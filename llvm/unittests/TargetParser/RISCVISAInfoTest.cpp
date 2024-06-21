@@ -223,7 +223,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   ASSERT_THAT_EXPECTED(MaybeRV32G, Succeeded());
   RISCVISAInfo &InfoRV32G = **MaybeRV32G;
   const auto &ExtsRV32G = InfoRV32G.getExtensions();
-  EXPECT_EQ(ExtsRV32G.size(), 7UL);
+  EXPECT_EQ(ExtsRV32G.size(), 8UL);
   EXPECT_TRUE(ExtsRV32G.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_TRUE(ExtsRV32G.at("m") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV32G.at("a") == (RISCVISAUtils::ExtensionVersion{2, 1}));
@@ -232,6 +232,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV32G.at("zicsr") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV32G.at("zifencei") ==
               (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("zmmul") == (RISCVISAUtils::ExtensionVersion{1, 0}));
   EXPECT_EQ(InfoRV32G.getXLen(), 32U);
   EXPECT_EQ(InfoRV32G.getFLen(), 64U);
   EXPECT_EQ(InfoRV32G.getMinVLen(), 0U);
@@ -266,7 +267,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   ASSERT_THAT_EXPECTED(MaybeRV64G, Succeeded());
   RISCVISAInfo &InfoRV64G = **MaybeRV64G;
   const auto &ExtsRV64G = InfoRV64G.getExtensions();
-  EXPECT_EQ(ExtsRV64G.size(), 7UL);
+  EXPECT_EQ(ExtsRV64G.size(), 8UL);
   EXPECT_TRUE(ExtsRV64G.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_TRUE(ExtsRV64G.at("m") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV64G.at("a") == (RISCVISAUtils::ExtensionVersion{2, 1}));
@@ -275,6 +276,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64G.at("zicsr") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV64G.at("zifencei") ==
               (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("zmmul") == (RISCVISAUtils::ExtensionVersion{1, 0}));
   EXPECT_EQ(InfoRV64G.getXLen(), 64U);
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
   EXPECT_EQ(InfoRV64G.getMinVLen(), 0U);
@@ -285,7 +287,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   ASSERT_THAT_EXPECTED(MaybeRV64GCV, Succeeded());
   RISCVISAInfo &InfoRV64GCV = **MaybeRV64GCV;
   const auto &ExtsRV64GCV = InfoRV64GCV.getExtensions();
-  EXPECT_EQ(ExtsRV64GCV.size(), 17UL);
+  EXPECT_EQ(ExtsRV64GCV.size(), 18UL);
   EXPECT_TRUE(ExtsRV64GCV.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_TRUE(ExtsRV64GCV.at("m") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV64GCV.at("a") == (RISCVISAUtils::ExtensionVersion{2, 1}));
@@ -295,6 +297,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64GCV.at("zicsr") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_TRUE(ExtsRV64GCV.at("zifencei") ==
               (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV32G.at("zmmul") == (RISCVISAUtils::ExtensionVersion{1, 0}));
   EXPECT_TRUE(ExtsRV64GCV.at("v") == (RISCVISAUtils::ExtensionVersion{1, 0}));
   EXPECT_TRUE(ExtsRV64GCV.at("zve32x") == (RISCVISAUtils::ExtensionVersion{1, 0}));
   EXPECT_TRUE(ExtsRV64GCV.at("zve32f") == (RISCVISAUtils::ExtensionVersion{1, 0}));
@@ -312,8 +315,6 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
-  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ib", true).takeError()),
-            "unsupported standard user-level extension 'b'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zmadeup", true).takeError()),
@@ -326,9 +327,6 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
       toString(
           RISCVISAInfo::parseArchString("rv64g_xmadeup", true).takeError()),
       "unsupported non-standard user-level extension 'xmadeup'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64ib1p0", true).takeError()),
-      "unsupported standard user-level extension 'b'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zmadeup1p0", true).takeError()),
@@ -344,8 +342,7 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32ib", "rv32i_zmadeup",
-                          "rv64i_smadeup", "rv64i_xmadeup"}) {
+  for (StringRef Input : {"rv32i_zmadeup", "rv64i_smadeup", "rv64i_xmadeup"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo &Info = **MaybeISAInfo;
@@ -430,7 +427,7 @@ TEST(ParseArchString, AcceptsUnderscoreSplittingExtensions) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 8UL);
+    EXPECT_EQ(Exts.size(), 9UL);
     EXPECT_EQ(Exts.count("i"), 1U);
     EXPECT_EQ(Exts.count("m"), 1U);
     EXPECT_EQ(Exts.count("a"), 1U);
@@ -439,6 +436,7 @@ TEST(ParseArchString, AcceptsUnderscoreSplittingExtensions) {
     EXPECT_EQ(Exts.count("c"), 1U);
     EXPECT_EQ(Exts.count("zicsr"), 1U);
     EXPECT_EQ(Exts.count("zifencei"), 1U);
+    EXPECT_EQ(Exts.count("zmmul"), 1U);
   }
 }
 
@@ -448,13 +446,14 @@ TEST(ParseArchString, AcceptsRelaxSingleLetterExtensions) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 6UL);
+    EXPECT_EQ(Exts.size(), 7UL);
     EXPECT_EQ(Exts.count("i"), 1U);
     EXPECT_EQ(Exts.count("m"), 1U);
     EXPECT_EQ(Exts.count("f"), 1U);
     EXPECT_EQ(Exts.count("a"), 1U);
     EXPECT_EQ(Exts.count("d"), 1U);
     EXPECT_EQ(Exts.count("zicsr"), 1U);
+    EXPECT_EQ(Exts.count("zmmul"), 1U);
   }
 }
 
@@ -465,7 +464,7 @@ TEST(ParseArchString, AcceptsRelaxMixedLetterExtensions) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 8UL);
+    EXPECT_EQ(Exts.size(), 9UL);
     EXPECT_EQ(Exts.count("i"), 1U);
     EXPECT_EQ(Exts.count("m"), 1U);
     EXPECT_EQ(Exts.count("a"), 1U);
@@ -474,6 +473,7 @@ TEST(ParseArchString, AcceptsRelaxMixedLetterExtensions) {
     EXPECT_EQ(Exts.count("zihintntl"), 1U);
     EXPECT_EQ(Exts.count("svinval"), 1U);
     EXPECT_EQ(Exts.count("zicsr"), 1U);
+    EXPECT_EQ(Exts.count("zmmul"), 1U);
   }
 }
 
@@ -482,21 +482,23 @@ TEST(ParseArchString, AcceptsAmbiguousFromRelaxExtensions) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 3UL);
+    EXPECT_EQ(Exts.size(), 4UL);
     EXPECT_EQ(Exts.count("i"), 1U);
     EXPECT_EQ(Exts.count("zba"), 1U);
     EXPECT_EQ(Exts.count("m"), 1U);
+    EXPECT_EQ(Exts.count("zmmul"), 1U);
   }
   for (StringRef Input :
        {"rv32ia_zba_m", "rv32iazba_m", "rv32ia2p1zba1p0_m2p0"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     const auto &Exts = (*MaybeISAInfo)->getExtensions();
-    EXPECT_EQ(Exts.size(), 4UL);
+    EXPECT_EQ(Exts.size(), 5UL);
     EXPECT_EQ(Exts.count("i"), 1U);
     EXPECT_EQ(Exts.count("zba"), 1U);
     EXPECT_EQ(Exts.count("m"), 1U);
     EXPECT_EQ(Exts.count("a"), 1U);
+    EXPECT_EQ(Exts.count("zmmul"), 1U);
   }
 }
 
@@ -686,7 +688,7 @@ TEST(ParseArchString, AcceptsBareProfileNames) {
   auto MaybeRVA20U64 = RISCVISAInfo::parseArchString("rva20u64", true);
   ASSERT_THAT_EXPECTED(MaybeRVA20U64, Succeeded());
   const auto &Exts = (*MaybeRVA20U64)->getExtensions();
-  EXPECT_EQ(Exts.size(), 13UL);
+  EXPECT_EQ(Exts.size(), 14UL);
   EXPECT_EQ(Exts.count("i"), 1U);
   EXPECT_EQ(Exts.count("m"), 1U);
   EXPECT_EQ(Exts.count("f"), 1U);
@@ -700,6 +702,7 @@ TEST(ParseArchString, AcceptsBareProfileNames) {
   EXPECT_EQ(Exts.count("ziccrse"), 1U);
   EXPECT_EQ(Exts.count("ziccamoa"), 1U);
   EXPECT_EQ(Exts.count("zicclsm"), 1U);
+  EXPECT_EQ(Exts.count("zmmul"), 1U);
 
   auto MaybeRVA23U64 = RISCVISAInfo::parseArchString("rva23u64", true);
   ASSERT_THAT_EXPECTED(MaybeRVA23U64, Succeeded());
@@ -710,10 +713,11 @@ TEST(ParseArchSTring, AcceptsProfileNamesWithSeparatedAdditionalExtensions) {
   auto MaybeRVI20U64 = RISCVISAInfo::parseArchString("rvi20u64_m_zba", true);
   ASSERT_THAT_EXPECTED(MaybeRVI20U64, Succeeded());
   const auto &Exts = (*MaybeRVI20U64)->getExtensions();
-  EXPECT_EQ(Exts.size(), 3UL);
+  EXPECT_EQ(Exts.size(), 4UL);
   EXPECT_EQ(Exts.count("i"), 1U);
   EXPECT_EQ(Exts.count("m"), 1U);
   EXPECT_EQ(Exts.count("zba"), 1U);
+  EXPECT_EQ(Exts.count("zmmul"), 1U);
 }
 
 TEST(ParseArchString,
@@ -738,7 +742,7 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
       RISCVISAInfo::parseArchString("rv64im_ztso", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+m", "+experimental-ztso"));
+              ElementsAre("+m", "+zmmul", "+experimental-ztso"));
 
   auto MaybeISAInfo2 =
       RISCVISAInfo::parseArchString("rv32e_ztso_xventanacondops", true, false);
@@ -913,6 +917,7 @@ R"(All available -march extensions for RISC-V
     f                    2.2
     d                    2.2
     c                    2.0
+    b                    1.0
     v                    1.0
     h                    1.0
     zic64b               1.0
@@ -935,6 +940,7 @@ R"(All available -march extensions for RISC-V
     za128rs              1.0
     za64rs               1.0
     zaamo                1.0
+    zabha                1.0
     zacas                1.0
     zalrsc               1.0
     zama16b              1.0
@@ -1013,12 +1019,16 @@ R"(All available -march extensions for RISC-V
     shvstvala            1.0
     shvstvecd            1.0
     smaia                1.0
+    smcdeleg             1.0
+    smcsrind             1.0
     smepmp               1.0
     smstateen            1.0
     ssaia                1.0
+    ssccfg               1.0
     ssccptr              1.0
     sscofpmf             1.0
     sscounterenw         1.0
+    sscsrind             1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0
@@ -1062,7 +1072,6 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              0.4       This is a long dummy description
     zicfiss              0.4
-    zabha                1.0
     zalasr               0.1
     zfbfmin              1.0
     ztso                 0.1

@@ -1162,6 +1162,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  // If we've processed an opening --start-lib, without a matching --end-lib
+  bool inLib = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1219,13 +1221,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
@@ -1648,6 +1653,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
+  config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);

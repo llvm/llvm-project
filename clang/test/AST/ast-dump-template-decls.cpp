@@ -116,7 +116,10 @@ template <class T> struct C {
 using type2 = typename C<int>::type1<void>;
 // CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:42> col:7 type2 'typename C<int>::type1<void>':'void (int)'
 // CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'typename C<int>::type1<void>' sugar
-// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias type1
+// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias
+// CHECK-NEXT: name: 'C<int>::type1':'PR55886::C<int>::type1' qualified
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'C<int>':'PR55886::C<int>'
+// CHECK-NEXT: TypeAliasTemplateDecl {{.+}} type1
 // CHECK-NEXT: TemplateArgument type 'void'
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
 // CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'void (int)' cdecl
@@ -135,7 +138,7 @@ template <typename... Cs> struct foo {
   template <typename... Ds> using bind = Z<Ds..., Cs...>;
 };
 using t1 = foo<int, short>::bind<char, float>;
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'Y<char, float, int, short>' sugar Y
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'Y<char, float, int, short>' sugar
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'char' sugar typename depth 0 index 0 ... Bs pack_index 3
 // CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'Z'
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar typename depth 0 index 0 ... Bs pack_index 2
@@ -149,7 +152,8 @@ template <typename... T> struct D {
   template <typename... U> using B = int(int (*...p)(T, U));
 };
 using t2 = D<float, char>::B<int, short>;
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'B<int, short>' sugar alias B
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'B<int, short>' sugar alias{{$}}
+// CHECK-NEXT: name: 'D<float, char>::B':'PR56099::D<float, char>::B' qualified
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (int (*)(float, int), int (*)(char, short))' cdecl
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (float, int)' cdecl
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar typename depth 0 index 0 ... T pack_index 1
@@ -169,8 +173,10 @@ template<template<class C1, class C2 = A<C1>> class D1, class D2> using D = D1<D
 
 template<class E1, class E2> class E {};
 using test1 = D<E, int>;
-// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<subst_default_argument::E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar A
+// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar
+// CHECK-NEXT: |-name: 'A':'subst_default_argument::A' qualified
+// CHECK-NEXT: | `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT: |-TemplateArgument type 'int'
 // CHECK-NEXT: | `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 1 D2
 // CHECK-NEXT: |   |-TypeAliasTemplate 0x{{[^ ]*}} 'D'

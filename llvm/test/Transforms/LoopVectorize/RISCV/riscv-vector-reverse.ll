@@ -54,7 +54,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
-; CHECK:       ph:
+; CHECK:       ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
@@ -119,6 +119,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
+; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.
@@ -195,7 +196,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
-; CHECK:       ph:
+; CHECK:       ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  No successors
 ; CHECK:       vector.ph:
@@ -260,6 +261,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
+; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.

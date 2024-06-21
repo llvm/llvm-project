@@ -28,6 +28,7 @@ static_library("IR") {
     "Core.cpp",
     "CycleInfo.cpp",
     "DIBuilder.cpp",
+    "DIExpressionOptimizer.cpp",
     "DataLayout.cpp",
     "DebugInfo.cpp",
     "DebugInfoMetadata.cpp",

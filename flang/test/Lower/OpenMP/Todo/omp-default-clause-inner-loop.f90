@@ -8,7 +8,7 @@
 ! CHECK: omp.parallel   {
 ! EXPECTED: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFEy"}
 ! EXPECTED: %[[PRIVATE_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFEz"}
-! CHECK: %[[TEMP:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK: %[[TEMP:.*]] = fir.alloca i32 {bindc_name = "x", pinned, {{.*}}}
 ! CHECK: %[[const_1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[const_2:.*]] = arith.constant 10 : i32
 ! CHECK: %[[const_3:.*]] = arith.constant 1 : i32

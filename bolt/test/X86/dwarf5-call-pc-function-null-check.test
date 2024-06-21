@@ -8,8 +8,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
 
-# Test checks we correctly handle nullptr returned by getBinaryFunctionContainingAddress for DW_AT_call_pc.
-# This happens when address is not contained in any function.
+## Test checks we correctly handle nullptr returned by getBinaryFunctionContainingAddress for DW_AT_call_pc.
+## This happens when address is not contained in any function.
 
 # CHECK: DW_AT_call_pc [DW_FORM_addrx]
 # CHECK-SAME: address = 0x[[#%.16x,ADDR:]]

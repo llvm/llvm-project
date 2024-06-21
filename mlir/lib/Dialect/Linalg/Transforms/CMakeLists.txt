@@ -2,7 +2,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   AllInterfaces.cpp
   BubbleUpExtractSlice.cpp
   BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
   ConstantFold.cpp
   ConvertToDestinationStyle.cpp
   ConvertConv2DToImg2Col.cpp

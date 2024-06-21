@@ -41,8 +41,14 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+
+static llvm::cl::opt<bool> allowAssumedRank(
+    "allow-assumed-rank",
+    llvm::cl::desc("Enable assumed rank lowering - experimental"),
+    llvm::cl::init(false));
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -159,12 +165,15 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fir::GlobalOp global = builder.getNamedGlobal(globalName))
     return global;
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  cuf::DataAttributeAttr dataAttr =
+      Fortran::lower::translateSymbolCUFDataAttribute(
+          converter.getFirOpBuilder().getContext(), sym);
   // Always define linkonce data since it may be optimized out from the module
   // that actually owns the variable if it does not refers to it.
   if (linkage == builder.createLinkOnceODRLinkage() ||
       linkage == builder.createLinkOnceLinkage())
-    return defineGlobal(converter, var, globalName, linkage);
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
+    return defineGlobal(converter, var, globalName, linkage, dataAttr);
   mlir::Location loc = genLocation(converter, sym);
   // Resolve potential host and module association before checking that this
   // symbol is an object of a function pointer.
@@ -173,9 +182,6 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
-  cuf::DataAttributeAttr dataAttr =
-      Fortran::lower::translateSymbolCUFDataAttribute(
-          converter.getFirOpBuilder().getContext(), sym);
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
                               mlir::Attribute{}, isConstant(ultimate),
                               var.isTarget(), dataAttr);
@@ -504,7 +510,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       if (details->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
-            details->init().value());
+            details->init().value(), dataAttr);
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;
@@ -1289,6 +1295,9 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
       getCommonMembersWithInitAliases(common);
   mlir::Location loc = converter.genLocation(common.name());
   mlir::StringAttr linkage = builder.createCommonLinkage();
+  const auto *details =
+      common.detailsIf<Fortran::semantics::CommonBlockDetails>();
+  assert(details && "Expect CommonBlockDetails on the common symbol");
   if (!commonBlockHasInit(cmnBlkMems)) {
     // A COMMON block sans initializers is initialized to zero.
     // mlir::Vector types must have a strictly positive size, so at least
@@ -1301,7 +1310,8 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     auto vecTy = mlir::VectorType::get(sz, i8Ty);
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
     auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
-    builder.createGlobal(loc, commonTy, commonName, linkage, init);
+    global = builder.createGlobal(loc, commonTy, commonName, linkage, init);
+    global.setAlignment(details->alignment());
     // No need to add any initial value later.
     return std::nullopt;
   }
@@ -1314,6 +1324,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
       getTypeOfCommonWithInit(converter, cmnBlkMems, commonSize);
   // Create the global object, the initial value will be added later.
   global = builder.createGlobal(loc, commonTy, commonName);
+  global.setAlignment(details->alignment());
   return std::make_tuple(global, std::move(cmnBlkMems), loc);
 }
 
@@ -1885,7 +1896,8 @@ void Fortran::lower::mapSymbolAttributes(
     return;
   }
 
-  if (Fortran::evaluate::IsAssumedRank(sym))
+  const bool isAssumedRank = Fortran::evaluate::IsAssumedRank(sym);
+  if (isAssumedRank && !allowAssumedRank)
     TODO(loc, "assumed-rank variable in procedure implemented in Fortran");
 
   Fortran::lower::BoxAnalyzer ba;
@@ -1901,6 +1913,7 @@ void Fortran::lower::mapSymbolAttributes(
     if (!boxAlloc)
       if (Fortran::lower::SymbolBox symbox = symMap.lookupSymbol(sym))
         boxAlloc = symbox.getAddr();
+    assert((boxAlloc || !isAssumedRank) && "assumed-ranks cannot be local");
     // local
     if (!boxAlloc)
       boxAlloc = createNewLocal(converter, loc, var, preAlloc);
@@ -1942,7 +1955,7 @@ void Fortran::lower::mapSymbolAttributes(
         if (mlir::Value len =
                 lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
           explicitParams.push_back(len);
-        if (sym.Rank() == 0) {
+        if (!isAssumedRank && sym.Rank() == 0) {
           // Do not keep scalar characters as fir.box (even when optional).
           // Lowering and FIR is not meant to deal with scalar characters as
           // fir.box outside of calls.
@@ -1987,9 +2000,11 @@ void Fortran::lower::mapSymbolAttributes(
         }
       }
       // TODO: derived type length parameters.
-      lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
-      lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents, symMap,
-                           stmtCtx);
+      if (!isAssumedRank) {
+        lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
+        lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents,
+                             symMap, stmtCtx);
+      }
       genBoxDeclare(converter, symMap, sym, dummyArg, lbounds, explicitParams,
                     explicitExtents, replace);
       return;
@@ -2041,6 +2056,13 @@ void Fortran::lower::mapSymbolAttributes(
     }
     return false;
   };
+
+  if (isAssumedRank) {
+    assert(isUnusedEntryDummy && "assumed rank must be pointers/allocatables "
+                                 "or descriptor dummy arguments");
+    genUnusedEntryPointBox();
+    return;
+  }
 
   // Helper to generate scalars for the symbol properties.
   auto genValue = [&](const Fortran::lower::SomeExpr &expr) {

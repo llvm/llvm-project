@@ -144,7 +144,7 @@ namespace fir {
 static void addCanonicalizerPassWithoutRegionSimplification(
     mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
@@ -178,13 +178,12 @@ inline void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
   addPassConditionally(pm, disableCodeGenRewrite,
-      [&]() { return fir::createFirCodeGenRewritePass(options); });
+      [&]() { return fir::createCodeGenRewrite(options); });
 }
 
 inline void addTargetRewritePass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableTargetRewrite, []() {
-    return fir::createFirTargetRewritePass(fir::TargetRewriteOptions{});
-  });
+  addPassConditionally(pm, disableTargetRewrite,
+      []() { return fir::createTargetRewritePass(); });
 }
 
 inline mlir::LLVM::DIEmissionKind getEmissionKind(
@@ -234,9 +233,8 @@ inline void addBoxedProcedurePass(mlir::PassManager &pm) {
 
 inline void addExternalNameConversionPass(
     mlir::PassManager &pm, bool appendUnderscore = true) {
-  addPassConditionally(pm, disableExternalNameConversion, [&]() {
-    return fir::createExternalNameConversionPass(appendUnderscore);
-  });
+  addPassConditionally(pm, disableExternalNameConversion,
+      [&]() { return fir::createExternalNameConversion({appendUnderscore}); });
 }
 
 // Use inliner extension point callback to register the default inliner pass.
@@ -262,7 +260,7 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // simplify the IR
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
@@ -292,10 +290,12 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
+  pm.addPass(fir::createAssumedRankOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
+  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
@@ -329,8 +329,8 @@ inline void createHLFIRToFIRPassPipeline(
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
-  pm.addPass(hlfir::createBufferizeHLFIRPass());
-  pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
+  pm.addPass(hlfir::createBufferizeHLFIR());
+  pm.addPass(hlfir::createConvertHLFIRtoFIR());
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -344,10 +344,11 @@ inline void createHLFIRToFIRPassPipeline(
 /// rather than the host device.
 inline void createOpenMPFIRPassPipeline(
     mlir::PassManager &pm, bool isTargetDevice) {
-  pm.addPass(fir::createOMPMapInfoFinalizationPass());
+  addNestedPassToAllTopLevelOperations(
+      pm, fir::createOMPMapInfoFinalizationPass);
   pm.addPass(fir::createOMPMarkDeclareTargetPass());
   if (isTargetDevice)
-    pm.addPass(fir::createOMPFunctionFilteringPass());
+    pm.addPass(fir::createOMPFunctionFiltering());
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
@@ -369,27 +370,25 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
 
   if (config.VScaleMin != 0)
-    pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
+    pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));
 
   // Add function attributes
-  fir::FunctionAttrTypes functionAttrs;
+  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
 
   if (config.FramePointerKind != llvm::FramePointerKind::None ||
       config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
       config.NoSignedZerosFPMath || config.UnsafeFPMath) {
     if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-      functionAttrs.framePointerKind =
+      framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
     else if (config.FramePointerKind == llvm::FramePointerKind::All)
-      functionAttrs.framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::All;
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
     else
-      functionAttrs.framePointerKind =
-          mlir::LLVM::framePointerKind::FramePointerKind::None;
+      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
+    pm.addPass(fir::createFunctionAttr({framePointerKind, config.NoInfsFPMath,
         config.NoNaNsFPMath, config.ApproxFuncFPMath,
-        config.NoSignedZerosFPMath, config.UnsafeFPMath));
+        config.NoSignedZerosFPMath, config.UnsafeFPMath}));
   }
 
   fir::addFIRToLLVMPass(pm, config);

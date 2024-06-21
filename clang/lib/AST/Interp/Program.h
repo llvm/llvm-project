@@ -45,7 +45,8 @@ public:
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
     for (Global *G : Globals)
-      G->block()->invokeDtor();
+      if (Block *B = G->block(); B->isInitialized())
+        B->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors

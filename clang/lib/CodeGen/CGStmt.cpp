@@ -417,7 +417,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
   case Stmt::OMPScopeDirectiveClass:
-    llvm_unreachable("scope not supported with FE outlining");
+    CGM.ErrorUnsupported(S, "scope with FE outlining");
+    break;
   case Stmt::OMPMaskedDirectiveClass:
     EmitOMPMaskedDirective(cast<OMPMaskedDirective>(*S));
     break;
@@ -444,6 +445,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OpenACCComputeConstructClass:
     EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
+    break;
+  case Stmt::OpenACCLoopConstructClass:
+    EmitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*S));
     break;
   }
 }

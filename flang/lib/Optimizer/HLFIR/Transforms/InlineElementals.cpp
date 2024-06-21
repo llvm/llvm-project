@@ -32,7 +32,7 @@ namespace hlfir {
 } // namespace hlfir
 
 /// If the elemental has only two uses and those two are an apply operation and
-/// a destory operation, return those two, otherwise return {}
+/// a destroy operation, return those two, otherwise return {}
 static std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>>
 getTwoUses(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -119,7 +119,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineElementalConversion>(context);

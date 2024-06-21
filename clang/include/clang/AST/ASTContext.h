@@ -1147,6 +1147,8 @@ public:
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/AMDGPUTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1771,6 +1773,13 @@ public:
                                                 QualType DeducedType,
                                                 bool IsDependent) const;
 
+private:
+  QualType getDeducedTemplateSpecializationTypeInternal(TemplateName Template,
+                                                        QualType DeducedType,
+                                                        bool IsDependent,
+                                                        QualType Canon) const;
+
+public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.
   QualType getTagDeclType(const TagDecl *Decl) const;
@@ -3202,9 +3211,6 @@ public:
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
-
-  std::vector<std::string>
-  filterFunctionTargetVersionAttrs(const TargetVersionAttr *TV) const;
 
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;

@@ -415,6 +415,7 @@ enum NodeType {
   STRICT_FLDEXP,
   STRICT_FSIN,
   STRICT_FCOS,
+  STRICT_FTAN,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -677,6 +678,12 @@ enum NodeType {
   UMIN,
   UMAX,
 
+  /// [US]CMP - 3-way comparison of signed or unsigned integers. Returns -1, 0,
+  /// or 1 depending on whether Op0 <, ==, or > Op1. The operands can have type
+  /// different to the result.
+  SCMP,
+  UCMP,
+
   /// Bitwise operators - logical and, logical or, logical xor.
   AND,
   OR,
@@ -934,6 +941,7 @@ enum NodeType {
   FCBRT,
   FSIN,
   FCOS,
+  FTAN,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
@@ -1406,6 +1414,11 @@ enum NodeType {
   // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
   // Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  // llvm.clear_cache intrinsic
+  // Operands: Input Chain, Start Addres, End Address
+  // Outputs: Output Chain
+  CLEAR_CACHE,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.

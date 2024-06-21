@@ -96,6 +96,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
+  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
+  case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -210,6 +212,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FCOS:                       return "fcos";
   case ISD::STRICT_FCOS:                return "strict_fcos";
   case ISD::FSINCOS:                    return "fsincos";
+  case ISD::FTAN:                       return "ftan";
+  case ISD::STRICT_FTAN:                return "strict_ftan";
   case ISD::FTRUNC:                     return "ftrunc";
   case ISD::STRICT_FTRUNC:              return "strict_ftrunc";
   case ISD::FFLOOR:                     return "ffloor";
@@ -289,6 +293,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SMAX:                       return "smax";
   case ISD::UMIN:                       return "umin";
   case ISD::UMAX:                       return "umax";
+  case ISD::SCMP:                       return "scmp";
+  case ISD::UCMP:                       return "ucmp";
 
   case ISD::FLDEXP:                     return "fldexp";
   case ISD::STRICT_FLDEXP:              return "strict_fldexp";
@@ -528,6 +534,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "stackmap";
   case ISD::PATCHPOINT:
     return "patchpoint";
+  case ISD::CLEAR_CACHE:
+    return "clear_cache";
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";

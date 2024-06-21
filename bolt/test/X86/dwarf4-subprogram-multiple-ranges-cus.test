@@ -1,0 +1,38 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-subprogram-multiple-ranges-main.s -o %t1.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-subprogram-multiple-ranges-other.s -o %t2.o
+# RUN: %clang %cflags %t1.o %t2.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-objdump %t.bolt --disassemble > %t1.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t1.txt
+# RUN: cat %t1.txt | FileCheck --check-prefix=POSTCHECK %s
+
+## This test checks that BOLT correctly handles DW_TAG_subprogram with Ranges with multiple entries and handles multiple CUs with ranges.
+
+# POSTCHECK: _Z7doStuffi>:
+# POSTCHECK: [[#%.6x,ADDR:]]
+# POSTCHECK: _Z7doStuffi.__part.1>:
+# POSTCHECK-NEXT: [[#%.6x,ADDR1:]]
+# POSTCHECK: _Z7doStuffi.__part.2>:
+# POSTCHECK-NEXT: [[#%.6x,ADDR2:]]
+
+# POSTCHECK: _Z12doStuffOtheri>:
+# POSTCHECK: [[#%.6x,ADDR3:]]
+# POSTCHECK: _Z12doStuffOtheri.__part.1>:
+# POSTCHECK-NEXT: [[#%.6x,ADDR4:]]
+# POSTCHECK: _Z12doStuffOtheri.__part.2>:
+# POSTCHECK-NEXT: [[#%.6x,ADDR5:]]
+
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK-NEXT: DW_AT_ranges
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR1]], 0x0000000000[[#ADDR1 + 0xb]])
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR2]], 0x0000000000[[#ADDR2 + 0x5]])
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR]], 0x0000000000[[#ADDR + 0xf]]))
+
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK-NEXT: DW_AT_ranges
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR4]], 0x0000000000[[#ADDR4 + 0xb]])
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR5]], 0x0000000000[[#ADDR5 + 0x5]])
+# POSTCHECK-NEXT:   [0x0000000000[[#ADDR3]], 0x0000000000[[#ADDR3 + 0xf]]))

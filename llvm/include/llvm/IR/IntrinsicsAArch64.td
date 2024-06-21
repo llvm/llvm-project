@@ -3121,6 +3121,11 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[llvm_nxv8bf16_ty],
                             [llvm_nxv4f32_ty, llvm_nxv4f32_ty],
                             [IntrNoMem]>;
+  
+  class SME2_CVT_WIDENING_VG2_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                            [LLVMSubdivide2VectorType<0>], [IntrNoMem]>;
+  
 
   class SME2_CVT_VG4_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide4VectorType<0>],
@@ -3356,6 +3361,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_bfmlslt : SME2_BFMLS_Intrinsic;
   def int_aarch64_sve_bfmlslt_lane : SME2_BFMLS_Lane_Intrinsic;
 
+  // Multi-vector zeroing
+
+  foreach vg = ["vg1x2", "vg1x4", "vg2x1", "vg2x2", "vg2x4", "vg4x1", "vg4x2", "vg4x4"] in {
+    def int_aarch64_sme_zero_za64_ # vg : DefaultAttrsIntrinsic<[], [llvm_i32_ty],  [IntrNoMem, IntrHasSideEffects]>;
+  }
+  
   // Multi-vector signed saturating doubling multiply high
 
   def int_aarch64_sve_sqdmulh_single_vgx2 : SME2_VG2_Multi_Single_Intrinsic;
@@ -3412,6 +3423,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_suvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
   def int_aarch64_sme_usvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
 
+
+  //
+  //Multi-vector floating-point convert from half-precision to deinterleaved single-precision.
+  //
+  
+  def int_aarch64_sve_fcvtl_widen_x2  : SME2_CVT_WIDENING_VG2_Intrinsic;
+
   //
   // Multi-vector floating-point CVT from single-precision to interleaved half-precision/BFloat16
   //
@@ -3431,7 +3449,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fcvtzu_x4 : SME2_CVT_X4_Intrinsic;
   def int_aarch64_sve_scvtf_x4  : SME2_CVT_X4_Intrinsic;
   def int_aarch64_sve_ucvtf_x4  : SME2_CVT_X4_Intrinsic;
-
+  def int_aarch64_sve_fcvt_widen_x2 : SME2_CVT_WIDENING_VG2_Intrinsic;
   //
   // Multi-vector saturating extract narrow
   //
@@ -3472,10 +3490,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_uclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_fclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
+  def int_aarch64_sve_bfclamp_single_x2 : SME2_VG2_Multi_Single_Single_Intrinsic;
 
   def int_aarch64_sve_sclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_uclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_fclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
+  def int_aarch64_sve_bfclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
 
   //
   // Multi-vector add/sub and accumulate into ZA
