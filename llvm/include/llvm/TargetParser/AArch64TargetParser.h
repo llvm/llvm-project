@@ -19,6 +19,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <array>
 #include <vector>
 
@@ -120,59 +122,28 @@ struct ExtensionInfo {
                                   // extensions representation in the bitfield.
   StringRef Feature;              // -mattr enable string, e.g. "+spe"
   StringRef NegFeature;           // -mattr disable string, e.g. "-spe"
-  CPUFeatures CPUFeature;      // Function Multi Versioning (FMV) bitfield value
-                               // set in __aarch64_cpu_features
-  StringRef DependentFeatures; // FMV enabled features string,
-                               // e.g. "+dotprod,+fp-armv8,+neon"
-  unsigned FmvPriority;        // FMV feature priority
-  static constexpr unsigned MaxFMVPriority =
-      1000; // Maximum priority for FMV feature
 };
 
 #define EMIT_EXTENSIONS
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
-struct ExtensionSet {
-  // Set of extensions which are currently enabled.
-  ExtensionBitset Enabled;
-  // Set of extensions which have been enabled or disabled at any point. Used
-  // to avoid cluttering the cc1 command-line with lots of unneeded features.
-  ExtensionBitset Touched;
-  // Base architecture version, which we need to know because some feature
-  // dependencies change depending on this.
-  const ArchInfo *BaseArch;
+struct FMVInfo {
+  StringRef Name;     // The target_version/target_clones spelling.
+  CPUFeatures Bit;    // Index of the bit in the FMV feature bitset.
+  StringRef Features; // List of SubtargetFeatures to enable.
+  unsigned Priority;  // FMV priority.
+  FMVInfo(StringRef Name, CPUFeatures Bit, StringRef Features,
+          unsigned Priority)
+      : Name(Name), Bit(Bit), Features(Features), Priority(Priority){};
 
-  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
-
-  // Enable the given architecture extension, and any other extensions it
-  // depends on. Does not change the base architecture, or follow dependencies
-  // between features which are only related by required arcitecture versions.
-  void enable(ArchExtKind E);
-
-  // Disable the given architecture extension, and any other extensions which
-  // depend on it. Does not change the base architecture, or follow
-  // dependencies between features which are only related by required
-  // arcitecture versions.
-  void disable(ArchExtKind E);
-
-  // Add default extensions for the given CPU. Records the base architecture,
-  // to later resolve dependencies which depend on it.
-  void addCPUDefaults(const CpuInfo &CPU);
-
-  // Add default extensions for the given architecture version. Records the
-  // base architecture, to later resolve dependencies which depend on it.
-  void addArchDefaults(const ArchInfo &Arch);
-
-  // Add or remove a feature based on a modifier string. The string must be of
-  // the form "<name>" to enable a feature or "no<name>" to disable it. This
-  // will also enable or disable any features as required by the dependencies
-  // between them.
-  bool parseModifier(StringRef Modifier);
-
-  // Convert the set of enabled extension to an LLVM feature list, appending
-  // them to Features.
-  void toLLVMFeatureList(std::vector<StringRef> &Features) const;
+  SmallVector<StringRef, 8> getImpliedFeatures() {
+    SmallVector<StringRef, 8> Feats;
+    Features.split(Feats, ',', -1, false); // discard empty strings
+    return Feats;
+  }
 };
+
+const std::vector<FMVInfo> &getFMVInfo();
 
 // Represents a dependency between two architecture extensions. Later is the
 // feature which was added to the architecture after Earlier, and expands the
@@ -264,6 +235,69 @@ struct CpuInfo {
 #define EMIT_CPU_INFO
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
+struct ExtensionSet {
+  // Set of extensions which are currently enabled.
+  ExtensionBitset Enabled;
+  // Set of extensions which have been enabled or disabled at any point. Used
+  // to avoid cluttering the cc1 command-line with lots of unneeded features.
+  ExtensionBitset Touched;
+  // Base architecture version, which we need to know because some feature
+  // dependencies change depending on this.
+  const ArchInfo *BaseArch;
+
+  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
+
+  // Enable the given architecture extension, and any other extensions it
+  // depends on. Does not change the base architecture, or follow dependencies
+  // between features which are only related by required arcitecture versions.
+  void enable(ArchExtKind E);
+
+  // Disable the given architecture extension, and any other extensions which
+  // depend on it. Does not change the base architecture, or follow
+  // dependencies between features which are only related by required
+  // arcitecture versions.
+  void disable(ArchExtKind E);
+
+  // Add default extensions for the given CPU. Records the base architecture,
+  // to later resolve dependencies which depend on it.
+  void addCPUDefaults(const CpuInfo &CPU);
+
+  // Add default extensions for the given architecture version. Records the
+  // base architecture, to later resolve dependencies which depend on it.
+  void addArchDefaults(const ArchInfo &Arch);
+
+  // Add or remove a feature based on a modifier string. The string must be of
+  // the form "<name>" to enable a feature or "no<name>" to disable it. This
+  // will also enable or disable any features as required by the dependencies
+  // between them.
+  bool parseModifier(StringRef Modifier, const bool AllowNoDashForm = false);
+
+  // Constructs a new ExtensionSet by toggling the corresponding bits for every
+  // feature in the \p Features list without expanding their dependencies. Used
+  // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
+  // Features that are not recognized are pushed back to \p NonExtensions.
+  void reconstructFromParsedFeatures(const std::vector<std::string> &Features,
+                                     std::vector<std::string> &NonExtensions);
+
+  // Convert the set of enabled extension to an LLVM feature list, appending
+  // them to Features.
+  template <typename T> void toLLVMFeatureList(std::vector<T> &Features) const {
+    if (BaseArch && !BaseArch->ArchFeature.empty())
+      Features.emplace_back(T(BaseArch->ArchFeature));
+
+    for (const auto &E : Extensions) {
+      if (E.Feature.empty() || !Touched.test(E.ID))
+        continue;
+      if (Enabled.test(E.ID))
+        Features.emplace_back(T(E.Feature));
+      else
+        Features.emplace_back(T(E.NegFeature));
+    }
+  }
+
+  void dump() const;
+};
+
 // Name alias.
 struct Alias {
   StringRef AltName;
@@ -287,7 +321,16 @@ const ArchInfo *getArchForCpu(StringRef CPU);
 
 // Parser
 const ArchInfo *parseArch(StringRef Arch);
+
+// Return the extension which has the given -target-feature name.
+std::optional<ExtensionInfo> targetFeatureToExtension(StringRef TargetFeature);
+
+// Parse a name as defined by the Extension class in tablegen.
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
+
+// Parse a name as defined by the FMVInfo class in tablegen.
+std::optional<FMVInfo> parseFMVExtension(StringRef Extension);
+
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);
 // Used by target parser tests

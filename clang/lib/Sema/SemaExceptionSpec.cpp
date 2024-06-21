@@ -1111,13 +1111,22 @@ static CanThrowResult canDynamicCastThrow(const CXXDynamicCastExpr *DC) {
 }
 
 static CanThrowResult canTypeidThrow(Sema &S, const CXXTypeidExpr *DC) {
+  // A typeid of a type is a constant and does not throw.
   if (DC->isTypeOperand())
     return CT_Cannot;
 
   if (DC->isValueDependent())
     return CT_Dependent;
 
-  return DC->hasNullCheck() ? CT_Can : CT_Cannot;
+  // If this operand is not evaluated it cannot possibly throw.
+  if (!DC->isPotentiallyEvaluated())
+    return CT_Cannot;
+
+  // Can throw std::bad_typeid if a nullptr is dereferenced.
+  if (DC->hasNullCheck())
+    return CT_Can;
+
+  return S.canThrow(DC->getExprOperand());
 }
 
 CanThrowResult Sema::canThrow(const Stmt *S) {
@@ -1404,6 +1413,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::PackIndexingExprClass:
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
     // These expressions can never throw.

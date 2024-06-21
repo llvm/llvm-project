@@ -615,7 +615,7 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     func->setAttr(fir::getFuncPureAttrName(),
                   mlir::UnitAttr::get(&mlirContext));
   if (IsElementalProcedure(sym))
-    func->setAttr(fir::getFuncElementAttrName(),
+    func->setAttr(fir::getFuncElementalAttrName(),
                   mlir::UnitAttr::get(&mlirContext));
   if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
     func->setAttr(fir::getFuncRecursiveAttrName(),

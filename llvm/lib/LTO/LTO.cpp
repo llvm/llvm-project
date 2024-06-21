@@ -65,6 +65,8 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
@@ -121,6 +123,9 @@ void llvm::computeLTOCacheKey(
     support::endian::write64le(Data, I);
     Hasher.update(Data);
   };
+  auto AddUint8 = [&](const uint8_t I) {
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
+  };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
@@ -156,18 +161,18 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-  std::vector<uint64_t> ExportsGUID;
+  std::vector<std::pair<uint64_t, uint8_t>> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
-    ExportsGUID.push_back(GUID);
-  }
+  for (const auto &[VI, ExportType] : ExportList)
+    ExportsGUID.push_back(
+        std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (uint64_t GUID : ExportsGUID) {
+  for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
+    AddUint8(ExportType);
   }
 
   // Include the hash for every module we import functions from. The set of
@@ -199,7 +204,7 @@ void llvm::computeLTOCacheKey(
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
                return Lhs.getHash() < Rhs.getHash();
              });
-  std::vector<uint64_t> ImportedGUIDs;
+  std::vector<std::pair<uint64_t, uint8_t>> ImportedGUIDs;
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
@@ -207,11 +212,13 @@ void llvm::computeLTOCacheKey(
     AddUint64(Entry.getFunctions().size());
 
     ImportedGUIDs.clear();
-    for (auto &Fn : Entry.getFunctions())
-      ImportedGUIDs.push_back(Fn);
+    for (auto &[Fn, ImportType] : Entry.getFunctions())
+      ImportedGUIDs.push_back(std::make_pair(Fn, ImportType));
     llvm::sort(ImportedGUIDs);
-    for (auto &GUID : ImportedGUIDs)
+    for (auto &[GUID, Type] : ImportedGUIDs) {
       AddUint64(GUID);
+      AddUint8(Type);
+    }
   }
 
   // Include the hash for the resolved ODR.
@@ -281,9 +288,9 @@ void llvm::computeLTOCacheKey(
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
   for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &ImpF : ImpM.getFunctions()) {
+    for (auto &[GUID, UnusedImportType] : ImpM.getFunctions()) {
       GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF, ImpM.getIdentifier());
+          Index.findSummaryInModule(GUID, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.
@@ -1395,6 +1402,7 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
                                      ImportList, ModuleToSummariesForIndex);
@@ -1403,6 +1411,8 @@ public:
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
+
+    // TODO: Serialize declaration bits to bitcode.
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
     if (ShouldEmitImportsFiles) {

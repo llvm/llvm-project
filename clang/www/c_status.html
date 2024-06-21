@@ -115,7 +115,16 @@ conformance.</p>
     <tr>
       <td>restricted pointers</td>
       <td>N448</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang's support for <code>restrict</code> is fully conforming but
+          considered only partially implemented. Clang implements all of the
+          constraints required for <code>restrict</code> support, but LLVM only
+          supports <code>restrict</code> optimization semantics for restricted
+          pointers used as function parameters; it does not fully support the
+          semantics for restrict on local variables or data members.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>variable length arrays</td>
@@ -423,11 +432,6 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
-      <td>Analyzability (#1, #4 - conditionally normative)</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1350.htm">N1350</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
       <td>FLT_EVAL_METHOD issues (first change only)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1353.pdf">N1353</a></td>
       <td class="unknown" align="center">Unknown</td>
@@ -440,7 +444,8 @@ conformance.</p>
     <tr>
       <td>Technical corrigendum for C1X</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1359.htm">N1359</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- The DRs listed in the paper are individually tested in clang/test/C/drs/dr3xx.c and others -->
     </tr>
     <tr>
       <td>Benign typedef redefinition</td>
@@ -471,11 +476,6 @@ conformance.</p>
       <td>Floating-point to int/_Bool conversions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1391.htm">N1391</a></td>
       <td class="full" align="center">Yes</td>
-    </tr>
-    <tr>
-      <td>Analyzability (along the lines)</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1394.htm">N1394</a></td>
-      <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>Wide function returns (alternate proposal)</td>
@@ -1213,7 +1213,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>#embed</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm">N3017</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
 </table>
 </details>
