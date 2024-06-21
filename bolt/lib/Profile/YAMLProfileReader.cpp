@@ -423,7 +423,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       matchProfileToFunction(YamlBF, *BF);
 
   // Uses name similarity to match functions that were not matched by name.
-  uint64_t MatchedWithDemangledName = 0;
+  uint64_t MatchedWithNameSimilarity = 0;
 
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
     auto DemangleName = [&](std::string &FunctionName) {
@@ -490,7 +490,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       if (ClosestNameBF &&
           MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
         matchProfileToFunction(YamlBF, *ClosestNameBF);
-        ++MatchedWithDemangledName;
+        ++MatchedWithNameSimilarity;
       }
     }
   }
@@ -499,6 +499,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
+
+  if (opts::Verbosity >= 2) {
+    outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
+           << " functions with similar names\n";
+  }
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
