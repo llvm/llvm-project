@@ -110,12 +110,12 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 
 func.func @transfer_read_dims_mismatch_non_contiguous_non_zero_indices(
     %arg : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
-    %idx0 : index,
-    %idx1 : index) -> vector<2x2xf32> {
+    %idx_1 : index,
+    %idx_2 : index) -> vector<2x2xf32> {
 
   %c0 = arith.constant 0 : index
   %cst_1 = arith.constant 0.000000e+00 : f32
-  %8 = vector.transfer_read %arg[%c0, %idx0, %idx1, %c0], %cst_1 {in_bounds = [true, true]} :
+  %8 = vector.transfer_read %arg[%c0, %idx_1, %idx_2, %c0], %cst_1 {in_bounds = [true, true]} :
     memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>, vector<2x2xf32>
   return %8 : vector<2x2xf32>
 }
@@ -358,11 +358,11 @@ func.func @transfer_write_dims_mismatch_non_zero_indices(
 func.func @transfer_write_dims_mismatch_non_contiguous_non_zero_indices(
     %value : vector<2x2xf32>,
     %subview : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
-    %idx0 : index,
-    %idx1 : index) {
+    %idx_1 : index,
+    %idx_2 : index) {
 
   %c0 = arith.constant 0 : index
-  vector.transfer_write %value, %subview[%c0, %idx0, %idx1, %c0] {in_bounds = [true, true]} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>
+  vector.transfer_write %value, %subview[%c0, %idx_1, %idx_2, %c0] {in_bounds = [true, true]} : vector<2x2xf32>, memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>
   return
 }
 
@@ -392,7 +392,7 @@ func.func @transfer_write_leading_dynamic_dims(
 }
 
 // CHECK-LABEL: func @transfer_write_leading_dynamic_dims
-// CHECK-SAME:    %[[ARG0:.+]]: vector<8x4xi8>, %[[ARG1:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG2:.+]]: index, %[[ARG3:.+]]: index
+// CHECK-SAME:  %[[ARG0:.+]]: vector<8x4xi8>, %[[ARG1:.+]]: memref<?x?x8x4xi8, {{.+}}>, %[[ARG2:.+]]: index, %[[ARG3:.+]]: index
 // CHECK:       %[[C0:.+]] = arith.constant 0 : index
 // CHECK:       %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG1]] {{\[}}[0], [1], [2, 3]{{\]}}
 // CHECK-SAME:    : memref<?x?x8x4xi8, {{.+}}> into memref<?x?x32xi8, {{.+}}>
