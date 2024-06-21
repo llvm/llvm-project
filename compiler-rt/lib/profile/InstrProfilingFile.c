@@ -254,12 +254,18 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   const char *BitmapBegin = __llvm_profile_begin_bitmap();
   const char *BitmapEnd = __llvm_profile_end_bitmap();
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  uint64_t CountersSize =
+      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
+  uint64_t NumBitmapBytes =
+      __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
   /* Get the file size. */
   uint64_t FileSize = 0;
   if (getProfileFileSizeForMerging(File, &FileSize))
     return 1;
 
   int Fileno = fileno(File);
+  uint64_t PaddingBytesAfterCounters =
+      __llvm_profile_get_num_padding_bytes(CountersSize);
   uint64_t FileOffsetToCounters =
       sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
 
