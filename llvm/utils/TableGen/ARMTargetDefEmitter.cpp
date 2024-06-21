@@ -221,28 +221,8 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifdef EMIT_CPU_INFO\n"
      << "inline constexpr CpuInfo CpuInfos[] = {\n";
 
-  std::map<std::string, std::pair<std::string, const Record *>> ProcessorModels;
   for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorModel")) {
     auto Name = Rec->getValueAsString("Name");
-    ProcessorModels.insert(std::make_pair(Name, std::make_pair(Name, Rec)));
-  }
-
-  for (const Record *Rec : RK.getAllDerivedDefinitions("ProcessorAlias")) {
-    std::string Name = Rec->getValueAsString("Name").str();
-    auto Alias = Rec->getValueAsString("Alias");
-    auto It = ProcessorModels.find(Alias.str());
-    if (!ProcessorModels
-             .insert(
-                 std::make_pair(Name, std::make_pair(Alias, It->second.second)))
-             .second)
-      PrintFatalError(
-          Rec, "Alias duplicates an existing ProcessorAlias or ProcessorModel");
-  }
-
-  for (auto &[K, V] : ProcessorModels) {
-    auto Name = K;
-    auto Alias = V.first;
-    auto *Rec = V.second;
     auto Features = Rec->getValueAsListOfDefs("Features");
 
     // "apple-latest" is backend-only, should not be accepted by TargetParser.
@@ -273,8 +253,9 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     auto Profile = Arch->getValueAsString("Profile");
     auto ArchInfo = ArchInfoName(Major, Minor, Profile);
 
-    if (Name != Alias)
-      OS << "  // Alias: " << Name << " -> " << Alias << "\n";
+    // The apple-latest alias is backend only, do not expose it to -mcpu.
+    if (Name == "apple-latest")
+      continue;
 
     OS << "  {\n"
        << "    \"" << Name << "\",\n"
