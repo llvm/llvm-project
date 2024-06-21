@@ -174,10 +174,8 @@ llvm.func @lower_region_with_addressof() {
 
 omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr alloc {
 ^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-    %1 = llvm.alloca %0 x f64 {bindc_name = "u1", pinned} : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
-  omp.yield(%2 : !llvm.ptr)
+  %0 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
 }
 
 llvm.mlir.global linkonce constant @_QQfoo() {addr_space = 0 : i32} : !llvm.array<3 x i8> {
