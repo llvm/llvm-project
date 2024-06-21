@@ -473,6 +473,12 @@ public:
     return result;
   }
 
+  MPFRNumber fmul(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_mul(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   cpp::string str() const {
     // 200 bytes should be more than sufficient to hold a 100-digit number
     // plus additional bytes for the decimal point, '-' sign etc.
@@ -722,6 +728,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.hypot(inputY);
   case Operation::Pow:
     return inputX.pow(inputY);
+  case Operation::Fmul:
+    return inputX.fmul(inputY);
   default:
     __builtin_unreachable();
   }
