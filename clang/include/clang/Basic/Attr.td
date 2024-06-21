@@ -287,7 +287,7 @@ class DefaultIntArgument<string name, int default> : IntArgument<name, 1> {
 // possible values, and a list of enumerators to map them to.
 class EnumArgument<string name, string type, bit is_string, list<string> values,
                    list<string> enums, bit opt = 0, bit fake = 0,
-                   bit isExternalType = 0>
+                   bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, opt, fake> {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -296,13 +296,16 @@ class EnumArgument<string name, string type, bit is_string, list<string> values,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // FIXME: There should be a VariadicArgument type that takes any other type
 //        of argument and generates the appropriate type.
 class VariadicEnumArgument<string name, string type, bit is_string,
                            list<string> values, list<string> enums,
-                           bit isExternalType = 0>
+                           bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, 1>  {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -311,6 +314,9 @@ class VariadicEnumArgument<string name, string type, bit is_string,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // Represents an attribute wrapped by another attribute.
@@ -2913,7 +2919,7 @@ def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
   let Spellings = [GCC<"model">];
   let Args = [EnumArgument<"Model", "llvm::CodeModel::Model", /*is_string=*/1,
               ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
-              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>];
   let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
   let Documentation = [CodeModelDocs];
 }
@@ -4472,7 +4478,7 @@ def HLSLShader : InheritableAttr {
                  ["Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
                   "RayGeneration", "Intersection", "AnyHit", "ClosestHit",
                   "Miss", "Callable", "Mesh", "Amplification"],
-                  /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
+                  /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
   let AdditionalMembers =
@@ -4487,30 +4493,31 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                           /*is_string=*/0,
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              EnumArgument<"ResourceKind", "llvm::hlsl::ResourceKind",
-                           /*is_string=*/0,
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              DefaultBoolArgument<"isROV", /*default=*/0>
-              ];
+  let Args = [
+    EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+                 /*is_string=*/0, ["SRV", "UAV", "CBuffer", "Sampler"],
+                 ["SRV", "UAV", "CBuffer", "Sampler"],
+                 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+    EnumArgument<
+        "ResourceKind", "llvm::hlsl::ResourceKind",
+        /*is_string=*/0,
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
+    DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
   let Documentation = [InternalOnly];
 }
 
