@@ -87,7 +87,8 @@ class InstrBuilder {
   Expected<const InstrDesc &>
   createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>
-  getOrCreateInstrDesc(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
+  getOrCreateInstrDesc(const MCInst &MCI,
+                       const SmallVector<Instrument *> &IVec);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;

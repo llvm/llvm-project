@@ -616,8 +616,8 @@ int main(int argc, char **argv) {
       const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
 
-      Expected<std::unique_ptr<mca::Instruction>> Inst = IB.createInstruction(
-          MCI, Instruments);
+      Expected<std::unique_ptr<mca::Instruction>> Inst =
+          IB.createInstruction(MCI, Instruments);
       if (!Inst) {
         if (auto NewE = handleErrors(
                 Inst.takeError(),
