@@ -115,7 +115,7 @@ public:
 private:
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.
-  lldb_private::Status AddData(const void *data, size_t size);
+  lldb_private::Status AddData(const void *data, uint64_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
   AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);

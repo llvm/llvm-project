@@ -667,7 +667,7 @@ Status MinidumpFileBuilder::AddThreadList() {
     m_data.AppendData(&t, sizeof(llvm::minidump::Thread));
   }
 
-  LLDB_LOGF(log, "AddThreadList(): total helper_data %zu bytes",
+  LLDB_LOGF(log, "AddThreadList(): total helper_data %" PRIx64 " bytes",
             helper_data.GetByteSize());
   m_data.AppendData(helper_data.GetBytes(), helper_data.GetByteSize());
   return Status();
@@ -931,7 +931,7 @@ Status MinidumpFileBuilder::DumpHeader() const {
   return error;
 }
 
-size_t MinidumpFileBuilder::GetCurrentDataEndOffset() const {
+offset_t MinidumpFileBuilder::GetCurrentDataEndOffset() const {
   return m_data.GetByteSize() + m_saved_data_size;
 }
 
@@ -1141,7 +1141,7 @@ MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
   }
 }
 
-Status MinidumpFileBuilder::AddData(const void *data, addr_t size) {
+Status MinidumpFileBuilder::AddData(const void *data, uint64_t size) {
   // This should also get chunked, because worst case we copy over a big
   // object / memory range, say 5gb. In that case, we'd have to allocate 10gb
   // 5 gb for the buffer we're copying from, and then 5gb for the buffer we're
@@ -1170,7 +1170,8 @@ Status MinidumpFileBuilder::FlushBufferToDisk() {
     error = m_core_file->Write(m_data.GetBytes() + offset, bytes_written);
     if (error.Fail()) {
       error.SetErrorStringWithFormat(
-          "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)",
+          "Wrote incorrect number of bytes to minidump file. (written %" PRIx64
+          "/%" PRIx64 ")",
           starting_size - remaining_bytes, starting_size);
       return error;
     }
