@@ -1,10 +1,9 @@
-// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=false})' -o - | FileCheck %s -check-prefix=MLIR
-// XFAIL: *
+// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=disabled})' -o - | FileCheck %s -check-prefix=MLIR
 
 !s32i = !cir.int<s, 32>
 
 module {
-
+  
   cir.func @gotoFromIf(%arg0: !s32i) -> !s32i {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
