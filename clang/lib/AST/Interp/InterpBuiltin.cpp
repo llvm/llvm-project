@@ -1329,8 +1329,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_launder:
-  case Builtin::BI__builtin___CFStringMakeConstantString:
-  case Builtin::BI__builtin___NSStringMakeConstantString:
     if (!noopPointer(S, OpPC, Frame, F, Call))
       return false;
     break;
