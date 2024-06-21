@@ -140,7 +140,7 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
 }
 
 /// Does a given PointerAuthScheme require us to sign a value
-static bool shouldSignPointer(const PointerAuthSchema &Schema) {
+bool CodeGenModule::shouldSignPointer(const PointerAuthSchema &Schema) {
   auto AuthenticationMode = Schema.getAuthenticationMode();
   return AuthenticationMode == PointerAuthenticationMode::SignAndStrip ||
          AuthenticationMode == PointerAuthenticationMode::SignAndAuth;
@@ -158,35 +158,6 @@ llvm::Constant *CodeGenModule::getConstantSignedPointer(
 
   return getConstantSignedPointer(Pointer, Schema.getKey(), StorageAddress,
                                   OtherDiscriminator);
-}
-
-/// Sign the given pointer and add it to the constant initializer
-/// currently being built.
-void ConstantAggregateBuilderBase::addSignedPointer(
-    llvm::Constant *Pointer, const PointerAuthSchema &Schema,
-    GlobalDecl CalleeDecl, QualType CalleeType) {
-  if (!Schema || !shouldSignPointer(Schema))
-    return add(Pointer);
-
-  llvm::Constant *StorageAddress = nullptr;
-  if (Schema.isAddressDiscriminated())
-    StorageAddress = getAddrOfCurrentPosition(Pointer->getType());
-
-  llvm::Constant *SignedPointer = Builder.CGM.getConstantSignedPointer(
-      Pointer, Schema, StorageAddress, CalleeDecl, CalleeType);
-  add(SignedPointer);
-}
-
-void ConstantAggregateBuilderBase::addSignedPointer(
-    llvm::Constant *Pointer, unsigned Key, bool UseAddressDiscrimination,
-    llvm::ConstantInt *OtherDiscriminator) {
-  llvm::Constant *StorageAddress = nullptr;
-  if (UseAddressDiscrimination)
-    StorageAddress = getAddrOfCurrentPosition(Pointer->getType());
-
-  llvm::Constant *SignedPointer = Builder.CGM.getConstantSignedPointer(
-      Pointer, Key, StorageAddress, OtherDiscriminator);
-  add(SignedPointer);
 }
 
 /// If applicable, sign a given constant function pointer with the ABI rules for

@@ -203,15 +203,9 @@ public:
   }
 
   /// Add a signed pointer using the given pointer authentication schema.
-  void addSignedPointer(llvm::Constant *pointer,
-                        const PointerAuthSchema &schema, GlobalDecl calleeDecl,
-                        QualType calleeType);
-
-  /// Add a signed pointer using the given pointer authentication schema.
-  void addSignedPointer(llvm::Constant *pointer,
-                        unsigned key,
-                        bool useAddressDiscrimination,
-                        llvm::ConstantInt *otherDiscriminator);
+  void addSignedPointer(llvm::Constant *Pointer,
+                        const PointerAuthSchema &Schema, GlobalDecl CalleeDecl,
+                        QualType CalleeType);
 
   /// Add a null pointer of a specific type.
   void addNullPointer(llvm::PointerType *ptrTy) {

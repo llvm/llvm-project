@@ -964,6 +964,13 @@ public:
 
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
 
+  bool shouldSignPointer(const PointerAuthSchema &Schema);
+  llvm::Constant *getConstantSignedPointer(llvm::Constant *Pointer,
+                                           const PointerAuthSchema &Schema,
+                                           llvm::Constant *StorageAddress,
+                                           GlobalDecl SchemaDecl,
+                                           QualType SchemaType);
+
   llvm::Constant *
   getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                            llvm::Constant *StorageAddress,
