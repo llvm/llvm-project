@@ -203,6 +203,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMINIMUM:            return "strict_fminimum";
   case ISD::FMAXIMUM:                   return "fmaximum";
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
+  case ISD::FMINIMUMNUM:               return "fminimumnum";
+  case ISD::STRICT_FMINIMUMNUM:        return "strict_fminimumnum";
+  case ISD::FMAXIMUMNUM:               return "fmaximumnum";
+  case ISD::STRICT_FMAXIMUMNUM:        return "strict_fmaximumnum";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -530,6 +534,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
   case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return "vecreduce_fmaximumnum";
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return "vecreduce_fminimumnum";
   case ISD::STACKMAP:
     return "stackmap";
   case ISD::PATCHPOINT:

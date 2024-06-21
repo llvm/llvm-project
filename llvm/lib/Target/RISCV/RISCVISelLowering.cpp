@@ -436,7 +436,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::STRICT_LRINT,   ISD::STRICT_LLRINT, ISD::STRICT_LROUND,
       ISD::STRICT_LLROUND, ISD::STRICT_FMA,    ISD::STRICT_FADD,
       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,   ISD::STRICT_FDIV,
-      ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS};
+      ISD::STRICT_FSQRT,   ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
+      ISD::FMINIMUMNUM,    ISD::FMAXIMUMNUM};
 
   static const ISD::CondCode FPCCToExpand[] = {
       ISD::SETOGT, ISD::SETOGE, ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
@@ -463,7 +464,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::STRICT_FSQRT, ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS,
       ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
-      ISD::FROUNDEVEN,   ISD::SELECT};
+      ISD::FROUNDEVEN,   ISD::SELECT,        ISD::FMINIMUMNUM,
+      ISD::FMAXIMUMNUM};
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -717,6 +719,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
         ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
         ISD::VP_FMINIMUM,    ISD::VP_FMAXIMUM,    ISD::VP_LRINT,
+        ISD::VP_FMINIMUMNUM, ISD::VP_FMAXIMUMNUM,
         ISD::VP_LLRINT,      ISD::EXPERIMENTAL_VP_REVERSE,
         ISD::EXPERIMENTAL_VP_SPLICE, ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
@@ -952,7 +955,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::FABS,        ISD::FNEG,         ISD::FCOPYSIGN,   ISD::FCEIL,
         ISD::FFLOOR,      ISD::FROUND,       ISD::FROUNDEVEN,  ISD::FRINT,
         ISD::FNEARBYINT,  ISD::IS_FPCLASS,   ISD::SETCC,       ISD::FMAXIMUM,
-        ISD::FMINIMUM,    ISD::STRICT_FADD,  ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+        ISD::FMINIMUM,    ISD::FMINIMUMNUM,  ISD::FMAXIMUMNUM,
+        ISD::STRICT_FADD, ISD::STRICT_FSUB,  ISD::STRICT_FMUL,
         ISD::STRICT_FDIV, ISD::STRICT_FSQRT, ISD::STRICT_FMA};
 
     // TODO: support more vp ops.
@@ -965,7 +969,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FFLOOR,      ISD::VP_FROUND,       ISD::VP_FROUNDEVEN,
         ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO, ISD::VP_FRINT,
         ISD::VP_FNEARBYINT,  ISD::VP_SETCC,        ISD::VP_FMINIMUM,
-        ISD::VP_FMAXIMUM,    ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM};
+        ISD::VP_FMAXIMUM,    ISD::VP_REDUCE_FMINIMUM, ISD::VP_REDUCE_FMAXIMUM,
+        ISD::VP_FMINIMUMNUM, ISD::VP_FMAXIMUMNUM};
 
     // Sets common operation actions on RVV floating-point vector types.
     const auto SetCommonVFPActions = [&](MVT VT) {
@@ -983,6 +988,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setCondCodeAction(VFPCCToExpand, VT, Expand);
 
       setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
+      setOperationAction({ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM}, VT, Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
 
       setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
@@ -1372,7 +1378,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
                             ISD::FMA, ISD::FMINNUM, ISD::FMAXNUM,
-                            ISD::IS_FPCLASS, ISD::FMAXIMUM, ISD::FMINIMUM},
+                            ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::IS_FPCLASS,
+                            ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
@@ -1472,7 +1479,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SRA);
 
   if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
+    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM,
+                         ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM});
 
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
@@ -5964,9 +5972,11 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_FP_TO_UINT:
     return RISCVISD::VFCVT_RTZ_XU_F_VL;
   case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::VP_FMINNUM:
     return RISCVISD::VFMIN_VL;
   case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::VP_FMAXNUM:
     return RISCVISD::VFMAX_VL;
   case ISD::LRINT:
@@ -6911,6 +6921,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMA:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
     if (Op.getValueType() == MVT::nxv32f16 &&
         (Subtarget.hasVInstructionsF16Minimal() &&
          !Subtarget.hasVInstructionsF16()))
@@ -7034,6 +7046,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FMA:
   case ISD::VP_FMINNUM:
   case ISD::VP_FMAXNUM:
+  case ISD::VP_FMINIMUMNUM:
+  case ISD::VP_FMAXIMUMNUM:
   case ISD::VP_FCOPYSIGN:
     if (Op.getValueType() == MVT::nxv32f16 &&
         (Subtarget.hasVInstructionsF16Minimal() &&
@@ -12924,8 +12938,10 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
     case ISD::FADD:
       return RISCVISD::VECREDUCE_FADD_VL;
     case ISD::FMAXNUM:
+    case ISD::FMAXIMUMNUM:
       return RISCVISD::VECREDUCE_FMAX_VL;
     case ISD::FMINNUM:
+    case ISD::FMINIMUMNUM:
       return RISCVISD::VECREDUCE_FMIN_VL;
     }
   };
@@ -16637,7 +16653,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::FMAXNUM:
-  case ISD::FMINNUM: {
+  case ISD::FMINNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM: {
     if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
       return V;
     if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
