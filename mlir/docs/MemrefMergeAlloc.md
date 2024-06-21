@@ -278,8 +278,6 @@ The pass should only consider to merge a `memref.alloc` only if
    yielded by a function or a loop.
  * and the memref is "dense" in its strides (points to a contiguous range of
    memory) and it has static shape
- * and memref is in the default memory space (this restriction may be removed in
-   the future)
 
 In tick-based merge-alloc, we call these `memref.alloc` **mergeable**
 allocations.
