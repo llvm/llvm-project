@@ -266,7 +266,7 @@ void AddDebugInfoPass::runOnOperation() {
 
     // Only definitions need a distinct identifier and a compilation unit.
     mlir::DistinctAttr id;
-    mlir::LLVM::DIScopeAttr Scope = fileAttr;
+    mlir::LLVM::DIScopeAttr Scope = cuAttr;
     mlir::LLVM::DICompileUnitAttr compilationUnit;
     mlir::LLVM::DISubprogramFlags subprogramFlags =
         mlir::LLVM::DISubprogramFlags{};
