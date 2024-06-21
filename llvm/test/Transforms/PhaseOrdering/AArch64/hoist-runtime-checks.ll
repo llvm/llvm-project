@@ -35,9 +35,9 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER13]]
 ; CHECK:       for.body.preheader13:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
@@ -150,9 +150,9 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER11]]
 ; CHECK:       for.body.preheader11:
 ; CHECK-NEXT:    [[I_07_PH:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[N_VEC]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
@@ -293,7 +293,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 2000, i32 1}
+; CHECK: [[PROF4]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
 ;.

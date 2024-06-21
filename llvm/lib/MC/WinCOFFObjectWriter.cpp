@@ -354,7 +354,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
+  if (UseOffsetLabels && !MCSec.empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
@@ -1097,8 +1097,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   // Create the contents of the .llvm_addrsig section.
   if (Mode != DwoOnly && OWriter.EmitAddrsigSection) {
-    auto Frag = new MCDataFragment(AddrsigSection);
-    Frag->setLayoutOrder(0);
+    auto *Frag = Asm.getContext().allocFragment<MCDataFragment>();
+    Frag->setParent(AddrsigSection);
+    AddrsigSection->addFragment(*Frag);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
@@ -1118,8 +1119,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   // Create the contents of the .llvm.call-graph-profile section.
   if (Mode != DwoOnly && CGProfileSection) {
-    auto *Frag = new MCDataFragment(CGProfileSection);
-    Frag->setLayoutOrder(0);
+    auto *Frag = Asm.getContext().allocFragment<MCDataFragment>();
+    Frag->setParent(CGProfileSection);
+    CGProfileSection->addFragment(*Frag);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
@@ -1209,15 +1211,13 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                    const MCAsmLayout &Layout) {
   if (EmitAddrsigSection) {
     ObjWriter->AddrsigSection = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
     Asm.registerSection(*ObjWriter->AddrsigSection);
   }
 
   if (!Asm.CGProfile.empty()) {
     ObjWriter->CGProfileSection = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
     Asm.registerSection(*ObjWriter->CGProfileSection);
   }
 

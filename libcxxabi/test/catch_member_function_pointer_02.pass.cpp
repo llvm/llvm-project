@@ -11,11 +11,11 @@
 // UNSUPPORTED: no-exceptions
 
 // Support for catching a function pointer including noexcept was shipped in macOS 10.13
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // GCC supports noexcept function types but this test still fails.
 // This is likely a bug in their implementation. Investigation needed.
-// XFAIL: gcc-13
+// XFAIL: gcc-13, gcc-14
 
 #include <cassert>
 

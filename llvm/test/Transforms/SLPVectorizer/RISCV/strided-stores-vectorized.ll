@@ -4,33 +4,12 @@
 define void @store_reverse(ptr %p3) {
 ; CHECK-LABEL: @store_reverse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P3:%.*]], align 8
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX1]], align 8
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[P3:%.*]], i64 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 7
-; CHECK-NEXT:    store i64 [[SHL]], ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 9
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX4]], align 8
-; CHECK-NEXT:    [[SHL5:%.*]] = shl i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 6
-; CHECK-NEXT:    store i64 [[SHL5]], ptr [[ARRAYIDX6]], align 8
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX7]], align 8
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 10
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX8]], align 8
-; CHECK-NEXT:    [[SHL9:%.*]] = shl i64 [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 5
-; CHECK-NEXT:    store i64 [[SHL9]], ptr [[ARRAYIDX10]], align 8
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX11]], align 8
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 11
-; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[ARRAYIDX12]], align 8
-; CHECK-NEXT:    [[SHL13:%.*]] = shl i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, ptr [[P3]], i64 4
-; CHECK-NEXT:    store i64 [[SHL13]], ptr [[ARRAYIDX14]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[P3]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[ARRAYIDX1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i64> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i64.p0.i64(<4 x i64> [[TMP2]], ptr align 8 [[ARRAYIDX2]], i64 -8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, i32 4)
 ; CHECK-NEXT:    ret void
 ;
 entry:

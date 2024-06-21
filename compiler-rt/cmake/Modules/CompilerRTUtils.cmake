@@ -369,7 +369,11 @@ macro(construct_compiler_rt_default_triple)
   endif()
 
   if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-    execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} -print-target-triple
+    set(option_prefix "")
+    if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+      set(option_prefix "/clang:")
+    endif()
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
                     OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()
@@ -542,9 +546,9 @@ function(add_compiler_rt_install_targets name)
                               -DCMAKE_INSTALL_DO_STRIP=1
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     set_target_properties(install-${ARG_PARENT_TARGET} PROPERTIES
-                          FOLDER "Compiler-RT Misc")
+                          FOLDER "Compiler-RT/Installation")
     set_target_properties(install-${ARG_PARENT_TARGET}-stripped PROPERTIES
-                          FOLDER "Compiler-RT Misc")
+                          FOLDER "Compiler-RT/Installation")
     add_dependencies(install-compiler-rt install-${ARG_PARENT_TARGET})
     add_dependencies(install-compiler-rt-stripped install-${ARG_PARENT_TARGET}-stripped)
   endif()

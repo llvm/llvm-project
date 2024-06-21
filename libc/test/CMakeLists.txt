@@ -8,10 +8,14 @@ add_custom_target(libc-long-running-tests)
 
 add_subdirectory(UnitTest)
 
-if(LIBC_TARGET_OS_IS_GPU AND
-   (NOT TARGET libc.utils.gpu.loader OR LIBC_GPU_TESTS_DISABLED))
-  message(WARNING "Cannot build libc GPU tests, missing loader or architecture")
-  return()
+if(LIBC_TARGET_OS_IS_GPU)
+  if(NOT TARGET libc.utils.gpu.loader)
+    message(WARNING "Cannot build libc GPU tests, missing loader.")
+    return()
+  elseif(LIBC_GPU_TESTS_DISABLED)
+    message(WARNING "Cannot build libc GPU tests, missing target architecture.")
+    return()
+  endif()
 endif()
 
 add_subdirectory(include)

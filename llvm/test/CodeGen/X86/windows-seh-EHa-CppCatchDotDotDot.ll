@@ -7,39 +7,39 @@
 ; CHECK-NEXT:	.long	("$ip2state$?crash@@YAXH@Z")
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
-; CHECK-NEXT:        .long   -1                
-; CHECK-NEXT:        .long   0                 
-; CHECK-NEXT:        .long   0                 
+; CHECK-NEXT:        .long   -1
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   "?dtor$
-; CHECK-NEXT:        .long   -1                
-; CHECK-NEXT:        .long   0                 
+; CHECK-NEXT:        .long   -1
+; CHECK-NEXT:        .long   0
 
 ; CHECK-LABEL: "$tryMap$?crash@@YAXH@Z":
-; CHECK-NEXT:        .long   0             
-; CHECK-NEXT:        .long   1             
-; CHECK-NEXT:        .long   2             
-; CHECK-NEXT:        .long   1             
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   ("$handlerMap$
 
 ; CHECK:       "$handlerMap$0$?crash@@YAXH@Z"
-; CHECK-NEXT:        .long   0             
-; CHECK-NEXT:        .long   0             
-; CHECK-NEXT:        .long   0             
-; CHECK-NEXT:        .long   "?catch$ 
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   "?catch$
 
 ; CHECK-LABEL: "$ip2state$?crash@@YAXH@Z":
 ; CHECK-NEXT:	.long	.Lfunc_begin0@IMGREL
-; CHECK-NEXT:	.long	-1                  
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	0                   
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	-1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	0                  
+; CHECK-NEXT:	.long	0
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	-1                                  
+; CHECK-NEXT:	.long	1
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	0
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	-1
 ; CHECK-NEXT:	.long	"?catch$
-; CHECK-NEXT:	.long	2                  
+; CHECK-NEXT:	.long	2
 
 ; ModuleID = 'windows-seh-EHa-CppCatchDotDotDot.cpp'
 source_filename = "windows-seh-EHa-CppCatchDotDotDot.cpp"

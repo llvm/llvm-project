@@ -1037,8 +1037,11 @@ public:
     addAttribute(StringAttr::get(getContext(), name), attr);
   }
 
-  /// Add an attribute with the specified name.
+  /// Add an attribute with the specified name. `name` and `attr` must not be
+  /// null.
   void addAttribute(StringAttr name, Attribute attr) {
+    assert(name && "attribute name cannot be null");
+    assert(attr && "attribute cannot be null");
     attributes.append(name, attr);
   }
 
@@ -1047,7 +1050,11 @@ public:
     attributes.append(newAttributes);
   }
 
-  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  /// Adds a successor to the operation sate. `successor` must not be null.
+  void addSuccessors(Block *successor) {
+    assert(successor && "successor cannot be null");
+    successors.push_back(successor);
+  }
   void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
@@ -1212,6 +1219,9 @@ public:
   /// Return if the printer should print users of values.
   bool shouldPrintValueUsers() const;
 
+  /// Return if printer should use unique SSA IDs.
+  bool shouldPrintUniqueSSAIDs() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1242,6 +1252,9 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
+
+  /// Print unique SSA IDs for values, block arguments and naming conflicts
+  bool printUniqueSSAIDsFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//

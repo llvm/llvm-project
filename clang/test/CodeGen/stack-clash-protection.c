@@ -1,9 +1,9 @@
 // Check the correct function attributes are generated
-// RUN: %clang_cc1 -triple x86_64-linux -O0 -S -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
-// RUN: %clang_cc1 -triple s390x-linux-gnu -O0 -S -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64le-linux-gnu -O0 -S -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
-// RUN: %clang_cc1 -triple powerpc64-linux-gnu -O0 -S -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -O0 -S -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -O0 -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
+// RUN: %clang_cc1 -triple s390x-linux-gnu -O0 -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64le-linux-gnu -O0 -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
+// RUN: %clang_cc1 -triple powerpc64-linux-gnu -O0 -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -O0 -emit-llvm -o- %s -fstack-clash-protection -mstack-probe-size=8192 | FileCheck %s
 
 // CHECK: define{{.*}} void @large_stack() #[[A:.*]] {
 void large_stack(void) {

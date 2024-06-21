@@ -863,9 +863,9 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
         if (LdRegex.match(Name)) {
           Type *ScalarTy =
-              dyn_cast<VectorType>(F->getReturnType())->getElementType();
-          ElementCount EC = dyn_cast<VectorType>(F->arg_begin()->getType())
-                                ->getElementCount();
+              cast<VectorType>(F->getReturnType())->getElementType();
+          ElementCount EC =
+              cast<VectorType>(F->arg_begin()->getType())->getElementCount();
           Type *Ty = VectorType::get(ScalarTy, EC);
           static const Intrinsic::ID LoadIDs[] = {
               Intrinsic::aarch64_sve_ld2_sret,
@@ -1059,7 +1059,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name.equals("coro.end")) {
+    if (F->arg_size() == 2 && Name == "coro.end") {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
@@ -4385,8 +4385,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                      .StartsWith("aarch64.sve.ld3", 3)
                      .StartsWith("aarch64.sve.ld4", 4)
                      .Default(0);
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements() / N;
     SmallVector<Value *, 2> Args(CI->args());
     Value *NewLdCall = Builder.CreateCall(NewFn, Args);
@@ -4414,8 +4413,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       DefaultCase();
       return;
     }
-    ScalableVectorType *RetTy =
-        dyn_cast<ScalableVectorType>(F->getReturnType());
+    auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements();
     unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     Value *NewIdx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
@@ -4431,9 +4429,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     if (Name.starts_with("aarch64.sve.tuple.set")) {
-      unsigned I = dyn_cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      ScalableVectorType *Ty =
-          dyn_cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
+      unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      auto *Ty = cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
       Value *NewIdx =
           ConstantInt::get(Type::getInt64Ty(C), I * Ty->getMinNumElements());
       NewCall = Builder.CreateCall(
@@ -4447,8 +4444,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                        .StartsWith("aarch64.sve.tuple.create4", 4)
                        .Default(0);
       assert(N > 1 && "Create is expected to be between 2-4");
-      ScalableVectorType *RetTy =
-          dyn_cast<ScalableVectorType>(F->getReturnType());
+      auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
       Value *Ret = llvm::PoisonValue::get(RetTy);
       unsigned MinElts = RetTy->getMinNumElements() / N;
       for (unsigned I = 0; I < N; I++) {
@@ -5368,8 +5364,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
-  if (T.isRISCV64()) {
-    // Make i32 a native type for 64-bit RISC-V.
+  if (T.isLoongArch64() || T.isRISCV64()) {
+    // Make i32 a native type for 64-bit LoongArch and RISC-V.
     auto I = DL.find("-n64-");
     if (I != StringRef::npos)
       return (DL.take_front(I) + "-n32:64-" + DL.drop_front(I + 5)).str();
@@ -5403,6 +5399,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    return Res;
+  }
+
+  // AArch64 data layout upgrades.
+  if (T.isAArch64()) {
+    // Add "-Fn32"
+    if (!DL.empty() && !DL.contains("-Fn32"))
+      Res.append("-Fn32");
     return Res;
   }
 

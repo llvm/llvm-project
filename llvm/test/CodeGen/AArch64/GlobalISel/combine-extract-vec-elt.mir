@@ -361,8 +361,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: %idx:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
-    ; CHECK-NEXT: %extract:_(s64) = G_FREEZE [[EVEC]]
+    ; CHECK-NEXT: %fvec:_(<2 x s64>) = G_FREEZE %vec
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %fvec(<2 x s64>), %idx(s64)
     ; CHECK-NEXT: $x0 = COPY %extract(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %vec:_(<2 x s64>) = COPY $q0
@@ -568,6 +568,69 @@ body:             |
     %bv:_(<2 x s64>) = G_BUILD_VECTOR_TRUNC %arg1(s128), %arg2(s128)
     %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
     $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_undef
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_undef
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(-1, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_opaque
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_opaque
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %idx:_(s64) = COPY $x1
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(undef, 0, 0, 0)
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = COPY $x1
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(-1, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_const
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %arg1(<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(3, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
     RET_ReallyLR implicit $x0
 ...
 ---

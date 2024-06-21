@@ -113,8 +113,11 @@ bool OffloadTargetInfo::isOffloadKindValid() const {
 
 bool OffloadTargetInfo::isOffloadKindCompatible(
     const StringRef TargetOffloadKind) const {
-  if (OffloadKind == TargetOffloadKind)
+  if ((OffloadKind == TargetOffloadKind) ||
+      (OffloadKind == "hip" && TargetOffloadKind == "hipv4") ||
+      (OffloadKind == "hipv4" && TargetOffloadKind == "hip"))
     return true;
+
   if (BundlerConfig.HipOpenmpCompatible) {
     bool HIPCompatibleWithOpenMP = OffloadKind.starts_with_insensitive("hip") &&
                                    TargetOffloadKind == "openmp";

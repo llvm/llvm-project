@@ -1035,27 +1035,27 @@ multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
                     (ins GR8:$val, i8mem:$ptr),
                     !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
                     [(set GR8:$dst,
-                          (!cast<PatFrag>(frag # "_8") addr:$ptr, GR8:$val))]>;
+                          (!cast<PatFrag>(frag # "_i8") addr:$ptr, GR8:$val))]>;
     def NAME#16 : I<opc, MRMSrcMem, (outs GR16:$dst),
                     (ins GR16:$val, i16mem:$ptr),
                     !strconcat(mnemonic, "{w}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR16:$dst,
-                       (!cast<PatFrag>(frag # "_16") addr:$ptr, GR16:$val))]>,
+                       (!cast<PatFrag>(frag # "_i16") addr:$ptr, GR16:$val))]>,
                     OpSize16;
     def NAME#32 : I<opc, MRMSrcMem, (outs GR32:$dst),
                     (ins GR32:$val, i32mem:$ptr),
                     !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR32:$dst,
-                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
+                       (!cast<PatFrag>(frag # "_i32") addr:$ptr, GR32:$val))]>,
                     OpSize32;
     def NAME#64 : RI<opc, MRMSrcMem, (outs GR64:$dst),
                      (ins GR64:$val, i64mem:$ptr),
                      !strconcat(mnemonic, "{q}\t{$val, $ptr|$ptr, $val}"),
                      [(set
                         GR64:$dst,
-                        (!cast<PatFrag>(frag # "_64") addr:$ptr, GR64:$val))]>;
+                        (!cast<PatFrag>(frag # "_i64") addr:$ptr, GR64:$val))]>;
   }
 }
 
@@ -1125,7 +1125,9 @@ multiclass ATOMIC_LOAD_FP_BINOP_MI<string Name, SDNode op> {
             Requires<[HasAVX512]>;
 }
 defm : ATOMIC_LOAD_FP_BINOP_MI<"ADD", fadd>;
-// FIXME: Add fsub, fmul, fdiv, ...
+defm : ATOMIC_LOAD_FP_BINOP_MI<"SUB", fsub>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"MUL", fmul>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"DIV", fdiv>;
 
 multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
                         dag dag64> {
@@ -1570,21 +1572,21 @@ let Predicates = [HasNDD] in {
 }
 
 // Depositing value to 8/16 bit subreg:
-def : Pat<(or (and GR64:$dst, -256), 
+def : Pat<(or (and GR64:$dst, -256),
               (i64 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR32:$dst, -256), 
+def : Pat<(or (and GR32:$dst, -256),
               (i32 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR64:$dst, -65536), 
+def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-def : Pat<(or (and GR32:$dst, -65536), 
+def : Pat<(or (and GR32:$dst, -65536),
               (i32 (zextloadi16 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

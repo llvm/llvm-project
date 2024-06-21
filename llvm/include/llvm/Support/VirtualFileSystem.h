@@ -31,7 +31,6 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -219,7 +218,7 @@ namespace detail {
 
 /// Keeps state for the recursive_directory_iterator.
 struct RecDirIterState {
-  std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
+  std::vector<directory_iterator> Stack;
   bool HasNoPushRequest = false;
 };
 
@@ -242,8 +241,8 @@ public:
   /// Equivalent to operator++, with an error code.
   recursive_directory_iterator &increment(std::error_code &EC);
 
-  const directory_entry &operator*() const { return *State->Stack.top(); }
-  const directory_entry *operator->() const { return &*State->Stack.top(); }
+  const directory_entry &operator*() const { return *State->Stack.back(); }
+  const directory_entry *operator->() const { return &*State->Stack.back(); }
 
   bool operator==(const recursive_directory_iterator &Other) const {
     return State == Other.State; // identity
@@ -319,6 +318,10 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  /// \returns true if \p A and \p B represent the same file, or an error or
+  /// false if they do not.
+  llvm::ErrorOr<bool> equivalent(const Twine &A, const Twine &B);
 
   enum class PrintType { Summary, Contents, RecursiveContents };
   void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
@@ -961,7 +964,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
+    if ((CaseSensitive ? lhs == rhs : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }

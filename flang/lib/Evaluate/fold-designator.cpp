@@ -273,9 +273,8 @@ static std::optional<DataRef> OffsetToDataRef(FoldingContext &context,
   if (IsAllocatableOrPointer(symbol)) {
     return entity.IsSymbol() ? DataRef{symbol}
                              : DataRef{std::move(entity.GetComponent())};
-  }
-  std::optional<DataRef> result;
-  if (std::optional<DynamicType> type{DynamicType::From(symbol)}) {
+  } else if (std::optional<DynamicType> type{DynamicType::From(symbol)}) {
+    std::optional<DataRef> result;
     if (!type->IsUnlimitedPolymorphic()) {
       if (std::optional<Shape> shape{GetShape(context, symbol)}) {
         if (GetRank(*shape) > 0) {
@@ -289,7 +288,7 @@ static std::optional<DataRef> OffsetToDataRef(FoldingContext &context,
               : DataRef{std::move(entity.GetComponent())};
         }
         if (result && type->category() == TypeCategory::Derived &&
-            size < result->GetLastSymbol().size()) {
+            size <= result->GetLastSymbol().size()) {
           if (const Symbol *
               component{OffsetToUniqueComponent(
                   type->GetDerivedTypeSpec(), offset)}) {
@@ -298,25 +297,32 @@ static std::optional<DataRef> OffsetToDataRef(FoldingContext &context,
                 NamedEntity{Component{std::move(*result), *component}}, offset,
                 size);
           }
-          result.reset();
         }
       }
     }
+    return result;
+  } else {
+    return std::nullopt;
   }
-  return result;
 }
 
 // Reconstructs a Designator from a symbol, an offset, and a size.
+// Returns a ProcedureDesignator in the case of a whole procedure pointer.
 std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
     const Symbol &baseSymbol, ConstantSubscript offset, std::size_t size) {
   if (offset < 0) {
     return std::nullopt;
-  }
-  if (std::optional<DataRef> dataRef{
-          OffsetToDataRef(context, NamedEntity{baseSymbol}, offset, size)}) {
+  } else if (std::optional<DataRef> dataRef{OffsetToDataRef(
+                 context, NamedEntity{baseSymbol}, offset, size)}) {
     const Symbol &symbol{dataRef->GetLastSymbol()};
-    if (std::optional<Expr<SomeType>> result{
-            AsGenericExpr(std::move(*dataRef))}) {
+    if (IsProcedurePointer(symbol)) {
+      if (std::holds_alternative<SymbolRef>(dataRef->u)) {
+        return Expr<SomeType>{ProcedureDesignator{symbol}};
+      } else if (auto *component{std::get_if<Component>(&dataRef->u)}) {
+        return Expr<SomeType>{ProcedureDesignator{std::move(*component)}};
+      }
+    } else if (std::optional<Expr<SomeType>> result{
+                   AsGenericExpr(std::move(*dataRef))}) {
       if (IsAllocatableOrPointer(symbol)) {
       } else if (auto type{DynamicType::From(symbol)}) {
         if (auto elementBytes{

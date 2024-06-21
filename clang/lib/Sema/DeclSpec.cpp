@@ -416,6 +416,7 @@ bool Declarator::isDeclarationOfFunction() const {
 bool Declarator::isStaticMember() {
   assert(getContext() == DeclaratorContext::Member);
   return getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
+         (!isDeclarationOfFunction() && !getTemplateParameterLists().empty()) ||
          (getName().getKind() == UnqualifiedIdKind::IK_OperatorFunctionId &&
           CXXMethodDecl::isStaticOverloadedOperator(
               getName().OperatorFunctionId.Operator));
@@ -1202,7 +1203,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         !S.Context.getTargetInfo().hasFeature("power8-vector"))
       S.Diag(TSTLoc, diag::err_invalid_vector_int128_decl_spec);
 
-    if (TypeAltiVecBool) {
+    // Complex vector types are not supported.
+    if (TypeSpecComplex != TSC_unspecified)
+      S.Diag(TSCLoc, diag::err_invalid_vector_complex_decl_spec);
+    else if (TypeAltiVecBool) {
       // Sign specifiers are not allowed with vector bool. (PIM 2.1)
       if (getTypeSpecSign() != TypeSpecifierSign::Unspecified) {
         S.Diag(TSSLoc, diag::err_invalid_vector_bool_decl_spec)

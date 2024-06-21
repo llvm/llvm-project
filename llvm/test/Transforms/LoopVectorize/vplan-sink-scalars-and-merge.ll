@@ -16,7 +16,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -85,7 +85,7 @@ exit:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -169,7 +169,7 @@ exit:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -269,7 +269,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:   CLONE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%iv>, ir<%k>
 ; CHECK-NEXT:   EMIT vp<[[NOT2:%.+]]> = not ir<%cmp>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]>, vp<[[NOT2]]>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK]]>, vp<[[NOT2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -326,7 +326,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -340,7 +340,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]>, ir<%c.1>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.1>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -361,15 +361,12 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
-; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.1>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[OR]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK1]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -426,7 +423,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -441,7 +438,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -462,16 +459,13 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
-; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
-; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = select vp<[[OR]]>, ir<%c.1>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.1>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK4]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK3]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -535,7 +529,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -549,7 +543,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK1:%.+]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1:%.+]]>, ir<%c.0>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -570,16 +564,13 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): then.0.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.0.0:
-; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
-; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
 ; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
-; CHECK-NEXT:   EMIT vp<[[MASK5:%.+]]> = select vp<[[MASK4]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK5]]>
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK3]]>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -644,7 +635,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -683,7 +674,7 @@ define void @merge_3_replicate_region(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.3:
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = select vp<[[MASK]]>, ir<%c.0>, ir<false>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK]]>, ir<%c.0>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul vp<[[PRED1]]>, vp<[[PRED2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -749,7 +740,7 @@ define void @update_2_uses_in_same_recipe_in_merged_block(i32 %k) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -816,7 +807,7 @@ define void @recipe_in_merge_candidate_used_by_first_order_recurrence(i32 %k) {
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + (8 umin %k))<nuw><nsw>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
@@ -1103,7 +1094,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ph:
+; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %start to i64))
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:

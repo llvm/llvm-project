@@ -15,3 +15,6 @@ vector8float foo3(double x) {
   return __builtin_convertvector(x, vector8float);  // expected-error {{must be a vector}}
 }
 
+float foo4(float x) {
+  return __builtin_convertvector(x, float); // expected-error {{first argument to __builtin_convertvector must be a vector}}
+}

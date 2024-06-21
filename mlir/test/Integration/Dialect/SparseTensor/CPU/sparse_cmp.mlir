@@ -132,22 +132,22 @@ module {
     // CHECK-NEXT: nse = 16
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
-    // CHECK-NEXT: values : ( 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3 )
+    // CHECK-NEXT: values : ( 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0 )
     // CHECK-NEXT: ----
     //
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 11
     // CHECK-NEXT: dim = ( 4, 4 )
     // CHECK-NEXT: lvl = ( 4, 4 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 9, 11
-    // CHECK-NEXT: crd[1] : ( 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1
-    // CHECK-NEXT: values : ( 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 9, 11 )
+    // CHECK-NEXT: crd[1] : ( 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1 )
+    // CHECK-NEXT: values : ( 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0 )
     // CHECK-NEXT: ----
     //
     %v = vector.transfer_read %all_dn_out[%c0, %c0], %d0

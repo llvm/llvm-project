@@ -182,7 +182,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE}).legalIf(typeInSet(1, allPtrs));
 
-  getActionDefinitionsBuilder(G_BITREVERSE).legalFor(allFloatScalarsAndVectors);
+  getActionDefinitionsBuilder(G_BITREVERSE).legalFor(allIntScalarsAndVectors);
 
   getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
 
@@ -277,6 +277,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FCEIL,
                                G_FCOS,
                                G_FSIN,
+                               G_FTAN,
+                               G_FACOS,
+                               G_FASIN,
+                               G_FATAN,
+                               G_FCOSH,
+                               G_FSINH,
+                               G_FTANH,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
@@ -303,6 +310,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
     // Struct return types become a single scalar, so cannot easily legalize.
     getActionDefinitionsBuilder({G_SMULH, G_UMULH}).alwaysLegal();
+
+    // supported saturation arithmetic
+    getActionDefinitionsBuilder({G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT})
+        .legalFor(allIntScalarsAndVectors);
   }
 
   getLegacyLegalizerInfo().computeTables();

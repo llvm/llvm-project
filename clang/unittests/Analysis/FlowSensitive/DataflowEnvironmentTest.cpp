@@ -9,6 +9,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -401,6 +403,37 @@ TEST_F(EnvironmentTest,
   Env.initialize();
   EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
               Contains(Member));
+}
+
+TEST_F(EnvironmentTest, Stmt) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct S { int i; };
+      void foo() {
+        S AnS = S{1};
+      }
+    )cc";
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *DeclStatement = const_cast<DeclStmt *>(selectFirst<DeclStmt>(
+      "d", match(declStmt(hasSingleDecl(varDecl(hasName("AnS")))).bind("d"),
+                 Context)));
+  ASSERT_THAT(DeclStatement, NotNull());
+  auto *Init = (cast<VarDecl>(*DeclStatement->decl_begin()))->getInit();
+  ASSERT_THAT(Init, NotNull());
+
+  // Verify that we can retrieve the result object location for the initializer
+  // expression when we analyze the DeclStmt for `AnS`.
+  Environment Env(DAContext, *DeclStatement);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And don't crash when retrieving the result object location.
+  Env.getResultObjectLocation(*Init);
 }
 
 } // namespace

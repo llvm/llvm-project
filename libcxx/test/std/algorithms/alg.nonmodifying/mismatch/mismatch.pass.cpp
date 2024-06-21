@@ -66,14 +66,27 @@ TEST_CONSTEXPR_CXX20 void check(Container1 lhs, Container2 rhs, size_t offset) {
 #endif
 }
 
-struct NonTrivial {
+// Compares modulo 4 to make sure we only forward to the vectorized version if we are trivially equality comparable
+struct NonTrivialMod4Comp {
   int i_;
 
-  TEST_CONSTEXPR_CXX20 NonTrivial(int i) : i_(i) {}
-  TEST_CONSTEXPR_CXX20 NonTrivial(NonTrivial&& other) : i_(other.i_) { other.i_ = 0; }
+  TEST_CONSTEXPR_CXX20 NonTrivialMod4Comp(int i) : i_(i) {}
+  TEST_CONSTEXPR_CXX20 NonTrivialMod4Comp(NonTrivialMod4Comp&& other) : i_(other.i_) { other.i_ = 0; }
 
-  TEST_CONSTEXPR_CXX20 friend bool operator==(const NonTrivial& lhs, const NonTrivial& rhs) { return lhs.i_ == rhs.i_; }
+  TEST_CONSTEXPR_CXX20 friend bool operator==(const NonTrivialMod4Comp& lhs, const NonTrivialMod4Comp& rhs) {
+    return lhs.i_ % 4 == rhs.i_ % 4;
+  }
 };
+
+#if TEST_STD_VER >= 20
+struct TriviallyEqualityComparable {
+  int i_;
+
+  TEST_CONSTEXPR_CXX20 TriviallyEqualityComparable(int i) : i_(i) {}
+
+  TEST_CONSTEXPR_CXX20 friend bool operator==(TriviallyEqualityComparable, TriviallyEqualityComparable) = default;
+};
+#endif // TEST_STD_VER >= 20
 
 struct ModTwoComp {
   TEST_CONSTEXPR_CXX20 bool operator()(int lhs, int rhs) { return lhs % 2 == rhs % 2; }
@@ -136,16 +149,30 @@ TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), Test());
 
   { // use a non-integer type to also test the general case - all elements match
-    std::array<NonTrivial, 8> lhs = {1, 2, 3, 4, 5, 6, 7, 8};
-    std::array<NonTrivial, 8> rhs = {1, 2, 3, 4, 5, 6, 7, 8};
-    check<NonTrivial*>(std::move(lhs), std::move(rhs), 8);
+    std::array<NonTrivialMod4Comp, 8> lhs = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::array<NonTrivialMod4Comp, 8> rhs = {1, 2, 3, 4, 1, 6, 7, 8};
+    check<NonTrivialMod4Comp*>(std::move(lhs), std::move(rhs), 8);
   }
 
   { // use a non-integer type to also test the general case - not all elements match
-    std::array<NonTrivial, 8> lhs = {1, 2, 3, 4, 7, 6, 7, 8};
-    std::array<NonTrivial, 8> rhs = {1, 2, 3, 4, 5, 6, 7, 8};
-    check<NonTrivial*>(std::move(lhs), std::move(rhs), 4);
+    std::array<NonTrivialMod4Comp, 8> lhs = {1, 2, 3, 4, 7, 6, 7, 8};
+    std::array<NonTrivialMod4Comp, 8> rhs = {1, 2, 3, 4, 5, 6, 7, 8};
+    check<NonTrivialMod4Comp*>(std::move(lhs), std::move(rhs), 4);
   }
+
+#if TEST_STD_VER >= 20
+  { // trivially equality comparable class type to test forwarding to the vectorized version - all elements match
+    std::array<TriviallyEqualityComparable, 8> lhs = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::array<TriviallyEqualityComparable, 8> rhs = {1, 2, 3, 4, 5, 6, 7, 8};
+    check<TriviallyEqualityComparable*>(std::move(lhs), std::move(rhs), 8);
+  }
+
+  { // trivially equality comparable class type to test forwarding to the vectorized version - not all elements match
+    std::array<TriviallyEqualityComparable, 8> lhs = {1, 2, 3, 4, 7, 6, 7, 8};
+    std::array<TriviallyEqualityComparable, 8> rhs = {1, 2, 3, 4, 5, 6, 7, 8};
+    check<TriviallyEqualityComparable*>(std::move(lhs), std::move(rhs), 4);
+  }
+#endif // TEST_STD_VER >= 20
 
   return true;
 }

@@ -11,6 +11,7 @@
 #include "Floating.h"
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
+#include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -137,9 +138,8 @@ static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
 }
 
 static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
-                      bool IsActive, const Descriptor *D,
+                      bool IsActive, bool IsUnion, const Descriptor *D,
                       unsigned FieldOffset) {
-  bool IsUnion = false; // FIXME
   auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
   Desc->Offset = FieldOffset;
   Desc->Desc = D;
@@ -174,7 +174,7 @@ static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
     initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
              V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
-    initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, F.Desc,
+    initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, IsUnion, F.Desc,
               F.Offset);
 
   // If this is initializing a virtual base, we do NOT want to consider its
@@ -193,7 +193,7 @@ static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   for (const auto &V : D->ElemRecord->bases())
     initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
-    initField(B, Ptr, IsConst, IsMutable, IsActive, F.Desc, F.Offset);
+    initField(B, Ptr, IsConst, IsMutable, IsActive, D->ElemRecord->isUnion(), F.Desc, F.Offset);
   for (const auto &V : D->ElemRecord->virtual_bases())
     initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, true);
 }
@@ -347,14 +347,6 @@ Descriptor::Descriptor(const DeclTy &D)
   assert(Source && "Missing source");
 }
 
-/// Dummy array.
-Descriptor::Descriptor(const DeclTy &D, UnknownSize)
-    : Source(D), ElemSize(1), Size(UnknownSizeMark), MDSize(0),
-      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
-      IsTemporary(false), IsArray(true), IsDummy(true) {
-  assert(Source && "Missing source");
-}
-
 QualType Descriptor::getType() const {
   if (auto *E = asExpr())
     return E->getType();
@@ -367,8 +359,14 @@ QualType Descriptor::getType() const {
 
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
-  const auto *AT = cast<ArrayType>(getType());
-  return AT->getElementType();
+  QualType T = getType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
+  if (const auto *CT = T->getAs<ComplexType>())
+    return CT->getElementType();
+  if (const auto *CT = T->getAs<VectorType>())
+    return CT->getElementType();
+  llvm_unreachable("Array that's not an array/complex/vector type?");
 }
 
 SourceLocation Descriptor::getLocation() const {

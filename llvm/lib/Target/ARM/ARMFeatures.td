@@ -15,6 +15,18 @@ def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
 // ARM Subtarget features.
 //
 
+// This is currently only used by AArch64, but is required here because ARM and
+// AArch64 share a tablegen backend for TargetParser.
+class Extension<
+  string TargetFeatureName,            // String used for -target-feature.
+  string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
+  string Desc,                         // Description.
+  list<SubtargetFeature> Implies = []  // List of dependent features.
+> : SubtargetFeature<TargetFeatureName, "Has" # Spelling, "true", Desc, Implies>
+{
+    string ArchExtKindSpelling = "AEK_" # Spelling; // ArchExtKind enum name.
+}
+
 // Floating Point, HW Division and Neon Support
 
 // FP loads/stores/moves, shared between VFP and MVE (even in the integer-only
@@ -536,15 +548,14 @@ def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
+// If frame pointers are in use, they must follow the AAPCS definition, which
+// always uses R11 as the frame pointer. If this is not set, we can use R7 as
+// the frame pointer for Thumb1-only code, which is more efficient, but less
+// compatible. Note that this feature does not control whether frame pointers
+// are emitted, that is controlled by the "frame-pointer" function attribute.
 def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
                                               "CreateAAPCSFrameChain", "true",
                                               "Create an AAPCS compliant frame chain">;
-
-def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
-                                                  "CreateAAPCSFrameChainLeaf", "true",
-                                                  "Create an AAPCS compliant frame chain "
-                                                  "for leaf functions",
-                                                  [FeatureAAPCSFrameChain]>;
 
 // Assume that lock-free 32-bit atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

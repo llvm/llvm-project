@@ -88,10 +88,11 @@ define <4 x float> @test7(<4 x float> %x) {
   ret <4 x float> %r
 }
 
-; This should turn into a single shuffle.
+; This should not turn into a single shuffle.
 define <4 x float> @test8(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[T134:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x i32> <i32 1, i32 poison, i32 3, i32 4>
+; CHECK-NEXT:    [[T132:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float undef, float poison, float poison>, <4 x i32> <i32 1, i32 5, i32 3, i32 poison>
+; CHECK-NEXT:    [[T134:%.*]] = shufflevector <4 x float> [[T132]], <4 x float> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
 ; CHECK-NEXT:    ret <4 x float> [[T134]]
 ;
   %t4 = extractelement <4 x float> %x, i32 1
@@ -1280,6 +1281,17 @@ define <2 x float> @fneg(<2 x float> %x) {
   ret <2 x float> %r
 }
 
+define <2 x float> @fneg_not_single_source(<2 x float> %x) {
+; CHECK-LABEL: @fneg_not_single_source(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[SPLAT1:%.*]] = insertelement <2 x float> [[NEG]], float undef, i64 1
+; CHECK-NEXT:    ret <2 x float> [[SPLAT1]]
+;
+  %neg = fneg <2 x float> %x
+  %splat = shufflevector <2 x float> %neg, <2 x float> undef, <2 x i32> <i32 0, i32 2>
+  ret <2 x float> %splat
+}
+
 define <2 x float> @fmul_splat_constant(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_splat_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X:%.*]], <float 4.200000e+01, float poison>
@@ -2329,4 +2341,39 @@ define <4 x i16> @blend_elements_from_load(ptr align 8 %_0) {
   %load = load <3 x i16>, ptr %_0, align 8
   %rv = shufflevector <3 x i16> <i16 0, i16 undef, i16 undef>, <3 x i16> %load, <4 x i32> <i32 0, i32 1, i32 3, i32 5>
   ret <4 x i16> %rv
+}
+
+define i16 @pr92887(<2 x i16> %v) {
+; CHECK-LABEL: @pr92887(
+; CHECK-NEXT:    ret i16 undef
+;
+  %v0 = extractelement <2 x i16> %v, i64 0
+  %v0lo = and i16 %v0, 1
+  %v1 = extractelement <2 x i16> %v, i64 1
+  %v1lo = and i16 %v1, 1
+  %ins1 = insertelement <4 x i16> poison, i16 %v0lo, i64 0
+  %ins2 = insertelement <4 x i16> %ins1, i16 %v1lo, i64 1
+  %shuf = shufflevector <4 x i16> %ins2, <4 x i16> <i16 poison, i16 poison, i16 undef, i16 undef>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %extract = extractelement <4 x i16> %shuf, i32 2
+  ret i16 %extract
+}
+
+define <2 x i32> @not_splat_shuffle1(i32 %x) {
+; CHECK-LABEL: @not_splat_shuffle1(
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %vec = insertelement <2 x i32> undef, i32 %x, i32 1
+  %shuf = shufflevector <2 x i32> %vec, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  ret <2 x i32> %shuf
+}
+
+define <2 x i32> @not_splat_shuffle2(i32 %x) {
+; CHECK-LABEL: @not_splat_shuffle2(
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x i32> <i32 poison, i32 undef>, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x i32> [[SHUF]]
+;
+  %vec = insertelement <2 x i32> poison, i32 %x, i32 1
+  %shuf = shufflevector <2 x i32> %vec, <2 x i32> undef, <2 x i32> <i32 1, i32 3>
+  ret <2 x i32> %shuf
 }

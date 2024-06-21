@@ -611,3 +611,21 @@ namespace {
 
   static_assert((g<int>(), true), "");
 }
+
+namespace {
+  /// The InitListExpr here is of void type.
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+                                                      // both-note {{subexpression not valid in a constant expression}}
+}
+
+namespace FuncPtrParam {
+  void foo(int(&a)()) {
+    *a; // both-warning {{expression result unused}}
+  }
+}
+
+namespace {
+  void f() noexcept;
+  void (&r)() = f;
+  void (&cond3)() = r;
+}

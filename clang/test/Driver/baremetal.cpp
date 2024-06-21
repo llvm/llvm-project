@@ -9,7 +9,7 @@
 // RUN:     -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-C %s
-// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-none-unknown-eabi"
+// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
 // CHECK-V6M-C-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-C-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"

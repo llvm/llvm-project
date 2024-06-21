@@ -24,7 +24,7 @@ void main() {
 // CHECK:     -CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:8:3, line:10:3> line:8:5 getFirst 'K ()' implicit-inline
 // CHECK-NEXT:-CompoundStmt 0x{{[0-9A-Fa-f]+}} <col:16, line:10:3>
 // CHECK-NEXT:-ReturnStmt 0x{{[0-9A-Fa-f]+}} <line:9:4, col:16>
-// CHECK-NEXT:-CXXDependentScopeMemberExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> '<dependent type>' lvalue .First
+// CHECK-NEXT:-MemberExpr 0x{{[0-9A-Fa-f]+}} <col:11, col:16> 'K' lvalue .First 0x{{[0-9A-Fa-f]+}}
 // CHECK-NEXT:-CXXThisExpr 0x{{[0-9A-Fa-f]+}} <col:11> 'Pair<K, V>' lvalue this
 // CHECK-NEXT:-CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <line:12:3, line:14:3> line:12:5 getSecond 'V ()' implicit-inline
 // CHECK-NEXT:-CompoundStmt 0x{{[0-9A-Fa-f]+}} <col:17, line:14:3>

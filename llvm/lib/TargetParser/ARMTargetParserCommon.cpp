@@ -139,7 +139,7 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
 // returned in `PBP`. Returns false in error, with `Err` containing
 // an erroneous part of the spec.
 bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                                StringRef &Err) {
+                                StringRef &Err, bool EnablePAuthLR) {
   PBP = {"none", "a_key", false, false, false};
   if (Spec == "none")
     return true; // defaults are ok
@@ -148,6 +148,7 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     PBP.Scope = "non-leaf";
     PBP.BranchTargetEnforcement = true;
     PBP.GuardedControlStack = true;
+    PBP.BranchProtectionPAuthLR = EnablePAuthLR;
     return true;
   }
 

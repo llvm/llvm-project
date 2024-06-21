@@ -32,9 +32,43 @@ template <class Emitter> class LocalScope;
 template <class Emitter> class DestructorScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
+template <class Emitter> class InitLinkScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
 template <class Emitter> class SourceLocScope;
+
+template <class Emitter> class ByteCodeExprGen;
+struct InitLink {
+public:
+  enum {
+    K_This = 0,
+    K_Field = 1,
+    K_Decl = 2,
+  };
+
+  static InitLink This() { return InitLink{K_This}; }
+  static InitLink Field(unsigned Offset) {
+    InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Decl(const ValueDecl *D) {
+    InitLink IL{K_Decl};
+    IL.D = D;
+    return IL;
+  }
+
+  InitLink(uint8_t Kind) : Kind(Kind) {}
+  template <class Emitter>
+  bool emit(ByteCodeExprGen<Emitter> *Ctx, const Expr *E) const;
+
+private:
+  uint32_t Kind;
+  union {
+    unsigned Offset;
+    const ValueDecl *D;
+  };
+};
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -90,6 +124,9 @@ public:
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
+  bool VisitObjCStringLiteral(const ObjCStringLiteral *E);
+  bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
+  bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
   bool VisitCharacterLiteral(const CharacterLiteral *E);
   bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
   bool VisitFloatCompoundAssignOperator(const CompoundAssignOperator *E);
@@ -112,6 +149,7 @@ public:
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
+  bool VisitEmbedExpr(const EmbedExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
@@ -121,10 +159,16 @@ public:
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
+  bool VisitRecoveryExpr(const RecoveryExpr *E);
+  bool VisitAddrLabelExpr(const AddrLabelExpr *E);
+  bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+  bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
+  bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD) override;
+  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -182,6 +226,8 @@ protected:
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  /// Visit the given decl as if we have a reference to it.
+  bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -225,7 +271,8 @@ protected:
     return this->emitFinishInitPop(I);
   }
 
-  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
+                     const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.
@@ -233,16 +280,19 @@ protected:
                                   bool IsExtended = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned> allocateLocal(DeclTy &&Decl, bool IsExtended = false);
+  std::optional<unsigned>
+  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
 
 private:
   friend class VariableScope<Emitter>;
   friend class LocalScope<Emitter>;
   friend class DestructorScope<Emitter>;
   friend class DeclScope<Emitter>;
+  friend class InitLinkScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
   friend class SourceLocScope<Emitter>;
+  friend struct InitLink;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
@@ -309,6 +359,10 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+  const ValueDecl *InitializingDecl = nullptr;
+
+  llvm::SmallVector<InitLink> InitStack;
+  bool InitStackActive = false;
 
   /// Flag indicating if we're initializing a global variable.
   bool GlobalDecl = false;
@@ -320,8 +374,8 @@ extern template class ByteCodeExprGen<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
-      : Ctx(Ctx), Parent(Ctx->VarScope) {
+  VariableScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
+      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD) {
     Ctx->VarScope = this;
   }
 
@@ -344,6 +398,24 @@ public:
       this->Parent->addExtended(Local);
   }
 
+  void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
+    // Walk up the chain of scopes until we find the one for ExtendingDecl.
+    // If there is no such scope, attach it to the parent one.
+    VariableScope *P = this;
+    while (P) {
+      if (P->ValDecl == ExtendingDecl) {
+        P->addLocal(Local);
+        return;
+      }
+      P = P->Parent;
+      if (!P)
+        break;
+    }
+
+    // Use the parent scope.
+    addExtended(Local);
+  }
+
   virtual void emitDestruction() {}
   virtual bool emitDestructors() { return true; }
   VariableScope *getParent() const { return Parent; }
@@ -353,12 +425,14 @@ protected:
   ByteCodeExprGen<Emitter> *Ctx;
   /// Link to the parent scope.
   VariableScope *Parent;
+  const ValueDecl *ValDecl = nullptr;
 };
 
 /// Generic scope for local variables.
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
-  LocalScope(ByteCodeExprGen<Emitter> *Ctx) : VariableScope<Emitter>(Ctx) {}
+  LocalScope(ByteCodeExprGen<Emitter> *Ctx)
+      : VariableScope<Emitter>(Ctx, nullptr) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -472,16 +546,9 @@ public:
   }
 };
 
-/// Expression scope which tracks potentially lifetime extended
-/// temporaries which are hoisted to the parent scope on exit.
 template <class Emitter> class ExprScope final : public AutoScope<Emitter> {
 public:
   ExprScope(ByteCodeExprGen<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
-
-  void addExtended(const Scope::Local &Local) override {
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-  }
 };
 
 template <class Emitter> class ArrayIndexScope final {
@@ -518,6 +585,18 @@ public:
 private:
   ByteCodeExprGen<Emitter> *Ctx;
   bool Enabled = false;
+};
+
+template <class Emitter> class InitLinkScope final {
+public:
+  InitLinkScope(ByteCodeExprGen<Emitter> *Ctx, InitLink &&Link) : Ctx(Ctx) {
+    Ctx->InitStack.push_back(std::move(Link));
+  }
+
+  ~InitLinkScope() { this->Ctx->InitStack.pop_back(); }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
 };
 
 } // namespace interp
