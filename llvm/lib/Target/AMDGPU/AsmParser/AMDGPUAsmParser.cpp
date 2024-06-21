@@ -1578,6 +1578,8 @@ public:
     return AMDGPU::isGFX12_10(getSTI());
   }
 
+  bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
+
   bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
 
   bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
@@ -5113,7 +5115,9 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts])
+  // TODO: Workaround for now. FeatureGFX12_10Insts is added to GFX13, but GFX13 is not required
+  // VGPRAlignment.
+  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX12_10Insts]) || isGFX13())
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
