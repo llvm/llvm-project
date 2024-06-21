@@ -480,6 +480,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   }
 
   BC.setNumUnusedProfiledObjects(NumUnused);
+  
+  for (BinaryFunction* BF : BC.getAllBinaryFunctions()) 
+    if (ProfiledFunctions.find(BF) == ProfiledFunctions.end())
+      BF->setIgnored();
 
   return Error::success();
 }
