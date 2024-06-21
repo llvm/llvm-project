@@ -9,14 +9,13 @@
 // type unit that is kept has the .dwo file name that it came from. When LLDB
 // loads the foreign type units, it needs to verify that any entries from
 // foreign type units come from the right .dwo file. We test this since the
-// contents of type units are not always the same even though they have the same
-// type hash. We don't want invalid accelerator table entries to come from one
-// .dwo file and be used on a type unit from another since this could cause
+// contents of type units are not always the same even though they have the
+// same type hash. We don't want invalid accelerator table entries to come from
+// one .dwo file and be used on a type unit from another since this could cause
 // invalid lookups to happen. LLDB knows how to track down which .dwo file a
 // type unit comes from by looking at the DW_AT_dwo_name attribute in the
 // DW_TAG_type_unit.
 
-// Now test with DWARF5
 // RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf \
 // RUN:   -fdebug-types-section -gpubnames -c %s -o %t.main.o
 // RUN: %clang -target x86_64-pc-linux -gdwarf-5 -gsplit-dwarf -DVARIANT \
@@ -93,14 +92,6 @@
 // DWPFOO-NEXT:     CustomType::FloatType y;
 // DWPFOO-NEXT: }
 
-// We need to do this so we end with a type unit in each .dwo file and that has
-// the same signature but different contents. When we make the .dwp file, then
-// one of the type units will end up in the .dwp file and we will have
-// .debug_names accelerator tables for both type units and we need to ignore
-// the type units .debug_names entries that don't match the .dwo file whose
-// copy of the type unit ends up in the final .dwp file. To do this, LLDB will
-// look at the type unit and take the DWO name attribute and make sure it
-// matches, and if it doesn't, it will ignore the accelerator table entry.
 struct CustomType {
   // We switch the order of "FloatType" and "IntegerType" so that if we do
   // end up reading the wrong accelerator table entry, that we would end up

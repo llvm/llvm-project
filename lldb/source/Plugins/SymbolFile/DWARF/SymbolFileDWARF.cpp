@@ -1744,27 +1744,18 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
   if (GetFileIndex() == file_index)
     return this;
 
-  // If we are currently in a .dwo file and our file index doesn't match we need
-  // to let the base symbol file handle this.
-  SymbolFileDWARFDwo *dwo = llvm::dyn_cast_or_null<SymbolFileDWARFDwo>(this);
-  if (dwo)
-    return dwo->GetDIERefSymbolFile(die_ref);
-
   if (file_index) {
-    SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile();
-    if (debug_map) {
       // We have a SymbolFileDWARFDebugMap, so let it find the right file
+\    if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
-    } else {
-      // Handle the .dwp file case correctly
-      if (*file_index == DIERef::k_file_index_mask)
-        return GetDwpSymbolFile().get(); // DWP case
+    
+    // Handle the .dwp file case correctly
+    if (*file_index == DIERef::k_file_index_mask)
+      return GetDwpSymbolFile().get(); // DWP case
 
-      // Handle the .dwo file case correctly
-      return DebugInfo()
-          .GetUnitAtIndex(*die_ref.file_index())
-          ->GetDwoSymbolFile(); // DWO case
-    }
+    // Handle the .dwo file case correctly
+    return DebugInfo().GetUnitAtIndex(*die_ref.file_index())
+        ->GetDwoSymbolFile(); // DWO case
   }
   return this;
 }
