@@ -57,6 +57,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stack>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
