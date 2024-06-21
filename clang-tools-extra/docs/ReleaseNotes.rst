@@ -341,10 +341,6 @@ Changes in existing checks
   <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
   include cycles.
 
-- Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by avoiding false positives for
-  the functions with the same name as standard library functions.
-
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.

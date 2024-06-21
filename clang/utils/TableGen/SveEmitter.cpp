@@ -1781,7 +1781,12 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   uint64_t VerifyRuntimeMode = getEnumValueForFlag("VerifyRuntimeMode");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
+
   for (auto &Def : Defs) {
+    if (!Def->isFlagSet(VerifyRuntimeMode) && Def->getGuard().contains("sve") &&
+        Def->getGuard().contains("sme"))
+      llvm_unreachable("Missing VerifyRuntimeMode flag");
+
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
     else if (Def->isFlagSet(VerifyRuntimeMode))
