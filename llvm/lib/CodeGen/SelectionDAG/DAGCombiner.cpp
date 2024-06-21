@@ -12093,7 +12093,7 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
   if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal))
     return TLI.isConstTrueVal(Mask) ? Vec : Passthru;
 
-  if (Vec.isUndef() || Mask.isUndef())
+  if ((Vec.isUndef() && Passthru.isUndef()) || Mask.isUndef())
     return DAG.getUNDEF(VecVT);
 
   // No need for potentially expensive compress if the mask is constant.
@@ -12104,6 +12104,7 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
     unsigned NumElmts = VecVT.getVectorNumElements();
     for (unsigned I = 0; I < NumElmts; ++I) {
       SDValue MaskI = Mask.getOperand(I);
+      // We treat undef mask entries as "false".
       if (MaskI.isUndef())
         continue;
 
