@@ -1086,14 +1086,6 @@ def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
-def int_minimumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-  [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
->;
-def int_maximumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-  [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
->;
 
 // Internal interface for object size checking
 def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -1285,14 +1277,6 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in 
                                                          LLVMMatchType<0>,
                                                          llvm_metadata_ty ]>;
   def int_experimental_constrained_minimum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_maximumnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
-                                                       [ LLVMMatchType<0>,
-                                                         LLVMMatchType<0>,
-                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_minimumnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ LLVMMatchType<0>,
                                                          LLVMMatchType<0>,
                                                          llvm_metadata_ty ]>;
@@ -2093,16 +2077,6 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_minimumnum : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ LLVMMatchType<0>,
-                               LLVMMatchType<0>,
-                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                               llvm_i32_ty]>;
-  def int_vp_maximumnum : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
-                             [ LLVMMatchType<0>,
-                               LLVMMatchType<0>,
-                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                               llvm_i32_ty]>;
   def int_vp_copysign : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
@@ -2288,16 +2262,6 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                    llvm_i32_ty]>;
   def int_vp_reduce_fminimum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                 [ LLVMVectorElementType<0>,
-                                   llvm_anyvector_ty,
-                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                   llvm_i32_ty]>;
-  def int_vp_reduce_fmaximumnum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                 [ LLVMVectorElementType<0>,
-                                   llvm_anyvector_ty,
-                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                   llvm_i32_ty]>;
-  def int_vp_reduce_fminimumnum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                  [ LLVMVectorElementType<0>,
                                    llvm_anyvector_ty,
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -2539,10 +2503,6 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_vector_reduce_fminimum: DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [llvm_anyvector_ty]>;
   def int_vector_reduce_fmaximum: DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
-  def int_vector_reduce_fminimumnum: DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
-  def int_vector_reduce_fmaximumnum: DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [llvm_anyvector_ty]>;
 }
 
