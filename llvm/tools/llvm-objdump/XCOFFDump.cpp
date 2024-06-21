@@ -20,7 +20,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -30,10 +32,128 @@ using namespace llvm::support;
 
 namespace {
 class XCOFFDumper : public objdump::Dumper {
+  const XCOFFObjectFile &Obj;
+  unsigned Width;
 public:
-  XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O) {}
-  void printPrivateHeaders() override {}
+  XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O), Obj(O) {}
+  void printPrivateHeaders() override;
+  void printFileHeader();
+  void printAuxiliaryHeader(){};
+  void printLoaderSectionHeader();
+  FormattedString formatName(StringRef Name);
+  void printHex(StringRef Name, uint64_t Value);
+  void printNumber(StringRef Name, uint64_t Value);
+  void printStrHex(StringRef Name, StringRef Str, uint64_t Value);
+  void setWidth(unsigned W) {Width =W;};
 };
+
+void XCOFFDumper::printPrivateHeaders() {
+  printFileHeader();
+  printAuxiliaryHeader();
+  printLoaderSectionHeader();
+}
+
+FormattedString XCOFFDumper::formatName(StringRef Name) {
+  return FormattedString(Name, Width, FormattedString::JustifyLeft);
+}
+
+void XCOFFDumper::printHex(StringRef Name, uint64_t Value) {
+  outs() << formatName(Name) << format_hex(Value, 0) << "\n";
+}
+
+void XCOFFDumper::printNumber(StringRef Name, uint64_t Value) {
+  outs() << formatName(Name) << format_decimal(Value, 0) << "\n";
+}
+
+void XCOFFDumper::printStrHex(StringRef Name, StringRef Str, uint64_t Value) {
+  outs() << formatName(Name) << Str << " (" << format_decimal(Value, 0) << ")"
+         << "\n";
+}
+
+void XCOFFDumper::printFileHeader() {
+  setWidth(20);
+  outs() << "\n---File Header:\n";
+  printHex("Magic:", Obj.getMagic());
+  printNumber("NumberOfSections:", Obj.getNumberOfSections());
+
+  // Negative timestamp values are reserved for future use.
+  int32_t TimeStamp = Obj.getTimeStamp();
+  if (TimeStamp > 0) {
+    // This handling of the time stamp assumes that the host
+    // system's time_t is
+    //  compatible with AIX time_t. If a platform is not
+    //  compatible, the lit
+    // tests will let us know.
+    time_t TimeDate = TimeStamp;
+
+    char FormattedTime[80] = {};
+
+    size_t BytesFormatted = strftime(FormattedTime, sizeof(FormattedTime),
+                                     "%F %T", gmtime(&TimeDate));
+    if (BytesFormatted)
+      printStrHex("TimeStamp:", FormattedTime, TimeStamp);
+    else
+      printHex("Timestamp:", TimeStamp);
+  } else {
+    printStrHex("TimeStamp:", TimeStamp == 0 ? "None" : "Reserved Value",
+                TimeStamp);
+  }
+
+  // The number of symbol table entries is an unsigned value in
+  // 64-bit objects and a signed value (with negative values
+  // being 'reserved') in 32-bit objects.
+
+  if (Obj.is64Bit()) {
+    printHex("SymbolTableOffset:", Obj.getSymbolTableOffset64());
+    printNumber("SymbolTableEntries:", Obj.getNumberOfSymbolTableEntries64());
+  } else {
+    printHex("SymbolTableOffset:", Obj.getSymbolTableOffset32());
+    int32_t SymTabEntries = Obj.getRawNumberOfSymbolTableEntries32();
+    if (SymTabEntries >= 0)
+      printNumber("SymbolTableEntries:", SymTabEntries);
+    else
+      printStrHex("SymbolTableEntries:", "Reserved Value", SymTabEntries);
+  }
+
+  printHex("OptionalHeaderSize:", Obj.getOptionalHeaderSize());
+  printHex("Flags:", Obj.getFlags());
+}
+
+void XCOFFDumper::printLoaderSectionHeader() {
+  Expected<uintptr_t> LoaderSectionAddrOrError =
+      Obj.getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
+  if (!LoaderSectionAddrOrError) {
+    reportUniqueWarning(LoaderSectionAddrOrError.takeError());
+    return;
+  }
+  uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
+
+  auto PrintLoadSecHeaderCommon = [&](const auto *LDHeader) {
+    printNumber("Version:", LDHeader->Version);
+    printNumber("NumberOfSymbolEntries:", LDHeader->NumberOfSymTabEnt);
+    printNumber("NumberOfRelocationEntries:", LDHeader->NumberOfRelTabEnt);
+    printNumber("LengthOfImportFileIDStringTable:",
+                LDHeader->LengthOfImpidStrTbl);
+    printNumber("NumberOfImportFileIDs:", LDHeader->NumberOfImpid);
+    printHex("OffsetToImportFileIDs:", LDHeader->OffsetToImpid);
+    printNumber("LengthOfStringTable:", LDHeader->LengthOfStrTbl);
+    printHex("OffsetToStringTable:", LDHeader->OffsetToStrTbl);
+  };
+
+  setWidth(35);
+  outs() << "\n---Loader Section Header:\n";
+  if (Obj.is64Bit()) {
+    const LoaderSectionHeader64 *LoaderSec64 =
+        reinterpret_cast<const LoaderSectionHeader64 *>(LoaderSectionAddr);
+    PrintLoadSecHeaderCommon(LoaderSec64);
+    printHex("OffsetToSymbolTable", LoaderSec64->OffsetToSymTbl);
+    printHex("OffsetToRelocationEntries", LoaderSec64->OffsetToRelEnt);
+  } else {
+    const LoaderSectionHeader32 *LoaderSec32 =
+        reinterpret_cast<const LoaderSectionHeader32 *>(LoaderSectionAddr);
+    PrintLoadSecHeaderCommon(LoaderSec32);
+  }
+}
 } // namespace
 
 std::unique_ptr<objdump::Dumper>
