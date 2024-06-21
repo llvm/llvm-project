@@ -18,7 +18,7 @@ define ptr @frame_1(i32 signext %num) nounwind {
 ; AIX32-NEXT:    lbz 4, 0(3)
 ; AIX32-NEXT:    addi 4, 4, 1
 ; AIX32-NEXT:    stb 4, 0(3)
-; AIX32-NEXT:    lwz 3, 0(31)
+; AIX32-NEXT:    lwz 3, 0(1)
 ; AIX32-NEXT:    lwz 1, 0(1)
 ; AIX32-NEXT:    lwz 31, -4(1)
 ; AIX32-NEXT:    blr
@@ -37,7 +37,7 @@ define ptr @frame_1(i32 signext %num) nounwind {
 ; AIX64-NEXT:    lbz 4, 0(3)
 ; AIX64-NEXT:    addi 4, 4, 1
 ; AIX64-NEXT:    stb 4, 0(3)
-; AIX64-NEXT:    ld 3, 0(31)
+; AIX64-NEXT:    ld 3, 0(1)
 ; AIX64-NEXT:    ld 1, 0(1)
 ; AIX64-NEXT:    ld 31, -8(1)
 ; AIX64-NEXT:    blr
@@ -56,7 +56,7 @@ define ptr @frame_1(i32 signext %num) nounwind {
 ; LE-NEXT:    lbz 4, 0(3)
 ; LE-NEXT:    addi 4, 4, 1
 ; LE-NEXT:    stb 4, 0(3)
-; LE-NEXT:    ld 3, 0(31)
+; LE-NEXT:    ld 3, 0(1)
 ; LE-NEXT:    ld 1, 0(1)
 ; LE-NEXT:    ld 31, -8(1)
 ; LE-NEXT:    blr
@@ -85,7 +85,7 @@ define ptr @frame_0(i32 signext %num) nounwind {
 ; AIX32-NEXT:    lbz 4, 0(3)
 ; AIX32-NEXT:    addi 4, 4, 1
 ; AIX32-NEXT:    stb 4, 0(3)
-; AIX32-NEXT:    mr 3, 31
+; AIX32-NEXT:    mr 3, 1
 ; AIX32-NEXT:    lwz 1, 0(1)
 ; AIX32-NEXT:    lwz 31, -4(1)
 ; AIX32-NEXT:    blr
@@ -104,7 +104,7 @@ define ptr @frame_0(i32 signext %num) nounwind {
 ; AIX64-NEXT:    lbz 4, 0(3)
 ; AIX64-NEXT:    addi 4, 4, 1
 ; AIX64-NEXT:    stb 4, 0(3)
-; AIX64-NEXT:    mr 3, 31
+; AIX64-NEXT:    mr 3, 1
 ; AIX64-NEXT:    ld 1, 0(1)
 ; AIX64-NEXT:    ld 31, -8(1)
 ; AIX64-NEXT:    blr
@@ -123,7 +123,7 @@ define ptr @frame_0(i32 signext %num) nounwind {
 ; LE-NEXT:    lbz 4, 0(3)
 ; LE-NEXT:    addi 4, 4, 1
 ; LE-NEXT:    stb 4, 0(3)
-; LE-NEXT:    mr 3, 31
+; LE-NEXT:    mr 3, 1
 ; LE-NEXT:    ld 1, 0(1)
 ; LE-NEXT:    ld 31, -8(1)
 ; LE-NEXT:    blr
