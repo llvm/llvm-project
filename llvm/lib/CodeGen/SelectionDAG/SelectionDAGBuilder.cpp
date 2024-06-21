@@ -6841,6 +6841,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
+  case Intrinsic::minimumnum:
+    setValue(&I, DAG.getNode(ISD::FMINIMUMNUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+  case Intrinsic::maximumnum:
+    setValue(&I, DAG.getNode(ISD::FMAXIMUMNUM, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::copysign:
     setValue(&I, DAG.getNode(ISD::FCOPYSIGN, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -9182,6 +9194,18 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitBinaryFloatCall(I, ISD::FMAXNUM))
           return;
         break;
+      case LibFunc_fminimum_num:
+      case LibFunc_fminimum_numf:
+      case LibFunc_fminimum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMINIMUMNUM))
+          return;
+        break;
+      case LibFunc_fmaximum_num:
+      case LibFunc_fmaximum_numf:
+      case LibFunc_fmaximum_numl:
+        if (visitBinaryFloatCall(I, ISD::FMAXIMUMNUM))
+          return;
+        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
@@ -10643,6 +10667,12 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     break;
   case Intrinsic::vector_reduce_fminimum:
     Res = DAG.getNode(ISD::VECREDUCE_FMINIMUM, dl, VT, Op1, SDFlags);
+    break;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    Res = DAG.getNode(ISD::VECREDUCE_FMAXIMUMNUM, dl, VT, Op1, SDFlags);
+    break;
+  case Intrinsic::vector_reduce_fminimumnum:
+    Res = DAG.getNode(ISD::VECREDUCE_FMINIMUMNUM, dl, VT, Op1, SDFlags);
     break;
   default:
     llvm_unreachable("Unhandled vector reduce intrinsic");
