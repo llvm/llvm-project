@@ -19,6 +19,7 @@ class LetDummies {
   bit FPDPRounding;
   bit IsInvalidSingleUseConsumer;
   bit IsInvalidSingleUseProducer;
+  bit IsDPMACCInstruction;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -92,6 +93,7 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   bit IsTrue16 = P.IsTrue16;
   bit IsInvalidSingleUseConsumer = P.IsInvalidSingleUseConsumer;
   bit IsInvalidSingleUseProducer = P.IsInvalidSingleUseProducer;
+  bit IsDPMACCInstruction = 0;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -188,6 +190,7 @@ class VOP_Real<VOP_Pseudo ps> {
   bit IsSingle = ps.Pfl.IsSingle;
   bit IsInvalidSingleUseConsumer = ps.Pfl.IsInvalidSingleUseConsumer;
   bit IsInvalidSingleUseProducer = ps.Pfl.IsInvalidSingleUseProducer;
+  bit IsDPMACCInstruction = ps.IsDPMACCInstruction;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -1958,4 +1961,13 @@ def SingleUseExceptionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getSingleUseExceptionHelper";
+}
+
+def DPMACCInstructionTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "DPMACCInstructionInfo";
+  let Fields = ["Opcode", "IsDPMACCInstruction"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getDPMACCInstructionHelper";
 }
