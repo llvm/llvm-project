@@ -1451,8 +1451,18 @@ static bool isConstReg(MachineRegisterInfo *MRI, SPIRVType *OpDef) {
     if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
       OpDef = RefDef;
   }
-  return OpDef->getOpcode() == TargetOpcode::G_CONSTANT ||
-         OpDef->getOpcode() == TargetOpcode::G_FCONSTANT;
+  unsigned Opcode = OpDef->getOpcode();
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+    return true;
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+    return cast<GIntrinsic>(*OpDef).getIntrinsicID() ==
+           Intrinsic::spv_const_composite;
+  }
+  return false;
 }
 
 // Return true if the virtual register represents a constant
