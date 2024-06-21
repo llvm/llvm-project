@@ -7372,36 +7372,43 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicTable() {
 template <class ELFT>
 void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
     const Elf_Dyn &Entry) {
+  auto FormatFlags = [this, Value = Entry.getVal()](auto Flags) {
+    ListScope L(this->W, "Flags");
+    for (const auto &Flag : Flags) {
+      if (Flag.Value != 0 && (Value & Flag.Value) == Flag.Value)
+        this->W.printString(Flag.Name);
+    }
+  };
   switch (Entry.getTag()) {
   case DT_SONAME:
     this->W.printString("Name", this->getDynamicString(Entry.getVal()));
     break;
   case DT_AUXILIARY:
-    LLVM_FALLTHROUGH;
   case DT_FILTER:
-    LLVM_FALLTHROUGH;
-  case DT_NEEDED: {
-    ListScope L(this->W, "Libraries");
-    this->W.printString(this->getDynamicString(Entry.getVal()));
-  } break;
-  case DT_USED: {
-    ListScope L(this->W, "Objects");
-    this->W.printString(this->getDynamicString(Entry.getVal()));
-  } break;
+  case DT_NEEDED:
+    this->W.printString("Library", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_USED:
+    this->W.printString("Object", this->getDynamicString(Entry.getVal()));
+    break;
   case DT_RPATH:
-    LLVM_FALLTHROUGH;
   case DT_RUNPATH: {
+    StringRef Value = this->getDynamicString(Entry.getVal());
     ListScope L(this->W, "Path");
-    this->W.printString(this->getDynamicString(Entry.getVal()));
+    while (!Value.empty()) {
+      auto [front, back] = Value.split(':');
+      this->W.printString(front);
+      Value = back;
+    }
   } break;
   case DT_FLAGS:
-    LLVM_FALLTHROUGH;
+    FormatFlags(ArrayRef(ElfDynamicDTFlags));
+    break;
   case DT_FLAGS_1:
-    this->W.printString("Flags",
-                        this->getDynamicEntry(Entry.getTag(), Entry.getVal()));
+    FormatFlags(ArrayRef(ElfDynamicDTFlags1));
     break;
   default:
-    break;
+    return;
   }
 }
 
@@ -7412,9 +7419,9 @@ template <class ELFT> void JSONELFDumper<ELFT>::printDynamicTable() {
     DictScope D(this->W);
     uintX_t Tag = Entry.getTag();
     this->W.printHex("Tag", Tag);
+    this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
     this->W.printHex("Value", Entry.getVal());
     this->printAuxillaryDynamicTableEntryInfo(Entry);
-    this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
   }
 }
 
