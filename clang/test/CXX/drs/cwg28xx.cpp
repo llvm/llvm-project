@@ -6,6 +6,30 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
+
+int main() {} // required for cwg2811
+
+namespace cwg2811 { // cwg2811: 3.5
+#if __cplusplus >= 201103L
+void f() {
+  (void)[&] {
+    using T = decltype(main);
+    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+  };
+  using T2 = decltype(main);
+  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+}
+
+using T = decltype(main);
+// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+
+int main();
+
+using U = decltype(main);
+using U2 = decltype(&main);
+#endif
+} // namespace cwg2811
+
 namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
@@ -110,22 +134,18 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2877 { // cwg2877: no tentatively ready 2024-05-31
+namespace cwg2877 { // cwg2877: 19 tentatively ready 2024-05-31
 #if __cplusplus >= 202002L
 enum E { x };
 void f() {
   int E;
-  // FIXME: OK, names ::E
-  using enum E;
-  // since-cxx20-error@-1 {{unknown type name E}}
+  using enum E;   // OK, names ::E
 }
 using F = E;
 using enum F;     // OK, designates ::E
 template<class T> using EE = T;
 void g() {
-  // FIXME: OK, designates ::E
-  using enum EE<E>;
-  // since-cxx20-error@-1 {{using enum requires an enum or typedef name}}
+  using enum EE<E>;  // OK, designates ::E
 }
 #endif
 } // namespace cwg2877

@@ -11,7 +11,7 @@
 // Aligned allocations are not supported on macOS < 10.13
 // Note: use 'unsupported' instead of 'xfail' to ensure
 // we won't pass prior to c++17.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 

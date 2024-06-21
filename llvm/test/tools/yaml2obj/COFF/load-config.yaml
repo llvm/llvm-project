@@ -190,7 +190,7 @@ sections:
 symbols: []
 ...
 
-## Create laod config larger than coff_load_configuration32 struct.
+## Create load config larger than coff_load_configuration32 struct.
 # RUN: yaml2obj --docnum=4 %s -o %t
 # RUN: llvm-readobj --hex-dump=.rdata %t | FileCheck %s --check-prefix=LARGE
 

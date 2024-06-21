@@ -8094,8 +8094,8 @@ ParseStatus AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
   if (getParser().parseExpression(ImmL))
     return ParseStatus::NoMatch;
 
-  unsigned ImmFVal = dyn_cast<MCConstantExpr>(ImmF)->getValue();
-  unsigned ImmLVal = dyn_cast<MCConstantExpr>(ImmL)->getValue();
+  unsigned ImmFVal = cast<MCConstantExpr>(ImmF)->getValue();
+  unsigned ImmLVal = cast<MCConstantExpr>(ImmL)->getValue();
 
   Operands.push_back(
       AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));

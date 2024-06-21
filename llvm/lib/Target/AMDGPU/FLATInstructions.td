@@ -966,6 +966,15 @@ defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_s
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
 let SubtargetPredicate = isGFX12Plus in {
+  let Uses = [EXEC, M0] in {
+    defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
+    defm GLOBAL_STORE_BLOCK  : FLAT_Global_Store_Pseudo <"global_store_block", VReg_1024>;
+  }
+  let Uses = [EXEC, FLAT_SCR, M0] in {
+    defm SCRATCH_LOAD_BLOCK : FLAT_Scratch_Load_Pseudo <"scratch_load_block", VReg_1024>;
+    defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VReg_1024>;
+  }
+
   let WaveSizePredicate = isWave32 in {
     let Mnemonic = "global_load_tr_b128" in
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w32", VReg_128>;
@@ -2658,6 +2667,8 @@ defm GLOBAL_STORE_BYTE_D16_HI      : VGLOBAL_Real_AllAddr_gfx12<0x024, "global_s
 defm GLOBAL_STORE_SHORT_D16_HI     : VGLOBAL_Real_AllAddr_gfx12<0x025, "global_store_d16_hi_b16">;
 defm GLOBAL_LOAD_DWORD_ADDTID      : VGLOBAL_Real_AllAddr_gfx12<0x028, "global_load_addtid_b32">;
 defm GLOBAL_STORE_DWORD_ADDTID     : VGLOBAL_Real_AllAddr_gfx12<0x029, "global_store_addtid_b32">;
+defm GLOBAL_LOAD_BLOCK             : VGLOBAL_Real_AllAddr_gfx12<0x053>;
+defm GLOBAL_STORE_BLOCK            : VGLOBAL_Real_AllAddr_gfx12<0x054>;
 
 defm GLOBAL_ATOMIC_SWAP            : VGLOBAL_Real_Atomics_gfx12<0x033, "global_atomic_swap_b32">;
 defm GLOBAL_ATOMIC_CMPSWAP         : VGLOBAL_Real_Atomics_gfx12<0x034, "global_atomic_cmpswap_b32">;
@@ -2728,3 +2739,6 @@ defm SCRATCH_LOAD_SBYTE_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x22, "scratch_
 defm SCRATCH_LOAD_SHORT_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x23, "scratch_load_d16_hi_b16">;
 defm SCRATCH_STORE_BYTE_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x24, "scratch_store_d16_hi_b8">;
 defm SCRATCH_STORE_SHORT_D16_HI    : VSCRATCH_Real_AllAddr_gfx12<0x25, "scratch_store_d16_hi_b16">;
+
+defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
+defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;

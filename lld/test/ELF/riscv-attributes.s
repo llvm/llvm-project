@@ -64,20 +64,20 @@
 # UNKNOWN22:         warning: unknown22a.o:(.riscv.attributes): invalid tag 0x16 at offset 0x10
 
 # HDR:      Name              Type             Address          Off    Size   ES Flg Lk Inf Al
-# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000158 00003e 00      0   0  1{{$}}
+# HDR:      .riscv.attributes RISCV_ATTRIBUTES 0000000000000000 000158 000047 00      0   0  1{{$}}
 
 # HDR:      Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # HDR:      LOAD           0x000000 0x0000000000010000 0x0000000000010000 0x000158 0x000158 R   0x1000
 # HDR-NEXT: GNU_STACK      0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 RW  0
-# HDR-NEXT: ATTRIBUTES     0x000158 0x0000000000000000 0x0000000000000000 0x00003e 0x00003e R   0x1{{$}}
+# HDR-NEXT: ATTRIBUTES     0x000158 0x0000000000000000 0x0000000000000000 0x000047 0x000047 R   0x1{{$}}
 
 # CHECK:      BuildAttributes {
 # CHECK-NEXT:   FormatVersion: 0x41
 # CHECK-NEXT:   Section 1 {
-# CHECK-NEXT:     SectionLength: 61
+# CHECK-NEXT:     SectionLength: 70
 # CHECK-NEXT:     Vendor: riscv
 # CHECK-NEXT:     Tag: Tag_File (0x1)
-# CHECK-NEXT:     Size: 51
+# CHECK-NEXT:     Size: 60
 # CHECK-NEXT:     FileAttributes {
 # CHECK-NEXT:       Attribute {
 # CHECK-NEXT:         Tag: 4
@@ -88,7 +88,7 @@
 # CHECK-NEXT:       Attribute {
 # CHECK-NEXT:         Tag: 5
 # CHECK-NEXT:         TagName: arch
-# CHECK-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0{{$}}
+# CHECK-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0{{$}}
 # CHECK-NEXT:       }
 # CHECK-NEXT:     }
 # CHECK-NEXT:   }
@@ -97,10 +97,10 @@
 # CHECK2:      BuildAttributes {
 # CHECK2-NEXT:   FormatVersion: 0x41
 # CHECK2-NEXT:   Section 1 {
-# CHECK2-NEXT:     SectionLength: 104
+# CHECK2-NEXT:     SectionLength: 113
 # CHECK2-NEXT:     Vendor: riscv
 # CHECK2-NEXT:     Tag: Tag_File (0x1)
-# CHECK2-NEXT:     Size: 94
+# CHECK2-NEXT:     Size: 103
 # CHECK2-NEXT:     FileAttributes {
 # CHECK2-NEXT:       Attribute {
 # CHECK2-NEXT:         Tag: 4
@@ -127,7 +127,7 @@
 # CHECK2-NEXT:       Attribute {
 # CHECK2-NEXT:         Tag: 5
 # CHECK2-NEXT:         TagName: arch
-# CHECK2-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zkt1p0_zve32f1p0_zve32x1p0_zvl32b1p0{{$}}
+# CHECK2-NEXT:         Value: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_zkt1p0_zve32f1p0_zve32x1p0_zvl32b1p0{{$}}
 # CHECK2-NEXT:       }
 # CHECK2-NEXT:     }
 # CHECK2-NEXT:   }
@@ -152,12 +152,12 @@
 
 #--- a.s
 .attribute stack_align, 16
-.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0"
+.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zmmul1p0"
 .attribute unaligned_access, 0
 
 #--- b.s
 .attribute stack_align, 16
-.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0"
+.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zmmul1p0"
 .attribute priv_spec, 2
 .attribute priv_spec_minor, 2
 

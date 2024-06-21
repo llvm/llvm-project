@@ -52,7 +52,8 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/PassManager.h"
 #include <type_traits>
 #include <vector>
 
@@ -184,7 +185,7 @@ private:
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
 
-  StringMap<std::string> ClassToPassName;
+  DenseMap<StringRef, std::string> ClassToPassName;
 };
 
 /// This class provides instrumentation entry points for the Pass Manager,
@@ -328,6 +329,30 @@ public:
 };
 
 bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+
+/// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
+/// managers.
+class PassInstrumentationAnalysis
+    : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
+  friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
+  static AnalysisKey Key;
+
+  PassInstrumentationCallbacks *Callbacks;
+
+public:
+  /// PassInstrumentationCallbacks object is shared, owned by something else,
+  /// not this analysis.
+  PassInstrumentationAnalysis(PassInstrumentationCallbacks *Callbacks = nullptr)
+      : Callbacks(Callbacks) {}
+
+  using Result = PassInstrumentation;
+
+  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+  Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
+    return PassInstrumentation(Callbacks);
+  }
+};
+
 
 } // namespace llvm
 

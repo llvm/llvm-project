@@ -14,7 +14,17 @@ include "mlir/Pass/PassBase.td"
 def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
   let summary = "Add [dis]assemble operations on external sparse tensors";
   let description = [{
-    A pass that converts public entry methods that use sparse tensors as
+    Unlike dense tensors, MLIR does **not** provide a direct `_mlir_ciface_`
+    ABI for passing sparse tensors as arguments from and to external methods
+    (within MLIR-generated methods, sparse tensors can be freely passed
+    around, but this eventually uses a bespoke parameter passing format
+    that is subject to change; like opaque pointers when the sparse runtime
+    support library is used or the constituent arrays and structs for
+    direct IR codegen). The sparse assembler pass, however, can be used
+    to obtain a stable `_mlir_ciface_` API for passing sparse tensors
+    from and to an external environment, such as Python, PyTorch, or JAX.
+
+    The pass converts public entry methods that use sparse tensors as
     input parameters and/or output return values into wrapper methods
     that [dis]assemble the individual tensors that constitute the actual
     storage used externally into MLIR sparse tensors. This pass can be used
@@ -27,6 +37,8 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
     By default, the pass uses the [dis]assemble operations to input and output
     sparse tensors. When the direct-out option is set, however, the output
     directly returns the MLIR allocated buffers to the external runtime.
+
+    The pass should always run before the actual sparsification passes.
   }];
   let constructor = "mlir::createSparseAssembler()";
   let dependentDialects = [
@@ -475,6 +487,15 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
            "Enable i32 indexing into vectors (for efficient gather/scatter)">,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
            "Enable GPU acceleration by means of direct library calls">,
+    Option<"sparseEmitStrategy", "sparse-emit-strategy", "mlir::SparseEmitStrategy",
+           "mlir::SparseEmitStrategy::kFunctional",
+           "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
+             clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                        "Emit functional code (with scf.for/while)."),
+             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
+                        "Emit (experimental) loops (with sparse.iterate)."),
+             clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+                        "Emit non-functional but easy-to-read interfaces to debug."))}]>,
   ];
 }
 

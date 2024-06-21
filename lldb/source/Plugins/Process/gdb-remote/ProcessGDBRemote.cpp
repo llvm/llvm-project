@@ -4383,7 +4383,7 @@ bool ParseRegisters(
 
   ParseFlags(feature_node, registers_flags_types);
   for (const auto &flags : registers_flags_types)
-    flags.second->log(log);
+    flags.second->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",

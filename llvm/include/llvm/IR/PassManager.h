@@ -39,16 +39,12 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -59,8 +55,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 
@@ -147,12 +141,6 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 }
 
 } // namespace detail
-
-// Forward declare the pass instrumentation analysis explicitly queried in
-// generic PassManager code.
-// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-// header.
-class PassInstrumentationAnalysis;
 
 /// Manages a sequence of passes over a particular unit of IR.
 ///
@@ -242,32 +230,6 @@ extern template class PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
-
-/// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
-/// managers. Goes before AnalysisManager definition to provide its
-/// internals (e.g PassInstrumentationAnalysis::ID) for use there if needed.
-/// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-/// header.
-class PassInstrumentationAnalysis
-    : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
-  friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
-
-  PassInstrumentationCallbacks *Callbacks;
-
-public:
-  /// PassInstrumentationCallbacks object is shared, owned by something else,
-  /// not this analysis.
-  PassInstrumentationAnalysis(PassInstrumentationCallbacks *Callbacks = nullptr)
-      : Callbacks(Callbacks) {}
-
-  using Result = PassInstrumentation;
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-  Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
-    return PassInstrumentation(Callbacks);
-  }
-};
 
 /// A container for analyses that lazily runs them and caches their
 /// results.
@@ -954,58 +916,6 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
     return PreservedAnalyses::none();
   }
 };
-
-/// A utility pass template that simply runs another pass multiple times.
-///
-/// This can be useful when debugging or testing passes. It also serves as an
-/// example of how to extend the pass manager in ways beyond composition.
-template <typename PassT>
-class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
-public:
-  RepeatedPass(int Count, PassT &&P)
-      : Count(Count), P(std::forward<PassT>(P)) {}
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM, Ts &&... Args) {
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    // Here we use std::tuple wrapper over getResult which helps to extract
-    // AnalysisManager's arguments out of the whole Args set.
-    PassInstrumentation PI =
-        detail::getAnalysisResult<PassInstrumentationAnalysis>(
-            AM, IR, std::tuple<Ts...>(Args...));
-
-    auto PA = PreservedAnalyses::all();
-    for (int i = 0; i < Count; ++i) {
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<IRUnitT>(P, IR))
-        continue;
-      PreservedAnalyses IterPA = P.run(IR, AM, std::forward<Ts>(Args)...);
-      PA.intersect(IterPA);
-      PI.runAfterPass(P, IR, IterPA);
-    }
-    return PA;
-  }
-
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    OS << "repeat<" << Count << ">(";
-    P.printPipeline(OS, MapClassName2PassName);
-    OS << ')';
-  }
-
-private:
-  int Count;
-  PassT P;
-};
-
-template <typename PassT>
-RepeatedPass<PassT> createRepeatedPass(int Count, PassT &&P) {
-  return RepeatedPass<PassT>(Count, std::forward<PassT>(P));
-}
 
 } // end namespace llvm
 

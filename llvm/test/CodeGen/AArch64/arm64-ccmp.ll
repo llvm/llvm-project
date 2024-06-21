@@ -706,10 +706,9 @@ define i32 @select_noccmp3(i32 %v0, i32 %v1, i32 %v2) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    mov w8, #99 ; =0x63
 ; GISEL-NEXT:    sub w9, w0, #45
-; GISEL-NEXT:    mov w10, #-23 ; =0xffffffe9
 ; GISEL-NEXT:    cmp w0, #77
 ; GISEL-NEXT:    ccmp w0, w8, #4, ne
-; GISEL-NEXT:    ccmp w9, w10, #2, eq
+; GISEL-NEXT:    ccmn w9, #23, #2, eq
 ; GISEL-NEXT:    ccmp w0, #14, #0, lo
 ; GISEL-NEXT:    csel w0, w1, w2, hs
 ; GISEL-NEXT:    ret

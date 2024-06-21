@@ -12,5 +12,10 @@
     "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
       "value": false
     }
+  },
+  "malloc": {
+    "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
+      "value": 102400
+    }
   }
 }

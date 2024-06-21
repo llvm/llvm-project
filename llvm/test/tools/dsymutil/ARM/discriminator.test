@@ -1,0 +1,23 @@
+; The input at Inputs/discriminator.arm64.dylib[.o] produced by compiling
+;
+;   int foo(int i, int a, int b) {
+;     return i ? a : a * b;
+;   }
+;
+; with -g -fdebug-info-for-profiling -O2.
+
+RUN: dsymutil --flat --linker=classic -oso-prepend-path %p -o - \
+RUN:  --oso-prepend-path %p/../Inputs --verify-dwarf=none \
+RUN:  %p/../Inputs/discriminator.arm64.dylib | llvm-dwarfdump -debug-line - \
+RUN:  | FileCheck %s
+
+RUN: dsymutil --flat --linker=parallel -oso-prepend-path %p -o - \
+RUN:  --oso-prepend-path %p/../Inputs --verify-dwarf=none \
+RUN:  %p/../Inputs/discriminator.arm64.dylib | llvm-dwarfdump -debug-line - \
+RUN:  | FileCheck %s
+
+CHECK:          Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT:     ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT:     0x0000000000003f98      2     10      0   0             0       0  is_stmt prologue_end
+CHECK-NEXT:     0x0000000000003fa4      2      3      0   0             6       0
+CHECK-NEXT:     0x0000000000003fa8      2      3      0   0             0       0  end_sequence

@@ -3265,7 +3265,7 @@ TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
   std::string Code = R"(
     namespace std {
     template <typename T>
-    struct initializer_list {};
+    struct initializer_list { const T *a, *b; };
     } // namespace std
 
     void target() {

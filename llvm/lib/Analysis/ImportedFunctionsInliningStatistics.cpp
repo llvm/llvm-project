@@ -32,7 +32,7 @@ cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats(
                clEnumValN(InlinerFunctionImportStatsOpts::Verbose, "verbose",
                           "printing of statistics for each inlined function")),
     cl::Hidden, cl::desc("Enable inliner stats for imported functions"));
-}
+} // namespace llvm
 
 ImportedFunctionsInliningStatistics::InlineGraphNode &
 ImportedFunctionsInliningStatistics::createInlineGraphNode(const Function &F) {

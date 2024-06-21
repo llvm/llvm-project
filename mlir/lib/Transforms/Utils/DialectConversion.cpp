@@ -734,11 +734,6 @@ public:
     return converterAndKind.getInt();
   }
 
-  /// Set the kind of this materialization.
-  void setMaterializationKind(MaterializationKind kind) {
-    converterAndKind.setInt(kind);
-  }
-
   /// Return the original illegal output type of the input values.
   Type getOrigOutputType() const { return origOutputType; }
 
@@ -2759,22 +2754,9 @@ static void computeNecessaryMaterializations(
       // TODO: Avoid materializing other types of conversions here.
     }
 
-    // Check to see if this is an argument materialization.
-    if (llvm::any_of(op->getOperands(), llvm::IsaPred<BlockArgument>) ||
-        llvm::any_of(inverseMapping[op->getResult(0)],
-                     llvm::IsaPred<BlockArgument>)) {
-      mat->setMaterializationKind(MaterializationKind::Argument);
-    }
-
     // If the materialization does not have any live users, we don't need to
     // generate a user materialization for it.
-    // FIXME: For argument materializations, we currently need to check if any
-    // of the inverse mapped values are used because some patterns expect blind
-    // value replacement even if the types differ in some cases. When those
-    // patterns are fixed, we can drop the argument special case here.
     bool isMaterializationLive = isLive(opResult);
-    if (mat->getMaterializationKind() == MaterializationKind::Argument)
-      isMaterializationLive |= llvm::any_of(inverseMapping[opResult], isLive);
     if (!isMaterializationLive)
       continue;
     if (!necessaryMaterializations.insert(mat))

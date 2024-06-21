@@ -4031,8 +4031,8 @@ public:
                               const ParsedAttributesView &AttrList);
   Decl *ActOnUsingEnumDeclaration(Scope *CurScope, AccessSpecifier AS,
                                   SourceLocation UsingLoc,
-                                  SourceLocation EnumLoc,
-                                  SourceLocation IdentLoc, IdentifierInfo &II,
+                                  SourceLocation EnumLoc, SourceRange TyLoc,
+                                  const IdentifierInfo &II, ParsedType Ty,
                                   CXXScopeSpec *SS = nullptr);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
@@ -5734,6 +5734,10 @@ public:
   ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
+
+  // #embed
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                            StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

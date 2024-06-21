@@ -995,6 +995,48 @@ def G_FTAN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point arccosine of a value.
+def G_FACOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arcsine of a value.
+def G_FASIN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic cosine of a value.
+def G_FCOSH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic sine of a value.
+def G_FSINH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic tangent of a value.
+def G_FTANH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point square root of a value.
 // This returns NaN for negative nonzero values.
 // NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's

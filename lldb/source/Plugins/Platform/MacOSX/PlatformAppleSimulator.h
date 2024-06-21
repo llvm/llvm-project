@@ -87,10 +87,6 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
                          const FileSpecList *module_search_paths_ptr,

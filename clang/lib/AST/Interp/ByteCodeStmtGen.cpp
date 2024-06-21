@@ -155,8 +155,10 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         return this->emitInitThisBitField(*T, F, FieldOffset, InitExpr);
       return this->emitInitThisField(*T, FieldOffset, InitExpr);
     }
+
     // Non-primitive case. Get a pointer to the field-to-initialize
     // on the stack and call visitInitialzer() for it.
+    InitLinkScope<Emitter> FieldScope(this, InitLink::Field(F->Offset));
     if (!this->emitGetPtrThisField(FieldOffset, InitExpr))
       return false;
 
@@ -178,6 +180,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
     if (!R)
       return false;
 
+    InitLinkScope<Emitter> InitScope(this, InitLink::This());
     for (const auto *Init : Ctor->inits()) {
       // Scope needed for the initializers.
       BlockScope<Emitter> Scope(this);

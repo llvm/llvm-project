@@ -33,7 +33,7 @@ public:
 
   ~ValueObjectPrinter() = default;
 
-  bool PrintValueObject();
+  llvm::Error PrintValueObject();
 
 protected:
   typedef std::set<uint64_t> InstancePointersSet;
@@ -75,7 +75,7 @@ protected:
 
   void SetupMostSpecializedValue();
 
-  const char *GetDescriptionForDisplay();
+  llvm::Expected<std::string> GetDescriptionForDisplay();
 
   const char *GetRootNameForDisplay();
 
@@ -108,7 +108,8 @@ protected:
 
   bool PrintValueAndSummaryIfNeeded(bool &value_printed, bool &summary_printed);
 
-  bool PrintObjectDescriptionIfNeeded(bool value_printed, bool summary_printed);
+  llvm::Error PrintObjectDescriptionIfNeeded(bool value_printed,
+                                             bool summary_printed);
 
   bool
   ShouldPrintChildren(DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
@@ -132,7 +133,7 @@ protected:
   PrintChildren(bool value_printed, bool summary_printed,
                 const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
 
-  void PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
+  llvm::Error PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
 
   bool PrintChildrenOneLiner(bool hide_names);
 

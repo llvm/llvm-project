@@ -13,8 +13,8 @@
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <string>
 #include <utility>
 #include <vector>

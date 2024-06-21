@@ -16,6 +16,7 @@
 // To get the test dialect definition.
 include "TestDialect.td"
 include "TestEnumDefs.td"
+include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -348,6 +349,14 @@ def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
 
   let assemblyFormat = [{
     `<` custom<CustomFloatAttr>($type_str, $value) `>`
+  }];
+}
+
+def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
+  let mnemonic = "nested_polynomial";
+  let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
+  let assemblyFormat = [{
+    `<` $poly `>`
   }];
 }
 

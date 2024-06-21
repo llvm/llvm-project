@@ -1,5 +1,18 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -DUNION_TEST -verify %s
 
+#ifdef UNION_TEST
+namespace std {
+  template<class E>
+  union initializer_list {
+  // expected-error@-1 {{'std::initializer_list<int>' layout not recognized.}}
+    const E* begin;
+    decltype(sizeof 0) size;
+  };
+
+  auto x = { 1, 2, 3 };
+};
+#else
 // This must obviously come before the definition of std::initializer_list.
 void missing_initializerlist() {
   auto l = {1, 2, 3, 4}; // expected-error {{std::initializer_list was not found}}
@@ -367,14 +380,49 @@ namespace designated_init {
 }
 
 namespace weird_initlist {
+  template<int>
   struct weird {};
 }
-template<> struct std::initializer_list<weird_initlist::weird> { int a, b, c; };
+template<> struct std::initializer_list<weird_initlist::weird<0>> { int a, b, c; };
+// expected-error@-1 2 {{'std::initializer_list<weird<0>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<1>> { std::size_t sz; const weird_initlist::weird<1>* p; };
+// expected-error@-1 {{'std::initializer_list<weird<1>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<2>> { const weird_initlist::weird<2>* first; const weird_initlist::weird<2>* last; };
+template<> struct std::initializer_list<weird_initlist::weird<3>> { weird_initlist::weird<3>* p; std::size_t sz; };
+// expected-error@-1 {{'std::initializer_list<weird<3>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<4>> { const weird_initlist::weird<4>& p; std::size_t sz; };
+// expected-error@-1 {{'std::initializer_list<weird<4>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<5>> { const weird_initlist::weird<5>* p; std::size_t : sizeof(std::size_t) * __CHAR_BIT__; };
+// expected-error@-1 {{'std::initializer_list<weird<5>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<6>> { const weird_initlist::weird<6>* p; std::size_t sz : sizeof(std::size_t) * __CHAR_BIT__; };
+// expected-error@-1 {{'std::initializer_list<weird<6>>' layout not recognized}}
+struct empty_base {};
+template<> struct std::initializer_list<weird_initlist::weird<7>> : empty_base { const weird_initlist::weird<7>* p; std::size_t sz; };
+// expected-error@-1 {{'std::initializer_list<weird<7>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<8>> { const weird_initlist::weird<8>* p; std::size_t sz; ~initializer_list(); };
+template<> struct std::initializer_list<weird_initlist::weird<9>> { const weird_initlist::weird<9>* p; std::size_t sz; virtual void f(); };
+// expected-error@-1 {{'std::initializer_list<weird<9>>' layout not recognized}}
+template<> struct std::initializer_list<weird_initlist::weird<10>> { const weird_initlist::weird<10>* p; alignas(64) std::size_t sz; };
+template<> struct std::initializer_list<weird_initlist::weird<11>>;
+// expected-note@-1 {{forward declaration of 'std::initializer_list<weird_initlist::weird<11>>'}}
 namespace weird_initlist {
-  // We don't check the struct layout in Sema.
-  auto x = {weird{}, weird{}, weird{}, weird{}, weird{}};
-  // ... but we do in constant evaluation.
-  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird>' has unexpected layout}}
+  auto _0 = {weird<0>{}, weird<0>{}, weird<0>{}, weird<0>{}, weird<0>{}};
+  constexpr auto _0c = {weird<0>{}, weird<0>{}, weird<0>{}, weird<0>{}, weird<0>{}};
+  auto _1 = {weird<1>{}, weird<1>{}};
+  auto _2 = {weird<2>{}, weird<2>{}, weird<2>{}};
+  constexpr auto _2c = {weird<2>{}, weird<2>{}, weird<2>{}}; // (Two pointer representation is supported)
+  static_assert(_2c.first + 3 == _2c.last, "");
+  auto _3 = {weird<3>{}, weird<3>{}};
+  auto _4 = {weird<4>{}, weird<4>{}};
+  auto _5 = {weird<5>{}, weird<5>{}};
+  auto _6 = {weird<6>{}, weird<6>{}};
+  auto _7 = {weird<7>{}, weird<7>{}};
+  auto _8 = {weird<8>{}, weird<8>{}};
+  auto _9 = {weird<9>{}, weird<9>{}};
+  auto _10 = {weird<10>{}, weird<10>{}};
+  constexpr auto _10c = {weird<10>{}, weird<10>{}, weird<10>{}};
+  static_assert(_10c.sz == 3, "");
+  const auto& _11 = {weird<11>{}, weird<11>{}}; // expected-error {{initialization of incomplete type 'const std::initializer_list<weird<11>>'}}
 }
 
 auto v = std::initializer_list<int>{1,2,3}; // expected-warning {{array backing local initializer list 'v' will be destroyed at the end of the full-expression}}
@@ -386,3 +434,4 @@ std::initializer_list<int> get(int cond) {
     return {1, 2, 3}; // expected-warning {{returning address of local temporary object}}
   return std::initializer_list<int>{1, 2, 3}; // expected-warning {{returning address of local temporary object}}
 }
+#endif // UNION_TEST

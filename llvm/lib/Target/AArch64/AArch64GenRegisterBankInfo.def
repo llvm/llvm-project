@@ -181,8 +181,8 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
   }
   if (RBIdx == PMI_FirstFPR) {
     const unsigned MinSize = Size.getKnownMinValue();
-    assert(!Size.isScalable() || MinSize >= 128
-           && "Scalable vector types should have size of at least 128 bits");
+    assert((!Size.isScalable() || MinSize >= 128) &&
+           "Scalable vector types should have size of at least 128 bits");
     if (MinSize <= 16)
       return 0;
     if (MinSize <= 32)

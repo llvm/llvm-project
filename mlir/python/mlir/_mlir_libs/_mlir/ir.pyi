@@ -209,6 +209,7 @@ class _OperationBase:
         print_generic_op_form: bool = False,
         use_local_scope: bool = False,
         assume_verified: bool = False,
+        skip_regions: bool = False,
     ) -> Union[io.BytesIO, io.StringIO]:
         """
         Gets the assembly form of the operation with all options available.
@@ -256,6 +257,7 @@ class _OperationBase:
         assume_verified: bool = False,
         file: Optional[Any] = None,
         binary: bool = False,
+        skip_regions: bool = False,
     ) -> None:
         """
         Prints the assembly form of the operation to a file like object.
@@ -281,6 +283,7 @@ class _OperationBase:
             and report failures in a more robust fashion. Set this to True if doing this
             in order to avoid running a redundant verification. If the IR is actually
             invalid, behavior is undefined.
+          skip_regions: Whether to skip printing regions. Defaults to False.
         """
     def verify(self) -> bool:
         """

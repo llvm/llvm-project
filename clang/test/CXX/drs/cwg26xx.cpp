@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 
-namespace cwg2621 { // cwg2621: 16
+namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
 enum class E { a };
 namespace One {
@@ -17,9 +17,8 @@ auto v = a;
 }
 namespace Two {
 using cwg2621::E;
-int E; // we see this
+int E; // ignored by type-only lookup
 using enum E;
-// since-cxx20-error@-1 {{unknown type name E}}
 }
 #endif
 }

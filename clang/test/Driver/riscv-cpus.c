@@ -358,3 +358,26 @@
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv32 -march=rv64i | FileCheck -check-prefix=MISMATCH-ARCH %s
 // MISMATCH-ARCH: cpu 'generic-rv32' does not support rv64
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr3-rv32 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR3-RV32 %s
+// MCPU-SYNTACORE-SCR3-RV32: "-target-cpu" "syntacore-scr3-rv32"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR3-RV32-SAME: "-target-abi" "ilp32"
+
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr3-rv32 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR3-RV32 %s
+// MTUNE-SYNTACORE-SCR3-RV32: "-tune-cpu" "syntacore-scr3-rv32"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=syntacore-scr3-rv64 | FileCheck -check-prefix=MCPU-SYNTACORE-SCR3-RV64 %s
+// MCPU-SYNTACORE-SCR3-RV64: "-target-cpu" "syntacore-scr3-rv64"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+m"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+a"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+c"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+zicsr"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-feature" "+zifencei"
+// MCPU-SYNTACORE-SCR3-RV64-SAME: "-target-abi" "lp64"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=syntacore-scr3-rv64 | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR3-RV64 %s
+// MTUNE-SYNTACORE-SCR3-RV64: "-tune-cpu" "syntacore-scr3-rv64"

@@ -361,8 +361,8 @@ def testScalarize(target):
 @run
 @create_sequence
 def testSplit(target):
-    split = structured.SplitOp(target, dimension=1, split_point=42)
-    structured.SplitOp(split.results[0], dimension=3, split_point=split.results[1])
+    split = structured.SplitOp(target, dimension=1, chunk_sizes=42)
+    structured.SplitOp(split.results[0], dimension=3, chunk_sizes=split.results[1])
     # CHECK-LABEL: TEST: testSplit
     # CHECK: %[[F:.+]], %[[S:.+]] = transform.structured.split %{{.*}} after 42 {dimension = 1
     # CHECK: transform.structured.split %[[F]] after %[[S]] {dimension = 3

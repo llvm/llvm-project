@@ -40,6 +40,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -56,6 +57,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stack>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 

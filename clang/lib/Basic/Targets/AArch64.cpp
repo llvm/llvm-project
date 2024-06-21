@@ -673,26 +673,22 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->FmvPriority;
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return Ext->Priority;
   return 0;
 }
 
 unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   // Take the maximum priority as per feature cost, so more features win.
-  return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
+  constexpr unsigned MaxFMVPriority = 1000;
+  return MaxFMVPriority;
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return !Ext->DependentFeatures.empty();
+  // FMV extensions which imply no backend features do not affect codegen.
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return !Ext->Features.empty();
   return false;
-}
-
-StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->DependentFeatures;
-  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -700,7 +696,7 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   llvm::SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, "+");
   for (auto &Feature : Features)
-    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+    if (!llvm::AArch64::parseFMVExtension(Feature.trim()).has_value())
       return false;
   return true;
 }

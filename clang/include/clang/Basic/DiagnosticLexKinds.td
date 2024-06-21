@@ -436,6 +436,14 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def ext_pp_embed_directive : ExtWarn<
+  "#embed is a %select{C23|Clang}0 extension">,
+  InGroup<C23>;
+def warn_compat_pp_embed_directive : Warning<
+  "#embed is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def err_pp_embed_dup_params : Error<
+  "cannot specify parameter '%0' twice in the same '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -505,6 +513,8 @@ def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
   err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
+def err_pp_unknown_parameter : Error<
+  "unknown%select{ | embed}0 preprocessor parameter '%1'">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -719,6 +729,8 @@ def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
+def err_defined_in_pp_embed : Error<
+  "'defined' cannot appear within this context">;
 def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;

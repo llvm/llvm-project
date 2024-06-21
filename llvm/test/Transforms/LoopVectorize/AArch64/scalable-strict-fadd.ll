@@ -57,8 +57,8 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
-; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP7]])
 ; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP7]])
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -279,11 +279,11 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP40]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
+; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd <vscale x 8 x float> [[TMP35]], [[TMP34]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX7:%.*]] = fadd <vscale x 8 x float> [[TMP36]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX8:%.*]] = fadd <vscale x 8 x float> [[TMP37]], [[BIN_RDX7]]
 ; CHECK-UNORDERED-NEXT:    [[TMP41:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX8]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -590,9 +590,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
+; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    [[TMP20:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP15]])
 ; CHECK-UNORDERED-NEXT:    [[TMP19:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP14]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -862,8 +862,8 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
-; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP11]])
 ; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP11]])
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -1105,8 +1105,8 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
-; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP11]])
 ; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP15:%.*]] = call float @llvm.vector.reduce.fadd.nxv4f32(float -0.000000e+00, <vscale x 4 x float> [[TMP11]])
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1348,8 +1348,8 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 ; CHECK-UNORDERED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
-; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP10]])
 ; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[TMP10]])
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1538,11 +1538,11 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP54]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
+; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd <vscale x 8 x float> [[TMP49]], [[TMP48]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX11:%.*]] = fadd <vscale x 8 x float> [[TMP50]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX12:%.*]] = fadd <vscale x 8 x float> [[TMP51]], [[BIN_RDX11]]
 ; CHECK-UNORDERED-NEXT:    [[TMP55:%.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX12]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1932,11 +1932,11 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[TMP54]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-UNORDERED:       middle.block:
+; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX:%.*]] = fadd nnan <vscale x 8 x float> [[TMP49]], [[TMP48]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX11:%.*]] = fadd nnan <vscale x 8 x float> [[TMP50]], [[BIN_RDX]]
 ; CHECK-UNORDERED-NEXT:    [[BIN_RDX12:%.*]] = fadd nnan <vscale x 8 x float> [[TMP51]], [[BIN_RDX11]]
 ; CHECK-UNORDERED-NEXT:    [[TMP55:%.*]] = call nnan float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> [[BIN_RDX12]])
-; CHECK-UNORDERED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK-UNORDERED:       scalar.ph:
 ; CHECK-UNORDERED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]

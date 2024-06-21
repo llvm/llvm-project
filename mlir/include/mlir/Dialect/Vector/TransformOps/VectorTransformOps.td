@@ -406,6 +406,17 @@ def ApplyFoldArithExtensionPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyFoldElementwiseToVectorPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.elementwise_to_vector",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect a set of patterns that fold elementwise op on vectors to the vector 
+    dialect.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.reduction_to_contract",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
