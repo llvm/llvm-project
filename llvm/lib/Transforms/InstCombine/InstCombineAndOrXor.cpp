@@ -3426,25 +3426,18 @@ static Value *foldAorBConst(BinaryOperator &I,
   assert(I.getOpcode() == Instruction::Or &&
          "Simplification only supports or at the moment.");
 
-  Value *Op0 = I.getOperand(0);
-  Value *Op1 = I.getOperand(1);
-
   Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
-  if (!match(Op0, m_And(m_Value(Cmp1), m_Value(Cmp2))) ||
-      !match(Op1, m_And(m_Value(Cmp3), m_Value(Cmp4))))
+  if (!match(I.getOperand(0), m_And(m_Value(Cmp1), m_Value(Cmp2))) ||
+      !match(I.getOperand(1), m_And(m_Value(Cmp3), m_Value(Cmp4))))
     return nullptr;
 
-  // check if any two pairs of the and operations are invertions of each other.
-  Value *Cmp2Inv = nullptr;
+  // Check if any two pairs of the and operations are invertions of each other.
   if (isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4))
-    Cmp2Inv = Cmp4;
+    return Builder.CreateXor(Cmp1, Cmp4);
   if (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3))
-    Cmp2Inv = Cmp3;
+    return Builder.CreateXor(Cmp1, Cmp3);
 
-  if (!Cmp2Inv)
-    return nullptr;
-
-  return Builder.CreateXor(Cmp1, Cmp2Inv);
+  return nullptr;
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
@@ -3476,7 +3469,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
 
-  // (A == c & B != d) | (A != c & B == d)) -> (A == c) | (B == d)
+  // (A == c & B != d) | (A != c & B == d)) -> (A == c) ^ (B == d)
   if (Value *V = foldAorBConst(I, Builder))
     return replaceInstUsesWith(I, V);
 
