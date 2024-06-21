@@ -1782,7 +1782,7 @@ def TruncInteger: GICombineRule<
 def cast_const_combines: GICombineGroup<[
   ZextInteger,
   SextInteger,
-  TruncInteger,
+  TruncInteger
 ]>;
 
 

@@ -42,4 +42,21 @@ body:             |
     %2:_(s64) = G_CONSTANT i64 5000000000
     %3:_(s32) = G_TRUNC %2
     $w0 = COPY %3
+...
+---
+name:            trunc_const_bv
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: trunc_const_bv
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 5000000000
+    ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC %bv(<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[TRUNC]](<2 x s32>)
+    %2:_(s64) = G_CONSTANT i64 5000000000
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %2, %2
+    %3:_(<2 x s32>) = G_TRUNC %bv
+    $x0 = COPY %3
 
