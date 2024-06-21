@@ -1553,14 +1553,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     return isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
         &Phi);
   });
-  // FIXME: Remove this once we can transform (select header_mask, true_value,
-  // false_value) into vp.merge.
-  bool ContainsOutloopReductions =
-      any_of(Header->phis(), [&](VPRecipeBase &Phi) {
-        auto *R = dyn_cast<VPReductionPHIRecipe>(&Phi);
-        return R && !R->isInLoop();
-      });
-  if (ContainsWidenInductions || ContainsOutloopReductions)
+  if (ContainsWidenInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
