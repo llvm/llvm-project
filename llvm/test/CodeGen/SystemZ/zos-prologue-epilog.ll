@@ -303,7 +303,7 @@ define i64 @func4(i64 %n) {
 ; Require saving of r4 and in addition, a displacement large enough
 ; to force use of agfi before stmg.
 ; CHECK64: lgr	0, 4
-; CHECK64: agfi	4, -1040192
+; CHECK64: agfi	4, -1040224
 ; CHECK64: stmg  4, 10, 2048(4)
 ; CHECK64: lgr     8, 4
 ; CHECK64: basr   7, 6
@@ -317,7 +317,7 @@ define i64 @func5(i64 %n) {
 }
 
 ; CHECK-LABEL: large_stack
-; CHECK64: agfi  4, -1048768
+; CHECK64: agfi  4, -1048800
 ; CHECK64-NEXT: llgt  3, 1208
 ; CHECK64-NEXT: cg  4, 64(3)
 ; CHECK64-NEXT: jhe
@@ -332,7 +332,7 @@ define void @large_stack0() {
 }
 
 ; CHECK-LABEL: large_stack1
-; CHECK64: agfi  4, -1048768
+; CHECK64: agfi  4, -1048800
 ; CHECK64: lgr 0, 3
 ; CHECK64: llgt  3, 1208
 ; CHECK64: cg  4, 64(3)
@@ -358,7 +358,7 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK-LABEL: large_stack2
 ; CHECK64: lgr 0, 4
 ; CHECK64: stg 3, 2192(4)
-; CHECK64: agfi  4, -1048768
+; CHECK64: agfi  4, -1048800
 ; CHECK64: llgt  3, 1208
 ; CHECK64: cg  4, 64(3)
 ; CHECK64: jhe L#BB8_2
