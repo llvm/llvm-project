@@ -86,7 +86,16 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
-- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+* LLVM now has rpmalloc version 1.4.5 in-tree, as a replacement C allocator for
+  hosted toolchains. This supports several host platforms such as Mac or Unix,
+  however currently only the Windows 64-bit LLVM release uses it.
+  This has a great benefit in terms of build times on Windows when using ThinLTO
+  linking, especially on machines with lots of cores, to an order of magnitude
+  or more. Clang compilation is also improved. Please see some build timings in
+  (`#91862 <https://github.com/llvm/llvm-project/pull/91862#issue-2291033962>`_)
+  For more information, refer to the **LLVM_ENABLE_RPMALLOC** option in `CMake variables <https://llvm.org/docs/CMake.html#llvm-related-variables>`_.
+
+* The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
   terminfo and now always uses the ``TERM`` environment variable for color
   support autodetection.
 
@@ -108,6 +117,13 @@ Changes to the AArch64 Backend
   default when the feature is enabled. The new behaviour results 
   in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
   is passed as part of ``-mcpu=`` options.
+
+* SVE and SVE2 have been moved to the default extensions list for ARMv9.0,
+  making them optional per the Arm ARM.  Existing v9.0+ CPUs in the backend that
+  support these extensions continue to have these features enabled by default
+  when specified via ``-march=`` or an ``-mcpu=`` that supports them.  The
+  attribute ``"target-features"="+v9a"`` no longer implies ``"+sve"`` and
+  ``"+sve2"`` respectively.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -167,6 +183,7 @@ Changes to the RISC-V Backend
 * Zabha is no longer experimental.
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
+* ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
