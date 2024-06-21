@@ -1070,6 +1070,30 @@ public:
 // ConversionConfig
 //===----------------------------------------------------------------------===//
 
+/// The type of materialization.
+enum MaterializationKind {
+  /// This materialization materializes a conversion for an illegal block
+  /// argument type, to a legal one.
+  Argument,
+
+  /// This materialization materializes a conversion from an illegal type to a
+  /// legal one.
+  Target,
+
+  /// This materialization materializes a conversion from a legal type back to
+  /// an illegal one.
+  Source
+};
+
+struct UnresolvedMaterialization {
+  UnresolvedMaterialization(UnrealizedConversionCastOp op, MaterializationKind kind, const TypeConverter *converter)
+      : op(op), kind(kind), converter(converter) {}
+
+  UnrealizedConversionCastOp op;
+  MaterializationKind kind;
+  const TypeConverter *converter;
+};
+
 /// Dialect conversion configuration.
 struct ConversionConfig {
   /// An optional callback used to notify about match failure diagnostics during
@@ -1122,6 +1146,8 @@ struct ConversionConfig {
   // already been modified) and iterators into past IR state cannot be
   // represented at the moment.
   RewriterBase::Listener *listener = nullptr;
+
+  SmallVector<UnresolvedMaterialization> *unresolvedMaterializations = nullptr;
 };
 
 //===----------------------------------------------------------------------===//
