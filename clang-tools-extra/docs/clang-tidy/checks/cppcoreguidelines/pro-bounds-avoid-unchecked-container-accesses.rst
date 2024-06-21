@@ -1,6 +1,6 @@
-.. title:: clang-tidy - cppcoreguidelines-prefer-at-over-subscript-operator
+.. title:: clang-tidy - cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 
-cppcoreguidelines-prefer-at-over-subscript-operator
+cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 ===================================================
 
 Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
