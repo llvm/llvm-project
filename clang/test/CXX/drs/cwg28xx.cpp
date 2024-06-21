@@ -89,7 +89,6 @@ void B<int>::g() requires true;
 } // namespace cwg2847
 
 namespace cwg2851 { // cwg2851: 19
-
 #if __cplusplus >= 202002L
 template<typename T, T v> struct Val { static constexpr T value = v; };
 
@@ -148,8 +147,7 @@ static_assert(__is_same(Val<float, __builtin_nanl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFF
 static_assert(__is_same(Val<float, __builtin_nansl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")>, Val<float, static_cast<float>(__builtin_nansl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))>));
 // since-cxx20-error@-1 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
 #endif
-
-}
+} // namespace cwg2851
 
 namespace cwg2857 { // cwg2857: no
 struct A {};
