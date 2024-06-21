@@ -63,15 +63,14 @@ func.func @vector_bitcast_2d_trailing_scalable_dim(%arg0: vector<2x[2]xi64>) -> 
 // CHECK:         %[[R2:.+]] = vector.insert %[[B2]], %[[R1]] [1] : vector<[4]xi32> into vector<2x[4]xi32>
 // CHECK:         return %[[R2]] : vector<2x[4]xi32>
 
-func.func @vector_bitcast_2d_leading_scalable_dim(%arg0: vector<[2]x2xi64>) -> vector<[2]x4xi32>
+func.func @negative_vector_bitcast_2d_leading_scalable_dim(%arg0: vector<[2]x2xi64>) -> vector<[2]x4xi32>
 {
   %0 = vector.bitcast %arg0 : vector<[2]x2xi64> to vector<[2]x4xi32>
   return %0 : vector<[2]x4xi32>
 }
-// CHECK-LABEL: func.func @vector_bitcast_2d_leading_scalable_dim
-// CHECK-SAME:    %[[IN:[a-zA-Z0-9]+]]
-// CHECK:         %[[RES:.+]] = vector.bitcast %[[IN]] : vector<[2]x2xi64> to vector<[2]x4xi32>
-// CHECK:         return %[[RES]] : vector<[2]x4xi32>
+// CHECK-LABEL: func.func @negative_vector_bitcast_2d_leading_scalable_dim
+// CHECK-NOT: vector.extract
+// CHECK-NOT: vector.insert
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
