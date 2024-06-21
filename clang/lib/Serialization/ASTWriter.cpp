@@ -1782,7 +1782,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
             .ValidateASTInputFilesContent) {
       auto MemBuff = Cache->getBufferIfLoaded();
       if (MemBuff)
-        ContentHash = hash_value(MemBuff->getBuffer());
+        ContentHash = xxh3_64bits(MemBuff->getBuffer());
       else
         PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
             << Entry.File.getName();
@@ -1987,7 +1987,10 @@ namespace {
       // The hash is based only on size/time of the file, so that the reader can
       // match even when symlinking or excess path elements ("foo/../", "../")
       // change the form of the name. However, complete path is still the key.
-      return llvm::hash_combine(key.Size, key.ModTime);
+      uint8_t buf[sizeof(key.Size) + sizeof(key.ModTime)];
+      memcpy(buf, &key.Size, sizeof(key.Size));
+      memcpy(buf + sizeof(key.Size), &key.ModTime, sizeof(key.ModTime));
+      return llvm::xxh3_64bits(buf);
     }
 
     std::pair<unsigned, unsigned>
