@@ -1723,6 +1723,18 @@ public:
     return buildInstr(TargetOpcode::G_FMAXNUM_IEEE, {Dst}, {Src0, Src1}, Flags);
   }
 
+  MachineInstrBuilder
+  buildFMinimumnum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                   std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FMINIMUMNUM, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder
+  buildFMaximumnum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                   std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FMAXIMUMNUM, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
                                std::optional<unsigned> Flags = std::nullopt) {
@@ -2072,6 +2084,18 @@ public:
   MachineInstrBuilder buildVecReduceFMinimum(const DstOp &Dst,
                                              const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_VECREDUCE_FMINIMUM, {Dst}, {Src});
+  }
+
+  /// Build and insert \p Res = G_VECREDUCE_FMAXIMUMNUM \p Src
+  MachineInstrBuilder buildVecReduceFMaximumnum(const DstOp &Dst,
+                                                const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_FMAXIMUMNUM, {Dst}, {Src});
+  }
+
+  /// Build and insert \p Res = G_VECREDUCE_FMINIMUMNUM \p Src
+  MachineInstrBuilder buildVecReduceFMinimumnum(const DstOp &Dst,
+                                                const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_VECREDUCE_FMINIMUMNUM, {Dst}, {Src});
   }
 
   /// Build and insert \p Res = G_VECREDUCE_ADD \p Src

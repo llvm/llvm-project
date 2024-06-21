@@ -763,6 +763,10 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     return minimum(C1, C2);
   case TargetOpcode::G_FMAXIMUM:
     return maximum(C1, C2);
+  case TargetOpcode::G_FMINIMUMNUM:
+    return minimumnum(C1, C2);
+  case TargetOpcode::G_FMAXIMUMNUM:
+    return maximumnum(C1, C2);
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
@@ -853,7 +857,9 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
             isKnownNeverNaN(DefMI->getOperand(2).getReg(), MRI));
   }
   case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXNUM: {
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
     // other ends up being one.
     return isKnownNeverNaN(DefMI->getOperand(1).getReg(), MRI, SNaN) ||
@@ -1700,9 +1706,11 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FMAD:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMUL:
