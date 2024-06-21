@@ -1787,8 +1787,7 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   if (destType->isBitIntType()) {
-    if (!CGM.getTypes().typeRequiresSplitIntoByteArray(destType,
-                                                       C->getType())) {
+    if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
       // Long _BitInt has array of bytes as in-memory type.
       // So, split constant into individual bytes.
       ConstantAggregateBuilder Builder(CGM);

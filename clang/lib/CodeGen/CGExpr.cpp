@@ -2018,8 +2018,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 /// by ConvertType) to its load/store type (as returned by
 /// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  if (hasBooleanRepresentation(Ty) ||
-      (Ty->isBitIntType() && Value->getType()->isIntegerTy())) {
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
     bool Signed = Ty->isSignedIntegerOrEnumerationType();
     return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");

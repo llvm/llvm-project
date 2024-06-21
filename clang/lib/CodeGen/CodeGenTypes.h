@@ -131,7 +131,8 @@ public:
   /// Check that size and ABI alignment of given LLVM type matches size and
   /// alignment of given AST type. If they don't, values of the type need to be
   /// emitted as byte array.
-  bool typeRequiresSplitIntoByteArray(QualType ASTTy, llvm::Type *LLVMTy);
+  bool typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
 
   /// For AST types with special memory representation returns type
   /// that ought to be used for load and store operations.

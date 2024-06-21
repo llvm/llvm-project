@@ -108,7 +108,7 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
   }
 
   if (T->isBitIntType()) {
-    if (!typeRequiresSplitIntoByteArray(T, R))
+    if (typeRequiresSplitIntoByteArray(T, R))
       return llvm::ArrayType::get(CGM.Int8Ty,
                                   Context.getTypeSizeInChars(T).getQuantity());
   }
@@ -126,10 +126,13 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
 
 bool CodeGenTypes::typeRequiresSplitIntoByteArray(QualType ASTTy,
                                                   llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(ASTTy);
+
   CharUnits ASTSize = Context.getTypeSizeInChars(ASTTy);
   CharUnits LLVMSize =
       CharUnits::fromQuantity(getDataLayout().getTypeAllocSize(LLVMTy));
-  return ASTSize == LLVMSize;
+  return ASTSize != LLVMSize;
 }
 
 llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
@@ -142,8 +145,7 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
                                   (unsigned)Context.getTypeSize(T));
 
   if (T->isBitIntType()) {
-    llvm::Type *R = ConvertType(T);
-    if (!typeRequiresSplitIntoByteArray(T, R))
+    if (typeRequiresSplitIntoByteArray(T))
       return llvm::Type::getIntNTy(
           getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
   }
