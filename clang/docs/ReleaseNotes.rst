@@ -287,6 +287,9 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
+- Clang now performs type-only lookup for the name in ``using enum`` declaration.
+  (`CWG2877: Type-only lookup for using-enum-declarator <https://cplusplus.github.io/CWG/issues/2877.html>`_).
+
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
@@ -909,7 +912,8 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <deque>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
