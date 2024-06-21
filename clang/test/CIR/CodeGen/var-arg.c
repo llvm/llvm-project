@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// XFAIL: *
 
 #include <stdarg.h>
 
@@ -14,7 +13,7 @@ int f1(int n, ...) {
   return res;
 }
 
-// BEFORE: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
+// BEFORE: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !s32i, !s32i}
 // BEFORE:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
 // BEFORE:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // BEFORE:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
@@ -27,7 +26,7 @@ int f1(int n, ...) {
 // BEFORE:  [[RETV:%.*]] = cir.load [[RETP]] : !cir.ptr<!s32i>, !s32i
 // BEFORE:   cir.return [[RETV]] : !s32i
 
-// AFTER: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
+// AFTER: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>, !s32i, !s32i}
 // AFTER:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
 // AFTER:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // AFTER:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
@@ -107,7 +106,7 @@ int f1(int n, ...) {
 // LLVM:  [[BB_ON_STACK]]: ;
 // LLVM-NEXT: [[STACK_P:%.*]] = getelementptr %struct.__va_list, ptr [[VARLIST]], i32 0, i32 0,
 // LLVM-NEXT: [[STACK_V:%.*]] = load ptr, ptr [[STACK_P]], align 8,
-// LLVM-NEXT: [[NEW_STACK_V:%.*]] = getelementptr i8, ptr [[STACK_V]], i32 8,
+// LLVM-NEXT: [[NEW_STACK_V:%.*]] = getelementptr i8, ptr [[STACK_V]], i64 8,
 // LLVM-NEXT: store ptr [[NEW_STACK_V]], ptr [[STACK_P]], align 8,
 // LLVM-NEXT: br label %[[BB_END]],
 

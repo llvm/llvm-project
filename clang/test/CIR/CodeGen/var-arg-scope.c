@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-cir -mmlir --mlir-print-ir-after=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=AFTER
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// XFAIL: *
 
 void f1(__builtin_va_list c) {
   { __builtin_va_arg(c, void *); }
@@ -90,7 +89,7 @@ void f1(__builtin_va_list c) {
 // LLVM:  [[BB_ON_STACK]]: ;
 // LLVM-NEXT: [[STACK_P:%.*]] = getelementptr %struct.__va_list, ptr [[VARLIST]], i32 0, i32 0,
 // LLVM-NEXT: [[STACK_V:%.*]] = load ptr, ptr [[STACK_P]], align 8,
-// LLVM-NEXT: [[NEW_STACK_V:%.*]] = getelementptr i8, ptr [[STACK_V]], i32 8,
+// LLVM-NEXT: [[NEW_STACK_V:%.*]] = getelementptr i8, ptr [[STACK_V]], i64 8,
 // LLVM-NEXT: store ptr [[NEW_STACK_V]], ptr [[STACK_P]], align 8,
 // LLVM-NEXT: br label %[[BB_END]],
 
