@@ -277,7 +277,25 @@ conformance.</p>
     <tr>
       <td>IEC 60559 support</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports much of the language requirements for Annex F, but
+          full conformance is only possible to determine when considering the
+          compiler's language support, the C runtime library's math library
+          support, and the target system's floating-point environment support.
+          Clang does not currently raise an "invalid" floating-point exception
+          on certain conversions, does not raise floating-point exceptions for
+          arithmetic constant expressions, and other corner cases. Note, Clang
+          does not define <code>__STDC_IEC_559__</code> because the compiler
+          does not fully conform. However, some C standard library
+          implementations
+          (<a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=include/stdc-predef.h">
+          glibc</a>, <a href="https://git.musl-libc.org/cgit/musl/tree/include/stdc-predef.h">
+          musl</a> will define the macro regardless of compiler support unless
+          the compiler defines <code>__GCC_IEC_559</code>, which Clang does not
+          currently define.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>trailing comma allowed in enum declaration</td>
