@@ -426,7 +426,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithDemangledName = 0;
 
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
-    outs() << "starting name similarity matching\n";
     auto DemangleName = [&](std::string &FunctionName) {
       StringRef RestoredName = NameResolver::restore(FunctionName);
       return demangle(RestoredName);
