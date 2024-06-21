@@ -353,6 +353,24 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   resld = __builtin_fmaxl(LD, LD);
   // CHECK: call x86_fp80 @llvm.maxnum.f80
 
+  resf = __builtin_fminimum_numf(F, F);
+  // CHECK: call float @llvm.minimumnum.f32
+
+  resd = __builtin_fminimum_num(D, D);
+  // CHECK: call double @llvm.minimumnum.f64
+
+  resld = __builtin_fminimum_numl(LD, LD);
+  // CHECK: call x86_fp80 @llvm.minimumnum.f80
+
+  resf = __builtin_fmaximum_numf(F, F);
+  // CHECK: call float @llvm.maximumnum.f32
+
+  resd = __builtin_fmaximum_num(D, D);
+  // CHECK: call double @llvm.maximumnum.f64
+
+  resld = __builtin_fmaximum_numl(LD, LD);
+  // CHECK: call x86_fp80 @llvm.maximumnum.f80
+
   resf = __builtin_fabsf(F);
   // CHECK: call float @llvm.fabs.f32
 
