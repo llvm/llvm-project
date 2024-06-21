@@ -1,7 +1,0 @@
-header: "assert.h"
-macros:
-  - name: static_assert
-  - name: assert
-types: []
-enums: []
-functions: []
