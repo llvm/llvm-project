@@ -175,9 +175,8 @@ define <3 x i5> @shl1_nuw_increment_commute(<3 x i5> %x, <3 x i5> noundef %p) {
 
 define i5 @shl1_nsw_increment(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_nsw_increment(
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
-; CHECK-NEXT:    [[MULSHL:%.*]] = shl i5 [[Y_FR]], [[X:%.*]]
-; CHECK-NEXT:    [[M1:%.*]] = add i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add i5 [[MULSHL]], [[Y]]
 ; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl i5 1, %x
@@ -188,9 +187,8 @@ define i5 @shl1_nsw_increment(i5 %x, i5 %y) {
 
 define i5 @shl1_nsw_nsw_increment(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_nsw_nsw_increment(
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
-; CHECK-NEXT:    [[MULSHL:%.*]] = shl nsw i5 [[Y_FR]], [[X:%.*]]
-; CHECK-NEXT:    [[M1:%.*]] = add nsw i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl nsw i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add nsw i5 [[MULSHL]], [[Y]]
 ; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl nsw i5 1, %x
