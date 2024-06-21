@@ -30,7 +30,6 @@ void test(int *dp, int (*fp)(int), int value) {
   int t2 = ptrauth_sign_generic_data(dp, 0);
   (void)t2;
   t0 = ptrauth_type_discriminator(int (*)(int));
-  dp = ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
   fp = ptrauth_auth_function(fp, VALID_CODE_KEY, 0);
 
   void * __ptrauth_function_pointer p0;
@@ -68,4 +67,8 @@ void test(int *dp, int (*fp)(int), int value) {
 void test_string_discriminator(int *dp) {
   ptrauth_extra_data_t t0 = ptrauth_string_discriminator("string");
   (void)t0;
+}
+
+void test_sign_constant(int *dp) {
+  dp = ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
 }

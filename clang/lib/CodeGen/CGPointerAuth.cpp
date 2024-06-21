@@ -29,9 +29,14 @@
 using namespace clang;
 using namespace CodeGen;
 
+// FIXME: Temporarily allow both ConstantPtrAuth and llvm.ptrauth emission.
+static llvm::cl::opt<bool> PtrauthEmitWrapperGlobals(
+    "ptrauth-emit-wrapper-globals", llvm::cl::init(true), llvm::cl::Hidden,
+    llvm::cl::desc("Emit llvm.ptrauth globals rather than ptrauth Constants"));
+
 /// Given a pointer-authentication schema, return a concrete "other"
 /// discriminator for it.
-llvm::Constant *
+llvm::ConstantInt *
 CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
                                                 GlobalDecl decl,
                                                 QualType type) {
@@ -424,7 +429,7 @@ buildConstantSignedPointer(CodeGenModule &CGM,
                            llvm::Constant *pointer,
                            unsigned key,
                            llvm::Constant *storageAddress,
-                           llvm::Constant *otherDiscriminator) {
+                           llvm::ConstantInt *otherDiscriminator) {
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct();
   values.add(pointer);
@@ -466,50 +471,71 @@ buildConstantSignedPointer(CodeGenModule &CGM,
 }
 
 llvm::Constant *
-CodeGenModule::getConstantSignedPointer(llvm::Constant *pointer,
-                                        unsigned key,
-                                        llvm::Constant *storageAddress,
-                                        llvm::Constant *otherDiscriminator) {
-  // Unique based on the underlying value, not a signing of it.
-  auto stripped = pointer->stripPointerCasts();
+CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                                        llvm::Constant *StorageAddress,
+                                        llvm::ConstantInt *OtherDiscriminator) {
+  if (PtrauthEmitWrapperGlobals) {
+    // Unique based on the underlying value, not a signing of it.
+    auto stripped = Pointer->stripPointerCasts();
 
-  PointerAuthConstantEntries *entries = nullptr;
+    PointerAuthConstantEntries *entries = nullptr;
 
-  // We can cache this for discriminators that aren't defined in terms
-  // of globals.  Discriminators defined in terms of globals (1) would
-  // require additional tracking to be safe and (2) only come up with
-  // address-specific discrimination, where this entry is almost certainly
-  // unique to the use-site anyway.
-  if (!storageAddress &&
-      (!otherDiscriminator ||
-       isa<llvm::ConstantInt>(otherDiscriminator))) {
+    // We can cache this for discriminators that aren't defined in terms
+    // of globals.  Discriminators defined in terms of globals (1) would
+    // require additional tracking to be safe and (2) only come up with
+    // address-specific discrimination, where this entry is almost certainly
+    // unique to the use-site anyway.
+    if (!StorageAddress &&
+        (!OtherDiscriminator ||
+         isa<llvm::ConstantInt>(OtherDiscriminator))) {
 
-    // Get or create the cache.
-    auto &cache =
-      getOrCreateCache<ByConstantCacheTy>(ConstantSignedPointersByConstant);
+      // Get or create the cache.
+      auto &cache =
+        getOrCreateCache<ByConstantCacheTy>(ConstantSignedPointersByConstant);
 
-    // Check for an existing entry.
-    entries = &cache[stripped];
-    for (auto &entry : *entries) {
-      if (entry.Key == key && entry.OtherDiscriminator == otherDiscriminator) {
-        auto global = entry.Global;
-        return llvm::ConstantExpr::getBitCast(global, pointer->getType());
+      // Check for an existing entry.
+      entries = &cache[stripped];
+      for (auto &entry : *entries) {
+        if (entry.Key == Key && entry.OtherDiscriminator == OtherDiscriminator) {
+          auto global = entry.Global;
+          return llvm::ConstantExpr::getBitCast(global, Pointer->getType());
+        }
       }
     }
+
+    // Build the constant.
+    auto global =
+      buildConstantSignedPointer(*this, stripped, Key, StorageAddress,
+                                 OtherDiscriminator);
+
+    // Cache if applicable.
+    if (entries) {
+      entries->push_back({ Key, OtherDiscriminator, global });
+    }
+
+    // Cast to the original type.
+    return llvm::ConstantExpr::getBitCast(global, Pointer->getType());
   }
 
-  // Build the constant.
-  auto global =
-    buildConstantSignedPointer(*this, stripped, key, storageAddress,
-                               otherDiscriminator);
-
-  // Cache if applicable.
-  if (entries) {
-    entries->push_back({ key, otherDiscriminator, global });
+  llvm::Constant *AddressDiscriminator;
+  if (StorageAddress) {
+    assert(StorageAddress->getType() == UnqualPtrTy);
+    AddressDiscriminator = StorageAddress;
+  } else {
+    AddressDiscriminator = llvm::Constant::getNullValue(UnqualPtrTy);
   }
 
-  // Cast to the original type.
-  return llvm::ConstantExpr::getBitCast(global, pointer->getType());
+  llvm::ConstantInt *IntegerDiscriminator;
+  if (OtherDiscriminator) {
+    assert(OtherDiscriminator->getType() == Int64Ty);
+    IntegerDiscriminator = OtherDiscriminator;
+  } else {
+    IntegerDiscriminator = llvm::ConstantInt::get(Int64Ty, 0);
+  }
+
+  return llvm::ConstantPtrAuth::get(Pointer,
+                                    llvm::ConstantInt::get(Int32Ty, Key),
+                                    IntegerDiscriminator, AddressDiscriminator);
 }
 
 /// Sign a constant pointer using the given scheme, producing a constant
@@ -520,7 +546,7 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *pointer,
                                         llvm::Constant *storageAddress,
                                         GlobalDecl schemaDecl,
                                         QualType schemaType) {
-  llvm::Constant *otherDiscriminator =
+  llvm::ConstantInt *otherDiscriminator =
     getPointerAuthOtherDiscriminator(schema, schemaDecl, schemaType);
 
   return getConstantSignedPointer(pointer, schema.getKey(),
@@ -531,7 +557,7 @@ llvm::Constant *
 CodeGen::getConstantSignedPointer(CodeGenModule &CGM,
                                   llvm::Constant *pointer, unsigned key,
                                   llvm::Constant *storageAddress,
-                                  llvm::Constant *otherDiscriminator) {
+                                  llvm::ConstantInt *otherDiscriminator) {
   return CGM.getConstantSignedPointer(pointer, key, storageAddress,
                                       otherDiscriminator);
 }
@@ -556,7 +582,7 @@ void ConstantAggregateBuilderBase::addSignedPointer(
 
 void ConstantAggregateBuilderBase::addSignedPointer(
     llvm::Constant *pointer, unsigned key,
-    bool useAddressDiscrimination, llvm::Constant *otherDiscriminator) {
+    bool useAddressDiscrimination, llvm::ConstantInt *otherDiscriminator) {
   llvm::Constant *storageAddress = nullptr;
   if (useAddressDiscrimination) {
     storageAddress = getAddrOfCurrentPosition(pointer->getType());
@@ -597,7 +623,7 @@ llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
     // to avoid it.
     pointer = getConstantSignedPointer(
         pointer, pointerAuth.getKey(), nullptr,
-        cast_or_null<llvm::Constant>(pointerAuth.getDiscriminator()));
+        cast_or_null<llvm::ConstantInt>(pointerAuth.getDiscriminator()));
 
     // Store the result back into the cache, if any.
     if (entry)
@@ -629,7 +655,7 @@ CodeGenModule::getMemberFunctionPointer(llvm::Constant *pointer,
 
     pointer = getConstantSignedPointer(
         pointer, pointerAuth.getKey(), nullptr,
-        cast_or_null<llvm::Constant>(pointerAuth.getDiscriminator()));
+        cast_or_null<llvm::ConstantInt>(pointerAuth.getDiscriminator()));
 
     if (entry)
       *entry = pointer;

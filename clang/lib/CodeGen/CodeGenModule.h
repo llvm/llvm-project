@@ -977,18 +977,19 @@ public:
                                            llvm::Constant *storageAddress,
                                            GlobalDecl schemaDecl,
                                            QualType schemaType);
-  llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
-                                           unsigned key,
-                                           llvm::Constant *storageAddress,
-                                           llvm::Constant *extraDiscrim);
 
-  llvm::Constant *
+  llvm::ConstantInt *
   getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
                                    GlobalDecl schemaDecl, QualType schemaType);
   uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
 
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
+
+  llvm::Constant *
+  getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                           llvm::Constant *StorageAddress,
+                           llvm::ConstantInt *OtherDiscriminator);
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {

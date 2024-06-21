@@ -894,7 +894,7 @@ static llvm::Constant *pointerAuthResignConstant(
 
   return CGM.getConstantSignedPointer(
       Info->getPointer(), NewAuthInfo.getKey(), nullptr,
-      cast<llvm::Constant>(NewAuthInfo.getDiscriminator()));
+      cast<llvm::ConstantInt>(NewAuthInfo.getDiscriminator()));
 }
 
 /// Perform a bitcast, derived-to-base, or base-to-derived member pointer

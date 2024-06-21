@@ -1959,11 +1959,11 @@ private:
   ConstantLValue emitPointerAuthSignConstant(const CallExpr *E);
   llvm::Constant *emitPointerAuthPointer(const Expr *E);
   unsigned emitPointerAuthKey(const Expr *E);
-  std::pair<llvm::Constant*, llvm::Constant*>
+  std::pair<llvm::Constant *, llvm::ConstantInt *>
   emitPointerAuthDiscriminator(const Expr *E);
+
   llvm::Constant *tryEmitConstantSignedPointer(llvm::Constant *ptr,
                                                PointerAuthQualifier auth);
-
   bool hasNonZeroOffset() const {
     return !Value.getLValueOffset().isZero();
   }
@@ -2081,7 +2081,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
         C = CGM.getConstantSignedPointer(
             C, AuthInfo.getKey(),
             /*storageAddress=*/nullptr,
-            cast_or_null<llvm::Constant>(AuthInfo.getDiscriminator()));
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
         return ConstantLValue(C, /*AppliedOffset=*/true, /*Signed=*/true);
       }
 
@@ -2180,12 +2180,13 @@ ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 ConstantLValue
 ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   unsigned builtin = E->getBuiltinCallee();
-  if (builtin == Builtin::BI__builtin_ptrauth_sign_constant)
-    return emitPointerAuthSignConstant(E);
-
   if (builtin == Builtin::BI__builtin_function_start)
     return CGM.GetFunctionStart(
         E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
+
+  if (builtin == Builtin::BI__builtin_ptrauth_sign_constant)
+    return emitPointerAuthSignConstant(E);
+
   if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;
@@ -2222,7 +2223,7 @@ ConstantLValueEmitter::tryEmitConstantSignedPointer(
   }
 
   // Fetch the extra discriminator.
-  llvm::Constant *otherDiscriminator =
+  llvm::ConstantInt *otherDiscriminator =
     llvm::ConstantInt::get(CGM.IntPtrTy, schema.getExtraDiscriminator());
 
   auto signedPointer =
@@ -2237,59 +2238,56 @@ ConstantLValueEmitter::tryEmitConstantSignedPointer(
 
 ConstantLValue
 ConstantLValueEmitter::emitPointerAuthSignConstant(const CallExpr *E) {
-  auto unsignedPointer = emitPointerAuthPointer(E->getArg(0));
-  auto key = emitPointerAuthKey(E->getArg(1));
-  llvm::Constant *storageAddress;
-  llvm::Constant *otherDiscriminator;
-  std::tie(storageAddress, otherDiscriminator) =
-    emitPointerAuthDiscriminator(E->getArg(2));
+  llvm::Constant *UnsignedPointer = emitPointerAuthPointer(E->getArg(0));
+  unsigned Key = emitPointerAuthKey(E->getArg(1));
+  auto [StorageAddress, OtherDiscriminator] =
+      emitPointerAuthDiscriminator(E->getArg(2));
 
-  auto signedPointer =
-    CGM.getConstantSignedPointer(unsignedPointer, key, storageAddress,
-                                 otherDiscriminator);
-  return signedPointer;
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, OtherDiscriminator);
+  return SignedPointer;
 }
 
 llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
-  Expr::EvalResult result;
-  bool succeeded = E->EvaluateAsRValue(result, CGM.getContext());
-  assert(succeeded); (void) succeeded;
+  Expr::EvalResult Result;
+  bool Succeeded = E->EvaluateAsRValue(Result, CGM.getContext());
+  assert(Succeeded);
+  (void)Succeeded;
 
   // The assertions here are all checked by Sema.
-  assert(result.Val.isLValue());
-  auto base = result.Val.getLValueBase().get<const ValueDecl *>();
-  if (auto decl = dyn_cast_or_null<FunctionDecl>(base)) {
-    assert(result.Val.getLValueOffset().isZero());
-    return CGM.getRawFunctionPointer(decl);
+  assert(Result.Val.isLValue());
+  auto Base = Result.Val.getLValueBase().get<const ValueDecl *>();
+  if (auto Decl = dyn_cast_or_null<FunctionDecl>(Base)) {
+    assert(Result.Val.getLValueOffset().isZero());
+    return CGM.getRawFunctionPointer(Decl);
   }
   return ConstantEmitter(CGM, Emitter.CGF)
-           .emitAbstract(E->getExprLoc(), result.Val, E->getType());
+      .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
 }
 
 unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
   return E->EvaluateKnownConstInt(CGM.getContext()).getZExtValue();
 }
 
-std::pair<llvm::Constant*, llvm::Constant*>
+std::pair<llvm::Constant *, llvm::ConstantInt *>
 ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto call = dyn_cast<CallExpr>(E)) {
-    if (call->getBuiltinCallee() ==
-          Builtin::BI__builtin_ptrauth_blend_discriminator) {
-      auto pointer = ConstantEmitter(CGM).emitAbstract(call->getArg(0),
-                                            call->getArg(0)->getType());
-      auto extra = ConstantEmitter(CGM).emitAbstract(call->getArg(1),
-                                            call->getArg(1)->getType());
-      return { pointer, extra };
+  if (const auto *Call = dyn_cast<CallExpr>(E)) {
+    if (Call->getBuiltinCallee() ==
+        Builtin::BI__builtin_ptrauth_blend_discriminator) {
+      llvm::Constant *Pointer = ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(0), Call->getArg(0)->getType());
+      auto *Extra = cast<llvm::ConstantInt>(ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(1), Call->getArg(1)->getType()));
+      return {Pointer, Extra};
     }
   }
 
-  auto result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
-  if (result->getType()->isPointerTy())
-    return { result, nullptr };
-  else
-    return { nullptr, result };
+  llvm::Constant *Result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
+  if (Result->getType()->isPointerTy())
+    return {Result, nullptr};
+  return {nullptr, cast<llvm::ConstantInt>(Result)};
 }
 
 ConstantLValue

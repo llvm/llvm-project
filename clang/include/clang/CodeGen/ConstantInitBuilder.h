@@ -212,7 +212,7 @@ public:
   void addSignedPointer(llvm::Constant *pointer,
                         unsigned key,
                         bool useAddressDiscrimination,
-                        llvm::Constant *otherDiscriminator);
+                        llvm::ConstantInt *otherDiscriminator);
 
   /// Add a null pointer of a specific type.
   void addNullPointer(llvm::PointerType *ptrTy) {
