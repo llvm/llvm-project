@@ -10,42 +10,74 @@
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
+  implicit none
   integer :: a = 0
+  INTERFACE
+     FUNCTION omp_get_device_num() BIND(C)
+       USE, INTRINSIC :: iso_c_binding, ONLY: C_INT
+       integer :: omp_get_device_num
+     END FUNCTION omp_get_device_num
+  END INTERFACE
+
   call foo(5, a)
   print*, "======= FORTRAN Test passed! ======="
-  print*, "foo(5) returned ", a, ", expected 8\n"
+  print*, "foo(5) returned ", a, ", expected 6\n"
+
   !       stop 0
-end program main
-subroutine foo(N, r)
-  integer, intent(in) :: N
-  integer, intent(out) :: r
-  integer :: z, i
-  z = 1
-  ! Spawn 3 threads
-  !$omp parallel num_threads(3)
+  contains
+    subroutine foo(N, r)
+      integer, intent(in) :: N
+      integer, intent(out) :: r
+      integer :: z, i, j, k, accumulator
+      z = 1
+      accumulator = 0
+      ! Spawn 3 threads
+      !$omp parallel num_threads(3)
 
-  ! Each thread redundantly updates z to N
-  ! i.e. 5
-  !$omp task depend(out: z) shared(z)
-  do while (i < 32766)
-     ! dumb loop to slow down the update of
-     ! z
-     i = i + 1
-  end do
-  z = N
-  !$omp end task
+      ! A single thread will then create two tasks
+      ! One is the 'producer' and potentially slower
+      ! task that updates 'z' to 'N'. The second is an
+      ! offloaded target task that increments 'z'.
+      ! If the depend clauses work properly, the
+      ! target task should wait for the 'producer'
+      ! task to complete before incrementing z
+      ! We use !$omp single here because only
+      ! the depend clause establishes dependencies
+      ! between sibling tasks only. This is the easiest
+      ! way of creating two sibling tasks.
+      !$omp single
+      !$omp task depend(out: z) shared(z)
+      do while (k < 32000)
+         do while (j < 32766)
+            do while (i < 32766)
+               ! dumb loop nest to slow down the update of
+               ! z
+               i = i + 1
+               ! Adding a function call slows down the producer
+               ! to the point that removing the depend clause
+               ! from the target construct below frequently
+               ! results in the wrong answer.
+               accumulator = accumulator + omp_get_device_num()
+            end do
+            j = j +1
+         end do
+         k = k + 1
+      end do
+      z = N
+      !$omp end task
 
-  ! z is 5 now. Each thread then offloads
-  ! increment of z by 1. So, z is incremented
-  ! three times.
-  !$omp target map(tofrom: z) depend(in: z)
-  z = z + 1
-  !$omp end target
-  !$omp end parallel
-
-  ! z is 8.
-  r = z
+      ! z is 5 now. Increment z to 6.
+      !$omp target map(tofrom: z) depend(in:z)
+      z = z + 1
+      !$omp end target
+      !$omp end single
+      !$omp end parallel
+      ! Use 'accumulator' so it is not optimized away
+      ! by the compiler.
+      print *, accumulator
+      r = z
 end subroutine foo
 
 !CHECK: ======= FORTRAN Test passed! =======
-!CHECK: foo(5) returned 8 , expected 8
+!CHECK: foo(5) returned 6 , expected 6
+end program main
