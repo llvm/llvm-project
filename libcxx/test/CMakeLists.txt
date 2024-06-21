@@ -34,31 +34,6 @@ endif()
 
 serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
 
-if (MSVC)
-  # Shared code for initializing some parameters used by all
-  # llvm-libc++-*-clangcl.cfg.in test configs.
-  set(dbg_include "")
-
-  if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
-    set(fms_runtime_lib "dll")
-    set(cxx_lib "msvcprt")
-  else()
-    set(fms_runtime_lib "static")
-    set(cxx_lib "libcpmt")
-  endif()
-
-  if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-      OR (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "Debug"))
-    set(dbg_include " -include set_windows_crt_report_mode.h")
-    set(fms_runtime_lib "${fms_runtime_lib}_dbg")
-    set(cxx_lib "${cxx_lib}d")
-  endif()
-
-  serialize_lit_string_param(SERIALIZED_LIT_PARAMS dbg_include "${dbg_include}")
-  serialize_lit_string_param(SERIALIZED_LIT_PARAMS fms_runtime_lib "${fms_runtime_lib}")
-  serialize_lit_string_param(SERIALIZED_LIT_PARAMS cxx_lib "${cxx_lib}")
-endif()
-
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 
