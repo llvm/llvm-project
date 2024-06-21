@@ -798,7 +798,7 @@
   bytes. Default value: 0, i.e. split iff the size is reduced. Note that on some
   architectures the size can increase after splitting.
 
-- `--stale-matching-matching-functions-with-hash`
+- `--match-profile-with-function-hash`
 
   Turns on matching functions with exact hash
 

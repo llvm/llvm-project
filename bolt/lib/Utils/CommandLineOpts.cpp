@@ -129,9 +129,9 @@ cl::opt<bool>
                cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-    MatchingFunctionsWithHash("stale-matching-matching-functions-with-hash",
-                              cl::desc("Matching functions using hash"),
-                              cl::Hidden, cl::cat(BoltCategory));
+    MatchProfileWithFunctionHash("match-profile-with-function-hash",
+                                 cl::desc("Match profile with function hash"),
+                                 cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<std::string>
 OutputFilename("o",

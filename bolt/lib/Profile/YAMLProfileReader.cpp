@@ -22,7 +22,7 @@ namespace opts {
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
-extern cl::opt<bool> MatchingFunctionsWithHash;
+extern cl::opt<bool> MatchProfileWithFunctionHash;
 extern cl::opt<bool> Lite;
 
 static llvm::cl::opt<bool>
@@ -370,7 +370,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithLTOCommonName = 0;
 
   // Computes hash for binary functions.
- if (opts::MatchingFunctionsWithHash)
+  if (opts::MatchProfileWithFunctionHash)
     for (auto &[_, BF] : BC.getBinaryFunctions())
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
   else if (!opts::IgnoreHash)
@@ -394,7 +394,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   // Uses the strict hash of profiled and binary functions to match functions
   // that are not matched by name or common name.
-  if (opts::MatchingFunctionsWithHash) {
+  if (opts::MatchProfileWithFunctionHash) {
     std::unordered_map<size_t, BinaryFunction *> StrictHashToBF;
     StrictHashToBF.reserve(BC.getBinaryFunctions().size());
 
@@ -481,12 +481,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   }
 
   BC.setNumUnusedProfiledObjects(NumUnused);
-  
-  if (opts::Lite)  
-    for (BinaryFunction* BF : BC.getAllBinaryFunctions()) 
+
+  if (opts::Lite)
+    for (BinaryFunction *BF : BC.getAllBinaryFunctions())
       if (ProfiledFunctions.find(BF) == ProfiledFunctions.end())
         BF->setIgnored();
-  
 
   return Error::success();
 }
