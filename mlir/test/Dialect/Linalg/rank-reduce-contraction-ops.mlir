@@ -203,11 +203,34 @@ func.func @matmul_transpose_a_to_vecmat(%arg0: tensor<256x1xf32>, %arg1: tensor<
 
 // -----
 
+func.func @batch_matmul_transpose_a_to_batch_vecmat(%arg0: tensor<64x256x1xf32>, %arg1: tensor<64x256x512xf32>, %arg2: tensor<64x1x512xf32>) -> tensor<64x1x512xf32> {
+  // CHECK-LABEL: @batch_matmul_transpose_a_to_batch_vecmat
+  // CHECK: collapse_shape {{.*}} into tensor<64x256xf32>
+  // CHECK: collapse_shape {{.*}} into tensor<64x512xf32>
+  // CHECK: linalg.batch_vecmat
+  // CHECK: expand_shape {{.*}} into tensor<64x1x512xf32>
+    %0 = linalg.batch_matmul_transpose_a ins(%arg0, %arg1: tensor<64x256x1xf32>, tensor<64x256x512xf32>) outs(%arg2: tensor<64x1x512xf32>) -> tensor<64x1x512xf32>
+    return %0 : tensor<64x1x512xf32>
+}
+
+// -----
+
 func.func @matmul_transpose_b_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<1x?xf32>, %arg2: memref<?x1xf32>) {
   // CHECK-LABEL: @matmul_transpose_b_to_matvec
   // CHECK: linalg.matvec
     linalg.matmul_transpose_b ins(%arg0, %arg1: memref<?x?xf32>, memref<1x?xf32>) outs(%arg2: memref<?x1xf32>)
     return
+}
+
+// -----
+
+func.func @batchmatmul_transpose_b_to_batchmatvec_tensor(%arg0: tensor<64x128x256xf32>, %arg1: tensor<64x1x256xf32>, %arg2: tensor<64x128x1xf32>) -> tensor<64x128x1xf32> {
+  // CHECK: collapse_shape {{.*}} into tensor<64x256xf32>
+  // CHECK: collapse_shape {{.*}} into tensor<64x128xf32>
+  // CHECK: linalg.batch_matvec
+  // CHECK: expand_shape {{.*}} into tensor<64x128x1xf32>
+    %0 = linalg.batch_matmul_transpose_b ins(%arg0, %arg1: tensor<64x128x256xf32>, tensor<64x1x256xf32>) outs(%arg2: tensor<64x128x1xf32>) -> tensor<64x128x1xf32> 
+    return %0 : tensor<64x128x1xf32>
 }
 
 // -----
