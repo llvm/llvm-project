@@ -837,6 +837,23 @@ def G_FMAXIMUM : GenericInstruction {
   let isCommutable = true;
 }
 
+// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that also treat -0.0
+// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
+// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics: if one operand
+// is SNaN, 2008 returns QNaN, while 2019 returns another non-NaN operand.
+def G_FMINIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+def G_FMAXIMUMNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------
@@ -1571,6 +1588,8 @@ def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;
 def G_VECREDUCE_FMAXIMUM : VectorReduction;
 def G_VECREDUCE_FMINIMUM : VectorReduction;
+def G_VECREDUCE_FMAXIMUMNUM : VectorReduction;
+def G_VECREDUCE_FMINIMUMNUM : VectorReduction;
 
 def G_VECREDUCE_ADD : VectorReduction;
 def G_VECREDUCE_MUL : VectorReduction;

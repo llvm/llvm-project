@@ -140,6 +140,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FLDEXP:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -1231,6 +1233,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::VP_FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::VP_FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::VP_FMAXIMUMNUM:
   case ISD::SDIV: case ISD::VP_SDIV:
   case ISD::UDIV: case ISD::VP_UDIV:
   case ISD::FDIV: case ISD::VP_FDIV:
@@ -3191,6 +3197,8 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     Res = SplitVecOp_VECREDUCE(N, OpNo);
     break;
   case ISD::VECREDUCE_SEQ_FADD:
@@ -3214,6 +3222,8 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FMAXIMUMNUM:
+  case ISD::VP_REDUCE_FMINIMUMNUM:
     Res = SplitVecOp_VP_REDUCE(N, OpNo);
     break;
   case ISD::VP_CTTZ_ELTS:
@@ -4340,6 +4350,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::VP_FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::VP_FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::VP_FMAXIMUMNUM:
   case ISD::SMIN: case ISD::VP_SMIN:
   case ISD::SMAX: case ISD::VP_SMAX:
   case ISD::UMIN: case ISD::VP_UMIN:

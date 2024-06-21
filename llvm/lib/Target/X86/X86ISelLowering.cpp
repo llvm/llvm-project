@@ -947,6 +947,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FEXP10, MVT::f80, Expand);
   setOperationAction(ISD::FMINNUM, MVT::f80, Expand);
   setOperationAction(ISD::FMAXNUM, MVT::f80, Expand);
+  setOperationAction(ISD::FMINIMUMNUM, MVT::f80, Expand);
+  setOperationAction(ISD::FMAXIMUMNUM, MVT::f80, Expand);
 
   // Some FP actions are always expanded for vector types.
   for (auto VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16,
@@ -44813,6 +44815,8 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM:
   case X86ISD::FMAX:
   case X86ISD::FMIN:
   case ISD::FABS: // Begin 1 operand

@@ -16080,6 +16080,100 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
+.. _i_fminmax_family:
+
+'``llvm.min.*``' Intrinsics Comparation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Standard:
+"""""""""
+
+IEEE754 and ISO C define some min/max operations, and they have some differences
+on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
+
+.. list-table::
+   :header-rows: 2
+
+   * - ``ISO C``
+     - fmin/fmax
+     - fmininum/fmaximum
+     - fminimum_num/fmaximum_num
+
+   * - ``IEEE754``
+     - minNum/maxNum (2008)
+     - minimum/maximum (2019)
+     - minimumNumber/maximumNumber (2019)
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0 > -0.0
+     - +0.0 > -0.0
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+LLVM Implementation:
+""""""""""""""""""""
+
+LLVM implements all ISO C flavors as listed in this table.
+Only basic intrinsics list here. The constrained version
+ones may have different behaivor on exception.
+
+Since some architectures implement minNum/maxNum with +0.0>-0.0,
+so we define internal ISD::MINNUM_IEEE and ISD::MAXNUM_IEEE.
+They will be helpful to implement minimumnum/maximumnum.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 16 28 28 28
+
+   * - Operation
+     - minnum/maxnum
+     - minimum/maximum
+     - minimumnum/maximumnum
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
+
+   * - ``NUM vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - NUM, invalid exception
+
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``sNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``+0.0 vs -0.0``
+     - either one
+     - +0.0(max)/-0.0(min)
+     - +0.0(max)/-0.0(min)
+
+   * - ``NUM vs NUM``
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+     - larger(max)/smaller(min)
+
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
@@ -16260,6 +16354,98 @@ If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2019.
+
+.. _i_minimumnum:
+
+'``llvm.minimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.minimumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.minimumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.minimumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.minimumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.minimumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.minimumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.minimumnum.*``' intrinsics return the minimum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the lesser of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
+
+It has some different with '``llvm.minnum.*``': 
+1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
+
+.. _i_maximumnum:
+
+'``llvm.maximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.maximumnum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.maximumnum.f32(float %Val0, float %Val1)
+      declare double    @llvm.maximumnum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.maximumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.maximumnum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.maximumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.maximumnum.*``' intrinsics return the maximum of the two
+arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If both operands are NaNs (including sNaN), returns qNaN. If one operand
+is NaN (including sNaN) and another operand is a number, return the number.
+Otherwise returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
+
+Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
+
+It has some different with '``llvm.maxnum.*``': 
+1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
+2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
 .. _int_copysign:
 
@@ -19067,6 +19253,65 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+.. _int_vector_reduce_fmaximumnum:
+
+'``llvm.vector.reduce.fmaximumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fmaximumnum.*``' intrinsics do a floating-point
+``MAX`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison semantics as the '``llvm.maximumnum.*``'
+intrinsic. That is, this intrinsic not propagates NaNs (even sNaNs) and +0.0 is
+considered greater than -0.0. If all elements of the vector are NaNs, the result is NaN.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
+.. _int_vector_reduce_fminimumnum:
+
+'``llvm.vector.reduce.fminimumnum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+      declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.reduce.fminimumnum.*``' intrinsics do a floating-point
+``MIN`` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison semantics as the '``llvm.minimumnum.*``'
+intrinsic. That is, this intrinsic not propagates NaNs (even sNaNs) and -0.0 is
+considered less than +0.0. If all elements of the vector are NaNs, the result is NaN.
+
+Arguments:
+""""""""""
+The argument to this intrinsic must be a vector of floating-point values.
+
+
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21253,6 +21498,107 @@ Examples:
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
+.. _int_vp_minimumnum:
+
+'``llvm.vp.minimumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.minimumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.minimumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.minimumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point minimum of two vectors of floating-point values,
+not propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of floating-point type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.minimumnum``' intrinsic performs floating-point minimumNumber (:ref:`minimumnum <i_minimumnum>`)
+of the first and second vector operand on each enabled lane, the result being
+NaN if both operands are NaN. Even sNaN vs Num results NUM. -0.0 is considered
+to be less than +0.0 for this intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.minimumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %a, <4 x float> %b)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+.. _int_vp_maximumnum:
+
+'``llvm.vp.maximumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.maximumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.maximumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.maximumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point maximum of two vectors of floating-point values,
+not propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two operands and the result have the same vector of floating-point type. The
+third operand is the vector mask and has the same number of elements as the
+result vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.maximumnum``' intrinsic performs floating-point maximumNumber (:ref:`maximumnum <i_maximumnum>`)
+of the first and second vector operand on each enabled lane, the result being
+NaN if both operands are NaN. sNaN vs Num results NUM. -0.0 is considered
+to be less than +0.0 for this intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
+The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+
 .. _int_vp_fadd:
 
 '``llvm.vp.fadd.*``' Intrinsics
@@ -22650,6 +22996,146 @@ Examples:
       %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
       %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
       %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
+
+
+.. _int_vp_reduce_fmaximumnum:
+
+'``llvm.vp.reduce.fmaximumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fmaximumnum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fmaximumnum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MAX`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fmaximumnum``' intrinsic performs the floating-point ``MAX``
+reduction (:ref:`llvm.vector.reduce.fmaximumnum <int_vector_reduce_fmaximumnum>`) of
+the vector operand ``val`` on each enabled lane, taking the maximum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the
+neutral value (i.e. having no effect on the reduction operation). If the vector
+length is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``-Infinity``.
+If ``ninf`` is set, then the neutral value is the smallest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fmaximumnum <int_vector_reduce_fmaximumnum>` intrinsic (and
+thus the '``llvm.maximumnum.*``' intrinsic). That is, the result will always be a
+number unless all of the elements in the vector and the starting value is
+``NaN``. Namely, this intrinsic not propagates ``NaN``, even for ``sNaN``.
+Also, -0.0 is considered less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fmaximumnum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
+      %reduction = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.maximumnum.f32(float %reduction, float %start)
+
+
+.. _int_vp_reduce_fminimumnum:
+
+'``llvm.vp.reduce.fminimumnum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fminimumnum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fminimumnum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MIN`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fminimumnum``' intrinsic performs the floating-point ``MIN``
+reduction (:ref:`llvm.vector.reduce.fminimumnum <int_vector_reduce_fminimumnum>`) of
+the vector operand ``val`` on each enabled lane, taking the minimum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the
+neutral value (i.e. having no effect on the reduction operation). If the vector
+length is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``+Infinity``.
+If ``ninf`` is set, then the neutral value is the largest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fminimumnum <int_vector_reduce_fminimumnum>` intrinsic (and
+thus the '``llvm.minimumnum.*``' intrinsic). That is, the result will always be a
+number unless all of the elements in the vector and the starting value is
+``NaN``. Namely, this intrinsic not propagates ``NaN``, even for ``sNaN``.
+Also, -0.0 is considered less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fmaximumnum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
+      %reduction = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.maximumnum.f32(float %reduction, float %start)
 
 
 .. _int_get_active_lane_mask:
@@ -26955,6 +27441,70 @@ Semantics:
 """"""""""
 
 This function follows semantics specified in the draft of IEEE 754-2019.
+
+
+'``llvm.experimental.constrained.maximumnum``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.maximumnum(<type> <op1>, <type> <op2>
+                                                metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.maximumnum``' intrinsic returns the maximum
+of the two arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers
+of the same type.
+
+The third argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+This function follows semantics specified in IEEE 754-2019.
+
+
+'``llvm.experimental.constrained.minimumnum``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.minimumnum(<type> <op1>, <type> <op2>
+                                                metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.minimumnum``' intrinsic returns the minimum
+of the two arguments, not propagating NaNs and treating -0.0 as less than +0.0.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers
+of the same type.
+
+The third argument specifies the exception behavior as described above.
+
+Semantics:
+""""""""""
+
+This function follows semantics specified in IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic

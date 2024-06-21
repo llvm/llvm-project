@@ -4916,6 +4916,18 @@ def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXNMDrr FPR64:$Rn, FPR64:$Rm)>;
 def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
+def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMINNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMINNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
+          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
+def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
+          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
+def : Pat<(f32 (fcanonicalize f32:$a)),
+          (FMINSrr   f32:$a, f32:$a)>;
+def : Pat<(f64 (fcanonicalize f64:$a)),
+          (FMINDrr   f64:$a, f64:$a)>;
 
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.

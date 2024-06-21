@@ -331,7 +331,9 @@ Value *CachingVPExpander::expandPredicationToFPCall(
     return NewOp;
   }
   case Intrinsic::maxnum:
-  case Intrinsic::minnum: {
+  case Intrinsic::minnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::minimumnum: {
     Value *Op0 = VPI.getOperand(0);
     Value *Op1 = VPI.getOperand(1);
     Function *Fn = Intrinsic::getDeclaration(
@@ -497,6 +499,18 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
     transferDecorations(*Reduction, VPI);
     Reduction =
         Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fmaximumnum:
+    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::maximumnum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fminimumnum:
+    Reduction = Builder.CreateFPMinimumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::minimumnum, Reduction, Start);
     break;
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);
@@ -755,6 +769,8 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_minnum:
   case Intrinsic::vp_maximum:
   case Intrinsic::vp_minimum:
+  case Intrinsic::vp_maximumnum:
+  case Intrinsic::vp_minimumnum:
   case Intrinsic::vp_fma:
   case Intrinsic::vp_fmuladd:
     return expandPredicationToFPCall(Builder, VPI,
