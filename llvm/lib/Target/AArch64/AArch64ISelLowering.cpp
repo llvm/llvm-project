@@ -856,7 +856,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
        {ISD::FFLOOR,          ISD::FNEARBYINT,      ISD::FCEIL,
         ISD::FRINT,           ISD::FTRUNC,          ISD::FROUND,
         ISD::FROUNDEVEN,      ISD::FMINNUM,         ISD::FMAXNUM,
-        ISD::FMINNUM_IEEE,    ISD::FMAXNUM_IEEE,
         ISD::FMINIMUM,        ISD::FMAXIMUM,        ISD::LROUND,
         ISD::LLROUND,         ISD::LRINT,           ISD::LLRINT,
         ISD::STRICT_FFLOOR,   ISD::STRICT_FCEIL,    ISD::STRICT_FNEARBYINT,
@@ -1186,7 +1185,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
           ISD::FROUNDEVEN,        ISD::FTRUNC,         ISD::FMINNUM,
           ISD::FMAXNUM,           ISD::FMINIMUM,       ISD::FMAXIMUM,
-          ISD::FMINNUM_IEEE,      ISD::FMAXNUM_IEEE,
           ISD::STRICT_FADD,       ISD::STRICT_FSUB,    ISD::STRICT_FMUL,
           ISD::STRICT_FDIV,       ISD::STRICT_FMA,     ISD::STRICT_FCEIL,
           ISD::STRICT_FFLOOR,     ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,
@@ -1878,7 +1876,6 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
       (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()))
     for (unsigned Opcode :
          {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM,
-          ISD::FMINNUM_IEEE,    ISD::FMAXNUM_IEEE,
           ISD::STRICT_FMINIMUM, ISD::STRICT_FMAXIMUM, ISD::STRICT_FMINNUM,
           ISD::STRICT_FMAXNUM, ISD::STRICT_FADD, ISD::STRICT_FSUB,
           ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FMA,
@@ -9818,9 +9815,7 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     EltSize *= 2;
     NumElts /= 2;
     MVT WidenVT = MVT::getVectorVT(MVT::getIntegerVT(EltSize), NumElts);
-    Val = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, WidenVT,
-        DAG.getConstant(Intrinsic::aarch64_neon_uaddlp, DL, MVT::i32), Val);
+    Val = DAG.getNode(AArch64ISD::UADDLP, DL, WidenVT, Val);
   }
 
   return Val;
