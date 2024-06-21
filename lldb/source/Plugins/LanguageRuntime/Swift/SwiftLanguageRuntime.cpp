@@ -336,9 +336,9 @@ public:
     return {};
   }
 
-  bool GetObjectDescription(Stream &str, ValueObject &object) {
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) {
     STUB_LOG();
-    return false;
+    return llvm::createStringError("Swift runtime not initialized");
   }
 
   void AddToLibraryNegativeCache(llvm::StringRef library_name) {}
@@ -1046,11 +1046,8 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
   return expr_string;
 }
 
-bool
-SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
-    std::string &expr_string,
-    Stream &result)
-{
+llvm::Error SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(
+    ValueObject &object, std::string &expr_string, Stream &result) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
@@ -1064,10 +1061,8 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
     frame_sp
         = m_process.GetThreadList().GetSelectedThread()
             ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
-  if (!frame_sp) {
-    log->Printf("no execution context to run expression in");
-    return false;
-  }
+  if (!frame_sp)
+    return llvm::createStringError("no execution context to run expression in");
   auto eval_result = m_process.GetTarget().EvaluateExpression(
       expr_string,
       frame_sp.get(),
@@ -1085,8 +1080,7 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
       log->Printf(
           "[RunObjectDescriptionExpr] expression generated no result");
 
-    result.Printf("expression produced no result");
-    return false;
+    return llvm::createStringError("expression produced no result");
   }
   if (result_sp->GetError().Fail()) {
     if (log)
@@ -1094,17 +1088,14 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
           "[RunObjectDescriptionExpr] expression generated error: %s",
           result_sp->GetError().AsCString());
 
-    result.Printf("expression produced error: %s",
-               result_sp->GetError().AsCString());
-    return false;
+    return result_sp->GetError().ToError();
   }
-  if (false == result_sp->GetCompilerType().IsValid()) {
+  if (!result_sp->GetCompilerType().IsValid()) {
     if (log)
       log->Printf("[RunObjectDescriptionExpr] expression generated "
                   "invalid type");
 
-    result.Printf("expression produced invalid result type");
-    return false;
+    return llvm::createStringError("expression produced invalid result type");
   }
 
   formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
@@ -1120,15 +1111,13 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
     if (log)
       log->Printf("[RunObjectDescriptionExpr] expression completed "
                   "successfully");
-    return true;
-  } else {
-    if (log)
-      log->Printf("[RunObjectDescriptionExpr] expression generated "
-                  "invalid string data");
-
-    result.Printf("expression produced unprintable string");
-    return false;
+    return llvm::Error::success();
   }
+  if (log)
+    log->Printf("[RunObjectDescriptionExpr] expression generated "
+                "invalid string data");
+
+  return llvm::createStringError("expression produced unprintable string");
 }
 
 static bool IsVariable(ValueObject &object) {
@@ -1160,12 +1149,11 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
-                                                    ValueObject &object) {
-  if (object.IsUninitializedReference()) {
-    str.Printf("<uninitialized>");
-    return true;
-  }
+llvm::Error
+SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
+                                               ValueObject &object) {
+  if (object.IsUninitializedReference())
+    return llvm::createStringError("<uninitialized>");
 
   std::string expr_string;
 
@@ -1185,10 +1173,11 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
   }
   if (!expr_string.empty()) {
     StreamString probe_stream;
-    if (RunObjectDescriptionExpr(object, expr_string, probe_stream)) {
-      str.Printf("%s", probe_stream.GetData());
-      return true;
-    }
+    auto error = RunObjectDescriptionExpr(object, expr_string, probe_stream);
+    if (error)
+      return error;
+    str.Printf("%s", probe_stream.GetData());
+    return llvm::Error::success();
   }
   // In general, don't try to use the name of the ValueObject as it might end up
   // referring to the wrong thing.  Instead, copy the object data into the
@@ -1196,15 +1185,15 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
   lldb::addr_t copy_location = LLDB_INVALID_ADDRESS;
   expr_string = GetObjectDescriptionExpr_Copy(object, copy_location);
   if (copy_location == LLDB_INVALID_ADDRESS) {
-    str.Printf("Failed to allocate memory for copy object.");
-    return false;
+    return llvm::createStringError(
+        "Failed to allocate memory for copy object.");
   }
 
-  auto cleanup =
-      llvm::make_scope_exit([&]() { m_process.DeallocateMemory(copy_location); });
+  auto cleanup = llvm::make_scope_exit(
+      [&]() { m_process.DeallocateMemory(copy_location); });
 
   if (expr_string.empty())
-    return false;
+    return llvm::createStringError("no object description");
   return RunObjectDescriptionExpr(object, expr_string, str);
 }
 
@@ -2472,8 +2461,8 @@ SwiftLanguageRuntime::GetNumFields(CompilerType type,
   FORWARD(GetNumFields, type, exe_ctx);
 }
 
-bool SwiftLanguageRuntime::GetObjectDescription(Stream &str,
-                                                ValueObject &object) {
+llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
+                                                       ValueObject &object) {
   FORWARD(GetObjectDescription, str, object);
 }
 

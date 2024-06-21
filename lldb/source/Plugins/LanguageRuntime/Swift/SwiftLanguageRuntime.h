@@ -109,11 +109,13 @@ public:
   /// PluginInterface protocol.
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  bool GetObjectDescription(Stream &str, Value &value,
-                            ExecutionContextScope *exe_scope) override {
+  llvm::Error
+  GetObjectDescription(Stream &str, Value &value,
+                       ExecutionContextScope *exe_scope) override {
     // This is only interesting to do with a ValueObject for Swift.
-    return false;
-   }
+    return llvm::createStringError(
+        "Swift values do not have an object description");
+  }
 
   lldb::LanguageType GetLanguageType() const override {
     return lldb::eLanguageTypeSwift;
@@ -237,7 +239,7 @@ public:
                                                      bool catch_bp,
                                                      bool throw_bp) override;
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
-  bool GetObjectDescription(Stream &str, ValueObject &object) override;
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override;
   CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
                                ConstString abstract_type_name) override;
 

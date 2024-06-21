@@ -52,3 +52,10 @@ class TestSwiftExpressionErrorReportingy(TestBase):
                 self.assertFalse(line.startswith('warning:'))
 
         check(value)
+
+        self.expect('dwim-print -O -- strct', error=True,
+                    substrs=['Missing type'])
+        
+        process.Continue()
+        self.expect('dwim-print -O -- number', error=True,
+                    substrs=['self', 'not', 'found'])
