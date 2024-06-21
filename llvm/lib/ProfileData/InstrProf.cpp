@@ -1001,6 +1001,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
   }
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
+  assert(ValueSites.size() == Site);
   if (N == 0)
     ValueSites.emplace_back();
   else
@@ -1379,22 +1380,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                                     ActualNumValueData, TotalC, GetNoICPValue))
     return nullptr;
   return ValueDataArray;
-}
-
-// FIXME: Migrate existing callers to the function above that returns an
-// array.
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue) {
-  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
-  if (!MD)
-    return false;
-  return getValueProfDataFromInstImpl(MD, MaxNumValueData, ValueData,
-                                      ActualNumValueData, TotalC,
-                                      GetNoICPValue);
 }
 
 MDNode *getPGOFuncNameMetadata(const Function &F) {
