@@ -71,7 +71,7 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   let Inst{13} = ?;       // supr
 
   let Inst{23-16} = op;
-  let Inst{31-24} = 0xde; // encoding
+  let Inst{31-24} = 0xdd; // encoding
 
   let Inst{40-32} = src0{8-0};
   let Inst{42-41} = ?;    // src0 cont
@@ -155,7 +155,7 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : Enc128 {
   let Inst{13} = ?;       // supr
 
   let Inst{23-16} = op;
-  let Inst{31-24} = 0xde; // encoding
+  let Inst{31-24} = 0xdf; // encoding
 
   let Inst{40-32} = src0{8-0};
   let Inst{42-41} = ?;    // src0 cont
