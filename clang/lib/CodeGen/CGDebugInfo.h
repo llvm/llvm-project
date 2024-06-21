@@ -617,7 +617,7 @@ public:
   ///
   /// * `<Prefix>:<Category>:<FailureMsg>`
   ///
-  /// `<Prefix>` is "__trap_msg".
+  /// `<Prefix>` is "__clang_trap_msg".
   ///
   /// This is used to store failure reasons for traps.
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,

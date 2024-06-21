@@ -28,7 +28,7 @@ namespace llvm {
 }
 
 // Prefix of the name of the artificial inline frame.
-#define CLANG_TRAP_PREFIX "__trap_msg"
+#define CLANG_TRAP_PREFIX "__clang_trap_msg"
 
 namespace clang {
   class CodeGenOptions;
