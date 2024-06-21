@@ -138,8 +138,9 @@ add_header_library(
 add_header_library(
   range_reduction_double
   HDRS
-    range_reduction_double.h
+    range_reduction_double_common.h
     range_reduction_double_fma.h
+    range_reduction_double_nofma.h
   DEPENDS
   libc.src.__support.FPUtil.double_double
   libc.src.__support.FPUtil.dyadic_float

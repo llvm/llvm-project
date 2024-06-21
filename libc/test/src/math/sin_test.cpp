@@ -19,7 +19,6 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcSinTest, TrickyInputs) {
-  constexpr int N = 50;
   constexpr double INPUTS[] = {
       0x1.940c877fb7dacp-7,    0x1.fffffffffdb6p24,    0x1.fd4da4ef37075p29,
       0x1.b951f1572eba5p+31,   0x1.55202aefde314p+31,  0x1.85fc0f04c0128p101,
@@ -39,9 +38,12 @@ TEST_F(LlvmLibcSinTest, TrickyInputs) {
       -0x1.6deb37da81129p+205, 0x1.08087e9aad90bp+887, 0x1.f6d7518808571p+1023,
       -0x1.8bb5847d49973p+845, 0x1.f08b14e1c4d0fp+890,
   };
+  constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
+
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
-    EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, LIBC_NAMESPACE::sin(x), 0.5);
+    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
+                                   LIBC_NAMESPACE::sin(x), 0.5);
   }
 }
 
@@ -100,14 +102,12 @@ TEST_F(LlvmLibcSinTest, InDoubleRange) {
   tlog << " Test Rounding To Nearest...\n";
   test(mpfr::RoundingMode::Nearest);
 
-  // TODO: Enable these tests when non-FMA versions works correctly for other
-  // rounding modes.
-  // tlog << " Test Rounding Downward...\n";
-  // test(mpfr::RoundingMode::Downward);
+  tlog << " Test Rounding Downward...\n";
+  test(mpfr::RoundingMode::Downward);
 
-  // tlog << " Test Rounding Upward...\n";
-  // test(mpfr::RoundingMode::Upward);
+  tlog << " Test Rounding Upward...\n";
+  test(mpfr::RoundingMode::Upward);
 
-  // tlog << " Test Rounding Toward Zero...\n";
-  // test(mpfr::RoundingMode::TowardZero);
+  tlog << " Test Rounding Toward Zero...\n";
+  test(mpfr::RoundingMode::TowardZero);
 }
