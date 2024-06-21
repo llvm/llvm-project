@@ -113,7 +113,7 @@ inline bool isTypedPointerTy(const Type *T) {
 
 // True if this is an instance of PointerType.
 inline bool isUntypedPointerTy(const Type *T) {
-  return T->getTypeID() == Type::PointerTyID;
+  return T && T->getTypeID() == Type::PointerTyID;
 }
 
 // True if this is an instance of PointerType or TypedPointerType.
@@ -153,11 +153,35 @@ inline Type *reconstructFunctionType(Function *F) {
   return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
-inline Type *toTypedPointer(Type *Ty, LLVMContext &Ctx) {
+inline Type *toTypedPointer(Type *Ty) {
   return isUntypedPointerTy(Ty)
-             ? TypedPointerType::get(IntegerType::getInt8Ty(Ctx),
+             ? TypedPointerType::get(IntegerType::getInt8Ty(Ty->getContext()),
                                      getPointerAddressSpace(Ty))
              : Ty;
+}
+
+inline Type *toTypedFunPointer(FunctionType *FTy) {
+  Type *OrigRetTy = FTy->getReturnType();
+  Type *RetTy = toTypedPointer(OrigRetTy);
+  bool IsUntypedPtr = false;
+  for (Type *PTy : FTy->params()) {
+    if (isUntypedPointerTy(PTy)) {
+      IsUntypedPtr = true;
+      break;
+    }
+  }
+  if (!IsUntypedPtr && RetTy == OrigRetTy)
+    return FTy;
+  SmallVector<Type *> ParamTys;
+  for (Type *PTy : FTy->params())
+    ParamTys.push_back(toTypedPointer(PTy));
+  return FunctionType::get(RetTy, ParamTys, FTy->isVarArg());
+}
+
+inline const Type *unifyPtrType(const Type *Ty) {
+  if (auto FTy = dyn_cast<FunctionType>(Ty))
+    return toTypedFunPointer(const_cast<FunctionType *>(FTy));
+  return toTypedPointer(const_cast<Type *>(Ty));
 }
 
 } // namespace llvm
