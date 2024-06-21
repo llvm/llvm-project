@@ -120,10 +120,10 @@ def EnableArmStreaming
            /*default=*/"false",
            "Only apply the selected streaming/ZA modes if the function contains"
            " ops that implement the ArmSMETileOpInterface.">,
-    Option<"ifCompatibleAndScalable", "if-compatible-and-scalable",
+    Option<"ifScalableAndSupported", "if-scalable-and-supported",
            "bool", /*default=*/"false",
            "Only apply the selected streaming/ZA modes if the function contains"
-           " compatible scalable vector operations.">
+           " supported scalable vector operations.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }

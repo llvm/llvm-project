@@ -69,19 +69,19 @@ bool isScalableVector(Type type) {
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
   EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode,
-                         bool ifRequiredByOps, bool ifCompatibleAndScalable) {
+                         bool ifRequiredByOps, bool ifScalableAndSupported) {
     this->streamingMode = streamingMode;
     this->zaMode = zaMode;
     this->ifRequiredByOps = ifRequiredByOps;
-    this->ifCompatibleAndScalable = ifCompatibleAndScalable;
+    this->ifScalableAndSupported = ifScalableAndSupported;
   }
   void runOnOperation() override {
     auto function = getOperation();
 
-    if (ifRequiredByOps && ifCompatibleAndScalable) {
+    if (ifRequiredByOps && ifScalableAndSupported) {
       function->emitOpError(
           "enable-arm-streaming: `if-required-by-ops` and "
-          "`if-compatible-and-scalable` are mutually exclusive");
+          "`if-scalable-and-supported` are mutually exclusive");
       return signalPassFailure();
     }
 
@@ -98,7 +98,7 @@ struct EnableArmStreamingPass
         return;
     }
 
-    if (ifCompatibleAndScalable) {
+    if (ifScalableAndSupported) {
       // FIXME: This should be based on target information. This currently errs
       // on the side of caution. If possible gathers/scatters should be lowered
       // regular vector loads/stores before invoking this pass.
@@ -141,7 +141,7 @@ struct EnableArmStreamingPass
 
 std::unique_ptr<Pass> mlir::arm_sme::createEnableArmStreamingPass(
     const ArmStreamingMode streamingMode, const ArmZaMode zaMode,
-    bool ifRequiredByOps, bool ifCompatibleAndScalable) {
+    bool ifRequiredByOps, bool ifScalableAndSupported) {
   return std::make_unique<EnableArmStreamingPass>(
-      streamingMode, zaMode, ifRequiredByOps, ifCompatibleAndScalable);
+      streamingMode, zaMode, ifRequiredByOps, ifScalableAndSupported);
 }
