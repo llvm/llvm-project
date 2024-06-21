@@ -293,9 +293,9 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
-// Returns the trip count of `forOp` if its' low bound, high bound and step are
-// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
-// - lowBound, step).
+/// Returns the trip count of `forOp` if its' low bound, high bound and step are
+/// constants, or optional otherwise. Trip count is computed as ceilDiv(highBound
+/// - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
   std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
   std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
