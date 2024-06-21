@@ -14,6 +14,7 @@
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
@@ -504,6 +505,24 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   ID.Reads.resize(CurrentUse);
 }
 
+hash_code hashMCOperand(const MCOperand &MCO) {
+  hash_code TypeHash = hash_combine(MCO.isReg(), MCO.isImm(), MCO.isSFPImm(),
+                                    MCO.isDFPImm(), MCO.isExpr(), MCO.isInst());
+  if (MCO.isReg())
+    return hash_combine(TypeHash, MCO.getReg());
+
+  return TypeHash;
+}
+
+hash_code hashMCInst(const MCInst &MCI) {
+  hash_code InstructionHash = hash_combine(MCI.getOpcode(), MCI.getFlags());
+  for (unsigned I = 0; I < MCI.getNumOperands(); ++I) {
+    InstructionHash =
+        hash_combine(InstructionHash, hashMCOperand(MCI.getOperand(I)));
+  }
+  return InstructionHash;
+}
+
 Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
                                     const MCInst &MCI) const {
   if (ID.NumMicroOps != 0)
@@ -523,8 +542,7 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<Instrument *> &IVec,
-                                  uint64_t InstructionAddress) {
+                                  const SmallVector<Instrument *> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -606,15 +624,14 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     return *Descriptors[DKey];
   }
 
-  auto VDKey = std::make_pair(InstructionAddress, SchedClassID);
+  auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   VariantDescriptors[VDKey] = std::move(ID);
   return *VariantDescriptors[VDKey];
 }
 
 Expected<const InstrDesc &>
 InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
-                                   const SmallVector<Instrument *> &IVec,
-                                   uint64_t InstructionAddress) {
+                                   const SmallVector<Instrument *> &IVec) {
   // Cache lookup using SchedClassID from Instrumentation
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
@@ -624,21 +641,20 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
 
   unsigned CPUID = STI.getSchedModel().getProcessorID();
   SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
-  auto VDKey = std::make_pair(InstructionAddress, SchedClassID);
+  auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 
-  return createInstrDescImpl(MCI, IVec, InstructionAddress);
+  return createInstrDescImpl(MCI, IVec);
 }
 
 STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<Instrument *> &IVec,
-                                uint64_t InstructionAddress) {
+                                const SmallVector<Instrument *> &IVec) {
   Expected<const InstrDesc &> DescOrErr =
-      getOrCreateInstrDesc(MCI, IVec, InstructionAddress);
+      getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;

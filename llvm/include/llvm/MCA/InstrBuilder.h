@@ -14,6 +14,7 @@
 #ifndef LLVM_MCA_INSTRBUILDER_H
 #define LLVM_MCA_INSTRBUILDER_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -73,7 +74,7 @@ class InstrBuilder {
 
   // Key is the instruction address and SchedClassID the describe the value
   // InstrDesc
-  DenseMap<std::pair<uint64_t, unsigned>, std::unique_ptr<const InstrDesc>>
+  DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
   bool FirstCallInst;
@@ -84,11 +85,9 @@ class InstrBuilder {
   InstRecycleCallback InstRecycleCB;
 
   Expected<const InstrDesc &>
-  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
-                      uint64_t InstructionAddress);
+  createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>
-  getOrCreateInstrDesc(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
-                       uint64_t InstructionAddress);
+  getOrCreateInstrDesc(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
@@ -113,15 +112,8 @@ public:
   /// or null if there isn't any.
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
-  /// Create an MCA Instruction from a MC Instruction that contains all the
-  /// relevant state MCA needs for modeling. Variant instructions (e.g.,
-  /// register zeroing idioms) each need their own instruction description
-  /// which is uniqued based on InstructionAddress. This can be an actual
-  /// address or something unique per instruction like a loop iteration
-  /// variable, but it must uniquely identify the instruction being passed in.
   Expected<std::unique_ptr<Instruction>>
-  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec,
-                    uint64_t InstructionAddress);
+  createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 };
 } // namespace mca
 } // namespace llvm

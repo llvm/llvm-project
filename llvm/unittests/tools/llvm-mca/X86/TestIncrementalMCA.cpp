@@ -43,7 +43,7 @@ TEST_F(X86TestBase, TestResumablePipeline) {
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i], Instruments, i);
+          IB.createInstruction(MCIs[i], Instruments);
       ASSERT_TRUE(bool(InstOrErr));
       ISM.addInst(std::move(InstOrErr.get()));
     }
@@ -135,7 +135,7 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
   for (unsigned i = 0U, E = MCIs.size(); i < E;) {
     for (unsigned TE = i + 7; i < TE && i < E; ++i) {
       Expected<std::unique_ptr<mca::Instruction>> InstOrErr =
-          IB.createInstruction(MCIs[i], Instruments, i);
+          IB.createInstruction(MCIs[i], Instruments);
 
       if (!InstOrErr) {
         mca::Instruction *RecycledInst = nullptr;
@@ -194,14 +194,12 @@ TEST_F(X86TestBase, TestInstructionRecycling) {
 // description as they are both zeroing idioms, but write to different
 // registers. If the key used to access the variant instruction description is
 // the same between the descriptions (like the MCInst pointer), we will run into
-// an assertion failure due to the different writes. Within this test, setting
-// both instruction addresses to the same builder within the calls to the MCA
-// instruction builder will cause the problem.
+// an assertion failure due to the different writes.
 TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
   mca::Context MCA(*MRI, *STI);
 
   mca::IncrementalSourceMgr ISM;
-  // Empty CustomBehavioour.
+  // Empty CustomBehaviour.
   auto CB = std::make_unique<mca::CustomBehaviour>(*STI, ISM, *MCII);
 
   auto PO = getDefaultPipelineOptions();
@@ -209,7 +207,7 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
   ASSERT_TRUE(P);
 
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, 100);
 
   const SmallVector<mca::Instrument *> Instruments;
 
@@ -219,7 +217,7 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
                          .addReg(X86::RAX)
                          .addReg(X86::RAX);
   Expected<std::unique_ptr<mca::Instruction>> Instruction1OrErr =
-      IB.createInstruction(InstructionToAdd, Instruments, 0);
+      IB.createInstruction(InstructionToAdd, Instruments);
   ASSERT_TRUE(static_cast<bool>(Instruction1OrErr));
   ISM.addInst(std::move(Instruction1OrErr.get()));
 
@@ -228,7 +226,7 @@ TEST_F(X86TestBase, TestVariantInstructionsSameAddress) {
                          .addReg(X86::XMM0)
                          .addReg(X86::XMM0);
   Expected<std::unique_ptr<mca::Instruction>> Instruction2OrErr =
-      IB.createInstruction(InstructionToAdd, Instruments, 1);
+      IB.createInstruction(InstructionToAdd, Instruments);
   ASSERT_TRUE(static_cast<bool>(Instruction2OrErr));
   ISM.addInst(std::move(Instruction2OrErr.get()));
 

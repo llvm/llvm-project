@@ -617,7 +617,7 @@ int main(int argc, char **argv) {
           InstrumentRegions.getActiveInstruments(Loc);
 
       Expected<std::unique_ptr<mca::Instruction>> Inst = IB.createInstruction(
-          MCI, Instruments, reinterpret_cast<uint64_t>(&MCI));
+          MCI, Instruments);
       if (!Inst) {
         if (auto NewE = handleErrors(
                 Inst.takeError(),
