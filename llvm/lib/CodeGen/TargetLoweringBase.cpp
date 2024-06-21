@@ -909,7 +909,6 @@ void TargetLoweringBase::initActions() {
                         ISD::FMINNUM,        ISD::FMAXNUM,
                         ISD::FMINNUM_IEEE,   ISD::FMAXNUM_IEEE,
                         ISD::FMINIMUM,       ISD::FMAXIMUM,
-                        ISD::FMINIMUMNUM,    ISD::FMAXIMUMNUM,
                         ISD::FMAD,           ISD::SMIN,
                         ISD::SMAX,           ISD::UMIN,
                         ISD::UMAX,           ISD::ABS,

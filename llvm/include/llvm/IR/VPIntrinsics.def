@@ -428,20 +428,6 @@ VP_PROPERTY_FUNCTIONAL_SDOPC(FMAXIMUM)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(maximum)
 END_REGISTER_VP(vp_maximum, VP_FMAXIMUM)
 
-// llvm.vp.minimumnum(x,y,mask,vlen)
-BEGIN_REGISTER_VP(vp_minimumnum, 2, 3, VP_FMINIMUMNUM, -1)
-VP_PROPERTY_BINARYOP
-VP_PROPERTY_FUNCTIONAL_SDOPC(FMINIMUMNUM)
-VP_PROPERTY_FUNCTIONAL_INTRINSIC(minimumnum)
-END_REGISTER_VP(vp_minimumnum, VP_FMINIMUMNUM)
-
-// llvm.vp.maximumnum(x,y,mask,vlen)
-BEGIN_REGISTER_VP(vp_maximumnum, 2, 3, VP_FMAXIMUMNUM, -1)
-VP_PROPERTY_BINARYOP
-VP_PROPERTY_FUNCTIONAL_SDOPC(FMAXIMUMNUM)
-VP_PROPERTY_FUNCTIONAL_INTRINSIC(maximumnum)
-END_REGISTER_VP(vp_maximumnum, VP_FMAXIMUMNUM)
-
 // llvm.vp.ceil(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(ceil)
@@ -722,14 +708,6 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximum, VP_REDUCE_FMAXIMUM,
 // llvm.vp.reduce.fminimum(start,x,mask,vlen)
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
                              vector_reduce_fminimum)
-
-// llvm.vp.reduce.fmaximumnum(start,x,mask,vlen)
-HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximumnum, VP_REDUCE_FMAXIMUMNUM,
-                             vector_reduce_fmaximumnum)
-
-// llvm.vp.reduce.fminimumnum(start,x,mask,vlen)
-HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimumnum, VP_REDUCE_FMINIMUMNUM,
-                             vector_reduce_fminimumnum)
 
 #undef HELPER_REGISTER_REDUCTION_VP
 

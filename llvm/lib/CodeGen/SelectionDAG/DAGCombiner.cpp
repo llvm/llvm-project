@@ -1936,9 +1936,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
   case ISD::FMINIMUM:
-  case ISD::FMAXIMUM:
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:       return visitFMinMax(N);
+  case ISD::FMAXIMUM:           return visitFMinMax(N);
   case ISD::FCEIL:              return visitFCEIL(N);
   case ISD::FTRUNC:             return visitFTRUNC(N);
   case ISD::FFREXP:             return visitFFREXP(N);
@@ -1981,9 +1979,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-  case ISD::VECREDUCE_FMINIMUMNUM:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -6117,7 +6113,6 @@ static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
 
-// FIXME: use FMINIMUMNUM if possible, such as for RISC-V.
 static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
                                      ISD::CondCode CC, unsigned OrAndOpcode,
                                      SelectionDAG &DAG,
@@ -18072,8 +18067,7 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
   const SDNodeFlags Flags = N->getFlags();
   unsigned Opc = N->getOpcode();
   bool PropagatesNaN = Opc == ISD::FMINIMUM || Opc == ISD::FMAXIMUM;
-  bool IsMin =
-      Opc == ISD::FMINNUM || Opc == ISD::FMINIMUM || Opc == ISD::FMINIMUMNUM;
+  bool IsMin = Opc == ISD::FMINNUM || Opc == ISD::FMINIMUM;
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
   // Constant fold.

@@ -86,8 +86,6 @@ DAG_FUNCTION(maxnum,          2, 0, experimental_constrained_maxnum,     FMAXNUM
 DAG_FUNCTION(minnum,          2, 0, experimental_constrained_minnum,     FMINNUM)
 DAG_FUNCTION(maximum,         2, 0, experimental_constrained_maximum,    FMAXIMUM)
 DAG_FUNCTION(minimum,         2, 0, experimental_constrained_minimum,    FMINIMUM)
-DAG_FUNCTION(maximumnum,     2, 0, experimental_constrained_maximumnum,    FMAXIMUMNUM)
-DAG_FUNCTION(minimumnum,     2, 0, experimental_constrained_minimumnum,    FMINIMUMNUM)
 DAG_FUNCTION(nearbyint,       1, 1, experimental_constrained_nearbyint,  FNEARBYINT)
 DAG_FUNCTION(pow,             2, 1, experimental_constrained_pow,        FPOW)
 DAG_FUNCTION(powi,            2, 1, experimental_constrained_powi,       FPOWI)

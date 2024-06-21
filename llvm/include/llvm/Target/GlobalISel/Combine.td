@@ -486,7 +486,7 @@ def commute_fp_constant_to_rhs : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FADD, G_FMUL, G_FMINNUM, G_FMAXNUM,
                            G_FMINNUM_IEEE, G_FMAXNUM_IEEE,
-                           G_FMINIMUM, G_FMAXIMUM, G_FMINIMUMNUM, G_FMAXIMUMNUM):$root,
+                           G_FMINIMUM, G_FMAXIMUM):$root,
     [{ return Helper.matchCommuteFPConstantToRHS(*${root}); }]),
   (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
@@ -583,7 +583,7 @@ def fold_binop_into_select : GICombineRule<
     G_SDIV, G_SREM, G_UDIV, G_UREM, G_LSHR, G_ASHR, G_SHL,
     G_SMIN, G_SMAX, G_UMIN, G_UMAX,
     G_FMUL, G_FADD, G_FSUB, G_FDIV, G_FREM,
-    G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM, G_FMINIMUMNUM, G_FMAXIMUMNUM):$root,
+    G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
     [{ return Helper.matchFoldBinOpIntoSelect(*${root}, ${select_op_no}); }]),
   (apply [{ Helper.applyFoldBinOpIntoSelect(*${root}, ${select_op_no}); }])
 >;
@@ -1249,7 +1249,7 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
 
 def combine_minmax_nan: GICombineRule<
   (defs root:$root, unsigned_matchinfo:$info),
-  (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM, G_FMINIMUMNUM, G_FMAXIMUMNUM):$root,
+  (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
 

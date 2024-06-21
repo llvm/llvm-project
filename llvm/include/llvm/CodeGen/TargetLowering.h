@@ -2910,8 +2910,6 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
-    case ISD::FMINIMUMNUM:
-    case ISD::FMAXIMUMNUM:
     case ISD::AVGFLOORS:
     case ISD::AVGFLOORU:
     case ISD::AVGCEILS:
@@ -5132,8 +5130,6 @@ public:
   /// through to the default expansion/soften to libcall, we might introduce a
   /// link-time dependency on libm into a file that originally did not have one.
   SDValue createSelectForFMINNUM_FMAXNUM(SDNode *Node, SelectionDAG &DAG) const;
-  SDValue createSelectForFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
-                                                 SelectionDAG &DAG) const;
 
   /// Return a reciprocal estimate value for the input operand.
   /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or
@@ -5264,9 +5260,6 @@ public:
 
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
-  SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
