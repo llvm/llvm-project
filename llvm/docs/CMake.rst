@@ -710,8 +710,15 @@ enabled sub-projects. Nearly all of these variable names begin with
     $ D:\git> git clone https://github.com/mjansson/rpmalloc
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
-  This flag needs to be used along with the static CRT, ie. if building the
+  This option needs to be used along with the static CRT, ie. if building the
   Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
+  Note that rpmalloc is also supported natively in-tree, see option below.
+
+**LLVM_ENABLE_RPMALLOC**:BOOL
+  Similar to LLVM_INTEGRATED_CRT_ALLOC, embeds the in-tree rpmalloc into the
+  host toolchain as a C runtime allocator. The version currently used is
+  rpmalloc 1.4.5. This option also implies linking with the static CRT, there's
+  no need to provide CMAKE_MSVC_RUNTIME_LIBRARY.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
