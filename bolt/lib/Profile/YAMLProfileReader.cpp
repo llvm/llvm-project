@@ -424,35 +424,74 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   // Uses name similarity to match functions that were not matched by name.
   uint64_t MatchedWithDemangledName = 0;
+
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
-
-    std::unordered_map<std::string, BinaryFunction *> NameToBinaryFunction;
-    NameToBinaryFunction.reserve(BC.getBinaryFunctions().size());
-
-    for (auto &[_, BF] : BC.getBinaryFunctions()) {
+    auto DemangleName = [&](const char* String) {
       int Status = 0;
-      char *DemangledName = abi::__cxa_demangle(BF.getOneName().str().c_str(),
+      char *DemangledName = abi::__cxa_demangle(String,
                                                 nullptr, nullptr, &Status);
-      if (Status == 0)
-        NameToBinaryFunction[std::string(DemangledName)] = &BF;
+      return Status == 0 ? new std::string(DemangledName) : nullptr;
+    };
+
+    auto DeriveNameSpace = [&](std::string DemangledName) {
+      size_t LParen = std::string(DemangledName).find("(");
+      std::string FunctionName = std::string(DemangledName).substr(0, LParen);
+      size_t ScopeResolutionOperator = std::string(FunctionName).rfind("::");
+      return ScopeResolutionOperator == std::string::npos ? std::string("") : std::string(DemangledName).substr(0, ScopeResolutionOperator);
+    };
+
+    std::unordered_map<std::string, std::vector<BinaryFunction *>> NamespaceToBFs;
+    NamespaceToBFs.reserve(BC.getBinaryFunctions().size());
+
+    for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+      std::string* DemangledName = DemangleName(BF->getOneName().str().c_str());
+      if (!DemangledName)
+        continue;
+      std::string Namespace = DeriveNameSpace(*DemangledName);
+      auto It = NamespaceToBFs.find(Namespace);
+      if (It == NamespaceToBFs.end())
+        NamespaceToBFs[Namespace] = {BF};
+      else
+        It->second.push_back(BF);
     }
 
     for (auto YamlBF : YamlBP.Functions) {
       if (YamlBF.Used)
         continue;
-      int Status = 0;
-      char *DemangledName =
-          abi::__cxa_demangle(YamlBF.Name.c_str(), nullptr, nullptr, &Status);
-      if (Status != 0)
+      std::string* YamlBFDemangledName = DemangleName(YamlBF.Name.c_str());
+      if (!YamlBFDemangledName)
         continue;
-      auto It = NameToBinaryFunction.find(DemangledName);
-      if (It == NameToBinaryFunction.end())
+      std::string Namespace = DeriveNameSpace(*YamlBFDemangledName);
+      auto It = NamespaceToBFs.find(Namespace);
+      if (It == NamespaceToBFs.end())
         continue;
-      BinaryFunction *BF = It->second;
-      matchProfileToFunction(YamlBF, *BF);
-      ++MatchedWithDemangledName;
+      std::vector<BinaryFunction *> BFs = It->second;
+
+      unsigned MinEditDistance = UINT_MAX;
+      BinaryFunction *ClosestNameBF = nullptr;
+
+      for (BinaryFunction *BF : BFs) {
+        if (ProfiledFunctions.count(BF))
+          continue;
+        std::string *BFDemangledName = DemangleName(BF->getOneName().str().c_str());
+        if (!BFDemangledName)
+          continue;
+        unsigned BFEditDistance = StringRef(*BFDemangledName).edit_distance(*YamlBFDemangledName);
+        if (BFEditDistance < MinEditDistance) {
+          MinEditDistance = BFEditDistance;
+          ClosestNameBF = BF;
+        }
+      }
+
+      if (ClosestNameBF &&
+        MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
+        matchProfileToFunction(YamlBF, *ClosestNameBF);
+        ++MatchedWithDemangledName;
+      }
     }
   }
+
+  outs() << MatchedWithDemangledName  << ": functions matched by name similarity\n";
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
