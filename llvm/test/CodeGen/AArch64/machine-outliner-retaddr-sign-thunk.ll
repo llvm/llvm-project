@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple aarch64-arm-linux-gnu --enable-machine-outliner -outliner-leaf-descendants=false \
-; RUN: -verify-machineinstrs %s -o - | FileCheck --check-prefixes CHECK,V8A %s
-; RUN-V83A: llc -mtriple aarch64 -enable-machine-outliner -outliner-leaf-descendants=false \
-; RUN-V83A: -verify-machineinstrs -mattr=+v8.3a %s -o - > %t
-; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
+; RUN:   -verify-machineinstrs %s -o - | FileCheck --check-prefixes CHECK,V8A %s
+; RUN: llc -mtriple aarch64 -enable-machine-outliner -outliner-leaf-descendants=false \
+; RUN:   -verify-machineinstrs -mattr=+v8.3a %s -o - | \
+; RUN:   FileCheck %s --check-prefixes CHECK,V83A
 
 declare i32 @thunk_called_fn(i32, i32, i32, i32)
 
@@ -13,8 +13,8 @@ define i32 @a() #0 {
 ; V83A-NEXT:        paciasp
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
-; V83A:             autiasp
-; CHECK-NEXT:       ret
+; V8A-NEXT:         ret
+; V83A:             retaa
 entry:
   %call = tail call i32 @thunk_called_fn(i32 1, i32 2, i32 3, i32 4)
   %cx = add i32 %call, 8
@@ -28,8 +28,8 @@ define i32 @b() #0 {
 ; V83A-NEXT:        paciasp
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
-; V83A:             autiasp
-; CHECK-NEXT:       ret
+; V8A-NEXT:         ret
+; V83A:             retaa
 entry:
   %call = tail call i32 @thunk_called_fn(i32 1, i32 2, i32 3, i32 4)
   %cx = add i32 %call, 88
@@ -43,8 +43,8 @@ define hidden i32 @c(ptr %fptr) #0 {
 ; V83A-NEXT:        paciasp
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
-; V83A:             autiasp
-; CHECK-NEXT:       ret
+; V8A-NEXT:         ret
+; V83A:             retaa
 entry:
   %call = tail call i32 %fptr(i32 1, i32 2, i32 3, i32 4)
   %add = add nsw i32 %call, 8
@@ -58,8 +58,8 @@ define hidden i32 @d(ptr %fptr) #0 {
 ; V83A-NEXT:        paciasp
 ; CHECK-NEXT:       .cfi_negate_ra_state
 ; V8A:              hint #29
-; V83A:             autiasp
-; CHECK-NEXT:       ret
+; V8A-NEXT:         ret
+; V83A:             retaa
 entry:
   %call = tail call i32 %fptr(i32 1, i32 2, i32 3, i32 4)
   %add = add nsw i32 %call, 88
