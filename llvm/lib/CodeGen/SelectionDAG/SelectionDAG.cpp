@@ -474,6 +474,12 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VECREDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
     return ISD::FMINIMUM;
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VP_REDUCE_FMAXIMUMNUM:
+    return ISD::FMAXIMUMNUM;
+  case ISD::VECREDUCE_FMINIMUMNUM:
+  case ISD::VP_REDUCE_FMINIMUMNUM:
+    return ISD::FMINIMUMNUM;
   }
 }
 
@@ -5429,7 +5435,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return false;
   }
   case ISD::FMINNUM:
-  case ISD::FMAXNUM: {
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
     // other ends up being one.
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) ||
@@ -6760,6 +6768,10 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       return getConstantFP(minimum(C1, C2), DL, VT);
     case ISD::FMAXIMUM:
       return getConstantFP(maximum(C1, C2), DL, VT);
+    case ISD::FMINIMUMNUM:
+      return getConstantFP(minimumnum(C1, C2), DL, VT);
+    case ISD::FMAXIMUMNUM:
+      return getConstantFP(maximumnum(C1, C2), DL, VT);
     default: break;
     }
   }
@@ -6951,6 +6963,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (Opcode == ISD::SSUBSAT || Opcode == ISD::USUBSAT)
         return getNode(ISD::AND, DL, VT, N1, getNOT(DL, N2, VT));
     }
+    break;
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
     break;
   case ISD::ABDS:
   case ISD::ABDU:
@@ -11751,6 +11771,10 @@ SDValue SelectionDAG::getSymbolFunctionGlobalAddress(SDValue Op,
 bool llvm::isNullConstant(SDValue V) {
   ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V);
   return Const != nullptr && Const->isZero();
+}
+
+bool llvm::isNullConstantOrUndef(SDValue V) {
+  return V.isUndef() || isNullConstant(V);
 }
 
 bool llvm::isNullFPConstant(SDValue V) {

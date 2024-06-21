@@ -196,6 +196,10 @@ def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
               DocName<"Target-dependent compilation options">,
               Visibility<[ClangOption, CLOption]>;
 
+def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
+                   DocName<"HLSL options">,
+                   Visibility<[ClangOption]>;
+
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
 // options.
@@ -880,6 +884,9 @@ will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     Visibility<[ClangOption, FlangOption]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
+def embed_dir_EQ : Joined<["--"], "embed-dir=">, Group<Preprocessor_Group>,
+    Visibility<[ClangOption, CC1Option]>, MetaVarName<"<dir>">,
+    HelpText<"Add directory to embed search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
@@ -1473,6 +1480,9 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
+def dE : Flag<["-"], "dE">, Group<d_Group>, Visibility<[CC1Option]>,
+  HelpText<"Print embed directives in -E mode in addition to normal output">,
+  MarshallingInfoFlag<PreprocessorOutputOpts<"ShowEmbedDirectives">>;
 def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
@@ -1790,6 +1800,14 @@ defm mcdc_coverage : BoolFOption<"coverage-mcdc",
           "Enable MC/DC criteria when generating code coverage">,
   NegFlag<SetFalse, [], [ClangOption], "Disable MC/DC coverage criteria">,
           BothFlags<[], [ClangOption, CLOption]>>;
+def fmcdc_max_conditions_EQ : Joined<["-"], "fmcdc-max-conditions=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Maximum number of conditions in MC/DC coverage">,
+  MarshallingInfoInt<CodeGenOpts<"MCDCMaxConds">, "32767">;
+def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Maximum number of test vectors in MC/DC coverage">,
+  MarshallingInfoInt<CodeGenOpts<"MCDCMaxTVs">, "0x7FFFFFFE">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
@@ -2114,7 +2132,7 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     MarshallingInfoNegativeFlag<DiagnosticOpts<"ElideType">>;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
-  "Do not emit ", "Emit ", " debug info for defined but unused types">;
+  "Do not emit ", "Emit ", " debug info for defined but unused types", [ClangOption, CLOption]>;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit all declarations, even if unused">,
@@ -7028,6 +7046,12 @@ def as_secure_log_file : Separate<["-"], "as-secure-log-file">,
 
 } // let Visibility = [CC1Option, CC1AsOption]
 
+let Visibility = [CC1Option, FC1Option] in {
+def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
+  HelpText<"Link and internalize needed symbols from the given bitcode file "
+           "before performing optimizations.">;
+} // let Visibility = [CC1Option, FC1Option]
+
 let Visibility = [CC1Option] in {
 
 def llvm_verify_each : Flag<["-"], "llvm-verify-each">,
@@ -7130,9 +7154,6 @@ defm constructor_aliases : BoolMOption<"constructor-aliases",
           " emitting complete constructors and destructors as aliases when possible">>;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
-def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
-  HelpText<"Link and internalize needed symbols from the given bitcode file "
-           "before performing optimizations.">;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
@@ -7885,6 +7906,11 @@ def finclude_default_header : Flag<["-"], "finclude-default-header">,
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
   HelpText<"Add OpenCL builtin function declarations (experimental)">;
 
+def fhlsl_strict_availability : Flag<["-"], "fhlsl-strict-availability">,
+  HelpText<"Enables strict availability diagnostic mode for HLSL built-in functions.">,
+  Group<hlsl_Group>,
+  MarshallingInfoFlag<LangOpts<"HLSLStrictAvailability">>;
+
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,
   MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>,
@@ -8116,7 +8142,7 @@ def show_inst : Flag<["-"], "show-inst">,
 def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
   HelpText<"The string to embed in the Dwarf debug AT_producer record.">;
 
-def defsym : Separate<["-"], "defsym">,
+def defsym : Separate<["--"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
 } // let Visibility = [CC1AsOption]
@@ -8262,6 +8288,8 @@ def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
   HelpText<"Only inline functions explicitly or implicitly marked inline">;
 def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
   HelpText<"Inline functions as deemed beneficial by the compiler">;
+def : CLFlag<"Ob3">, Alias<_SLASH_O>, AliasArgs<["b3"]>,
+  HelpText<"Same as /Ob2">;
 def : CLFlag<"Od", [CLOption, DXCOption]>, Alias<_SLASH_O>, AliasArgs<["d"]>,
   HelpText<"Disable optimization">;
 def : CLFlag<"Og">, Alias<_SLASH_O>, AliasArgs<["g"]>,
@@ -8271,9 +8299,9 @@ def : CLFlag<"Oi">, Alias<_SLASH_O>, AliasArgs<["i"]>,
 def : CLFlag<"Oi-">, Alias<_SLASH_O>, AliasArgs<["i-"]>,
   HelpText<"Disable use of builtin functions">;
 def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
-  HelpText<"Optimize for size">;
+  HelpText<"Optimize for size (like clang -Os)">;
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
-  HelpText<"Optimize for speed">;
+  HelpText<"Optimize for speed (like clang -O3)">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
   HelpText<"Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,

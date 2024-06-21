@@ -426,13 +426,16 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithDemangledName = 0;
 
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
+    outs() << "starting name similarity matching\n";
     auto DemangleName = [&](std::string &FunctionName) {
       StringRef RestoredName = NameResolver::restore(FunctionName);
       return demangle(RestoredName);
     };
 
-    ItaniumPartialDemangler ItaniumPartialDemangler;
-    auto DeriveNameSpace = [&](std::string DemangledName) {
+    auto DeriveNameSpace = [&](ItaniumPartialDemangler &ItaniumPartialDemangler,
+      std::string DemangledName) {
+      if (ItaniumPartialDemangler.partialDemangle(DemangledName.c_str()))
+        return std::string("");
       std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
       size_t BufferSize = Buffer.size();
       char *NameSpace = ItaniumPartialDemangler.getFunctionDeclContextName(
@@ -444,21 +447,24 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         NamespaceToBFs;
 
     NamespaceToBFs.reserve(BC.getBinaryFunctions().size());
+    ItaniumPartialDemangler ItaniumPartialDemangler;
 
     for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
       std::string DemangledName = BF->getDemangledName();
-      std::string Namespace = DeriveNameSpace(DemangledName);
+      std::string Namespace = DeriveNameSpace(ItaniumPartialDemangler, DemangledName);
       auto It = NamespaceToBFs.find(Namespace);
       if (It == NamespaceToBFs.end())
         NamespaceToBFs[Namespace] = {BF};
       else
         It->second.push_back(BF);
     }
+
+    size_t I = 0; size_t N = YamlBP.Functions.size();
     for (auto YamlBF : YamlBP.Functions) {
       if (YamlBF.Used)
         continue;
       std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
-      std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
+      std::string YamlBFNamespace = DeriveNameSpace(ItaniumPartialDemangler, YamlBFDemangledName);
       auto It = NamespaceToBFs.find(YamlBFNamespace);
       if (It == NamespaceToBFs.end())
         continue;
@@ -480,6 +486,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
           ClosestNameBF = BF;
         }
       }
+
 
       if (ClosestNameBF &&
           MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {

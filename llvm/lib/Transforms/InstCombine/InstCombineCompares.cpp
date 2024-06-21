@@ -3130,6 +3130,13 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     return new ICmpInst(ICmpInst::ICMP_EQ, Builder.CreateAnd(X, -C),
                         ConstantExpr::getNeg(cast<Constant>(Y)));
 
+  // X+C2 <u C -> (X & C) == 2C
+  //   iff C == -(C2)
+  //       C2 is a power of 2
+  if (Pred == ICmpInst::ICMP_ULT && C2->isPowerOf2() && C == -*C2)
+    return new ICmpInst(ICmpInst::ICMP_NE, Builder.CreateAnd(X, C),
+                        ConstantInt::get(Ty, C * 2));
+
   // X+C >u C2 -> (X & ~C2) != C
   //   iff C & C2 == 0
   //       C2+1 is a power of 2

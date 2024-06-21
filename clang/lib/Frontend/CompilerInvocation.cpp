@@ -4492,6 +4492,9 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
   if (Opts.DefineTargetOSMacros)
     GenerateArg(Consumer, OPT_fdefine_target_os_macros);
 
+  for (const auto &EmbedEntry : Opts.EmbedEntries)
+    GenerateArg(Consumer, OPT_embed_dir_EQ, EmbedEntry);
+
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
 }
@@ -4582,6 +4585,11 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     } else {
       Opts.SourceDateEpoch = V;
     }
+  }
+
+  for (const auto *A : Args.filtered(OPT_embed_dir_EQ)) {
+    StringRef Val = A->getValue();
+    Opts.EmbedEntries.push_back(std::string(Val));
   }
 
   // Always avoid lexing editor placeholders when we're just running the

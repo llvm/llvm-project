@@ -189,6 +189,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     if (resultTy.getRank() != 1)
       return rewriter.notifyMatchFailure(op, "unsupported rank");
 
+    if (resultTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "not a fixed-width vector");
+
     Location loc = op.getLoc();
     Type elemTy = resultTy.getElementType();
     // Vector type with a single element. Used to generate `vector.loads`.

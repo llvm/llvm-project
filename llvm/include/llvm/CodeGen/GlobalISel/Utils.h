@@ -60,6 +60,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -77,6 +79,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -584,6 +588,10 @@ bool isGuaranteedNotToBePoison(Register Reg, const MachineRegisterInfo &MRI,
 /// Returns true if \p Reg cannot be undef, but may be poison.
 bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
                               unsigned Depth = 0);
+
+/// Get the type back from LLT. It won't be 100 percent accurate but returns an
+/// estimate of the type.
+Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
 } // End namespace llvm.
 #endif
