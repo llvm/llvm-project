@@ -74,9 +74,11 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
-    if (stop_info_sp &&
-        stop_info_sp->GetStopReason() == StopReason::eStopReasonException) {
-      m_expected_directories++;
+    if (stop_info_sp) {
+      const StopReason &stop_reason = stop_info_sp->GetStopReason();
+      if (stop_reason == StopReason::eStopReasonException ||
+          stop_reason == StopReason::eStopReasonSignal)
+        m_expected_directories++;
     }
   }
 
@@ -831,8 +833,9 @@ Status MinidumpFileBuilder::AddMemoryList(SaveCoreStyle core_style) {
   if (error.Fail())
     return error;
 
-  uint64_t total_size =
-      ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
+  // Calculate totalsize including the current offset.
+  uint64_t total_size = GetCurrentDataEndOffset();
+  total_size += ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
   std::unordered_set<addr_t> stack_start_addresses;
   for (const auto &core_range : ranges_32) {
     stack_start_addresses.insert(core_range.range.start());
