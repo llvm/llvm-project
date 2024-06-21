@@ -28,6 +28,12 @@ typedef enum {
   /* A process-specific key which can be used to sign data pointers. */
   ptrauth_key_process_dependent_data = ptrauth_key_asdb,
 
+  /* The key used to sign C function pointers.
+     The extra data is always 0. */
+  ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
+
+  /* Other pointers signed under the ABI use private ABI rules. */
+
 } ptrauth_key;
 
 /* An integer type of the appropriate size for a discriminator argument. */
@@ -131,6 +137,27 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   __builtin_ptrauth_auth_and_resign(__value, __old_key, __old_data, __new_key, \
                                     __new_data)
 
+/* Authenticate a pointer using one scheme and resign it as a C
+   function pointer.
+
+   If the result is subsequently authenticated using the new scheme, that
+   authentication is guaranteed to fail if and only if the initial
+   authentication failed.
+
+   The value must be an expression of function pointer type.
+   The key must be a constant expression of type ptrauth_key.
+   The extra data must be an expression of pointer or integer type;
+   if an integer, it will be coerced to ptrauth_extra_data_t.
+   The result will have the same type as the original value.
+
+   This operation is guaranteed to not leave the intermediate value
+   available for attack before it is re-signed. Additionally, if this
+   expression is used syntactically as the function expression in a
+   call, only a single authentication will be performed. */
+#define ptrauth_auth_function(__value, __old_key, __old_data)                  \
+  ptrauth_auth_and_resign(__value, __old_key, __old_data,                      \
+                          ptrauth_key_function_pointer, 0)
+
 /* Authenticate a data pointer.
 
    The value must be an expression of non-function pointer type.
@@ -214,6 +241,13 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__old_data;                                                          \
     (void)__new_key;                                                           \
     (void)__new_data;                                                          \
+    __value;                                                                   \
+  })
+
+#define ptrauth_auth_function(__value, __old_key, __old_data)                  \
+  ({                                                                           \
+    (void)__old_key;                                                           \
+    (void)__old_data;                                                          \
     __value;                                                                   \
   })
 
