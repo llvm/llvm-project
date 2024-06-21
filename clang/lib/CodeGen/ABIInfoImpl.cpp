@@ -248,7 +248,7 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
   return Address(PHI, Addr1.getElementType(), Align);
 }
 
-bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
+bool CodeGen::isEmptyField(const ASTContext &Context, const FieldDecl *FD,
                            bool AllowArrays, bool AsIfNoUniqueAddr) {
   if (FD->isUnnamedBitField())
     return true;
@@ -289,8 +289,8 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   return isEmptyRecord(Context, FT, AllowArrays, AsIfNoUniqueAddr);
 }
 
-bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
-                            bool AsIfNoUniqueAddr) {
+bool CodeGen::isEmptyRecord(const ASTContext &Context, QualType T,
+                            bool AllowArrays, bool AsIfNoUniqueAddr) {
   const RecordType *RT = T->getAs<RecordType>();
   if (!RT)
     return false;

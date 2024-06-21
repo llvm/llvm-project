@@ -18,9 +18,7 @@ struct ATTR Derived : Base {
   int value;
 };
 
-// CHECK: [[DERIVED:%.*]] = type <{ [[BASE:%.*]], i32, [4 x i8] }>
-// CHECK: [[BASE]] = type { [[VBASE:%.*]] }
-// CHECK: [[VBASE]] = type { ptr }
+// CHECK: [[DERIVED:%.*]] = type { [8 x i8], i32, [4 x i8] }
 
 // CHECK: define{{.*}} void @_ZN7DerivedC2Ev
 // CHECK:   [[SELF:%.*]] = load ptr

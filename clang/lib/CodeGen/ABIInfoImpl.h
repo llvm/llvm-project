@@ -126,15 +126,15 @@ Address emitMergePHI(CodeGenFunction &CGF, Address Addr1,
 /// is an unnamed bit-field or an (array of) empty record(s). If
 /// AsIfNoUniqueAddr is true, then C++ record fields are considered empty if
 /// the [[no_unique_address]] attribute would have made them empty.
-bool isEmptyField(ASTContext &Context, const FieldDecl *FD, bool AllowArrays,
-                  bool AsIfNoUniqueAddr = false);
+bool isEmptyField(const ASTContext &Context, const FieldDecl *FD,
+                  bool AllowArrays, bool AsIfNoUniqueAddr = false);
 
 /// isEmptyRecord - Return true iff a structure contains only empty
 /// fields. Note that a structure with a flexible array member is not
 /// considered empty. If AsIfNoUniqueAddr is true, then C++ record fields are
 /// considered empty if the [[no_unique_address]] attribute would have made
 /// them empty.
-bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
+bool isEmptyRecord(const ASTContext &Context, QualType T, bool AllowArrays,
                    bool AsIfNoUniqueAddr = false);
 
 /// isSingleElementStruct - Determine if a structure is a "single

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CGRecordLayout.h"
+#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
@@ -384,7 +384,7 @@ void CGRecordLowering::accumulateFields(bool isNonVirtualBaseType) {
       Field = accumulateBitFields(isNonVirtualBaseType, Field, FieldEnd);
       assert((Field == FieldEnd || !Field->isBitField()) &&
              "Failed to accumulate all the bitfields");
-    } else if (Field->isZeroSize(Context)) {
+    } else if (isEmptyField(Context, *Field, false, true)) {
       // Empty fields have no storage.
       ++Field;
     } else {
@@ -634,7 +634,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           // non-reusable tail padding.
           CharUnits LimitOffset;
           for (auto Probe = Field; Probe != FieldEnd; ++Probe)
-            if (!Probe->isZeroSize(Context)) {
+            if (!isEmptyField(Context, *Probe, false, true)) {
               // A member with storage sets the limit.
               assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
                      "Next storage is not byte-aligned");
@@ -732,7 +732,7 @@ void CGRecordLowering::accumulateBases() {
     // Bases can be zero-sized even if not technically empty if they
     // contain only a trailing array member.
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    if (!BaseDecl->isEmpty() &&
+    if (!isEmptyRecord(Context, Base.getType(), false, true) &&
         !Context.getASTRecordLayout(BaseDecl).getNonVirtualSize().isZero())
       Members.push_back(MemberInfo(Layout.getBaseClassOffset(BaseDecl),
           MemberInfo::Base, getStorageType(BaseDecl), BaseDecl));
@@ -880,7 +880,7 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
   if (!isNonVirtualBaseType && isOverlappingVBaseABI())
     for (const auto &Base : RD->vbases()) {
       const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-      if (BaseDecl->isEmpty())
+      if (isEmptyRecord(Context, Base.getType(), false, true))
         continue;
       // If the vbase is a primary virtual base of some base, then it doesn't
       // get its own storage location but instead lives inside of that base.
@@ -896,7 +896,7 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
 void CGRecordLowering::accumulateVBases() {
   for (const auto &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    if (BaseDecl->isEmpty())
+    if (isEmptyRecord(Context, Base.getType(), false, true))
       continue;
     CharUnits Offset = Layout.getVBaseClassOffset(BaseDecl);
     // If the vbase is a primary virtual base of some base, then it doesn't
@@ -1162,7 +1162,7 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
     const FieldDecl *FD = *it;
 
     // Ignore zero-sized fields.
-    if (FD->isZeroSize(getContext()))
+    if (isEmptyField(Context, FD, false, true))
       continue;
 
     // For non-bit-fields, just check that the LLVM struct offset matches the

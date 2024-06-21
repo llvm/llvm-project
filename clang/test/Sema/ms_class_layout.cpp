@@ -447,18 +447,8 @@ int main() {
 // CHECK: %struct.O.base = type { ptr, [4 x i8], %struct.H.base, %struct.G, [4 x i8] }
 // CHECK: %struct.P = type { %struct.M.base, i32, %struct.K, %struct.L }
 // CHECK: %struct.R = type { i8 }
-// CHECK: %struct.f = type { ptr }
-// CHECK: %struct.s = type { ptr, ptr, i32, i32, %struct.f }
-// CHECK: %class.IA = type { ptr }
-// CHECK: %class.ICh = type { ptr, ptr, i32, %class.IA }
-// CHECK: %struct.sd = type { ptr, i32, i8, i32, %struct.f, %struct.s.base, i32, %class.IA, %class.ICh.base }
-// CHECK: %struct.AV = type { ptr }
-// CHECK: %struct.BV = type { %struct.AV }
-// CHECK: %struct.CV = type { ptr, i32, %struct.BV }
-// CHECK: %struct.CV.base = type { ptr }
-// CHECK: %struct.DV = type { %struct.BV }
-// CHECK: %struct.EV = type { %struct.DV, %struct.CV.base, i32, %struct.BV }
-// CHECK: %struct.EV.base = type { %struct.DV, %struct.CV.base }
+// CHECK: %struct.sd = type { ptr, i32, i8, [11 x i8], %struct.s.base, [16 x i8] }
+// CHECK: %struct.EV = type { [16 x i8] }
 
 // Overriding a method means that all the vbases containing that
 // method need a vtordisp.  Note: this code will cause an error in cl.exe.
