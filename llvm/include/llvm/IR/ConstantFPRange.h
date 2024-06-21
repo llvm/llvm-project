@@ -10,15 +10,18 @@
 // for a floating-point value. This keeps track of a lower and upper bound for
 // the constant.
 //
+// Range = [Lower, Upper] U (MayBeQNaN ? QNaN : {}) U (MayBeSNaN ? SNaN : {})
+// Specifically, [inf, -inf] represents an empty set.
+// Note: -0 is considered to be less than 0. That is, range [0, 0] doesn't
+// contain -0.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_CONSTANTFPRANGE_H
 #define LLVM_IR_CONSTANTFPRANGE_H
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/IR/Instructions.h"
 #include <optional>
 
 namespace llvm {
@@ -29,10 +32,8 @@ struct KnownFPClass;
 /// This class represents a range of floating-point values.
 class [[nodiscard]] ConstantFPRange {
   APFloat Lower, Upper;
-  bool MaybeQNaN : 1;
-  bool MaybeSNaN : 1;
-  bool SignBitMaybeZero : 1;
-  bool SignBitMaybeOne : 1;
+  bool MayBeQNaN : 1;
+  bool MayBeSNaN : 1;
 
   /// Create empty constant range with same semantics.
   ConstantFPRange getEmpty() const {
@@ -44,29 +45,55 @@ class [[nodiscard]] ConstantFPRange {
     return ConstantFPRange(getSemantics(), /*IsFullSet=*/true);
   }
 
+  void makeEmpty();
+  void makeFull();
+  bool isNaNOnly() const;
+
 public:
+  /// Return true if the floating point format is supported.
+  static bool isSupportedSemantics(const fltSemantics &Sem);
+
   /// Initialize a full or empty set for the specified semantics.
-  explicit ConstantFPRange(const fltSemantics &FloatSema, bool IsFullSet);
+  explicit ConstantFPRange(const fltSemantics &Sem, bool IsFullSet);
 
   /// Initialize a range to hold the single specified value.
   ConstantFPRange(const APFloat &Value);
 
   /// Initialize a range of values explicitly.
-  ConstantFPRange(APFloat Lower, APFloat Upper, bool MaybeQNaN, bool MaybeSNaN,
-                  bool SignBitMaybeZero, bool SignBitMaybeOne);
+  ConstantFPRange(APFloat LowerVal, APFloat UpperVal, bool MayBeQNaN = true,
+                  bool MaybeSNaN = true);
 
   /// Create empty constant range with the given semantics.
-  static ConstantFPRange getEmpty(const fltSemantics &FloatSema) {
-    return ConstantFPRange(FloatSema, /*IsFullSet=*/false);
+  static ConstantFPRange getEmpty(const fltSemantics &Sem) {
+    return ConstantFPRange(Sem, /*IsFullSet=*/false);
   }
 
   /// Create full constant range with the given semantics.
-  static ConstantFPRange getFull(const fltSemantics &FloatSema) {
-    return ConstantFPRange(FloatSema, /*IsFullSet=*/true);
+  static ConstantFPRange getFull(const fltSemantics &Sem) {
+    return ConstantFPRange(Sem, /*IsFullSet=*/true);
   }
 
-  /// Initialize a range based on a known floating-point classes constraint.
-  static ConstantFPRange fromKnownFPClass(const KnownFPClass &Known);
+  /// Produce the smallest range such that all values that may satisfy the given
+  /// predicate with any value contained within Other is contained in the
+  /// returned range.  Formally, this returns a superset of
+  /// 'union over all y in Other . { x : fcmp op x y is true }'.  If the exact
+  /// answer is not representable as a ConstantRange, the return value will be a
+  /// proper superset of the above.
+  ///
+  /// Example: Pred = ole and Other = float [2, 5] returns Result = [-inf, 5]
+  static ConstantFPRange makeAllowedFCmpRegion(FCmpInst::Predicate Pred,
+                                               const ConstantFPRange &Other);
+
+  /// Produce the largest range such that all values in the returned range
+  /// satisfy the given predicate with all values contained within Other.
+  /// Formally, this returns a subset of
+  /// 'intersection over all y in Other . { x : fcmp op x y is true }'.  If the
+  /// exact answer is not representable as a ConstantRange, the return value
+  /// will be a proper subset of the above.
+  ///
+  /// Example: Pred = ole and Other = float [2, 5] returns [-inf, 2]
+  static ConstantFPRange makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
+                                                  const ConstantFPRange &Other);
 
   /// Produce the exact range such that all values in the returned range satisfy
   /// the given predicate with any value contained within Other. Formally, this
@@ -113,20 +140,36 @@ public:
   /// Return true if the sign bit of all values in this range is 1.
   /// Return false if the sign bit of all values in this range is 0.
   /// Otherwise, return std::nullopt.
-  std::optional<bool> getSignBit();
+  std::optional<bool> getSignBit() const;
 
   /// Return true if this range is equal to another range.
   bool operator==(const ConstantFPRange &CR) const;
+  /// Return true if this range is not equal to another range.
   bool operator!=(const ConstantFPRange &CR) const { return !operator==(CR); }
 
+  /// Return the FPClassTest which will return true for the value.
+  FPClassTest classify() const;
+
   /// Return known floating-point classes for values in this range.
-  KnownFPClass toKnownFPClass();
+  KnownFPClass toKnownFPClass() const;
 
   /// Print out the bounds to a stream.
   void print(raw_ostream &OS) const;
 
   /// Allow printing from a debugger easily.
   void dump() const;
+
+  /// Return the range that results from the intersection of this range with
+  /// another range.
+  ConstantFPRange intersectWith(const ConstantFPRange &CR) const;
+
+  /// Return the range that results from the union of this range
+  /// with another range.  The resultant range is guaranteed to include the
+  /// elements of both sets, but may contain more.
+  ConstantFPRange unionWith(const ConstantFPRange &CR) const;
+
+  /// Return a new range that is the logical not of the current set.
+  ConstantFPRange inverse() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {
