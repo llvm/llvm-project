@@ -155,6 +155,18 @@ class SBFormattersAPITestCase(TestBase):
             ],
         )
 
+        self.dbg.GetCategory("CCCSynth2").SetEnabled(True)
+        self.expect(
+            "frame variable ccc",
+            matching=True,
+            substrs=[
+                "CCC object with leading synthetic value (int) b = 222",
+                "a = 111",
+                "b = 222",
+                "c = 333",
+            ],
+        )
+
         foo_var = (
             self.dbg.GetSelectedTarget()
             .GetProcess()
