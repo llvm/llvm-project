@@ -144,10 +144,10 @@ public:
   ///     Test with Success().
   //------------------------------------------------------------------
   Status
-  PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
-                      lldb::IRExecutionUnitSP &execution_unit_ap,
-                      ExecutionContext &exe_ctx, bool &can_interpret,
-                      lldb_private::ExecutionPolicy execution_policy) override;
+  DoPrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
+                        lldb::IRExecutionUnitSP &execution_unit_ap,
+                        ExecutionContext &exe_ctx, bool &can_interpret,
+                        lldb_private::ExecutionPolicy execution_policy) override;
 
   const EvaluateExpressionOptions &GetOptions() const { return m_options; }
 
