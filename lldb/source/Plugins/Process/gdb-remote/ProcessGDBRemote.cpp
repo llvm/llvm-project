@@ -4367,7 +4367,7 @@ static std::vector<RegisterFlags::Field> ParseFlagsFields(
           LLDB_LOG(log,
                    "ProcessGDBRemote::ParseFlagsFields Ignoring field \"{2}\" "
                    "that has "
-                   " size > 64 bits, this is not supported",
+                   "size > 64 bits, this is not supported",
                    name->data());
         else {
           // A field's type may be set to the name of an enum type.
@@ -4530,7 +4530,7 @@ bool ParseRegisters(
   // Enums first because they are referenced by fields in the flags.
   ParseEnums(feature_node, registers_enum_types);
   for (const auto &enum_type : registers_enum_types)
-    enum_type.second->log(log);
+    enum_type.second->DumpToLog(log);
 
   ParseFlags(feature_node, registers_flags_types, registers_enum_types);
   for (const auto &flags : registers_flags_types)

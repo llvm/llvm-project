@@ -33,7 +33,7 @@ public:
 
     void ToXML(Stream &strm) const;
 
-    void log(Log *log) const;
+    void DumpToLog(Log *log) const;
   };
 
   typedef std::vector<Enumerator> Enumerators;
@@ -49,7 +49,7 @@ public:
 
   void ToXML(Stream &strm, unsigned size) const;
 
-  void log(Log *log) const;
+  void DumpToLog(Log *log) const;
 
 private:
   std::string m_id;
