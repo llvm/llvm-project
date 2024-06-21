@@ -154,6 +154,7 @@ class SBFormattersAPITestCase(TestBase):
                 "c = 333",
             ],
         )
+        self.dbg.GetCategory("CCCSynth").SetEnabled(False)
 
         self.dbg.GetCategory("CCCSynth2").SetEnabled(True)
         self.expect(
