@@ -862,7 +862,7 @@ def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
           In other words, the returned vector can be used directly with
           `RewriterBase::replaceOp(this, returnedValues)`.
         }],
-        /*retType=*/"FailureOr<SmallVector<Value>>",
+        /*retType=*/"FailureOr<DecompositionResult>",
         /*methodName=*/"decomposeOperation",
         /*args=*/(ins
             "OpBuilder &":$b),
