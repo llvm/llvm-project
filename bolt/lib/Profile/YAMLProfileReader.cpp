@@ -486,7 +486,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         }
       }
 
-
       if (ClosestNameBF &&
           MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
         matchProfileToFunction(YamlBF, *ClosestNameBF);
