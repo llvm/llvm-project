@@ -449,17 +449,21 @@ object.
  }
 
 The checker option ``WarnOn`` controls on what objects the use-after-move is
-checked. The most strict value is ``KnownsOnly``, in this mode only objects are
-checked whose type is known to be move-unsafe. These include most STL objects
-(but excluding move-safe ones) and smart pointers. With option value
-``KnownsAndLocals`` local variables (of any type) are additionally checked. The
-idea behind this is that local variables are usually not tempting to be re-used
-so an use after move is more likely a bug than with member variables. With
-option value ``All`` any use-after move condition is checked on all kinds of
-variables, excluding global variables and known move-safe cases. Default value
-is ``KnownsAndLocals``.
+checked:
 
-Call of methods named ``empty()`` or ``isEmpty()`` are allowed on moved-from
+* The most strict value is ``KnownsOnly``, in this mode only objects are
+  checked whose type is known to be move-unsafe. These include most STL objects
+  (but excluding move-safe ones) and smart pointers.
+* With option value ``KnownsAndLocals`` local variables (of any type) are
+  additionally checked. The idea behind this is that local variables are
+  usually not tempting to be re-used so an use after move is more likely a bug
+  than with member variables.
+* With option value ``All`` any use-after move condition is checked on all
+  kinds of variables, excluding global variables and known move-safe cases.
+
+Default value is ``KnownsAndLocals``.
+
+Calls of methods named ``empty()`` or ``isEmpty()`` are allowed on moved-from
 objects because these methods are considered as move-safe. Functions called
 ``reset()``, ``destroy()``, ``clear()``, ``assign``, ``resize``,  ``shrink`` are
 treated as state-reset functions and are allowed on moved-from objects, these
