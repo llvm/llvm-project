@@ -39,7 +39,9 @@ def ccc_synthetic(sbvalue, internal_dict):
     # synthetic value. If it does, then sbvalue.GetChildMemberWithName("a")
     # in the following statement will call the 'get_child_index' method of the
     # synthetic child provider CCCSynthProvider below (which return the "b" field").
-    return "CCC object with leading synthetic value " + str(sbvalue.GetChildMemberWithName("a"))
+    return "CCC object with leading synthetic value " + str(
+        sbvalue.GetChildMemberWithName("a")
+    )
 
 
 class CCCSynthProvider(object):
