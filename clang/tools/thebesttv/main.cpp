@@ -443,7 +443,8 @@ void deduplicateAndFixLocations(ordered_json &locations, int fromLine,
 
 void saveAsJson(int fromLine, int toLine,
                 const std::set<std::vector<int>> &results,
-                const std::string &type, ordered_json &jResults) {
+                const std::string &type, int sourceIndex,
+                ordered_json &jResults) {
     std::vector<std::vector<int>> sortedResults(results.begin(), results.end());
     // sort based on length
     std::sort(sortedResults.begin(), sortedResults.end(),
@@ -456,6 +457,7 @@ void saveAsJson(int fromLine, int toLine,
             break;
         ordered_json jPath, locations;
         jPath["type"] = type;
+        jPath["sourceIndex"] = sourceIndex; // input.json 中 results 对应的下标
         jPath["nodes"] = path;
         for (int x : path) {
             dumpICFGNode(x, locations);
@@ -472,7 +474,8 @@ void saveAsJson(int fromLine, int toLine,
 int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
                     int toLine, const std::vector<VarLocResult> &_pointsToPass,
                     const std::vector<VarLocResult> &_pointsToAvoid,
-                    const std::string &type, ordered_json &jResults) {
+                    const std::string &type, int sourceIndex,
+                    ordered_json &jResults) {
     requireTrue(from.isValid(), "FROM location is invalid");
     requireTrue(to.isValid(), "TO location is invalid");
 
@@ -494,13 +497,14 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
     auto pFinder = DfsPathFinder(icfg);
     pFinder.search(u, v, pointsToPass, pointsToAvoid, Global.callDepth);
 
-    saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
+    saveAsJson(fromLine, toLine, pFinder.results, type, sourceIndex, jResults);
     return pFinder.results.size();
 }
 
 void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
                       int toLine, const std::vector<VarLocResult> &path,
-                      const std::string &type, ordered_json &jResults) {
+                      const std::string &type, int sourceIndex,
+                      ordered_json &jResults) {
 
     auto removeNpeBadSource = [&] {
         // 根据有缺陷的 source，删除可疑的 source
@@ -538,7 +542,7 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
 
         logger.info("Generating NPE bug version ...");
         int size = findPathBetween(from, fromLine, to, toLine, path, {},
-                                   "npe-bug", jResults);
+                                   "npe-bug", sourceIndex, jResults);
         if (size == 0)
             logger.warn("Unable to find any path for NPE bug version!");
 
@@ -549,8 +553,9 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         std::vector<VarLocResult> p = path;
         bool found = false;
         while (true) {
-            int result = findPathBetween(from, fromLine, sinkExit, INT_MAX, p,
-                                         {to}, "npe-fix", jResults);
+            int result =
+                findPathBetween(from, fromLine, sinkExit, INT_MAX, p, {to},
+                                "npe-fix", sourceIndex, jResults);
             if (result) {
                 found = true;
                 break;
@@ -575,11 +580,12 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
             to = getExit(from);
             toLine = INT_MAX;
         }
-        findPathBetween(from, fromLine, to, toLine, path, {}, type, jResults);
+        findPathBetween(from, fromLine, to, toLine, path, {}, type, sourceIndex,
+                        jResults);
     }
 }
 
-void generatePathFromOneEntry(const ordered_json &result,
+void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
                               FunctionLocator &locator, ordered_json &output) {
     std::string type = result["type"].template get<std::string>();
 
@@ -636,7 +642,8 @@ void generatePathFromOneEntry(const ordered_json &result,
         previousFid = varLoc.fid;
     }
 
-    handleInputEntry(from, fromLine, to, toLine, path, type, output["results"]);
+    handleInputEntry(from, fromLine, to, toLine, path, type, sourceIndex,
+                     output["results"]);
 }
 
 void generateFromInput(const ordered_json &input, fs::path outputDir) {
@@ -655,16 +662,16 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
     output["source"] = Global.inputJsonPath;
     output["results"] = ordered_json::array();
 
-    int cnt = 0;
+    int index = 0;
     for (const ordered_json &result : input["results"]) {
-        cnt++;
         std::string type = result["type"].template get<std::string>();
-        logger.info("[{}/{}] type: {}", cnt, total, type);
+        logger.info("[{}/{}] type: {}", index + 1, total, type);
         try {
-            generatePathFromOneEntry(result, locator, output);
+            generatePathFromOneEntry(index, result, locator, output);
         } catch (const std::exception &e) {
             logger.error("Exception encountered: {}", e.what());
         }
+        index++;
     }
 
     if (!Global.noNpeGoodSource) {
