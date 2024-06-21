@@ -1,5 +1,5 @@
 ! Offloading test checking interaction of two
-! explicit arrau member maps with bounds from
+! explicit array member maps with bounds from
 ! two nested derived types
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
