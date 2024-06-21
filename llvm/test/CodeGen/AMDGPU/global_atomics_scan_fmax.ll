@@ -1037,29 +1037,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_one_as_scope
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB2_2:
+; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1064-NEXT:  .LBB2_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB2_2:
+; GFX1032-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1032-NEXT:  .LBB2_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
@@ -1069,33 +1095,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_one_as_scope
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB2_2:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1164-NEXT:  .LBB2_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s2, 0
+; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB2_2:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1132-NEXT:  .LBB2_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
@@ -1133,29 +1186,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_one_as_scope
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB2_2:
+; GFX1064-DPP-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1064-DPP-NEXT:  .LBB2_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB2_2:
+; GFX1032-DPP-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-DPP-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1032-DPP-NEXT:  .LBB2_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
@@ -1165,33 +1244,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_one_as_scope
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB2_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-DPP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-DPP-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1164-DPP-NEXT:  .LBB2_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-DPP-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
+; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB2_2
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB2_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-DPP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB2_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-DPP-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-DPP-NEXT:  .LBB2_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB2_2
+; GFX1132-DPP-NEXT:  .LBB2_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") monotonic
   ret void
@@ -1349,18 +1455,18 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1064-NEXT:    s_mov_b32 s32, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
-; GFX1064-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1064-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX1064-NEXT:    v_max_f32_e64 v2, s3, s3
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1064-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1064-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1064-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1064-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1064-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
@@ -1368,13 +1474,27 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX1064-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1064-NEXT:    s_cbranch_execz .LBB3_4
+; GFX1064-NEXT:    s_cbranch_execz .LBB3_5
 ; GFX1064-NEXT:  ; %bb.3:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1064-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB3_4:
+; GFX1064-NEXT:    global_load_dword v1, v3, s[0:1]
+; GFX1064-NEXT:  .LBB3_4: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB3_4
+; GFX1064-NEXT:  .LBB3_5:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1405,31 +1525,45 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1032-NEXT:    s_mov_b32 s32, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1032-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    s_ff1_i32_b32 s1, s0
-; GFX1032-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1032-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1032-NEXT:    s_lshl_b32 s1, 1, s1
 ; GFX1032-NEXT:    s_andn2_b32 s0, s0, s1
 ; GFX1032-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1032-NEXT:    v_max_f32_e64 v2, s2, s2
-; GFX1032-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1032-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1032-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1032-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1032-NEXT:    s_cbranch_execz .LBB3_4
+; GFX1032-NEXT:    s_cbranch_execz .LBB3_5
 ; GFX1032-NEXT:  ; %bb.3:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1032-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB3_4:
+; GFX1032-NEXT:    global_load_dword v1, v3, s[0:1]
+; GFX1032-NEXT:  .LBB3_4: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB3_4
+; GFX1032-NEXT:  .LBB3_5:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1450,13 +1584,13 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:    s_mov_b32 s32, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
-; GFX1164-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1164-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_max_f32_e64 v2, s3, s3
@@ -1464,7 +1598,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1164-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1164-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
@@ -1473,13 +1607,29 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1164-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1164-NEXT:    s_cbranch_execz .LBB3_4
+; GFX1164-NEXT:    s_cbranch_execz .LBB3_5
 ; GFX1164-NEXT:  ; %bb.3:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1164-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB3_4:
+; GFX1164-NEXT:    global_load_b32 v1, v3, s[0:1]
+; GFX1164-NEXT:  .LBB3_4: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB3_4
+; GFX1164-NEXT:  .LBB3_5:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1500,13 +1650,13 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1132-NEXT:    s_mov_b32 s32, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX1132-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1132-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-NEXT:  .LBB3_1: ; %ComputeLoop
 ; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_ctz_i32_b32 s1, s0
-; GFX1132-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1132-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1132-NEXT:    s_lshl_b32 s1, 1, s1
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -1514,21 +1664,36 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_max_f32_e64 v2, s2, s2
-; GFX1132-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1132-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1132-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1132-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1132-NEXT:    s_cbranch_execz .LBB3_4
+; GFX1132-NEXT:    s_cbranch_execz .LBB3_5
 ; GFX1132-NEXT:  ; %bb.3:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1132-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1132-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_max_f32 v2, v2, v2
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB3_4:
+; GFX1132-NEXT:    global_load_b32 v1, v3, s[0:1]
+; GFX1132-NEXT:  .LBB3_4: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB3_4
+; GFX1132-NEXT:  .LBB3_5:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1693,13 +1858,27 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB3_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v6, v0, v0
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v1, v0, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB3_2:
+; GFX1064-DPP-NEXT:    global_load_dword v1, v2, s[0:1]
+; GFX1064-DPP-NEXT:  .LBB3_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v0, v6
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB3_2
+; GFX1064-DPP-NEXT:  .LBB3_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1761,15 +1940,29 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB3_2
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v6, v0, v0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v1, v0, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB3_2:
+; GFX1032-DPP-NEXT:    global_load_dword v1, v2, s[0:1]
+; GFX1032-DPP-NEXT:  .LBB3_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v0, v6
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB3_2
+; GFX1032-DPP-NEXT:  .LBB3_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1837,18 +2030,34 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1164-DPP-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX1164-DPP-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v0
+; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[0:1], exec
-; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v4
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB3_2
+; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v6, v4, v4
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v4, v0, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB3_2:
+; GFX1164-DPP-NEXT:    global_load_b32 v5, v0, s[0:1]
+; GFX1164-DPP-NEXT:  .LBB3_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v4, v4, v6
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v4, v0, v[4:5], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v5
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB3_2
+; GFX1164-DPP-NEXT:  .LBB3_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_div_value_one_as_scope_unsafe:
@@ -1904,18 +2113,34 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX1132-DPP-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v4, exec_lo, 0
-; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v4
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB3_2
+; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB3_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1132-DPP-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v6, v4, v4
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v4, v0, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB3_2:
+; GFX1132-DPP-NEXT:    global_load_b32 v5, v0, s[0:1]
+; GFX1132-DPP-NEXT:  .LBB3_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v4, v4, v6
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v4, v0, v[4:5], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v5
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB3_2
+; GFX1132-DPP-NEXT:  .LBB3_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic
@@ -1992,29 +2217,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_default_scop
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB4_2:
+; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1064-NEXT:  .LBB4_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB4_2:
+; GFX1032-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1032-NEXT:  .LBB4_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
@@ -2024,33 +2275,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_default_scop
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB4_2:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1164-NEXT:  .LBB4_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s2, 0
+; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB4_2:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1132-NEXT:  .LBB4_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
@@ -2088,29 +2366,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_default_scop
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB4_2:
+; GFX1064-DPP-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1064-DPP-NEXT:  .LBB4_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB4_2:
+; GFX1032-DPP-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-DPP-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1032-DPP-NEXT:  .LBB4_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
@@ -2120,33 +2424,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_default_scop
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB4_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-DPP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-DPP-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1164-DPP-NEXT:  .LBB4_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_default_scope_unsafe:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-DPP-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
+; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB4_2
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB4_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-DPP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB4_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-DPP-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-DPP-NEXT:  .LBB4_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB4_2
+; GFX1132-DPP-NEXT:  .LBB4_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 monotonic, align 4
   ret void
@@ -2303,18 +2634,18 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1064-NEXT:    s_mov_b32 s32, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064-NEXT:    s_ff1_i32_b64 s2, s[0:1]
-; GFX1064-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1064-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX1064-NEXT:    v_max_f32_e64 v2, s3, s3
 ; GFX1064-NEXT:    s_lshl_b64 s[2:3], 1, s2
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1064-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1064-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1064-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1064-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1064-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
@@ -2322,13 +2653,27 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX1064-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1064-NEXT:    s_cbranch_execz .LBB5_4
+; GFX1064-NEXT:    s_cbranch_execz .LBB5_5
 ; GFX1064-NEXT:  ; %bb.3:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1064-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB5_4:
+; GFX1064-NEXT:    global_load_dword v1, v3, s[0:1]
+; GFX1064-NEXT:  .LBB5_4: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB5_4
+; GFX1064-NEXT:  .LBB5_5:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2359,31 +2704,45 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1032-NEXT:    s_mov_b32 s32, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1032-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    s_ff1_i32_b32 s1, s0
-; GFX1032-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1032-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1032-NEXT:    s_lshl_b32 s1, 1, s1
 ; GFX1032-NEXT:    s_andn2_b32 s0, s0, s1
 ; GFX1032-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1032-NEXT:    v_max_f32_e64 v2, s2, s2
-; GFX1032-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1032-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1032-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1032-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1032-NEXT:    s_cbranch_execz .LBB5_4
+; GFX1032-NEXT:    s_cbranch_execz .LBB5_5
 ; GFX1032-NEXT:  ; %bb.3:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1032-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB5_4:
+; GFX1032-NEXT:    global_load_dword v1, v3, s[0:1]
+; GFX1032-NEXT:  .LBB5_4: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB5_4
+; GFX1032-NEXT:  .LBB5_5:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2404,13 +2763,13 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1164-NEXT:    s_mov_b32 s32, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_ctz_i32_b64 s2, s[0:1]
-; GFX1164-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1164-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_max_f32_e64 v2, s3, s3
@@ -2418,7 +2777,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1164-NEXT:    s_and_not1_b64 s[0:1], s[0:1], s[2:3]
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1164-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1164-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1164-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1164-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
@@ -2427,13 +2786,29 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1164-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
-; GFX1164-NEXT:    s_cbranch_execz .LBB5_4
+; GFX1164-NEXT:    s_cbranch_execz .LBB5_5
 ; GFX1164-NEXT:  ; %bb.3:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
+; GFX1164-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB5_4:
+; GFX1164-NEXT:    global_load_b32 v1, v3, s[0:1]
+; GFX1164-NEXT:  .LBB5_4: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB5_4
+; GFX1164-NEXT:  .LBB5_5:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2454,13 +2829,13 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1132-NEXT:    s_mov_b32 s32, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1132-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX1132-NEXT:    v_mov_b32_e32 v1, 0xff800000
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0xff800000
 ; GFX1132-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-NEXT:  .LBB5_1: ; %ComputeLoop
 ; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_ctz_i32_b32 s1, s0
-; GFX1132-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v1, v2, v2
 ; GFX1132-NEXT:    v_readlane_b32 s2, v0, s1
 ; GFX1132-NEXT:    s_lshl_b32 s1, 1, s1
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -2468,21 +2843,36 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1132-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_max_f32_e64 v2, s2, s2
-; GFX1132-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX1132-NEXT:    v_max_f32_e32 v2, v1, v2
 ; GFX1132-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX1132-NEXT:  ; %bb.2: ; %ComputeEnd
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1132-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX1132-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX1132-NEXT:    s_cbranch_execz .LBB5_4
+; GFX1132-NEXT:    s_cbranch_execz .LBB5_5
 ; GFX1132-NEXT:  ; %bb.3:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1132-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1132-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_max_f32 v2, v2, v2
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB5_4:
+; GFX1132-NEXT:    global_load_b32 v1, v3, s[0:1]
+; GFX1132-NEXT:  .LBB5_4: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v0, v2
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v3, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB5_4
+; GFX1132-NEXT:  .LBB5_5:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2647,13 +3037,27 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB5_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v6, v0, v0
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v1, v0, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB5_2:
+; GFX1064-DPP-NEXT:    global_load_dword v1, v2, s[0:1]
+; GFX1064-DPP-NEXT:  .LBB5_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v0, v6
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB5_2
+; GFX1064-DPP-NEXT:  .LBB5_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2715,15 +3119,29 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1032-DPP-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v1, exec_lo, 0
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, v3
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB5_2
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[34:35], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v6, v0, v0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v1, v0, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB5_2:
+; GFX1032-DPP-NEXT:    global_load_dword v1, v2, s[0:1]
+; GFX1032-DPP-NEXT:  .LBB5_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v0, v6
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB5_2
+; GFX1032-DPP-NEXT:  .LBB5_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2791,18 +3209,34 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1164-DPP-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX1164-DPP-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v4, exec_hi, v0
+; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[0:1], exec
-; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v4
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB5_2
+; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v6, v4, v4
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v4, v0, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB5_2:
+; GFX1164-DPP-NEXT:    global_load_b32 v5, v0, s[0:1]
+; GFX1164-DPP-NEXT:  .LBB5_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v4, v4, v6
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v4, v0, v[4:5], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v5
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB5_2
+; GFX1164-DPP-NEXT:  .LBB5_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_div_value_default_scope_unsafe:
@@ -2858,18 +3292,34 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1132-DPP-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX1132-DPP-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v4, exec_lo, 0
-; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v4, v1
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1132-DPP-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v4
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB5_2
+; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB5_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[34:35], 0x24
-; GFX1132-DPP-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v6, v4, v4
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v4, v0, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB5_2:
+; GFX1132-DPP-NEXT:    global_load_b32 v5, v0, s[0:1]
+; GFX1132-DPP-NEXT:  .LBB5_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v4, v5, v5
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v4, v4, v6
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v4, v0, v[4:5], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v5
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v5, v4
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB5_2
+; GFX1132-DPP-NEXT:  .LBB5_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue monotonic, align 4
@@ -3690,31 +4140,59 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_one_a
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB8_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1064-NEXT:  .LBB8_2:
+; GFX1064-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1064-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB8_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1064-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB8_2
+; GFX1064-NEXT:  .LBB8_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_double_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB8_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1032-NEXT:  .LBB8_2:
+; GFX1032-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1032-NEXT:    v_mov_b32_e32 v3, s5
+; GFX1032-NEXT:  .LBB8_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1032-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB8_2
+; GFX1032-NEXT:  .LBB8_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_double_uni_address_uni_value_one_as_scope_unsafe:
@@ -3819,31 +4297,59 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_one_a
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB8_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1064-DPP-NEXT:  .LBB8_2:
+; GFX1064-DPP-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB8_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB8_2
+; GFX1064-DPP-NEXT:  .LBB8_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_double_uni_address_uni_value_one_as_scope_unsafe:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB8_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB8_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1032-DPP-NEXT:  .LBB8_2:
+; GFX1032-DPP-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, s5
+; GFX1032-DPP-NEXT:  .LBB8_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB8_2
+; GFX1032-DPP-NEXT:  .LBB8_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_double_uni_address_uni_value_one_as_scope_unsafe:
@@ -4047,7 +4553,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1064-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1064-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1064-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1064-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1064-NEXT:  .LBB9_1: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1064-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB9_1
+; GFX1064-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_double_uni_address_div_value_one_as_scope_unsafe:
@@ -4079,7 +4601,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1032-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1032-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1032-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1032-NEXT:    s_mov_b32 s0, 0
+; GFX1032-NEXT:  .LBB9_1: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1032-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
+; GFX1032-NEXT:    s_cbranch_execnz .LBB9_1
+; GFX1032-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_double_uni_address_div_value_one_as_scope_unsafe:
@@ -4237,7 +4775,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-DPP-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1064-DPP-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1064-DPP-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1064-DPP-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1064-DPP-NEXT:  .LBB9_1: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB9_1
+; GFX1064-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_double_uni_address_div_value_one_as_scope_unsafe:
@@ -4269,7 +4823,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-DPP-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1032-DPP-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1032-DPP-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1032-DPP-NEXT:    s_mov_b32 s0, 0
+; GFX1032-DPP-NEXT:  .LBB9_1: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB9_1
+; GFX1032-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_double_uni_address_div_value_one_as_scope_unsafe:
@@ -4429,31 +4999,59 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_defau
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB10_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1064-NEXT:  .LBB10_2:
+; GFX1064-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1064-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB10_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1064-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB10_2
+; GFX1064-NEXT:  .LBB10_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_double_uni_address_uni_value_default_scope_unsafe:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB10_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1032-NEXT:  .LBB10_2:
+; GFX1032-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1032-NEXT:    v_mov_b32_e32 v3, s5
+; GFX1032-NEXT:  .LBB10_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1032-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB10_2
+; GFX1032-NEXT:  .LBB10_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_double_uni_address_uni_value_default_scope_unsafe:
@@ -4558,31 +5156,59 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_defau
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB10_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1064-DPP-NEXT:  .LBB10_2:
+; GFX1064-DPP-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, s3
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB10_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB10_2
+; GFX1064-DPP-NEXT:  .LBB10_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_double_uni_address_uni_value_default_scope_unsafe:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB10_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB10_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 0x40100000
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax_x2 v2, v[0:1], s[0:1]
-; GFX1032-DPP-NEXT:  .LBB10_2:
+; GFX1032-DPP-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, s5
+; GFX1032-DPP-NEXT:  .LBB10_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], 4.0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v4, v[0:3], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB10_2
+; GFX1032-DPP-NEXT:  .LBB10_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_double_uni_address_uni_value_default_scope_unsafe:
@@ -4786,7 +5412,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1064-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1064-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1064-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1064-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1064-NEXT:  .LBB11_1: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1064-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX1064-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_double_uni_address_div_value_default_scope_unsafe:
@@ -4818,7 +5460,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1032-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1032-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1032-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1032-NEXT:    s_mov_b32 s0, 0
+; GFX1032-NEXT:  .LBB11_1: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1032-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
+; GFX1032-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX1032-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_double_uni_address_div_value_default_scope_unsafe:
@@ -4976,7 +5634,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1064-DPP-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1064-DPP-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1064-DPP-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1064-DPP-NEXT:    s_mov_b64 s[0:1], 0
+; GFX1064-DPP-NEXT:  .LBB11_1: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1064-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u64_e32 vcc, v[0:1], v[2:3]
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX1064-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_double_uni_address_div_value_default_scope_unsafe:
@@ -5008,7 +5682,23 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-DPP-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX1032-DPP-NEXT:    global_atomic_fmax_x2 v40, v[0:1], s[34:35]
+; GFX1032-DPP-NEXT:    global_load_dwordx2 v[2:3], v40, s[34:35]
+; GFX1032-DPP-NEXT:    v_max_f64 v[4:5], v[0:1], v[0:1]
+; GFX1032-DPP-NEXT:    s_mov_b32 s0, 0
+; GFX1032-DPP-NEXT:  .LBB11_1: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[2:3], v[2:3]
+; GFX1032-DPP-NEXT:    v_max_f64 v[0:1], v[0:1], v[4:5]
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap_x2 v[0:1], v40, v[0:3], s[34:35] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[0:1], v[2:3]
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB11_1
+; GFX1032-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_double_uni_address_div_value_default_scope_unsafe:
@@ -5162,29 +5852,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB12_2:
+; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1064-NEXT:  .LBB12_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB12_2:
+; GFX1032-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1032-NEXT:  .LBB12_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5194,33 +5910,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB12_2:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1164-NEXT:  .LBB12_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s2, 0
+; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB12_2:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1132-NEXT:  .LBB12_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5258,29 +6001,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB12_2:
+; GFX1064-DPP-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1064-DPP-NEXT:  .LBB12_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB12_2:
+; GFX1032-DPP-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-DPP-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1032-DPP-NEXT:  .LBB12_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5290,33 +6059,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB12_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-DPP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-DPP-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1164-DPP-NEXT:  .LBB12_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-DPP-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
+; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB12_2
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB12_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-DPP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB12_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-DPP-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-DPP-NEXT:  .LBB12_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB12_2
+; GFX1132-DPP-NEXT:  .LBB12_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !amdgpu.ignore.denormal.mode !1
   ret void
@@ -5391,29 +6187,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1064-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1064-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-NEXT:  .LBB13_2:
+; GFX1064-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1064-NEXT:  .LBB13_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
 ; GFX1032-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1032-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-NEXT:  .LBB13_2:
+; GFX1032-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1032-NEXT:  .LBB13_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1164-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5423,33 +6245,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1164-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1164-NEXT:  ; %bb.1:
 ; GFX1164-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-NEXT:  .LBB13_2:
-; GFX1164-NEXT:    s_nop 0
-; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1164-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1164-NEXT:  .LBB13_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s2, 0
+; GFX1132-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1132-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1132-NEXT:  ; %bb.1:
 ; GFX1132-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-NEXT:  .LBB13_2:
-; GFX1132-NEXT:    s_nop 0
-; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1132-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1132-NEXT:  .LBB13_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
 ; GFX9-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5487,29 +6336,55 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1064-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX1064-DPP-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1064-DPP-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1064-DPP-NEXT:  ; %bb.1:
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1064-DPP-NEXT:  .LBB13_2:
+; GFX1064-DPP-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1064-DPP-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1064-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1064-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1064-DPP-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX1064-DPP-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1064-DPP-NEXT:  .LBB13_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
 ; GFX1032-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
+; GFX1032-DPP-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s2, vcc_lo
-; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1032-DPP-NEXT:    s_and_saveexec_b32 s3, vcc_lo
+; GFX1032-DPP-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1032-DPP-NEXT:  ; %bb.1:
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-DPP-NEXT:    global_atomic_fmax v0, v1, s[0:1]
-; GFX1032-DPP-NEXT:  .LBB13_2:
+; GFX1032-DPP-NEXT:    s_load_dword s3, s[0:1], 0x0
+; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1032-DPP-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1032-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
+; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1032-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1032-DPP-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX1032-DPP-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1032-DPP-NEXT:  .LBB13_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
 ; GFX1164-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -5519,33 +6394,60 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
 ; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1164-DPP-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
 ; GFX1164-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1164-DPP-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1164-DPP-NEXT:  ; %bb.1:
 ; GFX1164-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1164-DPP-NEXT:  .LBB13_2:
-; GFX1164-DPP-NEXT:    s_nop 0
-; GFX1164-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1164-DPP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1164-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1164-DPP-NEXT:    s_mov_b64 s[2:3], 0
+; GFX1164-DPP-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1164-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1164-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1164-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1164-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1164-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
+; GFX1164-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1164-DPP-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_and_not1_b64 exec, exec, s[2:3]
+; GFX1164-DPP-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1164-DPP-NEXT:  .LBB13_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
 ; GFX1132-DPP-LABEL: global_atomic_fmax_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
-; GFX1132-DPP-NEXT:    s_mov_b32 s2, exec_lo
+; GFX1132-DPP-NEXT:    s_mov_b32 s2, 0
+; GFX1132-DPP-NEXT:    s_mov_b32 s3, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-DPP-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB13_2
+; GFX1132-DPP-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX1132-DPP-NEXT:  ; %bb.1:
 ; GFX1132-DPP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1132-DPP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1132-DPP-NEXT:    global_atomic_max_f32 v0, v1, s[0:1]
-; GFX1132-DPP-NEXT:  .LBB13_2:
-; GFX1132-DPP-NEXT:    s_nop 0
-; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1132-DPP-NEXT:    s_load_b32 s3, s[0:1], 0x0
+; GFX1132-DPP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1132-DPP-NEXT:  .LBB13_2: ; %atomicrmw.start
+; GFX1132-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, v1, v1
+; GFX1132-DPP-NEXT:    v_max_f32_e32 v0, 4.0, v0
+; GFX1132-DPP-NEXT:    global_atomic_cmpswap_b32 v0, v2, v[0:1], s[0:1] glc
+; GFX1132-DPP-NEXT:    s_waitcnt vmcnt(0)
+; GFX1132-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
+; GFX1132-DPP-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1132-DPP-NEXT:    s_or_b32 s2, vcc_lo, s2
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
+; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB13_2
+; GFX1132-DPP-NEXT:  .LBB13_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1
   ret void

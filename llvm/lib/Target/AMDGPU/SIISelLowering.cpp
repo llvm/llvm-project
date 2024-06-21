@@ -16082,6 +16082,13 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (AS == AMDGPUAS::LOCAL_ADDRESS && (Ty->isFloatTy() || Ty->isDoubleTy()))
       return AtomicExpansionKind::None;
 
+    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
+      return AtomicExpansionKind::CmpXChg;
+
+    // Always expand system scope fp atomics.
+    if (HasSystemScope)
+      return AtomicExpansionKind::CmpXChg;
+
     // For flat and global cases:
     // float, double in gfx7. Manual claims denormal support.
     // Removed in gfx8.
@@ -16094,14 +16101,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // FIXME: Check scope and fine grained memory
     if (AS == AMDGPUAS::FLAT_ADDRESS) {
       if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
       if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
     } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
       if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
       if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
-        return AtomicExpansionKind::None;
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
     }
 
     return AtomicExpansionKind::CmpXChg;
