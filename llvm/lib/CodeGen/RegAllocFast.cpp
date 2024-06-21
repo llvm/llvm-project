@@ -177,7 +177,7 @@ private:
 
 class RegAllocFastImpl {
 public:
-  RegAllocFastImpl(const RegClassFilterFunc F = allocateAllRegClasses,
+  RegAllocFastImpl(const RegClassFilterFunc F = nullptr,
                    bool ClearVirtRegs_ = true)
       : ShouldAllocateClass(F), StackSlotForVirtReg(-1),
         ClearVirtRegs(ClearVirtRegs_) {}
@@ -322,7 +322,7 @@ public:
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
 
-  void addRegClassDefCounts(std::vector<unsigned> &RegClassDefCounts,
+  void addRegClassDefCounts(MutableArrayRef<unsigned> RegClassDefCounts,
                             Register Reg) const;
 
   void findAndSortDefOperandIndexes(const MachineInstr &MI);
@@ -387,8 +387,7 @@ class RegAllocFast : public MachineFunctionPass {
 public:
   static char ID;
 
-  RegAllocFast(const RegClassFilterFunc F = allocateAllRegClasses,
-               bool ClearVirtRegs_ = true)
+  RegAllocFast(const RegClassFilterFunc F = nullptr, bool ClearVirtRegs_ = true)
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -431,6 +430,8 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
 
 bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());
+  if (!ShouldAllocateClass)
+    return true;
   const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
   return ShouldAllocateClass(*TRI, RC);
 }
@@ -1253,7 +1254,7 @@ void RegAllocFastImpl::dumpState() const {
 
 /// Count number of defs consumed from each register class by \p Reg
 void RegAllocFastImpl::addRegClassDefCounts(
-    std::vector<unsigned> &RegClassDefCounts, Register Reg) const {
+    MutableArrayRef<unsigned> RegClassDefCounts, Register Reg) const {
   assert(RegClassDefCounts.size() == TRI->getNumRegClasses());
 
   if (Reg.isVirtual()) {
@@ -1289,10 +1290,6 @@ void RegAllocFastImpl::addRegClassDefCounts(
 void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   DefOperandIndexes.clear();
 
-  // Track number of defs which may consume a register from the class.
-  std::vector<unsigned> RegClassDefCounts(TRI->getNumRegClasses(), 0);
-  assert(RegClassDefCounts[0] == 0);
-
   LLVM_DEBUG(dbgs() << "Need to assign livethroughs\n");
   for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
@@ -1306,13 +1303,25 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
       }
     }
 
-    if (MO.isDef()) {
-      if (Reg.isVirtual() && shouldAllocateRegister(Reg))
-        DefOperandIndexes.push_back(I);
-
-      addRegClassDefCounts(RegClassDefCounts, Reg);
-    }
+    if (MO.isDef() && Reg.isVirtual() && shouldAllocateRegister(Reg))
+      DefOperandIndexes.push_back(I);
   }
+
+  // Most instructions only have one virtual def, so there's no point in
+  // computing the possible number of defs for every register class.
+  if (DefOperandIndexes.size() <= 1)
+    return;
+
+  // Track number of defs which may consume a register from the class. This is
+  // used to assign registers for possibly-too-small classes first. Example:
+  // defs are eax, 3 * gr32_abcd, 2 * gr32 => we want to assign the gr32_abcd
+  // registers first so that the gr32 don't use the gr32_abcd registers before
+  // we assign these.
+  SmallVector<unsigned> RegClassDefCounts(TRI->getNumRegClasses(), 0);
+
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.isDef())
+      addRegClassDefCounts(RegClassDefCounts, MO.getReg());
 
   llvm::sort(DefOperandIndexes, [&](unsigned I0, unsigned I1) {
     const MachineOperand &MO0 = MI.getOperand(I0);
