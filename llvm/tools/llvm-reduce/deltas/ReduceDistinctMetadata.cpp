@@ -1,5 +1,4 @@
-//===- ReduceDistinctMetadata.cpp - Specialized Delta Pass
-//------------------------===//
+//===- ReduceDistinctMetadata.cpp - Specialized Delta Pass ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,96 +23,101 @@
 using namespace llvm;
 
 // Traverse the graph breadth-first and try to remove unnamed metadata nodes
-void BFS_removal(MDNode *root,
-                 std::set<std::pair<unsigned int, MDNode *>> &nodesToDelete,
-                 MDNode *tmp, Oracle &O, Module &Program) {
-  std::queue<MDNode *> q{};
-  std::set<MDNode *>
-      visited{}; // Keep track of visited nodes not to get into loops
-  q.push(root);
+void reduceNodes(MDNode *Root,
+                 std::set<std::pair<unsigned int, MDNode *>> &NodesToDelete,
+                 MDNode *TemporaryNode, Oracle &O, Module &Program) {
+  std::queue<MDNode *> NodesToTraverse{};
+  // Keep track of visited nodes not to get into loops
+  std::set<MDNode *> VisitedNodes{};
+  NodesToTraverse.push(Root);
 
-  while (!q.empty()) {
-    MDNode *current = q.front();
-    q.pop();
+  while (!NodesToTraverse.empty()) {
+    MDNode *CurrentNode = NodesToTraverse.front();
+    NodesToTraverse.pop();
 
     // Mark the nodes for removal
-    for (unsigned int i = 0; i < current->getNumOperands(); ++i) {
-      Metadata *operand = current->getOperand(i).get();
-      if (isa_and_nonnull<MDNode>(operand)) {
-        if (std::find(visited.begin(), visited.end(), operand) ==
-            visited.end()) { // Check whether node has been visited
-          q.push(static_cast<MDNode *>(operand));
-          visited.insert(static_cast<MDNode *>(operand));
+    for (unsigned int I = 0; I < CurrentNode->getNumOperands(); ++I) {
+      Metadata *Operand = CurrentNode->getOperand(I).get();
+      if (isa_and_nonnull<MDNode>(Operand)) {
+        // Check whether node has been visited
+        if (VisitedNodes.find(static_cast<MDNode *>(Operand)) ==
+            VisitedNodes.end()) {
+          NodesToTraverse.push(static_cast<MDNode *>(Operand));
+          VisitedNodes.insert(static_cast<MDNode *>(Operand));
         }
         // Delete the node only if it is distinct
-        if (static_cast<MDNode *>(operand)->isDistinct())
-          nodesToDelete.insert(
-              std::make_pair(i, current)); // Add to removal list
+        if (static_cast<MDNode *>(Operand)->isDistinct())
+          // Add to removal list
+          NodesToDelete.insert(std::make_pair(I, CurrentNode));
       }
     }
 
     // Remove the nodes
-    for (std::pair<unsigned int, MDNode *> node : nodesToDelete) {
+    for (std::pair<unsigned int, MDNode *> Node : NodesToDelete) {
       if (!O.shouldKeep())
-        node.second->replaceOperandWith(node.first, tmp);
+        Node.second->replaceOperandWith(Node.first, TemporaryNode);
     }
-    nodesToDelete.clear();
+    NodesToDelete.clear();
   }
 }
 
 // After reducing metadata, we need to remove references to the temporary node,
 // this is also done with BFS
-void cleanup(NamedMDNode &namedNode, MDTuple *tmp, Module &Program) {
-  std::queue<MDTuple *> q{};
-  std::set<MDTuple *> visited{};
+void cleanUpTemporaries(NamedMDNode &NamedNode, MDTuple *TemporaryTuple,
+                        Module &Program) {
+  std::queue<MDTuple *> NodesToTraverse{};
+  std::set<MDTuple *> VisitedNodes{};
 
   // Push all first level operands of the named node to the queue
-  for (auto i = namedNode.op_begin(); i != namedNode.op_end(); ++i) {
+  for (auto I = NamedNode.op_begin(); I != NamedNode.op_end(); ++I) {
     // If the node hasn't been traversed yet, add it to the queue of nodes to
     // traverse.
-    if (std::find(visited.begin(), visited.end(), *i) == visited.end()) {
-      q.push(static_cast<MDTuple *>(*i));
-      visited.insert(static_cast<MDTuple *>(*i));
+    if (VisitedNodes.find(static_cast<MDTuple *>(*I)) == VisitedNodes.end()) {
+      NodesToTraverse.push(static_cast<MDTuple *>(*I));
+      VisitedNodes.insert(static_cast<MDTuple *>(*I));
     }
   }
 
-  while (!q.empty()) {
-    MDTuple *current = q.front();
-    q.pop();
+  while (!NodesToTraverse.empty()) {
+    MDTuple *CurrentTuple = NodesToTraverse.front();
+    NodesToTraverse.pop();
 
     // Shift all of the interesting elements to the left, pop remaining
     // afterwards
-    if (current->isDistinct()) { // Do resizing and cleaning operations only if
-                                 // the node is distinct, as resizing is not
-                                 // supported for unique nodes and is redundant.
-      unsigned int notToRemove = 0;
-      for (unsigned int i = 0; i < current->getNumOperands(); ++i) {
-        Metadata *operand = current->getOperand(i).get();
+    if (CurrentTuple
+            ->isDistinct()) { // Do resizing and cleaning operations only if
+                              // the node is distinct, as resizing is not
+                              // supported for unique nodes and is redundant.
+      unsigned int NotToRemove = 0;
+      for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
+        Metadata *Operand = CurrentTuple->getOperand(I).get();
         // If current operand is not the temporary node, move it to the front
         // and increase notToRemove so that it will be saved
-        if (operand != tmp) {
-          Metadata *temporary = current->getOperand(notToRemove).get();
-          current->replaceOperandWith(notToRemove, operand);
-          current->replaceOperandWith(i, temporary);
-          ++notToRemove;
+        if (Operand != TemporaryTuple) {
+          Metadata *TemporaryMetadata =
+              CurrentTuple->getOperand(NotToRemove).get();
+          CurrentTuple->replaceOperandWith(NotToRemove, Operand);
+          CurrentTuple->replaceOperandWith(I, TemporaryMetadata);
+          ++NotToRemove;
         }
       }
 
       // Remove all the uninteresting elements
-      unsigned int originalOperands = current->getNumOperands();
-      for (unsigned int i = 0; i < originalOperands - notToRemove; ++i)
-        current->pop_back();
+      unsigned int OriginalOperands = CurrentTuple->getNumOperands();
+      for (unsigned int I = 0; I < OriginalOperands - NotToRemove; ++I)
+        CurrentTuple->pop_back();
     }
 
     // Push the remaining nodes into the queue
-    for (unsigned int i = 0; i < current->getNumOperands(); ++i) {
-      Metadata *operand = current->getOperand(i).get();
-      if (isa_and_nonnull<MDTuple>(operand) &&
-          std::find(visited.begin(), visited.end(), operand) == visited.end()) {
-        q.push(static_cast<MDTuple *>(operand));
-        visited.insert(static_cast<MDTuple *>(
-            operand)); // If the node hasn't been traversed yet, add it to the
-                       // queue of nodes to traverse.
+    for (unsigned int I = 0; I < CurrentTuple->getNumOperands(); ++I) {
+      Metadata *Operand = CurrentTuple->getOperand(I).get();
+      if (isa_and_nonnull<MDTuple>(Operand) &&
+          VisitedNodes.find(static_cast<MDTuple *>(Operand)) ==
+              VisitedNodes.end()) {
+        NodesToTraverse.push(static_cast<MDTuple *>(Operand));
+        // If the node hasn't been traversed yet, add it to the queue of nodes
+        // to traverse.
+        VisitedNodes.insert(static_cast<MDTuple *>(Operand));
       }
     }
   }
@@ -122,22 +126,22 @@ void cleanup(NamedMDNode &namedNode, MDTuple *tmp, Module &Program) {
 static void extractDistinctMetadataFromModule(Oracle &O,
                                               ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
-  MDTuple *tmp = MDTuple::getDistinct(
+  MDTuple *TemporaryTuple = MDTuple::getDistinct(
       Program.getContext(), SmallVector<Metadata *, 1>{llvm::MDString::get(
-                                Program.getContext(), "temporary_node")});
-  std::set<std::pair<unsigned int, MDNode *>> nodesToDelete{};
-  for (NamedMDNode &namedNode :
+                                Program.getContext(), "temporary_tuple")});
+  std::set<std::pair<unsigned int, MDNode *>> NodesToDelete{};
+  for (NamedMDNode &NamedNode :
        Program.named_metadata()) { // Iterate over the named nodes
-    for (unsigned int i = 0; i < namedNode.getNumOperands();
-         ++i) { // Iterate over first level unnamed nodes..
-      Metadata *operand = namedNode.getOperand(i);
-      if (isa_and_nonnull<MDTuple>(operand))
-        BFS_removal(static_cast<MDTuple *>(operand), nodesToDelete, tmp, O,
-                    Program);
+    for (unsigned int I = 0; I < NamedNode.getNumOperands();
+         ++I) { // Iterate over first level unnamed nodes..
+      Metadata *Operand = NamedNode.getOperand(I);
+      if (isa_and_nonnull<MDTuple>(Operand))
+        reduceNodes(static_cast<MDTuple *>(Operand), NodesToDelete,
+                    TemporaryTuple, O, Program);
     }
   }
-  for (NamedMDNode &namedNode : Program.named_metadata())
-    cleanup(namedNode, tmp, Program);
+  for (NamedMDNode &NamedNode : Program.named_metadata())
+    cleanUpTemporaries(NamedNode, TemporaryTuple, Program);
 }
 
 void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test) {

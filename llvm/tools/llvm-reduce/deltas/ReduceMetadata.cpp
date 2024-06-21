@@ -32,22 +32,20 @@ static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
 static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &M = WorkItem.getModule();
 
-  for (NamedMDNode &i : M.named_metadata()) {
-    NamedMDNode &NamedNode = i;
-
+  for (NamedMDNode &I : M.named_metadata()) {
     bool MadeChange = false;
     SmallVector<MDNode *> KeptOperands;
-    for (auto I : seq<unsigned>(0, NamedNode.getNumOperands())) {
+    for (auto J : seq<unsigned>(0, I.getNumOperands())) {
       if (O.shouldKeep())
-        KeptOperands.push_back(NamedNode.getOperand(I));
+        KeptOperands.push_back(I.getOperand(J));
       else
         MadeChange = true;
     }
 
     if (MadeChange) {
-      NamedNode.clearOperands();
+      I.clearOperands();
       for (MDNode *KeptOperand : KeptOperands)
-        NamedNode.addOperand(KeptOperand);
+        I.addOperand(KeptOperand);
     }
   }
 }
