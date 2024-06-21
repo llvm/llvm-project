@@ -2856,22 +2856,22 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               GlobalDecl GD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
+                                                     llvm::Type *Ty) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(GD);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   return V;
 }
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -5506,7 +5506,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5529,7 +5529,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
@@ -5586,7 +5586,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     GD = GlobalDecl(VD);
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-  CGCallee callee(calleeInfo, calleePtr);
+  CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
+  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }
 
