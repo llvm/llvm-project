@@ -54,9 +54,7 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
       Ranges, NewRange, [](const ConstantRange &a, const ConstantRange &b) {
         return a.getLower().slt(b.getLower());
       });
-  if (LowerBound != Ranges.end() &&
-      LowerBound->getLower().eq(NewRange.getLower()) &&
-      LowerBound->getUpper().sge(NewRange.getUpper()))
+  if (LowerBound != Ranges.end() && LowerBound->contains(NewRange))
     return;
 
   // Slow insert.
