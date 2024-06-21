@@ -180,7 +180,9 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
   }
 
   StringMap<DenseSet<unsigned>> rootSymbolToSectionIdxs;
-  for (auto &[name, sectionIdxs] : symbolToSectionIdxs) {
+  for (auto &entry : symbolToSectionIdxs) {
+    StringRef name = entry.getKey();
+    auto &sectionIdxs = entry.getValue();
     name = getRootSymbol(name);
     rootSymbolToSectionIdxs[name].insert(sectionIdxs.begin(),
                                          sectionIdxs.end());
