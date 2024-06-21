@@ -189,8 +189,7 @@ void GOFFState::writeEnd(const GOFFYAML::EndOfModule &EndMod) {
   SmallString<16> EntryName;
   if (std::error_code EC =
           ConverterEBCDIC::convertToEBCDIC(EndMod.EntryName, EntryName))
-    reportError("conversion to EBCDIC 1047 failed on '" + EndMod.EntryName +
-                "'");
+    reportError("failed to convert '" + EndMod.EntryName + "' to EBCDIC 1047");
 
   GW.newRecord(GOFF::RT_END);
   LogicalRecord LR(GW);

@@ -71,9 +71,9 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
     Elem = std::make_unique<GOFFYAML::EndOfModule>(std::move(End));
   } else if (Key == "RelocationDirectory" || Key == "Symbol" || Key == "Text" ||
              Key == "Length")
-    IO.setError(Twine("not yet implemented ").concat(Key));
+    IO.setError(Twine("not yet implemented '").concat(Key).concat("'"));
   else
-    IO.setError(Twine("unknown record type name ").concat(Key));
+    IO.setError(Twine("unknown record type name '").concat(Key).concat("'"));
 }
 
 void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
