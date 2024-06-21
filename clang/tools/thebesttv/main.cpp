@@ -650,7 +650,10 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
     logger.info("There are {} results to search", total);
 
     ordered_json output(input);
-    output["results"].clear();
+    // 先把 results 删除，然后加上 source，最后加上空的 results
+    output.erase("results");
+    output["source"] = Global.inputJsonPath;
+    output["results"] = ordered_json::array();
 
     int cnt = 0;
     for (const ordered_json &result : input["results"]) {
@@ -760,6 +763,7 @@ int main(int argc, const char **argv) {
     llvm::InitLLVM X(argc, argv);
 
     fs::path jsonPath = fs::absolute(args::get(argIR));
+    Global.inputJsonPath = jsonPath;
     std::ifstream ifs(jsonPath);
     if (!ifs.is_open()) {
         logger.error("Cannot open file {}", jsonPath);

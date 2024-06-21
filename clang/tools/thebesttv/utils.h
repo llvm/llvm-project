@@ -143,6 +143,8 @@ struct GlobalStat {
     std::unique_ptr<CompilationDatabase> cb;
     std::set<std::string> allFiles; // cc.json 中的所有文件，不包括头文件
 
+    // 输入 input.json 的绝对路径
+    std::string inputJsonPath;
     // 项目所在绝对目录。所有不在这个目录下的函数都会被排除
     std::string projectDirectory;
 
