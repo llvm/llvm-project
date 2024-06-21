@@ -331,46 +331,46 @@ struct MatmulOpLowering : public ConversionPattern {
     toy::MatmulOpAdaptor matmulAdaptor(operands);
     Value lhs = matmulAdaptor.getLhs();
     Value rhs = matmulAdaptor.getRhs();
-    
+
     auto lhsType = dyn_cast<MemRefType>(lhs.getType());
     auto rhsType = dyn_cast<MemRefType>(rhs.getType());
-    if (!lhsType || !rhsType) {
-      return failure();
-    }
+    if (!lhsType || !rhsType) return failure();
+
     int64_t M = lhsType.getShape()[0];
     int64_t N = rhsType.getShape()[1];
     int64_t K = lhsType.getShape()[1];
     auto elementType = lhsType.getElementType();
     auto resultType = MemRefType::get({M, N}, elementType);
     Value result = rewriter.create<memref::AllocOp>(loc, resultType);
-     for (int64_t i = 0; i < M; ++i) {
-      for (int64_t j = 0; j < N; ++j) {
-        // Initialize the sum to zero.
-        Value sum = rewriter.create<arith::ConstantOp>(loc, rewriter.getF64Type(), rewriter.getF64FloatAttr(0.0));
 
-        for (int64_t k = 0; k < K; ++k) {
-          // Load lhs[i, k] and rhs[k, j].
-          Value lhsVal = rewriter.create<affine::AffineLoadOp>(loc, lhs, ValueRange{
-            rewriter.create<arith::ConstantIndexOp>(loc, i),
-            rewriter.create<arith::ConstantIndexOp>(loc, k)
-          });
-          Value rhsVal = rewriter.create<affine::AffineLoadOp>(loc, rhs, ValueRange{
-            rewriter.create<arith::ConstantIndexOp>(loc, k),
-            rewriter.create<arith::ConstantIndexOp>(loc, j)
-          });
+    rewriter.setInsertionPoint(op);
+    Value zero = rewriter.create<arith::ConstantOp>(op->getLoc(), rewriter.getF64FloatAttr(0.0));
 
-          // Perform the multiplication and accumulate the result.
-          Value product = rewriter.create<arith::MulFOp>(loc, lhsVal, rhsVal);
-          sum = rewriter.create<arith::AddFOp>(loc, sum, product);
-        }
+    auto outerLoop = rewriter.create<affine::AffineForOp>(op->getLoc(), 0, M, 1);
+    rewriter.setInsertionPointToStart(outerLoop.getBody());
+    Value i = outerLoop.getInductionVar();
 
-        // Store the computed value into the result matrix.
-        rewriter.create<affine::AffineStoreOp>(loc, sum, result, ValueRange{
-          rewriter.create<arith::ConstantIndexOp>(loc, i),
-          rewriter.create<arith::ConstantIndexOp>(loc, j)
-        });
-      }
-    }
+    auto middleLoop = rewriter.create<affine::AffineForOp>(op->getLoc(),0,N,1);
+    rewriter.setInsertionPointToStart(middleLoop.getBody());
+    Value j = middleLoop.getInductionVar();
+
+    rewriter.create<affine::AffineStoreOp>(op->getLoc(),zero,result,ValueRange{i,j});
+    Value sum = zero;
+    Value total_sum = zero;
+
+    auto innerLoop = rewriter.create<affine::AffineForOp>(op->getLoc(),0,K,1);
+    rewriter.setInsertionPointToStart(innerLoop.getBody());
+    Value k = innerLoop.getInductionVar();
+
+    Value lhsValue = rewriter.create<affine::AffineLoadOp>(op->getLoc(),lhs,ValueRange{i,k});
+    Value rhsValue = rewriter.create<affine::AffineLoadOp>(op->getLoc(),rhs,ValueRange{k,j});
+    Value product = rewriter.create<arith::MulFOp>(op->getLoc(),lhsValue,rhsValue);
+    sum = rewriter.create<arith::AddFOp>(op->getLoc(),sum,product);
+    Value currentValue = rewriter.create<affine::AffineLoadOp>(op->getLoc(), result, ValueRange{i, j});
+    total_sum = rewriter.create<arith::AddFOp>(op->getLoc(),sum,currentValue);
+    rewriter.setInsertionPoint(innerLoop.getBody()->getTerminator());
+    rewriter.create<affine::AffineStoreOp>(op->getLoc(),total_sum,result,ValueRange{i,j});
+
     rewriter.replaceOp(op, result);
     return success();
   }
