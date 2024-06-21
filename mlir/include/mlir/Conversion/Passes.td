@@ -32,18 +32,6 @@ def ConvertToLLVMPass : Pass<"convert-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ToSPIRV
-//===----------------------------------------------------------------------===//
-
-def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
-  let summary = "Convert to SPIR-V";
-  let description = [{
-    This is a generic pass to convert to SPIR-V.
-  }];
-  let dependentDialects = ["spirv::SPIRVDialect"];
-}
-
-//===----------------------------------------------------------------------===//
 // AffineToStandard
 //===----------------------------------------------------------------------===//
 
