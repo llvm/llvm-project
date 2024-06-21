@@ -22,9 +22,9 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
     support library is used or the constituent arrays and structs for
     direct IR codegen). The sparse assembler pass, however, can be used
     to obtain a stable `_mlir_ciface_` API for passing sparse tensors
-    in and from an external environment, such as Python, PyTorch, or JAX.
+    from and to an external environment, such as Python, PyTorch, or JAX.
 
-    The pass  converts public entry methods that use sparse tensors as
+    The pass converts public entry methods that use sparse tensors as
     input parameters and/or output return values into wrapper methods
     that [dis]assemble the individual tensors that constitute the actual
     storage used externally into MLIR sparse tensors. This pass can be used
