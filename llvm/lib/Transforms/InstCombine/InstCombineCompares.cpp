@@ -3936,10 +3936,10 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
   case ICmpInst::ICMP_NE:
     if (C.isZero())
       NewPredicate = Pred;
-    if (C.isOne())
+    else if (C.isOne())
       NewPredicate =
           Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
-    if (C.isAllOnes())
+    else if (C.isAllOnes())
       NewPredicate =
           Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
     break;
@@ -3947,14 +3947,14 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
   case ICmpInst::ICMP_SGT:
     if (C.isAllOnes())
       NewPredicate = ICmpInst::ICMP_UGE;
-    if (C.isZero())
+    else if (C.isZero())
       NewPredicate = ICmpInst::ICMP_UGT;
     break;
 
   case ICmpInst::ICMP_SLT:
     if (C.isZero())
       NewPredicate = ICmpInst::ICMP_ULT;
-    if (C.isOne())
+    else if (C.isOne())
       NewPredicate = ICmpInst::ICMP_ULE;
     break;
 
