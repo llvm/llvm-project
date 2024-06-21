@@ -1123,7 +1123,7 @@ void OpEmitter::genAttrNameGetters() {
 
   // Emit the getAttributeNameForIndex methods.
   {
-    auto *method = opClass.addInlineMethod<Method::Private>(
+    auto *method = opClass.addInlineMethod<Method::Private | Method::Const>(
         "::mlir::StringAttr", "getAttributeNameForIndex",
         MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
@@ -1161,7 +1161,8 @@ void OpEmitter::genAttrNameGetters() {
 
     // Generate the non-static variant.
     {
-      auto *method = opClass.addInlineMethod("::mlir::StringAttr", methodName);
+      auto *method = opClass.addInlineMethod<Method::Const>(
+          "::mlir::StringAttr", methodName);
       ERROR_IF_PRUNED(method, methodName, op);
       method->body() << llvm::formatv(attrNameMethodBody, index);
     }
