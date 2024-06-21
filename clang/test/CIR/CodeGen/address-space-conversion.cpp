@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -S -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 using pi1_t = int __attribute__((address_space(1))) *;
