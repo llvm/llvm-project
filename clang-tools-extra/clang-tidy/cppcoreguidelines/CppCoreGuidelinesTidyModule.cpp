@@ -34,9 +34,9 @@
 #include "NoMallocCheck.h"
 #include "NoSuspendWithLockCheck.h"
 #include "OwningMemoryCheck.h"
-#include "PreferAtOverSubscriptOperatorCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
+#include "ProBoundsAvoidUncheckedContainerAccesses.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -103,12 +103,12 @@ public:
         "cppcoreguidelines-non-private-member-variables-in-classes");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");
-    CheckFactories.registerCheck<PreferAtOverSubscriptOperatorCheck>(
-        "cppcoreguidelines-prefer-at-over-subscript-operator");
     CheckFactories.registerCheck<PreferMemberInitializerCheck>(
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccesses>(
+        "cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");
     CheckFactories.registerCheck<ProBoundsPointerArithmeticCheck>(
