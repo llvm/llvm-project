@@ -1016,18 +1016,6 @@ public:
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
   }
 
-  /// Create call to the minimumnum intrinsic.
-  Value *CreateMinimumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, nullptr,
-                                 Name);
-  }
-
-  /// Create call to the maximum intrinsic.
-  Value *CreateMaximumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, nullptr,
-                                 Name);
-  }
-
   /// Create call to the copysign intrinsic.
   Value *CreateCopySign(Value *LHS, Value *RHS,
                         Instruction *FMFSource = nullptr,
