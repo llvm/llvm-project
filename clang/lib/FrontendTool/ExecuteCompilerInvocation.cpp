@@ -172,12 +172,17 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
+// Cratels: 创建一个FontAction的智能指针，具体是哪个action是怎样带进来的？
 std::unique_ptr<FrontendAction> CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
   if (!Act)
     return nullptr;
 
+  // clang-format off
+  // Cratels: 获取前端的options，此时具体是使用哪种action会从option中获得。比如clang -cc1 -ast-dump demo.cpp执行时“-ast-dump”就会在这里。
+  // Cratels: 这个option会影响具体是哪种action
+  // clang-format on
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
 
   if (FEOpts.FixAndRecompile) {
