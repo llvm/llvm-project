@@ -182,7 +182,7 @@ bool TypeAndShape::IsCompatibleWith(parser::ContextualMessages &messages,
     return false;
   }
   return omitShapeConformanceCheck || (!shape_ && !that.shape_) ||
-      ((shape_ && that.shape_) &&
+      (shape_ && that.shape_ &&
           CheckConformance(
               messages, *shape_, *that.shape_, flags, thisIs, thatIs)
               .value_or(true /*fail only when nonconformance is known now*/));
