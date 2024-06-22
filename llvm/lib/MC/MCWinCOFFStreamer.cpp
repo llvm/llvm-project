@@ -212,9 +212,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   getAssembler().registerSection(*Sec);
   Sec->ensureMinAlignment(Align(4));
 
-  getContext().allocFragment<MCSymbolIdFragment>(Symbol,
-                                                 getCurrentSectionOnly());
-
+  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
   getAssembler().registerSymbol(*Symbol);
 }
 
