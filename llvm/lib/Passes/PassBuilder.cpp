@@ -93,6 +93,7 @@
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -386,7 +387,8 @@ public:
 class RequireAllMachineFunctionPropertiesPass
     : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
-  PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+    MFPropsModifier _(*this, MF);
     return PreservedAnalyses::none();
   }
 
@@ -1164,14 +1166,15 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      RegClassFilterFunc Filter = PB.parseRegAllocFilter(ParamName);
+      std::optional<RegClassFilterFunc> Filter =
+          PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
             formatv("invalid regallocfast register filter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
       }
-      Opts.Filter = Filter;
+      Opts.Filter = *Filter;
       Opts.FilterName = ParamName;
       continue;
     }
@@ -2161,13 +2164,14 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
+std::optional<RegClassFilterFunc>
+PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
-    return allocateAllRegClasses;
+    return nullptr;
   for (auto &C : RegClassFilterParsingCallbacks)
     if (auto F = C(FilterName))
       return F;
-  return nullptr;
+  return std::nullopt;
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {

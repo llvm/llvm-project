@@ -467,10 +467,6 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(FMIN_F);
   case TargetOpcode::G_FMAXNUM:
     RTLIBCASE(FMAX_F);
-  case TargetOpcode::G_FMINIMUMNUM:
-    RTLIBCASE(FMINIMUMNUM_F);
-  case TargetOpcode::G_FMAXIMUMNUM:
-    RTLIBCASE(FMAXIMUMNUM_F);
   case TargetOpcode::G_FSQRT:
     RTLIBCASE(SQRT_F);
   case TargetOpcode::G_FRINT:
@@ -1055,8 +1051,6 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINIMUMNUM:
-  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
@@ -1129,15 +1123,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     // FIXME: Support other types
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    Type *FromTy =
+        getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(1).getReg()));
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if ((ToSize != 32 && ToSize != 64) || (FromSize != 32 && FromSize != 64))
+    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
       return UnableToLegalize;
     LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder,
-        ToSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
-        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
-        LocObserver);
+        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -2896,8 +2888,6 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMINIMUMNUM:
-  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FDIV:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCEIL:
@@ -3021,9 +3011,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
-  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
-  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
-  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM: {
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM: {
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -3940,9 +3928,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FMINNUM:
   case G_FMAXNUM:
     return lowerFMinNumMaxNum(MI);
-  case G_FMINIMUMNUM:
-  case G_FMAXIMUMNUM:
-    return lowerFMinimumNumMaximumNum(MI);
   case G_MERGE_VALUES:
     return lowerMergeValues(MI);
   case G_UNMERGE_VALUES:
@@ -4697,8 +4682,6 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FMAXNUM_IEEE:
   case G_FMINIMUM:
   case G_FMAXIMUM:
-  case G_FMINIMUMNUM:
-  case G_FMAXIMUMNUM:
   case G_FSHL:
   case G_FSHR:
   case G_ROTL:
@@ -5357,10 +5340,8 @@ MachineInstrBuilder LegalizerHelper::getNeutralElementForVecReduce(
     return MIRBuilder.buildFConstant(Ty, 1.0);
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:
-  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
-  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
     assert(false && "getNeutralElementForVecReduce unimplemented for "
-                    "G_VECREDUCE_FMINIMUM and G_VECREDUCE_FMAXIMUM(_NUM)!");
+                    "G_VECREDUCE_FMINIMUM and G_VECREDUCE_FMAXIMUM!");
   }
   llvm_unreachable("switch expected to return!");
 }
@@ -5411,8 +5392,6 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMINIMUMNUM:
-  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_STRICT_FADD:
   case TargetOpcode::G_STRICT_FSUB:
   case TargetOpcode::G_STRICT_FMUL:
@@ -7243,36 +7222,6 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
   unsigned NewOp = MI.getOpcode() == TargetOpcode::G_FMINNUM ?
     TargetOpcode::G_FMINNUM_IEEE : TargetOpcode::G_FMAXNUM_IEEE;
-
-  auto [Dst, Src0, Src1] = MI.getFirst3Regs();
-  LLT Ty = MRI.getType(Dst);
-
-  if (!MI.getFlag(MachineInstr::FmNoNans)) {
-    // Insert canonicalizes if it's possible we need to quiet to get correct
-    // sNaN behavior.
-
-    // Note this must be done here, and not as an optimization combine in the
-    // absence of a dedicate quiet-snan instruction as we're using an
-    // omni-purpose G_FCANONICALIZE.
-    if (!isKnownNeverSNaN(Src0, MRI))
-      Src0 = MIRBuilder.buildFCanonicalize(Ty, Src0, MI.getFlags()).getReg(0);
-
-    if (!isKnownNeverSNaN(Src1, MRI))
-      Src1 = MIRBuilder.buildFCanonicalize(Ty, Src1, MI.getFlags()).getReg(0);
-  }
-
-  // If there are no nans, it's safe to simply replace this with the non-IEEE
-  // version.
-  MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFMinimumNumMaximumNum(MachineInstr &MI) {
-  unsigned NewOp = MI.getOpcode() == TargetOpcode::G_FMINIMUMNUM
-                       ? TargetOpcode::G_FMINNUM_IEEE
-                       : TargetOpcode::G_FMAXNUM_IEEE;
 
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);

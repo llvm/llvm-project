@@ -57,7 +57,7 @@
 //
 // base = gep a, 0, x, y
 // load base
-// laod base + 1  * sizeof(float)
+// load base + 1  * sizeof(float)
 // load base + 32 * sizeof(float)
 // load base + 33 * sizeof(float)
 //
