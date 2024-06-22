@@ -2735,7 +2735,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     if (TPLInst.isInvalid())
       return nullptr;
     TemplateParameterList *TPL = TransformTemplateParameterList(OrigTPL);
-    if (!TPL)
+    if (!TPL || Trap.hasErrorOccurred())
       TransRetReq.emplace(createSubstDiag(SemaRef, Info,
           [&] (llvm::raw_ostream& OS) {
               RetReq.getTypeConstraint()->getImmediatelyDeclaredConstraint()
