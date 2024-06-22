@@ -189,24 +189,27 @@ public:
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
                         ExtraArgTs... ExtraArgs);
 
-  // FIXME: Revert to enable_if style when gcc >= 11.1
-  template <typename PassT> LLVM_ATTRIBUTE_MINSIZE void addPass(PassT &&Pass) {
+  template <typename PassT>
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<!std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
-    if constexpr (!std::is_same_v<PassT, PassManager>) {
-      // Do not use make_unique or emplace_back, they cause too many template
-      // instantiations, causing terrible compile times.
-      Passes.push_back(std::unique_ptr<PassConceptT>(
-          new PassModelT(std::forward<PassT>(Pass))));
-    } else {
-      /// When adding a pass manager pass that has the same type as this pass
-      /// manager, simply move the passes over. This is because we don't have
-      /// use cases rely on executing nested pass managers. Doing this could
-      /// reduce implementation complexity and avoid potential invalidation
-      /// issues that may happen with nested pass managers of the same type.
-      for (auto &P : Pass.Passes)
-        Passes.push_back(std::move(P));
-    }
+    // Do not use make_unique or emplace_back, they cause too many template
+    // instantiations, causing terrible compile times.
+    Passes.push_back(std::unique_ptr<PassConceptT>(
+        new PassModelT(std::forward<PassT>(Pass))));
+  }
+
+  /// When adding a pass manager pass that has the same type as this pass
+  /// manager, simply move the passes over. This is because we don't have
+  /// use cases rely on executing nested pass managers. Doing this could
+  /// reduce implementation complexity and avoid potential invalidation
+  /// issues that may happen with nested pass managers of the same type.
+  template <typename PassT>
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
+    for (auto &P : Pass.Passes)
+      Passes.push_back(std::move(P));
   }
 
   /// Returns if the pass manager contains any passes.
