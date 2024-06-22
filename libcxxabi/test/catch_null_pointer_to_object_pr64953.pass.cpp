@@ -34,8 +34,8 @@
 // XPASS here so that we have to make these UNSUPPORTED for now (they should be
 // XFAILs when tested against current [macOS14] and previous installed libc++abi
 // as described above).
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}{{.*}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11|12|13|14}}{{.*}}
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}{{.*}}
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx{{11|12|13|14}}{{.*}}
 
 #include <exception>
 #include <stdlib.h>

@@ -938,6 +938,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}, VT,
                        Expand);
 
+    // [US]CMP default to expand
+    setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
+
     // Halving adds
     setOperationAction(
         {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,

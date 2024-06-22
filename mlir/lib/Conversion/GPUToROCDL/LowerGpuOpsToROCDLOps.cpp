@@ -305,9 +305,8 @@ struct LowerGpuOpsToROCDLOpsPass
     // Manually rewrite known block size attributes so the LLVMIR translation
     // infrastructure can pick them up.
     m.walk([&](LLVM::LLVMFuncOp op) {
-      if (auto blockSizes = dyn_cast_or_null<DenseI32ArrayAttr>(
-              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName()))) {
-        reqdWorkGroupSizeAttrHelper.setAttr(op, blockSizes);
+      if (reqdWorkGroupSizeAttrHelper.isAttrPresent(op)) {
+        auto blockSizes = reqdWorkGroupSizeAttrHelper.getAttr(op);
         // Also set up the rocdl.flat_work_group_size attribute to prevent
         // conflicting metadata.
         uint32_t flatSize = 1;
@@ -349,27 +348,33 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
 void mlir::populateGpuToROCDLConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
     mlir::gpu::amd::Runtime runtime) {
+  using gpu::index_lowering::IndexKind;
+  using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
-
+  auto *rocdlDialect =
+      converter.getContext().getLoadedDialect<ROCDL::ROCDLDialect>();
   populateWithGenerated(patterns);
-  patterns
-      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
-                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>>(
-          converter, gpu::GPUFuncOp::getKnownBlockSizeAttrName());
-  patterns.add<GPUIndexIntrinsicOpLowering<
+  patterns.add<
+      gpu::index_lowering::OpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
+                                      ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>>(
+      converter, IndexKind::Block, IntrType::Id);
+  patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, ROCDL::BlockIdXOp, ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>>(
-      converter, gpu::GPUFuncOp::getKnownGridSizeAttrName());
-  patterns
-      .add<GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
-                                       ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
-                                       ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
-           GPUReturnOpLowering>(converter);
+      converter, IndexKind::Grid, IntrType::Id);
+  patterns.add<
+      gpu::index_lowering::OpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
+                                      ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>>(
+      converter, IndexKind::Block, IntrType::Dim);
+  patterns.add<gpu::index_lowering::OpLowering<
+      gpu::GridDimOp, ROCDL::GridDimXOp, ROCDL::GridDimYOp, ROCDL::GridDimZOp>>(
+      converter, IndexKind::Grid, IntrType::Dim);
+  patterns.add<GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
       converter,
       /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
       /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      ROCDL::ROCDLDialect::KernelAttrHelper(&converter.getContext()).getName());
+      rocdlDialect->getKernelAttrHelper().getName(),
+      rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName());
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {
