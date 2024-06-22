@@ -403,7 +403,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   llvm_unreachable("invalid fragment kind");
 }
 
-void MCAsmLayout::layoutBundle(MCFragment *F) {
+void MCAsmLayout::layoutBundle(MCFragment *Prev, MCFragment *F) {
   // If bundling is enabled and this fragment has instructions in it, it has to
   // obey the bundling restrictions. With padding, we'll have:
   //
@@ -439,6 +439,9 @@ void MCAsmLayout::layoutBundle(MCFragment *F) {
     report_fatal_error("Padding cannot exceed 255 bytes");
   EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
   EF->Offset += RequiredBundlePadding;
+  if (auto *DF = dyn_cast_or_null<MCDataFragment>(Prev))
+    if (DF->getContents().empty())
+      DF->Offset = EF->Offset;
 }
 
 uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
@@ -451,14 +454,16 @@ void MCAsmLayout::ensureValid(const MCFragment *Frag) const {
   if (Sec.hasLayout())
     return;
   Sec.setHasLayout(true);
+  MCFragment *Prev = nullptr;
   uint64_t Offset = 0;
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
     if (Assembler.isBundlingEnabled() && F.hasInstructions()) {
-      const_cast<MCAsmLayout *>(this)->layoutBundle(&F);
+      const_cast<MCAsmLayout *>(this)->layoutBundle(Prev, &F);
       Offset = F.Offset;
     }
     Offset += getAssembler().computeFragmentSize(*this, F);
+    Prev = &F;
   }
 }
 
