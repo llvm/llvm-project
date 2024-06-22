@@ -2044,6 +2044,7 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
 
 PreservedAnalyses RegAllocFastPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
   RegAllocFastImpl Impl(Opts.Filter, Opts.ClearVRegs);
   bool Changed = Impl.runOnMachineFunction(MF);
   if (!Changed)
