@@ -44,6 +44,7 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
+class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -243,7 +244,7 @@ private:
   /// Honor temporary labels, this is useful for debugging semantic
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
-  bool AllowTemporaryLabels = true;
+  bool SaveTempLabels = false;
   bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
@@ -251,31 +252,6 @@ private:
 
   /// A collection of MCPseudoProbe in the current module
   MCPseudoProbeTable PseudoProbeTable;
-
-  // Sections are differentiated by the quadruple (section_name, group_name,
-  // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
-  // combined into one section.
-  struct ELFSectionKey {
-    std::string SectionName;
-    StringRef GroupName;
-    StringRef LinkedToName;
-    unsigned UniqueID;
-
-    ELFSectionKey(StringRef SectionName, StringRef GroupName,
-                  StringRef LinkedToName, unsigned UniqueID)
-        : SectionName(SectionName), GroupName(GroupName),
-          LinkedToName(LinkedToName), UniqueID(UniqueID) {}
-
-    bool operator<(const ELFSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      if (int O = LinkedToName.compare(Other.LinkedToName))
-        return O < 0;
-      return UniqueID < Other.UniqueID;
-    }
-  };
 
   struct COFFSectionKey {
     std::string SectionName;
@@ -350,8 +326,8 @@ private:
   };
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
-  std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
+  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
@@ -370,8 +346,10 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
+  MCDataFragment *allocInitialFragment(MCSection &Sec);
+
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
-                             bool CanBeUnnamed);
+                             bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
                          bool IsTemporary);
 
@@ -446,7 +424,6 @@ public:
 
   CodeViewContext &getCVContext();
 
-  void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
   void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 
   /// \name Module Lifetime Management
@@ -462,6 +439,10 @@ public:
 
   /// Create and return a new MC instruction.
   MCInst *createMCInst();
+
+  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
+    return new F(std::forward<Args>(args)...);
+  }
 
   /// \name Symbol Management
   /// @{

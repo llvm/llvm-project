@@ -4,8 +4,8 @@
 // CHECK-SAME:             %[[PRED:.*]]: i1,
 // CHECK-SAME:             %[[TRUE_TENSOR:.*]]: tensor<?xf32>,
 // CHECK-SAME:             %[[FALSE_TENSOR:.*]]: tensor<?xf32>) -> tensor<?xf32> {
-// CHECK:           %[[TRUE_MEMREF:.*]] = bufferization.to_memref %[[TRUE_TENSOR]] : memref<?xf32>
-// CHECK:           %[[FALSE_MEMREF:.*]] = bufferization.to_memref %[[FALSE_TENSOR]] : memref<?xf32>
+// CHECK-DAG:       %[[TRUE_MEMREF:.*]] = bufferization.to_memref %[[TRUE_TENSOR]] : memref<?xf32>
+// CHECK-DAG:       %[[FALSE_MEMREF:.*]] = bufferization.to_memref %[[FALSE_TENSOR]] : memref<?xf32>
 // CHECK:           %[[RESULT_MEMREF:.*]] = scf.if %[[PRED]] -> (memref<?xf32>) {
 // CHECK:             scf.yield %[[TRUE_MEMREF]] : memref<?xf32>
 // CHECK:           } else {

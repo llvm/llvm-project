@@ -57,6 +57,8 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SPIRVAttachTarget.cpp
   Transforms/SubgroupReduceLowering.cpp
   Transforms/Utils.cpp
+  
+  OBJECT
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU

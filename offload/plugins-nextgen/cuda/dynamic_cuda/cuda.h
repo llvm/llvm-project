@@ -282,6 +282,10 @@ typedef enum CUevent_flags_enum {
   CU_EVENT_INTERPROCESS = 0x4
 } CUevent_flags;
 
+static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
+static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
+static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);

@@ -31,6 +31,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/lazy.h>
 #include <__type_traits/negation.h>
@@ -462,6 +463,11 @@ public:
   using value_type      = _Tp;
   using error_type      = _Err;
   using unexpected_type = unexpected<_Err>;
+
+  using __trivially_relocatable =
+      __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
+                      expected,
+                      void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
