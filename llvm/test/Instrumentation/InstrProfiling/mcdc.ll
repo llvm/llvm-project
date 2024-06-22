@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @__profn_test = private constant [4 x i8] c"test"
 
-; BASIC: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
+; CHECK: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
 
 define dso_local void @test(i32 noundef %A) {
 entry:

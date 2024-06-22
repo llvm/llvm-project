@@ -238,7 +238,7 @@ private:
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
 
-  /// The instance of [[forceinline]] rmw_or(ptr, i8).
+  /// The instance of [[alwaysinline]] rmw_or(ptr, i8).
   /// This is name-insensitive.
   Function *RMWOrFunc = nullptr;
 
@@ -302,7 +302,7 @@ private:
                                        StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
 
-  /// Create [[forceinline]] rmw_or(ptr, i8).
+  /// Create [[alwaysinline]] rmw_or(ptr, i8).
   /// This doesn't update `RMWOrFunc`.
   Function *createRMWOrFunc();
 
@@ -950,10 +950,11 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
+/// Create `void [[alwaysinline]] rmw_or(uint8_t *ArgAddr, uint8_t ArgVal)`
+/// "Basic" sequence is `*ArgAddr |= ArgVal`
 Function *InstrLowerer::createRMWOrFunc() {
   auto &Ctx = M.getContext();
   auto *Int8Ty = Type::getInt8Ty(Ctx);
-  // void alwaysinline rmw_or(ptr, i8)
   Function *Fn = Function::Create(
       FunctionType::get(Type::getVoidTy(Ctx),
                         {PointerType::getUnqual(Ctx), Int8Ty}, false),
