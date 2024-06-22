@@ -924,12 +924,21 @@ def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
         "integer}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
+def err_ptrauth_bad_constant_pointer :
+  Error<"argument to ptrauth_sign_constant must refer to a global variable "
+        "or function">;
+def err_ptrauth_bad_constant_discriminator :
+  Error<"discriminator argument to ptrauth_sign_constant must be a constant "
+        "integer, the address of the global variable where the result "
+        "will be stored, or a blend of the two">;
 def warn_ptrauth_sign_null_pointer :
   Warning<"signing a null pointer will yield a non-null pointer">,
   InGroup<PtrAuthNullPointers>;
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_string_not_literal : Error<
+  "argument must be a string literal%select{| of char type}0">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -964,7 +973,7 @@ def err_main_global_variable :
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
-  "ISO C++ does not allow 'main' to be used by a program">, InGroup<Main>;
+    "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -12206,6 +12215,9 @@ def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
 def err_std_source_location_impl_malformed : Error<
   "'std::source_location::__impl' must be standard-layout and have only two 'const char *' fields '_M_file_name' and '_M_function_name', and two integral fields '_M_line' and '_M_column'">;
+
+def err_std_initializer_list_malformed : Error<
+  "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
 // HLSL Diagnostics
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
