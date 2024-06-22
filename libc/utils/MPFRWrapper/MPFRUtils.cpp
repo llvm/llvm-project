@@ -914,19 +914,19 @@ void explain_binary_operation_one_output_error(Operation op,
 
   tlog << "Libc result: " << mpfrMatchValue.str() << '\n'
        << "MPFR result: " << mpfr_result.str() << '\n';
-  tlog << "Libc floating point result bits: " << str(FPBits<T>(libc_result))
+  tlog << "Libc floating point result bits: " << str(FPBits<R>(libc_result))
        << '\n';
   tlog << "              MPFR rounded bits: "
-       << str(FPBits<T>(mpfr_result.as<T>())) << '\n';
+       << str(FPBits<R>(mpfr_result.as<R>())) << '\n';
   tlog << "ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
        << '\n';
 }
 
-template void explain_binary_operation_one_output_error<float>(
+template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float> &, float, double, RoundingMode);
-template void explain_binary_operation_one_output_error<double>(
-    Operation, const BinaryInput<double> &, double, double, RoundingMode);
-template void explain_binary_operation_one_output_error<long double>(
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, float, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
@@ -1072,11 +1072,11 @@ bool compare_binary_operation_one_output(Operation op,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_binary_operation_one_output<float>(
+template bool compare_binary_operation_one_output(
     Operation, const BinaryInput<float> &, float, double, RoundingMode);
-template bool compare_binary_operation_one_output<double>(
-    Operation, const BinaryInput<double> &, double, double, RoundingMode);
-template bool compare_binary_operation_one_output<long double>(
+template bool compare_binary_operation_one_output(
+    Operation, const BinaryInput<double> &, float, double, RoundingMode);
+template bool compare_binary_operation_one_output(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
