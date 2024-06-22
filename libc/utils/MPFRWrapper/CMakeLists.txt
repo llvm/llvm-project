@@ -7,6 +7,8 @@ if(LIBC_TESTS_CAN_USE_MPFR)
   target_compile_options(libcMPFRWrapper PRIVATE -O3)
   add_dependencies(
     libcMPFRWrapper
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits

@@ -231,6 +231,11 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
     return Data
         .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
   }
+  if (!Instance.Lane.isFirstLane() &&
+      vputils::isUniformAfterVectorization(Def) &&
+      hasScalarValue(Def, {Instance.Part, VPLane::getFirstLane()})) {
+    return Data.PerPartScalars[Def][Instance.Part][0];
+  }
 
   assert(hasVectorValue(Def, Instance.Part));
   auto *VecPart = Data.PerPartOutput[Def][Instance.Part];

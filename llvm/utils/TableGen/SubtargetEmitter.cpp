@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -255,6 +256,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
+  // Check that there are no duplicate keys
+  std::set<StringRef> UniqueKeys;
+
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
      << "extern const llvm::SubtargetFeatureKV " << Target
@@ -283,6 +287,10 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
     OS << " },\n";
     ++NumFeatures;
+
+    if (!UniqueKeys.insert(CommandLineName).second)
+      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
+                      CommandLineName);
   }
 
   // End feature table

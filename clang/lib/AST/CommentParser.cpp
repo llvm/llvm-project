@@ -89,6 +89,31 @@ class TextTokenRetokenizer {
     }
   }
 
+  /// Extract a template type
+  bool lexTemplate(SmallString<32> &WordText) {
+    unsigned BracketCount = 0;
+    while (!isEnd()) {
+      const char C = peek();
+      WordText.push_back(C);
+      consumeChar();
+      switch (C) {
+      case '<': {
+        BracketCount++;
+        break;
+      }
+      case '>': {
+        BracketCount--;
+        if (!BracketCount)
+          return true;
+        break;
+      }
+      default:
+        break;
+      }
+    }
+    return false;
+  }
+
   /// Add a token.
   /// Returns true on success, false if there are no interesting tokens to
   /// fetch from lexer.
@@ -147,6 +172,54 @@ public:
       Allocator(Allocator), P(P), NoMoreInterestingTokens(false) {
     Pos.CurToken = 0;
     addToken();
+  }
+
+  /// Extract a type argument
+  bool lexType(Token &Tok) {
+    if (isEnd())
+      return false;
+
+    // Save current position in case we need to rollback because the type is
+    // empty.
+    Position SavedPos = Pos;
+
+    // Consume any leading whitespace.
+    consumeWhitespace();
+    SmallString<32> WordText;
+    const char *WordBegin = Pos.BufferPtr;
+    SourceLocation Loc = getSourceLocation();
+
+    while (!isEnd()) {
+      const char C = peek();
+      // For non-whitespace characters we check if it's a template or otherwise
+      // continue reading the text into a word.
+      if (!isWhitespace(C)) {
+        if (C == '<') {
+          if (!lexTemplate(WordText))
+            return false;
+        } else {
+          WordText.push_back(C);
+          consumeChar();
+        }
+      } else {
+        consumeChar();
+        break;
+      }
+    }
+
+    const unsigned Length = WordText.size();
+    if (Length == 0) {
+      Pos = SavedPos;
+      return false;
+    }
+
+    char *TextPtr = Allocator.Allocate<char>(Length + 1);
+
+    memcpy(TextPtr, WordText.c_str(), Length + 1);
+    StringRef Text = StringRef(TextPtr, Length);
+
+    formTokenWithChars(Tok, Loc, WordBegin, Length, Text);
+    return true;
   }
 
   /// Extract a word -- sequence of non-whitespace characters.
@@ -304,6 +377,23 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
   return llvm::ArrayRef(Args, ParsedArgs);
 }
 
+ArrayRef<Comment::Argument>
+Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
+                              unsigned NumArgs) {
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
+  unsigned ParsedArgs = 0;
+  Token Arg;
+
+  while (ParsedArgs < NumArgs && Retokenizer.lexType(Arg)) {
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
+    ParsedArgs++;
+  }
+
+  return llvm::ArrayRef(Args, ParsedArgs);
+}
+
 BlockCommandComment *Parser::parseBlockCommand() {
   assert(Tok.is(tok::backslash_command) || Tok.is(tok::at_command));
 
@@ -356,6 +446,9 @@ BlockCommandComment *Parser::parseBlockCommand() {
       parseParamCommandArgs(PC, Retokenizer);
     else if (TPC)
       parseTParamCommandArgs(TPC, Retokenizer);
+    else if (Info->IsThrowsCommand)
+      S.actOnBlockCommandArgs(
+          BC, parseThrowCommandArgs(Retokenizer, Info->NumArgs));
     else
       S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 

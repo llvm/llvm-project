@@ -23,6 +23,7 @@
 #include "lldb/Core/PluginInterface.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <optional>
@@ -370,6 +371,56 @@ private:
                          ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const lldb_private::plugin::dwarf::DWARFDIE &die,
                                const ParsedDWARFTypeAttributes &attrs);
+
+  /// Helper function called by \ref ParseSubroutine when parsing ObjC-methods.
+  ///
+  /// \param[in] objc_method Name of the ObjC method being parsed.
+  ///
+  /// \param[in] die The DIE that represents the ObjC method being parsed.
+  ///
+  /// \param[in] clang_type The CompilerType representing the function prototype
+  ///                       of the ObjC method being parsed.
+  ///
+  /// \param[in] attrs DWARF attributes for \ref die.
+  ///
+  /// \param[in] is_variadic Is true iff we're parsing a variadic method.
+  ///
+  /// \returns true on success
+  bool
+  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+                  const lldb_private::plugin::dwarf::DWARFDIE &die,
+                  lldb_private::CompilerType clang_type,
+                  const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
+
+  /// Helper function called by \ref ParseSubroutine when parsing C++ methods.
+  ///
+  /// \param[in] die The DIE that represents the C++ method being parsed.
+  ///
+  /// \param[in] clang_type The CompilerType representing the function prototype
+  ///                       of the C++ method being parsed.
+  ///
+  /// \param[in] attrs DWARF attributes for \ref die.
+  ///
+  /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
+  ///                         method being parsed.
+  ///
+  /// \param[in] is_static Is true iff we're parsing a static method.
+  ///
+  /// \param[out] ignore_containing_context Will get set to true if the caller
+  ///             should treat this C++ method as-if it was not a C++ method.
+  ///             Currently used as a hack to work around templated C++ methods
+  ///             causing class definitions to mismatch between CUs.
+  ///
+  /// \returns A pair of <bool, TypeSP>. The first element is 'true' on success.
+  ///          The second element is non-null if we have previously parsed this
+  ///          method (a null TypeSP does not indicate failure).
+  std::pair<bool, lldb::TypeSP>
+  ParseCXXMethod(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                 lldb_private::CompilerType clang_type,
+                 const ParsedDWARFTypeAttributes &attrs,
+                 const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
+                 bool is_static, bool &ignore_containing_context);
+
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP

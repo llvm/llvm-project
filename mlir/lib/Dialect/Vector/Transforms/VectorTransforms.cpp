@@ -1293,6 +1293,11 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
+    // Make sure that the indices to be dropped are equal 0.
+    // TODO: Deal with cases when the indices are not 0.
+    if (!llvm::all_of(readOp.getIndices().take_back(dimsToDrop), isZeroIndex))
+      return failure();
+
     auto resultTargetVecType =
         VectorType::get(targetType.getShape().drop_back(dimsToDrop),
                         targetType.getElementType(),

@@ -495,6 +495,10 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// A list of classes which need to emit the VTable in the corresponding
+  /// object file.
+  llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
+
   /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
@@ -725,8 +729,7 @@ public:
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() ||
-            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
+    return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
@@ -849,6 +852,8 @@ public:
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
+  void handleVTable(CXXRecordDecl *RD);
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -943,6 +948,7 @@ public:
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
   void HandleTranslationUnit(ASTContext &Ctx) override;
+  void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }

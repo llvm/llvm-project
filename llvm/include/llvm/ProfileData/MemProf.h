@@ -921,15 +921,15 @@ struct LinearCallStackIdConverter {
 struct IndexedMemProfData {
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> RecordData;
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> Records;
 
   // A map to hold frame id to frame mappings. The mappings are used to
   // convert IndexedMemProfRecord to MemProfRecords with frame information
   // inline.
-  llvm::MapVector<FrameId, Frame> FrameData;
+  llvm::MapVector<FrameId, Frame> Frames;
 
   // A map to hold call stack id to call stacks.
-  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
 };
 
 struct FrameStat {
@@ -988,7 +988,7 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
 //
 // The radix tree allows us to reconstruct call stacks in the leaf-to-root
 // order as we scan the array from left ro right while following pointers to
-// parents along the way
+// parents along the way.
 //
 // For example, if we are decoding CallStackId 2, we start a forward traversal
 // at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When

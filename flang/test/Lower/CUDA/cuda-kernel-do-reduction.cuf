@@ -1,0 +1,37 @@
+! Test CUDA Fortran kernel do reduction
+! RUN: bbc -emit-fir -fcuda -o - %s | FileCheck %s
+
+module mod1
+contains
+   subroutine host_sub()
+      integer, parameter :: asize = 4
+      integer, device :: adev(asize) 
+      integer :: ahost(asize)
+      integer :: q
+      integer, device :: add_reduce_var
+      integer, device :: mul_reduce_var
+      ! CHECK: %[[VAL_0:.*]] = fir.declare %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QMmod1Fhost_subEadd_reduce_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      ! CHECK: %[[VAL_1:.*]] = fir.declare %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QMmod1Fhost_subEmul_reduce_var"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      do i = 1, asize
+         ahost(i) = i
+      enddo
+      adev = ahost 
+      add_reduce_var = 0.0
+      mul_reduce_var = 1.0
+      ! CHECK: {{.*}} reduce(%[[VAL_0:.*]], %[[VAL_1:.*]] : !fir.ref<i32>, !fir.ref<i32> : [#fir.reduce_attr<add>, #fir.reduce_attr<multiply>]) {{.*}}
+      !$cuf kernel do <<< *, * >>> reduce(+:add_reduce_var) reduce(*:mul_reduce_var)
+      do i = 1, asize
+         add_reduce_var = add_reduce_var + adev(i)
+         mul_reduce_var = mul_reduce_var * adev(i)
+      end do
+      q = rsum
+      ahost = adev 
+      print *, q
+   end
+end
+
+program test
+   use mod1
+   implicit none
+   call host_sub()
+end program test

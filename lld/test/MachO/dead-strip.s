@@ -35,7 +35,7 @@
 # EXEC-DAG:   g {{.*}} __mh_execute_header
 # EXECDATA-LABEL: Indirect symbols
 # EXECDATA-NEXT:  name
-# EXECDATA-NEXT:  _ref_com
+# EXECDATA-NEXT:  LOCAL
 # EXECDATA-LABEL: Contents of (__DATA,__ref_section) section
 # EXECDATA-NEXT:   04 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
 # EXECDATA-LABEL: Exports trie:
