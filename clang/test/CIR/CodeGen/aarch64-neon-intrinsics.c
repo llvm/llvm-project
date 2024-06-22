@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:    -fclangir -S -disable-O0-optnone \
+// RUN:    -fclangir -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-cir -o %t.cir %s
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:    -fclangir -S -disable-O0-optnone \
+// RUN:    -fclangir -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,simplifycfg -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
