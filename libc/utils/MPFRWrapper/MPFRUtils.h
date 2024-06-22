@@ -165,7 +165,7 @@ bool compare_unary_operation_two_outputs(Operation op, T input,
                                          const BinaryOutput<T> &libc_output,
                                          double ulp_tolerance,
                                          RoundingMode rounding);
-template <typename T>
+  template <typename T>
 bool compare_binary_operation_two_outputs(Operation op,
                                           const BinaryInput<T> &input,
                                           const BinaryOutput<T> &libc_output,
