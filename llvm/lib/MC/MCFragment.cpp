@@ -202,10 +202,6 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
     : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
 
 void MCFragment::destroy() {
-  // First check if we are the sentinel.
-  if (Kind == FragmentType(~0))
-    return;
-
   switch (Kind) {
     case FT_Align:
       cast<MCAlignFragment>(this)->~MCAlignFragment();
