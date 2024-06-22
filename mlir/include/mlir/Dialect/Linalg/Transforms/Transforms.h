@@ -1396,18 +1396,15 @@ struct LinalgGeneralizationPattern
 };
 
 struct LinalgSpecializationPattern
-    : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
+    : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
 
-  FailureOr<LinalgOp>
-  returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
-    auto genericOp = dyn_cast<GenericOp>(op.getOperation());
-    if (!genericOp)
-      return failure();
-    return specializeGenericOp(rewriter, genericOp);
+  FailureOr<GenericOp>
+  returningMatchAndRewrite(GenericOp op, PatternRewriter &rewriter) const {
+    return specializeGenericOp(rewriter, op);
   }
 
-  LogicalResult matchAndRewrite(LinalgOp op,
+  LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(op, rewriter);
   }
@@ -1565,7 +1562,11 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns to convert linalg.generic ops to named
-/// ops where possible.
+/// ops where possible. A linalg.generic can represent wide range and complex
+/// computations for which equivalent linalg named op may not exist e.g.
+/// linalg.generic that takes a tensor and computes a polynomial such as:
+///     p(x) = an*x^n + ... + a1x + a0
+/// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns);
 

@@ -74,14 +74,25 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
 /// Identifies linalg.generic that is essentially named op of the form:
 //    ` linalg.{batch_}?matmul{_transpose_a | _transpose_b}? `
 //
-// It is possible that a linalg.generic may be implementing one of matmul
-// variants but not in a straight-forward way, or the linalg.generic's
-// affine map per operand capture more semantics than is possible with
-// named op (which has implicit map interpreted via name).
-//
-// But a named linalg matmul variant that was 'generalized' should be
-// convertible back to named op here.
-//
+// It is possible that a linalg.generic may be implementing a matmul but not
+// in a straight-forward way e.g. below is matrix multiply over some slice
+// ```
+//  %0 = linalg.generic {
+//          indexing_maps = [affine_map<(d0, d1, d2) -> (3, d1, d0)>,
+//                           affine_map<(d0, d1, d2) -> (d0, 5, d2)>,
+//                           affine_map<(d0, d1, d2) -> (d2, d1, 13)>],
+//          iterator_types = ["parallel", "parallel", "parallel"]}
+//          ins(%A, %B : tensor<20x20x20xf32>,  tensor<20x20x20xf32>)
+//          outs(%C : tensor<20x20x20xf32>) {
+//             ^bb0(%a: f32, %b: f32, %c : f32):
+//                %mul = arith.mulf %a, %b : f32
+//                %add = arith.addf %mul, %c : f32
+//                linalg.yield %add : f32
+//       } -> tensor<20x20x20xf32>
+// ```
+// It is not possible to represent above as named op.
+// e.g. linalg.batch_matmul(%A, %B :  tensor<20x20x20xf32>, ...) is
+// not  the same as linalg.generic above.
 namespace {
 enum class IndexMatchResult {
   Match = 0,  // identity map.
@@ -89,23 +100,30 @@ enum class IndexMatchResult {
   Mismatch    // none of the above.
 };
 
-// Looks at the affine map of an operand and works out if generic accesses
-// the element as identity-map, transposed, or 'cant work out'.
-// This check skips the `offset` batch indices and focuses on the matmul part.
-static IndexMatchResult matchOperandMap(AffineMap m, unsigned offset,
-                                        unsigned i, unsigned j) {
-  auto expr_ei = dyn_cast<AffineDimExpr>(m.getResults()[offset]);
-  auto expr_ej = dyn_cast<AffineDimExpr>(m.getResults()[offset + 1]);
-  if (!expr_ei || !expr_ej)
+// Consider the A matrix in `C[M,N] = A[M,K] * B[K,N]`. Below, we
+// check whether the index map of A is identity (match), transposed, or
+// something completely different (mis-match).
+// The naming and explanation is in terms of A, but the function checks
+// effectively maps for all A, B, C i.e. <M,N>, <M, K>, <K,N>.
+static IndexMatchResult matchOperandMap(AffineMap map, unsigned batchSize,
+                                        unsigned expectedPosOfM,
+                                        unsigned expectedPosOfK) {
+  // Get the matrix multiply indices. They are past the batch indices.
+  auto exprOfM = map.getResults()[batchSize];
+  auto exprOfK = map.getResults()[batchSize + 1];
+
+  // They should be pure dim ids.
+  if (exprOfM.getKind() != AffineExprKind::DimId ||
+      exprOfK.getKind() != AffineExprKind::DimId)
     return IndexMatchResult::Mismatch;
 
-  auto ei = expr_ei.getPosition();
-  auto ej = expr_ej.getPosition();
+  auto posM = cast<AffineDimExpr>(exprOfM).getPosition();
+  auto posK = cast<AffineDimExpr>(exprOfK).getPosition();
 
-  if (ei == i && ej == j)
+  if (expectedPosOfM == posM && expectedPosOfK == posK)
     return IndexMatchResult::Match;
 
-  if (ei == j && ej == i)
+  if (expectedPosOfM == posK && expectedPosOfK == posM)
     return IndexMatchResult::Transposed;
 
   return IndexMatchResult::Mismatch;
@@ -179,7 +197,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   auto indexingMaps = genericOp.getIndexingMapsArray();
   if (llvm::any_of(indexingMaps, [&dims](AffineMap m) {
         return m.getResults().size() !=
-               dims.batch.size() + 2 /*two from {m,n,k}*/;
+               dims.batch.size() + 2 /* any two of {m,n,k} */;
       }))
     return failure();
 
@@ -193,8 +211,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     // identity since separate maps are not specified.
     if (llvm::any_of(indexingMaps, [batchSize](AffineMap m) {
           for (unsigned i = 0; i < batchSize; ++i) {
-            auto expr = dyn_cast<AffineDimExpr>(m.getResults()[i]);
-            if (!expr || expr.getPosition() != i)
+            auto expr = m.getResults()[i];
+            if (expr.getKind() != AffineExprKind::DimId ||
+                cast<AffineDimExpr>(expr).getPosition() != i)
               return true;
           }
           return false;
@@ -301,7 +320,9 @@ struct LinalgSpecializeGenericOpsPass
 void LinalgSpecializeGenericOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgGenericOpsSpecializationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+
+  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    signalPassFailure();
 }
 
 void mlir::linalg::populateLinalgGenericOpsSpecializationPatterns(
