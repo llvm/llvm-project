@@ -294,6 +294,13 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
                          uint64_t &TotalC, bool GetNoICPValue = false);
 
+/// Extract the value profile data from \p Inst and returns them if \p Inst is
+/// annotated with value profile data. Returns an empty vector otherwise.
+SmallVector<InstrProfValueData, 4>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint64_t &TotalC,
+                         bool GetNoICPValue = false);
+
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
 /// Return the PGOFuncName meta data associated with a function.

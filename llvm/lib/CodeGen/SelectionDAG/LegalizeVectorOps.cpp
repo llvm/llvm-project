@@ -397,8 +397,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:
   case ISD::FCOPYSIGN:
   case ISD::FSQRT:
   case ISD::FSIN:
@@ -487,8 +485,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-  case ISD::VECREDUCE_FMINIMUMNUM:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -1013,10 +1009,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FMAXIMUM:
     Results.push_back(TLI.expandFMINIMUM_FMAXIMUM(Node, DAG));
     return;
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:
-    Results.push_back(TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG));
-    return;
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -1105,8 +1097,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-  case ISD::VECREDUCE_FMINIMUMNUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
   case ISD::VECREDUCE_SEQ_FADD:
