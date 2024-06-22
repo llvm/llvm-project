@@ -36,7 +36,7 @@ class DivTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
       InFPBits::min_subnormal().uintval();
 
 public:
-  typedef OutType (*DivFunc)(InType, InType);
+  using DivFunc = OutType (*)(InType, InType);
 
   void test_subnormal_range(DivFunc func) {
     constexpr InStorageType COUNT = 100'001;

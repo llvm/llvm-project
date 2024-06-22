@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
@@ -53,12 +55,28 @@ div(InType x, InType y) {
       if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
         raise_except_if_required(FE_INVALID);
 
-      // TODO: Handle NaN payloads.
+      if (x_bits.is_quiet_nan()) {
+        InStorageType x_payload = static_cast<InStorageType>(getpayload(x));
+        if ((x_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
+          return OutFPBits::quiet_nan(x_bits.sign(),
+                                      static_cast<OutStorageType>(x_payload))
+              .get_val();
+      }
+
+      if (y_bits.is_quiet_nan()) {
+        InStorageType y_payload = static_cast<InStorageType>(getpayload(y));
+        if ((y_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
+          return OutFPBits::quiet_nan(y_bits.sign(),
+                                      static_cast<OutStorageType>(y_payload))
+              .get_val();
+      }
+
       return OutFPBits::quiet_nan().get_val();
     }
 
     if (x_bits.is_inf()) {
       if (y_bits.is_inf()) {
+        set_errno_if_required(EDOM);
         raise_except_if_required(FE_INVALID);
         return OutFPBits::quiet_nan().get_val();
       }
@@ -91,21 +109,40 @@ div(InType x, InType y) {
                    would_q_be_subnormal;
 
   if (q_exponent + OutFPBits::EXP_BIAS >= OutFPBits::MAX_BIASED_EXPONENT) {
-    switch (quick_get_round()) {
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
+    switch (get_round()) {
     case FE_TONEAREST:
+      return OutFPBits::inf(result_sign).get_val();
+    case FE_DOWNWARD:
+      if (result_sign.is_pos())
+        return OutFPBits::max_normal(result_sign).get_val();
+      return OutFPBits::inf(result_sign).get_val();
     case FE_UPWARD:
-      return OutFPBits::inf().get_val();
+      if (result_sign.is_pos())
+        return OutFPBits::inf(result_sign).get_val();
+      return OutFPBits::max_normal(result_sign).get_val();
     default:
-      return OutFPBits::max_normal().get_val();
+      return OutFPBits::max_normal(result_sign).get_val();
     }
   }
 
   if (q_exponent < -OutFPBits::EXP_BIAS - OutFPBits::FRACTION_LEN) {
+    set_errno_if_required(ERANGE);
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+
     switch (quick_get_round()) {
+    case FE_DOWNWARD:
+      if (result_sign.is_pos())
+        return OutFPBits::zero(result_sign).get_val();
+      return OutFPBits::min_subnormal(result_sign).get_val();
     case FE_UPWARD:
-      return OutFPBits::min_subnormal().get_val();
+      if (result_sign.is_pos())
+        return OutFPBits::min_subnormal(result_sign).get_val();
+      return OutFPBits::zero(result_sign).get_val();
     default:
-      return OutFPBits::zero().get_val();
+      return OutFPBits::zero(result_sign).get_val();
     }
   }
 
@@ -134,8 +171,10 @@ div(InType x, InType y) {
   if (q_exponent > -OutFPBits::EXP_BIAS) {
     // Result is normal.
 
-    round = (q & (InStorageType(1) << (Q_EXTRA_FRACTION_LEN - 1))) != 0;
-    sticky = (q & ((InStorageType(1) << (Q_EXTRA_FRACTION_LEN - 1)) - 1)) != 0;
+    InStorageType round_mask = InStorageType(1) << (Q_EXTRA_FRACTION_LEN - 1);
+    round = (q & round_mask) != 0;
+    InStorageType sticky_mask = round_mask - 1;
+    sticky = (q & sticky_mask) != 0;
 
     result = OutFPBits::create_value(
                  result_sign,
@@ -147,20 +186,22 @@ div(InType x, InType y) {
     // Result is subnormal.
 
     // +1 because the leading bit is now part of the fraction.
-    int underflow_extra_fraction_len =
+    int extra_fraction_len =
         Q_EXTRA_FRACTION_LEN + 1 - q_exponent - OutFPBits::EXP_BIAS;
 
-    InStorageType round_bit_mask = InStorageType(1)
-                                   << (underflow_extra_fraction_len - 1);
-    round = (q & round_bit_mask) != 0;
-    InStorageType sticky_bits_mask = round_bit_mask - 1;
-    sticky = (q & sticky_bits_mask) != 0;
+    InStorageType round_mask = InStorageType(1) << (extra_fraction_len - 1);
+    round = (q & round_mask) != 0;
+    InStorageType sticky_mask = round_mask - 1;
+    sticky = (q & sticky_mask) != 0;
 
     result = OutFPBits::create_value(
                  result_sign, 0,
-                 static_cast<OutStorageType>(q >> underflow_extra_fraction_len))
+                 static_cast<OutStorageType>(q >> extra_fraction_len))
                  .uintval();
   }
+
+  if (round || sticky)
+    raise_except_if_required(FE_INEXACT);
 
   bool lsb = (result & 1) != 0;
 

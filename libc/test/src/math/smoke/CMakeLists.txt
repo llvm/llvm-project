@@ -3640,6 +3640,7 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
     libc.src.math.f16divf
 )
 
