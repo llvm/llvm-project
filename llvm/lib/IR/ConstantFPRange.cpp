@@ -5,17 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Represent a range of possible values that may occur when the program is run
-// for a floating-point value. This keeps track of a lower and upper bound for
-// the constant.
-//
-// Range = [Lower, Upper] U (MayBeQNaN ? QNaN : {}) U (MayBeSNaN ? SNaN : {})
-// Specifically, [inf, -inf] represents an empty set.
-// Note: -0 is considered to be less than 0. That is, range [0, 0] doesn't
-// contain -0.
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
