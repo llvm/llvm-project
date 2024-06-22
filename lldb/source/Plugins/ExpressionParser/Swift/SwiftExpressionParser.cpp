@@ -2165,7 +2165,7 @@ static bool FindFunctionInModule(ConstString &mangled_name,
   return false;
 }
 
-Status SwiftExpressionParser::PrepareForExecution(
+Status SwiftExpressionParser::DoPrepareForExecution(
     lldb::addr_t &func_addr, lldb::addr_t &func_end,
     lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
     bool &can_interpret, ExecutionPolicy execution_policy) {
