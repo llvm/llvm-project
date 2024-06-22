@@ -9,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Utils.h"
+#include "DeviceUtils.h"
 
 #include "Debug.h"
 #include "Interface.h"

@@ -14,8 +14,8 @@
 #include "Configuration.h"
 #include "Mapping.h"
 #include "Synchronization.h"
-#include "Types.h"
-#include "Utils.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 
 using namespace ompx;
 

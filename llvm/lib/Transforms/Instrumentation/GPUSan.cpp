@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -90,6 +91,10 @@ private:
   instrumentReturns(SmallVectorImpl<std::pair<AllocaInst *, Value *>> &Allocas,
                     SmallVectorImpl<ReturnInst *> &Returns);
 
+  Value *getPC(IRBuilder<> &IRB);
+  Value *getFunctionName(IRBuilder<> &IRB);
+  Value *getFileName(IRBuilder<> &IRB);
+  Value *getLineNo(IRBuilder<> &IRB);
   PtrOrigin getPtrOrigin(LoopInfo &LI, Value *Ptr);
 
   FunctionCallee getOrCreateFn(FunctionCallee &FC, StringRef Name, Type *RetTy,
@@ -104,30 +109,31 @@ private:
   FunctionCallee getNewFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(NewFn[PO], "ompx_new" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty, Int64Ty});
+                         {PtrTy, Int64Ty, Int64Ty, Int64Ty});
   }
   FunctionCallee getFreeFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(FreeFn[PO], "ompx_free" + getSuffix(PO), VoidTy,
-                         {PtrTy});
+                         {PtrTy, Int64Ty});
   }
   FunctionCallee getFreeNLocalFn() {
     return getOrCreateFn(FreeNLocal, "ompx_free_local_n", VoidTy, {Int32Ty});
   }
   FunctionCallee getCheckFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
-    return getOrCreateFn(CheckFn[PO], "ompx_check" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty, Int64Ty});
+    return getOrCreateFn(
+        CheckFn[PO], "ompx_check" + getSuffix(PO), PtrTy,
+        {PtrTy, Int64Ty, Int64Ty, Int64Ty, PtrTy, PtrTy, Int64Ty});
   }
   FunctionCallee getGEPFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(GEPFn[PO], "ompx_gep" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty});
+                         {PtrTy, Int64Ty, Int64Ty});
   }
   FunctionCallee getUnpackFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(UnpackFn[PO], "ompx_unpack" + getSuffix(PO), PtrTy,
-                         {PtrTy});
+                         {PtrTy, Int64Ty});
   }
   FunctionCallee getLeakCheckFn() {
     FunctionCallee LeakCheckFn;
@@ -154,9 +160,52 @@ private:
   FunctionCallee CheckFn[3];
   FunctionCallee UnpackFn[3];
   FunctionCallee FreeNLocal;
+
+  StringMap<Value *> GlobalStringMap;
 };
 
 } // end anonymous namespace
+
+Value *GPUSanImpl::getPC(IRBuilder<> &IRB) {
+  return IRB.CreateIntrinsic(Int64Ty, Intrinsic::amdgcn_s_getpc, {}, nullptr,
+                             "PC");
+}
+Value *GPUSanImpl::getFunctionName(IRBuilder<> &IRB) {
+  const auto &DLoc = IRB.getCurrentDebugLocation();
+  StringRef FnName = IRB.GetInsertPoint()->getFunction()->getName();
+  if (DLoc && DLoc.get()) {
+    StringRef SubprogramName = DLoc.get()->getSubprogramLinkageName();
+    if (!SubprogramName.empty())
+      FnName = SubprogramName;
+  }
+  StringRef Name = FnName.take_back(255);
+  Value *&NameVal = GlobalStringMap[Name];
+  if (!NameVal)
+    NameVal = IRB.CreateAddrSpaceCast(
+        IRB.CreateGlobalStringPtr(Name, "", DL.getDefaultGlobalsAddressSpace(),
+                                  &M),
+        PtrTy);
+  return NameVal;
+}
+Value *GPUSanImpl::getFileName(IRBuilder<> &IRB) {
+  const auto &DLoc = IRB.getCurrentDebugLocation();
+  if (!DLoc || DLoc->getFilename().empty())
+    return ConstantPointerNull::get(PtrTy);
+  StringRef Name = DLoc->getFilename().take_back(255);
+  Value *&NameVal = GlobalStringMap[Name];
+  if (!NameVal)
+    NameVal = IRB.CreateAddrSpaceCast(
+        IRB.CreateGlobalStringPtr(Name, "", DL.getDefaultGlobalsAddressSpace(),
+                                  &M),
+        PtrTy);
+  return NameVal;
+}
+Value *GPUSanImpl::getLineNo(IRBuilder<> &IRB) {
+  const auto &DLoc = IRB.getCurrentDebugLocation();
+  if (!DLoc)
+    return Constant::getNullValue(Int64Ty);
+  return ConstantInt::get(Int64Ty, DLoc.getLine());
+}
 
 PtrOrigin GPUSanImpl::getPtrOrigin(LoopInfo &LI, Value *Ptr) {
   SmallVector<const Value *> Objects;
@@ -223,7 +272,8 @@ Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
   Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, PtrTy);
   static int AllocationId = 1;
   auto *CB = IRB.CreateCall(
-      Fn, {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++)},
+      Fn,
+      {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++), getPC(IRB)},
       I.getName() + ".san");
   I.replaceUsesWithIf(IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()),
                       [=](Use &U) {
@@ -258,7 +308,9 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   IRBuilder<> IRB(&I);
   Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
   auto *CB = IRB.CreateCall(
-      getCheckFn(PO), {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId)},
+      getCheckFn(PO),
+      {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId), getPC(IRB),
+       getFunctionName(IRB), getFileName(IRB), getLineNo(IRB)},
       I.getName() + ".san");
   I.setOperand(PtrIdx,
                IRB.CreatePointerBitCastOrAddrSpaceCast(CB, PtrOp->getType()));
@@ -285,9 +337,9 @@ void GPUSanImpl::instrumentGEPInst(LoopInfo &LI, GetElementPtrInst &GEP) {
                  Constant::getNullValue(PtrOp->getType()));
   IRBuilder<> IRB(GEP.getNextNode());
   Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
-  auto *CB =
-      IRB.CreateCall(getGEPFn(PO), {PlainPtrOp, UndefValue::get(Int64Ty)},
-                     GEP.getName() + ".san");
+  auto *CB = IRB.CreateCall(getGEPFn(PO),
+                            {PlainPtrOp, UndefValue::get(Int64Ty), getPC(IRB)},
+                            GEP.getName() + ".san");
   GEP.replaceAllUsesWith(
       IRB.CreatePointerBitCastOrAddrSpaceCast(CB, GEP.getType()));
   Value *Offset =
@@ -312,7 +364,7 @@ bool GPUSanImpl::instrumentCallInst(LoopInfo &LI, CallInst &CI) {
         if (PO > GLOBAL)
           continue;
         Value *PlainOp = IRB.CreatePointerBitCastOrAddrSpaceCast(Op, PtrTy);
-        auto *CB = IRB.CreateCall(getUnpackFn(PO), {PlainOp},
+        auto *CB = IRB.CreateCall(getUnpackFn(PO), {PlainOp, getPC(IRB)},
                                   Op->getName() + ".unpack");
         CI.setArgOperand(
             I, IRB.CreatePointerBitCastOrAddrSpaceCast(CB, Op->getType()));
@@ -392,8 +444,8 @@ bool GPUSanImpl::instrument() {
   for (Function &Fn : M)
     if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc") &&
         !Fn.getName().starts_with("rpc_"))
-      Changed |= instrumentFunction(Fn);
-  M.dump();
+      if (!Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+        Changed |= instrumentFunction(Fn);
   return Changed;
 }
 

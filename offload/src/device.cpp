@@ -191,21 +191,24 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                   DstPtr, Size, AsyncInfo);
 }
 
-int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
+int32_t DeviceTy::notifyDataMapped(void *HstPtr, void *DevicePtr, int64_t Size,
+                                   void *&FakeHstPtr) {
   DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
      DPxPTR(HstPtr), Size);
 
-  if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
+  if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, DevicePtr, Size,
+                              FakeHstPtr)) {
     REPORT("Notifiying about data mapping failed.\n");
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;
 }
 
-int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+int32_t DeviceTy::notifyDataUnmapped(void *HstPtr, void *FakeHstPtr) {
+  DP("Notifying about an unmapping: HstPtr=" DPxMOD " FakeHstPtr=" DPxMOD "\n",
+     DPxPTR(HstPtr), DPxPTR(FakeHstPtr));
 
-  if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
+  if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr, FakeHstPtr)) {
     REPORT("Notifiying about data unmapping failed.\n");
     return OFFLOAD_FAIL;
   }

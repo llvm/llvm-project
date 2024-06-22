@@ -18,7 +18,7 @@
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
+#include "DeviceTypes.h"
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 

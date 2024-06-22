@@ -78,6 +78,7 @@ VERS1.0 {
     llvmLaunchKernel;
     ompx_new_allocation_host;
     ompx_free_allocation_host;
+    ompx_register_image_functions;
   local:
     *;
 };

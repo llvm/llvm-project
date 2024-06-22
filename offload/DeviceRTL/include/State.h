@@ -16,8 +16,8 @@
 
 #include "Debug.h"
 #include "Mapping.h"
-#include "Types.h"
-#include "Utils.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 
 // Forward declaration.
 struct KernelEnvironmentTy;

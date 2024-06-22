@@ -16,8 +16,8 @@
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
-#include "Types.h"
-#include "Utils.h"
+#include "DeviceTypes.h"
+#include "DeviceUtils.h"
 
 #pragma omp begin declare target device_type(nohost)
 

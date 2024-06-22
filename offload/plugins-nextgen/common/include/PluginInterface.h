@@ -24,6 +24,7 @@
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Requirements.h"
+#include "Shared/Sanitizer.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"
@@ -231,7 +232,7 @@ public:
 
   /// Get the image size.
   size_t getSize() const {
-    return getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
+    return utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart);
   }
 
   /// Get a memory buffer reference to the whole image.
@@ -471,7 +472,7 @@ class PinnedAllocationMapTy {
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+    if (utils::advancePtr(It->HstPtr, It->Size) > HstPtr)
       return &(*It);
 
     // None found.
@@ -498,15 +499,15 @@ class PinnedAllocationMapTy {
 
   /// Indicate whether the first range A fully contains the second range B.
   static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrB >= PtrA && EndB <= EndA);
   }
 
   /// Indicate whether the first range A intersects with the second range B.
   static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
-    void *EndA = advanceVoidPtr(PtrA, SizeA);
-    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    void *EndA = utils::advancePtr(PtrA, SizeA);
+    void *EndB = utils::advancePtr(PtrB, SizeB);
     return (PtrA < EndB && PtrB < EndA);
   }
 
@@ -588,8 +589,8 @@ public:
     if (!Entry)
       return nullptr;
 
-    return advanceVoidPtr(Entry->DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry->HstPtr));
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -599,6 +600,22 @@ public:
     // Return whether there is an intersecting allocation.
     return (findIntersecting(const_cast<void *>(HstPtr)) != nullptr);
   }
+};
+
+struct GPUSanTy {
+  GPUSanTy(GenericDeviceTy &Device) : Device(Device) {}
+  Error notifyDataMapped(void *DevicePtr, uint64_t Size, void *&FakeHstPtr);
+  Error notifyDataUnmapped(void *FakeHstPtr);
+
+  void addGPUSanNewFn(GenericKernelTy &GK) { NewFns.push_back(&GK); }
+  void addGPUSanFreeFn(GenericKernelTy &GK) { FreeFns.push_back(&GK); }
+  void checkAndReportError();
+
+private:
+  uint32_t SlotCnt = SanitizerConfig<AllocationKind::GLOBAL>::SLOTS - 1;
+  GenericDeviceTy &Device;
+  SmallVector<GenericKernelTy *> NewFns;
+  SmallVector<GenericKernelTy *> FreeFns;
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -718,14 +735,19 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
   /// as source/destination of memory transfers. We can use this information to
   /// lock the host buffer and optimize its memory transfers.
-  Error notifyDataMapped(void *HstPtr, int64_t Size) {
+  Error notifyDataMapped(void *HstPtr, void *DevicePtr, int64_t Size,
+                         void *&FakeHstPtr) {
+    if (auto Err = GPUSan.notifyDataMapped(DevicePtr, Size, FakeHstPtr))
+      return Err;
     return PinnedAllocs.lockMappedHostBuffer(HstPtr, Size);
   }
 
   /// Mark the host buffer with address \p HstPtr as unmapped. This means that
   /// libomptarget removed an existing mapping. If the plugin locked the buffer
   /// in notifyDataMapped, this function should unlock it.
-  Error notifyDataUnmapped(void *HstPtr) {
+  Error notifyDataUnmapped(void *HstPtr, void *FakeHstPtr) {
+    if (auto Err = GPUSan.notifyDataUnmapped(FakeHstPtr))
+      return Err;
     return PinnedAllocs.unlockUnmappedHostBuffer(HstPtr);
   }
 
@@ -735,6 +757,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
                                          void *&BaseDevAccessiblePtr,
                                          size_t &BaseSize) const = 0;
+
+  void addGPUSanNewFn(GenericKernelTy &GK) { GPUSan.addGPUSanNewFn(GK); }
+  void addGPUSanFreeFn(GenericKernelTy &GK) { GPUSan.addGPUSanFreeFn(GK); }
+  void reportSanitizerError() { GPUSan.checkAndReportError(); }
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
@@ -857,7 +883,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
-  OMPXTrapIDTy *OmpxTrapId = nullptr;
+  SanitizerTrapInfoTy *SanitizerTrapInfo = nullptr;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;
@@ -952,6 +978,8 @@ protected:
 #endif
 
 private:
+  GPUSanTy GPUSan;
+
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 };
@@ -1120,10 +1148,12 @@ public:
   int32_t data_unlock(int32_t DeviceId, void *Ptr);
 
   /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
+  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, void *DevicePtr,
+                             int64_t Size, void *&FakeHstPtr);
 
   /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
+  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr,
+                               void *FakeHstPtr);
 
   /// Copy data to the given device.
   int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,

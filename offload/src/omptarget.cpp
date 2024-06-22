@@ -271,17 +271,22 @@ static int initLibrary(DeviceTy &Device) {
            ", name \"%s\"\n",
            DPxPTR(CurrHostEntry->addr), DPxPTR(CurrDeviceEntry->addr),
            CurrDeviceEntry->size, CurrDeviceEntry->name);
-        HDTTMap->emplace(new HostDataToTargetTy(
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
-            (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
-            (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
-            (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
-            (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
-            false /*UseHoldRefCount*/, CurrHostEntry->name,
-            true /*IsRefCountINF*/));
+        auto *Entry = HDTTMap
+                          ->emplace(new HostDataToTargetTy(
+                              (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
+                              (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
+                              (uintptr_t)CurrHostEntry->addr +
+                                  CurrHostEntry->size /*HstPtrEnd*/,
+                              (uintptr_t)CurrDeviceEntryAddr /*TgtAllocBegin*/,
+                              (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
+                              false /*UseHoldRefCount*/, CurrHostEntry->name,
+                              true /*IsRefCountINF*/))
+                          .first->HDTT;
 
         // Notify about the new mapping.
-        if (Device.notifyDataMapped(CurrHostEntry->addr, CurrHostEntry->size))
+        if (Device.notifyDataMapped(CurrHostEntry->addr, CurrDeviceEntryAddr,
+                                    CurrHostEntry->size,
+                                    Entry->FakeTgtPtrBegin))
           return OFFLOAD_FAIL;
       }
     }
@@ -323,8 +328,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         for (auto &Image : PM->deviceImages()) {
           const char *Start = reinterpret_cast<const char *>(
               Image.getExecutableImage().ImageStart);
-          uint64_t Length = llvm::omp::target::getPtrDiff(
-              Start, Image.getExecutableImage().ImageEnd);
+          uint64_t Length =
+              utils::getPtrDiff(Start, Image.getExecutableImage().ImageEnd);
           llvm::MemoryBufferRef Buffer(llvm::StringRef(Start, Length),
                                        /*Identifier=*/"");
 

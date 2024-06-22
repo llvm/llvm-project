@@ -13,7 +13,7 @@
 
 #include "Configuration.h"
 #include "State.h"
-#include "Types.h"
+#include "DeviceTypes.h"
 
 using namespace ompx;
 

@@ -100,11 +100,15 @@ struct DeviceTy {
 
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
-  int32_t notifyDataMapped(void *HstPtr, int64_t Size);
+  /// If GPUSan is enabled, \p DevicePtr is registered in each image and
+  /// \p FakeHstPtr is updated.
+  int32_t notifyDataMapped(void *HstPtr, void *DevicePtr, int64_t Size,
+                           void *&FakeHstPtr);
 
   /// Notify the plugin about an existing mapping being unmapped starting at
   /// the host address \p HstPtr.
-  int32_t notifyDataUnmapped(void *HstPtr);
+  /// If GPUSan is enabled, \p FakeHstPtr is unregistered.
+  int32_t notifyDataUnmapped(void *HstPtr, void *FakeHstPtr);
 
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,

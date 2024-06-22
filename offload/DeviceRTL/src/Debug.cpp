@@ -17,7 +17,7 @@
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
-#include "Types.h"
+#include "DeviceTypes.h"
 
 using namespace ompx;
 

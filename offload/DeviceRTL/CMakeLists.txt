@@ -69,6 +69,7 @@ elseif(LIBOMPTARGET_DEVICE_ARCHITECTURES STREQUAL "auto" OR
       "${LIBOMPTARGET_NVPTX_DETECTED_ARCH_LIST};${LIBOMPTARGET_AMDGPU_DETECTED_ARCH_LIST}")
 endif()
 list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
+set(LIBOMPTARGET_DEVICE_ARCHITECTURES ${LIBOMPTARGET_DEVICE_ARCHITECTURES} PARENT_SCOPE)
 
 set(include_files
   ${include_directory}/Allocator.h
@@ -85,7 +86,7 @@ set(include_files
 
 set(src_files
   ${source_directory}/Allocator.cpp
-  ${source_directory}/AllocationTracker.cpp
+  ${source_directory}/Sanitizer.cpp
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
