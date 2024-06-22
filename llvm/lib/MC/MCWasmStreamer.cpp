@@ -49,7 +49,7 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
                                     uint64_t Offset) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
