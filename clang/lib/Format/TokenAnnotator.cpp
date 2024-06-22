@@ -127,7 +127,7 @@ public:
                    SmallVector<ScopeType> &Scopes)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
-        Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
+        Keywords(Keywords), Scopes(Scopes) {
     assert(IsCpp == LangOpts.CXXOperatorNames);
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
@@ -1266,22 +1266,16 @@ private:
   }
 
   bool parseTemplateDeclaration() {
-    if (!CurrentToken || CurrentToken->isNot(tok::less))
-      return false;
-
-    CurrentToken->setType(TT_TemplateOpener);
-    next();
-
-    TemplateDeclarationDepth++;
-    const bool WellFormed = parseAngle();
-    TemplateDeclarationDepth--;
-    if (!WellFormed)
-      return false;
-
-    if (CurrentToken && TemplateDeclarationDepth == 0)
-      CurrentToken->Previous->ClosesTemplateDeclaration = true;
-
-    return true;
+    if (CurrentToken && CurrentToken->is(tok::less)) {
+      CurrentToken->setType(TT_TemplateOpener);
+      next();
+      if (!parseAngle())
+        return false;
+      if (CurrentToken)
+        CurrentToken->Previous->ClosesTemplateDeclaration = true;
+      return true;
+    }
+    return false;
   }
 
   bool consumeToken() {
@@ -3097,8 +3091,6 @@ private:
   // same decision irrespective of the decisions for tokens leading up to it.
   // Store this information to prevent this from causing exponential runtime.
   llvm::SmallPtrSet<FormatToken *, 16> NonTemplateLess;
-
-  int TemplateDeclarationDepth;
 };
 
 static const int PrecedenceUnaryOperator = prec::PointerToMember + 1;
