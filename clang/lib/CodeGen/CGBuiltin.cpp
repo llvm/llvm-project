@@ -723,11 +723,13 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
       return false;
     }();
 
-    if (IntrinsicID) {
+    const llvm::Triple &T = CGF.getTarget().getTriple();
+    // Restrict to Linux because not all targets set errno, such as MacOS.
+    if (IntrinsicID && T.getOS() == llvm::Triple::Linux) {
       llvm::MDBuilder MDHelper(CGF.getLLVMContext());
       MDNode *RootMD = CGF.CGM.getTBAARoot();
       // Emit "int" TBAA metadata on FP math libcalls.
-      MDNode *AliasType = MDHelper.createTBAANode("int", RootMD);
+      MDNode *AliasType = MDHelper.createTBAAScalarTypeNode("int", RootMD);
       MDNode *MDInt = MDHelper.createTBAAStructTagNode(AliasType, AliasType, 0);
 
       Value *Val = Call.getScalarVal();

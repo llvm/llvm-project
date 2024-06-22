@@ -28,5 +28,5 @@ float foo (float num[], float r2inv, int n) {
 // CHECK: [[META8]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
 // CHECK: [[META9]] = !{!"Simple C++ TBAA"}
 // CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
-// CHECK: [[META11]] = !{!"int", [[META9]]}
+// CHECK: [[META11]] = !{!"int", [[META9]], i64 0}
 //.
