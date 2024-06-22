@@ -121,7 +121,7 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
 RValue AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                 QualType Ty, AggValueSlot Slot) const {
   const bool IsIndirect = false;
-  const bool AllowHigherAlign = false;
+  const bool AllowHigherAlign = true;
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(4), AllowHigherAlign, Slot);
@@ -212,13 +212,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  if (Variadic) {
-    return ABIArgInfo::getDirect(/*T=*/nullptr,
-                                 /*Offset=*/0,
-                                 /*Padding=*/nullptr,
-                                 /*CanBeFlattened=*/false,
-                                 /*Align=*/0);
-  }
+  if (Variadic)
+    return ABIArgInfo::getDirect();
 
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
