@@ -8,7 +8,6 @@
 
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/WithColor.h"
 
 #include "DebugOptions.h"

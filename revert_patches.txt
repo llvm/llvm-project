@@ -84,3 +84,6 @@ Reverts: break componsableKernels
 contact: RonL
 
 ---
+Reverts: breaks build of kfdtest
+Revert "[CommandLine] Avoid ManagedStatic.h include (NFC)"
+---
