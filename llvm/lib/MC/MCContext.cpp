@@ -155,6 +155,7 @@ void MCContext::reset() {
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
+  FragmentAllocator.Reset();
   Instances.clear();
   CompilationDir.clear();
   MainFileName.clear();
