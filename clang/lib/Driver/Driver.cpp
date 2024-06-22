@@ -147,10 +147,13 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
 static std::optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
-    if (Args.hasArgNoClaim(options::OPT_offload_arch_EQ)) {
-      if (Args.getLastArgValue(options::OPT_offload_arch_EQ) == "amdgcnspirv")
+    auto OffloadArchs = Args.getAllArgValues(options::OPT_offload_arch_EQ);
+    if (llvm::find(OffloadArchs, "amdgcnspirv") != OffloadArchs.cend()) {
+      if (OffloadArchs.size() == 1)
         return llvm::Triple("spirv64-amd-amdhsa");
-      return llvm::Triple("amdgcn-amd-amdhsa");
+      // Mixing specific & SPIR-V compilation is not supported for now.
+      D.Diag(diag::err_drv_only_one_offload_target_supported);
+      return std::nullopt;
     }
     return llvm::Triple("amdgcn-amd-amdhsa"); // Default HIP triple.
   }
