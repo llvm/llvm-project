@@ -448,7 +448,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   return StringSwitch<const char *>(UArch)
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
-      .Default("generic");
+      .Default("");
 }
 
 StringRef sys::detail::getHostCPUNameForBPF() {
@@ -1571,7 +1571,9 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
-  return detail::getHostCPUNameForRISCV(Content);
+  auto CPUName = detail::getHostCPUNameForRISCV(Content);
+  if (!Name.empty())
+    return Name;
 #else
 #if __riscv_xlen == 64
   return "generic-rv64";
