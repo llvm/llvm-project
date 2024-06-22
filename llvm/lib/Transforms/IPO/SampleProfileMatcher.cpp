@@ -866,7 +866,11 @@ void SampleProfileMatcher::runOnModule() {
   if (SalvageUnusedProfile)
     for (auto &I : FuncToProfileNameMap) {
       assert(I.first && "New function is null");
-      FuncNameToProfNameMap->emplace(FunctionId(I.first->getName()), I.second);
+      FunctionId FuncName(I.first->getName());
+      FuncNameToProfNameMap->emplace(FuncName, I.second);
+      // We need to remove the old entry to avoid duplicating the function
+      // processing.
+      SymbolMap->erase(FuncName);
       SymbolMap->emplace(I.second, I.first);
     }
 
