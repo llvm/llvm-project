@@ -555,7 +555,7 @@ public:
     if (!LastEMSInfo->hasInfo())
       return;
     ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-    EmitMappingSymbol("$d", SMLoc(), EMS->F, EMS->Offset);
+    emitMappingSymbol("$d", *EMS->F, EMS->Offset);
     EMS->resetInfo();
   }
 
@@ -630,7 +630,7 @@ private:
       Offset = 0;
     }
     bool hasInfo() { return F != nullptr; }
-    MCFragment *F = nullptr;
+    MCDataFragment *F = nullptr;
     uint64_t Offset = 0;
     ElfMappingSymbol State = EMS_None;
   };
@@ -645,7 +645,7 @@ private:
       auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
       if (!DF)
         return;
-      EMS->F = getCurrentFragment();
+      EMS->F = DF;
       EMS->Offset = DF->getContents().size();
       LastEMSInfo->State = EMS_Data;
       return;
@@ -679,11 +679,10 @@ private:
     Symbol->setBinding(ELF::STB_LOCAL);
   }
 
-  void EmitMappingSymbol(StringRef Name, SMLoc Loc, MCFragment *F,
-                         uint64_t Offset) {
+  void emitMappingSymbol(StringRef Name, MCDataFragment &F, uint64_t Offset) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    emitLabelAtPos(Symbol, Loc, F, Offset);
+    emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
   }
