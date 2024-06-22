@@ -122,7 +122,8 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
   CurPPLexer = TheLexer;
   CurDirLookup = CurDir;
   CurLexerSubmodule = nullptr;
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
+  if (CurLexerCallback != CLK_LexAfterModuleImport &&
+      CurLexerCallback != CLK_LexAfterModuleDecl)
     CurLexerCallback = TheLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
@@ -215,7 +216,8 @@ void Preprocessor::EnterTokenStream(const Token *Toks, unsigned NumToks,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
+  if (CurLexerCallback != CLK_LexAfterModuleImport &&
+      CurLexerCallback != CLK_LexAfterModuleDecl)
     CurLexerCallback = CLK_TokenLexer;
 }
 

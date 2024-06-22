@@ -35,6 +35,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -914,6 +915,7 @@ void Preprocessor::Lex(Token &Result) {
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
     case tok::semi:
       TrackGMFState.handleSemi();
       StdCXXImportSeqState.handleSemi();
