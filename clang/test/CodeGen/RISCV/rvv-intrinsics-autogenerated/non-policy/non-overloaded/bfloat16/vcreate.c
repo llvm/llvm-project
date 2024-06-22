@@ -89,39 +89,39 @@ vbfloat16m8_t test_vcreate_v_bf16m4_bf16m8(vbfloat16m4_t v0, vbfloat16m4_t v1) {
   return __riscv_vcreate_v_bf16m4_bf16m8(v0, v1);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x2(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x2 @test_vcreate_v_bf16mf4x2(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x2 @llvm.vector.insert.riscv_mf4x2.nxv1bf16(riscv_mf4x2 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x2 @llvm.vector.insert.riscv_mf4x2.nxv1bf16(riscv_mf4x2 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    ret riscv_mf4x2 [[TMP1]]
 //
 vbfloat16mf4x2_t test_vcreate_v_bf16mf4x2(vbfloat16mf4_t v0,
                                           vbfloat16mf4_t v1) {
   return __riscv_vcreate_v_bf16mf4x2(v0, v1);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x3(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x3 @test_vcreate_v_bf16mf4x3(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x3 @llvm.vector.insert.riscv_mf4x3.nxv1bf16(riscv_mf4x3 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x3 @llvm.vector.insert.riscv_mf4x3.nxv1bf16(riscv_mf4x3 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x3 @llvm.vector.insert.riscv_mf4x3.nxv1bf16(riscv_mf4x3 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    ret riscv_mf4x3 [[TMP2]]
 //
 vbfloat16mf4x3_t test_vcreate_v_bf16mf4x3(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2) {
   return __riscv_vcreate_v_bf16mf4x3(v0, v1, v2);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x4(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x4 @test_vcreate_v_bf16mf4x4(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]], <vscale x 1 x bfloat> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]], <vscale x 1 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x4 @llvm.vector.insert.riscv_mf4x4.nxv1bf16(riscv_mf4x4 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x4 @llvm.vector.insert.riscv_mf4x4.nxv1bf16(riscv_mf4x4 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x4 @llvm.vector.insert.riscv_mf4x4.nxv1bf16(riscv_mf4x4 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf4x4 @llvm.vector.insert.riscv_mf4x4.nxv1bf16(riscv_mf4x4 [[TMP2]], <vscale x 1 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    ret riscv_mf4x4 [[TMP3]]
 //
 vbfloat16mf4x4_t test_vcreate_v_bf16mf4x4(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2,
@@ -129,15 +129,15 @@ vbfloat16mf4x4_t test_vcreate_v_bf16mf4x4(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
   return __riscv_vcreate_v_bf16mf4x4(v0, v1, v2, v3);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x5(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x5 @test_vcreate_v_bf16mf4x5(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]], <vscale x 1 x bfloat> [[V3:%.*]], <vscale x 1 x bfloat> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]], <vscale x 1 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP3]], <vscale x 1 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x5 @llvm.vector.insert.riscv_mf4x5.nxv1bf16(riscv_mf4x5 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x5 @llvm.vector.insert.riscv_mf4x5.nxv1bf16(riscv_mf4x5 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x5 @llvm.vector.insert.riscv_mf4x5.nxv1bf16(riscv_mf4x5 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf4x5 @llvm.vector.insert.riscv_mf4x5.nxv1bf16(riscv_mf4x5 [[TMP2]], <vscale x 1 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf4x5 @llvm.vector.insert.riscv_mf4x5.nxv1bf16(riscv_mf4x5 [[TMP3]], <vscale x 1 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    ret riscv_mf4x5 [[TMP4]]
 //
 vbfloat16mf4x5_t test_vcreate_v_bf16mf4x5(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2, vbfloat16mf4_t v3,
@@ -145,16 +145,16 @@ vbfloat16mf4x5_t test_vcreate_v_bf16mf4x5(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
   return __riscv_vcreate_v_bf16mf4x5(v0, v1, v2, v3, v4);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x6(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x6 @test_vcreate_v_bf16mf4x6(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]], <vscale x 1 x bfloat> [[V3:%.*]], <vscale x 1 x bfloat> [[V4:%.*]], <vscale x 1 x bfloat> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]], <vscale x 1 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP3]], <vscale x 1 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP4]], <vscale x 1 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 [[TMP2]], <vscale x 1 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 [[TMP3]], <vscale x 1 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf4x6 @llvm.vector.insert.riscv_mf4x6.nxv1bf16(riscv_mf4x6 [[TMP4]], <vscale x 1 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    ret riscv_mf4x6 [[TMP5]]
 //
 vbfloat16mf4x6_t test_vcreate_v_bf16mf4x6(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2, vbfloat16mf4_t v3,
@@ -163,17 +163,17 @@ vbfloat16mf4x6_t test_vcreate_v_bf16mf4x6(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
   return __riscv_vcreate_v_bf16mf4x6(v0, v1, v2, v3, v4, v5);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x7(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x7 @test_vcreate_v_bf16mf4x7(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]], <vscale x 1 x bfloat> [[V3:%.*]], <vscale x 1 x bfloat> [[V4:%.*]], <vscale x 1 x bfloat> [[V5:%.*]], <vscale x 1 x bfloat> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]], <vscale x 1 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP3]], <vscale x 1 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP4]], <vscale x 1 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP5]], <vscale x 1 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP2]], <vscale x 1 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP3]], <vscale x 1 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP4]], <vscale x 1 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_mf4x7 @llvm.vector.insert.riscv_mf4x7.nxv1bf16(riscv_mf4x7 [[TMP5]], <vscale x 1 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    ret riscv_mf4x7 [[TMP6]]
 //
 vbfloat16mf4x7_t test_vcreate_v_bf16mf4x7(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2, vbfloat16mf4_t v3,
@@ -182,18 +182,18 @@ vbfloat16mf4x7_t test_vcreate_v_bf16mf4x7(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
   return __riscv_vcreate_v_bf16mf4x7(v0, v1, v2, v3, v4, v5, v6);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } @test_vcreate_v_bf16mf4x8(
+// CHECK-RV64-LABEL: define dso_local riscv_mf4x8 @test_vcreate_v_bf16mf4x8(
 // CHECK-RV64-SAME: <vscale x 1 x bfloat> [[V0:%.*]], <vscale x 1 x bfloat> [[V1:%.*]], <vscale x 1 x bfloat> [[V2:%.*]], <vscale x 1 x bfloat> [[V3:%.*]], <vscale x 1 x bfloat> [[V4:%.*]], <vscale x 1 x bfloat> [[V5:%.*]], <vscale x 1 x bfloat> [[V6:%.*]], <vscale x 1 x bfloat> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } poison, <vscale x 1 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP0]], <vscale x 1 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP1]], <vscale x 1 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP2]], <vscale x 1 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP3]], <vscale x 1 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP4]], <vscale x 1 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP5]], <vscale x 1 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP6]], <vscale x 1 x bfloat> [[V7]], 7
-// CHECK-RV64-NEXT:    ret { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 poison, <vscale x 1 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP0]], <vscale x 1 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP1]], <vscale x 1 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP2]], <vscale x 1 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP3]], <vscale x 1 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP4]], <vscale x 1 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP5]], <vscale x 1 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call riscv_mf4x8 @llvm.vector.insert.riscv_mf4x8.nxv1bf16(riscv_mf4x8 [[TMP6]], <vscale x 1 x bfloat> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    ret riscv_mf4x8 [[TMP7]]
 //
 vbfloat16mf4x8_t test_vcreate_v_bf16mf4x8(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
                                           vbfloat16mf4_t v2, vbfloat16mf4_t v3,
@@ -203,39 +203,39 @@ vbfloat16mf4x8_t test_vcreate_v_bf16mf4x8(vbfloat16mf4_t v0, vbfloat16mf4_t v1,
   return __riscv_vcreate_v_bf16mf4x8(v0, v1, v2, v3, v4, v5, v6, v7);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x2(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x2 @test_vcreate_v_bf16mf2x2(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x2 @llvm.vector.insert.riscv_mf2x2.nxv2bf16(riscv_mf2x2 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x2 @llvm.vector.insert.riscv_mf2x2.nxv2bf16(riscv_mf2x2 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    ret riscv_mf2x2 [[TMP1]]
 //
 vbfloat16mf2x2_t test_vcreate_v_bf16mf2x2(vbfloat16mf2_t v0,
                                           vbfloat16mf2_t v1) {
   return __riscv_vcreate_v_bf16mf2x2(v0, v1);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x3(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x3 @test_vcreate_v_bf16mf2x3(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x3 @llvm.vector.insert.riscv_mf2x3.nxv2bf16(riscv_mf2x3 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x3 @llvm.vector.insert.riscv_mf2x3.nxv2bf16(riscv_mf2x3 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x3 @llvm.vector.insert.riscv_mf2x3.nxv2bf16(riscv_mf2x3 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    ret riscv_mf2x3 [[TMP2]]
 //
 vbfloat16mf2x3_t test_vcreate_v_bf16mf2x3(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2) {
   return __riscv_vcreate_v_bf16mf2x3(v0, v1, v2);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x4(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x4 @test_vcreate_v_bf16mf2x4(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]], <vscale x 2 x bfloat> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]], <vscale x 2 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x4 @llvm.vector.insert.riscv_mf2x4.nxv2bf16(riscv_mf2x4 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x4 @llvm.vector.insert.riscv_mf2x4.nxv2bf16(riscv_mf2x4 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x4 @llvm.vector.insert.riscv_mf2x4.nxv2bf16(riscv_mf2x4 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf2x4 @llvm.vector.insert.riscv_mf2x4.nxv2bf16(riscv_mf2x4 [[TMP2]], <vscale x 2 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    ret riscv_mf2x4 [[TMP3]]
 //
 vbfloat16mf2x4_t test_vcreate_v_bf16mf2x4(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2,
@@ -243,15 +243,15 @@ vbfloat16mf2x4_t test_vcreate_v_bf16mf2x4(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
   return __riscv_vcreate_v_bf16mf2x4(v0, v1, v2, v3);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x5(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x5 @test_vcreate_v_bf16mf2x5(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]], <vscale x 2 x bfloat> [[V3:%.*]], <vscale x 2 x bfloat> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]], <vscale x 2 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP3]], <vscale x 2 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x5 @llvm.vector.insert.riscv_mf2x5.nxv2bf16(riscv_mf2x5 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x5 @llvm.vector.insert.riscv_mf2x5.nxv2bf16(riscv_mf2x5 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x5 @llvm.vector.insert.riscv_mf2x5.nxv2bf16(riscv_mf2x5 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf2x5 @llvm.vector.insert.riscv_mf2x5.nxv2bf16(riscv_mf2x5 [[TMP2]], <vscale x 2 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf2x5 @llvm.vector.insert.riscv_mf2x5.nxv2bf16(riscv_mf2x5 [[TMP3]], <vscale x 2 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    ret riscv_mf2x5 [[TMP4]]
 //
 vbfloat16mf2x5_t test_vcreate_v_bf16mf2x5(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2, vbfloat16mf2_t v3,
@@ -259,16 +259,16 @@ vbfloat16mf2x5_t test_vcreate_v_bf16mf2x5(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
   return __riscv_vcreate_v_bf16mf2x5(v0, v1, v2, v3, v4);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x6(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x6 @test_vcreate_v_bf16mf2x6(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]], <vscale x 2 x bfloat> [[V3:%.*]], <vscale x 2 x bfloat> [[V4:%.*]], <vscale x 2 x bfloat> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]], <vscale x 2 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP3]], <vscale x 2 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP4]], <vscale x 2 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 [[TMP2]], <vscale x 2 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 [[TMP3]], <vscale x 2 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf2x6 @llvm.vector.insert.riscv_mf2x6.nxv2bf16(riscv_mf2x6 [[TMP4]], <vscale x 2 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    ret riscv_mf2x6 [[TMP5]]
 //
 vbfloat16mf2x6_t test_vcreate_v_bf16mf2x6(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2, vbfloat16mf2_t v3,
@@ -277,17 +277,17 @@ vbfloat16mf2x6_t test_vcreate_v_bf16mf2x6(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
   return __riscv_vcreate_v_bf16mf2x6(v0, v1, v2, v3, v4, v5);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x7(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x7 @test_vcreate_v_bf16mf2x7(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]], <vscale x 2 x bfloat> [[V3:%.*]], <vscale x 2 x bfloat> [[V4:%.*]], <vscale x 2 x bfloat> [[V5:%.*]], <vscale x 2 x bfloat> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]], <vscale x 2 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP3]], <vscale x 2 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP4]], <vscale x 2 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP5]], <vscale x 2 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP2]], <vscale x 2 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP3]], <vscale x 2 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP4]], <vscale x 2 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_mf2x7 @llvm.vector.insert.riscv_mf2x7.nxv2bf16(riscv_mf2x7 [[TMP5]], <vscale x 2 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    ret riscv_mf2x7 [[TMP6]]
 //
 vbfloat16mf2x7_t test_vcreate_v_bf16mf2x7(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2, vbfloat16mf2_t v3,
@@ -296,18 +296,18 @@ vbfloat16mf2x7_t test_vcreate_v_bf16mf2x7(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
   return __riscv_vcreate_v_bf16mf2x7(v0, v1, v2, v3, v4, v5, v6);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } @test_vcreate_v_bf16mf2x8(
+// CHECK-RV64-LABEL: define dso_local riscv_mf2x8 @test_vcreate_v_bf16mf2x8(
 // CHECK-RV64-SAME: <vscale x 2 x bfloat> [[V0:%.*]], <vscale x 2 x bfloat> [[V1:%.*]], <vscale x 2 x bfloat> [[V2:%.*]], <vscale x 2 x bfloat> [[V3:%.*]], <vscale x 2 x bfloat> [[V4:%.*]], <vscale x 2 x bfloat> [[V5:%.*]], <vscale x 2 x bfloat> [[V6:%.*]], <vscale x 2 x bfloat> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } poison, <vscale x 2 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP0]], <vscale x 2 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP1]], <vscale x 2 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP2]], <vscale x 2 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP3]], <vscale x 2 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP4]], <vscale x 2 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP5]], <vscale x 2 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP6]], <vscale x 2 x bfloat> [[V7]], 7
-// CHECK-RV64-NEXT:    ret { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 poison, <vscale x 2 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP0]], <vscale x 2 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP1]], <vscale x 2 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP2]], <vscale x 2 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP3]], <vscale x 2 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP4]], <vscale x 2 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP5]], <vscale x 2 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call riscv_mf2x8 @llvm.vector.insert.riscv_mf2x8.nxv2bf16(riscv_mf2x8 [[TMP6]], <vscale x 2 x bfloat> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    ret riscv_mf2x8 [[TMP7]]
 //
 vbfloat16mf2x8_t test_vcreate_v_bf16mf2x8(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
                                           vbfloat16mf2_t v2, vbfloat16mf2_t v3,
@@ -317,53 +317,53 @@ vbfloat16mf2x8_t test_vcreate_v_bf16mf2x8(vbfloat16mf2_t v0, vbfloat16mf2_t v1,
   return __riscv_vcreate_v_bf16mf2x8(v0, v1, v2, v3, v4, v5, v6, v7);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x2(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x2 @test_vcreate_v_bf16m1x2(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x2 @llvm.vector.insert.riscv_m1x2.nxv4bf16(riscv_m1x2 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x2 @llvm.vector.insert.riscv_m1x2.nxv4bf16(riscv_m1x2 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    ret riscv_m1x2 [[TMP1]]
 //
 vbfloat16m1x2_t test_vcreate_v_bf16m1x2(vbfloat16m1_t v0, vbfloat16m1_t v1) {
   return __riscv_vcreate_v_bf16m1x2(v0, v1);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x3(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x3 @test_vcreate_v_bf16m1x3(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x3 @llvm.vector.insert.riscv_m1x3.nxv4bf16(riscv_m1x3 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x3 @llvm.vector.insert.riscv_m1x3.nxv4bf16(riscv_m1x3 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x3 @llvm.vector.insert.riscv_m1x3.nxv4bf16(riscv_m1x3 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    ret riscv_m1x3 [[TMP2]]
 //
 vbfloat16m1x3_t test_vcreate_v_bf16m1x3(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2) {
   return __riscv_vcreate_v_bf16m1x3(v0, v1, v2);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x4(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x4 @test_vcreate_v_bf16m1x4(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]], <vscale x 4 x bfloat> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]], <vscale x 4 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x4 @llvm.vector.insert.riscv_m1x4.nxv4bf16(riscv_m1x4 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x4 @llvm.vector.insert.riscv_m1x4.nxv4bf16(riscv_m1x4 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x4 @llvm.vector.insert.riscv_m1x4.nxv4bf16(riscv_m1x4 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m1x4 @llvm.vector.insert.riscv_m1x4.nxv4bf16(riscv_m1x4 [[TMP2]], <vscale x 4 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    ret riscv_m1x4 [[TMP3]]
 //
 vbfloat16m1x4_t test_vcreate_v_bf16m1x4(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2, vbfloat16m1_t v3) {
   return __riscv_vcreate_v_bf16m1x4(v0, v1, v2, v3);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x5(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x5 @test_vcreate_v_bf16m1x5(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]], <vscale x 4 x bfloat> [[V3:%.*]], <vscale x 4 x bfloat> [[V4:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]], <vscale x 4 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP3]], <vscale x 4 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP4]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x5 @llvm.vector.insert.riscv_m1x5.nxv4bf16(riscv_m1x5 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x5 @llvm.vector.insert.riscv_m1x5.nxv4bf16(riscv_m1x5 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x5 @llvm.vector.insert.riscv_m1x5.nxv4bf16(riscv_m1x5 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m1x5 @llvm.vector.insert.riscv_m1x5.nxv4bf16(riscv_m1x5 [[TMP2]], <vscale x 4 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_m1x5 @llvm.vector.insert.riscv_m1x5.nxv4bf16(riscv_m1x5 [[TMP3]], <vscale x 4 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    ret riscv_m1x5 [[TMP4]]
 //
 vbfloat16m1x5_t test_vcreate_v_bf16m1x5(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2, vbfloat16m1_t v3,
@@ -371,16 +371,16 @@ vbfloat16m1x5_t test_vcreate_v_bf16m1x5(vbfloat16m1_t v0, vbfloat16m1_t v1,
   return __riscv_vcreate_v_bf16m1x5(v0, v1, v2, v3, v4);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x6(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x6 @test_vcreate_v_bf16m1x6(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]], <vscale x 4 x bfloat> [[V3:%.*]], <vscale x 4 x bfloat> [[V4:%.*]], <vscale x 4 x bfloat> [[V5:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]], <vscale x 4 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP3]], <vscale x 4 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP4]], <vscale x 4 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP5]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 [[TMP2]], <vscale x 4 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 [[TMP3]], <vscale x 4 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_m1x6 @llvm.vector.insert.riscv_m1x6.nxv4bf16(riscv_m1x6 [[TMP4]], <vscale x 4 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    ret riscv_m1x6 [[TMP5]]
 //
 vbfloat16m1x6_t test_vcreate_v_bf16m1x6(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2, vbfloat16m1_t v3,
@@ -388,17 +388,17 @@ vbfloat16m1x6_t test_vcreate_v_bf16m1x6(vbfloat16m1_t v0, vbfloat16m1_t v1,
   return __riscv_vcreate_v_bf16m1x6(v0, v1, v2, v3, v4, v5);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x7(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x7 @test_vcreate_v_bf16m1x7(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]], <vscale x 4 x bfloat> [[V3:%.*]], <vscale x 4 x bfloat> [[V4:%.*]], <vscale x 4 x bfloat> [[V5:%.*]], <vscale x 4 x bfloat> [[V6:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]], <vscale x 4 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP3]], <vscale x 4 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP4]], <vscale x 4 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP5]], <vscale x 4 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP6]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP2]], <vscale x 4 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP3]], <vscale x 4 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP4]], <vscale x 4 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_m1x7 @llvm.vector.insert.riscv_m1x7.nxv4bf16(riscv_m1x7 [[TMP5]], <vscale x 4 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    ret riscv_m1x7 [[TMP6]]
 //
 vbfloat16m1x7_t test_vcreate_v_bf16m1x7(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2, vbfloat16m1_t v3,
@@ -407,18 +407,18 @@ vbfloat16m1x7_t test_vcreate_v_bf16m1x7(vbfloat16m1_t v0, vbfloat16m1_t v1,
   return __riscv_vcreate_v_bf16m1x7(v0, v1, v2, v3, v4, v5, v6);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @test_vcreate_v_bf16m1x8(
+// CHECK-RV64-LABEL: define dso_local riscv_m1x8 @test_vcreate_v_bf16m1x8(
 // CHECK-RV64-SAME: <vscale x 4 x bfloat> [[V0:%.*]], <vscale x 4 x bfloat> [[V1:%.*]], <vscale x 4 x bfloat> [[V2:%.*]], <vscale x 4 x bfloat> [[V3:%.*]], <vscale x 4 x bfloat> [[V4:%.*]], <vscale x 4 x bfloat> [[V5:%.*]], <vscale x 4 x bfloat> [[V6:%.*]], <vscale x 4 x bfloat> [[V7:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } poison, <vscale x 4 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP0]], <vscale x 4 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP1]], <vscale x 4 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP2]], <vscale x 4 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP3]], <vscale x 4 x bfloat> [[V4]], 4
-// CHECK-RV64-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP4]], <vscale x 4 x bfloat> [[V5]], 5
-// CHECK-RV64-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP5]], <vscale x 4 x bfloat> [[V6]], 6
-// CHECK-RV64-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP6]], <vscale x 4 x bfloat> [[V7]], 7
-// CHECK-RV64-NEXT:    ret { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[TMP7]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 poison, <vscale x 4 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP0]], <vscale x 4 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP1]], <vscale x 4 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP2]], <vscale x 4 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP4:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP3]], <vscale x 4 x bfloat> [[V4]], i64 4)
+// CHECK-RV64-NEXT:    [[TMP5:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP4]], <vscale x 4 x bfloat> [[V5]], i64 5)
+// CHECK-RV64-NEXT:    [[TMP6:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP5]], <vscale x 4 x bfloat> [[V6]], i64 6)
+// CHECK-RV64-NEXT:    [[TMP7:%.*]] = call riscv_m1x8 @llvm.vector.insert.riscv_m1x8.nxv4bf16(riscv_m1x8 [[TMP6]], <vscale x 4 x bfloat> [[V7]], i64 7)
+// CHECK-RV64-NEXT:    ret riscv_m1x8 [[TMP7]]
 //
 vbfloat16m1x8_t test_vcreate_v_bf16m1x8(vbfloat16m1_t v0, vbfloat16m1_t v1,
                                         vbfloat16m1_t v2, vbfloat16m1_t v3,
@@ -427,50 +427,50 @@ vbfloat16m1x8_t test_vcreate_v_bf16m1x8(vbfloat16m1_t v0, vbfloat16m1_t v1,
   return __riscv_vcreate_v_bf16m1x8(v0, v1, v2, v3, v4, v5, v6, v7);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_vcreate_v_bf16m2x2(
+// CHECK-RV64-LABEL: define dso_local riscv_m2x2 @test_vcreate_v_bf16m2x2(
 // CHECK-RV64-SAME: <vscale x 8 x bfloat> [[V0:%.*]], <vscale x 8 x bfloat> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m2x2 @llvm.vector.insert.riscv_m2x2.nxv8bf16(riscv_m2x2 poison, <vscale x 8 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m2x2 @llvm.vector.insert.riscv_m2x2.nxv8bf16(riscv_m2x2 [[TMP0]], <vscale x 8 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    ret riscv_m2x2 [[TMP1]]
 //
 vbfloat16m2x2_t test_vcreate_v_bf16m2x2(vbfloat16m2_t v0, vbfloat16m2_t v1) {
   return __riscv_vcreate_v_bf16m2x2(v0, v1);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_vcreate_v_bf16m2x3(
+// CHECK-RV64-LABEL: define dso_local riscv_m2x3 @test_vcreate_v_bf16m2x3(
 // CHECK-RV64-SAME: <vscale x 8 x bfloat> [[V0:%.*]], <vscale x 8 x bfloat> [[V1:%.*]], <vscale x 8 x bfloat> [[V2:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m2x3 @llvm.vector.insert.riscv_m2x3.nxv8bf16(riscv_m2x3 poison, <vscale x 8 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m2x3 @llvm.vector.insert.riscv_m2x3.nxv8bf16(riscv_m2x3 [[TMP0]], <vscale x 8 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m2x3 @llvm.vector.insert.riscv_m2x3.nxv8bf16(riscv_m2x3 [[TMP1]], <vscale x 8 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    ret riscv_m2x3 [[TMP2]]
 //
 vbfloat16m2x3_t test_vcreate_v_bf16m2x3(vbfloat16m2_t v0, vbfloat16m2_t v1,
                                         vbfloat16m2_t v2) {
   return __riscv_vcreate_v_bf16m2x3(v0, v1, v2);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_vcreate_v_bf16m2x4(
+// CHECK-RV64-LABEL: define dso_local riscv_m2x4 @test_vcreate_v_bf16m2x4(
 // CHECK-RV64-SAME: <vscale x 8 x bfloat> [[V0:%.*]], <vscale x 8 x bfloat> [[V1:%.*]], <vscale x 8 x bfloat> [[V2:%.*]], <vscale x 8 x bfloat> [[V3:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], <vscale x 8 x bfloat> [[V2]], 2
-// CHECK-RV64-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP2]], <vscale x 8 x bfloat> [[V3]], 3
-// CHECK-RV64-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP3]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m2x4 @llvm.vector.insert.riscv_m2x4.nxv8bf16(riscv_m2x4 poison, <vscale x 8 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m2x4 @llvm.vector.insert.riscv_m2x4.nxv8bf16(riscv_m2x4 [[TMP0]], <vscale x 8 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = call riscv_m2x4 @llvm.vector.insert.riscv_m2x4.nxv8bf16(riscv_m2x4 [[TMP1]], <vscale x 8 x bfloat> [[V2]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP3:%.*]] = call riscv_m2x4 @llvm.vector.insert.riscv_m2x4.nxv8bf16(riscv_m2x4 [[TMP2]], <vscale x 8 x bfloat> [[V3]], i64 3)
+// CHECK-RV64-NEXT:    ret riscv_m2x4 [[TMP3]]
 //
 vbfloat16m2x4_t test_vcreate_v_bf16m2x4(vbfloat16m2_t v0, vbfloat16m2_t v1,
                                         vbfloat16m2_t v2, vbfloat16m2_t v3) {
   return __riscv_vcreate_v_bf16m2x4(v0, v1, v2, v3);
 }
 
-// CHECK-RV64-LABEL: define dso_local { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } @test_vcreate_v_bf16m4x2(
+// CHECK-RV64-LABEL: define dso_local riscv_m4x2 @test_vcreate_v_bf16m4x2(
 // CHECK-RV64-SAME: <vscale x 16 x bfloat> [[V0:%.*]], <vscale x 16 x bfloat> [[V1:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } poison, <vscale x 16 x bfloat> [[V0]], 0
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } [[TMP0]], <vscale x 16 x bfloat> [[V1]], 1
-// CHECK-RV64-NEXT:    ret { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } [[TMP1]]
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call riscv_m4x2 @llvm.vector.insert.riscv_m4x2.nxv16bf16(riscv_m4x2 poison, <vscale x 16 x bfloat> [[V0]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call riscv_m4x2 @llvm.vector.insert.riscv_m4x2.nxv16bf16(riscv_m4x2 [[TMP0]], <vscale x 16 x bfloat> [[V1]], i64 1)
+// CHECK-RV64-NEXT:    ret riscv_m4x2 [[TMP1]]
 //
 vbfloat16m4x2_t test_vcreate_v_bf16m4x2(vbfloat16m4_t v0, vbfloat16m4_t v1) {
   return __riscv_vcreate_v_bf16m4x2(v0, v1);

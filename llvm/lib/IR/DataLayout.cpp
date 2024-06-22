@@ -31,6 +31,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -850,6 +851,9 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     // based on the full size for scalable vectors. Using the minimum element
     // count should be enough here.
     return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinValue()));
+  }
+  case Type::RISCVVectorTupleTyID: {
+    return Align(8);
   }
   case Type::X86_AMXTyID:
     return Align(64);

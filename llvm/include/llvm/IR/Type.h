@@ -75,6 +75,7 @@ public:
     ArrayTyID,          ///< Arrays
     FixedVectorTyID,    ///< Fixed width SIMD vector type
     ScalableVectorTyID, ///< Scalable SIMD vector type
+    RISCVVectorTupleTyID, ///< RISCV vector tuple type
     TypedPointerTyID,   ///< Typed pointer used by some GPU targets
     TargetExtTyID,      ///< Target extension type
   };
@@ -263,7 +264,14 @@ public:
 
   /// True if this is an instance of VectorType.
   inline bool isVectorTy() const {
-    return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
+    return getTypeID() == ScalableVectorTyID ||
+           getTypeID() == FixedVectorTyID ||
+           getTypeID() == RISCVVectorTupleTyID;
+  }
+
+  /// True if this is an instance of RISCVVectorTupleType.
+  inline bool isRISCVVectorTupleTy() const {
+    return getTypeID() == RISCVVectorTupleTyID;
   }
 
   /// Return true if this type could be converted with a lossless BitCast to
@@ -303,7 +311,7 @@ public:
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
         getTypeID() == PointerTyID || getTypeID() == X86_MMXTyID ||
-        getTypeID() == X86_AMXTyID)
+        getTypeID() == X86_AMXTyID || getTypeID() == RISCVVectorTupleTyID)
       return true;
     // If it is not something that can have a size (e.g. a function or label),
     // it doesn't have a size.

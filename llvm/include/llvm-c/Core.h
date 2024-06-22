@@ -164,6 +164,7 @@ typedef enum {
   LLVMX86_MMXTypeKind,   /**< X86 MMX */
   LLVMTokenTypeKind,     /**< Tokens */
   LLVMScalableVectorTypeKind, /**< Scalable SIMD vector type */
+  LLVMRISCVVectorTupleTypeKind, /**< RISCV vector tuple type */
   LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
   LLVMX86_AMXTypeKind,   /**< X86 AMX */
   LLVMTargetExtTypeKind, /**< Target extension type */
@@ -1642,6 +1643,17 @@ LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount);
  */
 LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
                                    unsigned ElementCount);
+
+/**
+ * Create a RISCV vector tuple type that contains a defined type and has
+ * multiple scalable vectors.
+ *
+ * The created type will exist in the context thats its element type
+ * exists in.
+ *
+ * @see llvm::RISCVVectorTupleType::get()
+ */
+LLVMTypeRef LLVMRISCVVectorTupleType(LLVMContextRef C, LLVMTypeRef WrappedTy);
 
 /**
  * Obtain the (possibly scalable) number of elements in a vector type.

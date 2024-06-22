@@ -1606,6 +1606,8 @@ public:
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
+  DenseMap<std::pair<uint64_t, uint64_t>, RISCVVectorTupleType *>
+      RISCVTupleTypes;
   PointerType *AS0PointerType = nullptr; // AddrSpace = 0
   DenseMap<unsigned, PointerType *> PointerTypes;
   DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;

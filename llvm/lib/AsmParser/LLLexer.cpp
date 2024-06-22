@@ -844,6 +844,22 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));
 
 #undef TYPEKEYWORD
+  if (Keyword.starts_with("riscv_m")) {
+    int Log2LMUL = 1;
+    int Offset = 7;
+    if (Keyword[Offset] == 'f') {
+      Log2LMUL = -1;
+      Offset = 8;
+    }
+
+    Log2LMUL *=
+        Log2_64(atoull(Keyword.begin() + Offset, Keyword.begin() + Offset + 1));
+    unsigned NF =
+        atoull(Keyword.begin() + Offset + 2, Keyword.begin() + Offset + 3);
+
+    TyVal = RISCVVectorTupleType::get(Context, Log2LMUL, NF);
+    return lltok::Type;
+  }
 
   // Keywords for instructions.
 #define INSTKEYWORD(STR, Enum)                                                 \

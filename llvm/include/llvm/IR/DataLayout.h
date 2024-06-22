@@ -33,6 +33,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -711,6 +712,15 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     uint64_t MinBits = EltCnt.getKnownMinValue() *
                        getTypeSizeInBits(VTy->getElementType()).getFixedValue();
     return TypeSize(MinBits, EltCnt.isScalable());
+  }
+  case Type::RISCVVectorTupleTyID: {
+    RISCVVectorTupleType *VTy = cast<RISCVVectorTupleType>(Ty);
+    int Log2LMUL = VTy->getLog2LMUL();
+    uint64_t MinBits = VTy->getNumFields() * RISCV::RVVBitsPerBlock;
+    // If LMUL < 1, consider it as 1.
+    if (Log2LMUL > 0)
+      MinBits = MinBits << Log2LMUL;
+    return TypeSize(MinBits, false);
   }
   case Type::TargetExtTyID: {
     Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();

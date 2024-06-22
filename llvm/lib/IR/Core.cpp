@@ -617,6 +617,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTokenTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
+  case Type::RISCVVectorTupleTyID:
+    return LLVMRISCVVectorTupleTypeKind;
   case Type::TargetExtTyID:
     return LLVMTargetExtTypeKind;
   case Type::TypedPointerTyID:
@@ -888,6 +890,12 @@ LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount) {
 LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
                                    unsigned ElementCount) {
   return wrap(ScalableVectorType::get(unwrap(ElementType), ElementCount));
+}
+
+LLVMTypeRef LLVMRISCVVectorTupleType(LLVMContextRef C, LLVMTypeRef WrappedTy) {
+  return wrap(RISCVVectorTupleType::get(
+      *unwrap(C), unwrap<RISCVVectorTupleType>(WrappedTy)->getLog2LMUL(),
+      unwrap<RISCVVectorTupleType>(WrappedTy)->getNumFields()));
 }
 
 LLVMTypeRef LLVMGetElementType(LLVMTypeRef WrappedTy) {

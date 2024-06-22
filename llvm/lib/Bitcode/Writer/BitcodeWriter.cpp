@@ -1153,6 +1153,14 @@ void ModuleBitcodeWriter::writeTypeTable() {
         TypeVals.push_back(true);
       break;
     }
+    case Type::RISCVVectorTupleTyID: {
+      RISCVVectorTupleType *VT = cast<RISCVVectorTupleType>(T);
+      // VECTOR [log2lmul, num_fields]
+      Code = bitc::TYPE_CODE_RISCV_VECTOR_TUPLE_TYPE;
+      TypeVals.push_back(VT->getLog2LMUL());
+      TypeVals.push_back(VT->getNumFields());
+      break;
+    }
     case Type::TargetExtTyID: {
       TargetExtType *TET = cast<TargetExtType>(T);
       Code = bitc::TYPE_CODE_TARGET_TYPE;

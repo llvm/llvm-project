@@ -112,8 +112,8 @@ vfloat16m1_t test_vle16ff_v_f16m1(const _Float16 *base, size_t *new_vl, size_t v
 
 // CHECK-ZVFHMIN-LABEL: @test_vlseg2e16_v_f16m1x2(
 // CHECK-ZVFHMIN-NEXT:  entry:
-// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlseg2.nxv4f16.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-ZVFHMIN-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
+// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call riscv_m1x2 @llvm.riscv.vlseg2.riscv_m1x2.i64(riscv_m1x2 poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 4)
+// CHECK-ZVFHMIN-NEXT:    ret riscv_m1x2 [[TMP0]]
 //
 vfloat16m1x2_t test_vlseg2e16_v_f16m1x2(const _Float16 *base, size_t vl) {
   return __riscv_vlseg2e16_v_f16m1x2(base, vl);
@@ -121,14 +121,11 @@ vfloat16m1x2_t test_vlseg2e16_v_f16m1x2(const _Float16 *base, size_t vl) {
 
 // CHECK-ZVFHMIN-LABEL: @test_vlseg2e16ff_v_f16m1x2(
 // CHECK-ZVFHMIN-NEXT:  entry:
-// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half>, i64 } @llvm.riscv.vlseg2ff.nxv4f16.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE:%.*]], i64 [[VL:%.*]])
-// CHECK-ZVFHMIN-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, i64 } [[TMP0]], 0
-// CHECK-ZVFHMIN-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } poison, <vscale x 4 x half> [[TMP1]], 0
-// CHECK-ZVFHMIN-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, i64 } [[TMP0]], 1
-// CHECK-ZVFHMIN-NEXT:    [[TMP4:%.*]] = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP2]], <vscale x 4 x half> [[TMP3]], 1
-// CHECK-ZVFHMIN-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, i64 } [[TMP0]], 2
-// CHECK-ZVFHMIN-NEXT:    store i64 [[TMP5]], ptr [[NEW_VL:%.*]], align 8
-// CHECK-ZVFHMIN-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP4]]
+// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { riscv_m1x2, i64 } @llvm.riscv.vlseg2ff.riscv_m1x2.i64(riscv_m1x2 poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-ZVFHMIN-NEXT:    [[TMP1:%.*]] = extractvalue { riscv_m1x2, i64 } [[TMP0]], 0
+// CHECK-ZVFHMIN-NEXT:    [[TMP2:%.*]] = extractvalue { riscv_m1x2, i64 } [[TMP0]], 1
+// CHECK-ZVFHMIN-NEXT:    store i64 [[TMP2]], ptr [[NEW_VL:%.*]], align 8
+// CHECK-ZVFHMIN-NEXT:    ret riscv_m1x2 [[TMP1]]
 //
 vfloat16m1x2_t test_vlseg2e16ff_v_f16m1x2(const _Float16 *base, size_t *new_vl, size_t vl) {
   return __riscv_vlseg2e16ff_v_f16m1x2(base, new_vl, vl);
@@ -136,8 +133,8 @@ vfloat16m1x2_t test_vlseg2e16ff_v_f16m1x2(const _Float16 *base, size_t *new_vl, 
 
 // CHECK-ZVFHMIN-LABEL: @test_vlsseg2e16_v_f16m1x2(
 // CHECK-ZVFHMIN-NEXT:  entry:
-// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vlsseg2.nxv4f16.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE:%.*]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
-// CHECK-ZVFHMIN-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
+// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call riscv_m1x2 @llvm.riscv.vlsseg2.riscv_m1x2.i64(riscv_m1x2 poison, ptr [[BASE:%.*]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]], i64 4)
+// CHECK-ZVFHMIN-NEXT:    ret riscv_m1x2 [[TMP0]]
 //
 vfloat16m1x2_t test_vlsseg2e16_v_f16m1x2(const _Float16 *base, ptrdiff_t bstride, size_t vl) {
   return __riscv_vlsseg2e16_v_f16m1x2(base, bstride, vl);
@@ -145,8 +142,8 @@ vfloat16m1x2_t test_vlsseg2e16_v_f16m1x2(const _Float16 *base, ptrdiff_t bstride
 
 // CHECK-ZVFHMIN-LABEL: @test_vluxseg2ei32_v_f16m1x2(
 // CHECK-ZVFHMIN-NEXT:  entry:
-// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vluxseg2.nxv4f16.nxv4i32.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-ZVFHMIN-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
+// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call riscv_m1x2 @llvm.riscv.vluxseg2.riscv_m1x2.nxv4i32.i64(riscv_m1x2 poison, ptr [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-ZVFHMIN-NEXT:    ret riscv_m1x2 [[TMP0]]
 //
 vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2(const _Float16 *base, vuint32m2_t bindex, size_t vl) {
   return __riscv_vluxseg2ei32_v_f16m1x2(base, bindex, vl);
@@ -154,8 +151,8 @@ vfloat16m1x2_t test_vluxseg2ei32_v_f16m1x2(const _Float16 *base, vuint32m2_t bin
 
 // CHECK-ZVFHMIN-LABEL: @test_vloxseg2ei32_v_f16m1x2(
 // CHECK-ZVFHMIN-NEXT:  entry:
-// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call { <vscale x 4 x half>, <vscale x 4 x half> } @llvm.riscv.vloxseg2.nxv4f16.nxv4i32.i64(<vscale x 4 x half> poison, <vscale x 4 x half> poison, ptr [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
-// CHECK-ZVFHMIN-NEXT:    ret { <vscale x 4 x half>, <vscale x 4 x half> } [[TMP0]]
+// CHECK-ZVFHMIN-NEXT:    [[TMP0:%.*]] = call riscv_m1x2 @llvm.riscv.vloxseg2.riscv_m1x2.nxv4i32.i64(riscv_m1x2 poison, ptr [[BASE:%.*]], <vscale x 4 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-ZVFHMIN-NEXT:    ret riscv_m1x2 [[TMP0]]
 //
 vfloat16m1x2_t test_vloxseg2ei32_v_f16m1x2(const _Float16 *base, vuint32m2_t bindex, size_t vl) {
   return __riscv_vloxseg2ei32_v_f16m1x2(base, bindex, vl);

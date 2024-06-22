@@ -638,6 +638,13 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << '>';
     return;
   }
+  case Type::RISCVVectorTupleTyID: {
+    auto *VTy = cast<RISCVVectorTupleType>(Ty);
+    int Log2LMUL = VTy->getLog2LMUL();
+    OS << "riscv_m" << (Log2LMUL < 0 ? "f" : "") << (1 << std::abs(Log2LMUL))
+       << "x" << VTy->getNumFields();
+    return;
+  }
   case Type::TypedPointerTyID: {
     TypedPointerType *TPTy = cast<TypedPointerType>(Ty);
     OS << "typedptr(" << *TPTy->getElementType() << ", "

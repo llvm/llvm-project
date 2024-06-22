@@ -997,6 +997,12 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "vararg";
     // Ensure nested function types are distinguishable.
     Result += "f";
+  } else if (RISCVVectorTupleType *VTy = dyn_cast<RISCVVectorTupleType>(Ty)) {
+    int Log2LMUL = VTy->getLog2LMUL();
+    unsigned NF = VTy->getNumFields();
+    Result += "riscv_m" +
+              ((Log2LMUL < 0 ? "f" : "") + utostr(1 << std::abs(Log2LMUL))) +
+              "x" + utostr(NF);
   } else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     ElementCount EC = VTy->getElementCount();
     if (EC.isScalable())

@@ -729,6 +729,25 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
 }
 
 //===----------------------------------------------------------------------===//
+//                       RISCVVectorTupleType Implementation
+//===----------------------------------------------------------------------===//
+
+RISCVVectorTupleType *RISCVVectorTupleType::get(LLVMContext &Context,
+                                                int Log2LMUL,
+                                                unsigned NFields) {
+  LLVMContextImpl *pImpl = Context.pImpl;
+  RISCVVectorTupleType *&Entry =
+      pImpl->RISCVTupleTypes[std::make_pair(Log2LMUL, NFields)];
+
+  if (!Entry) {
+    Entry = new (pImpl->Alloc) RISCVVectorTupleType(Context, Log2LMUL, NFields);
+    pImpl->RISCVTupleTypes.insert(
+        std::make_pair(std::make_pair(Log2LMUL, NFields), Entry));
+  }
+  return Entry;
+}
+
+//===----------------------------------------------------------------------===//
 //                         PointerType Implementation
 //===----------------------------------------------------------------------===//
 

@@ -1011,7 +1011,7 @@ RVVIntrinsic::RVVIntrinsic(
       (!IsMasked && hasPassthruOperand())) {
     for (auto &I : IntrinsicTypes) {
       if (I >= 0)
-        I += NF;
+        I += 1;
     }
   }
 }

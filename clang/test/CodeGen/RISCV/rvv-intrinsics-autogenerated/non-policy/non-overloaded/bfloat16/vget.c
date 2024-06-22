@@ -69,9 +69,9 @@ vbfloat16m4_t test_vget_v_bf16m8_bf16m4(vbfloat16m8_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x2_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x2 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x2(riscv_mf4x2 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x2_bf16mf4(vbfloat16mf4x2_t src,
@@ -80,9 +80,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x2_bf16mf4(vbfloat16mf4x2_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x3_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x3 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x3(riscv_mf4x3 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x3_bf16mf4(vbfloat16mf4x3_t src,
@@ -91,9 +91,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x3_bf16mf4(vbfloat16mf4x3_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x4_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x4 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x4(riscv_mf4x4 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x4_bf16mf4(vbfloat16mf4x4_t src,
@@ -102,9 +102,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x4_bf16mf4(vbfloat16mf4x4_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x5_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x5 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x5(riscv_mf4x5 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x5_bf16mf4(vbfloat16mf4x5_t src,
@@ -113,9 +113,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x5_bf16mf4(vbfloat16mf4x5_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x6_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x6 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x6(riscv_mf4x6 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x6_bf16mf4(vbfloat16mf4x6_t src,
@@ -124,9 +124,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x6_bf16mf4(vbfloat16mf4x6_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x7_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x7 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x7(riscv_mf4x7 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x7_bf16mf4(vbfloat16mf4x7_t src,
@@ -135,9 +135,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x7_bf16mf4(vbfloat16mf4x7_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 1 x bfloat> @test_vget_v_bf16mf4x8_bf16mf4(
-// CHECK-RV64-SAME: { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf4x8 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x bfloat> @llvm.vector.extract.nxv1bf16.riscv_mf4x8(riscv_mf4x8 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vget_v_bf16mf4x8_bf16mf4(vbfloat16mf4x8_t src,
@@ -146,9 +146,9 @@ vbfloat16mf4_t test_vget_v_bf16mf4x8_bf16mf4(vbfloat16mf4x8_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x2_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x2 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x2(riscv_mf2x2 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x2_bf16mf2(vbfloat16mf2x2_t src,
@@ -157,9 +157,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x2_bf16mf2(vbfloat16mf2x2_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x3_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x3 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x3(riscv_mf2x3 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x3_bf16mf2(vbfloat16mf2x3_t src,
@@ -168,9 +168,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x3_bf16mf2(vbfloat16mf2x3_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x4_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x4 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x4(riscv_mf2x4 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x4_bf16mf2(vbfloat16mf2x4_t src,
@@ -179,9 +179,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x4_bf16mf2(vbfloat16mf2x4_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x5_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x5 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x5(riscv_mf2x5 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x5_bf16mf2(vbfloat16mf2x5_t src,
@@ -190,9 +190,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x5_bf16mf2(vbfloat16mf2x5_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x6_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x6 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x6(riscv_mf2x6 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x6_bf16mf2(vbfloat16mf2x6_t src,
@@ -201,9 +201,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x6_bf16mf2(vbfloat16mf2x6_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x7_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x7 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x7(riscv_mf2x7 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x7_bf16mf2(vbfloat16mf2x7_t src,
@@ -212,9 +212,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x7_bf16mf2(vbfloat16mf2x7_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 2 x bfloat> @test_vget_v_bf16mf2x8_bf16mf2(
-// CHECK-RV64-SAME: { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_mf2x8 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.riscv_mf2x8(riscv_mf2x8 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vget_v_bf16mf2x8_bf16mf2(vbfloat16mf2x8_t src,
@@ -223,9 +223,9 @@ vbfloat16mf2_t test_vget_v_bf16mf2x8_bf16mf2(vbfloat16mf2x8_t src,
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x2_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x2 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x2(riscv_m1x2 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x2_bf16m1(vbfloat16m1x2_t src, size_t index) {
@@ -233,9 +233,9 @@ vbfloat16m1_t test_vget_v_bf16m1x2_bf16m1(vbfloat16m1x2_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x3_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x3 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x3(riscv_m1x3 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x3_bf16m1(vbfloat16m1x3_t src, size_t index) {
@@ -243,9 +243,9 @@ vbfloat16m1_t test_vget_v_bf16m1x3_bf16m1(vbfloat16m1x3_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x4_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x4 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x4(riscv_m1x4 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x4_bf16m1(vbfloat16m1x4_t src, size_t index) {
@@ -253,9 +253,9 @@ vbfloat16m1_t test_vget_v_bf16m1x4_bf16m1(vbfloat16m1x4_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x5_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x5 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x5(riscv_m1x5 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x5_bf16m1(vbfloat16m1x5_t src, size_t index) {
@@ -263,9 +263,9 @@ vbfloat16m1_t test_vget_v_bf16m1x5_bf16m1(vbfloat16m1x5_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x6_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x6 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x6(riscv_m1x6 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x6_bf16m1(vbfloat16m1x6_t src, size_t index) {
@@ -273,9 +273,9 @@ vbfloat16m1_t test_vget_v_bf16m1x6_bf16m1(vbfloat16m1x6_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x7_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x7 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x7(riscv_m1x7 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x7_bf16m1(vbfloat16m1x7_t src, size_t index) {
@@ -283,9 +283,9 @@ vbfloat16m1_t test_vget_v_bf16m1x7_bf16m1(vbfloat16m1x7_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 4 x bfloat> @test_vget_v_bf16m1x8_bf16m1(
-// CHECK-RV64-SAME: { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m1x8 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.riscv_m1x8(riscv_m1x8 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vget_v_bf16m1x8_bf16m1(vbfloat16m1x8_t src, size_t index) {
@@ -293,9 +293,9 @@ vbfloat16m1_t test_vget_v_bf16m1x8_bf16m1(vbfloat16m1x8_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vget_v_bf16m2x2_bf16m2(
-// CHECK-RV64-SAME: { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m2x2 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.riscv_m2x2(riscv_m2x2 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vget_v_bf16m2x2_bf16m2(vbfloat16m2x2_t src, size_t index) {
@@ -303,9 +303,9 @@ vbfloat16m2_t test_vget_v_bf16m2x2_bf16m2(vbfloat16m2x2_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vget_v_bf16m2x3_bf16m2(
-// CHECK-RV64-SAME: { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m2x3 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.riscv_m2x3(riscv_m2x3 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vget_v_bf16m2x3_bf16m2(vbfloat16m2x3_t src, size_t index) {
@@ -313,9 +313,9 @@ vbfloat16m2_t test_vget_v_bf16m2x3_bf16m2(vbfloat16m2x3_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 8 x bfloat> @test_vget_v_bf16m2x4_bf16m2(
-// CHECK-RV64-SAME: { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m2x4 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.riscv_m2x4(riscv_m2x4 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vget_v_bf16m2x4_bf16m2(vbfloat16m2x4_t src, size_t index) {
@@ -323,9 +323,9 @@ vbfloat16m2_t test_vget_v_bf16m2x4_bf16m2(vbfloat16m2x4_t src, size_t index) {
 }
 
 // CHECK-RV64-LABEL: define dso_local <vscale x 16 x bfloat> @test_vget_v_bf16m4x2_bf16m4(
-// CHECK-RV64-SAME: { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-SAME: riscv_m4x2 [[SRC:%.*]], i64 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 16 x bfloat>, <vscale x 16 x bfloat> } [[SRC]], 0
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x bfloat> @llvm.vector.extract.nxv16bf16.riscv_m4x2(riscv_m4x2 [[SRC]], i64 0)
 // CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 vbfloat16m4_t test_vget_v_bf16m4x2_bf16m4(vbfloat16m4x2_t src, size_t index) {

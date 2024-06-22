@@ -513,14 +513,15 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        // Tuple types are expressed as aggregregate types of the same scalable
-        // vector type (e.g. vint32m1x2_t is two vint32m1_t, which is {<vscale x
-        // 2 x i32>, <vscale x 2 x i32>}).
         if (Info.NumVectors != 1) {
-          llvm::Type *EltTy = llvm::ScalableVectorType::get(
-              ConvertType(Info.ElementType), Info.EC.getKnownMinValue());
-          llvm::SmallVector<llvm::Type *, 4> EltTys(Info.NumVectors, EltTy);
-          return llvm::StructType::get(getLLVMContext(), EltTys);
+          int Log2LMUL =
+              llvm::Log2_64(
+                  Info.EC.getKnownMinValue() *
+                  ConvertType(Info.ElementType)->getScalarSizeInBits() * 8 /
+                  llvm::RISCV::RVVBitsPerBlock) -
+              3;
+          return llvm::RISCVVectorTupleType::get(getLLVMContext(), Log2LMUL,
+                                                 Info.NumVectors);
         }
         return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
                                              Info.EC.getKnownMinValue());

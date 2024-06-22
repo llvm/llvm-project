@@ -531,7 +531,8 @@ public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
     return T->getTypeID() == FixedVectorTyID ||
-           T->getTypeID() == ScalableVectorTyID;
+           T->getTypeID() == ScalableVectorTyID ||
+           T->getTypeID() == RISCVVectorTupleTyID;
   }
 };
 
@@ -635,6 +636,36 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;
+  }
+};
+
+/// Class to represent RISCV vector tuple type
+/// The vector tuple type is composed of homogeneous scalable vectors,
+/// represented as riscv_m1x8(a set of 8 LMUL1 scalable vectors)
+class RISCVVectorTupleType : public VectorType {
+  const int Log2LMUL;
+  const unsigned NumFields;
+
+protected:
+  // We need to inherit VectorType to make int_vector_extract work so the dummy
+  // type is needed to carry the Context to VectorType constructor.
+  RISCVVectorTupleType(LLVMContext &Context, int Log2LMUL, unsigned NumFields)
+      : VectorType(IntegerType::get(Context, 64) /*dummy type*/, 0,
+                   RISCVVectorTupleTyID),
+        Log2LMUL(Log2LMUL), NumFields(NumFields) {}
+
+public:
+  static RISCVVectorTupleType *get(LLVMContext &Context, int Log2LMUL,
+                                   unsigned NumFields);
+
+  /// Get the Log2LMUL.
+  int getLog2LMUL() const { return Log2LMUL; }
+
+  /// Get the NumFields.
+  uint64_t getNumFields() const { return NumFields; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeID() == RISCVVectorTupleTyID;
   }
 };
 
