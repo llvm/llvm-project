@@ -380,7 +380,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  SmallVector<std::string, 0> pendingErrors;
+  SmallVector<SmallString<0>, 0> recordedErrors;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

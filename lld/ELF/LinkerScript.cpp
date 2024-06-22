@@ -1410,7 +1410,7 @@ LinkerScript::assignAddresses() {
   state = &st;
   errorOnMissingSection = true;
   st.outSec = aether;
-  pendingErrors.clear();
+  recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {
@@ -1661,7 +1661,8 @@ void LinkerScript::printMemoryUsage(raw_ostream& os) {
 }
 
 void LinkerScript::recordError(const Twine &msg) {
-  pendingErrors.push_back(msg.str());
+  auto &str = recordedErrors.emplace_back();
+  msg.toVector(str);
 }
 
 static void checkMemoryRegion(const MemoryRegion *region,
@@ -1676,7 +1677,7 @@ static void checkMemoryRegion(const MemoryRegion *region,
 }
 
 void LinkerScript::checkFinalScriptConditions() const {
-  for (StringRef err : pendingErrors)
+  for (StringRef err : recordedErrors)
     errorOrWarn(err);
   for (const OutputSection *sec : outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
