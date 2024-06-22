@@ -161,22 +161,25 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
   // Sort the regions in an ascending order by the file id and the starting
   // location. Sort by region kinds to ensure stable order for tests.
-  llvm::stable_sort(MappingRegions, [](const CounterMappingRegion &LHS,
-                                       const CounterMappingRegion &RHS) {
-    if (LHS.FileID != RHS.FileID)
-      return LHS.FileID < RHS.FileID;
-    if (LHS.startLoc() != RHS.startLoc())
-      return LHS.startLoc() < RHS.startLoc();
+  if (!KeepMappingOrder) {
+    llvm::stable_sort(MappingRegions, [](const CounterMappingRegion &LHS,
+                                         const CounterMappingRegion &RHS) {
+      if (LHS.FileID != RHS.FileID)
+        return LHS.FileID < RHS.FileID;
 
-    // Put `Decision` before `Expansion`.
-    auto getKindKey = [](CounterMappingRegion::RegionKind Kind) {
-      return (Kind == CounterMappingRegion::MCDCDecisionRegion
-                  ? 2 * CounterMappingRegion::ExpansionRegion - 1
-                  : 2 * Kind);
-    };
+      if (LHS.startLoc() != RHS.startLoc())
+        return LHS.startLoc() < RHS.startLoc();
 
-    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
-  });
+      // Put `Decision` before `Expansion`.
+      auto getKindKey = [](CounterMappingRegion::RegionKind Kind) {
+        return (Kind == CounterMappingRegion::MCDCDecisionRegion
+                    ? 2 * CounterMappingRegion::ExpansionRegion - 1
+                    : 2 * Kind);
+      };
+
+      return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
+    });
+  }
 
   // Write out the fileid -> filename mapping.
   encodeULEB128(VirtualFileMapping.size(), OS);
