@@ -14,6 +14,7 @@
 #include "AArch64LegalizerInfo.h"
 #include "AArch64RegisterBankInfo.h"
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
@@ -1908,6 +1909,31 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   auto CTPOP = MIRBuilder.buildCTPOP(VTy, Val);
 
   // Sum across lanes.
+
+  if (ST->hasDotProd() && Ty.isVector() && Ty.getNumElements() >= 2 &&
+      Ty.getScalarSizeInBits() != 16) {
+    LLT Dt = Ty == LLT::fixed_vector(2, 64) ? LLT::fixed_vector(4, 32) : Ty;
+    auto Zeros = MIRBuilder.buildConstant(Dt, 0);
+    auto Ones = MIRBuilder.buildConstant(VTy, 1);
+    MachineInstrBuilder SUM;
+
+    if (Ty == LLT::fixed_vector(2, 64)) {
+      auto UDOT =
+          MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
+      SUM = MIRBuilder.buildInstr(AArch64::G_UADDLP, {Ty}, {UDOT});
+    } else if (Ty == LLT::fixed_vector(4, 32)) {
+      SUM = MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
+    } else if (Ty == LLT::fixed_vector(2, 32)) {
+      SUM = MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
+    } else {
+      llvm_unreachable("unexpected vector shape");
+    }
+
+    SUM->getOperand(0).setReg(Dst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   Register HSum = CTPOP.getReg(0);
   unsigned Opc;
   SmallVector<LLT> HAddTys;
