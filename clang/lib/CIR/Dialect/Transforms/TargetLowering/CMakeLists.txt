@@ -12,6 +12,7 @@ add_clang_library(TargetLowering
   RecordLayoutBuilder.cpp
   TargetInfo.cpp
   TargetLoweringInfo.cpp
+  Targets/AArch64.cpp
   Targets/X86.cpp
   Targets/LoweringPrepareAArch64CXXABI.cpp
   Targets/LoweringPrepareItaniumCXXABI.cpp

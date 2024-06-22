@@ -15,6 +15,13 @@
 
 namespace cir {
 
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
 // Possible argument classifications according to the x86 ABI documentation.
 enum X86ArgClass {
   Integer = 0,
