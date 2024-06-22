@@ -662,6 +662,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
 
+  Tokens = annotate("return (struct foo){};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
+
   Tokens = annotate("#define FOO(bar) foo((uint64_t)&bar)");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
