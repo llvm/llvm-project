@@ -113,8 +113,7 @@ define i1 @cmp16_reg_eq_imm8(i16 %a0) {
 define i1 @cmp16_reg_eq_imm16(i16 %a0) {
 ; X86-GENERIC-LABEL: cmp16_reg_eq_imm16:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $1024, %eax # imm = 0x400
+; X86-GENERIC-NEXT:    cmpw $1024, {{[0-9]+}}(%esp) # imm = 0x400
 ; X86-GENERIC-NEXT:    sete %al
 ; X86-GENERIC-NEXT:    retl
 ;
@@ -177,12 +176,11 @@ define i1 @cmp16_reg_eq_imm16_minsize(i16 %a0) minsize {
 }
 
 define i1 @cmp16_reg_eq_imm16_optsize(i16 %a0) optsize {
-; X86-GENERIC-LABEL: cmp16_reg_eq_imm16_optsize:
-; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $1024, %eax # imm = 0x400
-; X86-GENERIC-NEXT:    sete %al
-; X86-GENERIC-NEXT:    retl
+; X86-LABEL: cmp16_reg_eq_imm16_optsize:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpw $1024, {{[0-9]+}}(%esp) # imm = 0x400
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_reg_eq_imm16_optsize:
 ; X64-GENERIC:       # %bb.0:
@@ -191,23 +189,11 @@ define i1 @cmp16_reg_eq_imm16_optsize(i16 %a0) optsize {
 ; X64-GENERIC-NEXT:    sete %al
 ; X64-GENERIC-NEXT:    retq
 ;
-; X86-FAST-LABEL: cmp16_reg_eq_imm16_optsize:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    cmpw $1024, {{[0-9]+}}(%esp) # imm = 0x400
-; X86-FAST-NEXT:    sete %al
-; X86-FAST-NEXT:    retl
-;
 ; X64-FAST-LABEL: cmp16_reg_eq_imm16_optsize:
 ; X64-FAST:       # %bb.0:
 ; X64-FAST-NEXT:    cmpw $1024, %di # imm = 0x400
 ; X64-FAST-NEXT:    sete %al
 ; X64-FAST-NEXT:    retq
-;
-; X86-ATOM-LABEL: cmp16_reg_eq_imm16_optsize:
-; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    cmpw $1024, {{[0-9]+}}(%esp) # imm = 0x400
-; X86-ATOM-NEXT:    sete %al
-; X86-ATOM-NEXT:    retl
 ;
 ; X64-ATOM-LABEL: cmp16_reg_eq_imm16_optsize:
 ; X64-ATOM:       # %bb.0:
@@ -269,8 +255,7 @@ define i1 @cmp16_reg_sgt_imm8(i16 %a0) {
 define i1 @cmp16_reg_sgt_imm16(i16 %a0) {
 ; X86-GENERIC-LABEL: cmp16_reg_sgt_imm16:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $-1023, %eax # imm = 0xFC01
+; X86-GENERIC-NEXT:    cmpw $-1023, {{[0-9]+}}(%esp) # imm = 0xFC01
 ; X86-GENERIC-NEXT:    setge %al
 ; X86-GENERIC-NEXT:    retl
 ;
@@ -333,12 +318,11 @@ define i1 @cmp16_reg_sgt_imm16_minsize(i16 %a0) minsize {
 }
 
 define i1 @cmp16_reg_sgt_imm16_optsize(i16 %a0) optsize {
-; X86-GENERIC-LABEL: cmp16_reg_sgt_imm16_optsize:
-; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $-1023, %eax # imm = 0xFC01
-; X86-GENERIC-NEXT:    setge %al
-; X86-GENERIC-NEXT:    retl
+; X86-LABEL: cmp16_reg_sgt_imm16_optsize:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpw $-1023, {{[0-9]+}}(%esp) # imm = 0xFC01
+; X86-NEXT:    setge %al
+; X86-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_reg_sgt_imm16_optsize:
 ; X64-GENERIC:       # %bb.0:
@@ -347,23 +331,11 @@ define i1 @cmp16_reg_sgt_imm16_optsize(i16 %a0) optsize {
 ; X64-GENERIC-NEXT:    setge %al
 ; X64-GENERIC-NEXT:    retq
 ;
-; X86-FAST-LABEL: cmp16_reg_sgt_imm16_optsize:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    cmpw $-1023, {{[0-9]+}}(%esp) # imm = 0xFC01
-; X86-FAST-NEXT:    setge %al
-; X86-FAST-NEXT:    retl
-;
 ; X64-FAST-LABEL: cmp16_reg_sgt_imm16_optsize:
 ; X64-FAST:       # %bb.0:
 ; X64-FAST-NEXT:    cmpw $-1023, %di # imm = 0xFC01
 ; X64-FAST-NEXT:    setge %al
 ; X64-FAST-NEXT:    retq
-;
-; X86-ATOM-LABEL: cmp16_reg_sgt_imm16_optsize:
-; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    cmpw $-1023, {{[0-9]+}}(%esp) # imm = 0xFC01
-; X86-ATOM-NEXT:    setge %al
-; X86-ATOM-NEXT:    retl
 ;
 ; X64-ATOM-LABEL: cmp16_reg_sgt_imm16_optsize:
 ; X64-ATOM:       # %bb.0:
@@ -377,8 +349,7 @@ define i1 @cmp16_reg_sgt_imm16_optsize(i16 %a0) optsize {
 define i1 @cmp16_reg_uge_imm16(i16 %a0) {
 ; X86-GENERIC-LABEL: cmp16_reg_uge_imm16:
 ; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $64512, %eax # imm = 0xFC00
+; X86-GENERIC-NEXT:    cmpw $-1024, {{[0-9]+}}(%esp) # imm = 0xFC00
 ; X86-GENERIC-NEXT:    setae %al
 ; X86-GENERIC-NEXT:    retl
 ;
@@ -441,12 +412,11 @@ define i1 @cmp16_reg_uge_imm16_minsize(i16 %a0) minsize {
 }
 
 define i1 @cmp16_reg_uge_imm16_optsize(i16 %a0) optsize {
-; X86-GENERIC-LABEL: cmp16_reg_uge_imm16_optsize:
-; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    cmpl $64512, %eax # imm = 0xFC00
-; X86-GENERIC-NEXT:    setae %al
-; X86-GENERIC-NEXT:    retl
+; X86-LABEL: cmp16_reg_uge_imm16_optsize:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpw $-1024, {{[0-9]+}}(%esp) # imm = 0xFC00
+; X86-NEXT:    setae %al
+; X86-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_reg_uge_imm16_optsize:
 ; X64-GENERIC:       # %bb.0:
@@ -455,23 +425,11 @@ define i1 @cmp16_reg_uge_imm16_optsize(i16 %a0) optsize {
 ; X64-GENERIC-NEXT:    setae %al
 ; X64-GENERIC-NEXT:    retq
 ;
-; X86-FAST-LABEL: cmp16_reg_uge_imm16_optsize:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    cmpw $-1024, {{[0-9]+}}(%esp) # imm = 0xFC00
-; X86-FAST-NEXT:    setae %al
-; X86-FAST-NEXT:    retl
-;
 ; X64-FAST-LABEL: cmp16_reg_uge_imm16_optsize:
 ; X64-FAST:       # %bb.0:
 ; X64-FAST-NEXT:    cmpw $-1024, %di # imm = 0xFC00
 ; X64-FAST-NEXT:    setae %al
 ; X64-FAST-NEXT:    retq
-;
-; X86-ATOM-LABEL: cmp16_reg_uge_imm16_optsize:
-; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    cmpw $-1024, {{[0-9]+}}(%esp) # imm = 0xFC00
-; X86-ATOM-NEXT:    setae %al
-; X86-ATOM-NEXT:    retl
 ;
 ; X64-ATOM-LABEL: cmp16_reg_uge_imm16_optsize:
 ; X64-ATOM:       # %bb.0:
@@ -592,15 +550,13 @@ define i1 @cmp16_load_ne_imm16(ptr %p0) {
 ; X86-GENERIC-LABEL: cmp16_load_ne_imm16:
 ; X86-GENERIC:       # %bb.0:
 ; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    movzwl (%eax), %eax
-; X86-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
+; X86-GENERIC-NEXT:    cmpw $512, (%eax) # imm = 0x200
 ; X86-GENERIC-NEXT:    setne %al
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_load_ne_imm16:
 ; X64-GENERIC:       # %bb.0:
-; X64-GENERIC-NEXT:    movzwl (%rdi), %eax
-; X64-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
+; X64-GENERIC-NEXT:    cmpw $512, (%rdi) # imm = 0x200
 ; X64-GENERIC-NEXT:    setne %al
 ; X64-GENERIC-NEXT:    retq
 ;
@@ -694,15 +650,13 @@ define i1 @cmp16_load_slt_imm16(ptr %p0) {
 ; X86-GENERIC-LABEL: cmp16_load_slt_imm16:
 ; X86-GENERIC:       # %bb.0:
 ; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    movswl (%eax), %eax
-; X86-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
+; X86-GENERIC-NEXT:    cmpw $512, (%eax) # imm = 0x200
 ; X86-GENERIC-NEXT:    setl %al
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_load_slt_imm16:
 ; X64-GENERIC:       # %bb.0:
-; X64-GENERIC-NEXT:    movswl (%rdi), %eax
-; X64-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
+; X64-GENERIC-NEXT:    cmpw $512, (%rdi) # imm = 0x200
 ; X64-GENERIC-NEXT:    setl %al
 ; X64-GENERIC-NEXT:    retq
 ;
@@ -761,46 +715,18 @@ define i1 @cmp16_load_slt_imm16_minsize(ptr %p0) minsize {
 }
 
 define i1 @cmp16_load_slt_imm16_optsize(ptr %p0) optsize {
-; X86-GENERIC-LABEL: cmp16_load_slt_imm16_optsize:
-; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    movswl (%eax), %eax
-; X86-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
-; X86-GENERIC-NEXT:    setl %al
-; X86-GENERIC-NEXT:    retl
+; X86-LABEL: cmp16_load_slt_imm16_optsize:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpw $512, (%eax) # imm = 0x200
+; X86-NEXT:    setl %al
+; X86-NEXT:    retl
 ;
-; X64-GENERIC-LABEL: cmp16_load_slt_imm16_optsize:
-; X64-GENERIC:       # %bb.0:
-; X64-GENERIC-NEXT:    movswl (%rdi), %eax
-; X64-GENERIC-NEXT:    cmpl $512, %eax # imm = 0x200
-; X64-GENERIC-NEXT:    setl %al
-; X64-GENERIC-NEXT:    retq
-;
-; X86-FAST-LABEL: cmp16_load_slt_imm16_optsize:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FAST-NEXT:    cmpw $512, (%eax) # imm = 0x200
-; X86-FAST-NEXT:    setl %al
-; X86-FAST-NEXT:    retl
-;
-; X64-FAST-LABEL: cmp16_load_slt_imm16_optsize:
-; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    cmpw $512, (%rdi) # imm = 0x200
-; X64-FAST-NEXT:    setl %al
-; X64-FAST-NEXT:    retq
-;
-; X86-ATOM-LABEL: cmp16_load_slt_imm16_optsize:
-; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    cmpw $512, (%eax) # imm = 0x200
-; X86-ATOM-NEXT:    setl %al
-; X86-ATOM-NEXT:    retl
-;
-; X64-ATOM-LABEL: cmp16_load_slt_imm16_optsize:
-; X64-ATOM:       # %bb.0:
-; X64-ATOM-NEXT:    cmpw $512, (%rdi) # imm = 0x200
-; X64-ATOM-NEXT:    setl %al
-; X64-ATOM-NEXT:    retq
+; X64-LABEL: cmp16_load_slt_imm16_optsize:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpw $512, (%rdi) # imm = 0x200
+; X64-NEXT:    setl %al
+; X64-NEXT:    retq
   %ld = load i16, ptr %p0
   %cmp = icmp slt i16 %ld, 512
   ret i1 %cmp
@@ -860,15 +786,13 @@ define i1 @cmp16_load_ule_imm16(ptr %p0) {
 ; X86-GENERIC-LABEL: cmp16_load_ule_imm16:
 ; X86-GENERIC:       # %bb.0:
 ; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    movzwl (%eax), %eax
-; X86-GENERIC-NEXT:    cmpl $513, %eax # imm = 0x201
+; X86-GENERIC-NEXT:    cmpw $513, (%eax) # imm = 0x201
 ; X86-GENERIC-NEXT:    setb %al
 ; X86-GENERIC-NEXT:    retl
 ;
 ; X64-GENERIC-LABEL: cmp16_load_ule_imm16:
 ; X64-GENERIC:       # %bb.0:
-; X64-GENERIC-NEXT:    movzwl (%rdi), %eax
-; X64-GENERIC-NEXT:    cmpl $513, %eax # imm = 0x201
+; X64-GENERIC-NEXT:    cmpw $513, (%rdi) # imm = 0x201
 ; X64-GENERIC-NEXT:    setb %al
 ; X64-GENERIC-NEXT:    retq
 ;
@@ -927,46 +851,18 @@ define i1 @cmp16_load_ule_imm16_minsize(ptr %p0) minsize {
 }
 
 define i1 @cmp16_load_ule_imm16_optsize(ptr %p0) optsize {
-; X86-GENERIC-LABEL: cmp16_load_ule_imm16_optsize:
-; X86-GENERIC:       # %bb.0:
-; X86-GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-GENERIC-NEXT:    movzwl (%eax), %eax
-; X86-GENERIC-NEXT:    cmpl $513, %eax # imm = 0x201
-; X86-GENERIC-NEXT:    setb %al
-; X86-GENERIC-NEXT:    retl
+; X86-LABEL: cmp16_load_ule_imm16_optsize:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpw $513, (%eax) # imm = 0x201
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
 ;
-; X64-GENERIC-LABEL: cmp16_load_ule_imm16_optsize:
-; X64-GENERIC:       # %bb.0:
-; X64-GENERIC-NEXT:    movzwl (%rdi), %eax
-; X64-GENERIC-NEXT:    cmpl $513, %eax # imm = 0x201
-; X64-GENERIC-NEXT:    setb %al
-; X64-GENERIC-NEXT:    retq
-;
-; X86-FAST-LABEL: cmp16_load_ule_imm16_optsize:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FAST-NEXT:    cmpw $513, (%eax) # imm = 0x201
-; X86-FAST-NEXT:    setb %al
-; X86-FAST-NEXT:    retl
-;
-; X64-FAST-LABEL: cmp16_load_ule_imm16_optsize:
-; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    cmpw $513, (%rdi) # imm = 0x201
-; X64-FAST-NEXT:    setb %al
-; X64-FAST-NEXT:    retq
-;
-; X86-ATOM-LABEL: cmp16_load_ule_imm16_optsize:
-; X86-ATOM:       # %bb.0:
-; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-ATOM-NEXT:    cmpw $513, (%eax) # imm = 0x201
-; X86-ATOM-NEXT:    setb %al
-; X86-ATOM-NEXT:    retl
-;
-; X64-ATOM-LABEL: cmp16_load_ule_imm16_optsize:
-; X64-ATOM:       # %bb.0:
-; X64-ATOM-NEXT:    cmpw $513, (%rdi) # imm = 0x201
-; X64-ATOM-NEXT:    setb %al
-; X64-ATOM-NEXT:    retq
+; X64-LABEL: cmp16_load_ule_imm16_optsize:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpw $513, (%rdi) # imm = 0x201
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
   %ld = load i16, ptr %p0
   %cmp = icmp ule i16 %ld, 512
   ret i1 %cmp

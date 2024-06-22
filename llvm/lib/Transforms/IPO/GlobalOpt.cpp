@@ -2224,6 +2224,9 @@ static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
                              bool &RenameTarget) {
+  if (GA.isWeakForLinker())
+    return false;
+
   RenameTarget = false;
   bool Ret = false;
   if (hasUseOtherThanLLVMUsed(GA, U))
@@ -2455,7 +2458,9 @@ static bool OptimizeStaticIFuncs(Module &M) {
   bool Changed = false;
   for (GlobalIFunc &IF : M.ifuncs())
     if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
-      if (!IF.use_empty()) {
+      if (!IF.use_empty() &&
+          (!Callee->isDeclaration() ||
+           none_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))) {
         IF.replaceAllUsesWith(Callee);
         NumIFuncsResolved++;
         Changed = true;

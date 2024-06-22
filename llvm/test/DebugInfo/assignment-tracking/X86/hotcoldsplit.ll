@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: define void @_foo()
 ; CHECK: common.ret:
-; CHECK-NEXT: dbg.assign(metadata i64 0, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[ID1:[0-9]+]], {{.*}}, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i64 0, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[ID1:[0-9]+]], {{.*}}, !DIExpression(),
 
 ; CHECK-LABEL: define internal void @_foo.cold.1()
 ; CHECK: store i64 0, ptr null, align 8, !DIAssignID ![[ID2:[0-9]+]]

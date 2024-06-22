@@ -272,9 +272,6 @@ const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
-std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &,
-    const parser::CharBlock *derivedTypeRename = nullptr);
-
 template <TypeCategory CATEGORY, int KIND = 0> struct TypeBase {
   static constexpr TypeCategory category{CATEGORY};
   static constexpr int kind{KIND};

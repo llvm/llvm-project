@@ -227,13 +227,12 @@ void SendContinuedEvent() {
 // debugged.
 void SendTerminatedEvent() {
   // Prevent races if the process exits while we're being asked to disconnect.
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> locker(mutex);
-
-  g_dap.RunTerminateCommands();
-  // Send a "terminated" event
-  llvm::json::Object event(CreateTerminatedEventObject());
-  g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  llvm::call_once(g_dap.terminated_event_flag, [&] {
+    g_dap.RunTerminateCommands();
+    // Send a "terminated" event
+    llvm::json::Object event(CreateTerminatedEventObject());
+    g_dap.SendJSON(llvm::json::Value(std::move(event)));
+  });
 }
 
 // Send a thread stopped event for all threads as long as the process
@@ -977,7 +976,7 @@ void request_disconnect(const llvm::json::Object &request) {
     g_dap.debugger.SetAsync(false);
     lldb::SBError error = terminateDebuggee ? process.Kill() : process.Detach();
     if (!error.Success())
-      response.try_emplace("error", error.GetCString());
+      EmplaceSafeString(response, "error", error.GetCString());
     g_dap.debugger.SetAsync(true);
     break;
   }

@@ -381,7 +381,6 @@ bool generateDsymCompanion(
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
 
   // Layout but don't emit.
-  ObjectStreamer.flushPendingLabels();
   MCAsmLayout Layout(MCAsm);
   MCAsm.layout(Layout);
 
@@ -630,7 +629,7 @@ bool generateDsymCompanion(
 
   // Emit the Dwarf sections contents.
   for (const MCSection &Sec : MCAsm) {
-    if (Sec.begin() == Sec.end())
+    if (Sec.empty())
       continue;
 
     uint64_t Pos = OutFile.tell();

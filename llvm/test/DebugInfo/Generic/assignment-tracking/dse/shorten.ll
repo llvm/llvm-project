@@ -27,13 +27,13 @@
 
 ; CHECK: @_Z10shortenEndv
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 192), metadata ![[ID:[0-9]+]], metadata ptr %local, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 192), ![[ID:[0-9]+]], ptr %local, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 64), ![[UniqueID1:[0-9]+]], ptr undef, !DIExpression(),
 
 ; CHECK: @_Z12shortenStartv
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2:[0-9]+]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %local2, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 128), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2]], ptr %local2, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), ![[UniqueID2:[0-9]+]], ptr undef, !DIExpression(),
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID1]] = distinct !DIAssignID()

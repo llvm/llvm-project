@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -111,11 +112,24 @@ void CodeMetrics::collectEphemeralValues(
   completeEphemeralValues(Visited, Worklist, EphValues);
 }
 
+static bool extendsConvergenceOutsideLoop(const Instruction &I, const Loop *L) {
+  if (!L)
+    return false;
+  if (!isa<ConvergenceControlInst>(I))
+    return false;
+  for (const auto *U : I.users()) {
+    if (!L->contains(cast<Instruction>(U)))
+      return true;
+  }
+  return false;
+}
+
 /// Fill in the current structure with information gleaned from the specified
 /// block.
 void CodeMetrics::analyzeBasicBlock(
     const BasicBlock *BB, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &EphValues, bool PrepareForLTO) {
+    const SmallPtrSetImpl<const Value *> &EphValues, bool PrepareForLTO,
+    const Loop *L) {
   ++NumBlocks;
   InstructionCost NumInstsBeforeThisBB = NumInsts;
   for (const Instruction &I : *BB) {
@@ -163,19 +177,38 @@ void CodeMetrics::analyzeBasicBlock(
     if (isa<ExtractElementInst>(I) || I.getType()->isVectorTy())
       ++NumVectorInsts;
 
-    if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
+    if (I.getType()->isTokenTy() && !isa<ConvergenceControlInst>(I) &&
+        I.isUsedOutsideOfBlock(BB)) {
+      LLVM_DEBUG(dbgs() << I
+                        << "\n  Cannot duplicate a token value used outside "
+                           "the current block (except convergence control).\n");
       notDuplicatable = true;
-
-    if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
-      if (CI->cannotDuplicate())
-        notDuplicatable = true;
-      if (CI->isConvergent())
-        convergent = true;
     }
 
-    if (const InvokeInst *InvI = dyn_cast<InvokeInst>(&I))
-      if (InvI->cannotDuplicate())
+    if (const CallBase *CB = dyn_cast<CallBase>(&I)) {
+      if (CB->cannotDuplicate())
         notDuplicatable = true;
+      // Compute a meet over the visited blocks for the following partial order:
+      //
+      // None -> { Controlled, ExtendedLoop, Uncontrolled}
+      // Controlled -> ExtendedLoop
+      if (Convergence <= ConvergenceKind::Controlled && CB->isConvergent()) {
+        if (isa<ConvergenceControlInst>(CB) ||
+            CB->getConvergenceControlToken()) {
+          assert(Convergence != ConvergenceKind::Uncontrolled);
+          LLVM_DEBUG(dbgs() << "Found controlled convergence:\n" << I << "\n");
+          if (extendsConvergenceOutsideLoop(I, L))
+            Convergence = ConvergenceKind::ExtendedLoop;
+          else {
+            assert(Convergence != ConvergenceKind::ExtendedLoop);
+            Convergence = ConvergenceKind::Controlled;
+          }
+        } else {
+          assert(Convergence == ConvergenceKind::None);
+          Convergence = ConvergenceKind::Uncontrolled;
+        }
+      }
+    }
 
     NumInsts += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
   }

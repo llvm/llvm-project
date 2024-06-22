@@ -902,6 +902,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     int64_t Imm = ConstNode->getSExtValue();
+    // If only the lower 8 bits are used, try to convert this to a simm6 by
+    // sign-extending bit 7. This is neutral without the C extension, and
+    // allows C.LI to be used if C is present.
+    if (isUInt<8>(Imm) && isInt<6>(SignExtend64<8>(Imm)) && hasAllBUsers(Node))
+      Imm = SignExtend64<8>(Imm);
     // If the upper XLen-16 bits are not used, try to convert this to a simm12
     // by sign extending bit 15.
     if (isUInt<16>(Imm) && isInt<12>(SignExtend64<16>(Imm)) &&
@@ -1522,6 +1527,67 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::LOAD: {
     if (tryIndexedLoad(Node))
       return;
+
+    if (Subtarget->hasVendorXCVmem()) {
+      // We match post-incrementing load here
+      LoadSDNode *Load = cast<LoadSDNode>(Node);
+      if (Load->getAddressingMode() != ISD::POST_INC)
+        break;
+
+      SDValue Chain = Node->getOperand(0);
+      SDValue Base = Node->getOperand(1);
+      SDValue Offset = Node->getOperand(2);
+
+      bool Simm12 = false;
+      bool SignExtend = Load->getExtensionType() == ISD::SEXTLOAD;
+
+      if (auto ConstantOffset = dyn_cast<ConstantSDNode>(Offset)) {
+        int ConstantVal = ConstantOffset->getSExtValue();
+        Simm12 = isInt<12>(ConstantVal);
+        if (Simm12)
+          Offset = CurDAG->getTargetConstant(ConstantVal, SDLoc(Offset),
+                                             Offset.getValueType());
+      }
+
+      unsigned Opcode = 0;
+      switch (Load->getMemoryVT().getSimpleVT().SimpleTy) {
+      case MVT::i8:
+        if (Simm12 && SignExtend)
+          Opcode = RISCV::CV_LB_ri_inc;
+        else if (Simm12 && !SignExtend)
+          Opcode = RISCV::CV_LBU_ri_inc;
+        else if (!Simm12 && SignExtend)
+          Opcode = RISCV::CV_LB_rr_inc;
+        else
+          Opcode = RISCV::CV_LBU_rr_inc;
+        break;
+      case MVT::i16:
+        if (Simm12 && SignExtend)
+          Opcode = RISCV::CV_LH_ri_inc;
+        else if (Simm12 && !SignExtend)
+          Opcode = RISCV::CV_LHU_ri_inc;
+        else if (!Simm12 && SignExtend)
+          Opcode = RISCV::CV_LH_rr_inc;
+        else
+          Opcode = RISCV::CV_LHU_rr_inc;
+        break;
+      case MVT::i32:
+        if (Simm12)
+          Opcode = RISCV::CV_LW_ri_inc;
+        else
+          Opcode = RISCV::CV_LW_rr_inc;
+        break;
+      default:
+        break;
+      }
+      if (!Opcode)
+        break;
+
+      ReplaceNode(Node, CurDAG->getMachineNode(Opcode, DL, XLenVT, XLenVT,
+                                               Chain.getSimpleValueType(), Base,
+                                               Offset, Chain));
+      return;
+    }
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -2661,6 +2727,19 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::SelectAddrRegReg(SDValue Addr, SDValue &Base,
+                                         SDValue &Offset) {
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+
+  if (isa<ConstantSDNode>(Addr.getOperand(1)))
+    return false;
+
+  Base = Addr.getOperand(1);
+  Offset = Addr.getOperand(0);
   return true;
 }
 
@@ -3907,9 +3986,14 @@ bool RISCVDAGToDAGISel::doPeepholeNoRegPassThru() {
 // for instruction scheduling.
 FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
                                        CodeGenOptLevel OptLevel) {
-  return new RISCVDAGToDAGISel(TM, OptLevel);
+  return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
 }
 
-char RISCVDAGToDAGISel::ID = 0;
+char RISCVDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+RISCVDAGToDAGISelLegacy::RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel)
+    : SelectionDAGISelLegacy(
+          ID, std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
+
+INITIALIZE_PASS(RISCVDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)

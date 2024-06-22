@@ -347,6 +347,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -mlink-builtin-bitcode
+  for (auto *a :
+       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+    opts.BuiltinBCLibs.push_back(a->getValue());
+
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
@@ -487,6 +492,9 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       break;
     case clang::driver::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction = DebugUnparseWithSymbols;
+      break;
+    case clang::driver::options::OPT_fdebug_unparse_with_modules:
+      opts.programAction = DebugUnparseWithModules;
       break;
     case clang::driver::options::OPT_fdebug_dump_symbols:
       opts.programAction = DebugDumpSymbols;
@@ -903,6 +911,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             res.getLangOpts().OpenMPVersion, diags)) {
       res.getLangOpts().OpenMPVersion = Version;
     }
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_force_usm)) {
+      res.getLangOpts().OpenMPForceUSM = 1;
+    }
     if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
       res.getLangOpts().OpenMPIsTargetDevice = 1;
 
@@ -1201,6 +1212,12 @@ bool CompilerInvocation::createFromArgs(
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
+  }
+
+  // -flang-experimental-integer-overflow
+  if (args.hasArg(
+          clang::driver::options::OPT_flang_experimental_integer_overflow)) {
+    invoc.loweringOpts.setNSWOnLoopVarInc(true);
   }
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or

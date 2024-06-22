@@ -87,6 +87,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -1384,6 +1385,13 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
+  if (Target.getTriple().isAMDGPU() ||
+      (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AMDGPUTypes.def"
+  }
+
   // Builtin type for __objc_yes and __objc_no
   ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
                        SignedCharTy : BoolTy);
@@ -2200,6 +2208,13 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
+                               SINGLETONID)                                    \
+  case BuiltinType::ID:                                                        \
+    Width = WIDTH;                                                             \
+    Align = ALIGN;                                                             \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3054,21 +3069,27 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
   if (!T.hasAddressSpace())
     return T;
 
-  // If we are composing extended qualifiers together, merge together
-  // into one ExtQuals node.
   QualifierCollector Quals;
   const Type *TypeNode;
+  // For arrays, strip the qualifier off the element type, then reconstruct the
+  // array type
+  if (T.getTypePtr()->isArrayType()) {
+    T = getUnqualifiedArrayType(T, Quals);
+    TypeNode = T.getTypePtr();
+  } else {
+    // If we are composing extended qualifiers together, merge together
+    // into one ExtQuals node.
+    while (T.hasAddressSpace()) {
+      TypeNode = Quals.strip(T);
 
-  while (T.hasAddressSpace()) {
-    TypeNode = Quals.strip(T);
+      // If the type no longer has an address space after stripping qualifiers,
+      // jump out.
+      if (!QualType(TypeNode, 0).hasAddressSpace())
+        break;
 
-    // If the type no longer has an address space after stripping qualifiers,
-    // jump out.
-    if (!QualType(TypeNode, 0).hasAddressSpace())
-      break;
-
-    // There might be sugar in the way. Strip it and try again.
-    T = T.getSingleStepDesugaredType(*this);
+      // There might be sugar in the way. Strip it and try again.
+      T = T.getSingleStepDesugaredType(*this);
+    }
   }
 
   Quals.removeAddressSpace();
@@ -5000,9 +5021,6 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
                                           QualType Underlying) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = QTN->getUnderlyingTemplate();
 
   const auto *TD = Template.getAsTemplateDecl();
   bool IsTypeAlias = TD && TD->isTypeAlias();
@@ -5037,10 +5055,6 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
     TemplateName Template, ArrayRef<TemplateArgument> Args) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = TemplateName(QTN->getUnderlyingTemplate());
 
   // Build the canonical template specialization type.
   TemplateName CanonTemplate = getCanonicalTemplateName(Template);
@@ -5256,10 +5270,12 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     Arg = TemplateArgument(E);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+    TemplateName Name = getQualifiedTemplateName(
+        nullptr, /*TemplateKeyword=*/false, TemplateName(TTP));
     if (TTP->isParameterPack())
-      Arg = TemplateArgument(TemplateName(TTP), std::optional<unsigned>());
+      Arg = TemplateArgument(Name, std::optional<unsigned>());
     else
-      Arg = TemplateArgument(TemplateName(TTP));
+      Arg = TemplateArgument(Name);
   }
 
   if (Param->isTemplateParameterPack())
@@ -5910,7 +5926,8 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
   if (auto *AT = CanonT->getAs<AutoType>()) {
     if (!AT->isConstrained())
       return T;
-    return getQualifiedType(getAutoType(QualType(), AT->getKeyword(), false,
+    return getQualifiedType(getAutoType(QualType(), AT->getKeyword(),
+                                        AT->isDependentType(),
                                         AT->containsUnexpandedParameterPack()),
                             T.getQualifiers());
   }
@@ -5923,11 +5940,9 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
   return T;
 }
 
-/// Return the uniqued reference to the deduced template specialization type
-/// which has been deduced to the given type, or to the canonical undeduced
-/// such type, or the canonical deduced-but-dependent such type.
-QualType ASTContext::getDeducedTemplateSpecializationType(
-    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
+    TemplateName Template, QualType DeducedType, bool IsDependent,
+    QualType Canon) const {
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -5938,13 +5953,28 @@ QualType ASTContext::getDeducedTemplateSpecializationType(
     return QualType(DTST, 0);
 
   auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
-      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent);
+      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent,
+                                        Canon);
   llvm::FoldingSetNodeID TempID;
   DTST->Profile(TempID);
   assert(ID == TempID && "ID does not match");
   Types.push_back(DTST);
   DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
   return QualType(DTST, 0);
+}
+
+/// Return the uniqued reference to the deduced template specialization type
+/// which has been deduced to the given type, or to the canonical undeduced
+/// such type, or the canonical deduced-but-dependent such type.
+QualType ASTContext::getDeducedTemplateSpecializationType(
+    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+  QualType Canon = DeducedType.isNull()
+                       ? getDeducedTemplateSpecializationTypeInternal(
+                             getCanonicalTemplateName(Template), QualType(),
+                             IsDependent, QualType())
+                       : DeducedType.getCanonicalType();
+  return getDeducedTemplateSpecializationTypeInternal(Template, DeducedType,
+                                                      IsDependent, Canon);
 }
 
 /// getAtomicType - Return the uniqued reference to the atomic type for
@@ -6092,7 +6122,7 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
 }
 
 QualType ASTContext::getUnqualifiedArrayType(QualType type,
-                                             Qualifiers &quals) {
+                                             Qualifiers &quals) const {
   SplitQualType splitType = type.getSplitUnqualifiedType();
 
   // FIXME: getSplitUnqualifiedType() actually walks all the way to
@@ -6487,7 +6517,8 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!TTPX->hasDefaultArgument() || !TTPY->hasDefaultArgument())
       return false;
 
-    return hasSameType(TTPX->getDefaultArgument(), TTPY->getDefaultArgument());
+    return hasSameType(TTPX->getDefaultArgument().getArgument().getAsType(),
+                       TTPY->getDefaultArgument().getArgument().getAsType());
   }
 
   if (auto *NTTPX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
@@ -6495,8 +6526,10 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!NTTPX->hasDefaultArgument() || !NTTPY->hasDefaultArgument())
       return false;
 
-    Expr *DefaultArgumentX = NTTPX->getDefaultArgument()->IgnoreImpCasts();
-    Expr *DefaultArgumentY = NTTPY->getDefaultArgument()->IgnoreImpCasts();
+    Expr *DefaultArgumentX =
+        NTTPX->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
+    Expr *DefaultArgumentY =
+        NTTPY->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
     llvm::FoldingSetNodeID XID, YID;
     DefaultArgumentX->Profile(XID, *this, /*Canonical=*/true);
     DefaultArgumentY->Profile(YID, *this, /*Canonical=*/true);
@@ -6789,7 +6822,7 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   // Using shadow declarations with the same target match.
   if (const auto *USX = dyn_cast<UsingShadowDecl>(X)) {
     const auto *USY = cast<UsingShadowDecl>(Y);
-    return USX->getTargetDecl() == USY->getTargetDecl();
+    return declaresSameEntity(USX->getTargetDecl(), USY->getTargetDecl());
   }
 
   // Using declarations with the same qualifier match. (We already know that
@@ -8150,6 +8183,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
@@ -9294,7 +9329,8 @@ TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
 TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                                   bool TemplateKeyword,
                                                   TemplateName Template) const {
-  assert(NNS && "Missing nested-name-specifier in qualified template name");
+  assert(Template.getKind() == TemplateName::Template ||
+         Template.getKind() == TemplateName::UsingTemplate);
 
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;
@@ -11510,6 +11546,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.SveCountTy;
       break;
     }
+    case 'b': {
+      Type = Context.AMDGPUBufferRsrcTy;
+      break;
+    }
     default:
       llvm_unreachable("Unexpected target builtin type");
     }
@@ -12012,7 +12052,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  if (VD->shouldEmitInExternalSource())
     return false;
 
   // Variables that can be needed in other TUs are required.
@@ -13657,17 +13697,16 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
   }
 }
 
-std::vector<std::string> ASTContext::filterFunctionTargetVersionAttrs(
-    const TargetVersionAttr *TV) const {
-  assert(TV != nullptr);
-  llvm::SmallVector<StringRef, 8> Feats;
-  std::vector<std::string> ResFeats;
-  TV->getFeatures(Feats);
-  for (auto &Feature : Feats)
-    if (Target->validateCpuSupports(Feature.str()))
-      // Use '?' to mark features that came from TargetVersion.
-      ResFeats.push_back("?" + Feature.str());
-  return ResFeats;
+// Given a list of FMV features, return a concatenated list of the
+// corresponding backend features (which may contain duplicates).
+static std::vector<std::string> getFMVBackendFeaturesFor(
+    const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
+  std::vector<std::string> BackendFeats;
+  for (StringRef F : FMVFeatStrings)
+    if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
+      for (StringRef F : FMVExt->getImpliedFeatures())
+        BackendFeats.push_back(F.str());
+  return BackendFeats;
 }
 
 ParsedTargetAttr
@@ -13702,10 +13741,12 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    ParsedAttr.Features.insert(
-        ParsedAttr.Features.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.end());
+    // AArch64 handles command line option features in parseTargetAttr().
+    if (!Target->getTriple().isAArch64())
+      ParsedAttr.Features.insert(
+          ParsedAttr.Features.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.end());
 
     if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
       TargetCPU = ParsedAttr.CPU;
@@ -13726,32 +13767,31 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                     Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
-    std::vector<std::string> Features;
     if (Target->getTriple().isAArch64()) {
-      // TargetClones for AArch64
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-      for (StringRef Feat : Feats)
-        if (Target->validateCpuSupports(Feat.str()))
-          // Use '?' to mark features that came from AArch64 TargetClones.
-          Features.push_back("?" + Feat.str());
+      std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
+      std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    std::vector<std::string> Feats = filterFunctionTargetVersionAttrs(TV);
-    Feats.insert(Feats.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.end());
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Feats);
+    llvm::SmallVector<StringRef, 8> Feats;
+    TV->getFeatures(Feats);
+    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    Features.insert(Features.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.end());
+    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }

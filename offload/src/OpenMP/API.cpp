@@ -642,7 +642,7 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  size_t NumDevices = omp_get_initial_device();
+  int NumDevices = omp_get_initial_device();
   if (DeviceNum == NumDevices) {
     DP("Device %d is initial device, returning Ptr " DPxMOD ".\n",
            DeviceNum, DPxPTR(Ptr));

@@ -531,6 +531,14 @@ class Base(unittest.TestCase):
     # Keep track of the old current working directory.
     oldcwd = None
 
+    # Maximum allowed attempts when launching the inferior process.
+    # Can be overridden by the LLDB_MAX_LAUNCH_COUNT environment variable.
+    maxLaunchCount = 1
+
+    # Time to wait before the next launching attempt in second(s).
+    # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
+    timeWaitNextLaunch = 1.0
+
     @staticmethod
     def compute_mydir(test_file):
         """Subclasses should call this function to correctly calculate the
@@ -796,6 +804,12 @@ class Base(unittest.TestCase):
         # import traceback
         # traceback.print_stack()
 
+        if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
+            self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])
+
+        if "LLDB_TIME_WAIT_NEXT_LAUNCH" in os.environ:
+            self.timeWaitNextLaunch = float(os.environ["LLDB_TIME_WAIT_NEXT_LAUNCH"])
+
         if "LIBCXX_PATH" in os.environ:
             self.libcxxPath = os.environ["LIBCXX_PATH"]
         else:
@@ -936,6 +950,57 @@ class Base(unittest.TestCase):
         proc.launch(executable, args, extra_env=extra_env)
         self.subprocesses.append(proc)
         return proc
+
+    def runCmd(self, cmd, msg=None, check=True, trace=False, inHistory=False):
+        """
+        Ask the command interpreter to handle the command and then check its
+        return status.
+        """
+        # Fail fast if 'cmd' is not meaningful.
+        if cmd is None:
+            raise Exception("Bad 'cmd' parameter encountered")
+
+        trace = True if traceAlways else trace
+
+        if cmd.startswith("target create "):
+            cmd = cmd.replace("target create ", "file ")
+
+        running = cmd.startswith("run") or cmd.startswith("process launch")
+
+        for i in range(self.maxLaunchCount if running else 1):
+            with recording(self, trace) as sbuf:
+                print("runCmd:", cmd, file=sbuf)
+                if not check:
+                    print("check of return status not required", file=sbuf)
+
+            self.ci.HandleCommand(cmd, self.res, inHistory)
+
+            with recording(self, trace) as sbuf:
+                if self.res.Succeeded():
+                    print("output:", self.res.GetOutput(), file=sbuf)
+                else:
+                    print("runCmd failed!", file=sbuf)
+                    print(self.res.GetError(), file=sbuf)
+
+            if self.res.Succeeded():
+                break
+            elif running:
+                # For process launch, wait some time before possible next try.
+                time.sleep(self.timeWaitNextLaunch)
+                with recording(self, trace) as sbuf:
+                    print("Command '" + cmd + "' failed!", file=sbuf)
+
+        if check:
+            output = ""
+            if self.res.GetOutput():
+                output += "\nCommand output:\n" + self.res.GetOutput()
+            if self.res.GetError():
+                output += "\nError output:\n" + self.res.GetError()
+            if msg:
+                msg += output
+            if cmd:
+                cmd += output
+            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1764,14 +1829,6 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
 
-    # Maximum allowed attempts when launching the inferior process.
-    # Can be overridden by the LLDB_MAX_LAUNCH_COUNT environment variable.
-    maxLaunchCount = 1
-
-    # Time to wait before the next launching attempt in second(s).
-    # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
-    timeWaitNextLaunch = 1.0
-
     def generateSource(self, source):
         template = source + ".template"
         temp = os.path.join(self.getSourceDir(), template)
@@ -1811,12 +1868,6 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
 
         for s in self.setUpCommands():
             self.runCmd(s)
-
-        if "LLDB_MAX_LAUNCH_COUNT" in os.environ:
-            self.maxLaunchCount = int(os.environ["LLDB_MAX_LAUNCH_COUNT"])
-
-        if "LLDB_TIME_WAIT_NEXT_LAUNCH" in os.environ:
-            self.timeWaitNextLaunch = float(os.environ["LLDB_TIME_WAIT_NEXT_LAUNCH"])
 
         # We want our debugger to be synchronous.
         self.dbg.SetAsync(False)
@@ -1982,57 +2033,6 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             matched = thread_line_pattern.match(line)
             if matched:
                 self.runCmd("thread select %s" % matched.group(1))
-
-    def runCmd(self, cmd, msg=None, check=True, trace=False, inHistory=False):
-        """
-        Ask the command interpreter to handle the command and then check its
-        return status.
-        """
-        # Fail fast if 'cmd' is not meaningful.
-        if cmd is None:
-            raise Exception("Bad 'cmd' parameter encountered")
-
-        trace = True if traceAlways else trace
-
-        if cmd.startswith("target create "):
-            cmd = cmd.replace("target create ", "file ")
-
-        running = cmd.startswith("run") or cmd.startswith("process launch")
-
-        for i in range(self.maxLaunchCount if running else 1):
-            with recording(self, trace) as sbuf:
-                print("runCmd:", cmd, file=sbuf)
-                if not check:
-                    print("check of return status not required", file=sbuf)
-
-            self.ci.HandleCommand(cmd, self.res, inHistory)
-
-            with recording(self, trace) as sbuf:
-                if self.res.Succeeded():
-                    print("output:", self.res.GetOutput(), file=sbuf)
-                else:
-                    print("runCmd failed!", file=sbuf)
-                    print(self.res.GetError(), file=sbuf)
-
-            if self.res.Succeeded():
-                break
-            elif running:
-                # For process launch, wait some time before possible next try.
-                time.sleep(self.timeWaitNextLaunch)
-                with recording(self, trace) as sbuf:
-                    print("Command '" + cmd + "' failed!", file=sbuf)
-
-        if check:
-            output = ""
-            if self.res.GetOutput():
-                output += "\nCommand output:\n" + self.res.GetOutput()
-            if self.res.GetError():
-                output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
 
     def match(
         self, str, patterns, msg=None, trace=False, error=False, matching=True, exe=True

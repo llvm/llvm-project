@@ -808,8 +808,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       // we need to insert the new GEP where the old GEP was.
       if (!DT->dominates(Base, &*Builder.GetInsertPoint()))
         Builder.SetInsertPoint(cast<Instruction>(V));
-      OuterValue = Builder.CreateGEP(GEP->getSourceElementType(), Base,
-                                     OuterValue, "flatten." + V->getName());
+      OuterValue =
+          Builder.CreateGEP(GEP->getSourceElementType(), Base, OuterValue,
+                            "flatten." + V->getName(),
+                            GEP->isInBounds() && InnerGEP->isInBounds());
     }
 
     LLVM_DEBUG(dbgs() << "Replacing: "; V->dump(); dbgs() << "with:      ";

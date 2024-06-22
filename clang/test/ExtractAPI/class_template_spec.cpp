@@ -53,7 +53,7 @@ template<> class Foo<int> {};
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",
@@ -140,7 +140,7 @@ template<> class Foo<int> {};
         },
         {
           "kind": "text",
-          "spelling": "<> "
+          "spelling": " <> "
         },
         {
           "kind": "keyword",

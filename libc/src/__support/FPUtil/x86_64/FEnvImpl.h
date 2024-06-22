@@ -248,7 +248,7 @@ LIBC_INLINE int raise_except(int excepts) {
   // of the "Intel 64 and IA-32 Architectures Software Developer's
   // Manual, Vol 1".
 
-  // FPU status word is read for each exception seperately as the
+  // FPU status word is read for each exception separately as the
   // exception handler can potentially write to it (typically to clear
   // the corresponding exception flag). By reading it separately, we
   // ensure that the writes by the exception handler are maintained

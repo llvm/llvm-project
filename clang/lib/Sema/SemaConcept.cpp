@@ -1162,6 +1162,13 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
         break;
       }
     return;
+  } else if (auto *TTE = dyn_cast<TypeTraitExpr>(SubstExpr);
+             TTE && TTE->getTrait() == clang::TypeTrait::BTT_IsDeducible) {
+    assert(TTE->getNumArgs() == 2);
+    S.Diag(SubstExpr->getSourceRange().getBegin(),
+           diag::note_is_deducible_constraint_evaluated_to_false)
+        << TTE->getArg(0)->getType() << TTE->getArg(1)->getType();
+    return;
   }
 
   S.Diag(SubstExpr->getSourceRange().getBegin(),

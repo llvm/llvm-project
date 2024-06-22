@@ -4,6 +4,21 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2a %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 
+namespace cwg1110 { // cwg1110: 3.1
+#if __cplusplus >= 201103L
+template <typename T>
+T return_T();
+
+struct A;
+
+template <typename>
+struct B;
+
+decltype(return_T<A>())* a;
+decltype(return_T<B<int>>())* b;
+#endif
+} // namespace cwg1110
+
 namespace cwg1111 { // cwg1111: 3.2
 namespace example1 {
 template <typename> struct set; // #cwg1111-struct-set

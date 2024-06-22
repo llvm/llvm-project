@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -vector-bufferize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=vector,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[o1:.*]]: index, %[[o2:.*]]: index, %[[pad:.*]]: f32)

@@ -19,7 +19,7 @@ module m
   !WARNING: Attribute 'PRIVATE' cannot be used more than once
   procedure(procFunc), private, pointer, private :: proc2
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
-  !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   procedure(procFunc), bind(c), pointer, bind(c) :: proc3
   !WARNING: Attribute 'PROTECTED' cannot be used more than once
   procedure(procFunc), protected, pointer, protected :: proc4
