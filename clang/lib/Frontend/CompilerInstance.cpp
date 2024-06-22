@@ -1011,9 +1011,15 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
 
   raw_ostream &OS = getVerboseOutputStream();
 
+  // clang-format off
+  // Cratels: 执行前的准备动作
+  // clang-format on
   if (!Act.PrepareToExecute(*this))
     return false;
 
+  // clang-format off
+  // Cratels: 创建 target 对象
+  // clang-format on
   if (!createTarget())
     return false;
 
@@ -1039,6 +1045,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   llvm::sort(getCodeGenOpts().NoTocDataVars);
 
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
+    llvm::outs() << "被编译的文件名: " << FIF.getFile() << "\n";
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
     if (hasSourceManager() && !Act.isModelParsingAction())

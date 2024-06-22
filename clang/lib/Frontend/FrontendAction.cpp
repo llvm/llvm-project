@@ -1168,10 +1168,18 @@ bool FrontendAction::shouldEraseOutputFiles() {
 // Utility Actions
 //===----------------------------------------------------------------------===//
 
+// clang-format off
+// Cratels: 所有的前端 Action 全部共用这个方法
+// clang-format on
 void ASTFrontendAction::ExecuteAction() {
+  // clang-format off
+  // Cratels: 获取全局编译器实例对象
+  // clang-format on
   CompilerInstance &CI = getCompilerInstance();
+
   if (!CI.hasPreprocessor())
     return;
+
   // This is a fallback: If the client forgets to invoke this, we mark the
   // current stack as the bottom. Though not optimal, this could help prevent
   // stack overflow during deep recursion.
