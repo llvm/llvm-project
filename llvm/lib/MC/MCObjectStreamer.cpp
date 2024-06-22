@@ -567,8 +567,7 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label,
                                                  SMLoc Loc) {
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, Loc);
-  insert(getContext().allocFragment<MCDwarfCallFrameFragment>(*AddrDelta,
-                                                              nullptr));
+  insert(getContext().allocFragment<MCDwarfCallFrameFragment>(*AddrDelta));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,

@@ -107,7 +107,7 @@ public:
 
 class MCDummyFragment : public MCFragment {
 public:
-  explicit MCDummyFragment(MCSection *Sec) : MCFragment(FT_Dummy, false, Sec) {}
+  explicit MCDummyFragment() : MCFragment(FT_Dummy, false) {}
 
   static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
