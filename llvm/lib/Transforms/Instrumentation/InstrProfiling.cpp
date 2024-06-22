@@ -237,6 +237,10 @@ private:
   GlobalVariable *NamesVar = nullptr;
   size_t NamesSize = 0;
 
+  /// The instance of [[alwaysinline]] rmw_or(ptr, i8).
+  /// This is name-insensitive.
+  Function *RMWOrFunc = nullptr;
+
   // vector of counter load/store pairs to be register promoted.
   std::vector<LoadStorePair> PromotionCandidates;
 
@@ -296,6 +300,14 @@ private:
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
                                        StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
+
+  /// Create [[alwaysinline]] rmw_or(ptr, i8).
+  /// This doesn't update `RMWOrFunc`.
+  Function *createRMWOrFunc();
+
+  /// Get the call to `rmw_or`.
+  /// Create the instance if it is unknown.
+  CallInst *getRMWOrCall(Value *Addr, Value *Val);
 
   /// Compute the address of the test vector bitmap that this profiling
   /// instruction acts on.
@@ -937,6 +949,45 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   return Builder.CreateIntToPtr(Add, Addr->getType());
 }
 
+/// Create `void [[alwaysinline]] rmw_or(uint8_t *ArgAddr, uint8_t ArgVal)`
+/// "Basic" sequence is `*ArgAddr |= ArgVal`
+Function *InstrLowerer::createRMWOrFunc() {
+  auto &Ctx = M.getContext();
+  auto *Int8Ty = Type::getInt8Ty(Ctx);
+  Function *Fn = Function::Create(
+      FunctionType::get(Type::getVoidTy(Ctx),
+                        {PointerType::getUnqual(Ctx), Int8Ty}, false),
+      Function::LinkageTypes::PrivateLinkage, "rmw_or", M);
+  Fn->addFnAttr(Attribute::AlwaysInline);
+  auto *ArgAddr = Fn->getArg(0);
+  auto *ArgVal = Fn->getArg(1);
+  IRBuilder<> Builder(BasicBlock::Create(Ctx, "", Fn));
+
+  // Load profile bitmap byte.
+  //  %mcdc.bits = load i8, ptr %4, align 1
+  auto *Bitmap = Builder.CreateLoad(Int8Ty, ArgAddr, "mcdc.bits");
+
+  // Perform logical OR of profile bitmap byte and shifted bit offset.
+  //  %8 = or i8 %mcdc.bits, %7
+  auto *Result = Builder.CreateOr(Bitmap, ArgVal);
+
+  // Store the updated profile bitmap byte.
+  //  store i8 %8, ptr %3, align 1
+  Builder.CreateStore(Result, ArgAddr);
+
+  // Terminator
+  Builder.CreateRetVoid();
+
+  return Fn;
+}
+
+CallInst *InstrLowerer::getRMWOrCall(Value *Addr, Value *Val) {
+  if (!RMWOrFunc)
+    RMWOrFunc = createRMWOrFunc();
+
+  return CallInst::Create(RMWOrFunc, {Addr, Val});
+}
+
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   IRBuilder<> Builder(I);
@@ -1044,17 +1095,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  %7 = shl i8 1, %6
   auto *ShiftedVal = Builder.CreateShl(Builder.getInt8(0x1), BitToSet);
 
-  // Load profile bitmap byte.
-  //  %mcdc.bits = load i8, ptr %4, align 1
-  auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
-
-  // Perform logical OR of profile bitmap byte and shifted bit offset.
-  //  %8 = or i8 %mcdc.bits, %7
-  auto *Result = Builder.CreateOr(Bitmap, ShiftedVal);
-
-  // Store the updated profile bitmap byte.
-  //  store i8 %8, ptr %3, align 1
-  Builder.CreateStore(Result, BitmapByteAddr);
+  Builder.Insert(getRMWOrCall(BitmapByteAddr, ShiftedVal));
   Update->eraseFromParent();
 }
 
