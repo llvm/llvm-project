@@ -242,6 +242,7 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_parallel_master_taskloop,
     Directive::OMPD_parallel_master_taskloop_simd,
     Directive::OMPD_simd,
+    Directive::OMPD_target_loop,
     Directive::OMPD_target_parallel_do,
     Directive::OMPD_target_parallel_do_simd,
     Directive::OMPD_target_parallel_loop,

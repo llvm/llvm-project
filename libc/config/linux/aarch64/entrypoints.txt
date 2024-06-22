@@ -524,6 +524,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
+    libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -545,6 +546,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
     libc.src.math.totalorderf16

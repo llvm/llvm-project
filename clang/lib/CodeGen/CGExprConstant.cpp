@@ -2024,8 +2024,25 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
+    auto PtrAuthSign = [&](llvm::Constant *C) {
+      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
+
+      if (AuthInfo) {
+        if (hasNonZeroOffset())
+          return ConstantLValue(nullptr);
+
+        C = applyOffset(C);
+        C = CGM.getConstantSignedPointer(
+            C, AuthInfo.getKey(), nullptr,
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
+        return ConstantLValue(C, /*applied offset*/ true);
+      }
+
+      return ConstantLValue(C);
+    };
+
     if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
 
     if (auto VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
