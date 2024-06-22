@@ -726,9 +726,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
   if (!Name.empty())
     addString(Buffer, dwarf::DW_AT_name, Name);
 
-  addAnnotation(Buffer, BTy->getAnnotations());
-
-  // An unspecified type only has a name attribute & annotations.
+  // An unspecified type only has a name attribute.
   if (BTy->getTag() == dwarf::DW_TAG_unspecified_type)
     return;
 
@@ -902,8 +900,6 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
 
   if (CTy->isRValueReference())
     addFlag(Buffer, dwarf::DW_AT_rvalue_reference);
-
-  addAnnotation(Buffer, CTy->getAnnotations());
 }
 
 void DwarfUnit::addAnnotation(DIE &Buffer, DINodeArray Annotations) {

@@ -19,6 +19,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <array>
 #include <vector>
 
@@ -120,17 +122,28 @@ struct ExtensionInfo {
                                   // extensions representation in the bitfield.
   StringRef Feature;              // -mattr enable string, e.g. "+spe"
   StringRef NegFeature;           // -mattr disable string, e.g. "-spe"
-  CPUFeatures CPUFeature;      // Function Multi Versioning (FMV) bitfield value
-                               // set in __aarch64_cpu_features
-  StringRef DependentFeatures; // FMV enabled features string,
-                               // e.g. "+dotprod,+fp-armv8,+neon"
-  unsigned FmvPriority;        // FMV feature priority
-  static constexpr unsigned MaxFMVPriority =
-      1000; // Maximum priority for FMV feature
 };
 
 #define EMIT_EXTENSIONS
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
+
+struct FMVInfo {
+  StringRef Name;     // The target_version/target_clones spelling.
+  CPUFeatures Bit;    // Index of the bit in the FMV feature bitset.
+  StringRef Features; // List of SubtargetFeatures to enable.
+  unsigned Priority;  // FMV priority.
+  FMVInfo(StringRef Name, CPUFeatures Bit, StringRef Features,
+          unsigned Priority)
+      : Name(Name), Bit(Bit), Features(Features), Priority(Priority){};
+
+  SmallVector<StringRef, 8> getImpliedFeatures() {
+    SmallVector<StringRef, 8> Feats;
+    Features.split(Feats, ',', -1, false); // discard empty strings
+    return Feats;
+  }
+};
+
+const std::vector<FMVInfo> &getFMVInfo();
 
 // Represents a dependency between two architecture extensions. Later is the
 // feature which was added to the architecture after Earlier, and expands the
@@ -281,6 +294,8 @@ struct ExtensionSet {
         Features.emplace_back(T(E.NegFeature));
     }
   }
+
+  void dump() const;
 };
 
 // Name alias.
@@ -312,6 +327,9 @@ std::optional<ExtensionInfo> targetFeatureToExtension(StringRef TargetFeature);
 
 // Parse a name as defined by the Extension class in tablegen.
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
+
+// Parse a name as defined by the FMVInfo class in tablegen.
+std::optional<FMVInfo> parseFMVExtension(StringRef Extension);
 
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);

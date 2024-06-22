@@ -1180,7 +1180,7 @@ uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
   uptr module_name_len = internal_readlink(default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
-#    endif  // SANITIZER_SOLARIS
+#    endif
   if (IsErr) {
     // We can't read binary name for some reason, assume it's unknown.
     Report(

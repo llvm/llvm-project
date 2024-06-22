@@ -46,6 +46,7 @@ class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
+class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
 class SMDiagnostic;
 class SMRange;

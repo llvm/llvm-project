@@ -1425,8 +1425,8 @@ TEST_P(ASTMatchersTest,
     return;
   }
   StringRef code = "namespace std {"
-                   "template <typename> class initializer_list {"
-                   "  public: initializer_list() noexcept {}"
+                   "template <typename E> class initializer_list {"
+                   "  public: const E *a, *b;"
                    "};"
                    "}"
                    "struct A {"
