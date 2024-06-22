@@ -9,7 +9,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @__profn_test = private constant [4 x i8] c"test"
 
-; CHECK: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
+; BASIC: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
+; ATOMIC: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
 
 define dso_local void @test(i32 noundef %A) {
 entry:
@@ -47,6 +48,7 @@ entry:
 ; ATOMIC-NEXT: ret void
 ; ATOMIC: [[SKIP]]:
 ; CHECK-NEXT: ret void
+
 ; ATOMIC: ![[MDPROF]] = !{!"branch_weights", i32 1, i32 1048575}
 
 declare void @llvm.instrprof.cover(ptr, i64, i32, i32)
