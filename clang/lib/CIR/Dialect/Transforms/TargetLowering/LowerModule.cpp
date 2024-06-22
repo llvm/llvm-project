@@ -19,9 +19,12 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
+#include "clang/CIR/Target/AArch64.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using MissingFeatures = ::cir::MissingFeatures;
+using AArch64ABIKind = ::cir::AArch64ABIKind;
+using X86AVXABILevel = ::cir::X86AVXABILevel;
 
 namespace mlir {
 namespace cir {
@@ -52,6 +55,17 @@ createTargetLoweringInfo(LowerModule &LM) {
   const llvm::Triple &Triple = Target.getTriple();
 
   switch (Triple.getArch()) {
+  case llvm::Triple::aarch64: {
+    AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
+    if (Target.getABI() == "darwinpcs")
+      llvm_unreachable("DarwinPCS ABI NYI");
+    else if (Triple.isOSWindows())
+      llvm_unreachable("Windows ABI NYI");
+    else if (Target.getABI() == "aapcs-soft")
+      llvm_unreachable("AAPCS-soft ABI NYI");
+
+    return createAArch64TargetLoweringInfo(LM, Kind);
+  }
   case llvm::Triple::x86_64: {
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:

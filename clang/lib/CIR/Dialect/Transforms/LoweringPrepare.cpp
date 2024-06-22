@@ -8,7 +8,6 @@
 
 #include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Region.h"
 #include "clang/AST/ASTContext.h"

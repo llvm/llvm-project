@@ -3,7 +3,6 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenTypes.h"
-#include "CallingConv.h"
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Target/x86.h"
@@ -136,10 +135,14 @@ public:
 
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// X86 ABI Implementation
+//===----------------------------------------------------------------------===//
+
 namespace {
 
 /// The AVX ABI leel for X86 targets.
-enum class X86AVXABILevel { None, AVX, AVX512 };
+using X86AVXABILevel = ::cir::X86AVXABILevel;
 
 class X86_64ABIInfo : public ABIInfo {
   using Class = X86ArgClass;

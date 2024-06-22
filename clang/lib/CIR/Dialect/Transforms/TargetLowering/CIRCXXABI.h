@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/Target/AArch64.h"
 
 namespace mlir {
 namespace cir {
@@ -51,17 +52,10 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &CGM);
 // should be updated to follow some level of codegen parity.
 namespace cir {
 
-enum class AArch64ABIKind {
-  AAPCS = 0,
-  DarwinPCS,
-  Win64,
-  AAPCSSoft,
-};
-
 class LoweringPrepareCXXABI {
 public:
   static LoweringPrepareCXXABI *createItaniumABI();
-  static LoweringPrepareCXXABI *createAArch64ABI(AArch64ABIKind k);
+  static LoweringPrepareCXXABI *createAArch64ABI(::cir::AArch64ABIKind k);
 
   virtual mlir::Value lowerVAArg(CIRBaseBuilderTy &builder,
                                  mlir::cir::VAArgOp op,

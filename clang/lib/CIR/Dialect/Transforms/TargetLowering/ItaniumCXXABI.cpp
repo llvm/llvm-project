@@ -22,6 +22,7 @@
 
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace mlir {
 namespace cir {
@@ -30,8 +31,16 @@ namespace {
 
 class ItaniumCXXABI : public CIRCXXABI {
 
+protected:
+  bool UseARMMethodPtrABI;
+  bool UseARMGuardVarABI;
+  bool Use32BitVTableOffsetABI;
+
 public:
-  ItaniumCXXABI(LowerModule &LM) : CIRCXXABI(LM) {}
+  ItaniumCXXABI(LowerModule &LM, bool UseARMMethodPtrABI = false,
+                bool UseARMGuardVarABI = false)
+      : CIRCXXABI(LM), UseARMMethodPtrABI(UseARMMethodPtrABI),
+        UseARMGuardVarABI(UseARMGuardVarABI), Use32BitVTableOffsetABI(false) {}
 
   bool classifyReturnType(LowerFunctionInfo &FI) const override;
 };
@@ -52,6 +61,13 @@ bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
   switch (LM.getCXXABIKind()) {
+  // Note that AArch64 uses the generic ItaniumCXXABI class since it doesn't
+  // include the other 32-bit ARM oddities: constructor/destructor return values
+  // and array cookies.
+  case clang::TargetCXXABI::GenericAArch64:
+    return new ItaniumCXXABI(LM, /*UseARMMethodPtrABI=*/true,
+                             /*UseARMGuardVarABI=*/true);
+
   case clang::TargetCXXABI::GenericItanium:
     return new ItaniumCXXABI(LM);
 

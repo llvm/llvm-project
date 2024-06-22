@@ -10,6 +10,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
 
+using X86AVXABILevel = ::cir::X86AVXABILevel;
+
 namespace mlir {
 namespace cir {
 
