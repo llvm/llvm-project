@@ -4582,7 +4582,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   }
 
   // Pointer to object of size zero is not allowed.
-  if (Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
+  if (!AtomTy->isIncompleteType() &&
+      Context.getTypeInfoInChars(AtomTy).Width.isZero()) {
     Diag(ExprRange.getBegin(), diag::err_atomic_builtin_must_be_pointer)
         << Ptr->getType() << 1 << Ptr->getSourceRange();
     return ExprError();
