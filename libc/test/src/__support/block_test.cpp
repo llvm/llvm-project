@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 #include <stddef.h>
 
-#include "src/stdlib/block.h"
-
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/block.h"
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
 
