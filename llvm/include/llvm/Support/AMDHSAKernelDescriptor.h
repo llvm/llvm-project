@@ -263,7 +263,8 @@ enum : int32_t {
   KERNEL_CODE_PROPERTY(RESERVED0, 7, 3),
   KERNEL_CODE_PROPERTY(ENABLE_WAVEFRONT_SIZE32, 10, 1), // GFX10+
   KERNEL_CODE_PROPERTY(USES_DYNAMIC_STACK, 11, 1),
-  KERNEL_CODE_PROPERTY(RESERVED1, 12, 4),
+  KERNEL_CODE_PROPERTY(ENABLE_WAVEGROUP, 12, 1), // GFX13+
+  KERNEL_CODE_PROPERTY(RESERVED1, 13, 3),
 };
 #undef KERNEL_CODE_PROPERTY
 
@@ -283,8 +284,9 @@ struct kernel_descriptor_t {
   uint32_t kernarg_size;
   uint8_t reserved0[4];
   int64_t kernel_code_entry_byte_offset;
-  uint8_t reserved1[20];
-  uint32_t compute_pgm_rsrc3; // GFX10+ and GFX90A+
+  uint8_t reserved1[16];
+  uint32_t laneshared_segment_fixed_size; // GFX13+
+  uint32_t compute_pgm_rsrc3;             // GFX10+ and GFX90A+
   uint32_t compute_pgm_rsrc1;
   uint32_t compute_pgm_rsrc2;
   uint16_t kernel_code_properties;
@@ -299,6 +301,7 @@ enum : uint32_t {
   RESERVED0_OFFSET = 12,
   KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET = 16,
   RESERVED1_OFFSET = 24,
+  LANESHARED_SEGMENT_FIXED_SIZE_OFFSET = 40,
   COMPUTE_PGM_RSRC3_OFFSET = 44,
   COMPUTE_PGM_RSRC1_OFFSET = 48,
   COMPUTE_PGM_RSRC2_OFFSET = 52,
@@ -326,6 +329,9 @@ static_assert(offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) ==
               "invalid offset for kernel_code_entry_byte_offset");
 static_assert(offsetof(kernel_descriptor_t, reserved1) == RESERVED1_OFFSET,
               "invalid offset for reserved1");
+static_assert(offsetof(kernel_descriptor_t, laneshared_segment_fixed_size) ==
+                  LANESHARED_SEGMENT_FIXED_SIZE_OFFSET,
+              "invalid offset for laneshared_segment_fixed_size");
 static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc3) ==
                   COMPUTE_PGM_RSRC3_OFFSET,
               "invalid offset for compute_pgm_rsrc3");
