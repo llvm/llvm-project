@@ -128,8 +128,6 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
-  PendingLabels.clear();
-  PendingLabelSections.clear();
   MCStreamer::reset();
 }
 

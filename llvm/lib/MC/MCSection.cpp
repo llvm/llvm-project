@@ -79,9 +79,6 @@ void MCSection::switchSubsection(unsigned Subsection) {
 
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
-void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump() const {
   raw_ostream &OS = errs();
