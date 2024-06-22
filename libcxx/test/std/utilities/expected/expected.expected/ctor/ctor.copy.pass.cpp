@@ -62,15 +62,14 @@ static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonT
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<int, CopyableNonTrivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonTrivial, CopyableNonTrivial>>);
 
-
 struct Any {
-  constexpr Any() = default;
-  constexpr Any(const Any&) = default;
-  constexpr Any& operator=(const Any&)=default;
+  constexpr Any()                      = default;
+  constexpr Any(const Any&)            = default;
+  constexpr Any& operator=(const Any&) = default;
 
   template <class T>
-    requires (!std::is_same_v<Any, std::decay_t<T>> && std::is_copy_constructible_v<std::decay_t<T>>)
-  constexpr Any(T&&){}
+    requires(!std::is_same_v<Any, std::decay_t<T>> && std::is_copy_constructible_v<std::decay_t<T>>)
+  constexpr Any(T&&) {}
 };
 
 constexpr bool test() {
@@ -121,10 +120,13 @@ constexpr bool test() {
   }
 
   {
+    // TODO(LLVM 20): Remove once we drop support for Clang 17
+#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 1700
     // https://github.com/llvm/llvm-project/issues/92676
     std::expected<Any, int> e1;
     auto e2 = e1;
     assert(e2.has_value());
+#endif
   }
 
   return true;
