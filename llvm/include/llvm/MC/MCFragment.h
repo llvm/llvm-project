@@ -58,7 +58,7 @@ private:
   MCFragment *Next = nullptr;
 
   /// The data for the section this fragment is in.
-  MCSection *Parent;
+  MCSection *Parent = nullptr;
 
   /// The offset of this fragment in its section.
   uint64_t Offset = 0;
