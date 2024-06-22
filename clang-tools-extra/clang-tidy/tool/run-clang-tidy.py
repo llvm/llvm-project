@@ -235,6 +235,7 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_fi
             args.plugins,
             args.warnings_as_errors,
             args.exclude_header_filter,
+            args.allow_no_checks,
         )
 
         proc = subprocess.Popen(
