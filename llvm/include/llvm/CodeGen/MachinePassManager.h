@@ -99,6 +99,10 @@ private:
       is_detected<has_get_cleared_properties_t, T>::value;
 };
 
+// Additional deduction guide to suppress warning.
+template <typename PassT>
+MFPropsModifier(PassT &P, MachineFunction &MF) -> MFPropsModifier<PassT>;
+
 using MachineFunctionAnalysisManagerModuleProxy =
     InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Module>;
 
