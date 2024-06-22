@@ -16,17 +16,17 @@
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T, typename R>
+template <typename OutType, typename InType>
 class FmulMPFRTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
-  DECLARE_SPECIAL_CONSTANTS(T)
+  DECLARE_SPECIAL_CONSTANTS(InType)
 
 public:
-  typedef T (*FMulFunc)(R, R);
+  typedef OutType (*FMulFunc)(InType, InType);
 
    void testFMulMPFR(FMulFunc func) {
      constexpr int N = 10;
-     mpfr::BinaryInput<T> INPUTS[N] = {
+     mpfr::BinaryInput<InType> INPUTS[N] = {
        {3.0, 5.0}, {0x1.0p1, 0x1.0p-131}, {0x1.0p2, 0x1.0p-129},
        {1.0,1.0}, {-0.0, -0.0}, {-0.0, 0.0}, {0.0, -0.0},
        {0x1.0p100, 0x1.0p100},
@@ -35,15 +35,15 @@ public:
      };
 
      for (int i = 0; i < N; ++i) {
-       T x = INPUTS[i].x;
-       T y = INPUTS[i].y;
+       InType x = INPUTS[i].x;
+       InType y = INPUTS[i].y;
        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i], func(x,y), 0.5);
      }
    }
 
   void testSpecialInputsMPFR(FMulFunc func) {
     constexpr int N = 27;
-    mpfr::BinaryInput<T> INPUTS[N] = {
+    mpfr::BinaryInput<InType> INPUTS[N] = {
         {inf, 0x1.0p-129}, {0x1.0p-129, inf}, {inf, 2.0}, {3.0, inf}, {0.0, 0.0},
         {neg_inf, aNaN}, {aNaN, neg_inf}, {neg_inf, neg_inf},
         {0.0, neg_inf}, {neg_inf, 0.0},
@@ -56,16 +56,16 @@ public:
 
 
     for (int i = 0; i < N; ++i) {
-        T x = INPUTS[i].x;
-        T y = INPUTS[i].y;
+        InType x = INPUTS[i].x;
+        InType y = INPUTS[i].y;
         ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i], func(x, y), 0.5);
     }
 }
 
 };
 
-#define LIST_FMUL_MPFR_TESTS(T, R, func)                                            \
-  using LlvmLibcFmulTest = FmulMPFRTest<T, R>;                                     \
+#define LIST_FMUL_MPFR_TESTS(OutType, InType, func)			\
+  using LlvmLibcFmulTest = FmulMPFRTest<OutType, InType>;                                     \
   TEST_F(LlvmLibcFmulTest, MulMpfr) { testFMulMPFR(&func); }                       \
   TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }          
   
