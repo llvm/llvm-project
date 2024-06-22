@@ -146,6 +146,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
 
   DoubleDouble y;
   unsigned k;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
@@ -184,7 +185,8 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
     }
 
     // Large range reduction.
-    k = generic::range_reduction_large<NO_FMA>(x, y);
+    k = range_reduction_large.compute_high_part(x);
+    y = range_reduction_large.fast();
   }
 
   DoubleDouble sin_y, cos_y;
@@ -252,7 +254,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
     u_f128 = generic::range_reduction_small_f128(x);
   else
-    u_f128 = generic::range_reduction_large_f128<NO_FMA>(x);
+    u_f128 = range_reduction_large.accurate();
 
   Float128 u_sq = fputil::quick_mul(u_f128, u_f128);
 
