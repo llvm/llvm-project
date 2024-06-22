@@ -172,6 +172,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.div
     libc.src.stdlib.free
+    libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
