@@ -4214,10 +4214,6 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // FMINNUM has same costs so don't duplicate.
     ISD = ISD::FMAXNUM;
     break;
-  case Intrinsic::maximumnum:
-  case Intrinsic::minimumnum:
-    ISD = ISD::FMAXIMUMNUM;
-    break;
   case Intrinsic::sadd_sat:
     ISD = ISD::SADDSAT;
     break;
@@ -5411,12 +5407,9 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
   } else {
     assert(ValTy->isFPOrFPVectorTy() &&
            "Expected float point or integer vector type.");
-    if (IID == Intrinsic::minimumnum || IID == Intrinsic::maximumnum)
-      ISD = ISD::FMINIMUMNUM;
-    else
-      ISD = (IID == Intrinsic::minnum || IID == Intrinsic::maxnum)
-                ? ISD::FMINNUM
-                : ISD::FMINIMUM;
+    ISD = (IID == Intrinsic::minnum || IID == Intrinsic::maxnum)
+              ? ISD::FMINNUM
+              : ISD::FMINIMUM;
   }
 
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
