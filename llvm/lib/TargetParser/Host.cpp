@@ -1571,7 +1571,7 @@ StringRef sys::getHostCPUName() {
 #if defined(__linux__)
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
-  auto CPUName = detail::getHostCPUNameForRISCV(Content);
+  StringRef Name = detail::getHostCPUNameForRISCV(Content);
   if (!Name.empty())
     return Name;
 #else
