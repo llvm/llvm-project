@@ -62,6 +62,7 @@ static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonT
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<int, CopyableNonTrivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<std::expected<CopyableNonTrivial, CopyableNonTrivial>>);
 
+#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 1700
 struct Any {
   constexpr Any()                      = default;
   constexpr Any(const Any&)            = default;
@@ -71,6 +72,7 @@ struct Any {
     requires(!std::is_same_v<Any, std::decay_t<T>> && std::is_copy_constructible_v<std::decay_t<T>>)
   constexpr Any(T&&) {}
 };
+#endif
 
 constexpr bool test() {
   // copy the value non-trivial
