@@ -392,7 +392,8 @@ else()
     COMPILE_OPTIONS
       -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
   )
-  if(LIBC_TARGET_OS_IS_BAREMETAL)
+  get_target_property(freelist_malloc_is_skipped libc.src.stdlib.freelist_malloc "SKIPPED")
+  if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT freelist_malloc_is_skipped)
     add_entrypoint_object(
       malloc
       ALIAS
