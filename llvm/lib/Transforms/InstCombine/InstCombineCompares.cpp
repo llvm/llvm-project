@@ -38,10 +38,11 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
-static cl::opt<bool> DisableInsertAssumeICmp(
-    "instcombine-disable-insert-assume-icmp",
-    cl::init(true),
-    cl::desc("Disable insertion of assume intrinsics derevied from known bits and icmp"));
+static cl::opt<bool>
+    DisableInsertAssumeICmp("instcombine-disable-insert-assume-icmp",
+                            cl::init(true),
+                            cl::desc("Disable insertion of assume intrinsics "
+                                     "derevied from known bits and icmp"));
 
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
@@ -6337,6 +6338,9 @@ bool InstCombinerImpl::replacedSelectWithOperand(SelectInst *SI,
   return false;
 }
 
+// Given the `Target` number and KnownBits `Known`, compute the closest
+// number smaller than the `Target` and the closest number bigger than the
+// `Target` satifying `Known`.
 static void computeClosestIntsSatisfyingKnownBits(
     APInt Target, KnownBits &Known, unsigned BitWidth, bool IsSigned,
     APInt &ClosestSmaller, APInt &ClosestBigger) {
@@ -6344,7 +6348,7 @@ static void computeClosestIntsSatisfyingKnownBits(
   if (KnownZeroMaskLength == 0)
     return;
 
-  APInt PowOf2(BitWidth, 1 << KnownZeroMaskLength);
+  APInt PowOf2 = APInt::getOneBitSet(BitWidth, KnownZeroMaskLength);
   if (!IsSigned || Target.isNonNegative()) {
     ClosestSmaller =
         PowOf2 * APIntOps::RoundingUDiv(Target, PowOf2, APInt::Rounding::DOWN);
@@ -6367,6 +6371,11 @@ static void insertAssumeICmp(BasicBlock *BB, ICmpInst::Predicate Pred,
   return;
 }
 
+// If we have a compare instruction like `%cmp = icmp ult i16 %x, 14` and
+// it is known that lower 2 bits of `%x` are both zero, then we know that
+// if the result of compare is true, then `%x ult 13` and if
+// compare is false then in `%x uge 16`. Insert compare intrinsics to express
+// this knowledge.
 static void tryToInsertAssumeBasedOnICmpAndKnownBits(ICmpInst &I,
                                                      KnownBits Op0Known,
                                                      KnownBits Op1Known,
