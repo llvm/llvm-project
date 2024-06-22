@@ -419,6 +419,10 @@ New Compiler Flags
   existing ``-fno-c++-static-destructors`` flag) skips all static
   destructors registration.
 
+- ``-fms-reference-binding`` and its clang-cl counterpart ``/Zc:referenceBinding``.
+  Implements the MSVC extension where expressions that bind a user-defined type temporary
+  to a non-const lvalue reference are allowed.
+
 Deprecated Compiler Flags
 -------------------------
 

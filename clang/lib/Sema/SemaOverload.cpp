@@ -5013,6 +5013,16 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
              : Ref_Incompatible;
 }
 
+bool Sema::AllowMSLValueReferenceBinding(Qualifiers Quals, QualType QT) {
+  if (Quals.hasVolatile())
+    return false;
+  if (Quals.hasConst())
+    return true;
+  if (QT->isBuiltinType() || QT->isArrayType())
+    return false;
+  return true;
+}
+
 /// Look for a user-defined conversion to a value reference-compatible
 ///        with DeclType. Return true if something definite is found.
 static bool
@@ -5245,7 +5255,11 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //     -- Otherwise, the reference shall be an lvalue reference to a
   //        non-volatile const type (i.e., cv1 shall be const), or the reference
   //        shall be an rvalue reference.
-  if (!isRValRef && (!T1.isConstQualified() || T1.isVolatileQualified())) {
+  const bool CanBindLValueRef =
+      !S.getLangOpts().MSVCReferenceBinding
+          ? (T1.isConstQualified() && !T1.isVolatileQualified())
+          : S.AllowMSLValueReferenceBinding(T1.getQualifiers(), T1);
+  if (!isRValRef && !CanBindLValueRef) {
     if (InitCategory.isRValue() && RefRelationship != Sema::Ref_Incompatible)
       ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, Init, DeclType);
     return ICS;

@@ -947,6 +947,7 @@ static void TranslatePermissive(Arg *A, llvm::opt::DerivedArgList &DAL,
                                 const OptTable &Opts) {
   DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase_));
   DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_operator_names));
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT_fms_reference_binding));
 }
 
 static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
