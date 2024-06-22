@@ -899,7 +899,7 @@ void explain_binary_operation_one_output_error(Operation op,
                                                R libc_result,
                                                double ulp_tolerance,
                                                RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<R>(ulp_tolerance);
   MPFRNumber mpfrX(input.x, precision);
   MPFRNumber mpfrY(input.y, precision);
   FPBits<T> xbits(input.x);
@@ -924,6 +924,8 @@ void explain_binary_operation_one_output_error(Operation op,
 
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float> &, float, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
+    Operation, const BinaryInput<double> &, double, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, float, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
@@ -1064,7 +1066,7 @@ bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<T> &input,
                                          R libc_result, double ulp_tolerance,
                                          RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<R>(ulp_tolerance);
   MPFRNumber mpfr_result =
       binary_operation_one_output(op, input.x, input.y, precision, rounding);
   double ulp = mpfr_result.ulp(libc_result);
@@ -1074,6 +1076,8 @@ bool compare_binary_operation_one_output(Operation op,
 
 template bool compare_binary_operation_one_output(
     Operation, const BinaryInput<float> &, float, double, RoundingMode);
+template bool compare_binary_operation_one_output(
+    Operation, const BinaryInput<double> &, double, double, RoundingMode);
 template bool compare_binary_operation_one_output(
     Operation, const BinaryInput<double> &, float, double, RoundingMode);
 template bool compare_binary_operation_one_output(
