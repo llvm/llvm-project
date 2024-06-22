@@ -380,31 +380,32 @@ elseif(LIBC_TARGET_OS_IS_GPU)
     aligned_alloc
   )
 else()
-  add_header_library(
-    block
+  # Only use freelist malloc for baremetal targets.
+  add_entrypoint_object(
+    freelist_malloc
+    SRCS
+      freelist_malloc.cpp
     HDRS
-      block.h
+      malloc.h
     DEPENDS
-      libc.src.__support.CPP.algorithm
-      libc.src.__support.CPP.limits
-      libc.src.__support.CPP.new
-      libc.src.__support.CPP.optional
-      libc.src.__support.CPP.span
-      libc.src.__support.CPP.type_traits
+      libc.src.__support.freelist_heap
+    COMPILE_OPTIONS
+      -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
   )
-  add_header_library(
-    freelist
-    HDRS
-      freelist.h
-    DEPENDS
-      libc.src.__support.fixedvector
-      libc.src.__support.CPP.cstddef
-      libc.src.__support.CPP.array
-      libc.src.__support.CPP.span
-  )
-  add_entrypoint_external(
-    malloc
-  )
+  get_target_property(freelist_malloc_is_skipped libc.src.stdlib.freelist_malloc "SKIPPED")
+  if(LIBC_TARGET_OS_IS_BAREMETAL AND NOT freelist_malloc_is_skipped)
+    add_entrypoint_object(
+      malloc
+      ALIAS
+      DEPENDS
+        .freelist_malloc
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )

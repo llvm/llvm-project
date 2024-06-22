@@ -499,7 +499,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
 
-    if (FixupSection.getKind().isText()) {
+    if (FixupSection.isText()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
                           "' unsupported subtraction expression used in "
@@ -561,13 +561,13 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     // later gets changed again to a func symbol?] or it can be a real
     // function symbol, in which case it can be left as-is.
 
-    if (!FixupSection.getKind().isMetadata())
+    if (!FixupSection.isMetadata())
       report_fatal_error("relocations for function or section offsets are "
                          "only supported in metadata sections");
 
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
-    if (SecA.getKind().isText()) {
+    if (SecA.isText()) {
       auto SecSymIt = SectionFunctions.find(&SecA);
       if (SecSymIt == SectionFunctions.end())
         report_fatal_error("section doesn\'t have defining symbol");
@@ -627,9 +627,9 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
   if (FixupSection.isWasmData()) {
     DataRelocations.push_back(Rec);
-  } else if (FixupSection.getKind().isText()) {
+  } else if (FixupSection.isText()) {
     CodeRelocations.push_back(Rec);
-  } else if (FixupSection.getKind().isMetadata()) {
+  } else if (FixupSection.isMetadata()) {
     CustomSectionsRelocations[&FixupSection].push_back(Rec);
   } else {
     llvm_unreachable("unexpected section type");
@@ -1498,7 +1498,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       continue;
 
     // Code is handled separately
-    if (Section.getKind().isText())
+    if (Section.isText())
       continue;
 
     if (Section.isWasmData()) {
@@ -1524,7 +1524,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       }
     } else {
       // Create custom sections
-      assert(Sec.getKind().isMetadata());
+      assert(Section.isMetadata());
 
       StringRef Name = SectionName;
 

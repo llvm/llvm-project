@@ -4801,7 +4801,6 @@ private:
 
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
-  StringLiteral *Filename;
   StringLiteral *BinaryData;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
@@ -4848,7 +4847,6 @@ public:
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
-  StringLiteral *getFilenameStringLiteral() const { return Data->Filename; }
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
   EmbedDataStorage *getData() const { return Data; }
 

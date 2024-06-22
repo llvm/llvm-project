@@ -387,16 +387,21 @@ func.func @dead_dealloc_fold() {
 
 // CHECK-LABEL: func @dead_dealloc_fold_multi_use
 func.func @dead_dealloc_fold_multi_use(%cond : i1) {
-  // CHECK-NEXT: return
+  // CHECK-NOT: alloc
   %a = memref.alloc() : memref<4xf32>
+  // CHECK: cond_br
   cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 
 ^bb2:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 }
 
@@ -719,7 +724,7 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
   %r2 = memref.load %3[%c0, %c0] : memref<?x4xf32>
 
   // Test: folding static alloc and memref.cast into a view.
-  // CHECK memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
   %4 = memref.cast %0 : memref<2048xi8> to memref<?xi8>
   %5 = memref.view %4[%c15][%c15, %c7] : memref<?xi8> to memref<?x?xf32>
   %r3 = memref.load %5[%c0, %c0] : memref<?x?xf32>
