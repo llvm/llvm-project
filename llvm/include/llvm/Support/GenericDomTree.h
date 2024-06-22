@@ -187,10 +187,8 @@ template <class NodeT>
 void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
                   unsigned Lev) {
   O.indent(2 * Lev) << "[" << Lev << "] " << N;
-  for (typename DomTreeNodeBase<NodeT>::const_iterator I = N->begin(),
-                                                       E = N->end();
-       I != E; ++I)
-    PrintDomTree<NodeT>(*I, O, Lev + 1);
+  for (const auto &I : *N)
+    PrintDomTree<NodeT>(I, O, Lev + 1);
 }
 
 namespace DomTreeBuilder {
@@ -870,10 +868,9 @@ protected:
     // Find NewBB's immediate dominator and create new dominator tree node for
     // NewBB.
     NodeT *NewBBIDom = nullptr;
-    unsigned i = 0;
-    for (i = 0; i < PredBlocks.size(); ++i)
-      if (isReachableFromEntry(PredBlocks[i])) {
-        NewBBIDom = PredBlocks[i];
+    for (const auto &Pred : PredBlocks)
+      if (isReachableFromEntry(Pred)) {
+        NewBBIDom = Pred;
         break;
       }
 
@@ -882,9 +879,9 @@ protected:
     // changed.
     if (!NewBBIDom) return;
 
-    for (i = i + 1; i < PredBlocks.size(); ++i) {
-      if (isReachableFromEntry(PredBlocks[i]))
-        NewBBIDom = findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
+    for (const auto &Pred : llvm::drop_begin(PredBlocks)) {
+      if (isReachableFromEntry(Pred))
+        NewBBIDom = findNearestCommonDominator(NewBBIDom, Pred);
     }
 
     // Create the new dominator tree node... and set the idom of NewBB.
