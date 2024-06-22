@@ -1145,23 +1145,23 @@ ElementCount ConstantAggregateZero::getElementCount() const {
 //                         UndefValue Implementation
 //===----------------------------------------------------------------------===//
 
-UndefValue *UndefValue::getSequentialElement() const {
+Constant *UndefValue::getSequentialElement() const {
   if (ArrayType *ATy = dyn_cast<ArrayType>(getType()))
     return UndefValue::get(ATy->getElementType());
   return UndefValue::get(cast<VectorType>(getType())->getElementType());
 }
 
-UndefValue *UndefValue::getStructElement(unsigned Elt) const {
+Constant *UndefValue::getStructElement(unsigned Elt) const {
   return UndefValue::get(getType()->getStructElementType(Elt));
 }
 
-UndefValue *UndefValue::getElementValue(Constant *C) const {
+Constant *UndefValue::getElementValue(Constant *C) const {
   if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(cast<ConstantInt>(C)->getZExtValue());
 }
 
-UndefValue *UndefValue::getElementValue(unsigned Idx) const {
+Constant *UndefValue::getElementValue(unsigned Idx) const {
   if (isa<ArrayType>(getType()) || isa<VectorType>(getType()))
     return getSequentialElement();
   return getStructElement(Idx);
@@ -1792,12 +1792,9 @@ void ConstantTargetNone::destroyConstantImpl() {
   getContext().pImpl->CTNConstants.erase(getType());
 }
 
-UndefValue *UndefValue::get(Type *Ty) {
-  std::unique_ptr<UndefValue> &Entry = Ty->getContext().pImpl->UVConstants[Ty];
-  if (!Entry)
-    Entry.reset(new UndefValue(Ty));
-
-  return Entry.get();
+Constant *UndefValue::get(Type *Ty) {
+  // errs() << *Ty << '\n';
+  return Constant::getNullValue(Ty);
 }
 
 /// Remove the constant from the constant table.

@@ -276,7 +276,7 @@ static void buildPartialUnswitchConditionalBranch(
 
   SmallVector<Value *> FrozenInvariants;
   for (Value *Inv : Invariants) {
-    if (InsertFreeze && !isGuaranteedNotToBeUndefOrPoison(Inv, AC, I, &DT))
+    if (InsertFreeze)
       Inv = IRB.CreateFreeze(Inv, Inv->getName() + ".fr");
     FrozenInvariants.push_back(Inv);
   }

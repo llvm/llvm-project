@@ -5315,7 +5315,8 @@ bool SROA::deleteDeadInstructions(
     }
 
     at::deleteAssignmentMarkers(I);
-    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    if (!I->use_empty())
+      I->replaceAllUsesWith(UndefValue::get(I->getType()));
 
     for (Use &Operand : I->operands())
       if (Instruction *U = dyn_cast<Instruction>(Operand)) {

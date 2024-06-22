@@ -4352,7 +4352,7 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
     Use &U = CB.getArgOperandUse(getCallSiteArgNo());
     assert(!isa<UndefValue>(U.get()) &&
            "Expected undef values to be filtered out!");
-    UndefValue &UV = *UndefValue::get(U->getType());
+    Constant &UV = *UndefValue::get(U->getType());
     if (A.changeUseAfterManifest(U, UV))
       return ChangeStatus::CHANGED;
     return ChangeStatus::UNCHANGED;
@@ -4442,7 +4442,7 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
   ChangeStatus manifest(Attributor &A) override {
     // TODO: Rewrite the signature to return void?
     bool AnyChange = false;
-    UndefValue &UV = *UndefValue::get(getAssociatedFunction()->getReturnType());
+    Constant &UV = *UndefValue::get(getAssociatedFunction()->getReturnType());
     auto RetInstPred = [&](Instruction &I) {
       ReturnInst &RI = cast<ReturnInst>(I);
       if (!isa<UndefValue>(RI.getReturnValue()))

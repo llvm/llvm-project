@@ -5877,10 +5877,6 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
       return LHS;
     if (!LHS || !RHS)
       return nullptr;
-    if (LHS == UndefInt8)
-      return RHS;
-    if (RHS == UndefInt8)
-      return LHS;
     return nullptr;
   };
 

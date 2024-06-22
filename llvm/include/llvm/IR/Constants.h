@@ -1385,33 +1385,33 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantExpr, Constant)
 class UndefValue : public ConstantData {
   friend class Constant;
 
-  explicit UndefValue(Type *T) : ConstantData(T, UndefValueVal) {}
-
   void destroyConstantImpl();
 
 protected:
-  explicit UndefValue(Type *T, ValueTy vty) : ConstantData(T, vty) {}
+  explicit UndefValue(Type *T, ValueTy vty) : ConstantData(T, vty) {
+    assert(vty == PoisonValueVal && "undef value is not allowed");
+  }
 
 public:
   UndefValue(const UndefValue &) = delete;
 
   /// Static factory methods - Return an 'undef' object of the specified type.
-  static UndefValue *get(Type *T);
+  static Constant *get(Type *T);
 
   /// If this Undef has array or vector type, return a undef with the right
   /// element type.
-  UndefValue *getSequentialElement() const;
+  Constant *getSequentialElement() const;
 
   /// If this undef has struct type, return a undef with the right element type
   /// for the specified element.
-  UndefValue *getStructElement(unsigned Elt) const;
+  Constant *getStructElement(unsigned Elt) const;
 
   /// Return an undef of the right value for the specified GEP index if we can,
   /// otherwise return null (e.g. if C is a ConstantExpr).
-  UndefValue *getElementValue(Constant *C) const;
+  Constant *getElementValue(Constant *C) const;
 
   /// Return an undef of the right value for the specified GEP index.
-  UndefValue *getElementValue(unsigned Idx) const;
+  Constant *getElementValue(unsigned Idx) const;
 
   /// Return the number of elements in the array, vector, or struct.
   unsigned getNumElements() const;

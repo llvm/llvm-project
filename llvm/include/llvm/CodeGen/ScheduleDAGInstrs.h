@@ -247,8 +247,7 @@ namespace llvm {
     void insertBarrierChain(Value2SUsMap &map);
 
     /// For an unanalyzable memory access, this Value is used in maps.
-    UndefValue *UnknownValue;
-
+    Constant *UnknownValue;
 
     /// Topo - A topological ordering for SUnits which permits fast IsReachable
     /// and similar queries.
