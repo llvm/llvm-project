@@ -636,23 +636,46 @@ TEST(APFloatTest, MinimumNumber) {
   APFloat f2(2.0);
   APFloat zp(0.0);
   APFloat zn(-0.0);
-  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
-  APFloat snan = APFloat::getSNaN(APFloat::IEEEdouble());
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
 
   EXPECT_EQ(1.0, minimumnum(f1, f2).convertToDouble());
   EXPECT_EQ(1.0, minimumnum(f2, f1).convertToDouble());
   EXPECT_EQ(-0.0, minimumnum(zp, zn).convertToDouble());
   EXPECT_EQ(-0.0, minimumnum(zn, zp).convertToDouble());
+
   EXPECT_TRUE(minimumnum(zn, zp).isNegative());
   EXPECT_TRUE(minimumnum(zp, zn).isNegative());
   EXPECT_TRUE(minimumnum(zn, zn).isNegative());
   EXPECT_FALSE(minimumnum(zp, zp).isNegative());
-  EXPECT_FALSE(std::isnan(minimumnum(f1, nan).convertToDouble()));
-  EXPECT_FALSE(std::isnan(minimumnum(nan, f1).convertToDouble()));
-  EXPECT_FALSE(std::isnan(minimumnum(f1, snan).convertToDouble()));
-  EXPECT_FALSE(std::isnan(minimumnum(snan, f1).convertToDouble()));
-  EXPECT_FALSE(minimumnum(snan, nan).isSignaling());
-  EXPECT_FALSE(minimumnum(snan, snan).isSignaling());
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0], nan_89ab[0], mnan_cdef[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = minimumnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = minimumnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = minimumnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
 }
 
 TEST(APFloatTest, MaximumNumber) {
@@ -660,23 +683,46 @@ TEST(APFloatTest, MaximumNumber) {
   APFloat f2(2.0);
   APFloat zp(0.0);
   APFloat zn(-0.0);
-  APFloat nan = APFloat::getNaN(APFloat::IEEEdouble());
-  APFloat snan = APFloat::getSNaN(APFloat::IEEEdouble());
+  APInt intPayload_89ab(64, 0x89ab);
+  APInt intPayload_cdef(64, 0xcdef);
+  APFloat nan_0123[2] = {APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123),
+                         APFloat::getNaN(APFloat::IEEEdouble(), false, 0x0123)};
+  APFloat mnan_4567[2] = {APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567),
+                          APFloat::getNaN(APFloat::IEEEdouble(), true, 0x4567)};
+  APFloat nan_89ab[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), false, &intPayload_89ab),
+      APFloat::getNaN(APFloat::IEEEdouble(), false, 0x89ab)};
+  APFloat mnan_cdef[2] = {
+      APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
+      APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
 
   EXPECT_EQ(2.0, maximumnum(f1, f2).convertToDouble());
   EXPECT_EQ(2.0, maximumnum(f2, f1).convertToDouble());
   EXPECT_EQ(0.0, maximumnum(zp, zn).convertToDouble());
   EXPECT_EQ(0.0, maximumnum(zn, zp).convertToDouble());
+
   EXPECT_FALSE(maximumnum(zn, zp).isNegative());
   EXPECT_FALSE(maximumnum(zp, zn).isNegative());
   EXPECT_TRUE(maximumnum(zn, zn).isNegative());
   EXPECT_FALSE(maximumnum(zp, zp).isNegative());
-  EXPECT_FALSE(std::isnan(maximumnum(f1, nan).convertToDouble()));
-  EXPECT_FALSE(std::isnan(maximumnum(nan, f1).convertToDouble()));
-  EXPECT_FALSE(std::isnan(maximumnum(f1, snan).convertToDouble()));
-  EXPECT_FALSE(std::isnan(maximumnum(snan, f1).convertToDouble()));
-  EXPECT_FALSE(maximumnum(snan, nan).isSignaling());
-  EXPECT_FALSE(maximumnum(snan, snan).isSignaling());
+
+  for (APFloat n : {nan_0123[0], mnan_4567[0], nan_89ab[0], mnan_cdef[0]})
+    for (APFloat f : {f1, f2, zn, zp}) {
+      APFloat res = maximumnum(f, n);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+      res = maximumnum(n, f);
+      EXPECT_FALSE(res.isNaN());
+      EXPECT_TRUE(res.bitwiseIsEqual(f));
+    }
+
+  // When NaN vs NaN, we should keep payload/sign of either one.
+  for (auto n1 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef})
+    for (auto n2 : {nan_0123, mnan_4567, nan_89ab, mnan_cdef}) {
+      APFloat res = maximumnum(n1[0], n2[0]);
+      EXPECT_TRUE(res.bitwiseIsEqual(n1[1]) || res.bitwiseIsEqual(n2[1]));
+      EXPECT_FALSE(res.isSignaling());
+    }
 }
 
 TEST(APFloatTest, Denormal) {
