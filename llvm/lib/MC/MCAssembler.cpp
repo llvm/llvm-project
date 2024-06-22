@@ -829,7 +829,8 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
     Sec->setLayoutOrder(i);
 
     // Chain together fragments from all subsections.
-    MCDummyFragment Dummy(Sec);
+    MCDummyFragment Dummy;
+    Dummy.setParent(Sec);
     MCFragment *Tail = &Dummy;
     for (auto &[_, List] : Sec->Subsections) {
       if (!List.Head)
