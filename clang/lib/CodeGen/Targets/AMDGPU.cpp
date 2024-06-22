@@ -399,6 +399,20 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
 
+  if (const auto *Attr = FD->getAttr<AMDGPUWavegroupKernelAttr>()) {
+    F->addFnAttr("amdgpu-wavegroup-enable");
+
+    llvm::Type *I32 = llvm::IntegerType::get(F->getContext(), 32);
+    auto *X = llvm::ConstantInt::get(I32, Attr->getBlockDimX());
+    auto *Y = llvm::ConstantInt::get(I32, Attr->getBlockDimY());
+    auto *Z = llvm::ConstantInt::get(I32, Attr->getBlockDimZ());
+    llvm::Metadata *AttrMDArgs[] = {llvm::ConstantAsMetadata::get(X),
+                                    llvm::ConstantAsMetadata::get(Y),
+                                    llvm::ConstantAsMetadata::get(Z)};
+    F->setMetadata("reqd_work_group_size",
+                   llvm::MDNode::get(F->getContext(), AttrMDArgs));
+  }
+
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
     uint32_t X =
         Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();

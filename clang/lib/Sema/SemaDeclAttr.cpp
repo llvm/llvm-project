@@ -6532,6 +6532,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AMDGPUMaxNumWorkGroups:
     S.AMDGPU().handleAMDGPUMaxNumWorkGroupsAttr(D, AL);
     break;
+  case ParsedAttr::AT_AMDGPUWavegroupKernel:
+    S.AMDGPU().handleAMDGPUWavegroupKernelAttr(D, AL);
+    break;
   case ParsedAttr::AT_AVRSignal:
     S.AVR().handleSignalAttr(D, AL);
     break;
@@ -7311,6 +7314,10 @@ void Sema::ProcessDeclAttributeList(
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
       D->setInvalidDecl();
     } else if (const auto *A = D->getAttr<AMDGPUNumVGPRAttr>()) {
+      Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
+          << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
+      D->setInvalidDecl();
+    } else if (const auto *A = D->getAttr<AMDGPUWavegroupKernelAttr>()) {
       Diag(D->getLocation(), diag::err_attribute_wrong_decl_type)
           << A << A->isRegularKeywordAttribute() << ExpectedKernelFunction;
       D->setInvalidDecl();

@@ -61,6 +61,7 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
 };
 } // namespace clang
 

@@ -2859,6 +2859,26 @@ An error will be given if:
   }];
 }
 
+def AMDGPUWavegroupKernelDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attributes marks a kernel as using wavegroup launch.
+
+Clang supports the
+``__attribute__((amdgpu_wavegroup_kernel(<num_wavegroups>, <wave_size>, <x>, <y>, <z>)))``
+attribute for the AMDGPU target when compiling for a GFX13 offload target. This
+attribute may be attached to HIP kernel function definitions to enable wavegroup
+kernel launches.
+
+The ``<x>``, ``<y>``, and ``<<z>>`` parameters specify the exact size of work
+groups.
+
+``<num_wavegroups>`` must be 4, ``<wave_size>`` must be 32. The number of
+threads per workgroup, i.e. the product of ``<x>``, ``<y>``, and ``<z>``, must
+be divisible by 128.
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target

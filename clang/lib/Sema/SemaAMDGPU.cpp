@@ -368,4 +368,60 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
+void SemaAMDGPU::handleAMDGPUWavegroupKernelAttr(Decl *D,
+                                                 const ParsedAttr &AL) {
+  uint32_t NumWavegroups = 0;
+  uint32_t WaveSize = 0;
+  uint32_t BlockDimX = 0;
+  uint32_t BlockDimY = 0;
+  uint32_t BlockDimZ = 0;
+
+  // TODO-GFX13: Do we need more error checking?
+
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), NumWavegroups))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), WaveSize))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(2), BlockDimX))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(3), BlockDimY))
+    return;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(4), BlockDimZ))
+    return;
+
+  if (NumWavegroups != 4) {
+    Diag(AL.getLoc(), diag::err_amdgcn_num_wavegroups_value);
+    return;
+  }
+
+  if (WaveSize != 32) {
+    Diag(AL.getLoc(), diag::err_amdgcn_wave_size_value);
+    return;
+  }
+
+  uint32_t BlockDim = BlockDimX * BlockDimY * BlockDimZ;
+  if (BlockDim == 0) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 0;
+    return;
+  }
+  if (BlockDim > 1024 || BlockDimX > 1024 || BlockDimY > 1024 ||
+      BlockDimZ > 1024) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 1;
+    return;
+  }
+  if ((BlockDim % 128) != 0) {
+    Diag(AL.getLoc(), diag::err_amdgcn_block_dim_invalid_value);
+    Diag(AL.getLoc(), diag::note_amdgcn_block_dim_valid_value) << 2;
+    return;
+  }
+
+  auto *Addr = ::new (getASTContext())
+      AMDGPUWavegroupKernelAttr(getASTContext(), AL, NumWavegroups, WaveSize,
+                                BlockDimX, BlockDimY, BlockDimZ);
+
+  D->addAttr(Addr);
+}
+
 } // namespace clang

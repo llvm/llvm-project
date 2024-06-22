@@ -2178,6 +2178,17 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUWavegroupKernel : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_wavegroup_kernel", 0>];
+  let Args = [
+    UnsignedArgument<"NumWavegroups">, UnsignedArgument<"WaveSize">,
+    UnsignedArgument<"BlockDimX">, UnsignedArgument<"BlockDimY">,
+    UnsignedArgument<"BlockDimZ">
+  ];
+  let Documentation = [AMDGPUWavegroupKernelDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel function">;
+}
+
 def AMDGPUKernelCall : DeclOrTypeAttr {
   let Spellings = [Clang<"amdgpu_kernel">];
   let Documentation = [Undocumented];
