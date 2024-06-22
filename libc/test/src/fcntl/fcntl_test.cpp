@@ -163,6 +163,7 @@ TEST(LlvmLibcFcntlTest, UseAfterClose) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, F_GETFL));
   ASSERT_ERRNO_EQ(EBADF);
+  LIBC_NAMESPACE::libc_errno = 0;
 }
 
 TEST(LlvmLibcFcntlTest, SetGetOwnerTest) {
