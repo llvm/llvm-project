@@ -1266,23 +1266,22 @@ private:
   }
 
   bool parseTemplateDeclaration() {
-    if (CurrentToken && CurrentToken->is(tok::less)) {
-      CurrentToken->setType(TT_TemplateOpener);
-      next();
-      TemplateDeclarationDepth++;
-      if (!parseAngle()) {
-        TemplateDeclarationDepth--;
-        return false;
-      }
-      TemplateDeclarationDepth--;
-      if (CurrentToken &&
-          (TemplateDeclarationDepth == 0 ||
-           !CurrentToken->isOneOf(tok::kw_typename, tok::kw_class))) {
-        CurrentToken->Previous->ClosesTemplateDeclaration = true;
-      }
-      return true;
-    }
-    return false;
+    if (!CurrentToken || CurrentToken->isNot(tok::less))
+      return false;
+
+    CurrentToken->setType(TT_TemplateOpener);
+    next();
+
+    TemplateDeclarationDepth++;
+    const bool WellFormed = parseAngle();
+    TemplateDeclarationDepth--;
+    if (!WellFormed)
+      return false;
+
+    if (CurrentToken && TemplateDeclarationDepth == 0)
+      CurrentToken->Previous->ClosesTemplateDeclaration = true;
+
+    return true;
   }
 
   bool consumeToken() {
