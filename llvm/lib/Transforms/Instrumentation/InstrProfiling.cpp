@@ -85,6 +85,11 @@ cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
                           "Use debug info to correlate"),
                clEnumValN(InstrProfCorrelator::BINARY, "binary",
                           "Use binary to correlate")));
+
+cl::opt<bool>
+    InstrProfThreadLocal("instr-prof-thread-local",
+                         cl::desc("Generate thread local counter regions"),
+                         cl::init(false));
 } // namespace llvm
 
 namespace {
@@ -215,6 +220,10 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
+    GlobalVariable *TLSRegionCounters = nullptr;
+    // Both a regular DataVar and TLS Datavar must exist when TLS counters are
+    // in use
+    GlobalVariable *TLSDataVar = nullptr;
     GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
@@ -286,16 +295,24 @@ private:
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
 
+  Value *getThreadLocalCounterAddress(InstrProfCntrInstBase *I);
+
   /// Get the region counters for an increment, creating them if necessary.
   ///
   /// If the counter array doesn't yet exist, the profile data variables
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfCntrInstBase *Inc);
 
+  /// Get the thread local region counters, creating them if necessary.
+  /// These must exist alongside the global region counters.
+  GlobalVariable *
+  getOrCreateThreadLocalRegionCounters(InstrProfCntrInstBase *Inc);
+
   /// Create the region counters.
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
                                        StringRef Name,
-                                       GlobalValue::LinkageTypes Linkage);
+                                       GlobalValue::LinkageTypes Linkage,
+                                       bool ThreadLocal);
 
   /// Compute the address of the test vector bitmap that this profiling
   /// instruction acts on.
@@ -608,6 +625,7 @@ enum class ValueProfilingCallType {
 
 } // end anonymous namespace
 
+// TODO: put TLS counters incompatibility checks here
 PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
                                                   ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
@@ -914,6 +932,9 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
 
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
+  if (InstrProfThreadLocal) {
+    return getThreadLocalCounterAddress(I);
+  }
   IRBuilder<> Builder(I);
 
   if (isa<InstrProfTimestampInst>(I))
@@ -935,6 +956,22 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
+}
+
+Value *InstrLowerer::getThreadLocalCounterAddress(InstrProfCntrInstBase *I) {
+  GlobalVariable *CountersTLS = getOrCreateThreadLocalRegionCounters(I);
+  IRBuilder<> Builder(I);
+
+  if (isa<InstrProfTimestampInst>(I))
+    CountersTLS->setAlignment(Align(8));
+
+  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
+      CountersTLS->getValueType(),
+      Builder.CreateThreadLocalAddress(CountersTLS), 0,
+      I->getIndex()->getZExtValue());
+
+  assert(!isRuntimeCounterRelocationEnabled());
+  return Addr;
 }
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
@@ -1367,13 +1404,18 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
     VarPrefix = getInstrProfCountersVarPrefix();
     VarName = getVarName(Inc, VarPrefix, Renamed);
     InstrProfCntrInstBase *CntrIncrement = dyn_cast<InstrProfCntrInstBase>(Inc);
-    Ptr = createRegionCounters(CntrIncrement, VarName, Linkage);
+    Ptr = createRegionCounters(CntrIncrement, VarName, Linkage, false);
   } else if (IPSK == IPSK_bitmap) {
     VarPrefix = getInstrProfBitmapVarPrefix();
     VarName = getVarName(Inc, VarPrefix, Renamed);
     InstrProfMCDCBitmapInstBase *BitmapUpdate =
         dyn_cast<InstrProfMCDCBitmapInstBase>(Inc);
     Ptr = createRegionBitmaps(BitmapUpdate, VarName, Linkage);
+  } else if (IPSK == IPSK_tls_cnts) {
+    VarPrefix = getInstrProfCountersTLSVarPrefix();
+    VarName = getVarName(Inc, VarPrefix, Renamed);
+    InstrProfCntrInstBase *CntrIncrement = dyn_cast<InstrProfCntrInstBase>(Inc);
+    Ptr = createRegionCounters(CntrIncrement, VarName, Linkage, true);
   } else {
     llvm_unreachable("Profile Section must be for Counters or Bitmaps");
   }
@@ -1416,7 +1458,8 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 
 GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
-                                   GlobalValue::LinkageTypes Linkage) {
+                                   GlobalValue::LinkageTypes Linkage,
+                                   bool ThreadLocal) {
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
@@ -1436,6 +1479,7 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                             Constant::getNullValue(CounterTy), Name);
     GV->setAlignment(Align(8));
   }
+  GV->setThreadLocal(ThreadLocal);
   return GV;
 }
 
@@ -1450,6 +1494,10 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   // the corresponding profile section.
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
+
+  if (InstrProfThreadLocal) {
+    PD.TLSRegionCounters = setupProfileSection(Inc, IPSK_tls_cnts);
+  }
 
   if (DebugInfoCorrelate ||
       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
@@ -1494,6 +1542,21 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   return PD.RegionCounters;
 }
 
+GlobalVariable *
+InstrLowerer::getOrCreateThreadLocalRegionCounters(InstrProfCntrInstBase *Inc) {
+  // If this check fails, this function would return a null pointer
+  assert(InstrProfThreadLocal);
+  GlobalVariable *NamePtr = Inc->getName();
+  auto &PD = ProfileDataMap[NamePtr];
+  if (PD.TLSRegionCounters) {
+    return PD.TLSRegionCounters;
+  } else {
+    // Initializes TLSRegionCounters when InstrProfThreadLocal is true
+    (void)getOrCreateRegionCounters(Inc);
+    return PD.TLSRegionCounters;
+  }
+}
+
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
@@ -1531,6 +1594,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
       getVarName(Inc, getInstrProfCountersVarPrefix(), Renamed);
   std::string DataVarName =
       getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
+  std::string TLSDataVarName =
+      getVarName(Inc, getInstrProfCountersTLSVarPrefix(), Renamed);
 
   auto *Int8PtrTy = PointerType::getUnqual(Ctx);
   // Allocate statically the array of pointers to value profile nodes for

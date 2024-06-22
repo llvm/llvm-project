@@ -2941,6 +2941,14 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
+.. option:: -fprofile-thread-local
+
+   Increment profile counters in thread local storage and atomically add their
+   values to global counters on thread exit.  This has the potential to deliver
+   both accuracy and high performance whenever there is high thread contention 
+   on profile counters.  This is an experimental option and it is only supported
+   on 64-bit linux.
+
 Fine Tuning Profile Collection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

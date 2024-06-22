@@ -1,0 +1,27 @@
+RUN: mkdir -p %t.tls.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tls.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.tls.d\" -DDLOPEN_FLAGS="RTLD_LAZY" -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tls -rpath %t.tls.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+RUN: mkdir -p %t.atomic.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic.d/lib.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlclose-lib.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.atomic.d\" -DDLOPEN_FLAGS="RTLD_LAZY" -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic -rpath %t.atomic.d %S/../Inputs/instrprof-tls-dlclose-main.c
+
+RUN: env LLVM_PROFILE_FILE=%t-atomic.profraw %run %t-atomic
+// Here we expect a segfault until the dlclose issue is fixed
+RUN: env LLVM_PROFILE_FILE=%t-tls.profraw %run %t-tls
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata    -o %t-main.tls.ll    -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-main.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-main.c
+RUN: diff %t-main.tls.ll %t-main.atomic.ll
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata -o %t-lib.tls.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-lib.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-lib.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlclose-lib.c
+RUN: diff %t-lib.tls.ll %t-lib.atomic.ll
+
+XFAIL: target={{.*}}

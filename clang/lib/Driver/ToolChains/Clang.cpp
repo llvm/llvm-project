@@ -720,6 +720,18 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fcoverage-mcdc");
   }
 
+  if (Args.hasArg(options::OPT_fprofile_thread_local)) {
+    if (!ProfileGenerateArg)
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << "-fprofile-thread-local"
+          << "-fprofile-instr-generate";
+
+    // Clang cc1 is not in the know about thread local coverage, but llvm
+    // should be
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-instr-prof-thread-local");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fcoverage_compilation_dir_EQ)) {
     if (A->getOption().matches(options::OPT_ffile_compilation_dir_EQ))

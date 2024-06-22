@@ -34,6 +34,7 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
+#include "InstrProfilingTLS.h"
 #include "InstrProfilingUtil.h"
 
 /* From where is profile name specified.
@@ -1086,6 +1087,8 @@ void __llvm_profile_set_filename(const char *FilenamePat) {
   parseAndSetFilename(FilenamePat, PNS_runtime_api, 1);
 }
 
+void (*on_main_thread_exit)(void) = NULL;
+
 /* The public API for writing profile data into the file with name
  * set by previous calls to __llvm_profile_set_filename or
  * __llvm_profile_override_default_filename or
@@ -1098,6 +1101,9 @@ int __llvm_profile_write_file(void) {
 
   // Temporarily suspend getting SIGKILL when the parent exits.
   int PDeathSig = lprofSuspendSigKill();
+
+  if (on_main_thread_exit)
+    on_main_thread_exit();
 
   if (lprofProfileDumped() || __llvm_profile_is_continuous_mode_enabled()) {
     PROF_NOTE("Profile data not written to file: %s.\n", "already written");

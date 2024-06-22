@@ -1,0 +1,32 @@
+RUN: mkdir -p %t.tls.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tls.d/func.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlopen-func.c
+RUN: %clang_profgen -fcoverage-mapping -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.tls.d/func2.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlopen-func2.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.tls.d\" -DDLOPEN_FLAGS="RTLD_LAZY" -fprofile-thread-local -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-tls -rpath %t.tls.d %S/../Inputs/instrprof-tls-dlopen-main.c
+
+RUN: mkdir -p %t.atomic.d
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic.d/func.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlopen-func.c
+RUN: %clang_profgen -fcoverage-mapping -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t.atomic.d/func2.shared -fPIC -shared %S/../Inputs/instrprof-tls-dlopen-func2.c
+
+RUN: %clang_profgen -fcoverage-mapping -lpthread -DDLOPEN_FUNC_DIR=\"%t.atomic.d\" -DDLOPEN_FLAGS="RTLD_LAZY" -fprofile-update=atomic -fdata-sections -ffunction-sections -fuse-ld=gold -Wl,--gc-sections -o %t-atomic -rpath %t.atomic.d %S/../Inputs/instrprof-tls-dlopen-main.c
+
+RUN: env LLVM_PROFILE_FILE=%t-tls.profraw %run %t-tls
+RUN: env LLVM_PROFILE_FILE=%t-atomic.profraw %run %t-atomic
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata    -o %t-main.tls.ll    -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-main.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-main.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-main.c
+RUN: diff %t-main.tls.ll %t-main.atomic.ll
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata -o %t-func2.tls.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-func2.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-func2.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-func2.c
+RUN: diff %t-func2.tls.ll %t-func2.atomic.ll
+
+RUN: llvm-profdata merge -o %t-tls.profdata %t-tls.profraw
+RUN: llvm-profdata merge -o %t-atomic.profdata %t-atomic.profraw
+RUN: %clang_profuse=%t-tls.profdata -o %t-func.tls.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-func.c
+RUN: %clang_profuse=%t-atomic.profdata -o %t-func.atomic.ll -S -emit-llvm %S/../Inputs/instrprof-tls-dlopen-func.c
+RUN: diff %t-func.tls.ll %t-func.atomic.ll

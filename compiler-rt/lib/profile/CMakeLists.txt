@@ -70,13 +70,24 @@ set(PROFILE_SOURCES
   InstrProfilingUtil.c
   )
 
+set(PROFILE_STATIC_TLS_SOURCES
+  InstrProfilingTLS.c
+  InstrProfilingStaticTLSLinux.cpp)
+
+set(PROFILE_SHARED_TLS_SOURCES
+  InstrProfilingTLSDyLib.c
+  InstrProfilingDyLibLinux.cpp)
+
 set(PROFILE_HEADERS
   InstrProfiling.h
   InstrProfilingInternal.h
   InstrProfilingPort.h
   InstrProfilingUtil.h
+  InstrProfilingTLS.h
   WindowsMMap.h
   )
+
+set(PROFILE_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 
 if(WIN32)
   list(APPEND PROFILE_SOURCES
@@ -134,6 +145,30 @@ if(APPLE)
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
 else()
+  #if(UNIX AND NOT APPLE AND NOT ANDROID)
+  if(OS_NAME MATCHES "Linux")
+    add_compiler_rt_runtime(clang_rt.profile_threadlocal
+      STATIC
+      OS ${PROFILE_SUPPORTED_OS}
+      ARCHS ${PROFILE_SUPPORTED_ARCH}
+      CFLAGS ${EXTRA_FLAGS}
+      SOURCES ${PROFILE_STATIC_TLS_SOURCES} 
+      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+      PARENT_TARGET profile)
+
+    add_compiler_rt_runtime(clang_rt.profile_threadlocal
+      SHARED
+      OS ${PROFILE_SUPPORTED_OS}
+      ARCHS ${PROFILE_SUPPORTED_ARCH}
+      CFLAGS ${EXTRA_FLAGS}
+      SOURCES ${PROFILE_SHARED_TLS_SOURCES} 
+      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+      OBJECT_LIBS RTInterception
+                  RTSanitizerCommon
+                  RTSanitizerCommonLibc
+      PARENT_TARGET profile)
+  endif()
+
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
     ARCHS ${PROFILE_SUPPORTED_ARCH}
