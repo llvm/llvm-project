@@ -868,9 +868,10 @@ protected:
     // Find NewBB's immediate dominator and create new dominator tree node for
     // NewBB.
     NodeT *NewBBIDom = nullptr;
-    for (const auto &Pred : PredBlocks)
-      if (isReachableFromEntry(Pred)) {
-        NewBBIDom = Pred;
+    unsigned i = 0;
+    for (i = 0; i < PredBlocks.size(); ++i)
+      if (isReachableFromEntry(PredBlocks[i])) {
+        NewBBIDom = PredBlocks[i];
         break;
       }
 
@@ -879,9 +880,9 @@ protected:
     // changed.
     if (!NewBBIDom) return;
 
-    for (const auto &Pred : llvm::drop_begin(PredBlocks)) {
-      if (isReachableFromEntry(Pred))
-        NewBBIDom = findNearestCommonDominator(NewBBIDom, Pred);
+    for (i = i + 1; i < PredBlocks.size(); ++i) {
+      if (isReachableFromEntry(PredBlocks[i]))
+        NewBBIDom = findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
     }
 
     // Create the new dominator tree node... and set the idom of NewBB.
