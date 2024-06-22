@@ -153,17 +153,17 @@ bool compare_unary_operation_two_outputs(Operation op, T input,
                                          const BinaryOutput<T> &libc_output,
                                          double ulp_tolerance,
                                          RoundingMode rounding);
-template <typename T>
+  template <typename T>
 bool compare_binary_operation_two_outputs(Operation op,
                                           const BinaryInput<T> &input,
                                           const BinaryOutput<T> &libc_output,
                                           double ulp_tolerance,
                                           RoundingMode rounding);
 
-template <typename T>
+  template <typename T, typename R>
 bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<T> &input,
-                                         T libc_output, double ulp_tolerance,
+                                         R libc_output, double ulp_tolerance,
                                          RoundingMode rounding);
 
 template <typename InputType, typename OutputType>
@@ -188,10 +188,10 @@ void explain_binary_operation_two_outputs_error(
     const BinaryOutput<T> &match_value, double ulp_tolerance,
     RoundingMode rounding);
 
-template <typename T>
+  template <typename T, typename R>
 void explain_binary_operation_one_output_error(Operation op,
                                                const BinaryInput<T> &input,
-                                               T match_value,
+                                               R match_value,
                                                double ulp_tolerance,
                                                RoundingMode rounding);
 
@@ -236,7 +236,7 @@ private:
                                                rounding);
   }
 
-  template <typename T> bool match(const BinaryInput<T> &in, T out) {
+  template <typename T, typename R> bool match(const BinaryInput<T> &in, R out) {
     return compare_binary_operation_one_output(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -269,7 +269,7 @@ private:
                                                rounding);
   }
 
-  template <typename T> void explain_error(const BinaryInput<T> &in, T out) {
+  template <typename T, typename R> void explain_error(const BinaryInput<T> &in, R out) {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
                                               rounding);
   }

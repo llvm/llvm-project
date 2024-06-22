@@ -893,10 +893,10 @@ template void explain_binary_operation_two_outputs_error<long double>(
     Operation, const BinaryInput<long double> &,
     const BinaryOutput<long double> &, double, RoundingMode);
 
-template <typename T>
+  template <typename T, typename R>
 void explain_binary_operation_one_output_error(Operation op,
                                                const BinaryInput<T> &input,
-                                               T libc_result,
+                                               R libc_result,
                                                double ulp_tolerance,
                                                RoundingMode rounding) {
   unsigned int precision = get_precision<T>(ulp_tolerance);
@@ -1059,10 +1059,10 @@ template bool compare_binary_operation_two_outputs<long double>(
     Operation, const BinaryInput<long double> &,
     const BinaryOutput<long double> &, double, RoundingMode);
 
-template <typename T>
+  template <typename T, typename R>
 bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<T> &input,
-                                         T libc_result, double ulp_tolerance,
+                                         R libc_result, double ulp_tolerance,
                                          RoundingMode rounding) {
   unsigned int precision = get_precision<T>(ulp_tolerance);
   MPFRNumber mpfr_result =
