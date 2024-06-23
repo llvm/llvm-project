@@ -83,7 +83,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
-    // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
