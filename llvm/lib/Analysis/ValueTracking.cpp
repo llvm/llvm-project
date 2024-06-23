@@ -9396,7 +9396,7 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   case Intrinsic::scmp:
   case Intrinsic::ucmp:
     return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
-                                      APInt::getOneBitSet(Width, 0));
+                                      APInt(Width, 2));
   default:
     break;
   }
