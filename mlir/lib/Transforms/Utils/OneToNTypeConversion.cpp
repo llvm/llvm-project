@@ -394,9 +394,10 @@ applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
         assert(castKind == getCastKindName(CastKind::Argument) &&
                "unexpected value of cast kind attribute");
         assert(llvm::all_of(operands, llvm::IsaPred<BlockArgument>));
+        SmallVector<BlockArgument> blockArgs = llvm::map_to_vector(
+            operands, [](Value v) { return cast<BlockArgument>(v); });
         maybeResult = typeConverter.materializeArgumentConversion(
-            rewriter, castOp->getLoc(), resultTypes.front(),
-            castOp.getOperands());
+            rewriter, castOp->getLoc(), resultTypes.front(), blockArgs);
       }
       if (!maybeResult.has_value() || !maybeResult.value()) {
         emitError(castOp->getLoc())

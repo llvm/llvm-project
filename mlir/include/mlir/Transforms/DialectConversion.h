@@ -186,7 +186,7 @@ public:
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
     argumentMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapArgumentMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
   /// converting a legal type to an illegal source type. This is used when
@@ -300,9 +300,9 @@ public:
   /// methods.
   Value materializeArgumentConversion(OpBuilder &builder, Location loc,
                                       Type resultType,
-                                      ValueRange inputs) const {
-    return materializeConversion(argumentMaterializations, builder, loc,
-                                 resultType, inputs);
+                                      Block::BlockArgListType inputs) const {
+    return materializeArgumentConversion(argumentMaterializations, builder, loc,
+                                         resultType, inputs);
   }
   Value materializeSourceConversion(OpBuilder &builder, Location loc,
                                     Type resultType, ValueRange inputs) const {
@@ -332,6 +332,8 @@ private:
   /// The signature of the callback used to materialize a conversion.
   using MaterializationCallbackFn = std::function<std::optional<Value>(
       OpBuilder &, Type, ValueRange, Location)>;
+  using ArgumentMaterializationCallbackFn = std::function<std::optional<Value>(
+      OpBuilder &, Type, Block::BlockArgListType, Location)>;
 
   /// The signature of the callback used to convert a type attribute.
   using TypeAttributeConversionCallbackFn =
@@ -343,6 +345,10 @@ private:
   materializeConversion(ArrayRef<MaterializationCallbackFn> materializations,
                         OpBuilder &builder, Location loc, Type resultType,
                         ValueRange inputs) const;
+  Value materializeArgumentConversion(
+      ArrayRef<ArgumentMaterializationCallbackFn> materializations,
+      OpBuilder &builder, Location loc, Type resultType,
+      Block::BlockArgListType inputs) const;
 
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
@@ -397,6 +403,18 @@ private:
       return std::nullopt;
     };
   }
+  template <typename T, typename FnT>
+  ArgumentMaterializationCallbackFn
+  wrapArgumentMaterialization(FnT &&callback) const {
+    return
+        [callback = std::forward<FnT>(callback)](
+            OpBuilder &builder, Type resultType, Block::BlockArgListType inputs,
+            Location loc) -> std::optional<Value> {
+          if (T derivedType = dyn_cast<T>(resultType))
+            return callback(builder, derivedType, inputs, loc);
+          return std::nullopt;
+        };
+  }
 
   /// Generate a wrapper for the given memory space conversion callback. The
   /// callback may take any subclass of `Attribute` and the wrapper will check
@@ -428,7 +446,7 @@ private:
   SmallVector<ConversionCallbackFn, 4> conversions;
 
   /// The list of registered materialization functions.
-  SmallVector<MaterializationCallbackFn, 2> argumentMaterializations;
+  SmallVector<ArgumentMaterializationCallbackFn, 2> argumentMaterializations;
   SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
   SmallVector<MaterializationCallbackFn, 2> targetMaterializations;
 

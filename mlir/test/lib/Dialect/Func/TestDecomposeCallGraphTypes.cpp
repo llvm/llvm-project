@@ -124,6 +124,7 @@ struct TestDecomposeCallGraphTypes
           return success();
         });
     typeConverter.addArgumentMaterialization(buildMakeTupleOp);
+    typeConverter.addSourceMaterialization(buildMakeTupleOp);
 
     ValueDecomposer decomposer;
     decomposer.addDecomposeValueConversion(buildDecomposeTuple);

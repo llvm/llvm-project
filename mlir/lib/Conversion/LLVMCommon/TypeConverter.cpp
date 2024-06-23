@@ -168,14 +168,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                               inputs);
       });
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
-                                 ValueRange inputs,
+                                 Block::BlockArgListType inputs,
                                  Location loc) -> std::optional<Value> {
     if (inputs.size() == 1) {
       // This is a bare pointer. We allow bare pointers only for function entry
       // blocks.
-      BlockArgument barePtr = dyn_cast<BlockArgument>(inputs.front());
-      if (!barePtr)
-        return std::nullopt;
+      BlockArgument barePtr = inputs.front();
       Block *block = barePtr.getOwner();
       if (!block->isEntryBlock() ||
           !isa<FunctionOpInterface>(block->getParentOp()))

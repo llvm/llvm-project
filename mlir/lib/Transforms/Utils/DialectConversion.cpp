@@ -2841,6 +2841,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
   if (const TypeConverter *converter = mat.getConverter()) {
     rewriter.setInsertionPoint(op);
     Value newMaterialization;
+    SmallVector<BlockArgument> blockArgs;
     switch (mat.getMaterializationKind()) {
     case MaterializationKind::Argument:
       // Try to materialize an argument conversion.
@@ -2851,8 +2852,10 @@ static LogicalResult legalizeUnresolvedMaterialization(
       // that it diverges from the behavior of the other hooks, and can be
       // easily misunderstood. We should clean up the argument hooks to better
       // represent the desired invariants we actually care about.
+      blockArgs = llvm::map_to_vector(
+          inputOperands, [](Value v) { return cast<BlockArgument>(v); });
       newMaterialization = converter->materializeArgumentConversion(
-          rewriter, op->getLoc(), mat.getOrigOutputType(), inputOperands);
+          rewriter, op->getLoc(), mat.getOrigOutputType(), blockArgs);
       if (newMaterialization)
         break;
 
@@ -3129,6 +3132,17 @@ Value TypeConverter::materializeConversion(
     ArrayRef<MaterializationCallbackFn> materializations, OpBuilder &builder,
     Location loc, Type resultType, ValueRange inputs) const {
   for (const MaterializationCallbackFn &fn : llvm::reverse(materializations))
+    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
+      return *result;
+  return nullptr;
+}
+
+Value TypeConverter::materializeArgumentConversion(
+    ArrayRef<ArgumentMaterializationCallbackFn> materializations,
+    OpBuilder &builder, Location loc, Type resultType,
+    Block::BlockArgListType inputs) const {
+  for (const ArgumentMaterializationCallbackFn &fn :
+       llvm::reverse(materializations))
     if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
       return *result;
   return nullptr;
