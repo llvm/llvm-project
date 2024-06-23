@@ -3966,6 +3966,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
     const CXXMethodDecl *OldMethod = dyn_cast<CXXMethodDecl>(Old);
     CXXMethodDecl *NewMethod = dyn_cast<CXXMethodDecl>(New);
+    const FunctionDecl *RemoveRestrictFrom = nullptr; // See below.
     if (OldMethod && NewMethod) {
       // Preserve triviality.
       NewMethod->setTrivial(OldMethod->isTrivial());
@@ -4032,6 +4033,14 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
             << llvm::to_underlying(getSpecialMember(OldMethod));
         return true;
       }
+
+      // GCC and MSVC allow a mismatch in '__restrict'-qualification between
+      // member function declarations, so remove it if it is present on one
+      // but not the other.
+      auto OldQuals = OldMethod->getMethodQualifiers();
+      auto NewQuals = NewMethod->getMethodQualifiers();
+      if (OldQuals.hasRestrict() != NewQuals.hasRestrict())
+        RemoveRestrictFrom = OldQuals.hasRestrict() ? Old : New;
     }
 
     // C++1z [over.load]p2
@@ -4077,12 +4086,32 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
     // noreturn should now match unless the old type info didn't have it.
     QualType OldQTypeForComparison = OldQType;
-    if (!OldTypeInfo.getNoReturn() && NewTypeInfo.getNoReturn()) {
-      auto *OldType = OldQType->castAs<FunctionProtoType>();
-      const FunctionType *OldTypeForComparison
-        = Context.adjustFunctionType(OldType, OldTypeInfo.withNoReturn(true));
-      OldQTypeForComparison = QualType(OldTypeForComparison, 0);
-      assert(OldQTypeForComparison.isCanonical());
+    QualType NewQTypeForComparison = NewQType;
+
+    // Helper to adjust the EPI of a function type.
+    auto AdjustFunctionType = [&](QualType QT, auto Adjust) -> QualType {
+      const auto *FPT = QT->castAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      Adjust(EPI);
+      QualType Adjusted = Context.getFunctionType(FPT->getReturnType(),
+                                                  FPT->getParamTypes(), EPI);
+      assert(Adjusted.isCanonical());
+      return Adjusted;
+    };
+
+    bool AddNoReturn = !OldTypeInfo.getNoReturn() && NewTypeInfo.getNoReturn();
+    if (AddNoReturn || RemoveRestrictFrom == Old) {
+      auto Adjust = [&](FunctionProtoType::ExtProtoInfo &EPI) {
+        EPI.ExtInfo = OldTypeInfo.withNoReturn(AddNoReturn);
+        if (RemoveRestrictFrom == Old)
+          EPI.TypeQuals.removeRestrict();
+      };
+      OldQTypeForComparison = AdjustFunctionType(OldQType, Adjust);
+    }
+
+    if (RemoveRestrictFrom == New) {
+      auto Adjust = [](auto &EPI) { EPI.TypeQuals.removeRestrict(); };
+      NewQTypeForComparison = AdjustFunctionType(NewQType, Adjust);
     }
 
     if (haveIncompatibleLanguageLinkages(Old, New)) {
@@ -4109,7 +4138,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // CheckEquivalentExceptionSpec, and we don't want follow-on diagnostics
     // about incompatible types under -fms-compatibility.
     if (Context.hasSameFunctionTypeIgnoringExceptionSpec(OldQTypeForComparison,
-                                                         NewQType))
+                                                         NewQTypeForComparison))
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
 
     // If the types are imprecise (due to dependent constructs in friends or

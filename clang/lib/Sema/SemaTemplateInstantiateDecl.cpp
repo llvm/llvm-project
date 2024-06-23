@@ -5060,6 +5060,28 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setRangeEnd(PatternDecl->getEndLoc());
   Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
 
+  // Propagate '__restrict' (or lack thereof) properly.
+  //
+  // Since '__restrict'-ness is allowed to differ between the declaration and
+  // definition of a function, we need to propagate the '__restrict'-ness of
+  // the template declaration to the instantiated declaration, and that of the
+  // template definition to the instantiated definition. The former happens
+  // automatically during template instantiation, so we only need to handle
+  // the latter here.
+  if (auto MD = dyn_cast<CXXMethodDecl>(Function)) {
+    bool Restrict = cast<CXXMethodDecl>(PatternDecl)->isEffectivelyRestrict();
+    if (Restrict != MD->getMethodQualifiers().hasRestrict()) {
+      const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (Restrict)
+        EPI.TypeQuals.addRestrict();
+      else
+        EPI.TypeQuals.removeRestrict();
+      MD->setType(Context.getFunctionType(FPT->getReturnType(),
+                                          FPT->getParamTypes(), EPI));
+    }
+  }
+
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
