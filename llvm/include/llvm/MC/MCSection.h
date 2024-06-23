@@ -211,7 +211,7 @@ public:
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    const MCExpr *Subsection) const = 0;
+                                    uint32_t Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill
   /// instead of 0s.
