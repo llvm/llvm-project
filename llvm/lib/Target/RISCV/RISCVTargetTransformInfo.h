@@ -397,6 +397,8 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return true;
   }
+
+  bool shouldDropLSRSolutionIfLessProfitable() const { return true; }
 };
 
 } // end namespace llvm
