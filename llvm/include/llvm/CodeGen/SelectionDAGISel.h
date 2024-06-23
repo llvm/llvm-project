@@ -471,6 +471,7 @@ private:
   void Select_CONVERGENCECTRL_ANCHOR(SDNode *N);
   void Select_CONVERGENCECTRL_ENTRY(SDNode *N);
   void Select_CONVERGENCECTRL_LOOP(SDNode *N);
+  void Select_CONVERGENCECTRL_GLUE(SDNode *N);
 
   void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
                                 SDLoc DL);
