@@ -962,6 +962,17 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
+  // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
+  // AVL operand with the AVL of the defining vsetvli.
+  if (NewInfo.hasAVLReg()) {
+    if (const MachineInstr *DefMI = NewInfo.getAVLDefMI(LIS);
+        DefMI && isVectorConfigInstr(*DefMI)) {
+      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
+      if (DefInstrInfo.hasSameVLMAX(NewInfo))
+        NewInfo.setAVL(DefInstrInfo);
+    }
+  }
+
   return NewInfo;
 }
 
@@ -1050,15 +1061,12 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
   InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
 
   // If AVL is defined by a vsetvli with the same VLMAX, we can replace the
-  // AVL operand with the AVL of the defining vsetvli.  We avoid general
-  // register AVLs to avoid extending live ranges without being sure we can
-  // kill the original source reg entirely.
+  // AVL operand with the AVL of the defining vsetvli.
   if (InstrInfo.hasAVLReg()) {
     if (const MachineInstr *DefMI = InstrInfo.getAVLDefMI(LIS);
         DefMI && isVectorConfigInstr(*DefMI)) {
       VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInstrInfo.hasSameVLMAX(InstrInfo) &&
-          (DefInstrInfo.hasAVLImm() || DefInstrInfo.hasAVLVLMAX()))
+      if (DefInstrInfo.hasSameVLMAX(InstrInfo))
         InstrInfo.setAVL(DefInstrInfo);
     }
   }
@@ -1146,9 +1154,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     LIS->InsertMachineInstrInMaps(*MI);
     // Normally the AVL's live range will already extend past the inserted
     // vsetvli because the pseudos below will already use the AVL. But this
-    // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand.
-    LIS->getInterval(AVLReg).extendInBlock(
-        LIS->getMBBStartIdx(&MBB), LIS->getInstructionIndex(*MI).getRegSlot());
+    // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand or
+    // we've taken the AVL from the VL output of another vsetvli.
+    LiveInterval &LI = LIS->getInterval(AVLReg);
+    // Need to get non-const VNInfo
+    VNInfo *VNI = LI.getValNumInfo(Info.getAVLVNInfo()->id);
+    LI.addSegment(LiveInterval::Segment(
+        VNI->def, LIS->getInstructionIndex(*MI).getRegSlot(), VNI));
   }
 }
 
@@ -1162,19 +1174,6 @@ bool RISCVInsertVSETVLI::needVSETVLI(const DemandedFields &Used,
 
   if (CurInfo.isCompatible(Used, Require, LIS))
     return false;
-
-  // We didn't find a compatible value. If our AVL is a virtual register,
-  // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
-  // and the last VL/VTYPE we observed is the same, we don't need a
-  // VSETVLI here.
-  if (Require.hasAVLReg() && CurInfo.hasCompatibleVTYPE(Used, Require)) {
-    if (const MachineInstr *DefMI = Require.getAVLDefMI(LIS);
-        DefMI && isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-      if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
-        return false;
-    }
-  }
 
   return true;
 }
