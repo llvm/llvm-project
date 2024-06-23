@@ -2349,8 +2349,7 @@ void _mm_sfence(void);
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_max_pi16(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pmaxsw128((__v8hi)__anyext128(__a),
-                                            (__v8hi)__anyext128(__b)));
+  return (__m64)__builtin_elementwise_max((__v4hi)__a, (__v4hi)__b);
 }
 
 /// Compares each of the corresponding packed 8-bit unsigned integer
@@ -2369,8 +2368,7 @@ _mm_max_pi16(__m64 __a, __m64 __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_max_pu8(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pmaxub128((__v16qi)__anyext128(__a),
-                                            (__v16qi)__anyext128(__b)));
+  return (__m64)__builtin_elementwise_max((__v8qu)__a, (__v8qu)__b);
 }
 
 /// Compares each of the corresponding packed 16-bit integer values of
@@ -2389,8 +2387,7 @@ _mm_max_pu8(__m64 __a, __m64 __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_min_pi16(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pminsw128((__v8hi)__anyext128(__a),
-                                            (__v8hi)__anyext128(__b)));
+  return (__m64)__builtin_elementwise_min((__v4hi)__a, (__v4hi)__b);
 }
 
 /// Compares each of the corresponding packed 8-bit unsigned integer
@@ -2409,8 +2406,7 @@ _mm_min_pi16(__m64 __a, __m64 __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_min_pu8(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pminub128((__v16qi)__anyext128(__a),
-                                            (__v16qi)__anyext128(__b)));
+  return (__m64)__builtin_elementwise_min((__v8qu)__a, (__v8qu)__b);
 }
 
 /// Takes the most significant bit from each 8-bit element in a 64-bit

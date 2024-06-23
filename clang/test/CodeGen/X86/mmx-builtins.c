@@ -6,19 +6,19 @@
 
 __m64 test_mm_abs_pi8(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi8
-  // CHECK: call <16 x i8> @llvm.abs.v16i8(
+  // CHECK: call <8 x i8> @llvm.abs.v8i8(
   return _mm_abs_pi8(a);
 }
 
 __m64 test_mm_abs_pi16(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi16
-  // CHECK: call <8 x i16> @llvm.abs.v8i16(
+  // CHECK: call <4 x i16> @llvm.abs.v4i16(
   return _mm_abs_pi16(a);
 }
 
 __m64 test_mm_abs_pi32(__m64 a) {
   // CHECK-LABEL: test_mm_abs_pi32
-  // CHECK: call <4 x i32> @llvm.abs.v4i32(
+  // CHECK: call <2 x i32> @llvm.abs.v2i32(
   return _mm_abs_pi32(a);
 }
 
@@ -48,25 +48,25 @@ __m64 test_mm_add_si64(__m64 a, __m64 b) {
 
 __m64 test_mm_adds_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_adds_pi8
-  // CHECK: call <16 x i8> @llvm.sadd.sat.v16i8(
+  // CHECK: call <8 x i8> @llvm.sadd.sat.v8i8(
   return _mm_adds_pi8(a, b);
 }
 
 __m64 test_mm_adds_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_adds_pi16
-  // CHECK: call <8 x i16> @llvm.sadd.sat.v8i16(
+  // CHECK: call <4 x i16> @llvm.sadd.sat.v4i16(
   return _mm_adds_pi16(a, b);
 }
 
 __m64 test_mm_adds_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_adds_pu8
-  // CHECK: call <16 x i8> @llvm.uadd.sat.v16i8(
+  // CHECK: call <8 x i8> @llvm.uadd.sat.v8i8(
   return _mm_adds_pu8(a, b);
 }
 
 __m64 test_mm_adds_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_adds_pu16
-  // CHECK: call <8 x i16> @llvm.uadd.sat.v8i16(
+  // CHECK: call <4 x i16> @llvm.uadd.sat.v4i16(
   return _mm_adds_pu16(a, b);
 }
 
@@ -301,25 +301,25 @@ void test_mm_maskmove_si64(__m64 d, __m64 n, char *p) {
 
 __m64 test_mm_max_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_max_pi16
-  // CHECK: call <8 x i16> @llvm.smax.v8i16(
+  // CHECK: call <4 x i16> @llvm.smax.v4i16(
   return _mm_max_pi16(a, b);
 }
 
 __m64 test_mm_max_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_max_pu8
-  // CHECK: call <16 x i8> @llvm.umax.v16i8(
+  // CHECK: call <8 x i8> @llvm.umax.v8i8(
   return _mm_max_pu8(a, b);
 }
 
 __m64 test_mm_min_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pi16
-  // CHECK: call <8 x i16> @llvm.smin.v8i16(
+  // CHECK: call <4 x i16> @llvm.smin.v4i16(
   return _mm_min_pi16(a, b);
 }
 
 __m64 test_mm_min_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_min_pu8
-  // CHECK: call <16 x i8> @llvm.umin.v16i8(
+  // CHECK: call <8 x i8> @llvm.umin.v8i8(
   return _mm_min_pu8(a, b);
 }
 
@@ -606,13 +606,13 @@ __m64 test_mm_srli_si64(__m64 a) {
 
 void test_mm_stream_pi(__m64 *p, __m64 a) {
   // CHECK-LABEL: test_mm_stream_pi
-  // CHECK: store <1 x i64> {{%.*}}, <1 x i64>* {{%.*}}, align 8, !nontemporal
+  // CHECK: store <1 x i64> {{%.*}}, ptr {{%.*}}, align 8, !nontemporal
   _mm_stream_pi(p, a);
 }
 
 void test_mm_stream_pi_void(void *p, __m64 a) {
   // CHECK-LABEL: test_mm_stream_pi_void
-  // CHECK: call void @llvm.x86.mmx.movnt.dq
+  // CHECK: store <1 x i64> {{%.*}}, ptr {{%.*}}, align 8, !nontemporal
   _mm_stream_pi(p, a);
 }
 
@@ -642,25 +642,25 @@ __m64 test_mm_sub_si64(__m64 a, __m64 b) {
 
 __m64 test_mm_subs_pi8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_subs_pi8
-  // CHECK: call <16 x i8> @llvm.ssub.sat.v16i8(
+  // CHECK: call <8 x i8> @llvm.ssub.sat.v8i8(
   return _mm_subs_pi8(a, b);
 }
 
 __m64 test_mm_subs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_subs_pi16
-  // CHECK: call <8 x i16> @llvm.ssub.sat.v8i16(
+  // CHECK: call <4 x i16> @llvm.ssub.sat.v4i16(
   return _mm_subs_pi16(a, b);
 }
 
 __m64 test_mm_subs_pu8(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_subs_pu8
-  // CHECK: call <16 x i8> @llvm.usub.sat.v16i8(
+  // CHECK: call <8 x i8> @llvm.usub.sat.v8i8(
   return _mm_subs_pu8(a, b);
 }
 
 __m64 test_mm_subs_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_subs_pu16
-  // CHECK: call <8 x i16> @llvm.usub.sat.v8i16(
+  // CHECK: call <4 x i16> @llvm.usub.sat.v4i16(
   return _mm_subs_pu16(a, b);
 }
 

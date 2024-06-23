@@ -432,8 +432,7 @@ _mm_add_pi32(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_adds_pi8(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_paddsb128((__v16qi)__anyext128(__m1),
-                                              (__v16qi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_add_sat((__v8qs)__m1, (__v8qs)__m2);
 }
 
 /// Adds, with saturation, each 16-bit signed integer element of the first
@@ -457,8 +456,7 @@ _mm_adds_pi8(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_adds_pi16(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_paddsw128((__v8hi)__anyext128(__m1),
-                                              (__v8hi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_add_sat((__v4hi)__m1, (__v4hi)__m2);
 }
 
 /// Adds, with saturation, each 8-bit unsigned integer element of the first
@@ -481,8 +479,7 @@ _mm_adds_pi16(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_adds_pu8(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_paddusb128((__v16qi)__anyext128(__m1),
-                                               (__v16qi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_add_sat((__v8qu)__m1, (__v8qu)__m2);
 }
 
 /// Adds, with saturation, each 16-bit unsigned integer element of the first
@@ -505,8 +502,7 @@ _mm_adds_pu8(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_adds_pu16(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_paddusw128((__v8hi)__anyext128(__m1),
-                                               (__v8hi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_add_sat((__v4hu)__m1, (__v4hu)__m2);
 }
 
 /// Subtracts each 8-bit integer element of the second 64-bit integer
@@ -593,8 +589,7 @@ _mm_sub_pi32(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_subs_pi8(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_psubsb128((__v16qi)__anyext128(__m1),
-                                              (__v16qi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_sub_sat((__v8qs)__m1, (__v8qs)__m2);
 }
 
 /// Subtracts, with saturation, each 16-bit signed integer element of the
@@ -618,8 +613,7 @@ _mm_subs_pi8(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_subs_pi16(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_psubsw128((__v8hi)__anyext128(__m1),
-                                              (__v8hi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_sub_sat((__v4hi)__m1, (__v4hi)__m2);
 }
 
 /// Subtracts each 8-bit unsigned integer element of the second 64-bit
@@ -643,8 +637,7 @@ _mm_subs_pi16(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_subs_pu8(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_psubusb128((__v16qi)__anyext128(__m1),
-                                               (__v16qi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_sub_sat((__v8qu)__m1, (__v8qu)__m2);
 }
 
 /// Subtracts each 16-bit unsigned integer element of the second 64-bit
@@ -668,8 +661,7 @@ _mm_subs_pu8(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_subs_pu16(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_psubusw128((__v8hi)__anyext128(__m1),
-                                               (__v8hi)__anyext128(__m2)));
+    return (__m64)__builtin_elementwise_sub_sat((__v4hu)__m1, (__v4hu)__m2);
 }
 
 /// Multiplies each 16-bit signed integer element of the first 64-bit

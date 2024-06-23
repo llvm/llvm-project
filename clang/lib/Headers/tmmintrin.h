@@ -38,7 +38,7 @@
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_abs_pi8(__m64 __a)
 {
-    return __trunc64(__builtin_ia32_pabsb128((__v16qi)__anyext128(__a)));
+  return (__m64)__builtin_elementwise_abs((__v8qs)__a);
 }
 
 /// Computes the absolute value of each of the packed 8-bit signed
@@ -74,7 +74,7 @@ _mm_abs_epi8(__m128i __a)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_abs_pi16(__m64 __a)
 {
-    return __trunc64(__builtin_ia32_pabsw128((__v8hi)__anyext128(__a)));
+    return (__m64)__builtin_elementwise_abs((__v4hi)__a);
 }
 
 /// Computes the absolute value of each of the packed 16-bit signed
@@ -110,7 +110,7 @@ _mm_abs_epi16(__m128i __a)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_abs_pi32(__m64 __a)
 {
-    return __trunc64(__builtin_ia32_pabsd128((__v4si)__anyext128(__a)));
+    return (__m64)__builtin_elementwise_abs((__v2si)__a);
 }
 
 /// Computes the absolute value of each of the packed 32-bit signed
