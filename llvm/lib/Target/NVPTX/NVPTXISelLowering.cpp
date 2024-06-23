@@ -5345,15 +5345,26 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue PerformStoreCombineHelper(SDNode *N, std::size_t Front,
+                                         std::size_t Back) {
+  if (all_of(N->ops().drop_front(Front).drop_back(Back),
+             [](const SDUse &U) { return U.get()->isUndef(); }))
+    // Operand 0 is the previous value in the chain. Cannot return EntryToken
+    // as the previous value will become unused and eliminated later.
+    return N->getOperand(0);
+
+  return SDValue();
+}
+
+static SDValue PerformStoreParamCombine(SDNode *N) {
+  // Operands from the 3rd to the 2nd last one are the values to be stored.
+  //   {Chain, ArgID, Offset, Val, Glue}
+  return PerformStoreCombineHelper(N, 3, 1);
+}
+
 static SDValue PerformStoreRetvalCombine(SDNode *N) {
   // Operands from the 2nd to the last one are the values to be stored
-  for (std::size_t I = 2, OpsCount = N->ops().size(); I != OpsCount; ++I)
-    if (!N->getOperand(I).isUndef())
-      return SDValue();
-
-  // Operand 0 is the previous value in the chain. Cannot return EntryToken
-  // as the previous value will become unused and eliminated later.
-  return N->getOperand(0);
+  return PerformStoreCombineHelper(N, 2, 0);
 }
 
 /// PerformADDCombine - Target-specific dag combine xforms for ISD::ADD.
@@ -5822,6 +5833,10 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
       VectorVT == MVT::v4i8 || VectorVT == MVT::v8i8)
     return SDValue();
 
+  // Don't mess with undef values as sra may be simplified to 0, not undef.
+  if (Vector->isUndef() || ISD::allOperandsUndef(Vector.getNode()))
+    return SDValue();
+
   uint64_t VectorBits = VectorVT.getSizeInBits();
   // We only handle the types we can extract in-register.
   if (!(VectorBits == 16 || VectorBits == 32 || VectorBits == 64))
@@ -5950,6 +5965,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
       return PerformStoreRetvalCombine(N);
+    case NVPTXISD::StoreParam:
+    case NVPTXISD::StoreParamV2:
+    case NVPTXISD::StoreParamV4:
+      return PerformStoreParamCombine(N);
     case ISD::EXTRACT_VECTOR_ELT:
       return PerformEXTRACTCombine(N, DCI);
     case ISD::VSELECT:
