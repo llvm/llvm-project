@@ -655,22 +655,38 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
 // cloned region.
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Entry);
-  for (VPBlockBase *BB : RPOT) {
+  VPBlockBase *Exiting = nullptr;
+  // First, clone blocks reachable from Entry.
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = BB->clone();
-    for (VPBlockBase *Pred : BB->getPredecessors())
-      VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
-
     Old2NewVPBlocks[BB] = NewBB;
+    if (BB->getNumSuccessors() == 0) {
+      assert(!Exiting && "Multiple exiting blocks?");
+      Exiting = BB;
+    }
+  }
+
+  // Second, update the predecessors & successors of the cloned blocks.
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
+    VPBlockBase *NewBB = Old2NewVPBlocks[BB];
+    SmallVector<VPBlockBase *> NewPreds;
+    for (VPBlockBase *Pred : BB->getPredecessors()) {
+      NewPreds.push_back(Old2NewVPBlocks[Pred]);
+    }
+    NewBB->setPredecessors(NewPreds);
+    SmallVector<VPBlockBase *> NewSuccs;
+    for (VPBlockBase *Succ : BB->successors()) {
+      NewSuccs.push_back(Old2NewVPBlocks[Succ]);
+    }
+    NewBB->setSuccessors(NewSuccs);
   }
 
 #if !defined(NDEBUG)
   // Verify that the order of predecessors and successors matches in the cloned
   // version.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-      NewRPOT(Old2NewVPBlocks[Entry]);
-  for (const auto &[OldBB, NewBB] : zip(RPOT, NewRPOT)) {
+  for (const auto &[OldBB, NewBB] :
+       zip(vp_depth_first_shallow(Entry),
+           vp_depth_first_shallow(Old2NewVPBlocks[Entry]))) {
     for (const auto &[OldPred, NewPred] :
          zip(OldBB->getPredecessors(), NewBB->getPredecessors()))
       assert(NewPred == Old2NewVPBlocks[OldPred] && "Different predecessors");
@@ -681,8 +697,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry],
-                        Old2NewVPBlocks[*reverse(RPOT).begin()]);
+  return std::make_pair(Old2NewVPBlocks[Entry], Old2NewVPBlocks[Exiting]);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
