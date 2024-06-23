@@ -893,7 +893,7 @@ template void explain_binary_operation_two_outputs_error<long double>(
     Operation, const BinaryInput<long double> &,
     const BinaryOutput<long double> &, double, RoundingMode);
 
-  template <typename T, typename R>
+template <typename T, typename R>
 void explain_binary_operation_one_output_error(Operation op,
                                                const BinaryInput<T> &input,
                                                R libc_result,
@@ -922,15 +922,17 @@ void explain_binary_operation_one_output_error(Operation op,
        << '\n';
 }
 
-template void explain_binary_operation_one_output_error(
-    Operation, const BinaryInput<float> &, float, double, RoundingMode);
+template void
+explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
+                                          float, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, double, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, float, double, RoundingMode);
-template void explain_binary_operation_one_output_error(
-    Operation, const BinaryInput<long double> &, long double, double,
-    RoundingMode);
+template void
+explain_binary_operation_one_output_error(Operation,
+                                          const BinaryInput<long double> &,
+                                          long double, double, RoundingMode);
 
 template <typename InputType, typename OutputType>
 void explain_ternary_operation_one_output_error(
@@ -1061,7 +1063,7 @@ template bool compare_binary_operation_two_outputs<long double>(
     Operation, const BinaryInput<long double> &,
     const BinaryOutput<long double> &, double, RoundingMode);
 
-  template <typename T, typename R>
+template <typename T, typename R>
 bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<T> &input,
                                          R libc_result, double ulp_tolerance,
@@ -1074,15 +1076,18 @@ bool compare_binary_operation_one_output(Operation op,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_binary_operation_one_output(
-    Operation, const BinaryInput<float> &, float, double, RoundingMode);
-template bool compare_binary_operation_one_output(
-    Operation, const BinaryInput<double> &, double, double, RoundingMode);
-template bool compare_binary_operation_one_output(
-    Operation, const BinaryInput<double> &, float, double, RoundingMode);
-template bool compare_binary_operation_one_output(
-    Operation, const BinaryInput<long double> &, long double, double,
-    RoundingMode);
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<float> &,
+                                                  float, double, RoundingMode);
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<double> &,
+                                                  double, double, RoundingMode);
+template bool compare_binary_operation_one_output(Operation,
+                                                  const BinaryInput<double> &,
+                                                  float, double, RoundingMode);
+template bool
+compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
+                                    long double, double, RoundingMode);
 
 template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,
