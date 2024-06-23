@@ -13,7 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-
 template <typename T, typename R>
 class FmulTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -100,6 +99,6 @@ public:
 #define LIST_FMUL_TESTS(T, R, func)                                            \
   using LlvmLibcFmulTest = FmulTest<T, R>;                                     \
   TEST_F(LlvmLibcFmulTest, Mul) { testMul(&func); }                            \
-  TEST_F(LlvmLibcFmulTest, NaNInf) { testSpecialInputs(&func); }               \
+  TEST_F(LlvmLibcFmulTest, NaNInf) { testSpecialInputs(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMULTEST_H
