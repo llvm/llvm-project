@@ -1033,6 +1033,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      if (Name.starts_with("ds.fadd")) {
+        // Replaced with atomicrmw fadd, so there's no new declaration.
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.starts_with("ldexp.")) {
         // Target specific intrinsic became redundant
         NewFn = Intrinsic::getDeclaration(
@@ -2331,40 +2337,74 @@ static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   llvm_unreachable("Unknown function for ARM CallBase upgrade.");
 }
 
+// These are expected to have the arguments:
+// atomic.intrin (ptr, rmw_value, ordering, scope, isVolatile)
+//
+// Except for int_amdgcn_ds_fadd_v2bf16 which only has (ptr, rmw_value).
+//
 static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
                                          Function *F, IRBuilder<> &Builder) {
-  const bool IsInc = Name.starts_with("atomic.inc.");
-  if (IsInc || Name.starts_with("atomic.dec.")) {
-    if (CI->getNumOperands() != 6) // Malformed bitcode.
-      return nullptr;
+  AtomicRMWInst::BinOp RMWOp =
+      StringSwitch<AtomicRMWInst::BinOp>(Name)
+          .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
+          .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
 
-    AtomicRMWInst::BinOp RMWOp =
-        IsInc ? AtomicRMWInst::UIncWrap : AtomicRMWInst::UDecWrap;
+  unsigned NumOperands = CI->getNumOperands();
+  if (NumOperands < 3) // Malformed bitcode.
+    return nullptr;
 
-    Value *Ptr = CI->getArgOperand(0);
-    Value *Val = CI->getArgOperand(1);
-    ConstantInt *OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+  Value *Ptr = CI->getArgOperand(0);
+  if (!isa<PointerType>(Ptr->getType())) // Malformed.
+    return nullptr;
+
+  Value *Val = CI->getArgOperand(1);
+  if (Val->getType() != CI->getType()) // Malformed.
+    return nullptr;
+
+  ConstantInt *OrderArg = nullptr;
+  bool IsVolatile = false;
+
+  // These should have 5 arguments (plus the callee). A separate version of the
+  // ds_fadd intrinsic was defined for bf16 which was missing arguments.
+  if (NumOperands > 3)
+    OrderArg = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+
+  // Ignore scope argument at 3
+
+  if (NumOperands > 5) {
     ConstantInt *VolatileArg = dyn_cast<ConstantInt>(CI->getArgOperand(4));
-
-    AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
-    if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
-      Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
-    if (Order == AtomicOrdering::NotAtomic ||
-        Order == AtomicOrdering::Unordered)
-      Order = AtomicOrdering::SequentiallyConsistent;
-
-    // The scope argument never really worked correctly. Use agent as the most
-    // conservative option which should still always produce the instruction.
-    SyncScope::ID SSID = F->getContext().getOrInsertSyncScopeID("agent");
-    AtomicRMWInst *RMW =
-        Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
-
-    if (!VolatileArg || !VolatileArg->isZero())
-      RMW->setVolatile(true);
-    return RMW;
+    IsVolatile = !VolatileArg || !VolatileArg->isZero();
   }
 
-  llvm_unreachable("Unknown function for AMDGPU intrinsic upgrade.");
+  AtomicOrdering Order = AtomicOrdering::SequentiallyConsistent;
+  if (OrderArg && isValidAtomicOrdering(OrderArg->getZExtValue()))
+    Order = static_cast<AtomicOrdering>(OrderArg->getZExtValue());
+  if (Order == AtomicOrdering::NotAtomic || Order == AtomicOrdering::Unordered)
+    Order = AtomicOrdering::SequentiallyConsistent;
+
+  LLVMContext &Ctx = F->getContext();
+
+  // Handle the v2bf16 intrinsic which used <2 x i16> instead of <2 x bfloat>
+  Type *RetTy = CI->getType();
+  if (VectorType *VT = dyn_cast<VectorType>(RetTy)) {
+    if (VT->getElementType()->isIntegerTy(16)) {
+      VectorType *AsBF16 =
+          VectorType::get(Type::getBFloatTy(Ctx), VT->getElementCount());
+      Val = Builder.CreateBitCast(Val, AsBF16);
+    }
+  }
+
+  // The scope argument never really worked correctly. Use agent as the most
+  // conservative option which should still always produce the instruction.
+  SyncScope::ID SSID = Ctx.getOrInsertSyncScopeID("agent");
+  AtomicRMWInst *RMW =
+      Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
+
+  if (IsVolatile)
+    RMW->setVolatile(true);
+
+  return Builder.CreateBitCast(RMW, RetTy);
 }
 
 /// Helper to unwrap intrinsic call MetadataAsValue operands.

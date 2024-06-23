@@ -479,7 +479,7 @@ public:
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override {
+  void changeSection(MCSection *Section, uint32_t Subsection) override {
     LastMappingSymbols[getCurrentSection().first] = std::move(LastEMSInfo);
     MCELFStreamer::changeSection(Section, Subsection);
     auto LastMappingSymbol = LastMappingSymbols.find(Section);

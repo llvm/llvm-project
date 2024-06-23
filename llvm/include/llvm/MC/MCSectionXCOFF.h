@@ -112,7 +112,7 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
