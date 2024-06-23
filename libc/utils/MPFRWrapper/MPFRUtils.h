@@ -139,11 +139,11 @@ template <typename T> struct IsTernaryInput<TernaryInput<T>> {
 };
 
 template <typename T> struct IsBinaryInput {
-    static constexpr bool VALUE = false;
+  static constexpr bool VALUE = false;
 };
-  
+
 template <typename T> struct IsBinaryInput<BinaryInput<T>> {
-    static constexpr bool VALUE = true;
+  static constexpr bool VALUE = true;
 };
 
 template <typename T> struct MakeScalarInput : cpp::type_identity<T> {};
@@ -171,7 +171,8 @@ bool compare_binary_operation_two_outputs(Operation op,
 template <typename InputType, typename OutputType>
 bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<InputType> &input,
-                                         OutputType libc_output, double ulp_tolerance,
+                                         OutputType libc_output,
+                                         double ulp_tolerance,
                                          RoundingMode rounding);
 
 template <typename InputType, typename OutputType>
@@ -197,11 +198,9 @@ void explain_binary_operation_two_outputs_error(
     RoundingMode rounding);
 
 template <typename InputType, typename OutputType>
-void explain_binary_operation_one_output_error(Operation op,
-                                               const BinaryInput<InputType> &input,
-                                               OutputType match_value,
-                                               double ulp_tolerance,
-                                               RoundingMode rounding);
+void explain_binary_operation_one_output_error(
+    Operation op, const BinaryInput<InputType> &input, OutputType match_value,
+    double ulp_tolerance, RoundingMode rounding);
 
 template <typename InputType, typename OutputType>
 void explain_ternary_operation_one_output_error(
@@ -234,12 +233,14 @@ public:
   bool is_silent() const override { return silent; }
 
 private:
-  template <typename InType, typename OutType> bool match(InType in, OutType out) {
+  template <typename InType, typename OutType>
+  bool match(InType in, OutType out) {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
 
-  template <typename InType> bool match(InType in, const BinaryOutput<InType> &out) {
+  template <typename InType>
+  bool match(InType in, const BinaryOutput<InType> &out) {
     return compare_unary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -262,18 +263,21 @@ private:
                                                 rounding);
   }
 
-  template <typename InType, typename OutType> void explain_error(InType in, OutType out) {
+  template <typename InType, typename OutType>
+  void explain_error(InType in, OutType out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
 
-  template <typename InType> void explain_error(InType in, const BinaryOutput<InType> &out) {
+  template <typename InType>
+  void explain_error(InType in, const BinaryOutput<InType> &out) {
     explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
                                               rounding);
   }
 
   template <typename InType>
-  void explain_error(const BinaryInput<InType> &in, const BinaryOutput<InType> &out) {
+  void explain_error(const BinaryInput<InType> &in,
+                     const BinaryOutput<InType> &out) {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
                                                rounding);
   }
@@ -305,7 +309,8 @@ constexpr bool is_valid_operation() {
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
-      (op == Operation::Fmul && internal::IsBinaryInput<InputType>::VALUE && cpp::is_floating_point_v<OutputType>);
+      (op == Operation::Fmul && internal::IsBinaryInput<InputType>::VALUE &&
+       cpp::is_floating_point_v<OutputType>);
   if (IS_NARROWING_OP)
     return true;
   return (Operation::BeginUnaryOperationsSingleOutput < op &&

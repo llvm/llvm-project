@@ -894,11 +894,9 @@ template void explain_binary_operation_two_outputs_error<long double>(
     const BinaryOutput<long double> &, double, RoundingMode);
 
 template <typename InputType, typename OutputType>
-void explain_binary_operation_one_output_error(Operation op,
-                                               const BinaryInput<InputType> &input,
-                                               OutputType libc_result,
-                                               double ulp_tolerance,
-                                               RoundingMode rounding) {
+void explain_binary_operation_one_output_error(
+    Operation op, const BinaryInput<InputType> &input, OutputType libc_result,
+    double ulp_tolerance, RoundingMode rounding) {
   unsigned int precision = get_precision<OutputType>(ulp_tolerance);
   MPFRNumber mpfrX(input.x, precision);
   MPFRNumber mpfrY(input.y, precision);
@@ -914,8 +912,8 @@ void explain_binary_operation_one_output_error(Operation op,
 
   tlog << "Libc result: " << mpfrMatchValue.str() << '\n'
        << "MPFR result: " << mpfr_result.str() << '\n';
-  tlog << "Libc floating point result bits: " << str(FPBits<OutputType>(libc_result))
-       << '\n';
+  tlog << "Libc floating point result bits: "
+       << str(FPBits<OutputType>(libc_result)) << '\n';
   tlog << "              MPFR rounded bits: "
        << str(FPBits<OutputType>(mpfr_result.as<OutputType>())) << '\n';
   tlog << "ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
@@ -1066,7 +1064,8 @@ template bool compare_binary_operation_two_outputs<long double>(
 template <typename InputType, typename OutputType>
 bool compare_binary_operation_one_output(Operation op,
                                          const BinaryInput<InputType> &input,
-                                         OutputType libc_result, double ulp_tolerance,
+                                         OutputType libc_result,
+                                         double ulp_tolerance,
                                          RoundingMode rounding) {
   unsigned int precision = get_precision<OutputType>(ulp_tolerance);
   MPFRNumber mpfr_result =

@@ -90,7 +90,7 @@ public:
     using StorageType = typename FPBits::StorageType;
     static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
     static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
-   
+
     constexpr StorageType COUNT = 10'001;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
@@ -105,8 +105,8 @@ public:
         }
 
         mpfr::BinaryInput<InType> input{x, y};
-        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, input,
-                                       func(x, y), 0.5);
+        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, input, func(x, y),
+                                       0.5);
       }
     }
   }
@@ -116,6 +116,6 @@ public:
   using LlvmLibcFmulTest = FmulMPFRTest<OutType, InType>;                      \
   TEST_F(LlvmLibcFmulTest, MulMpfr) { testFMulMPFR(&func); }                   \
   TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }       \
-  TEST_F(LlvmLibcFmulTest, NormalRange) {testNormalRange(&func); }
+  TEST_F(LlvmLibcFmulTest, NormalRange) { testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMULTEST_H
