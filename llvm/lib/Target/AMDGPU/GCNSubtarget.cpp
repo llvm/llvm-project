@@ -755,6 +755,11 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
     FlatScratchInit = true;
   }
 
+  // TODO-GFX13: Can we make this conditional on whether private is actually
+  //             used?
+  if (IsKernel && AMDGPU::getWavegroupEnable(F))
+    PrivateSegmentSize = true;
+
   if (hasImplicitBufferPtr())
     NumUsedUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
 

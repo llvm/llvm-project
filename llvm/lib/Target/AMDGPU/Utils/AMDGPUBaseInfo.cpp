@@ -2286,6 +2286,10 @@ bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
+bool getWavegroupEnable(const Function &F) {
+  return F.hasFnAttribute("amdgpu-wavegroup-enable");
+}
+
 bool isShader(CallingConv::ID cc) {
   switch(cc) {
     case CallingConv::AMDGPU_VS:

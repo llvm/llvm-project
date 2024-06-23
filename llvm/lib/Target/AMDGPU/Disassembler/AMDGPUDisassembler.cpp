@@ -2618,6 +2618,15 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 
+    if (isGFX13Plus()) {
+      PRINT_DIRECTIVE(".amdhsa_enable_wavegroup",
+                      KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP) {
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET,
+                                       "must be zero prior to gfx13");
+    }
+
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1) {
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED1,
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET);

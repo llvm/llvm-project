@@ -459,6 +459,8 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
+  if (AMDGPU::getWavegroupEnable(MF.getFunction()))
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP;
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
   // un-evaluatable at this point so it cannot be conditionally checked here.

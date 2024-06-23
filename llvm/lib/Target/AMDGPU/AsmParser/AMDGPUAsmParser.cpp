@@ -6139,6 +6139,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK, ExprVal,
                        ValRange);
+    } else if (ID == ".amdhsa_enable_wavegroup") {
+      if (IVersion.Major < 13)
+        return Error(IDRange.Start, "directive requires gfx13+", IDRange);
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP, ExprVal,
+                       ValRange);
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,

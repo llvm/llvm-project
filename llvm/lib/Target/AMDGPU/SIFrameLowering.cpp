@@ -42,6 +42,21 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
+// Allocate a scratch register for use at a single point in the program,
+// tracking available live units.
+static MCRegister allocScratchRegister(MachineRegisterInfo &MRI,
+                                       LiveRegUnits &LiveUnits,
+                                       const TargetRegisterClass &RC) {
+  for (MCRegister Reg : RC) {
+    if (LiveUnits.available(Reg) && !MRI.isReserved(Reg)) {
+      LiveUnits.addReg(Reg);
+      return Reg;
+    }
+  }
+
+  llvm_unreachable("unable to find a scratch register");
+}
+
 // Find a scratch register that we can use in the prologue. We avoid using
 // callee-save registers since they may appear to be free when this is called
 // from canUseAsPrologue (during shrink wrapping), but then no longer be free
@@ -690,17 +705,87 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
+  const bool WavegroupEnable = AMDGPU::getWavegroupEnable(MF.getFunction());
+  LiveRegUnits LiveUnits;
+  Register PreloadedPrivateSegmentSizeReg;
+  Register FPReg;
+  Register WaveIdReg;
+  Register Tmp32Reg;
+
+  if (WavegroupEnable) {
+    PreloadedPrivateSegmentSizeReg =
+        MFI->getPreloadedReg(AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_SIZE);
+    if (PreloadedPrivateSegmentSizeReg) {
+      MRI.addLiveIn(PreloadedPrivateSegmentSizeReg);
+      MBB.addLiveIn(PreloadedPrivateSegmentSizeReg);
+    }
+
+    LiveUnits.init(*TRI);
+    LiveUnits.addLiveIns(MBB);
+
+    WaveIdReg = allocScratchRegister(MRI, LiveUnits, AMDGPU::SGPR_32RegClass);
+    Tmp32Reg = allocScratchRegister(MRI, LiveUnits, AMDGPU::SGPR_32RegClass);
+
+    // TODO-GFX13: This will typically be redundant with uses of the WaveID from
+    //             the main function body. We could potentially eliminate the
+    //             redundancy if frame lowering happened earlier, or by some
+    //             other tricks like making it a fake preload.
+    using namespace AMDGPU::Hwreg;
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), WaveIdReg)
+        .addImm(HwregEncoding::encode(ID_WAVE_GROUP_INFO, 16, 4));
+
+    // Set the private VGPR base.
+    //
+    // Due to inversion of control, it seems difficult to obtain the required
+    // number of VGPRs here (taking the entire control flow graph into
+    // account!). So we use a placeholder immediate that is fixed up in a late
+    // pass.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), Tmp32Reg)
+        .addReg(WaveIdReg)
+        .addTargetIndex(AMDGPU::TI_NUM_VGPRS);
+
+    unsigned RankVGPRStart = alignTo(MFI->getLaneSharedVGPRSize(), 4u) / 4u;
+    if (RankVGPRStart != 0) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), Tmp32Reg)
+          .addReg(Tmp32Reg)
+          .addImm(RankVGPRStart);
+    }
+
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
+        .addReg(Tmp32Reg);
+  }
+
   if (hasFP(MF)) {
-    Register FPReg = MFI->getFrameOffsetReg();
+    FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+    if (!WavegroupEnable) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+    } else {
+      // Initial FP = LanesharedSize * WaveIdInWavegroup * PrivateSegmentSize
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), FPReg)
+          .addReg(WaveIdReg)
+          .addReg(PreloadedPrivateSegmentSizeReg);
+
+      unsigned LaneSharedSize = MFI->getLaneSharedScratchSize();
+      if (LaneSharedSize != 0) {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), FPReg)
+            .addReg(FPReg)
+            .addImm(LaneSharedSize);
+      }
+    }
   }
 
   if (requiresStackPointerReference(MF)) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+    if (!WavegroupEnable) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
+          .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+    } else {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), SPReg)
+          .addReg(FPReg)
+          .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+    }
   }
 
   bool NeedsFlatScratchInit =
@@ -722,6 +807,15 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     emitEntryFunctionScratchRsrcRegSetup(MF, MBB, I, DL,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
+  }
+
+  if (WavegroupEnable) {
+    // Add this barrier to prevent re-ordering of S_SET_GPR_IDX against
+    // VALU instructions.
+    //
+    // TODO-GFX13: We would get slightly better SMEM latency hiding if we could
+    //             model this more accurately.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::SCHED_BARRIER)).addImm(0);
   }
 }
 
@@ -2025,9 +2119,7 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
     // frame layout is determined or CSR spills are inserted.
     return MFI.getStackSize() != 0;
   }
-  // TODO-GFX13: replace the 1st condition with the real wavegroup attribute
-  return MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedScratchSize() ||
-         MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedVGPRSize() ||
+  return AMDGPU::getWavegroupEnable(MF.getFunction()) ||
          frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||

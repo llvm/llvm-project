@@ -482,6 +482,10 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
+  // TODO-GFX13: Properly check for CodeObjectVersion
+  if (STM.hasVGPRIndexingRegisters())
+    Kern[".enable_wavegroup"] = AMDGPU::getWavegroupEnable(MF.getFunction());
+
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =
       Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
