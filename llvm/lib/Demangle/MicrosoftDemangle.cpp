@@ -2269,12 +2269,27 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
     } else if (llvm::itanium_demangle::starts_with(MangledName, "$1") ||
                llvm::itanium_demangle::starts_with(MangledName, "$H") ||
                llvm::itanium_demangle::starts_with(MangledName, "$I") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$J")) {
+               llvm::itanium_demangle::starts_with(MangledName, "$J") ||
+               llvm::itanium_demangle::starts_with(MangledName, "$M")) {
       // Pointer to member
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
 
       MangledName.remove_prefix(1);
+
+      // <auto-nttp> ::= $ M <type> 1? <mangled-name>
+      if (llvm::itanium_demangle::starts_with(MangledName, 'M')) {
+        MangledName.remove_prefix(1);
+
+        // The deduced type of the auto NTTP parameter isn't printed so
+        // we want to ignore the AST created from demangling the type.
+        //
+        // TODO: Avoid the extra allocations to the bump allocator in this case.
+        (void)demangleType(MangledName, QualifierMangleMode::Drop);
+        if (Error)
+          return nullptr;
+      }
+
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
       // I - virtual inheritance      <name> <number> <number>
