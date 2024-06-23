@@ -447,15 +447,15 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     //  to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-    if (getParent()->isExiting()) {
-      VPRegionBlock *ParentRegion = getParent()->getParent();
-      VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-    }
-
-    // Forward destination(s) are hooked up later when they are created.
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+
+    if (!getParent()->isExiting())
+      return CondBr;
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
   case VPInstruction::BranchOnCount: {

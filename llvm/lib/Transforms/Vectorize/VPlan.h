@@ -614,8 +614,11 @@ public:
       appendPredecessor(Pred);
   }
 
+  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
+  /// This VPBlockBase must have no successors. This VPBlockBase is not added
+  /// as predecessor of any VPBasicBlock in \p NewSuccs.
   void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
-    assert(Successors.empty() && "Block predecessors already set.");
+    assert(Successors.empty() && "Block successors already set.");
     for (auto *Succ : NewSuccs)
       appendSuccessor(Succ);
   }

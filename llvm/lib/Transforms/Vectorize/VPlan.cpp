@@ -448,13 +448,12 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRBasicBlock::execute(VPTransformState *State) {
-
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
   if (getSingleSuccessor() && isa<UnreachableInst>(getIRBasicBlock()->getTerminator())) {
     auto *Br = State->Builder.CreateBr(getIRBasicBlock());
     Br->setOperand(0, nullptr);
-getIRBasicBlock()->getTerminator()->eraseFromParent();
+    getIRBasicBlock()->getTerminator()->eraseFromParent();
   }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
@@ -647,7 +646,6 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 
   printSuccessors(O, Indent);
 }
-
 #endif
 
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
@@ -655,18 +653,23 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
 // Clone the CFG for all nodes in the single-entry-single-exit region reachable
 // from \p Entry, this includes cloning the blocks and their recipes. Operands
 // of cloned recipes will NOT be updated. Remapping of operands must be done
-// separately. Returns a pair with the the new entry and exiting blocks of the
-// cloned region.
+// separately. Returns a pair with the new entry and exiting blocks of the
+// cloned region. If \p Entry isn't part of a region, return nullptr for the exiting block.
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
   VPBlockBase *Exiting = nullptr;
+  bool InRegion = Entry->getParent();
+  // First, clone blocks reachable from Entry.
   for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = BB->clone();
     Old2NewVPBlocks[BB] = NewBB;
-    if (BB->getNumSuccessors() == 0)
+    if (InRegion && BB->getNumSuccessors() == 0) {
+      assert(!Exiting && "Multiple exiting blocks?");
       Exiting = BB;
+    }
   }
 
+  // Second, update the predecessors & successors of the cloned blocks.
   for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = Old2NewVPBlocks[BB];
     SmallVector<VPBlockBase *> NewPreds;
@@ -697,7 +700,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry], Old2NewVPBlocks[Exiting]);
+  return std::make_pair(Old2NewVPBlocks[Entry], InRegion ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
@@ -806,9 +809,9 @@ VPlan::~VPlan() {
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPIRBasicBlock *Preheader = new VPIRBasicBlock(TheLoop->getLoopPreheader());
+  VPIRBasicBlock *Entry= new VPIRBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
+  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
   // Create empty VPRegionBlock, to be filled during processing later.
@@ -1257,10 +1260,8 @@ void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
                             bool Hidden, const Twine &Label) {
   // Due to "dot" we print an edge between two regions as an edge between the
   // exiting basic block and the entry basic of the respective regions.
-  const VPBlockBase *Tail =
-      isa<VPIRBasicBlock>(From) ? From : From->getExitingBasicBlock();
-  const VPBlockBase *Head =
-      isa<VPIRBasicBlock>(To) ? To : To->getEntryBasicBlock();
+  const VPBlockBase *Tail = From->getExitingBasicBlock();
+  const VPBlockBase *Head = To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
   if (Tail != From)

@@ -1304,7 +1304,26 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           // region. The privatizer is processed in-place (see below) before it
           // gets inlined in the parallel region and therefore processing the
           // original op is dangerous.
-          return {privVar, privatizer.clone()};
+
+          MLIRContext &context = moduleTranslation.getContext();
+          mlir::IRRewriter opCloner(&context);
+          opCloner.setInsertionPoint(privatizer);
+          auto clone = llvm::cast<mlir::omp::PrivateClauseOp>(
+              opCloner.clone(*privatizer));
+
+          // Unique the clone name to avoid clashes in the symbol table.
+          unsigned counter = 0;
+          SmallString<256> cloneName = SymbolTable::generateSymbolName<256>(
+              privatizer.getSymName(),
+              [&](llvm::StringRef candidate) {
+                return SymbolTable::lookupNearestSymbolFrom(
+                           opInst, StringAttr::get(&context, candidate)) !=
+                       nullptr;
+              },
+              counter);
+
+          clone.setSymName(cloneName);
+          return {privVar, clone};
         }
       }
 

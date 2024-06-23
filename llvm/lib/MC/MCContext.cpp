@@ -483,10 +483,12 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
 
   // Otherwise, return a new section.
   StringRef Name = R.first->first();
-  R.first->second = new (MachOAllocator.Allocate())
+  auto *Ret = new (MachOAllocator.Allocate())
       MCSectionMachO(Segment, Name.substr(Name.size() - Section.size()),
                      TypeAndAttributes, Reserved2, Kind, Begin);
-  return R.first->second;
+  R.first->second = Ret;
+  allocInitialFragment(*Ret);
+  return Ret;
 }
 
 MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
@@ -672,7 +674,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
       MCSectionGOFF(CachedName, Kind, Parent, Subsection);
   Iter->second = GOFFSection;
-
+  allocInitialFragment(*GOFFSection);
   return GOFFSection;
 }
 
@@ -701,8 +703,8 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   StringRef CachedName = Iter->first.SectionName;
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
       CachedName, Characteristics, COMDATSymbol, Selection, Begin);
-
   Iter->second = Result;
+  allocInitialFragment(*Result);
   return Result;
 }
 
