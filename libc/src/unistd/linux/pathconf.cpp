@@ -15,9 +15,8 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, pathconf, (const char *path, int name)) {
   if (cpp::optional<statfs_utils::LinuxStatFs> result =
-          statfs_utils::linux_statfs(path)) {
+          statfs_utils::linux_statfs(path))
     return pathconfig(result.value(), name);
-  }
   return -1;
 }
 

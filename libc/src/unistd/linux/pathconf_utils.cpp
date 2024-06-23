@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/limits_macros.h"
+#include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
@@ -14,11 +16,9 @@
 #if __has_include(<linux/ufs_fs.h>)
 #include <linux/ufs_fs.h>
 #else
-// from https://elixir.bootlin.com/linux/latest/source/fs/ufs/ufs_fs.h
+// from https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/
 #define UFS_MAGIC 0x00011954
 #endif
-#include "hdr/limits_macros.h"
-#include "hdr/unistd_macros.h"
 #include <linux/limits.h> // For LINK_MAX and other limits
 #include <linux/magic.h>  // For common FS magics
 
@@ -50,7 +50,7 @@ long link_max(const statfs_utils::LinuxStatFs &s) {
   return LINK_MAX;
 }
 
-long _2_symlinks(const statfs_utils::LinuxStatFs &s) {
+long symlinks(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case ADFS_SUPER_MAGIC:
   case BFS_MAGIC:
@@ -72,7 +72,7 @@ long pathconfig(const statfs_utils::LinuxStatFs &s, int name) {
     return filesizebits(s);
 
   case _PC_2_SYMLINKS:
-    return _2_symlinks(s);
+    return symlinks(s);
 
   case _PC_REC_MIN_XFER_SIZE:
     return s.f_bsize;

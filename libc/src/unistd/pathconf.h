@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PATHCONF_H
 #define LLVM_LIBC_SRC_UNISTD_PATHCONF_H
 
-#include <unistd.h>
-
 namespace LIBC_NAMESPACE {
 
 long pathconf(const char *path, int name);

@@ -19,7 +19,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcPipeTest, SmokeTest) {
-  constexpr const char *FILENAME = "fpathconf.test";
+  constexpr const char *FILENAME = "pathconf.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   EXPECT_EQ(LIBC_NAMESPACE::pathconf(FILENAME, _PC_SYNC_IO), -1l);

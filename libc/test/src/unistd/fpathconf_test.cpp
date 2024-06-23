@@ -10,6 +10,7 @@
 #include "hdr/limits_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/unistd_macros.h"
+#include "llvm-libc-macros/sys-stat-macros.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fpathconf.h"

@@ -459,6 +459,7 @@ add_libc_unittest(
     libc.src.unistd.fpathconf
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.include.llvm-libc-macros.sys-stat-macros
 )
 
 add_libc_unittest(
@@ -474,6 +475,7 @@ add_libc_unittest(
     libc.src.unistd.pathconf
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.include.llvm-libc-macros.sys-stat-macros
 )
 
 add_libc_test(
