@@ -25,7 +25,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -353,15 +353,21 @@ void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
     cast<MCSymbolCOFF>(S)->setExternal(true);
 }
 
-void MCWinCOFFStreamer::finalizeCGProfile() {
-  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
-    finalizeCGProfileEntry(E.From);
-    finalizeCGProfileEntry(E.To);
-  }
-}
-
 void MCWinCOFFStreamer::finishImpl() {
-  finalizeCGProfile();
+  MCAssembler &Asm = getAssembler();
+  if (Asm.getWriter().getEmitAddrsigSection()) {
+    // Register the section.
+    switchSection(Asm.getContext().getCOFFSection(".llvm_addrsig",
+                                                  COFF::IMAGE_SCN_LNK_REMOVE));
+  }
+  if (!Asm.CGProfile.empty()) {
+    for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+      finalizeCGProfileEntry(E.From);
+      finalizeCGProfileEntry(E.To);
+    }
+    switchSection(Asm.getContext().getCOFFSection(".llvm.call-graph-profile",
+                                                  COFF::IMAGE_SCN_LNK_REMOVE));
+  }
 
   MCObjectStreamer::finishImpl();
 }
