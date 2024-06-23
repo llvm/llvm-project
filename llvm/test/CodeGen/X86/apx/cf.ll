@@ -5,12 +5,8 @@ define void @basic(i32 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: basic:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    negb %dil
-; CHECK-NEXT:    cfcmovnel (%rsi), %esi
-; CHECK-NEXT:    cfcmovnel %esi, (%rdx)
-; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    cfcmovel (%rsi), %eax
+; CHECK-NEXT:    cfcmovel %eax, (%rdx)
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cfcmovneq %rax, (%rdx)
 ; CHECK-NEXT:    movw $2, %ax
@@ -32,9 +28,7 @@ define i16 @cload_passthru_zero(i16 %a, ptr %b) {
 ; CHECK-LABEL: cload_passthru_zero:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testw %di, %di
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    cfcmovnew (%rsi), %ax
+; CHECK-NEXT:    cfcmovew (%rsi), %ax
 ; CHECK-NEXT:    retq
 entry:
   %cond = icmp eq i16 %a, 0
@@ -48,9 +42,7 @@ define i64 @cload_passthru_not_zero(i64 %a, ptr %b) {
 ; CHECK-LABEL: cload_passthru_not_zero:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    negb %al
-; CHECK-NEXT:    cfcmovneq (%rsi), %rdi, %rax
+; CHECK-NEXT:    cfcmoveq (%rsi), %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %cond = icmp eq i64 %a, 0
