@@ -167,6 +167,7 @@ protected:
   bool HasAtomicFlatPkAdd16Insts = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
+  bool HasAtomicMemoryAtomicFaddF32DenormalSupport = false;
   bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
   bool HasAtomicCSubNoRtnInsts = false;
@@ -871,6 +872,12 @@ public:
   }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  /// \return true if the target's flat, global, and buffer atomic fadd for
+  /// float supports denormal handling.
+  bool hasMemoryAtomicFaddF32DenormalSupport() const {
+    return HasAtomicMemoryAtomicFaddF32DenormalSupport;
+  }
 
   /// \return true if atomic operations targeting fine-grained memory work
   /// correctly at device scope, in allocations in host or peer PCIe device

@@ -788,6 +788,13 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
+def FeatureMemoryAtomicFaddF32DenormalSupport
+  : SubtargetFeature<"memory-atomic-fadd-f32-denormal-support",
+  "HasAtomicMemoryAtomicFaddF32DenormalSupport",
+  "true",
+  "global/flat/buffer atomic fadd for float supports denormal handling"
+>;
+
 def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   : SubtargetFeature<"agent-scope-fine-grained-remote-memory-atomics",
   "HasAgentScopeFineGrainedRemoteMemoryAtomics",
@@ -1427,7 +1434,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureKernargPreload,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
+   FeatureMemoryAtomicFaddF32DenormalSupport
    ]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1631,7 +1639,9 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
-   Feature1_5xVGPRs]>;
+   Feature1_5xVGPRs,
+   FeatureMemoryAtomicFaddF32DenormalSupport]>;
+   ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
