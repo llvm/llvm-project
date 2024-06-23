@@ -2231,11 +2231,10 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // order of fragment size - there should be no duplicates.
   for (auto &Pair : FragmentMap) {
     SmallVector<DebugVariable, 8> &Frags = Pair.second;
-    std::sort(Frags.begin(), Frags.end(),
-              [](const DebugVariable &Next, const DebugVariable &Elmt) {
-                return Elmt.getFragmentOrDefault().SizeInBits >
-                       Next.getFragmentOrDefault().SizeInBits;
-              });
+    llvm::sort(Frags, [](const DebugVariable &Next, const DebugVariable &Elmt) {
+      return Elmt.getFragmentOrDefault().SizeInBits >
+             Next.getFragmentOrDefault().SizeInBits;
+    });
     // Check for duplicates.
     assert(std::adjacent_find(Frags.begin(), Frags.end()) == Frags.end());
   }
