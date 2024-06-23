@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMULTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMULTEST_H
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -83,11 +84,38 @@ public:
                                      func(x, y), 0.5);
     }
   }
+
+  void testNormalRange(FMulFunc func) {
+    using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;
+    using StorageType = typename FPBits::StorageType;
+    static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
+    static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
+   
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
+    for (int signs = 0; signs < 4; ++signs) {
+      for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
+           v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {
+        InType x = FPBits(v).get_val(), y = FPBits(w).get_val();
+        if (signs % 2 == 1) {
+          x = -x;
+        }
+        if (signs >= 2) {
+          y = -y;
+        }
+
+        mpfr::BinaryInput<InType> input{x, y};
+        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, input,
+                                       func(x, y), 0.5);
+      }
+    }
+  }
 };
 
 #define LIST_FMUL_MPFR_TESTS(OutType, InType, func)                            \
   using LlvmLibcFmulTest = FmulMPFRTest<OutType, InType>;                      \
   TEST_F(LlvmLibcFmulTest, MulMpfr) { testFMulMPFR(&func); }                   \
-  TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }
+  TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }       \
+  TEST_F(LlvmLibcFmulTest, NormalRange) {testNormalRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMULTEST_H
