@@ -165,7 +165,7 @@ bool compare_unary_operation_two_outputs(Operation op, T input,
                                          const BinaryOutput<T> &libc_output,
                                          double ulp_tolerance,
                                          RoundingMode rounding);
-  template <typename T>
+template <typename T>
 bool compare_binary_operation_two_outputs(Operation op,
                                           const BinaryInput<T> &input,
                                           const BinaryOutput<T> &libc_output,
@@ -312,7 +312,9 @@ constexpr bool is_valid_operation() {
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
        cpp::is_floating_point_v<OutputType>) ||
-    (op == Operation::Fmul && !internal::AreMatchingBinaryInputAndBinaryOutput<InputType, OutputType>::VALUE);
+      (op == Operation::Fmul &&
+       !internal::AreMatchingBinaryInputAndBinaryOutput<InputType,
+                                                        OutputType>::VALUE);
   if (IS_NARROWING_OP)
     return true;
   return (Operation::BeginUnaryOperationsSingleOutput < op &&

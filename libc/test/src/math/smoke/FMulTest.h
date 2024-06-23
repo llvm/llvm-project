@@ -98,44 +98,65 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(sNaN, sNaN));
   }
 
-   void testMPFR(FMulFunc func) {
-     constexpr int N = 10;
-     mpfr::BinaryInput<T> INPUTS[N] = {
-       {3.0, 5.0}, {0x1.0p1, 0x1.0p-131}, {0x1.0p2, 0x1.0p-129},
-       {1.0,1.0}, {-0.0, -0.0}, {-0.0, 0.0}, {0.0, -0.0},
-       {0x1.0p100, 0x1.0p100},
-       {1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150},
-       {1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150}
-     };
+  void testMPFR(FMulFunc func) {
+    constexpr int N = 10;
+    mpfr::BinaryInput<T> INPUTS[N] = {
+        {3.0, 5.0},
+        {0x1.0p1, 0x1.0p-131},
+        {0x1.0p2, 0x1.0p-129},
+        {1.0, 1.0},
+        {-0.0, -0.0},
+        {-0.0, 0.0},
+        {0.0, -0.0},
+        {0x1.0p100, 0x1.0p100},
+        {1.0, 1.0 + 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150},
+        {1.0, 0x1.0p-128 + 0x1.0p-149 + 0x1.0p-150}};
 
-     for (int i = 0; i < N; ++i) {
-       T x = INPUTS[i].x;
-       T y = INPUTS[i].y;
-       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i], LIBC_NAMESPACE::fmul(x,y), 0.5);
-     }
-   }
+    for (int i = 0; i < N; ++i) {
+      T x = INPUTS[i].x;
+      T y = INPUTS[i].y;
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i],
+                                     LIBC_NAMESPACE::fmul(x, y), 0.5);
+    }
+  }
 
   void testSpecialInputsMPFR(FMulFunc func) {
     constexpr int N = 27;
-    mpfr::BinaryInput<T> INPUTS[N] = {
-        {inf, 0x1.0p-129}, {0x1.0p-129, inf}, {inf, 2.0}, {3.0, inf}, {0.0, 0.0},
-        {neg_inf, aNaN}, {aNaN, neg_inf}, {neg_inf, neg_inf},
-        {0.0, neg_inf}, {neg_inf, 0.0},
-        {neg_inf, 1.0}, {1.0, neg_inf},
-        {neg_inf, 0x1.0p-129}, {0x1.0p-129, neg_inf},
-        {0.0, 0x1.0p-129}, {inf, 0.0}, {0.0, inf},
-        {0.0, aNaN}, {2.0, aNaN}, {0x1.0p-129, aNaN}, {inf, aNaN}, {aNaN, aNaN},
-        {0.0, sNaN}, {2.0, sNaN}, {0x1.0p-129, sNaN}, {inf, sNaN}, {sNaN, sNaN}
-    };
-
+    mpfr::BinaryInput<T> INPUTS[N] = {{inf, 0x1.0p-129},
+                                      {0x1.0p-129, inf},
+                                      {inf, 2.0},
+                                      {3.0, inf},
+                                      {0.0, 0.0},
+                                      {neg_inf, aNaN},
+                                      {aNaN, neg_inf},
+                                      {neg_inf, neg_inf},
+                                      {0.0, neg_inf},
+                                      {neg_inf, 0.0},
+                                      {neg_inf, 1.0},
+                                      {1.0, neg_inf},
+                                      {neg_inf, 0x1.0p-129},
+                                      {0x1.0p-129, neg_inf},
+                                      {0.0, 0x1.0p-129},
+                                      {inf, 0.0},
+                                      {0.0, inf},
+                                      {0.0, aNaN},
+                                      {2.0, aNaN},
+                                      {0x1.0p-129, aNaN},
+                                      {inf, aNaN},
+                                      {aNaN, aNaN},
+                                      {0.0, sNaN},
+                                      {2.0, sNaN},
+                                      {0x1.0p-129, sNaN},
+                                      {inf, sNaN},
+                                      {sNaN, sNaN}};
 
     for (int i = 0; i < N; ++i) {
-        T x = INPUTS[i].x;
-        T y = INPUTS[i].y;
-        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i], LIBC_NAMESPACE::fmul(x, y), 0.5);
+      T x = INPUTS[i].x;
+      T y = INPUTS[i].y;
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fmul, INPUTS[i],
+                                     LIBC_NAMESPACE::fmul(x, y), 0.5);
     }
-}
-
+  }
 };
 
 #define LIST_FMUL_TESTS(T, R, func)                                            \
@@ -143,7 +164,6 @@ public:
   TEST_F(LlvmLibcFmulTest, Mul) { testMul(&func); }                            \
   TEST_F(LlvmLibcFmulTest, NaNInf) { testSpecialInputs(&func); }               \
   TEST_F(LlvmLibcFmulTest, MulMpfr) { testMPFR(&func); }                       \
-  TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }          
-  
+  TEST_F(LlvmLibcFmulTest, NanInfMpfr) { testSpecialInputsMPFR(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMULTEST_H
