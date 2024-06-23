@@ -615,17 +615,6 @@ private:
 
   ModuleDeclSeq ModuleDeclState;
 
-  /// Whether the module import expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleImportExpectsIdentifier = false;
-
-  /// Whether the module declaration expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleDeclarationExpectsIdentifier = false;
-
-  /// Whether lexing the name of module partition declaration.
-  bool ModuleDeclarationLexingPartitionName = false;
-
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
   std::pair<IdentifierInfo *, SourceLocation> PragmaARCCFCodeAuditedInfo;

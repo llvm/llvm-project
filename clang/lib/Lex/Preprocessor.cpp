@@ -861,7 +861,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     ModuleImportLoc = Identifier.getLocation();
     NamedModuleImportPath.clear();
     IsAtImport = true;
-    ModuleImportExpectsIdentifier = true;
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
 
@@ -869,8 +868,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
       !InMacroArgs && !DisableMacroExpansion &&
       (getLangOpts().CPlusPlusModules || getLangOpts().DebuggerSupport) &&
       CurLexerCallback != CLK_CachingLexer) {
-    ModuleDeclarationExpectsIdentifier = true;
-    ModuleDeclarationLexingPartitionName = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;
   }
   return true;
@@ -964,15 +961,13 @@ void Preprocessor::Lex(Token &Result) {
             ModuleImportLoc = Result.getLocation();
             NamedModuleImportPath.clear();
             IsAtImport = false;
-            ModuleImportExpectsIdentifier = true;
             CurLexerCallback = CLK_LexAfterModuleImport;
           }
           break;
-        } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
+        }
+        if (Result.getIdentifierInfo()->isModulesDeclaration()) {
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
-          ModuleDeclarationExpectsIdentifier = true;
-          ModuleDeclarationLexingPartitionName = false;
           CurLexerCallback = CLK_LexAfterModuleDecl;
           break;
         }
