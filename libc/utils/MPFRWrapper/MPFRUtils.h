@@ -311,7 +311,8 @@ constexpr bool is_valid_operation() {
       (op == Operation::Fma && internal::IsTernaryInput<InputType>::VALUE &&
        cpp::is_floating_point_v<
            typename internal::MakeScalarInput<InputType>::type> &&
-       cpp::is_floating_point_v<OutputType>);
+       cpp::is_floating_point_v<OutputType>) ||
+    (op == Operation::Fmul && !internal::AreMatchingBinaryInputAndBinaryOutput<InputType, OutputType>::VALUE);
   if (IS_NARROWING_OP)
     return true;
   return (Operation::BeginUnaryOperationsSingleOutput < op &&
@@ -326,6 +327,10 @@ constexpr bool is_valid_operation() {
           op < Operation::EndBinaryOperationsSingleOutput &&
           cpp::is_floating_point_v<OutputType> &&
           cpp::is_same_v<InputType, BinaryInput<OutputType>>) ||
+         (Operation::BeginBinaryOperationsSingleOutput < op &&
+          op < Operation::EndBinaryOperationsSingleOutput &&
+          cpp::is_floating_point_v<OutputType> &&
+          !cpp::is_same_v<InputType, BinaryInput<OutputType>>) ||
          (Operation::BeginBinaryOperationsTwoOutputs < op &&
           op < Operation::EndBinaryOperationsTwoOutputs &&
           internal::AreMatchingBinaryInputAndBinaryOutput<InputType,
