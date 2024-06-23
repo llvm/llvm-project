@@ -114,21 +114,19 @@ Float128 exp2_f128(double x, int hi, int idx1, int idx2) {
   Float128 dx = Float128(x);
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
-  Float128 exp_mid1 =
-      fputil::quick_add(Float128(EXP2_MID1[idx1].hi),
-                        fputil::quick_add(Float128(EXP2_MID1[idx1].mid),
-                                          Float128(EXP2_MID1[idx1].lo)));
+  Float128 exp_mid1 = quick_add(
+      Float128(EXP2_MID1[idx1].hi),
+      quick_add(Float128(EXP2_MID1[idx1].mid), Float128(EXP2_MID1[idx1].lo)));
 
-  Float128 exp_mid2 =
-      fputil::quick_add(Float128(EXP2_MID2[idx2].hi),
-                        fputil::quick_add(Float128(EXP2_MID2[idx2].mid),
-                                          Float128(EXP2_MID2[idx2].lo)));
+  Float128 exp_mid2 = quick_add(
+      Float128(EXP2_MID2[idx2].hi),
+      quick_add(Float128(EXP2_MID2[idx2].mid), Float128(EXP2_MID2[idx2].lo)));
 
-  Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
+  Float128 exp_mid = quick_mul(exp_mid1, exp_mid2);
 
   Float128 p = poly_approx_f128(dx);
 
-  Float128 r = fputil::quick_mul(exp_mid, p);
+  Float128 r = quick_mul(exp_mid, p);
 
   r.exponent += hi;
 

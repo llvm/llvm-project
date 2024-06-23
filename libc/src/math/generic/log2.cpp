@@ -838,17 +838,17 @@ constexpr Float128 BIG_COEFFS[4]{
 double log2_accurate(int e_x, int index, double m_x) {
 
   Float128 sum(static_cast<float>(e_x));
-  sum = fputil::quick_add(sum, LOG2_TABLE.step_1[index]);
+  sum = quick_add(sum, LOG2_TABLE.step_1[index]);
 
   Float128 v_f128 = log_range_reduction(m_x, LOG2_TABLE, sum);
 
   // Polynomial approximation
-  Float128 p = fputil::quick_mul(v_f128, BIG_COEFFS[0]);
-  p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[1]));
-  p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[2]));
-  p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[3]));
+  Float128 p = quick_mul(v_f128, BIG_COEFFS[0]);
+  p = quick_mul(v_f128, quick_add(p, BIG_COEFFS[1]));
+  p = quick_mul(v_f128, quick_add(p, BIG_COEFFS[2]));
+  p = quick_mul(v_f128, quick_add(p, BIG_COEFFS[3]));
 
-  Float128 r = fputil::quick_add(sum, p);
+  Float128 r = quick_add(sum, p);
 
   return static_cast<double>(r);
 }

@@ -244,10 +244,10 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_positive_df(int exponent, size_t i) {
       false, -276, FIVE_EXP_MINUS_NINE_MANT);
 
   if (i > 0) {
-    fputil::DyadicFloat<INT_SIZE> fives = fputil::pow_n(FIVE_EXP_MINUS_NINE, i);
+    fputil::DyadicFloat<INT_SIZE> fives = FIVE_EXP_MINUS_NINE.pow_n(i);
     num = fives;
   }
-  num = mul_pow_2(num, shift_amount);
+  num = num.mul_pow_2(shift_amount);
 
   // Adding one is part of the formula.
   UInt<INT_SIZE> int_num = static_cast<UInt<INT_SIZE>>(num) + 1;
@@ -349,10 +349,10 @@ LIBC_INLINE UInt<MID_INT_SIZE> get_table_negative_df(int exponent, size_t i) {
                                                           TEN_EXP_NINE_MANT);
 
   if (i > 0) {
-    fputil::DyadicFloat<INT_SIZE> tens = fputil::pow_n(TEN_EXP_NINE, i);
+    fputil::DyadicFloat<INT_SIZE> tens = TEN_EXP_NINE.pow_n(i);
     num = tens;
   }
-  num = mul_pow_2(num, shift_amount);
+  num = num.mul_pow_2(shift_amount);
 
   UInt<INT_SIZE> int_num = static_cast<UInt<INT_SIZE>>(num);
   if (int_num > MOD_SIZE) {

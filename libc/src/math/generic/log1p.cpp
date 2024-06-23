@@ -824,11 +824,11 @@ constexpr Float128 BIG_COEFFS[4]{
 LIBC_INLINE double log1p_accurate(int e_x, int index,
                                   fputil::DoubleDouble m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
-  Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
-  sum = fputil::quick_add(sum, LOG_R1[index]);
+  Float128 sum = quick_mul(LOG_2, e_x_f128);
+  sum = quick_add(sum, LOG_R1[index]);
 
   // fputil::DoubleDouble v4;
-  Float128 v = fputil::quick_add(Float128(m_x.hi), Float128(m_x.lo));
+  Float128 v = quick_add(Float128(m_x.hi), Float128(m_x.lo));
 
   // Skip 2nd range reduction step if |m_x| <= 2^-15.
   if (m_x.hi > 0x1p-15 || m_x.hi < -0x1p-15) {
@@ -841,9 +841,9 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
     // Output range:
     //   -0x1.1037c00000040271p-15 <= v2.hi + v2.lo <= 0x1.108480000008096cp-15
     int idx2 = static_cast<int>(0x1p14 * (m_x.hi + (91 * 0x1p-14 + 0x1p-15)));
-    sum = fputil::quick_add(sum, LOG_R2[idx2]);
+    sum = quick_add(sum, LOG_R2[idx2]);
     Float128 s2 = Float128(S2[idx2]);
-    v = fputil::quick_add(fputil::quick_add(v, s2), fputil::quick_mul(v, s2));
+    v = quick_add(quick_add(v, s2), quick_mul(v, s2));
   }
 
   // Skip 3rd range reduction step if |v| <= 2^-22.
@@ -857,19 +857,19 @@ LIBC_INLINE double log1p_accurate(int e_x, int index,
     //   -0x1.012bb800000800114p-22 <= v3.hi + v3.lo <= 0x1p-22
     int idx3 =
         static_cast<int>(0x1p21 * (double(v) + (69 * 0x1p-21 + 0x1p-22)));
-    sum = fputil::quick_add(sum, LOG_R3[idx3]);
+    sum = quick_add(sum, LOG_R3[idx3]);
     Float128 s3 = Float128(S3[idx3]);
-    v = fputil::quick_add(fputil::quick_add(v, s3), fputil::quick_mul(v, s3));
+    v = quick_add(quick_add(v, s3), quick_mul(v, s3));
   }
 
   // Polynomial approximation
-  Float128 p = fputil::quick_mul(v, BIG_COEFFS[0]);
-  p = fputil::quick_mul(v, fputil::quick_add(p, BIG_COEFFS[1]));
-  p = fputil::quick_mul(v, fputil::quick_add(p, BIG_COEFFS[2]));
-  p = fputil::quick_mul(v, fputil::quick_add(p, BIG_COEFFS[3]));
-  p = fputil::quick_add(v, fputil::quick_mul(v, p));
+  Float128 p = quick_mul(v, BIG_COEFFS[0]);
+  p = quick_mul(v, quick_add(p, BIG_COEFFS[1]));
+  p = quick_mul(v, quick_add(p, BIG_COEFFS[2]));
+  p = quick_mul(v, quick_add(p, BIG_COEFFS[3]));
+  p = quick_add(v, quick_mul(v, p));
 
-  Float128 r = fputil::quick_add(sum, p);
+  Float128 r = quick_add(sum, p);
 
   return static_cast<double>(r);
 }
