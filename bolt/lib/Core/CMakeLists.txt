@@ -19,6 +19,7 @@ add_llvm_library(LLVMBOLTCore
   BinaryFunction.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp
+  BoltBisect.cpp
   DebugData.cpp
   DebugNames.cpp
   DIEBuilder.cpp
