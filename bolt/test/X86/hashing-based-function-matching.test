@@ -1,5 +1,4 @@
-## Test YAMLProfileReader support for pass-through blocks in non-matching edges:
-## match the profile edge A -> C to the CFG with blocks A -> B -> C.
+## Tests function matching in YAMLProfileReader by function hash.
 
 # REQUIRES: system-linux
 # RUN: split-file %s %t

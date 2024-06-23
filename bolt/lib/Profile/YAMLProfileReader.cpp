@@ -406,7 +406,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         continue;
       auto It = StrictHashToBF.find(YamlBF.Hash);
       if (It != StrictHashToBF.end() && !ProfiledFunctions.count(It->second)) {
-        auto *BF = It->second;
+        BinaryFunction *BF = It->second;
         matchProfileToFunction(YamlBF, *BF);
         ++MatchedWithHash;
       }
@@ -484,7 +484,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   if (opts::Lite)
     for (BinaryFunction *BF : BC.getAllBinaryFunctions())
-      if (ProfiledFunctions.find(BF) == ProfiledFunctions.end())
+      if (!BF->hasProfile())
         BF->setIgnored();
 
   return Error::success();
