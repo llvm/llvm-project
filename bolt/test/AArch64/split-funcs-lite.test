@@ -1,0 +1,14 @@
+// This test checks that tentative code layout for cold basic blocks runs
+// at least once, even when each function after the hot/cold frontier is not
+// emittable. This is done by ignoring each function using the 'skip-funcs' flag.
+// In a realistic scenario, this may happen when lite mode is enabled along
+// with a bolt profile.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags %p/../Inputs/asm_main.c -Wl,-q -o %t
+
+RUN: not --crash llvm-bolt %t -o %t.bolt -lite=1 -split-functions -split-all-cold \
+RUN: --skip-funcs="main,foo" 2>&1 | FileCheck %s
+
+CHECK: Did not perform tentative code layout for cold blocks.

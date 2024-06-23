@@ -382,6 +382,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     DotAddress += Func->estimateConstantIslandSize();
     ++CurrentIndex;
   }
+
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
     tentativeBBLayout(*Func);
