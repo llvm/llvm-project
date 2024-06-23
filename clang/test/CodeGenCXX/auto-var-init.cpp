@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=ZERO,ZERO-O1
-// TODO %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
+// RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
 
