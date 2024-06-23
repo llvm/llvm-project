@@ -28,7 +28,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -183,7 +183,7 @@ public:
                       std::move(Emitter)),
         MappingSymbolCounter(0), LastEMS(EMS_None) {}
 
-  void changeSection(MCSection *Section, uint32_t Subsection) override {
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
@@ -248,6 +248,9 @@ public:
     emitDataMappingSymbol();
     MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
   }
+
+  void finishImpl() override;
+
 private:
   enum ElfMappingSymbol {
     EMS_None,
@@ -283,6 +286,27 @@ private:
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
   ElfMappingSymbol LastEMS;
 };
+
+void AArch64ELFStreamer::finishImpl() {
+  MCContext &Ctx = getContext();
+  auto &Asm = getAssembler();
+  MCSectionELF *MemtagSec = nullptr;
+  const auto *Zero = MCConstantExpr::create(0, Ctx);
+  for (const MCSymbol &Symbol : Asm.symbols()) {
+    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    if (!Sym.isMemtag())
+      continue;
+    if (!MemtagSec) {
+      MemtagSec = Ctx.getELFSection(".memtag.globals.static",
+                                    ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
+      switchSection(MemtagSec);
+    }
+    auto *SRE = MCSymbolRefExpr::create(&Sym, MCSymbolRefExpr::VK_None, Ctx);
+    (void)MCObjectStreamer::emitRelocDirective(
+        *Zero, "BFD_RELOC_NONE", SRE, SMLoc(), *Ctx.getSubtargetInfo());
+  }
+  MCELFStreamer::finishImpl();
+}
 
 } // end anonymous namespace
 
