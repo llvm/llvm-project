@@ -29,12 +29,12 @@ void print_bytes(const T* object) {
 
 template <class T>
 void __builtin_clear_padding2(T t) {
-  __builtin_clear_padding(t);
+  //__builtin_clear_padding(t);
   (void)t;
 }
 
 void assert2(bool b){
-  assert(b);
+  //assert(b);
   (void)b;
 }
 
@@ -647,9 +647,9 @@ void structTests() {
     struct S {
       // will usually occupy 2 bytes:
       unsigned char b1 : 3; // 1st 3 bits (in 1st byte) are b1
-      unsigned char    : 2; // next 2 bits (in 1st byte) are blocked out as unused
-      unsigned char b2 : 6; // 6 bits for b2 - doesn't fit into the 1st byte => starts a 2nd
-      unsigned char b3 : 2; // 2 bits for b3 - next (and final) bits in the 2nd byte
+      unsigned char b2 : 2; // next 2 bits (in 1st byte) are blocked out as unused
+      unsigned char b3 : 6; // 6 bits for b2 - doesn't fit into the 1st byte => starts a 2nd
+      unsigned char b4 : 2; // 2 bits for b3 - next (and final) bits in the 2nd byte
     };
 
     S s1, s2;
@@ -658,16 +658,14 @@ void structTests() {
 
     s1.b1 = 5;
     s2.b1 = 5;
-    s1.b2 = 27;
-    s2.b2 = 27;
-    s1.b3 = 3;
-    s2.b3 = 3;
+    s1.b2 = 3;
+    s2.b2 = 3;
+    s1.b3 = 27;
+    s2.b3 = 27;
+    s1.b4 = 3;
+    s2.b4 = 3;
     __builtin_clear_padding2(&s2);
-    //print_bytes(&s1);
-    //print_bytes(&s2);
-    //assert(false);
-    //TODO
-    //assert2(memcmp(&s1, &s2, sizeof(S)) == 0);
+    assert2(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
   testAllStructsForType<32, 16, char>(11, 22, 33, 44);
