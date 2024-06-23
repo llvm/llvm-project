@@ -790,9 +790,9 @@ VPlan::~VPlan() {
 
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                    BasicBlock *PH) {
-  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
+  VPIRBasicBlock *Entry = new VPIRBasicBlock(PH);
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
-  auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
+  auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
   // Create empty VPRegionBlock, to be filled during processing later.
