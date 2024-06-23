@@ -2,8 +2,7 @@
 // RUN: %libomptarget-run-generic %fcheck-generic
 
 // REQURIES: gpu
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvidia-gpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <cstdio>
