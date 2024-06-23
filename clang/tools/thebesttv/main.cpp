@@ -347,7 +347,10 @@ void dumpICFGNode(int u, ordered_json &jPath) {
                 ordered_json j;
                 j["type"] = isEntry ? "entry" : "exit";
                 // TODO: content只要declaration就行，不然太大了
-                saveLocationInfo(Context, fi->D->getSourceRange(), j);
+                // 尽量获取函数定义对应的源码
+                const FunctionDecl *D =
+                    fi->D->getDefinition() ? fi->D->getDefinition() : fi->D;
+                saveLocationInfo(Context, D->getSourceRange(), j);
                 jPath.push_back(j);
 
                 goto dumpICFGNodeExit;
