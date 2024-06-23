@@ -21,10 +21,8 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-
 TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   int fd = 10;
   unsigned long request = 10;
   int res = LIBC_NAMESPACE::ioctl(fd, request, NULL);
@@ -32,9 +30,11 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 }
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
-  constexpr const char *FILENAME = "testdata/ioctl.test";
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  LIBC_NAMESPACE::libc_errno = 0;
+  constexpr const char *FILENAME = "ioctl.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
-  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   int data;
