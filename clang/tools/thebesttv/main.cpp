@@ -112,11 +112,13 @@ struct VarLocResult {
  * succFirst：在 CFG 中，对于语句 `p = foo()`，`foo()` 会在 pred，`p = foo()`
  * 会在 succ。如果想进入函数，需要优先访问 pred。对于 input.json 的 stmt
  * 类型，需要优先进入函数。但 source 和 sink 则不需要。
+ * 但如果 source 是 p = foo() /
+ * foo()，且下一条语句(nextFid)是那个被调用的函数中的， 那就会无视 succFirst。
  */
 VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             int line, int column, bool isStmt,
-                            bool requireExact, bool succFirst,
-                            int previousFid) {
+                            bool requireExact, bool succFirst, int previousFid,
+                            int nextFid) {
     FindVarVisitor visitor;
 
     for (const auto &fi : functionsInFile.at(file)) {
@@ -213,27 +215,29 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
             std::string calleeSignature =
                 getFullSignature(callExpr->getDirectCallee());
             int calleeFid = Global.getIdOfFunction(calleeSignature);
-            if (succFirstResult != predFirstResult) {
-                logger.info("Stmt in form of 'p = foo()'");
-                if (calleeFid == previousFid) {
-                    // 应该是 foo() 返回后的那条语句
-                    logger.info("  Succ first");
-                    return succFirstResult;
+            if (calleeFid != -1) { // 保证了 previousFid 和 nextFid 都不是 -1
+                if (succFirstResult != predFirstResult) {
+                    logger.info("Stmt in form of 'p = foo()'");
+                    if (calleeFid == previousFid) {
+                        // 应该是 foo() 返回后的那条语句
+                        logger.info("  Succ first");
+                        return succFirstResult;
+                    } else if (calleeFid == nextFid) {
+                        // 应该是进入 foo() 之前的那条语句
+                        logger.info("  Pred first");
+                        return predFirstResult;
+                    }
                 } else {
-                    // 进入 foo() 之前的那条语句
-                    // logger.info("  Pred first");
-                    // return predFirstResult;
-                }
-            } else {
-                logger.info("Stmt in form of 'foo()'");
-                if (calleeFid == previousFid) {
-                    // 由于 foo() 只在 pred 有 CallExpr，succ 就没有了
-                    // 所以直接返回非法值，跳过这条语句
-                    logger.info("  Skip this stmt");
-                    return VarLocResult();
-                } else {
-                    // logger.info("  Pred first");
-                    // return predFirstResult;
+                    logger.info("Stmt in form of 'foo()'");
+                    if (calleeFid == previousFid) {
+                        // 由于 foo() 只在 pred 有 CallExpr，succ 就没有了
+                        // 所以直接返回非法值，跳过这条语句
+                        logger.info("  Skip this stmt");
+                        return VarLocResult();
+                    } else if (calleeFid == nextFid) {
+                        logger.info("  Pred first");
+                        return predFirstResult;
+                    }
                 }
             }
         }
@@ -280,7 +284,7 @@ struct FunctionLocator {
 };
 
 VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
-                            bool succFirst, int previousFid) {
+                            bool succFirst, int previousFid, int nextFid) {
     int fid = locator.getFid(loc);
     if (fid == -1) {
         return VarLocResult();
@@ -311,7 +315,7 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     */
     auto result =
         locateVariable(functionsInFile, loc.file, loc.line, loc.column, true,
-                       false, succFirst, previousFid);
+                       false, succFirst, previousFid, nextFid);
     return result;
 }
 
@@ -597,7 +601,8 @@ void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
     int fromLine, toLine;
     std::vector<VarLocResult> path;
     int previousFid = -1;
-    for (const ordered_json &loc : locations) {
+    for (auto it = locations.cbegin(); it != locations.cend(); it++) {
+        const ordered_json &loc = *it;
         std::string type = loc["type"].template get<std::string>();
         if (type != "source" && type != "sink" && type != "stmt") {
             logger.warn("Skipping path type: {}", type);
@@ -617,8 +622,18 @@ void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
             continue;
         }
 
+        int nextFid = -1;
+        {
+            // 获取下一条语句对应的 fid
+            auto nextIt = std::next(it);
+            if (nextIt != locations.cend()) {
+                Location nextJsonLoc(*nextIt);
+                nextFid = locator.getFid(nextJsonLoc);
+            }
+        }
+
         VarLocResult varLoc =
-            locateVariable(locator, jsonLoc, succFirst, previousFid);
+            locateVariable(locator, jsonLoc, succFirst, previousFid, nextFid);
         if (!varLoc.isValid()) {
             logger.error("Error: cannot locate {} at {}", type, loc);
             // 跳过无法定位的中间路径
