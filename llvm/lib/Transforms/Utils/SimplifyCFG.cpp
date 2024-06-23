@@ -2967,6 +2967,10 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
+static bool isLoadFromAlloca(const Instruction &I) {
+  return isa<LoadInst>(I) && isa<AllocaInst>(I.getOperand(0));
+}
+
 /// Hoist load/store instructions from the conditional successor blocks up into
 /// the block.
 ///
@@ -3025,6 +3029,9 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
 ///   are handled first.
 bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     BasicBlock *BB) {
+  if (!HoistLoadsStoresWithCondFaulting)
+    return false;
+
   auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isConditional())
     return false;
@@ -3036,7 +3043,7 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
   for (auto *Succ : {IfTrueBB, IfFalseBB})
-    if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
+    if (Succ->hasAddressTaken())
       return false;
 
   // Collect hoisted loads/stores.
@@ -3071,6 +3078,11 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
       auto *LI = dyn_cast<LoadInst>(&I);
       auto *SI = dyn_cast<StoreInst>(&I);
       if (LI || SI) {
+        // a load from alloca is always safe.
+        if (isLoadFromAlloca(I)) {
+          HoistedInsts.insert(&I);
+          continue;
+        }
         auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
         bool IsSimple = (LI && LI->isSimple()) || (SI && SI->isSimple());
         if (!TTI.hasConditionalFaultingLoadStoreForType(Type) || !IsSimple ||
@@ -3099,6 +3111,12 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
   auto *VCond = Builder.CreateBitCast(Cond, VCondTy);
   Value *VCondNot = nullptr;
   for (auto *I : HoistedInsts) {
+    // Only need to move the position for load from alloca.
+    if (isLoadFromAlloca(*I)) {
+      I->moveBefore(BI);
+      continue;
+    }
+
     bool InvertCond = I->getParent() == IfFalseBB;
     // Construct the inverted condition if need.
     if (InvertCond && !VCondNot)
@@ -3132,8 +3150,10 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
 
   // Erase the hoisted instrutions in reverse order to avoid use-w/o-define
   // error.
-  std::for_each(HoistedInsts.rbegin(), HoistedInsts.rend(),
-                [](auto I) { I->eraseFromParent(); });
+  std::for_each(HoistedInsts.rbegin(), HoistedInsts.rend(), [](auto I) {
+    if (!isLoadFromAlloca(*I))
+      I->eraseFromParent();
+  });
 
   return true;
 }
@@ -7608,26 +7628,31 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (HoistCommon && hoistCommonCodeFromSuccessors(
                              BI->getParent(), !Options.HoistCommonInsts))
         return requestResimplify();
-      if (HoistLoadsStoresWithCondFaulting &&
-          hoistLoadStoreWithCondFaultingFromSuccessors(BI->getParent()))
+      if (hoistLoadStoreWithCondFaultingFromSuccessors(BI->getParent()))
         return requestResimplify();
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
       Instruction *Succ0TI = BI->getSuccessor(0)->getTerminator();
       if (Succ0TI->getNumSuccessors() == 1 &&
-          Succ0TI->getSuccessor(0) == BI->getSuccessor(1))
+          Succ0TI->getSuccessor(0) == BI->getSuccessor(1)) {
+        if (hoistLoadStoreWithCondFaultingFromSuccessors(BI->getParent()))
+          return requestResimplify();
         if (SpeculativelyExecuteBB(BI, BI->getSuccessor(0)))
           return requestResimplify();
+      }
     }
   } else if (BI->getSuccessor(1)->getSinglePredecessor()) {
     // If Successor #0 has multiple preds, we may be able to conditionally
     // execute Successor #1 if it branches to Successor #0.
     Instruction *Succ1TI = BI->getSuccessor(1)->getTerminator();
     if (Succ1TI->getNumSuccessors() == 1 &&
-        Succ1TI->getSuccessor(0) == BI->getSuccessor(0))
+        Succ1TI->getSuccessor(0) == BI->getSuccessor(0)) {
+      if (hoistLoadStoreWithCondFaultingFromSuccessors(BI->getParent()))
+        return requestResimplify();
       if (SpeculativelyExecuteBB(BI, BI->getSuccessor(1)))
         return requestResimplify();
+    }
   }
 
   // If this is a branch on something for which we know the constant value in

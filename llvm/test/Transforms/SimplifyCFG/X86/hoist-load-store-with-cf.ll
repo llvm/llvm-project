@@ -35,6 +35,109 @@ if.end:
   ret void
 }
 
+;; simplifycfg is run before sroa. alloca here is not optimized away yet.
+define void @alloca(ptr %p, ptr %q, i32 %a) {
+; CHECK-LABEL: @alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[Q_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store ptr [[P:%.*]], ptr [[P_ADDR]], align 8
+; CHECK-NEXT:    store ptr [[Q:%.*]], ptr [[Q_ADDR]], align 8
+; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[Q_ADDR]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[TMP2]], i32 4, <1 x i1> [[TMP1]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP6]], ptr [[TMP5]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p.addr = alloca ptr
+  %q.addr = alloca ptr
+  %a.addr = alloca i32
+  store ptr %p, ptr %p.addr
+  store ptr %q, ptr %q.addr
+  store i32 %a, ptr %a.addr
+  %0 = load i32, ptr %a.addr
+  %tobool = icmp ne i32 %0, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:
+  %1 = load ptr, ptr %q.addr
+  %2 = load i32, ptr %1
+  %3 = load ptr, ptr %p.addr
+  store i32 %2, ptr %3
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+;; successor 1 branches to successor 0
+define void @succ1to0(ptr %p, ptr %q, i32 %a) {
+; CHECK-LABEL: @succ1to0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[TOBOOL]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TOBOOL]], true
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i1 [[TMP1]] to <1 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP2]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tobool = icmp ne i32 %a, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.end:
+  ret void
+
+if.then:
+  %0 = load i32, ptr %q
+  store i32 %0, ptr %p
+  br label %if.end
+}
+
+;; successor 0 branches to successor 1
+define void @succ0to1(i32 %a, ptr %b, ptr %p, ptr %q) {
+; CHECK-LABEL: @succ0to1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i1 [[TMP4]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 1>, ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  store i32 1, ptr %q, align 4
+  br label %if.end
+
+if.true:
+  %0 = load i32, ptr %b, align 4
+  store i32 %0, ptr %p, align 4
+  br label %if.false
+
+if.end:
+  ret void
+}
+
+; i8 is not supported by conditional faulting
 define void @not_supported_type(i8 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: @not_supported_type(
 ; CHECK-NEXT:  entry:
@@ -89,36 +192,6 @@ entry:
   i32 1, label %if.false
   i32 2, label %if.true
   ]
-
-if.false:
-  store i32 1, ptr %q, align 4
-  br label %if.end
-
-if.true:
-  %0 = load i32, ptr %b, align 4
-  store i32 %0, ptr %p, align 4
-  br label %if.false
-
-if.end:
-  ret void
-}
-
-define void @not_single_predecessor(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @not_single_predecessor(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if.false:
-; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    ret void
-; CHECK:       if.true:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[IF_FALSE]]
-;
-entry:
-  %cond = icmp eq i32 %a, 0
-  br i1 %cond, label %if.true, label %if.false
 
 if.false:
   store i32 1, ptr %q, align 4
