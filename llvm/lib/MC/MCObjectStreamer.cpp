@@ -295,8 +295,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
-  CurSubsectionIdx = Subsection;
-  Section->switchSubsection(CurSubsectionIdx);
+  Section->switchSubsection(Subsection);
   return Created;
 }
 
