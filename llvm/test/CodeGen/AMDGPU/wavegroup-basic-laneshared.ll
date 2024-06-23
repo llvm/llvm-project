@@ -102,6 +102,7 @@ store:
 ; KERNEL-NEXT:         .amdhsa_wavefront_size32 1
 ; KERNEL-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; KERNEL-NEXT:         .amdhsa_enable_wavegroup 1
+; KERNEL-NEXT:         .amdhsa_laneshared_segment_fixed_size 0
 ; KERNEL-NEXT:         .amdhsa_enable_private_segment 0
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_x 1
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_y 0
@@ -137,6 +138,7 @@ store:
 ; KERNEL-NEXT:    .group_segment_fixed_size: 0
 ; KERNEL-NEXT:    .kernarg_segment_align: 8
 ; KERNEL-NEXT:    .kernarg_segment_size: 16
+; KERNEL-NEXT:    .laneshared_segment_fixed_size: 0
 ; KERNEL-NEXT:    .max_flat_workgroup_size: 1024
 ; KERNEL-NEXT:    .name:           wavegroup_kernel
 ; KERNEL-NEXT:    .private_segment_fixed_size: 0

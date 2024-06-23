@@ -490,6 +490,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   KernelDescriptor.group_segment_fixed_size =
       MCConstantExpr::create(PI.LDSSize, Ctx);
   KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
+  KernelDescriptor.laneshared_segment_fixed_size = PI.LaneSharedSegmentSize;
 
   Align MaxKernArgAlign;
   KernelDescriptor.kernarg_size = MCConstantExpr::create(
@@ -789,6 +790,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     unsigned NumLaneSharedVGPRs = divideCeil(MFI->getLaneSharedVGPRSize(), 4);
 
     NumArchVGPR = NumVGPR = NumLaneSharedVGPRs + NumWavesPerVGPRAlloc * NumVGPR;
+
+    ProgInfo.LaneSharedSegmentSize =
+        CreateExpr(MFI->getLaneSharedScratchSize());
   }
 
   ProgInfo.NumArchVGPR = CreateExpr(NumArchVGPR);

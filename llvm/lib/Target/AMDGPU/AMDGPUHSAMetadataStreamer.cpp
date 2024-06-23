@@ -483,8 +483,12 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
   // TODO-GFX13: Properly check for CodeObjectVersion
-  if (STM.hasVGPRIndexingRegisters())
+  if (STM.hasVGPRIndexingRegisters()) {
     Kern[".enable_wavegroup"] = AMDGPU::getWavegroupEnable(MF.getFunction());
+    DelayedExprs->assignDocNode(Kern[".laneshared_segment_fixed_size"],
+                                msgpack::Type::UInt,
+                                ProgramInfo.LaneSharedSegmentSize);
+  }
 
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =

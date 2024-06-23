@@ -440,11 +440,15 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
                amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK,
                ".amdhsa_uses_dynamic_stack");
-  if (IVersion.Major >= 13)
+  if (IVersion.Major >= 13) {
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP,
                ".amdhsa_enable_wavegroup");
+    OS << "\t\t.amdhsa_laneshared_segment_fixed_size ";
+    EmitMCExpr(KD.laneshared_segment_fixed_size);
+    OS << '\n';
+  }
   PrintField(KD.compute_pgm_rsrc2,
              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT_SHIFT,
              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT,
@@ -1016,7 +1020,9 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
       sizeof(amdhsa::kernel_descriptor_t::kernel_code_entry_byte_offset));
   for (uint32_t i = 0; i < sizeof(amdhsa::kernel_descriptor_t::reserved1); ++i)
     Streamer.emitInt8(0u);
-  Streamer.emitInt32(0u); // TODO-GFX13: laneshared_segment_fixed_size
+  Streamer.emitValue(
+      KernelDescriptor.laneshared_segment_fixed_size,
+      sizeof(amdhsa::kernel_descriptor_t::laneshared_segment_fixed_size));
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc3,
                      sizeof(amdhsa::kernel_descriptor_t::compute_pgm_rsrc3));
   Streamer.emitValue(KernelDescriptor.compute_pgm_rsrc1,

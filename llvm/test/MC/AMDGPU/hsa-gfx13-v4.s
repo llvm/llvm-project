@@ -6,7 +6,7 @@
 
 // READOBJ: Section Headers
 // READOBJ: .text   PROGBITS {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9a-f]+}} {{[0-9]+}} AX {{[0-9]+}} {{[0-9]+}} 256
-// READOBJ: .rodata PROGBITS {{[0-9a-f]+}}        000640 {{[0-9a-f]+}} {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
+// READOBJ: .rodata PROGBITS {{[0-9a-f]+}}        000740 {{[0-9a-f]+}} {{[0-9]+}}  A {{[0-9]+}} {{[0-9]+}} 64
 
 // READOBJ: Relocation section '.rela.rodata' at offset
 // READOBJ: 0000000000000010 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 10
@@ -14,6 +14,8 @@
 // READOBJ: 0000000000000090 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 210
 // READOBJ: 00000000000000d0 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 310
 // READOBJ: 0000000000000110 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 410
+// READOBJ: 0000000000000150 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 510
+// READOBJ: 0000000000000190 {{[0-9a-f]+}}00000005 R_AMDGPU_REL64 0000000000000000 .text + 610
 
 // READOBJ: Symbol table '.symtab' contains {{[0-9]+}} entries:
 // READOBJ:      0000000000000000  0 FUNC    LOCAL  PROTECTED 2 minimal
@@ -22,12 +24,14 @@
 // READOBJ-NEXT: 0000000000000300  0 FUNC    LOCAL  PROTECTED 2 disabled_user_sgpr
 // READOBJ-NEXT: 0000000000000400  0 FUNC    LOCAL  PROTECTED 2 max_lds_size
 // READOBJ-NEXT: 0000000000000500  0 FUNC    LOCAL  PROTECTED 2 max_vgprs
+// READOBJ-NEXT: 0000000000000600  0 FUNC    LOCAL  PROTECTED 2 wavegroup_kernel
 // READOBJ-NEXT: 0000000000000000 64 OBJECT  LOCAL  DEFAULT   3 minimal.kd
 // READOBJ-NEXT: 0000000000000040 64 OBJECT  LOCAL  DEFAULT   3 complete.kd
 // READOBJ-NEXT: 0000000000000080 64 OBJECT  LOCAL  DEFAULT   3 special_sgpr.kd
 // READOBJ-NEXT: 00000000000000c0 64 OBJECT  LOCAL  DEFAULT   3 disabled_user_sgpr.kd
 // READOBJ-NEXT: 0000000000000100 64 OBJECT  LOCAL  DEFAULT   3 max_lds_size.kd
 // READOBJ-NEXT: 0000000000000140 64 OBJECT  LOCAL  DEFAULT   3 max_vgprs.kd
+// READOBJ-NEXT: 0000000000000180 64 OBJECT  LOCAL  DEFAULT   3 wavegroup_kernel.kd
 
 // OBJDUMP: Contents of section .rodata
 // Note, relocation for KERNEL_CODE_ENTRY_BYTE_OFFSET is not resolved here.
@@ -61,6 +65,11 @@
 // OBJDUMP-NEXT: 0150 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0160 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0170 7f000c40 80000000 00040000 00000000
+// wavegroup_kernel
+// OBJDUMP-NEXT: 0180 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 0190 00000000 00000000 00000000 00000000
+// OBJDUMP-NEXT: 01a0 00000000 00000000 00100000 00000000
+// OBJDUMP-NEXT: 01b0 01000c40 80000000 00140000 00000000
 
 .text
 // ASM: .text
@@ -96,6 +105,11 @@ max_lds_size:
 .p2align 8
 .type max_vgprs,@function
 max_vgprs:
+  s_endpgm
+
+.p2align 8
+.type wavegroup_kernel,@function
+wavegroup_kernel:
   s_endpgm
 
 .rodata
@@ -166,6 +180,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
 // ASM-NEXT: .amdhsa_enable_wavegroup 0
+// ASM-NEXT: .amdhsa_laneshared_segment_fixed_size 0
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1
@@ -246,6 +261,23 @@ max_vgprs:
  .amdhsa_next_free_vgpr 1024
  .amdhsa_next_free_sgpr 1
 .end_amdhsa_kernel
+
+// Test wavegroups and laneshared segment fixed size
+
+.p2align 6
+.amdhsa_kernel wavegroup_kernel
+    .amdhsa_enable_wavegroup 1
+    .amdhsa_laneshared_segment_fixed_size 4096
+    .amdhsa_next_free_vgpr 10
+    .amdhsa_next_free_sgpr 48
+.end_amdhsa_kernel
+
+// ASM: .amdhsa_kernel wavegroup_kernel
+// ASM:    .amdhsa_enable_wavegroup 1
+// ASM:    .amdhsa_laneshared_segment_fixed_size 4096
+// ASM:    .amdhsa_next_free_vgpr 10
+// ASM:    .amdhsa_next_free_sgpr 48
+// ASM: .end_amdhsa_kernel
 
 .section .foo
 

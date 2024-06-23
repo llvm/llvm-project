@@ -68,6 +68,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LDSSize = 0;
   FlatUsed = ZeroExpr;
 
+  LaneSharedSegmentSize = ZeroExpr;
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
   Occupancy = ZeroExpr;

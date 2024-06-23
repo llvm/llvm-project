@@ -126,7 +126,7 @@ static bool isSupportedMemset(MemSetInst *I, const GlobalVariable &GV,
   using namespace PatternMatch;
   // For now we only care about non-volatile memsets that affect the whole
   // type (start at index 0 and fill the whole global variable).
-  const unsigned Size = DL.getTypeStoreSize(GV.getType());
+  const unsigned Size = DL.getTypeStoreSize(GV.getValueType());
   return I->getOperand(0) == &GV &&
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
@@ -140,6 +140,12 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(GlobalVariable &GV) {
                       << "    " << *Inst << "\n");
     return false;
   };
+
+  // TODO-GFX13: Do a proper allocation check across _all_ global variables.
+  if (DL->getTypeStoreSize(GV.getValueType()) > 4 * (1024 - 64)) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: too large\n");
+    return false;
+  }
 
   SmallVector<Use *, 8> Uses;
   collectUses(GV, Uses);

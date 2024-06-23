@@ -6145,6 +6145,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP, ExprVal,
                        ValRange);
+    } else if (ID == ".amdhsa_laneshared_segment_fixed_size") {
+      if (IVersion.Major < 13)
+        return Error(IDRange.Start, "directive requires gfx13+", IDRange);
+      if (!isUInt<sizeof(kernel_descriptor_t::laneshared_segment_fixed_size) *
+                  CHAR_BIT>(Val))
+        return OutOfRangeError(ValRange);
+      KD.laneshared_segment_fixed_size = ExprVal;
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
