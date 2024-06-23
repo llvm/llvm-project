@@ -305,6 +305,21 @@ bool LibcxxChronoYearMonthDaySummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::chrono::year_month_day
 
+SyntheticChildrenFrontEnd *
+LibcxxStdStringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdWStringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                         lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdU16StringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdU32StringSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP);
 } // namespace formatters
 } // namespace lldb_private
 
