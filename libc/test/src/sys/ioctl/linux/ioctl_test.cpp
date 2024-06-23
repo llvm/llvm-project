@@ -16,10 +16,6 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
-#include <linux/fs.h>
-#include <sys/ioctl.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
