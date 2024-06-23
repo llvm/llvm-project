@@ -222,10 +222,10 @@ public:
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
 #elif KMP_ARCH_X86_64
-#ifndef __ILP32__
-#define X32_BIT 0
-#else
+#ifdef __ILP32__
 #define X32_BIT 0x40000000
+#else
+#define X32_BIT 0
 #endif /* __ILP32__ */
 #ifndef __NR_sched_setaffinity
 #define __NR_sched_setaffinity (203 + X32_BIT)
