@@ -30,7 +30,7 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
-set(LLVM_RELEASE_ENABLE_PGO OFF CACHE BOOL "")
+set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;mlir;flang" CACHE STRING "")
 # Note we don't need to add install here, since it is one of the pre-defined
@@ -82,6 +82,7 @@ set(LLVM_ENABLE_PROJECTS ${STAGE1_PROJECTS} CACHE STRING "")
 # stage2-instrumented and Final Stage Config:
 # Options that need to be set in both the instrumented stage (if we are doing
 # a pgo build) and the final stage.
+set_instrument_and_final_stage_var(CMAKE_POSITION_INDEPENDENT_CODE "ON" STRING)
 set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" STRING)
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)
@@ -90,4 +91,6 @@ endif()
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
 set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 

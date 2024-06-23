@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -o - -emit-llvm %s | FileCheck %s
 // Test ARM64 SIMD duplicate lane and n intrinsics
 
 // REQUIRES: aarch64-registered-target || arm-registered-target

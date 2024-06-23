@@ -76,20 +76,16 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    auto CallStackCallback = [&](CallStackId CSId) {
-      llvm::SmallVector<Frame> CallStack;
-      auto Iter = CSIdToCallStack.find(CSId);
-      assert(Iter != CSIdToCallStack.end());
-      for (FrameId Id : Iter->second)
-        CallStack.push_back(Callback(Id));
-      return CallStack;
-    };
+    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
+                                                             Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
         Iter->first,
-        IndexedRecord.toMemProfRecord(CallStackCallback),
+        IndexedRecord.toMemProfRecord(CSIdConv),
     };
+    if (CSIdConv.LastUnmappedId)
+      return make_error<InstrProfError>(instrprof_error::hash_mismatch);
     Iter++;
     return Error::success();
   }
@@ -141,7 +137,7 @@ class RawMemProfReader final : public MemProfReader {
 public:
   RawMemProfReader(const RawMemProfReader &) = delete;
   RawMemProfReader &operator=(const RawMemProfReader &) = delete;
-  virtual ~RawMemProfReader() override = default;
+  ~RawMemProfReader() override = default;
 
   // Prints the contents of the profile in YAML format.
   void printYAML(raw_ostream &OS);
@@ -165,7 +161,7 @@ public:
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
-  virtual Error
+  Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback) override;
 

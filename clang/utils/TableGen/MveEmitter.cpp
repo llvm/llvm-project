@@ -928,8 +928,8 @@ public:
       llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
       llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
       if (ActualRange.ult(ArgTypeRange))
-        SemaChecks.push_back("BuiltinConstantArgRange(TheCall, " + Index +
-                             ", " + signedHexLiteral(lo) + ", " +
+        SemaChecks.push_back("SemaRef.BuiltinConstantArgRange(TheCall, " +
+                             Index + ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
@@ -943,8 +943,9 @@ public:
           }
           Suffix = (Twine(", ") + Arg).str();
         }
-        SemaChecks.push_back((Twine("BuiltinConstantArg") + IA.ExtraCheckType +
-                              "(TheCall, " + Index + Suffix + ")")
+        SemaChecks.push_back((Twine("SemaRef.BuiltinConstantArg") +
+                              IA.ExtraCheckType + "(TheCall, " + Index +
+                              Suffix + ")")
                                  .str());
       }
 

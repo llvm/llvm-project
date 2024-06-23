@@ -76,7 +76,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
     bool UseParens = MAI && MAI->useParensForDollarSignNames() && !InParens &&
-                     !Sym.getName().empty() && Sym.getName()[0] == '$';
+                     Sym.getName().starts_with('$');
 
     if (UseParens) {
       OS << '(';
@@ -645,10 +645,6 @@ static void AttemptToFoldSymbolOffsetDifference(
       Addend += SA.getOffset() - SB.getOffset();
       return FinalizeFolding();
     }
-    // One of the symbol involved is part of a fragment being laid out. Quit now
-    // to avoid a self loop.
-    if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
-      return;
 
     // Eagerly evaluate when layout is finalized.
     Addend += Layout->getSymbolOffset(A->getSymbol()) -
@@ -665,19 +661,16 @@ static void AttemptToFoldSymbolOffsetDifference(
     // this is important when the Subtarget is changed and a new MCDataFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
-    if (SA.isVariable() || SB.isVariable() ||
-        FA->getSubsectionNumber() != FB->getSubsectionNumber())
+    if (SA.isVariable() || SB.isVariable())
       return;
 
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     bool Reverse = false;
-    if (FA == FB) {
+    if (FA == FB)
       Reverse = SA.getOffset() < SB.getOffset();
-    } else if (!isa<MCDummyFragment>(FA)) {
-      Reverse = std::find_if(std::next(FA->getIterator()), SecA.end(),
-                             [&](auto &I) { return &I == FB; }) != SecA.end();
-    }
+    else
+      Reverse = FA->getLayoutOrder() < FB->getLayoutOrder();
 
     uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
     int64_t Displacement = SA.getOffset() - SB.getOffset();
@@ -687,13 +680,12 @@ static void AttemptToFoldSymbolOffsetDifference(
       Displacement *= -1;
     }
 
-    [[maybe_unused]] bool Found = false;
     // Track whether B is before a relaxable instruction and whether A is after
     // a relaxable instruction. If SA and SB are separated by a linker-relaxable
     // instruction, the difference cannot be resolved as it may be changed by
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
-    for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
+    for (auto FI = FB; FI; FI = FI->getNext()) {
       auto DF = dyn_cast<MCDataFragment>(FI);
       if (DF && DF->isLinkerRelaxable()) {
         if (&*FI != FB || SBOffset != DF->getContents().size())
@@ -704,8 +696,11 @@ static void AttemptToFoldSymbolOffsetDifference(
           return;
       }
       if (&*FI == FA) {
-        Found = true;
-        break;
+        // If FA and FB belong to the same subsection, the loop will find FA and
+        // we can resolve the difference.
+        Addend += Reverse ? -Displacement : Displacement;
+        FinalizeFolding();
+        return;
       }
 
       int64_t Num;
@@ -724,12 +719,6 @@ static void AttemptToFoldSymbolOffsetDifference(
         return;
       }
     }
-    // If the previous loop does not find FA, FA must be a dummy fragment not in
-    // the fragment list (which means SA is a pending label (see
-    // flushPendingLabels)). In either case, we can resolve the difference.
-    assert(Found || isa<MCDummyFragment>(FA));
-    Addend += Reverse ? -Displacement : Displacement;
-    FinalizeFolding();
   }
 }
 

@@ -19,6 +19,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         cls.RemoveTempFile("child_send2.txt")
         cls.RemoveTempFile("child_read2.txt")
 
+    @skipIf(macos_version=["<", "14.0"], asan=True)
     @add_test_categories(["pexpect"])
     @no_debug_info_test
     def test_stty_dash_a_before_and_afetr_invoking_lldb_command(self):

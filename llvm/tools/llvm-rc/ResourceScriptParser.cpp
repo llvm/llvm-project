@@ -430,6 +430,8 @@ RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
       return parseFontStmt(StmtsType);
     if (TypeToken->equals_insensitive("STYLE"))
       return parseStyleStmt();
+    if (TypeToken->equals_insensitive("MENU"))
+      return parseMenuStmt();
   }
 
   return getExpectedError("optional statement type, BEGIN or '{'",
@@ -963,6 +965,11 @@ RCParser::ParseOptionType RCParser::parseStyleStmt() {
 RCParser::ParseOptionType RCParser::parseExStyleStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return std::make_unique<ExStyleStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseMenuStmt() {
+  ASSIGN_OR_RETURN(Arg, readIntOrString());
+  return std::make_unique<MenuStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {

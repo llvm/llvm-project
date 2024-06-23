@@ -10,7 +10,7 @@ define void @vector_interleave2_v4i32(<2 x i32> %a, <2 x i32> %b) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<2 x s32>), [[COPY1]], shufflemask(0, 2, 1, 3)
   ; CHECK-NEXT:   RET_ReallyLR
-    %res = call <4 x i32> @llvm.experimental.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
+    %res = call <4 x i32> @llvm.vector.interleave2.v4i32(<2 x i32> %a, <2 x i32> %b)
     ret void
 }
 
@@ -25,6 +25,6 @@ define void @vector_interleave2_v8f32(<4 x float> %a, <4 x float> %b) {
   ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<8 x s32>) = G_SHUFFLE_VECTOR [[BITCAST]](<4 x s32>), [[BITCAST1]], shufflemask(0, 4, 1, 5, 2, 6, 3, 7)
   ; CHECK-NEXT:   RET_ReallyLR
-    %res = call <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
+    %res = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
     ret void
 }

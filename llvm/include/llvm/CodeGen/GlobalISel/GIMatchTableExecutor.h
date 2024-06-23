@@ -168,7 +168,7 @@ enum {
   /// operand.
   /// - InsnID(ULEB128) - Instruction ID
   /// - MMOIdx(ULEB128) - MMO index
-  /// - NumAddrSpace(ULEB128) - Number of valid address spaces
+  /// - NumAddrSpace(1) - Number of valid address spaces
   /// - AddrSpaceN(ULEB128) - An allowed space of the memory access
   /// - AddrSpaceN+1 ...
   GIM_CheckMemoryAddressSpace,
@@ -177,7 +177,7 @@ enum {
   /// memory operand.
   /// - InsnID(ULEB128) - Instruction ID
   /// - MMOIdx(ULEB128) - MMO index
-  /// - MinAlign(ULEB128) - Minimum acceptable alignment
+  /// - MinAlign(1) - Minimum acceptable alignment
   GIM_CheckMemoryAlignment,
 
   /// Check the size of the memory access for the given machine memory operand
@@ -211,6 +211,10 @@ enum {
   /// Check if there's no use of the first result.
   /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
+
+  /// Check if there's one use of the first result.
+  /// - InsnID(ULEB128) - Instruction ID
+  GIM_CheckHasOneUse,
 
   /// Check the type for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
@@ -471,16 +475,11 @@ enum {
   /// - RendererFnID(2) - Custom renderer function to call
   GIR_CustomRenderer,
 
-  /// Calls a C++ function to perform an action when a match is complete.
-  /// The MatcherState is passed to the function to allow it to modify
-  /// instructions.
-  /// This is less constrained than a custom renderer and can update
-  /// instructions
-  /// in the state.
+  /// Calls a C++ function that concludes the current match.
+  /// The C++ function is free to return false and reject the match, or
+  /// return true and mutate the instruction(s) (or do nothing, even).
   /// - FnID(2) - The function to call.
-  /// TODO: Remove this at some point when combiners aren't reliant on it. It's
-  /// a bit of a hack.
-  GIR_CustomAction,
+  GIR_DoneWithCustomAction,
 
   /// Render operands to the specified instruction using a custom function,
   /// reading from a specific operand.
@@ -688,7 +687,7 @@ protected:
     llvm_unreachable("Subclass does not implement testSimplePredicate!");
   }
 
-  virtual void runCustomAction(unsigned, const MatcherState &State,
+  virtual bool runCustomAction(unsigned, const MatcherState &State,
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
@@ -712,6 +711,28 @@ protected:
     Ty Ret;
     memcpy(&Ret, MatchTable, sizeof(Ret));
     return Ret;
+  }
+
+public:
+  // Faster ULEB128 decoder tailored for the Match Table Executor.
+  //
+  // - Arguments are fixed to avoid mid-function checks.
+  // - Unchecked execution, assumes no error.
+  // - Fast common case handling (1 byte values).
+  LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
+  fastDecodeULEB128(const uint8_t *LLVM_ATTRIBUTE_RESTRICT MatchTable,
+                    uint64_t &CurrentIdx) {
+    uint64_t Value = MatchTable[CurrentIdx++];
+    if (LLVM_UNLIKELY(Value >= 128)) {
+      Value &= 0x7f;
+      unsigned Shift = 7;
+      do {
+        uint64_t Slice = MatchTable[CurrentIdx] & 0x7f;
+        Value += Slice << Shift;
+        Shift += 7;
+      } while (MatchTable[CurrentIdx++] >= 128);
+    }
+    return Value;
   }
 };
 

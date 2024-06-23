@@ -20,8 +20,8 @@
 ; RUN: not llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo &> helperdwodwo.txt
 ; RUN: cat helperdwodwo.txt | FileCheck -check-prefix=BOLT-DWO-HELPER %s
 
-; Testing dwarf5 split dwarf for two CUs. Making sure DW_AT_low_pc/DW_AT_high_pc are converted correctly in the binary and in dwo.
-; Checking that DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx ##) are updated correctly.
+;; Testing dwarf5 split dwarf for two CUs. Making sure DW_AT_low_pc/DW_AT_high_pc are converted correctly in the binary and in dwo.
+;; Checking that DW_AT_location [DW_FORM_exprloc]	(DW_OP_addrx ##) are updated correctly.
 
 ; PRE-BOLT: version = 0x0004
 ; PRE-BOLT: DW_TAG_compile_unit

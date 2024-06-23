@@ -74,7 +74,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         attr.getName() ==
             gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName() ||
         attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
-        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName())
+        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownBlockSizeAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName())
       continue;
     if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
       argAttrs = gpuFuncOp.getArgAttrsAttr();
@@ -82,27 +84,28 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     }
     attributes.push_back(attr);
   }
+
+  DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
+  DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
+  // Ensure we don't lose information if the function is lowered before its
+  // surrounding context.
+  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
+  if (knownBlockSize)
+    attributes.emplace_back(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
+                            knownBlockSize);
+  if (knownGridSize)
+    attributes.emplace_back(gpuDialect->getKnownGridSizeAttrHelper().getName(),
+                            knownGridSize);
+
   // Add a dialect specific kernel attribute in addition to GPU kernel
   // attribute. The former is necessary for further translation while the
   // latter is expected by gpu.launch_func.
   if (gpuFuncOp.isKernel()) {
     attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
-
-    // Set the block size attribute if it is present.
-    if (kernelBlockSizeAttributeName.has_value()) {
-      std::optional<int32_t> dimX =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::x);
-      std::optional<int32_t> dimY =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::y);
-      std::optional<int32_t> dimZ =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::z);
-      if (dimX.has_value() || dimY.has_value() || dimZ.has_value()) {
-        // If any of the dimensions are missing, fill them in with 1.
-        attributes.emplace_back(
-            kernelBlockSizeAttributeName.value(),
-            rewriter.getDenseI32ArrayAttr(
-                {dimX.value_or(1), dimY.value_or(1), dimZ.value_or(1)}));
-      }
+    // Set the dialect-specific block size attribute if there is one.
+    if (kernelBlockSizeAttributeName.has_value() && knownBlockSize) {
+      attributes.emplace_back(kernelBlockSizeAttributeName.value(),
+                              knownBlockSize);
     }
   }
   auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
@@ -678,6 +681,62 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
 
   // Step 5. Replace the op with memref descriptor
   rewriter.replaceOp(op, {memRefDescriptor});
+  return success();
+}
+
+LogicalResult GPUReturnOpLowering::matchAndRewrite(
+    gpu::ReturnOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  unsigned numArguments = op.getNumOperands();
+  SmallVector<Value, 4> updatedOperands;
+
+  bool useBarePtrCallConv = getTypeConverter()->getOptions().useBarePtrCallConv;
+  if (useBarePtrCallConv) {
+    // For the bare-ptr calling convention, extract the aligned pointer to
+    // be returned from the memref descriptor.
+    for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
+      Type oldTy = std::get<0>(it).getType();
+      Value newOperand = std::get<1>(it);
+      if (isa<MemRefType>(oldTy) && getTypeConverter()->canConvertToBarePtr(
+                                        cast<BaseMemRefType>(oldTy))) {
+        MemRefDescriptor memrefDesc(newOperand);
+        newOperand = memrefDesc.allocatedPtr(rewriter, loc);
+      } else if (isa<UnrankedMemRefType>(oldTy)) {
+        // Unranked memref is not supported in the bare pointer calling
+        // convention.
+        return failure();
+      }
+      updatedOperands.push_back(newOperand);
+    }
+  } else {
+    updatedOperands = llvm::to_vector<4>(adaptor.getOperands());
+    (void)copyUnrankedDescriptors(rewriter, loc, op.getOperands().getTypes(),
+                                  updatedOperands,
+                                  /*toDynamic=*/true);
+  }
+
+  // If ReturnOp has 0 or 1 operand, create it and return immediately.
+  if (numArguments <= 1) {
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
+        op, TypeRange(), updatedOperands, op->getAttrs());
+    return success();
+  }
+
+  // Otherwise, we need to pack the arguments into an LLVM struct type before
+  // returning.
+  auto packedType = getTypeConverter()->packFunctionResults(
+      op.getOperandTypes(), useBarePtrCallConv);
+  if (!packedType) {
+    return rewriter.notifyMatchFailure(op, "could not convert result types");
+  }
+
+  Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
+  for (auto [idx, operand] : llvm::enumerate(updatedOperands)) {
+    packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, operand, idx);
+  }
+  rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
+                                              op->getAttrs());
   return success();
 }
 

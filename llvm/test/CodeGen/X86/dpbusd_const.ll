@@ -7,7 +7,7 @@ define i32 @mul_4xi8_zc_exceed(<4 x i8> %a, i32 %c) {
 ; ALL-LABEL: mul_4xi8_zc_exceed:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; ALL-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; ALL-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,1,0,2,0,128,0]
 ; ALL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; ALL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
@@ -148,7 +148,7 @@ define i32 @mul_4xi8_cs_exceed(<4 x i8> %a, i32 %c) {
 ; ALL-LABEL: mul_4xi8_cs_exceed:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vpmovsxbd %xmm0, %xmm0
-; ALL-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; ALL-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,0,1,0,2,0,256,0]
 ; ALL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; ALL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]

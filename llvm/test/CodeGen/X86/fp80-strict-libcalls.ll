@@ -504,6 +504,31 @@ entry:
   ret x86_fp80 %sin
 }
 
+define x86_fp80 @tan(x86_fp80 %x) nounwind strictfp {
+; X86-LABEL: tan:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    calll tanl
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: tan:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fstpt (%rsp)
+; X64-NEXT:    wait
+; X64-NEXT:    callq tanl@PLT
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+entry:
+  %tan = call x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret x86_fp80 %tan
+}
+
 define x86_fp80 @trunc(x86_fp80 %x) nounwind strictfp {
 ; X86-LABEL: trunc:
 ; X86:       # %bb.0: # %entry
@@ -650,6 +675,7 @@ declare x86_fp80 @llvm.experimental.constrained.rint.f80(x86_fp80, metadata, met
 declare x86_fp80 @llvm.experimental.constrained.round.f80(x86_fp80, metadata)
 declare x86_fp80 @llvm.experimental.constrained.roundeven.f80(x86_fp80, metadata)
 declare x86_fp80 @llvm.experimental.constrained.sin.f80(x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f80(x86_fp80, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f80(x86_fp80, metadata, metadata)

@@ -150,6 +150,8 @@ public:
 
   uint64_t GetByteSize();
 
+  uint64_t GetByteAlign();
+
   bool IsPointerType();
 
   bool IsReferenceType();

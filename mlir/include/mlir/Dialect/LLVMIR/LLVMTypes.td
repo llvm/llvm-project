@@ -40,7 +40,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
     ```
   }];
 
-  let parameters = (ins "Type":$elementType, "unsigned":$numElements);
+  let parameters = (ins "Type":$elementType, "uint64_t":$numElements);
   let assemblyFormat = [{
     `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
   }];
@@ -49,7 +49,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 
   let builders = [
     TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$numElements)>
+                                        "uint64_t":$numElements)>
   ];
 
   let extraClassDeclaration = [{

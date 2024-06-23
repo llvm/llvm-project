@@ -27,7 +27,7 @@ define internal float @callsite_implies_return() {
 ; arg should get nofpclass(inf nan)
 define float @nofpclass_callsite_arg_implies_arg(float %arg) {
 ; CHECK-LABEL: define float @nofpclass_callsite_arg_implies_arg
-; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @extern(float nofpclass(nan inf) [[ARG]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
@@ -37,9 +37,9 @@ define float @nofpclass_callsite_arg_implies_arg(float %arg) {
 
 define float @nofpclass_earlier_call_implies_later_call_arg(float %arg) {
 ; CHECK-LABEL: define float @nofpclass_earlier_call_implies_later_call_arg
-; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[CALL0:%.*]] = call float @extern(float nofpclass(nan inf) [[ARG]])
-; CHECK-NEXT:    [[CALL1:%.*]] = call float @extern(float [[ARG]])
+; CHECK-NEXT:    [[CALL1:%.*]] = call float @extern(float nofpclass(nan inf) [[ARG]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CALL0]], [[CALL1]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;

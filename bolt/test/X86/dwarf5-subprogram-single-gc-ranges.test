@@ -6,7 +6,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt > %t1.txt
 # RUN: cat %t1.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks BOLT correctly handles DW_TAG_subprogram with Ranges with single entry, when function was GCed.
+## This test checks BOLT correctly handles DW_TAG_subprogram with Ranges with single entry, when function was GCed.
 
 # POSTCHECK: DW_TAG_subprogram
 # POSTCHECK-NEXT: DW_AT_frame_base

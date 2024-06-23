@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPomp_task_simple() {
 subroutine omp_task_simple

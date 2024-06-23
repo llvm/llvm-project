@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -disable-output < %s
 
 ; void f(long A[], long N) {
 ;   long i, j;

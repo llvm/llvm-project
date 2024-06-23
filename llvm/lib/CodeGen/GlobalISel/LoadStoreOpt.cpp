@@ -84,21 +84,20 @@ BaseIndexOffset GISelAddressing::getPointerInfo(Register Ptr,
                                                 MachineRegisterInfo &MRI) {
   BaseIndexOffset Info;
   Register PtrAddRHS;
-  if (!mi_match(Ptr, MRI, m_GPtrAdd(m_Reg(Info.BaseReg), m_Reg(PtrAddRHS)))) {
-    Info.BaseReg = Ptr;
-    Info.IndexReg = Register();
-    Info.IsIndexSignExt = false;
+  Register BaseReg;
+  if (!mi_match(Ptr, MRI, m_GPtrAdd(m_Reg(BaseReg), m_Reg(PtrAddRHS)))) {
+    Info.setBase(Ptr);
+    Info.setOffset(0);
     return Info;
   }
-
+  Info.setBase(BaseReg);
   auto RHSCst = getIConstantVRegValWithLookThrough(PtrAddRHS, MRI);
   if (RHSCst)
-    Info.Offset = RHSCst->Value.getSExtValue();
+    Info.setOffset(RHSCst->Value.getSExtValue());
 
   // Just recognize a simple case for now. In future we'll need to match
   // indexing patterns for base + index + constant.
-  Info.IndexReg = PtrAddRHS;
-  Info.IsIndexSignExt = false;
+  Info.setIndex(PtrAddRHS);
   return Info;
 }
 
@@ -114,15 +113,16 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   BaseIndexOffset BasePtr0 = getPointerInfo(LdSt1->getPointerReg(), MRI);
   BaseIndexOffset BasePtr1 = getPointerInfo(LdSt2->getPointerReg(), MRI);
 
-  if (!BasePtr0.BaseReg.isValid() || !BasePtr1.BaseReg.isValid())
+  if (!BasePtr0.getBase().isValid() || !BasePtr1.getBase().isValid())
     return false;
 
   LocationSize Size1 = LdSt1->getMemSize();
   LocationSize Size2 = LdSt2->getMemSize();
 
   int64_t PtrDiff;
-  if (BasePtr0.BaseReg == BasePtr1.BaseReg) {
-    PtrDiff = BasePtr1.Offset - BasePtr0.Offset;
+  if (BasePtr0.getBase() == BasePtr1.getBase() && BasePtr0.hasValidOffset() &&
+      BasePtr1.hasValidOffset()) {
+    PtrDiff = BasePtr1.getOffset() - BasePtr0.getOffset();
     // If the size of memory access is unknown, do not use it to do analysis.
     // One example of unknown size memory access is to load/store scalable
     // vector objects on the stack.
@@ -149,8 +149,8 @@ bool GISelAddressing::aliasIsKnownForLoadStore(const MachineInstr &MI1,
   // able to calculate their relative offset if at least one arises
   // from an alloca. However, these allocas cannot overlap and we
   // can infer there is no alias.
-  auto *Base0Def = getDefIgnoringCopies(BasePtr0.BaseReg, MRI);
-  auto *Base1Def = getDefIgnoringCopies(BasePtr1.BaseReg, MRI);
+  auto *Base0Def = getDefIgnoringCopies(BasePtr0.getBase(), MRI);
+  auto *Base1Def = getDefIgnoringCopies(BasePtr1.getBase(), MRI);
   if (!Base0Def || !Base1Def)
     return false; // Couldn't tell anything.
 
@@ -534,16 +534,20 @@ bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
 
   Register StoreAddr = StoreMI.getPointerReg();
   auto BIO = getPointerInfo(StoreAddr, *MRI);
-  Register StoreBase = BIO.BaseReg;
-  uint64_t StoreOffCst = BIO.Offset;
+  Register StoreBase = BIO.getBase();
   if (C.Stores.empty()) {
+    C.BasePtr = StoreBase;
+    if (!BIO.hasValidOffset()) {
+      C.CurrentLowestOffset = 0;
+    } else {
+      C.CurrentLowestOffset = BIO.getOffset();
+    }
     // This is the first store of the candidate.
     // If the offset can't possibly allow for a lower addressed store with the
     // same base, don't bother adding it.
-    if (StoreOffCst < ValueTy.getSizeInBytes())
+    if (BIO.hasValidOffset() &&
+        BIO.getOffset() < static_cast<int64_t>(ValueTy.getSizeInBytes()))
       return false;
-    C.BasePtr = StoreBase;
-    C.CurrentLowestOffset = StoreOffCst;
     C.Stores.emplace_back(&StoreMI);
     LLVM_DEBUG(dbgs() << "Starting a new merge candidate group with: "
                       << StoreMI);
@@ -563,8 +567,12 @@ bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
   // writes to the next lowest adjacent address.
   if (C.BasePtr != StoreBase)
     return false;
-  if ((C.CurrentLowestOffset - ValueTy.getSizeInBytes()) !=
-      static_cast<uint64_t>(StoreOffCst))
+  // If we don't have a valid offset, we can't guarantee to be an adjacent
+  // offset.
+  if (!BIO.hasValidOffset())
+    return false;
+  if ((C.CurrentLowestOffset -
+       static_cast<int64_t>(ValueTy.getSizeInBytes())) != BIO.getOffset())
     return false;
 
   // This writes to an adjacent address. Allow it.

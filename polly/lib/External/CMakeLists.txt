@@ -302,7 +302,7 @@ if (POLLY_BUNDLED_ISL)
   add_executable(polly-isl-test
     isl/isl_test.c
     )
-  set_target_properties(polly-isl-test PROPERTIES FOLDER "Polly")
+  set_target_properties(polly-isl-test PROPERTIES FOLDER "Polly/Tests")
 
   target_link_libraries(polly-isl-test PRIVATE
     PollyISL

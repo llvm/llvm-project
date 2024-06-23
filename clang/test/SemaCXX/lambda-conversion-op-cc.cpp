@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc %s -verify -DBAD_CONVERSION
 // RUN: %clang_cc1 -fsyntax-only -triple i386-windows-pc %s -verify -DBAD_CONVERSION -DWIN32
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc %s -ast-dump | FileCheck %s --check-prefixes=CHECK,LIN64,NODEF
-// RUN: %clang_cc1 -fsyntax-only -triple i386-windows-pc %s -ast-dump -DWIN32 | FileCheck %s --check-prefixes=CHECK,WIN32,NODEF
+// RUN: %clang_cc1 -triple x86_64-linux-pc %s -ast-dump | FileCheck %s --check-prefixes=CHECK,LIN64,NODEF
+// RUN: %clang_cc1 -triple i386-windows-pc %s -ast-dump -DWIN32 | FileCheck %s --check-prefixes=CHECK,WIN32,NODEF
 
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -verify -DBAD_VEC_CONVERS
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -ast-dump | FileCheck %s --check-prefixes=CHECK,VECTDEF
+// RUN: %clang_cc1 -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -ast-dump | FileCheck %s --check-prefixes=CHECK,VECTDEF
 
 void useage() {
   auto normal = [](int, float, double) {};                                // #1

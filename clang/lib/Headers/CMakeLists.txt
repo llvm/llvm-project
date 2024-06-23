@@ -12,6 +12,7 @@ set(core_files
   stdarg.h
   __stdarg___gnuc_va_list.h
   __stdarg___va_copy.h
+  __stdarg_header_macro.h
   __stdarg_va_arg.h
   __stdarg_va_copy.h
   __stdarg_va_list.h
@@ -19,6 +20,7 @@ set(core_files
   stdbool.h
   stdckdint.h
   stddef.h
+  __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
   __stddef_nullptr_t.h
@@ -151,12 +153,10 @@ set(x86_files
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
-  avx512erintrin.h
   avx512fintrin.h
   avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
-  avx512pfintrin.h
   avx512vbmi2intrin.h
   avx512vbmiintrin.h
   avx512vbmivlintrin.h
@@ -318,8 +318,10 @@ set(ppc_wrapper_files
 set(openmp_wrapper_files
   openmp_wrappers/math.h
   openmp_wrappers/cmath
-  openmp_wrappers/complex.h
+  # Due to a bug in CMake, `complex` must be before `complex.h`
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/26058
   openmp_wrappers/complex
+  openmp_wrappers/complex.h
   openmp_wrappers/__clang_openmp_device_functions.h
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
@@ -333,6 +335,10 @@ set(llvm_libc_wrapper_files
   llvm_libc_wrappers/ctype.h
   llvm_libc_wrappers/inttypes.h
   llvm_libc_wrappers/time.h
+)
+
+set(zos_wrapper_files
+  zos_wrappers/builtins.h
 )
 
 include(GetClangResourceDir)
@@ -370,7 +376,7 @@ endfunction(clang_generate_header)
 
 # Copy header files from the source directory to the build directory
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
-           ${ppc_wrapper_files} ${openmp_wrapper_files} ${hlsl_files}
+           ${ppc_wrapper_files} ${openmp_wrapper_files} ${zos_wrapper_files} ${hlsl_files}
            ${llvm_libc_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
@@ -439,14 +445,14 @@ endforeach( f )
 function(add_header_target target_name file_list)
   add_library(${target_name} INTERFACE ${file_list})
   set_target_properties(${target_name} PROPERTIES
-    FOLDER "Misc"
+    FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
 # The catch-all clang-resource-headers target
 add_library(clang-resource-headers INTERFACE ${out_files})
 set_target_properties("clang-resource-headers" PROPERTIES
-  FOLDER "Misc"
+  FOLDER "Clang/Resources"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 add_dependencies("clang-resource-headers"
                  "core-resource-headers"
@@ -487,7 +493,7 @@ add_header_target("mips-resource-headers" "${mips_msa_files}")
 add_header_target("ppc-resource-headers" "${ppc_files};${ppc_wrapper_files}")
 add_header_target("ppc-htm-resource-headers" "${ppc_htm_files}")
 add_header_target("riscv-resource-headers" "${riscv_files};${riscv_generated_files}")
-add_header_target("systemz-resource-headers" "${systemz_files}")
+add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_files}")
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
@@ -536,6 +542,11 @@ install(
 install(
   FILES ${openmp_wrapper_files}
   DESTINATION ${header_install_dir}/openmp_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${zos_wrapper_files}
+  DESTINATION ${header_install_dir}/zos_wrappers
   COMPONENT clang-resource-headers)
 
 #############################################################
@@ -639,6 +650,12 @@ install(
 install(
   FILES ${systemz_files}
   DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT systemz-resource-headers)
+
+install(
+  FILES ${zos_wrapper_files}
+  DESTINATION  ${header_install_dir}/zos_wrappers
   EXCLUDE_FROM_ALL
   COMPONENT systemz-resource-headers)
 

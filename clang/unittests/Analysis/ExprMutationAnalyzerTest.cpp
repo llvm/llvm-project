@@ -10,8 +10,8 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/SmallString.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cctype>
@@ -43,7 +43,7 @@ std::unique_ptr<ASTUnit> buildASTFromCode(const Twine &Code) {
 }
 
 ExprMatcher declRefTo(StringRef Name) {
-  return declRefExpr(to(namedDecl(hasName(Name))));
+  return declRefExpr(to(namedDecl(hasName(Name)).bind("decl")));
 }
 
 StmtMatcher withEnclosingCompound(ExprMatcher Matcher) {
@@ -55,6 +55,13 @@ bool isMutated(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
   const auto *const E = selectFirst<Expr>("expr", Results);
   TraversalKindScope RAII(AST->getASTContext(), TK_AsIs);
   return ExprMutationAnalyzer(*S, AST->getASTContext()).isMutated(E);
+}
+
+bool isDeclMutated(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
+  const auto *const S = selectFirst<Stmt>("stmt", Results);
+  const auto *const D = selectFirst<Decl>("decl", Results);
+  TraversalKindScope RAII(AST->getASTContext(), TK_AsIs);
+  return ExprMutationAnalyzer(*S, AST->getASTContext()).isMutated(D);
 }
 
 SmallVector<std::string, 1>
@@ -1176,7 +1183,7 @@ TEST(ExprMutationAnalyzerTest, CastToConstRef) {
 
 // section: comma expressions
 
-TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssigment) {
+TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssignment) {
   const auto AST = buildASTFromCodeWithArgs(
       "void f() { int x; int y; (x, y) = 5; }", {"-Wno-unused-value"});
   const auto Results =
@@ -1267,7 +1274,7 @@ TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsValue) {
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
-TEST(ExprMutationAnalyzerTest, CommaEpxrAsReturnAsNonConstRef) {
+TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsNonConstRef) {
   const auto AST = buildASTFromCodeWithArgs(
       "int& f() { int x, y; return (y, x); }", {"-Wno-unused-value"});
   const auto Results =
@@ -1551,6 +1558,21 @@ TEST(ExprMutationAnalyzerTest, UniquePtr) {
 }
 
 // section: complex problems detected on real code
+
+TEST(ExprMutationAnalyzerTest, SelfRef) {
+  std::unique_ptr<ASTUnit> AST{};
+  SmallVector<BoundNodes, 1> Results{};
+
+  AST = buildASTFromCodeWithArgs("void f() { int &x = x; }",
+                                 {"-Wno-unused-value", "-Wno-uninitialized"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isDeclMutated(Results, AST.get()));
+
+  AST = buildASTFromCodeWithArgs("void f() { int &x = x; x = 1; }",
+                                 {"-Wno-unused-value", "-Wno-uninitialized"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isDeclMutated(Results, AST.get()));
+}
 
 TEST(ExprMutationAnalyzerTest, UnevaluatedContext) {
   const std::string Example =
