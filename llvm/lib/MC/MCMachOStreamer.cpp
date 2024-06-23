@@ -85,7 +85,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Sect, const MCExpr *Subsect) override;
+  void changeSection(MCSection *Sect, uint32_t Subsect) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
@@ -163,8 +163,7 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   return false;
 }
 
-void MCMachOStreamer::changeSection(MCSection *Section,
-                                    const MCExpr *Subsection) {
+void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Change the section normally.
   bool Created = changeSectionImpl(Section, Subsection);
   const MCSectionMachO &MSec = *cast<MCSectionMachO>(Section);

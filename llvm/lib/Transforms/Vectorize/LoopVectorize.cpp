@@ -3088,18 +3088,18 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
   |    [  ]_|   <-- vector loop (created during VPlan execution).
   |     |
   |     v
-  \   -[ ]   <--- middle-block (branch to successors created during VPlan
-   |    |                       execution)
+  \   -[ ]   <--- middle-block (wrapped in VPIRBasicBlock with the branch to
+   |    |                       successors created during VPlan execution)
    \/   |
    /\   v
-   | ->[ ]     <--- new preheader.
+   | ->[ ]     <--- new preheader (wrapped in VPIRBasicBlock).
    |    |
  (opt)  v      <-- edge from middle to exit iff epilogue is not required.
    |   [ ] \
    |   [ ]_|   <-- old scalar loop to handle remainder (scalar epilogue).
     \   |
      \  v
-      >[ ]     <-- exit block(s).
+      >[ ]     <-- exit block(s). (wrapped in VPIRBasicBlock)
    ...
    */
 
@@ -3398,18 +3398,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                                VF.getKnownMinValue() * UF);
 }
 
-// Helper to reorder blocks so they match the original order even after the
-// order of the predecessors changes. This is only used to avoid a number of
-// test changes due to reordering of incoming blocks in phi nodes and should be
-// removed soon, with the tests being updated.
-static void reorderIncomingBlocks(SmallVectorImpl<BasicBlock *> &Blocks,
-                                  BasicBlock *LoopMiddleBlock) {
-  if (Blocks.front() == LoopMiddleBlock)
-    std::swap(Blocks.front(), Blocks.back());
-  if (Blocks.size() == 3)
-    std::swap(Blocks[0], Blocks[1]);
-}
-
 void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
                                                   VPTransformState &State) {
   // Extract the last vector element in the middle block. This will be the
@@ -3428,9 +3416,7 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
   auto *ScalarPreheaderPhi =
       Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
-  SmallVector<BasicBlock *> Blocks(predecessors(LoopScalarPreHeader));
-  reorderIncomingBlocks(Blocks, LoopMiddleBlock);
-  for (auto *BB : Blocks) {
+  for (auto *BB : predecessors(LoopScalarPreHeader)) {
     auto *Incoming = BB == LoopMiddleBlock ? ResumeScalarFOR : InitScalarFOR;
     ScalarPreheaderPhi->addIncoming(Incoming, BB);
   }
@@ -7338,9 +7324,7 @@ static void createAndCollectMergePhiForReduction(
   // If we are fixing reductions in the epilogue loop then we should already
   // have created a bc.merge.rdx Phi after the main vector body. Ensure that
   // we carry over the incoming values correctly.
-  SmallVector<BasicBlock *> Blocks(predecessors(LoopScalarPreHeader));
-  reorderIncomingBlocks(Blocks, LoopMiddleBlock);
-  for (auto *Incoming : Blocks) {
+  for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
     if (Incoming == LoopMiddleBlock)
       BCBlockPhi->addIncoming(FinalValue, Incoming);
     else if (ResumePhi && is_contained(ResumePhi->blocks(), Incoming))
@@ -7414,18 +7398,6 @@ LoopVectorizationPlanner::executePlan(
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif
-
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
-
-  using namespace llvm::VPlanPatternMatch;
-  if (MiddleVPBB->begin() != MiddleVPBB->end() &&
-      match(&MiddleVPBB->back(), m_BranchOnCond(m_VPValue()))) {
-    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[1])
-        ->resetBlock(OrigLoop->getLoopPreheader());
-  } else
-    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])
-        ->resetBlock(OrigLoop->getLoopPreheader());
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
@@ -7506,7 +7478,7 @@ LoopVectorizationPlanner::executePlan(
 
   ILV.printDebugTracesAtEnd();
 
-  // Adjust branch weight of the branch in the middle block.
+  // 4. Adjust branch weight of the branch in the middle block.
   auto *MiddleTerm =
       cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
   if (MiddleTerm->isConditional() &&
@@ -8513,14 +8485,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // the vector loop, followed by the middle basic block. The skeleton vector
   // loop region contains a header and latch basic blocks.
 
-  // Add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Do nothing.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
-  //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can use the previous value for the condition (true).
-  // 3) Otherwise, construct a runtime check.
   bool RequiresScalarEpilogueCheck =
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [this](ElementCount VF) {
@@ -8989,7 +8953,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   Builder.setInsertPoint(&*LatchVPBB->begin());
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
-  VPBasicBlock::iterator IP = MiddleVPBB->begin();
+  VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);

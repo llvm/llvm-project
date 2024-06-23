@@ -2629,7 +2629,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
            "We should only check the content of the inputs with "
            "ValidateASTInputFilesContent enabled.");
 
-    if (StoredContentHash == static_cast<uint64_t>(llvm::hash_code(-1)))
+    if (StoredContentHash == 0)
       return OriginalChange;
 
     auto MemBuffOrError = FileMgr.getBufferForFile(*File);

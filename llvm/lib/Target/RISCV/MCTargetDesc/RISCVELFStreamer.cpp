@@ -159,8 +159,7 @@ void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
   Symbol->setBinding(ELF::STB_LOCAL);
 }
 
-void RISCVELFStreamer::changeSection(MCSection *Section,
-                                     const MCExpr *Subsection) {
+void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // We have to keep track of the mapping symbol state of any sections we
   // use. Each one should start off as EMS_None, which is provided as the
   // default constructor by DenseMap::lookup.

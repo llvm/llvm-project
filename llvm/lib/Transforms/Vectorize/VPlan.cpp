@@ -659,14 +659,15 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
 // cloned region.
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      Entry);
-  for (VPBlockBase *BB : RPOT) {
+  VPBlockBase *Exiting = nullptr;
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = BB->clone();
     Old2NewVPBlocks[BB] = NewBB;
+    if (BB->getNumSuccessors() == 0)
+      Exiting = BB;
   }
 
-  for (VPBlockBase *BB : RPOT) {
+  for (VPBlockBase *BB : vp_depth_first_shallow(Entry)) {
     VPBlockBase *NewBB = Old2NewVPBlocks[BB];
     SmallVector<VPBlockBase *> NewPreds;
     for (VPBlockBase *Pred : BB->getPredecessors()) {
@@ -683,9 +684,9 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
 #if !defined(NDEBUG)
   // Verify that the order of predecessors and successors matches in the cloned
   // version.
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>>
-      NewRPOT(Old2NewVPBlocks[Entry]);
-  for (const auto &[OldBB, NewBB] : zip(RPOT, NewRPOT)) {
+  for (const auto &[OldBB, NewBB] :
+       zip(vp_depth_first_shallow(Entry),
+           vp_depth_first_shallow(Old2NewVPBlocks[Entry]))) {
     for (const auto &[OldPred, NewPred] :
          zip(OldBB->getPredecessors(), NewBB->getPredecessors()))
       assert(NewPred == Old2NewVPBlocks[OldPred] && "Different predecessors");
@@ -696,8 +697,7 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
   }
 #endif
 
-  return std::make_pair(Old2NewVPBlocks[Entry],
-                        Old2NewVPBlocks[*reverse(RPOT).begin()]);
+  return std::make_pair(Old2NewVPBlocks[Entry], Old2NewVPBlocks[Exiting]);
 }
 
 VPRegionBlock *VPRegionBlock::clone() {
@@ -817,10 +817,18 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
-  BasicBlock *EB = TheLoop->getUniqueExitBlock();
+  // Add a check in the middle block to see if we have completed
+  // all of the iterations in the first vector loop.  Three cases:
+  // 1) If we require a scalar epilogue, there is no conditional branch as
+  //    we unconditionally branch to the scalar preheader.  Do nothing.
+  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
+  //    Thus if tail is to be folded, we know we don't need to run the
+  //    remainder and we can use the previous value for the condition (true).
+  // 3) Otherwise, construct a runtime check.
+  BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
   if (RequiresScalarEpilogueCheck) {
-    auto *EBWrapper = new VPIRBasicBlock(EB);
-    VPBlockUtils::insertBlockAfter(EBWrapper, MiddleVPBB);
+    auto *VPExitBlock = new VPIRBasicBlock(IRExitBlock);
+    VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
 
     auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
     // Here we use the same DebugLoc as the scalar loop latch terminator instead
@@ -841,8 +849,7 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
                                  ScalarLatchTerm->getDebugLoc());
     MiddleVPBB->appendRecipe(Br);
   }
-  BasicBlock *Header = TheLoop->getHeader();
-  VPIRBasicBlock *PHWrapper = new VPIRBasicBlock(Header);
+  VPBasicBlock *PHWrapper = new VPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(MiddleVPBB, PHWrapper);
 
   return Plan;
@@ -912,25 +919,41 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
-  replaceVPBBWithIRVPBB(
-      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor()),
-      State->CFG.ExitBB);
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
+  // Replace regular VPBB's for the middle and scalar preheader blocks with
+  // VPIRBasicBlocks with VPIRBasicBlocks wrapping their IR blocks. The IR
+  // blocks are created during skeleton creation, so we can only create the
+  // VPIRBasicBlocks after legacy skeleton creation.
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor());
+  // Find the VPBB for the scalar preheader, relying on the current structure
+  // when creating the middle block and its successrs: if there's a single
+  // predecessor, it must be the scalar preheader. Otherwise, the second
+  // successor is the scalar preheader.
+  BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
+  auto &MiddleSuccs = MiddleVPBB->getSuccessors();
+  assert((MiddleSuccs.size() == 1 || MiddleSuccs.size() == 2) &&
+         "middle block has unexpected successors");
+  VPBasicBlock *ScalarPhVPBB = cast<VPBasicBlock>(
+      MiddleSuccs.size() == 1 ? MiddleSuccs[0] : MiddleSuccs[1]);
+  assert(!isa<VPIRBasicBlock>(ScalarPhVPBB) &&
+         "scalar preheader cannot be wrapped already");
+  replaceVPBBWithIRVPBB(ScalarPhVPBB, ScalarPh);
+  replaceVPBBWithIRVPBB(MiddleVPBB, MiddleBB);
+
   // Disconnect the middle block from its single successor (the scalar loop
   // header) in both the CFG and DT. The branch will be created during VPlan
   // execution.
-  BasicBlock *MiddleBB = State->CFG.ExitBB;
-  State->CFG.DTU.applyUpdates(
-      {{DominatorTree::Delete, MiddleBB, MiddleBB->getSingleSuccessor()}});
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
   BrInst->insertBefore(MiddleBB->getTerminator());
   MiddleBB->getTerminator()->eraseFromParent();
-
+  State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
     Block->execute(State);

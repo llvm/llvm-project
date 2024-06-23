@@ -151,10 +151,15 @@ void MCContext::reset() {
   SPIRVAllocator.DestroyAll();
   WasmSignatureAllocator.DestroyAll();
 
+  // ~CodeViewContext may destroy a MCFragment outside of sections and need to
+  // be reset before FragmentAllocator.
+  CVContext.reset();
+
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
+  FragmentAllocator.Reset();
   Instances.clear();
   CompilationDir.clear();
   MainFileName.clear();
@@ -164,8 +169,6 @@ void MCContext::reset() {
   DwarfDebugFlags = StringRef();
   DwarfCompileUnitID = 0;
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
-
-  CVContext.reset();
 
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
@@ -657,7 +660,7 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
 
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
                                          MCSection *Parent,
-                                         const MCExpr *SubsectionId) {
+                                         uint32_t Subsection) {
   // Do the lookup. If we don't have a hit, return a new section.
   auto IterBool =
       GOFFUniquingMap.insert(std::make_pair(Section.str(), nullptr));
@@ -667,7 +670,7 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
 
   StringRef CachedName = Iter->first;
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, SubsectionId);
+      MCSectionGOFF(CachedName, Kind, Parent, Subsection);
   Iter->second = GOFFSection;
 
   return GOFFSection;

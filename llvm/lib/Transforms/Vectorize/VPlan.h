@@ -3003,8 +3003,6 @@ public:
   }
 
   BasicBlock *getIRBasicBlock() const { return IRBB; }
-
-  void resetBlock(BasicBlock *BB) { IRBB = BB; }
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks

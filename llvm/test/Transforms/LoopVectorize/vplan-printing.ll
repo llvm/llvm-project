@@ -36,12 +36,12 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, ir-bb<for.body>
+; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.end.loopexit>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.body>
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -97,12 +97,12 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, ir-bb<for.body>
+; CHECK-NEXT:  Successor(s): ir-bb<for.end.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.end.loopexit>
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<for.body>
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ;
@@ -156,12 +156,12 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_RES]]>
@@ -213,12 +213,12 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:.+]]> = compute-reduction-result ir<%red>, ir<%red.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -291,12 +291,12 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -364,12 +364,12 @@ define void @print_interleave_groups(i32 %C, i32 %D) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<256>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -437,12 +437,12 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result ir<%sum.07>, ir<[[MULADD]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<for.end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_RES]]>
@@ -522,12 +522,12 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<128>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT:}
 ;
@@ -599,12 +599,12 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<loop.exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<loop.exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -656,12 +656,12 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i32 %lcssa = ir<%add>
@@ -716,12 +716,12 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -776,12 +776,12 @@ define void @print_exact_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -856,12 +856,12 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<end>, ir-bb<for.body>
+; CHECK-NEXT: Successor(s): ir-bb<end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<end>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -925,12 +925,12 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ;
@@ -1027,12 +1027,12 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
-; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>
+; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR_RESULT]]>
