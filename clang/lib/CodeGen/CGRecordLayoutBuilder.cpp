@@ -12,6 +12,7 @@
 
 #include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
+#include "CGRecordLayout.h"
 #include "CodeGenTypes.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
