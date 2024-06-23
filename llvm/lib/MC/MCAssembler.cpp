@@ -126,6 +126,7 @@ void MCAssembler::reset() {
 bool MCAssembler::registerSection(MCSection &Section) {
   if (Section.isRegistered())
     return false;
+  assert(Section.curFragList()->Head && "allocInitialFragment not called");
   Sections.push_back(&Section);
   Section.setIsRegistered(true);
   return true;
@@ -856,17 +857,8 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
 
   // Create dummy fragments and assign section ordinals.
   unsigned SectionIndex = 0;
-  for (MCSection &Sec : *this) {
-    // Create dummy fragments to eliminate any empty sections, this simplifies
-    // layout.
-    if (Sec.empty()) {
-      auto *F = getContext().allocFragment<MCDataFragment>();
-      F->setParent(&Sec);
-      Sec.addFragment(*F);
-    }
-
+  for (MCSection &Sec : *this)
     Sec.setOrdinal(SectionIndex++);
-  }
 
   // Assign layout order indices to sections and fragments.
   for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
