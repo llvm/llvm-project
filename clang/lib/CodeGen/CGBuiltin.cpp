@@ -2825,19 +2825,75 @@ private:
     return Results;
   }
 
-  void ClearPadding(Value *Ptr, const BitInterval &PaddingInteval) {
-    // TODO: support clearning non-one-byte clearing
-    auto *I8Ptr = CGF.Builder.CreateBitCast(Ptr, CGF.Int8PtrTy);
-    auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
-    for (auto Offset = PaddingInteval.First / CharWidth;
-         Offset < PaddingInteval.Last / CharWidth; ++Offset) {
-      auto *Index = ConstantInt::get(CGF.IntTy, Offset);
-      auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-      CGF.Builder.CreateAlignedStore(
-          Zero, Element,
-          CharUnits::One().alignmentAtOffset(CharUnits::fromQuantity(Offset)));
-    }
+
+
+  void ClearPadding(Value *Ptr, const BitInterval &PaddingInterval) {
+      auto *I8Ptr = CGF.Builder.CreateBitCast(Ptr, CGF.Int8PtrTy);
+      auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
+  
+      // Calculate byte indices and bit positions
+      auto StartByte = PaddingInterval.First / CharWidth;
+      auto StartBit = PaddingInterval.First % CharWidth;
+      auto EndByte = PaddingInterval.Last / CharWidth;
+      auto EndBit = PaddingInterval.Last % CharWidth;
+  
+      if (StartByte == EndByte) {
+          // Interval is within a single byte
+          auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
+          auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+          Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+  
+          auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+  
+          // Create mask to clear bits within the byte
+          uint8_t mask = ((1 << EndBit) - 1) & ~((1 << StartBit) - 1);
+          auto *MaskValue = ConstantInt::get(CGF.Int8Ty, mask);
+          auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+  
+          CGF.Builder.CreateStore(NewValue, ElementAddr);
+      } else {
+          // Handle the start byte
+          if (StartBit != 0) {
+              auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
+              auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+              Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+  
+              auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+  
+              uint8_t startMask = ((1 << (CharWidth - StartBit)) - 1) << StartBit;
+              auto *MaskValue = ConstantInt::get(CGF.Int8Ty, ~startMask);
+              auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+  
+              CGF.Builder.CreateStore(NewValue, ElementAddr);
+              ++StartByte;
+          }
+  
+          // Handle full bytes in the middle
+          for (auto Offset = StartByte; Offset < EndByte; ++Offset) {
+              auto *Index = ConstantInt::get(CGF.IntTy, Offset);
+              auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+              Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+  
+              CGF.Builder.CreateStore(Zero, ElementAddr);
+          }
+  
+          // Handle the end byte
+          if (EndBit != 0) {
+              auto *Index = ConstantInt::get(CGF.IntTy, EndByte);
+              auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+              Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+  
+              auto *Value = CGF.Builder.CreateLoad(ElementAddr);
+  
+              uint8_t endMask = (1 << EndBit) - 1;
+              auto *MaskValue = ConstantInt::get(CGF.Int8Ty, endMask);
+              auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
+  
+              CGF.Builder.CreateStore(NewValue, ElementAddr);
+          }
+      }
   }
+
 
   CodeGenFunction &CGF;
   const uint64_t CharWidth;
