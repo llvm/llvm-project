@@ -927,7 +927,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   Lex();
 
-  return getStreamer().subSection(Subsection);
+  return getStreamer().switchSection(getStreamer().getCurrentSectionOnly(),
+                                     Subsection);
 }
 
 bool ELFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {

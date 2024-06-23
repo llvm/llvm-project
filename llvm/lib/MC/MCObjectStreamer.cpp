@@ -285,22 +285,17 @@ void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
   report_fatal_error("This file format doesn't support weak aliases.");
 }
 
-void MCObjectStreamer::changeSection(MCSection *Section,
-                                     const MCExpr *Subsection) {
+void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   changeSectionImpl(Section, Subsection);
 }
 
 bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
-                                         const MCExpr *SubsecExpr) {
+                                         uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
-
-  int64_t Subsec = 0;
-  if (SubsecExpr)
-    (void)SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr());
-  CurSubsectionIdx = uint32_t(Subsec);
+  CurSubsectionIdx = Subsection;
   Section->switchSubsection(CurSubsectionIdx);
   return Created;
 }

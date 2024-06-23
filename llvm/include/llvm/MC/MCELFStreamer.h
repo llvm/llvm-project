@@ -46,7 +46,7 @@ public:
   /// @{
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
                       uint64_t Offset) override;

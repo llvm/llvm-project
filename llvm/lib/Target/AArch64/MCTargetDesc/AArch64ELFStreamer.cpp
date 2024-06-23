@@ -183,7 +183,7 @@ public:
                       std::move(Emitter)),
         MappingSymbolCounter(0), LastEMS(EMS_None) {}
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override {
+  void changeSection(MCSection *Section, uint32_t Subsection) override {
     // We have to keep track of the mapping symbol state of any sections we
     // use. Each one should start off as EMS_None, which is provided as the
     // default constructor by DenseMap::lookup.
