@@ -554,13 +554,12 @@ void MCMachOStreamer::finalizeCGProfile() {
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
   Asm.registerSection(*CGProfileSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(CGProfileSection);
-  CGProfileSection->addFragment(*Frag);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  Frag->getContents().resize(SectionBytes);
+  cast<MCDataFragment>(*CGProfileSection->begin())
+      .getContents()
+      .resize(SectionBytes);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
