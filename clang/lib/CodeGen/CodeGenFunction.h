@@ -343,7 +343,6 @@ public:
   /// CGBuilder insert helper. This function is called after an
   /// instruction is created using Builder.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const;
 
   /// CurFuncDecl - Holds the Decl for the current outermost
@@ -4417,6 +4416,10 @@ public:
   }
 
   bool isPointerKnownNonNull(const Expr *E);
+
+  void EmitPointerAuthOperandBundle(
+      const CGPointerAuthInfo &Info,
+      SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.

@@ -3508,9 +3508,9 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     break;
   }
 
-  bool isInstField = ((DS.getStorageClassSpec() == DeclSpec::SCS_unspecified ||
-                       DS.getStorageClassSpec() == DeclSpec::SCS_mutable) &&
-                      !isFunc);
+  bool isInstField = (DS.getStorageClassSpec() == DeclSpec::SCS_unspecified ||
+                      DS.getStorageClassSpec() == DeclSpec::SCS_mutable) &&
+                     !isFunc && TemplateParameterLists.empty();
 
   if (DS.hasConstexprSpecifier() && isInstField) {
     SemaDiagnosticBuilder B =
@@ -3559,28 +3559,6 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     }
 
     IdentifierInfo *II = Name.getAsIdentifierInfo();
-
-    // Member field could not be with "template" keyword.
-    // So TemplateParameterLists should be empty in this case.
-    if (TemplateParameterLists.size()) {
-      TemplateParameterList* TemplateParams = TemplateParameterLists[0];
-      if (TemplateParams->size()) {
-        // There is no such thing as a member field template.
-        Diag(D.getIdentifierLoc(), diag::err_template_member)
-            << II
-            << SourceRange(TemplateParams->getTemplateLoc(),
-                TemplateParams->getRAngleLoc());
-      } else {
-        // There is an extraneous 'template<>' for this member.
-        Diag(TemplateParams->getTemplateLoc(),
-            diag::err_template_member_noparams)
-            << II
-            << SourceRange(TemplateParams->getTemplateLoc(),
-                TemplateParams->getRAngleLoc());
-      }
-      return nullptr;
-    }
-
     if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
       Diag(D.getIdentifierLoc(), diag::err_member_with_template_arguments)
           << II
@@ -12394,23 +12372,24 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S, AccessSpecifier AS,
 
 Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
-                                      SourceLocation EnumLoc,
-                                      SourceLocation IdentLoc,
-                                      IdentifierInfo &II, CXXScopeSpec *SS) {
+                                      SourceLocation EnumLoc, SourceRange TyLoc,
+                                      const IdentifierInfo &II, ParsedType Ty,
+                                      CXXScopeSpec *SS) {
   assert(!SS->isInvalid() && "ScopeSpec is invalid");
   TypeSourceInfo *TSI = nullptr;
-  QualType EnumTy = GetTypeFromParser(
-      getTypeName(II, IdentLoc, S, SS, /*isClassName=*/false,
-                  /*HasTrailingDot=*/false,
-                  /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
-                  /*WantNontrivialTypeSourceInfo=*/true),
-      &TSI);
+  SourceLocation IdentLoc = TyLoc.getBegin();
+  QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
     Diag(IdentLoc, SS && isDependentScopeSpecifier(*SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
         << II.getName()
-        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, IdentLoc);
+        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, TyLoc.getEnd());
+    return nullptr;
+  }
+
+  if (EnumTy->isDependentType()) {
+    Diag(IdentLoc, diag::err_using_enum_is_dependent);
     return nullptr;
   }
 
@@ -16133,7 +16112,7 @@ ExprResult Sema::BuildCXXConstructExpr(
     CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl)) {
     Constructor = findInheritingConstructor(ConstructLoc, Constructor, Shadow);
-    // The only way to get here is if we did overlaod resolution to find the
+    // The only way to get here is if we did overload resolution to find the
     // shadow decl, so we don't need to worry about re-checking the trailing
     // requires clause.
     if (DiagnoseUseOfOverloadedDecl(Constructor, ConstructLoc))

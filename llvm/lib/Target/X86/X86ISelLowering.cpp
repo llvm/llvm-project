@@ -4183,8 +4183,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
                                    const SDLoc &dl) {
   // Make sure we only try to split 256/512-bit types to avoid creating
   // narrow vectors.
-  EVT VT = Op.getValueType();
-  (void)VT;
+  [[maybe_unused]] EVT VT = Op.getValueType();
   assert((Op.getOperand(0).getValueType().is256BitVector() ||
           Op.getOperand(0).getValueType().is512BitVector()) &&
          (VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
@@ -4199,8 +4198,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
 static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
                                     const SDLoc &dl) {
   // Assert that all the types match.
-  EVT VT = Op.getValueType();
-  (void)VT;
+  [[maybe_unused]] EVT VT = Op.getValueType();
   assert(Op.getOperand(0).getValueType() == VT &&
          Op.getOperand(1).getValueType() == VT && "Unexpected VTs!");
   assert((VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
@@ -23411,8 +23409,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
   assert(!IsStrict && "Strict SETCC only handles FP operands.");
 
-  MVT VTOp0 = Op0.getSimpleValueType();
-  (void)VTOp0;
+  [[maybe_unused]] MVT VTOp0 = Op0.getSimpleValueType();
   assert(VTOp0 == Op1.getSimpleValueType() &&
          "Expected operands with same type!");
   assert(VT.getVectorNumElements() == VTOp0.getVectorNumElements() &&
@@ -37095,16 +37092,12 @@ static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
   APInt DemandedHiElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo =
-      DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1).sext(32);
-  KnownBits LHSHi =
-      DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1).sext(32);
-  KnownBits RHSLo =
-      DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1).sext(32);
-  KnownBits RHSHi =
-      DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1).sext(32);
-  KnownBits Lo = KnownBits::mul(LHSLo, RHSLo);
-  KnownBits Hi = KnownBits::mul(LHSHi, RHSHi);
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
+  KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
   Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true,
                                       /*NUW=*/false, Lo, Hi);
 }
@@ -37116,23 +37109,19 @@ static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
                                          unsigned Depth) {
   unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
 
-  // Multiply signed/unsigned i8 elements to create i16 values and add_sat Lo/Hi
+  // Multiply unsigned/signed i8 elements to create i16 values and add_sat Lo/Hi
   // pairs.
   APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
   APInt DemandedLoElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
   APInt DemandedHiElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo =
-      DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1).zext(16);
-  KnownBits LHSHi =
-      DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1).zext(16);
-  KnownBits RHSLo =
-      DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1).sext(16);
-  KnownBits RHSHi =
-      DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1).sext(16);
-  KnownBits Lo = KnownBits::mul(LHSLo, RHSLo);
-  KnownBits Hi = KnownBits::mul(LHSHi, RHSHi);
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.zext(16), RHSLo.sext(16));
+  KnownBits Hi = KnownBits::mul(LHSHi.zext(16), RHSHi.sext(16));
   Known = KnownBits::sadd_sat(Lo, Hi);
 }
 
@@ -41775,6 +41764,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero | RHSZero;
     break;
   }
+  case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD: {
     APInt LHSUndef, LHSZero;
     APInt RHSUndef, RHSZero;
@@ -50877,6 +50867,10 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
   if (!(RegVT.is128BitVector() || RegVT.is256BitVector()))
     return SDValue();
 
+  const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+  if (!LdC)
+    return SDValue();
+
   auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
                          ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
     for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
@@ -50901,12 +50895,11 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
             RegVT.getFixedSizeInBits()) {
       EVT UserVT = User->getValueType(0);
       SDValue UserPtr = UserLd->getBasePtr();
-      const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
       const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
 
       // See if we are loading a constant that matches in the lower
       // bits of a longer constant (but from a different constant pool ptr).
-      if (LdC && UserC && UserPtr != Ptr) {
+      if (UserC && UserPtr != Ptr) {
         unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
         unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
         if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
@@ -55929,6 +55922,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PSHUFB:
     case X86ISD::PSADBW:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useBWIRegs()))) {
         MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
