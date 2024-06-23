@@ -1107,7 +1107,12 @@ enum MemberFunctionKind {
 };
 
 /// String matching algorithm used by SBTarget.
-enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
+enum MatchType {
+  eMatchTypeNormal,
+  eMatchTypeRegex,
+  eMatchTypeStartsWith,
+  eMatchTypeRegexInsensitive
+};
 
 /// Bitmask that describes details about a type.
 FLAGS_ENUM(TypeFlags){

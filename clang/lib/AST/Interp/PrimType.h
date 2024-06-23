@@ -25,6 +25,7 @@ class Pointer;
 class Boolean;
 class Floating;
 class FunctionPointer;
+class MemberPointer;
 template <bool Signed> class IntegralAP;
 template <unsigned Bits, bool Signed> class Integral;
 
@@ -44,10 +45,11 @@ enum PrimType : unsigned {
   PT_Float = 11,
   PT_Ptr = 12,
   PT_FnPtr = 13,
+  PT_MemberPtr = 14,
 };
 
 inline constexpr bool isPtrType(PrimType T) {
-  return T == PT_Ptr || T == PT_FnPtr;
+  return T == PT_Ptr || T == PT_FnPtr || T == PT_MemberPtr;
 }
 
 enum class CastKind : uint8_t {
@@ -91,6 +93,9 @@ template <> struct PrimConv<PT_Ptr> { using T = Pointer; };
 template <> struct PrimConv<PT_FnPtr> {
   using T = FunctionPointer;
 };
+template <> struct PrimConv<PT_MemberPtr> {
+  using T = MemberPointer;
+};
 
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
@@ -131,6 +136,7 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
       TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
+      TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
     }                                                                          \
   } while (0)
 

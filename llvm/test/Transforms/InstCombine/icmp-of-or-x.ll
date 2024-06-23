@@ -373,3 +373,39 @@ define i1 @pr64610(ptr %b) {
   %r = icmp ugt i32 %or, %s
   ret i1 %r
 }
+
+define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y, i8 %z) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zz = xor i8 %z, -1
+  %yy = select i1 %y, i8 7, i8 %zz
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
+
+define i1 @icmp_eq_x_invertable_y2(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %yy = xor i8 %y, -1
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
+
+define i1 @PR38139(i8 %arg) {
+; CHECK-LABEL: @PR38139(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[ARG:%.*]], -64
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %masked = or i8 %arg, 192
+  %r = icmp ne i8 %masked, %arg
+  ret i1 %r
+}

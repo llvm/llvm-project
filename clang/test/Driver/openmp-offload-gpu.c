@@ -70,21 +70,21 @@
 
 /// Check that the runtime bitcode library is part of the compile line.
 /// Create a bogus bitcode library and specify it with libomptarget-nvptx-bc-path
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
 
 /// Specify the directory containing the bitcode lib, check clang picks the right one
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHK-BCLIB-DIR %s
 
 /// Create a bogus bitcode library and find it with LIBRARY_PATH
-// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget/subdir %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget/subdir %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:   -Xopenmp-target -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHK-ENV-BCLIB %s

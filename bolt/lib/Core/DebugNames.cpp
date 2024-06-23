@@ -220,6 +220,7 @@ static uint64_t getEntryID(const BOLTDWARF5AccelTableData &Entry) {
 std::optional<BOLTDWARF5AccelTableData *>
 DWARF5AcceleratorTable::addAccelTableEntry(
     DWARFUnit &Unit, const DIE &Die, const std::optional<uint64_t> &DWOID,
+    const uint32_t NumberParentsInChain,
     std::optional<BOLTDWARF5AccelTableData *> &Parent) {
   if (Unit.getVersion() < 5 || !NeedToCreate)
     return std::nullopt;
@@ -312,8 +313,14 @@ DWARF5AcceleratorTable::addAccelTableEntry(
     // Keeping memory footprint down.
     if (ParentOffset)
       EntryRelativeOffsets.insert({*ParentOffset, 0});
+    bool IsParentRoot = false;
+    // If there is no parent and no valid Entries in parent chain this is a root
+    // to be marked with a flag.
+    if (!Parent && !NumberParentsInChain)
+      IsParentRoot = true;
     It.Values.push_back(new (Allocator) BOLTDWARF5AccelTableData(
-        Die.getOffset(), ParentOffset, DieTag, UnitID, IsTU, SecondIndex));
+        Die.getOffset(), ParentOffset, DieTag, UnitID, IsParentRoot, IsTU,
+        SecondIndex));
     return It.Values.back();
   };
 
@@ -462,7 +469,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
         Abbrev.addAttribute({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
         if (std::optional<uint64_t> Offset = Value->getParentDieOffset())
           Abbrev.addAttribute({dwarf::DW_IDX_parent, dwarf::DW_FORM_ref4});
-        else
+        else if (Value->isParentRoot())
           Abbrev.addAttribute(
               {dwarf::DW_IDX_parent, dwarf::DW_FORM_flag_present});
         FoldingSetNodeID ID;

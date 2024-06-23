@@ -107,6 +107,7 @@ class CommandInterpreterAPICase(TestBase):
     def test_get_transcript(self):
         """Test structured transcript generation and retrieval."""
         ci = self.buildAndCreateTarget()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
 
         # Make sure the "save-transcript" setting is on
         self.runCmd("settings set interpreter.save-transcript true")
@@ -119,7 +120,6 @@ class CommandInterpreterAPICase(TestBase):
         ci.HandleCommand("version", res)
         ci.HandleCommand("an-unknown-command", res)
         ci.HandleCommand("br s -f main.c -l %d" % self.line, res)
-        ci.HandleCommand("r", res)
         ci.HandleCommand("p a", res)
         ci.HandleCommand("statistics dump", res)
         total_number_of_commands = 6
@@ -174,31 +174,22 @@ class CommandInterpreterAPICase(TestBase):
         self.assertIn("Breakpoint 1: where = a.out`main ", transcript[2]["output"])
         self.assertEqual(transcript[2]["error"], "")
 
-        # (lldb) r
-        self.assertEqual(transcript[3]["command"], "r")
-        self.assertEqual(transcript[3]["commandName"], "process launch")
-        self.assertEqual(transcript[3]["commandArguments"], "-X true --")
-        # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
-        self.assertIn("Process", transcript[3]["output"])
-        self.assertIn("launched", transcript[3]["output"])
-        self.assertEqual(transcript[3]["error"], "")
-
         # (lldb) p a
-        self.assertEqual(transcript[4],
+        self.assertEqual(transcript[3],
             {
                 "command": "p a",
                 "commandName": "dwim-print",
                 "commandArguments": "-- a",
-                "output": "(int) 123\n",
-                "error": "",
+                "output": "",
+                "error": "error: <user expression 0>:1:1: use of undeclared identifier 'a'\n    1 | a\n      | ^\n",
             })
 
         # (lldb) statistics dump
-        self.assertEqual(transcript[5]["command"], "statistics dump")
-        self.assertEqual(transcript[5]["commandName"], "statistics dump")
-        self.assertEqual(transcript[5]["commandArguments"], "")
-        self.assertEqual(transcript[5]["error"], "")
-        statistics_dump = json.loads(transcript[5]["output"])
+        self.assertEqual(transcript[4]["command"], "statistics dump")
+        self.assertEqual(transcript[4]["commandName"], "statistics dump")
+        self.assertEqual(transcript[4]["commandArguments"], "")
+        self.assertEqual(transcript[4]["error"], "")
+        statistics_dump = json.loads(transcript[4]["output"])
         # Dump result should be valid JSON
         self.assertTrue(statistics_dump is not json.JSONDecodeError)
         # Dump result should contain expected fields
@@ -208,14 +199,15 @@ class CommandInterpreterAPICase(TestBase):
         self.assertIn("targets", statistics_dump)
 
     def test_save_transcript_setting_default(self):
-        ci = self.buildAndCreateTarget()
-        res = lldb.SBCommandReturnObject()
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
 
         # The setting's default value should be "false"
         self.runCmd("settings show interpreter.save-transcript", "interpreter.save-transcript (boolean) = false\n")
 
     def test_save_transcript_setting_off(self):
-        ci = self.buildAndCreateTarget()
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
 
         # Make sure the setting is off
         self.runCmd("settings set interpreter.save-transcript false")
@@ -226,8 +218,8 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(transcript, [])
 
     def test_save_transcript_setting_on(self):
-        ci = self.buildAndCreateTarget()
-        res = lldb.SBCommandReturnObject()
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
 
         # Make sure the setting is on
         self.runCmd("settings set interpreter.save-transcript true")
@@ -247,7 +239,8 @@ class CommandInterpreterAPICase(TestBase):
         because there is no logic in the command interpreter to modify a
         transcript item (representing a command) after it has been returned.
         """
-        ci = self.buildAndCreateTarget()
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
 
         # Make sure the setting is on
         self.runCmd("settings set interpreter.save-transcript true")

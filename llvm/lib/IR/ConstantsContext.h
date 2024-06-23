@@ -219,35 +219,6 @@ public:
   }
 };
 
-// CompareConstantExpr - This class is private to Constants.cpp, and is used
-// behind the scenes to implement ICmp and FCmp constant expressions. This is
-// needed in order to store the predicate value for these instructions.
-class CompareConstantExpr final : public ConstantExpr {
-public:
-  unsigned short predicate;
-  CompareConstantExpr(Type *ty, Instruction::OtherOps opc,
-                      unsigned short pred,  Constant* LHS, Constant* RHS)
-    : ConstantExpr(ty, opc, &Op<0>(), 2), predicate(pred) {
-    Op<0>() = LHS;
-    Op<1>() = RHS;
-  }
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getOpcode() == Instruction::ICmp ||
-           CE->getOpcode() == Instruction::FCmp;
-  }
-  static bool classof(const Value *V) {
-    return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
-  }
-};
-
 template <>
 struct OperandTraits<CastConstantExpr>
     : public FixedNumOperandTraits<CastConstantExpr, 1> {};
@@ -278,11 +249,6 @@ struct OperandTraits<GetElementPtrConstantExpr>
     : public VariadicOperandTraits<GetElementPtrConstantExpr, 1> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrConstantExpr, Value)
-
-template <>
-struct OperandTraits<CompareConstantExpr>
-    : public FixedNumOperandTraits<CompareConstantExpr, 2> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CompareConstantExpr, Value)
 
 template <class ConstantClass> struct ConstantAggrKeyType;
 struct InlineAsmKeyType;
@@ -411,7 +377,6 @@ struct ConstantExprKeyType {
 private:
   uint8_t Opcode;
   uint8_t SubclassOptionalData;
-  uint16_t SubclassData;
   ArrayRef<Constant *> Ops;
   ArrayRef<int> ShuffleMask;
   Type *ExplicitTy;
@@ -438,19 +403,17 @@ private:
 
 public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
-                      unsigned short SubclassData = 0,
                       unsigned short SubclassOptionalData = 0,
                       ArrayRef<int> ShuffleMask = std::nullopt,
                       Type *ExplicitTy = nullptr,
                       std::optional<ConstantRange> InRange = std::nullopt)
-      : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData),
-        SubclassData(SubclassData), Ops(Ops), ShuffleMask(ShuffleMask),
-        ExplicitTy(ExplicitTy), InRange(std::move(InRange)) {}
+      : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData), Ops(Ops),
+        ShuffleMask(ShuffleMask), ExplicitTy(ExplicitTy),
+        InRange(std::move(InRange)) {}
 
   ConstantExprKeyType(ArrayRef<Constant *> Operands, const ConstantExpr *CE)
       : Opcode(CE->getOpcode()),
-        SubclassOptionalData(CE->getRawSubclassOptionalData()),
-        SubclassData(CE->isCompare() ? CE->getPredicate() : 0), Ops(Operands),
+        SubclassOptionalData(CE->getRawSubclassOptionalData()), Ops(Operands),
         ShuffleMask(getShuffleMaskIfValid(CE)),
         ExplicitTy(getSourceElementTypeIfValid(CE)),
         InRange(getInRangeIfValid(CE)) {}
@@ -459,7 +422,6 @@ public:
                       SmallVectorImpl<Constant *> &Storage)
       : Opcode(CE->getOpcode()),
         SubclassOptionalData(CE->getRawSubclassOptionalData()),
-        SubclassData(CE->isCompare() ? CE->getPredicate() : 0),
         ShuffleMask(getShuffleMaskIfValid(CE)),
         ExplicitTy(getSourceElementTypeIfValid(CE)),
         InRange(getInRangeIfValid(CE)) {
@@ -477,7 +439,7 @@ public:
   }
 
   bool operator==(const ConstantExprKeyType &X) const {
-    return Opcode == X.Opcode && SubclassData == X.SubclassData &&
+    return Opcode == X.Opcode &&
            SubclassOptionalData == X.SubclassOptionalData && Ops == X.Ops &&
            ShuffleMask == X.ShuffleMask && ExplicitTy == X.ExplicitTy &&
            rangesEqual(InRange, X.InRange);
@@ -489,8 +451,6 @@ public:
     if (SubclassOptionalData != CE->getRawSubclassOptionalData())
       return false;
     if (Ops.size() != CE->getNumOperands())
-      return false;
-    if (SubclassData != (CE->isCompare() ? CE->getPredicate() : 0))
       return false;
     for (unsigned I = 0, E = Ops.size(); I != E; ++I)
       if (Ops[I] != CE->getOperand(I))
@@ -506,7 +466,7 @@ public:
 
   unsigned getHash() const {
     return hash_combine(
-        Opcode, SubclassOptionalData, SubclassData,
+        Opcode, SubclassOptionalData,
         hash_combine_range(Ops.begin(), Ops.end()),
         hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
   }
@@ -532,12 +492,6 @@ public:
     case Instruction::GetElementPtr:
       return GetElementPtrConstantExpr::Create(
           ExplicitTy, Ops[0], Ops.slice(1), Ty, SubclassOptionalData, InRange);
-    case Instruction::ICmp:
-      return new CompareConstantExpr(Ty, Instruction::ICmp, SubclassData,
-                                     Ops[0], Ops[1]);
-    case Instruction::FCmp:
-      return new CompareConstantExpr(Ty, Instruction::FCmp, SubclassData,
-                                     Ops[0], Ops[1]);
     }
   }
 };

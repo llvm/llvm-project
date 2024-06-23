@@ -17,7 +17,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace mesh {
@@ -114,7 +114,7 @@ inline int64_t shardDimension(int64_t dimSize, int64_t shardCount) {
     return ShapedType::kDynamic;
 
   assert(dimSize % shardCount == 0);
-  return ceilDiv(dimSize, shardCount);
+  return dimSize / shardCount;
 }
 
 // Get the size of an unsharded dimension.

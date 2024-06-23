@@ -112,7 +112,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB2_3 Depth 2
 ; LA64-NEXT:    move $a3, $a2
-; LA64-NEXT:    addi.d $a2, $a2, 1
+; LA64-NEXT:    addi.w $a2, $a2, 1
 ; LA64-NEXT:    sltu $a4, $a3, $a1
 ; LA64-NEXT:    xori $a4, $a4, 1
 ; LA64-NEXT:    masknez $a4, $a2, $a4
@@ -298,7 +298,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB6_3 Depth 2
 ; LA64-NEXT:    move $a4, $a2
-; LA64-NEXT:    addi.d $a2, $a2, -1
+; LA64-NEXT:    addi.w $a2, $a2, -1
 ; LA64-NEXT:    sltui $a5, $a4, 1
 ; LA64-NEXT:    sltu $a6, $a3, $a4
 ; LA64-NEXT:    masknez $a2, $a2, $a6

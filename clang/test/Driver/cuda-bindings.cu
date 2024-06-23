@@ -9,9 +9,6 @@
 // way. Instead we check whether we've generated a permanent name on
 // device side, which appends '-device-cuda-<triple>' suffix.
 
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-
 //
 // Test single gpu architecture with complete compilation.
 // No intermediary device files should have "-device-cuda..." in the name.

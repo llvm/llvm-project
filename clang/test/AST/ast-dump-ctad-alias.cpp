@@ -36,11 +36,11 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     | |   `-TemplateTypeParmType {{.*}} 'type-parameter-1-0' dependent depth 1 index 0
 // CHECK-NEXT: |     | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
 // CHECK-NEXT: |     |   |-DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
-// CHECK-NEXT: |     |   | `-name:  'Out2<double>::AInner'
+// CHECK-NEXT: |     |   | `-name: 'Out2<double>::AInner'
 // CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner{{$}}
 // CHECK-NEXT: |     |   `-ElaboratedType {{.*}} 'Inner<type-parameter-1-0>' sugar dependent
 // CHECK-NEXT: |     |     `-TemplateSpecializationType {{.*}} 'Inner<type-parameter-1-0>' dependent
-// CHECK-NEXT: |     |       |-name:  'Inner':'Out<int>::Inner' qualified
+// CHECK-NEXT: |     |       |-name: 'Inner':'Out<int>::Inner' qualified
 // CHECK-NEXT: |     |       | `-ClassTemplateDecl {{.+}} Inner{{$}}
 // CHECK-NEXT: |     |       `-TemplateArgument type 'type-parameter-1-0'
 // CHECK-NEXT: |     |         `-SubstTemplateTypeParmType {{.*}} 'type-parameter-1-0'

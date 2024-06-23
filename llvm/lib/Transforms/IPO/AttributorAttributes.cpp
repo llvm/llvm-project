@@ -419,7 +419,8 @@ struct AAReturnedFromReturnedValues : public BaseType {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
-    clampReturnedValueStates<AAType, StateType, IRAttributeKind, RecurseForSelectAndPHI>(
+    clampReturnedValueStates<AAType, StateType, IRAttributeKind,
+                             RecurseForSelectAndPHI>(
         A, *this, S,
         PropagateCallBaseContext ? this->getCallBaseContext() : nullptr);
     // TODO: If we know we visited all returned values, thus no are assumed
@@ -1472,7 +1473,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);
-    auto *Last = std::unique(Offsets.begin(), Offsets.end());
+    auto *Last = llvm::unique(Offsets);
     Offsets.erase(Last, Offsets.end());
 
     VectorType *VT = dyn_cast<VectorType>(&Ty);
@@ -1607,11 +1608,15 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     //
     // The RHS is a reference that may be invalidated by an insertion caused by
     // the LHS. So we ensure that the side-effect of the LHS happens first.
+
+    assert(OffsetInfoMap.contains(CurPtr) &&
+           "CurPtr does not exist in the map!");
+
     auto &UsrOI = OffsetInfoMap[Usr];
     auto &PtrOI = OffsetInfoMap[CurPtr];
     assert(!PtrOI.isUnassigned() &&
            "Cannot pass through if the input Ptr was not visited!");
-    UsrOI = PtrOI;
+    UsrOI.merge(PtrOI);
     Follow = true;
     return true;
   };
@@ -1634,8 +1639,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
         return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (CE->isCompare())
-        return true;
       if (!isa<GEPOperator>(CE)) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                           << "\n");
@@ -2447,7 +2450,7 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
               return true;
             },
             IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
-            UsedAssumedInformation))
+            UsedAssumedInformation, false, /*CheckPotentiallyDead=*/true))
       return false;
   }
 
@@ -6975,10 +6978,9 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
       if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "[H2S] unique free call might not be executed with the allocation "
-            << *UniqueFree << "\n");
+        LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
+                             "with the allocation "
+                          << *UniqueFree << "\n");
         return false;
       }
     }
@@ -10338,48 +10340,25 @@ struct AANoFPClassImpl : AANoFPClass {
   /// See followUsesInMBEC
   bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
                        AANoFPClass::StateType &State) {
-    const Value *UseV = U->get();
-    const DominatorTree *DT = nullptr;
-    AssumptionCache *AC = nullptr;
-    const TargetLibraryInfo *TLI = nullptr;
-    InformationCache &InfoCache = A.getInfoCache();
-
-    if (Function *F = getAnchorScope()) {
-      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
-      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-      TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
-    }
-
-    const DataLayout &DL = A.getDataLayout();
-
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DL,
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, TLI, AC, I, DT);
-    State.addKnownBits(~KnownFPClass.KnownFPClasses);
-
-    if (auto *CI = dyn_cast<CallInst>(UseV)) {
-      // Special case FP intrinsic with struct return type.
-      switch (CI->getIntrinsicID()) {
-      case Intrinsic::frexp:
-        return true;
-      case Intrinsic::not_intrinsic:
-        // TODO: Could recognize math libcalls
-        return false;
-      default:
-        break;
-      }
-    }
-
-    if (!UseV->getType()->isFPOrFPVectorTy())
+    // TODO: Determine what instructions can be looked through.
+    auto *CB = dyn_cast<CallBase>(I);
+    if (!CB)
       return false;
-    return !isa<LoadInst, AtomicRMWInst>(UseV);
+
+    if (!CB->isArgOperand(U))
+      return false;
+
+    unsigned ArgNo = CB->getArgOperandNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    if (auto *NoFPAA = A.getAAFor<AANoFPClass>(*this, IRP, DepClassTy::NONE))
+      State.addKnownBits(NoFPAA->getState().getKnown());
+    return false;
   }
 
   const std::string getAsStr(Attributor *A) const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
-    OS << getAssumedNoFPClass();
+    OS << getKnownNoFPClass() << '/' << getAssumedNoFPClass();
     return Result;
   }
 
@@ -10431,11 +10410,12 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
 
 struct AANoFPClassReturned final
     : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                   AANoFPClassImpl::StateType, false, Attribute::None, false> {
+                                   AANoFPClassImpl::StateType, false,
+                                   Attribute::None, false> {
   AANoFPClassReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                     AANoFPClassImpl::StateType, false, Attribute::None, false>(
-            IRP, A) {}
+                                     AANoFPClassImpl::StateType, false,
+                                     Attribute::None, false>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -10784,9 +10764,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return;
     }
     Value *Stripped = getAssociatedValue().stripPointerCasts();
-    auto *CE = dyn_cast<ConstantExpr>(Stripped);
-    if (isa<Constant>(Stripped) &&
-        (!CE || CE->getOpcode() != Instruction::ICmp)) {
+    if (isa<Constant>(Stripped) && !isa<ConstantExpr>(Stripped)) {
       addValue(A, getState(), *Stripped, getCtxI(), AA::AnyScope,
                getAnchorScope());
       indicateOptimisticFixpoint();
@@ -11380,13 +11358,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         continue;
       }
 
-      if (auto *CE = dyn_cast<ConstantExpr>(V)) {
-        if (CE->getOpcode() == Instruction::ICmp)
-          if (handleCmp(A, *CE, CE->getOperand(0), CE->getOperand(1),
-                        CmpInst::Predicate(CE->getPredicate()), II, Worklist))
-            continue;
-      }
-
       if (auto *I = dyn_cast<Instruction>(V)) {
         if (simplifyInstruction(A, *I, II, Worklist, LivenessAAs))
           continue;
@@ -11768,11 +11739,14 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
       return ChangeStatus::UNCHANGED;
 
     const IRPosition &IRP = getIRPosition();
-    return A.manifestAttrs(
-        IRP,
-        Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
-                       llvm::join(getAssumed().getSet(), ",")),
-        /* ForceReplace */ true);
+    SmallVector<StringRef, 0> Set(getAssumed().getSet().begin(),
+                                  getAssumed().getSet().end());
+    llvm::sort(Set);
+    return A.manifestAttrs(IRP,
+                           Attribute::get(IRP.getAnchorValue().getContext(),
+                                          AssumptionAttrKey,
+                                          llvm::join(Set, ",")),
+                           /*ForceReplace=*/true);
   }
 
   bool hasAssumption(const StringRef Assumption) const override {
@@ -11784,13 +11758,15 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
     const SetContents &Known = getKnown();
     const SetContents &Assumed = getAssumed();
 
-    const std::string KnownStr =
-        llvm::join(Known.getSet().begin(), Known.getSet().end(), ",");
-    const std::string AssumedStr =
-        (Assumed.isUniversal())
-            ? "Universal"
-            : llvm::join(Assumed.getSet().begin(), Assumed.getSet().end(), ",");
+    SmallVector<StringRef, 0> Set(Known.getSet().begin(), Known.getSet().end());
+    llvm::sort(Set);
+    const std::string KnownStr = llvm::join(Set, ",");
 
+    std::string AssumedStr = "Universal";
+    if (!Assumed.isUniversal()) {
+      Set.assign(Assumed.getSet().begin(), Assumed.getSet().end());
+      AssumedStr = llvm::join(Set, ",");
+    }
     return "Known [" + KnownStr + "]," + " Assumed [" + AssumedStr + "]";
   }
 };

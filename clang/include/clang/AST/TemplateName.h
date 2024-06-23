@@ -314,11 +314,6 @@ public:
 
   TemplateName getUnderlying() const;
 
-  /// Get the template name to substitute when this template name is used as a
-  /// template template argument. This refers to the most recent declaration of
-  /// the template, including any default template arguments.
-  TemplateName getNameToSubstitute() const;
-
   TemplateNameDependence getDependence() const;
 
   /// Determines whether this is a dependent template name.
@@ -345,13 +340,15 @@ public:
              Qualified Qual = Qualified::AsWritten) const;
 
   /// Debugging aid that dumps the template name.
-  void dump(raw_ostream &OS) const;
+  void dump(raw_ostream &OS, const ASTContext &Context) const;
 
   /// Debugging aid that dumps the template name to standard
   /// error.
   void dump() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID);
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    ID.AddPointer(Storage.getOpaqueValue());
+  }
 
   /// Retrieve the template name as a void pointer.
   void *getAsVoidPointer() const { return Storage.getOpaqueValue(); }

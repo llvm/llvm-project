@@ -45,7 +45,7 @@ getIntrinsicEffects(mlir::Operation *self,
          "hlfir intrinsic ops only produce 1 result");
   if (mlir::isa<hlfir::ExprType>(self->getResult(0).getType()))
     effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
-                         self->getResult(0),
+                         self->getOpResult(0),
                          mlir::SideEffects::DefaultResource::get());
 
   // read effect if we read from a pointer or refference type
@@ -59,10 +59,10 @@ getIntrinsicEffects(mlir::Operation *self,
   // } to {
   //   hlfir.yield %0#0 : !fir.box<!fir.array<?x?xf32>>
   // }
-  for (mlir::Value operand : self->getOperands()) {
-    mlir::Type opTy = operand.getType();
+  for (mlir::OpOperand &operand : self->getOpOperands()) {
+    mlir::Type opTy = operand.get().getType();
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
-      effects.emplace_back(mlir::MemoryEffects::Read::get(), operand,
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
   }
 }
@@ -1495,9 +1495,9 @@ mlir::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value var_is_present) {
+                            mlir::Value tempBox, mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               var_is_present);
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//

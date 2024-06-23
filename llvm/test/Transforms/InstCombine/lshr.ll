@@ -464,6 +464,119 @@ define i32 @shl_sub_lshr(i32 %x, i32 %c, i32 %y) {
   ret i32 %lshr
 }
 
+define i32 @shl_sub_lshr_reverse(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = sub nuw nsw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw nsw i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_sub_lshr_reverse_no_nsw(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_no_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = sub nuw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_sub_lshr_reverse_nsw_on_op1(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_nsw_on_op1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = sub nuw i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw nsw i32 %x, %c
+  %sub = sub nuw i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_reverse_no_exact(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_no_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[Y:%.*]], [[SHL]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw nsw i32 %y, %shl
+  %lshr = lshr i32 %sub, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_reverse_multiuse(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_multiuse(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[Y:%.*]], [[SHL]]
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  %sub = sub nuw i32 %y, %shl
+  call void @use(i32 %sub)
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+define i32 @shl_sub_lshr_reverse_multiuse2(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_multiuse2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[Y:%.*]], [[C]]
+; CHECK-NEXT:    [[LSHR:%.*]] = sub nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw i32 %x, %c
+  call void @use(i32 %shl)
+  %sub = sub nuw i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_reverse_no_nuw(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_no_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[Y:%.*]], [[SHL]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl i32 %x, %c
+  %sub = sub nuw i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @shl_sub_lshr_reverse_no_nsw_2(i32 %x, i32 %c, i32 %y) {
+; CHECK-LABEL: @shl_sub_lshr_reverse_no_nsw_2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[SHL]]
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr exact i32 [[SUB]], [[C]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %shl = shl nuw nsw i32 %x, %c
+  %sub = sub i32 %y, %shl
+  %lshr = lshr exact i32 %sub, %c
+  ret i32 %lshr
+}
+
 define i32 @shl_or_lshr(i32 %x, i32 %c, i32 %y) {
 ; CHECK-LABEL: @shl_or_lshr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
@@ -1277,8 +1390,8 @@ define i8 @not_signbit_trunc(i16 %x) {
 
 define i2 @bool_add_lshr(i1 %a, i1 %b) {
 ; CHECK-LABEL: @bool_add_lshr(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i2
+; CHECK-NEXT:    [[LSHR1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[LSHR1]] to i2
 ; CHECK-NEXT:    ret i2 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i2
@@ -1323,8 +1436,8 @@ define i2 @bool_add_ashr(i1 %a, i1 %b) {
 
 define <2 x i8> @bool_add_lshr_vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @bool_add_lshr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[LSHR1:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[LSHR1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %zext.a = zext <2 x i1> %a to <2 x i8>
@@ -1340,8 +1453,7 @@ define i32 @bool_add_lshr_uses(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_A]])
 ; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32
@@ -1360,8 +1472,7 @@ define i32 @bool_add_lshr_uses2(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    call void @use(i32 [[ADD]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32
@@ -1383,7 +1494,7 @@ define i32 @bool_add_lshr_uses3(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    call void @use(i32 [[ADD]])
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32
