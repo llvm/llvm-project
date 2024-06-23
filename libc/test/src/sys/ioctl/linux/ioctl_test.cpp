@@ -32,7 +32,8 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 }
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
-  constexpr const char *TEST_FILE = "testdata/ioctl.test";
+  constexpr const char *FILENAME = "testdata/ioctl.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
