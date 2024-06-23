@@ -1242,18 +1242,68 @@ void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
 void MCStreamer::emitBundleUnlock() {}
 
-void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
+bool MCStreamer::popSection() {
+  if (SectionStack.size() <= 1)
+    return false;
+  auto I = SectionStack.end();
+  --I;
+  MCSectionSubPair OldSec = I->first;
+  --I;
+  MCSectionSubPair NewSec = I->first;
+
+  if (NewSec.first && OldSec != NewSec)
+    changeSection(NewSec.first, NewSec.second ? MCConstantExpr::create(
+                                                    NewSec.second, getContext())
+                                              : nullptr);
+  SectionStack.pop_back();
+  return true;
+}
+
+bool MCStreamer::subSection(const MCExpr *SubsecExpr) {
+  if (SectionStack.empty())
+    return true;
+
+  int64_t Subsec;
+  if (!SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr())) {
+    getContext().reportError(SubsecExpr->getLoc(),
+                             "cannot evaluate subsection number");
+    return true;
+  }
+  if (!isUInt<31>(Subsec)) {
+    getContext().reportError(SubsecExpr->getLoc(),
+                             "subsection number " + Twine(Subsec) +
+                                 " is not within [0,2147483647]");
+    return true;
+  }
+
+  MCSectionSubPair CurPair = SectionStack.back().first;
+  SectionStack.back().second = CurPair;
+  SectionStack.back().first.second = Subsec;
+  changeSection(CurPair.first, SubsecExpr);
+  return false;
+}
+
+void MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
   assert(Section && "Cannot switch to a null section!");
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
-  if (MCSectionSubPair(Section, Subsection) != curSection) {
-    changeSection(Section, Subsection);
-    SectionStack.back().first = MCSectionSubPair(Section, Subsection);
+  uint32_t Subsec = 0;
+  if (SubsecExpr)
+    Subsec = cast<MCConstantExpr>(SubsecExpr)->getValue();
+  if (MCSectionSubPair(Section, Subsec) != curSection) {
+    changeSection(Section, SubsecExpr);
+    SectionStack.back().first = MCSectionSubPair(Section, Subsec);
     assert(!Section->hasEnded() && "Section already ended");
     MCSymbol *Sym = Section->getBeginSymbol();
     if (Sym && !Sym->isInSection())
       emitLabel(Sym);
   }
+}
+
+void MCStreamer::switchSection(MCSection *Section, uint32_t Subsec) {
+  switchSection(Section, Subsec == 0
+                             ? nullptr
+                             : MCConstantExpr::create(Subsec, getContext()));
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

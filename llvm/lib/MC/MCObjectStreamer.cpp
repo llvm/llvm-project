@@ -291,25 +291,16 @@ void MCObjectStreamer::changeSection(MCSection *Section,
 }
 
 bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
-                                         const MCExpr *Subsection) {
+                                         const MCExpr *SubsecExpr) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
 
-  int64_t IntSubsection = 0;
-  if (Subsection &&
-      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr())) {
-    getContext().reportError(Subsection->getLoc(),
-                             "cannot evaluate subsection number");
-  }
-  if (!isUInt<31>(IntSubsection)) {
-    getContext().reportError(Subsection->getLoc(),
-                             "subsection number " + Twine(IntSubsection) +
-                                 " is not within [0,2147483647]");
-  }
-
-  CurSubsectionIdx = unsigned(IntSubsection);
+  int64_t Subsec = 0;
+  if (SubsecExpr)
+    (void)SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr());
+  CurSubsectionIdx = uint32_t(Subsec);
   Section->switchSubsection(CurSubsectionIdx);
   return Created;
 }

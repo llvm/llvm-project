@@ -63,7 +63,7 @@ struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
 }
 
-using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
+using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 
 /// Target specific streamer interface. This is used so that targets can
 /// implement support for target specific assembly directives.
@@ -423,28 +423,9 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection() {
-    if (SectionStack.size() <= 1)
-      return false;
-    auto I = SectionStack.end();
-    --I;
-    MCSectionSubPair OldSection = I->first;
-    --I;
-    MCSectionSubPair NewSection = I->first;
+  bool popSection();
 
-    if (NewSection.first && OldSection != NewSection)
-      changeSection(NewSection.first, NewSection.second);
-    SectionStack.pop_back();
-    return true;
-  }
-
-  bool subSection(const MCExpr *Subsection) {
-    if (SectionStack.empty())
-      return false;
-
-    switchSection(SectionStack.back().first.first, Subsection);
-    return true;
-  }
+  bool subSection(const MCExpr *Subsection);
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
@@ -452,17 +433,16 @@ public:
   /// This corresponds to assembler directives like .section, .text, etc.
   virtual void switchSection(MCSection *Section,
                              const MCExpr *Subsection = nullptr);
+  void switchSection(MCSection *Section, uint32_t Subsec);
 
   /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call
   /// changeSection.
-  void switchSectionNoChange(MCSection *Section,
-                             const MCExpr *Subsection = nullptr) {
+  void switchSectionNoChange(MCSection *Section) {
     assert(Section && "Cannot switch to a null section!");
     MCSectionSubPair curSection = SectionStack.back().first;
     SectionStack.back().second = curSection;
-    if (MCSectionSubPair(Section, Subsection) != curSection)
-      SectionStack.back().first = MCSectionSubPair(Section, Subsection);
+    SectionStack.back().first = MCSectionSubPair(Section, 0);
   }
 
   /// Create the default sections and set the initial one.
