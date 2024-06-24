@@ -1,6 +1,7 @@
 import unittest
 
 from clang.cindex import (
+    TokenKind,
     CursorKind,
     TemplateArgumentKind,
     ExceptionSpecificationKind,
@@ -16,6 +17,7 @@ from clang.cindex import (
 
 class TestCursorKind(unittest.TestCase):
     enums = [
+        TokenKind,
         CursorKind,
         TemplateArgumentKind,
         ExceptionSpecificationKind,

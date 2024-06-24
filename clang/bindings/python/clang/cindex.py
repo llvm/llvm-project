@@ -64,8 +64,6 @@ from __future__ import absolute_import, division, print_function
 
 from ctypes import *
 
-import clang.enumerations
-
 import collections.abc
 import os
 from enum import Enum
@@ -573,44 +571,6 @@ class TokenGroup:
             yield token
 
 
-class TokenKind:
-    """Describes a specific type of a Token."""
-
-    _value_map = {}  # int -> TokenKind
-
-    def __init__(self, value, name):
-        """Create a new TokenKind instance from a numeric value and a name."""
-        self.value = value
-        self.name = name
-
-    def __repr__(self):
-        return "TokenKind.%s" % (self.name,)
-
-    @staticmethod
-    def from_value(value):
-        """Obtain a registered TokenKind instance from its value."""
-        result = TokenKind._value_map.get(value, None)
-
-        if result is None:
-            raise ValueError("Unknown TokenKind: %d" % value)
-
-        return result
-
-    @staticmethod
-    def register(value, name):
-        """Register a new TokenKind enumeration.
-
-        This should only be called at module load time by code within this
-        package.
-        """
-        if value in TokenKind._value_map:
-            raise ValueError("TokenKind already registered: %d" % value)
-
-        kind = TokenKind(value, name)
-        TokenKind._value_map[value] = kind
-        setattr(TokenKind, name, kind)
-
-
 ### Cursor Kinds ###
 class BaseEnumeration(Enum):
     """
@@ -633,6 +593,21 @@ class BaseEnumeration(Enum):
             self.__class__.__name__,
             self.name,
         )
+
+
+class TokenKind(BaseEnumeration):
+    """Describes a specific type of a Token."""
+
+    @classmethod
+    def from_value(cls, value):
+        """Obtain a registered TokenKind instance from its value."""
+        return cls.from_id(value)
+
+    PUNCTUATION = 0
+    KEYWORD = 1
+    IDENTIFIER = 2
+    LITERAL = 3
+    COMMENT = 4
 
 
 class CursorKind(BaseEnumeration):
@@ -4040,13 +4015,7 @@ class Config:
         return True
 
 
-def register_enumerations():
-    for name, value in clang.enumerations.TokenKinds:
-        TokenKind.register(value, name)
-
-
 conf = Config()
-register_enumerations()
 
 __all__ = [
     "AvailabilityKind",
