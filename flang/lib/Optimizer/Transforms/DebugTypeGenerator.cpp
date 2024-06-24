@@ -162,6 +162,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
 
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
     if (dim == seqTy.getUnknownExtent()) {
+      // FIXME: This path is taken for assumed size arrays but also for arrays
+      // with non constant extent. For the latter case, the DISubrangeAttr
+      // should point to a variable which will have the extent at runtime.
       auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
           context, /*count=*/nullptr, /*lowerBound=*/nullptr,
           /*upperBound*/ nullptr, /*stride*/ nullptr);
