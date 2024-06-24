@@ -2366,8 +2366,12 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
                                                            int64_t Val) {
   MCContext &Ctx = getContext();
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
-  assert(!Sym->isVariable());
-  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  int64_t Res = ~Val;
+  assert(!Sym->isVariable() ||
+         (Sym->getVariableValue()->evaluateAsAbsolute(Res) && Res == Val));
+  (void)Res;
+  if (!Sym->isVariable())
+    Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
   return MCSymbolRefExpr::create(Sym, Ctx);
 }
 
