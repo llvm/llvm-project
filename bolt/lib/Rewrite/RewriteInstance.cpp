@@ -140,9 +140,6 @@ KeepTmp("keep-tmp",
   cl::Hidden,
   cl::cat(BoltCategory));
 
-cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
-                   cl::cat(BoltCategory));
-
 static cl::opt<unsigned>
 LiteThresholdPct("lite-threshold-pct",
   cl::desc("threshold (in percent) for selecting functions to process in lite "
