@@ -17132,7 +17132,7 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("decltype((foo())) a = foo();", Spaces);
   verifyFormat("decltype((bar(10))) a = bar(11);", Spaces);
   verifyFormat("if ((x - y) && (a ^ b))\n"
-               "  f();\n",
+               "  f();",
                Spaces);
   verifyFormat("for (int i = 0; i < 10; i = (i + 1))\n"
                "  foo(i);",
@@ -17183,7 +17183,7 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("decltype( ( foo() ) ) a = foo();", Spaces);
   verifyFormat("decltype( ( bar( 10 ) ) ) a = bar( 11 );", Spaces);
   verifyFormat("if ( ( x - y ) && ( a ^ b ) )\n"
-               "  f();\n",
+               "  f();",
                Spaces);
   verifyFormat("for ( int i = 0; i < 10; i = ( i + 1 ) )\n"
                "  foo( i );",
@@ -17245,7 +17245,7 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
   verifyFormat("decltype((foo( ))) a = foo( );", Spaces);
   verifyFormat("decltype((bar(10))) a = bar(11);", Spaces);
   verifyFormat("if ((x - y) && (a ^ b))\n"
-               "  f( );\n",
+               "  f( );",
                Spaces);
   verifyFormat("for (int i = 0; i < 10; i = (i + 1))\n"
                "  foo(i);",
@@ -17403,7 +17403,7 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
                "} while ((i = i + 1));",
                Spaces);
   verifyFormat("if ( (x - y) && (a ^ b) )\n"
-               "  f();\n",
+               "  f();",
                Spaces);
   verifyFormat("if ((i = j))\n"
                "  do_something(i);",
