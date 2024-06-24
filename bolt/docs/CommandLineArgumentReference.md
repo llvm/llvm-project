@@ -798,13 +798,14 @@
   bytes. Default value: 0, i.e. split iff the size is reduced. Note that on some
   architectures the size can increase after splitting.
 
-- `--match-profile-with-function-hash`
-
-  Turns on matching functions with exact hash
-
 - `--stale-matching-max-func-size=<uint>`
 
   The maximum size of a function to consider for inference.
+
+- `--stale-matching-min-matched-block=<uint>`
+
+  Percentage threshold of matched basic blocks at which stale profile inference
+  is executed.
 
 - `--stale-threshold=<uint>`
 
