@@ -356,6 +356,22 @@ public:
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
+
+  /// Remove elements that match the given predicate.
+  template <typename UnaryPredicate>
+  void remove_if(UnaryPredicate P) {
+    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
+      const void *Value = *APtr;
+      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+        continue;
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      if (P(Ptr)) {
+        *APtr = getTombstoneMarker();
+        ++NumTombstones;
+      }
+    }
+  }
+
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
   size_type count(ConstPtrType Ptr) const {
     return find_imp(ConstPtrTraits::getAsVoidPointer(Ptr)) != EndPointer();
