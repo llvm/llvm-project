@@ -116,8 +116,6 @@ struct LlvmLibcExhaustiveMathTest
   using FPBits = typename Checker::FPBits;
   using StorageType = typename Checker::StorageType;
 
-  static constexpr StorageType INCREMENT = Increment;
-
   void explain_failed_range(std::stringstream &msg, StorageType x_begin,
                             StorageType x_end) {
 #ifdef LIBC_TYPES_HAS_FLOAT16
@@ -165,8 +163,8 @@ struct LlvmLibcExhaustiveMathTest
               return;
 
             range_begin = current_value;
-            if (stop >= INCREMENT && stop - INCREMENT >= current_value) {
-              range_end = current_value + INCREMENT;
+            if (stop >= Increment && stop - Increment >= current_value) {
+              range_end = current_value + Increment;
             } else {
               range_end = stop;
             }
