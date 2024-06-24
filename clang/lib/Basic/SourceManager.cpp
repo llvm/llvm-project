@@ -20,6 +20,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
@@ -45,6 +46,13 @@
 using namespace clang;
 using namespace SrcMgr;
 using llvm::MemoryBuffer;
+
+#define DEBUG_TYPE "source-manager"
+
+// Reaching a limit of 2^31 results in a hard error. This metric allows to track
+// if particular invocation of the compiler is close to it.
+STATISTIC(MaxUsedSLocBytes, "Maximum number of bytes used by source locations "
+                            "(both loaded and local).");
 
 //===----------------------------------------------------------------------===//
 // SourceManager Helper Classes
@@ -466,6 +474,7 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
   SLocEntryLoaded.resize(LoadedSLocEntryTable.size());
   SLocEntryOffsetLoaded.resize(LoadedSLocEntryTable.size());
   CurrentLoadedOffset -= TotalSize;
+  updateSlocUsageStats();
   int BaseID = -int(LoadedSLocEntryTable.size()) - 1;
   LoadedSLocEntryAllocBegin.push_back(FileID::get(BaseID));
   return std::make_pair(BaseID, CurrentLoadedOffset);
@@ -619,6 +628,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
   NextLocalOffset += FileSize + 1;
+  updateSlocUsageStats();
 
   // Set LastFileIDLookup to the newly created file.  The next getFileID call is
   // almost guaranteed to be from that file.
@@ -679,6 +689,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   }
   // See createFileID for that +1.
   NextLocalOffset += Length + 1;
+  updateSlocUsageStats();
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
 }
 
@@ -1841,6 +1852,12 @@ void SourceManager::associateFileChunkWithMacroArgExp(
   SourceLocation EndOffsMappedLoc = I->second;
   MacroArgsCache[BeginOffs] = ExpansionLoc;
   MacroArgsCache[EndOffs] = EndOffsMappedLoc;
+}
+
+void SourceManager::updateSlocUsageStats() const {
+  SourceLocation::UIntTy UsedBytes =
+      NextLocalOffset + (MaxLoadedOffset - CurrentLoadedOffset);
+  MaxUsedSLocBytes.updateMax(UsedBytes);
 }
 
 /// If \arg Loc points inside a function macro argument, the returned

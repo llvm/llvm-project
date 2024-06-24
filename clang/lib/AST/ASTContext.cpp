@@ -1110,6 +1110,31 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   CurrentCXXNamedModule = M;
 }
 
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+  if (!M1 != !M2)
+    return false;
+
+  /// Get the representative module for M. The representative module is the
+  /// first module unit for a specific primary module name. So that the module
+  /// units have the same representative module belongs to the same module.
+  ///
+  /// The process is helpful to reduce the expensive string operations.
+  auto GetRepresentativeModule = [this](const Module *M) {
+    auto Iter = SameModuleLookupSet.find(M);
+    if (Iter != SameModuleLookupSet.end())
+      return Iter->second;
+
+    const Module *RepresentativeModule =
+        PrimaryModuleNameMap.try_emplace(M->getPrimaryModuleInterfaceName(), M)
+            .first->second;
+    SameModuleLookupSet[M] = RepresentativeModule;
+    return RepresentativeModule;
+  };
+
+  assert(M1 && "Shouldn't call `isInSameModule` if both M1 and M2 are none.");
+  return GetRepresentativeModule(M1) == GetRepresentativeModule(M2);
+}
+
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
   if (!ExternCContext)
     ExternCContext = ExternCContextDecl::Create(*this, getTranslationUnitDecl());

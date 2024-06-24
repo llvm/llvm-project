@@ -6318,8 +6318,8 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
