@@ -35,7 +35,8 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   // to the list.
   SmallVector<Constant *, 16> CurrentCtors;
   StructType *EltTy;
-  if (GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName)) {
+  GlobalVariable *GVCtor = M.getNamedGlobal(ArrayName);
+  if (GVCtor) {
     EltTy = cast<StructType>(GVCtor->getValueType()->getArrayElementType());
     if (Constant *Init = GVCtor->getInitializer()) {
       unsigned n = Init->getNumOperands();
@@ -43,7 +44,6 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
       for (unsigned i = 0; i != n; ++i)
         CurrentCtors.push_back(cast<Constant>(Init->getOperand(i)));
     }
-    GVCtor->eraseFromParent();
   } else {
     EltTy = StructType::get(IRB.getInt32Ty(),
                             PointerType::get(FnTy, F->getAddressSpace()),
@@ -67,8 +67,14 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
 
   // Create the new global variable and replace all uses of
   // the old global variable with the new one.
-  (void)new GlobalVariable(M, NewInit->getType(), false,
-                           GlobalValue::AppendingLinkage, NewInit, ArrayName);
+  auto *NewGVCtor =
+      new GlobalVariable(M, NewInit->getType(), false,
+                         GlobalValue::AppendingLinkage, NewInit, ArrayName);
+  if (GVCtor) {
+    NewGVCtor->takeName(GVCtor);
+    GVCtor->replaceAllUsesWith(NewGVCtor);
+    GVCtor->eraseFromParent();
+  }
 }
 
 void llvm::appendToGlobalCtors(Module &M, Function *F, int Priority, Constant *Data) {
