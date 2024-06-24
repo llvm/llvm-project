@@ -2962,7 +2962,10 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
   //                      ::= J # __export __fastcall
   //                      ::= Q # __vectorcall
   //                      ::= S # __attribute__((__swiftcall__)) // Clang-only
-  //                      ::= T # __attribute__((__swiftasynccall__))
+  //                      ::= W # __attribute__((__swiftasynccall__))
+  //                      ::= U # __attribute__((__preserve_most__))
+  //                      ::= V # __attribute__((__preserve_none__)) //
+  //                      Clang-only
   //                            // Clang-only
   //                      ::= w # __regcall
   //                      ::= x # __regcall4
@@ -2986,6 +2989,9 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
     case CC_Swift: Out << 'S'; break;
     case CC_SwiftAsync: Out << 'W'; break;
     case CC_PreserveMost: Out << 'U'; break;
+    case CC_PreserveNone:
+      Out << 'V';
+      break;
     case CC_X86RegCall:
       if (getASTContext().getLangOpts().RegCall4)
         Out << "x";
