@@ -3228,7 +3228,7 @@ Error BitcodeReader::parseConstants() {
         V = ConstantFP::get(
             CurTy, APFloat(APFloat::PPCDoubleDouble(), APInt(128, Record)));
       else
-        V = UndefValue::get(CurTy);
+        V = PoisonValue::get(CurTy);
       break;
     }
 
@@ -3251,7 +3251,7 @@ Error BitcodeReader::parseConstants() {
         V = BitcodeConstant::create(
             Alloc, CurTy, BitcodeConstant::ConstantVectorOpcode, Elts);
       } else {
-        V = UndefValue::get(CurTy);
+        V = PoisonValue::get(CurTy);
       }
       break;
     }
@@ -3332,7 +3332,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid unary op constexpr record");
       int Opc = getDecodedUnaryOpcode(Record[0], CurTy);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown unop.
+        V = PoisonValue::get(CurTy);  // Unknown unop.
       } else {
         V = BitcodeConstant::create(Alloc, CurTy, Opc, (unsigned)Record[1]);
       }
@@ -3343,7 +3343,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid binary op constexpr record");
       int Opc = getDecodedBinaryOpcode(Record[0], CurTy);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown binop.
+        V = PoisonValue::get(CurTy);  // Unknown binop.
       } else {
         uint8_t Flags = 0;
         if (Record.size() >= 4) {
@@ -3373,7 +3373,7 @@ Error BitcodeReader::parseConstants() {
         return error("Invalid cast constexpr record");
       int Opc = getDecodedCastOpcode(Record[0]);
       if (Opc < 0) {
-        V = UndefValue::get(CurTy);  // Unknown cast.
+        V = PoisonValue::get(CurTy);  // Unknown cast.
       } else {
         unsigned OpTyID = Record[1];
         Type *OpTy = getTypeByID(OpTyID);
