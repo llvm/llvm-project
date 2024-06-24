@@ -305,6 +305,9 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   Float128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
                                  fputil::quick_mul(cos_k_f128, sin_u));
 
+  // TODO: Add assertion if Ziv's accuracy tests fail in debug mode.
+  // https://github.com/llvm/llvm-project/issues/96452.
+
   return static_cast<double>(r);
 #endif // !LIBC_MATH_SIN_SKIP_ACCURATE_PASS
 }
