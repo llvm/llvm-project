@@ -67,7 +67,7 @@ Error checkBuffer(const MemoryBuffer &Buffer) {
   uint64_t TotalSize = 0;
   const char *Next = Buffer.getBufferStart();
   while (Next < Buffer.getBufferEnd()) {
-    auto *H = reinterpret_cast<const Header *>(Next);
+    const auto *H = reinterpret_cast<const Header *>(Next);
     if (H->Version != MEMPROF_RAW_VERSION) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
@@ -587,31 +587,27 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 std::vector<std::string>
 RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
   const char *Next = DataBuffer->getBufferStart();
-  // Use a set + vector since a profile file may contain multiple raw profile
+  // Use a SetVector since a profile file may contain multiple raw profile
   // dumps, each with segment information. We want them unique and in order they
   // were stored in the profile; the profiled binary should be the first entry.
   // The runtime uses dl_iterate_phdr and the "... first object visited by
   // callback is the main program."
   // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
-  std::vector<std::string> BuildIds;
-  llvm::SmallSet<std::string, 10> BuildIdsSet;
+  llvm::SetVector<std::string, std::vector<std::string>,
+                  llvm::SmallSet<std::string, 10>>
+      BuildIds;
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
 
-    for (const auto &Entry : Entries) {
-      const std::string Id = getBuildIdString(Entry);
-      if (BuildIdsSet.contains(Id))
-        continue;
-      BuildIds.push_back(Id);
-      BuildIdsSet.insert(Id);
-    }
+    for (const auto &Entry : Entries)
+      BuildIds.insert(getBuildIdString(Entry));
 
     Next += Header->TotalSize;
   }
-  return BuildIds;
+  return BuildIds.takeVector();
 }
 
 Error RawMemProfReader::readRawProfile(
@@ -619,7 +615,7 @@ Error RawMemProfReader::readRawProfile(
   const char *Next = DataBuffer->getBufferStart();
 
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     // Read in the segment information, check whether its the same across all
     // profiles in this binary file.
@@ -694,7 +690,7 @@ Error RawMemProfReader::readNextRecord(
       return F;
     auto Iter = this->GuidToSymbolName.find(F.Function);
     assert(Iter != this->GuidToSymbolName.end());
-    F.SymbolName = Iter->getSecond();
+    F.SymbolName = std::make_unique<std::string>(Iter->getSecond());
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);

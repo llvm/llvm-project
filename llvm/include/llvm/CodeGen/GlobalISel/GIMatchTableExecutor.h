@@ -212,6 +212,10 @@ enum {
   /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
 
+  /// Check if there's one use of the first result.
+  /// - InsnID(ULEB128) - Instruction ID
+  GIM_CheckHasOneUse,
+
   /// Check the type for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index

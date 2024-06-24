@@ -674,10 +674,10 @@ __builtin_sqrt(f);       __builtin_sqrtf(f);      __builtin_sqrtl(f); __builtin_
 
 __builtin_tan(f);        __builtin_tanf(f);       __builtin_tanl(f); __builtin_tanf128(f);
 
-// NO__ERRNO: declare double @tan(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @tanf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[READNONE]]
-// NO__ERRNO: declare fp128 @tanf128(fp128 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.tan.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.tan.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.tan.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.tan.f128(fp128) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @tan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]

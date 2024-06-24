@@ -1044,11 +1044,12 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   if (!NoFinalize) {
     if (MAI.hasSubsectionsViaSymbols()) {
       for (const auto &TableEntry : getContext().getSymbols()) {
-        MCSymbol *Sym = TableEntry.getValue();
+        MCSymbol *Sym = TableEntry.getValue().Symbol;
         // Variable symbols may not be marked as defined, so check those
         // explicitly. If we know it's a variable, we have a definition for
         // the purposes of this check.
-        if (Sym->isTemporary() && !Sym->isVariable() && !Sym->isDefined())
+        if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
+            !Sym->isDefined())
           // FIXME: We would really like to refer back to where the symbol was
           // first referenced for a source location. We need to add something
           // to track that. Currently, we just point to the end of the file.
@@ -2580,7 +2581,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
         OS << NumOfMacroInstantiations;
         Pos += 2;
       } else if (Argument == "+") {
-        OS << Macro.Count++;
+        OS << Macro.Count;
         Pos += 2;
       } else {
         for (; Index < NParameters; ++Index)
@@ -2629,6 +2630,7 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
     Body = Body.substr(Pos);
   }
 
+  ++Macro.Count;
   return false;
 }
 
@@ -2920,6 +2922,10 @@ void AsmParser::handleMacroExit() {
   // Jump to the EndOfStatement we should return to, and consume it.
   jumpToLoc(ActiveMacros.back()->ExitLoc, ActiveMacros.back()->ExitBuffer);
   Lex();
+  // If .endm/.endr is followed by \n instead of a comment, consume it so that
+  // we don't print an excess \n.
+  if (getTok().is(AsmToken::EndOfStatement))
+    Lex();
 
   // Pop the instantiation entry.
   delete ActiveMacros.back();
@@ -5624,27 +5630,22 @@ MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
       return nullptr;
     }
 
-    if (Lexer.is(AsmToken::Identifier) &&
-        (getTok().getIdentifier() == ".rep" ||
-         getTok().getIdentifier() == ".rept" ||
-         getTok().getIdentifier() == ".irp" ||
-         getTok().getIdentifier() == ".irpc")) {
-      ++NestLevel;
-    }
-
-    // Otherwise, check whether we have reached the .endr.
-    if (Lexer.is(AsmToken::Identifier) && getTok().getIdentifier() == ".endr") {
-      if (NestLevel == 0) {
-        EndToken = getTok();
-        Lex();
-        if (Lexer.isNot(AsmToken::EndOfStatement)) {
-          printError(getTok().getLoc(),
-                     "unexpected token in '.endr' directive");
+    if (Lexer.is(AsmToken::Identifier)) {
+      StringRef Ident = getTok().getIdentifier();
+      if (Ident == ".rep" || Ident == ".rept" || Ident == ".irp" ||
+          Ident == ".irpc") {
+        ++NestLevel;
+      } else if (Ident == ".endr") {
+        if (NestLevel == 0) {
+          EndToken = getTok();
+          Lex();
+          if (Lexer.is(AsmToken::EndOfStatement))
+            break;
+          printError(getTok().getLoc(), "expected newline");
           return nullptr;
         }
-        break;
+        --NestLevel;
       }
-      --NestLevel;
     }
 
     // Otherwise, scan till the end of the statement.
@@ -6079,8 +6080,7 @@ bool AsmParser::parseMSInlineAsm(
 
   // Set the unique clobbers.
   array_pod_sort(ClobberRegs.begin(), ClobberRegs.end());
-  ClobberRegs.erase(std::unique(ClobberRegs.begin(), ClobberRegs.end()),
-                    ClobberRegs.end());
+  ClobberRegs.erase(llvm::unique(ClobberRegs), ClobberRegs.end());
   Clobbers.assign(ClobberRegs.size(), std::string());
   for (unsigned I = 0, E = ClobberRegs.size(); I != E; ++I) {
     raw_string_ostream OS(Clobbers[I]);

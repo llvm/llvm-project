@@ -85,7 +85,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Sect, const MCExpr *Subsect) override;
+  void changeSection(MCSection *Sect, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
@@ -155,16 +155,16 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   if (SegName == "__TEXT" && SecName == "__eh_frame")
     return true;
 
-  if (SegName == "__DATA" && (SecName == "__nl_symbol_ptr" ||
-                              SecName == "__thread_ptr"))
+  if (SegName == "__DATA" &&
+      (SecName == "__llvm_addrsig" || SecName == "__nl_symbol_ptr" ||
+       SecName == "__thread_ptr"))
     return true;
-  if (SegName == "__LLVM" && SecName == "__cg_profile")
+  if (SegName == "__LLVM" && (SecName == "__cg_profile"))
     return true;
   return false;
 }
 
-void MCMachOStreamer::changeSection(MCSection *Section,
-                                    const MCExpr *Subsection) {
+void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Change the section normally.
   bool Created = changeSectionImpl(Section, Subsection);
   const MCSectionMachO &MSec = *cast<MCSectionMachO>(Section);
@@ -199,7 +199,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (getAssembler().isSymbolLinkerVisible(*Symbol))
-    insert(new MCDataFragment());
+    insert(getContext().allocFragment<MCDataFragment>());
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -519,11 +519,13 @@ void MCMachOStreamer::finishImpl() {
   // Set the fragment atom associations by tracking the last seen atom defining
   // symbol.
   for (MCSection &Sec : getAssembler()) {
+    cast<MCSectionMachO>(Sec).allocAtoms();
     const MCSymbol *CurrentAtom = nullptr;
+    size_t I = 0;
     for (MCFragment &Frag : Sec) {
       if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
         CurrentAtom = Symbol;
-      Frag.setAtom(CurrentAtom);
+      cast<MCSectionMachO>(Sec).setAtom(I++, CurrentAtom);
     }
   }
 
@@ -552,12 +554,13 @@ void MCMachOStreamer::finalizeCGProfile() {
   // and set its size now so that it's accounted for in layout.
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-  Asm.registerSection(*CGProfileSection);
-  auto *Frag = new MCDataFragment(CGProfileSection);
+  changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  Frag->getContents().resize(SectionBytes);
+  cast<MCDataFragment>(*CGProfileSection->begin())
+      .getContents()
+      .resize(SectionBytes);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -592,8 +595,10 @@ void MCMachOStreamer::createAddrSigSection() {
   // to be computed immediately after in order for it to be exported correctly.
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  Asm.registerSection(*AddrSigSection);
-  auto *Frag = new MCDataFragment(AddrSigSection);
+  changeSection(AddrSigSection);
+  auto *Frag = getContext().allocFragment<MCDataFragment>();
+  Frag->setParent(AddrSigSection);
+  AddrSigSection->addFragment(*Frag);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are

@@ -101,7 +101,7 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
   return success();
 }
 
-template <typename PolynoimalAttrTy, typename Monomial>
+template <typename Monomial>
 LogicalResult
 parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
                     llvm::StringSet<> &variables,
@@ -155,7 +155,7 @@ Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
   llvm::SmallVector<IntMonomial> monomials;
   llvm::StringSet<> variables;
 
-  if (failed(parsePolynomialAttr<IntPolynomialAttr, IntMonomial>(
+  if (failed(parsePolynomialAttr<IntMonomial>(
           parser, monomials, variables,
           [&](IntMonomial &monomial) -> OptionalParseResult {
             APInt parsedCoeff(apintBitWidth, 1);
@@ -175,7 +175,6 @@ Attribute IntPolynomialAttr::parse(AsmParser &parser, Type type) {
   }
   return IntPolynomialAttr::get(parser.getContext(), result.value());
 }
-
 Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
@@ -191,8 +190,8 @@ Attribute FloatPolynomialAttr::parse(AsmParser &parser, Type type) {
     return OptionalParseResult(result);
   };
 
-  if (failed(parsePolynomialAttr<FloatPolynomialAttr, FloatMonomial>(
-          parser, monomials, variables, parseAndStoreCoefficient))) {
+  if (failed(parsePolynomialAttr<FloatMonomial>(parser, monomials, variables,
+                                                parseAndStoreCoefficient))) {
     return {};
   }
 

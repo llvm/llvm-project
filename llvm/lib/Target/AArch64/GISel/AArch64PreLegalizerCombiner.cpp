@@ -554,6 +554,57 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+// Pushes ADD/SUB through extend instructions to decrease the number of extend
+// instruction at the end by allowing selection of {s|u}addl sooner
+
+// i32 add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
+bool matchPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        Register DstReg, Register SrcReg1, Register SrcReg2) {
+  assert((MI.getOpcode() == TargetOpcode::G_ADD ||
+          MI.getOpcode() == TargetOpcode::G_SUB) &&
+         "Expected a G_ADD or G_SUB instruction\n");
+
+  // Deal with vector types only
+  LLT DstTy = MRI.getType(DstReg);
+  if (!DstTy.isVector())
+    return false;
+
+  // Return true if G_{S|Z}EXT instruction is more than 2* source
+  Register ExtDstReg = MI.getOperand(1).getReg();
+  LLT Ext1SrcTy = MRI.getType(SrcReg1);
+  LLT Ext2SrcTy = MRI.getType(SrcReg2);
+  unsigned ExtDstScal = MRI.getType(ExtDstReg).getScalarSizeInBits();
+  unsigned Ext1SrcScal = Ext1SrcTy.getScalarSizeInBits();
+  if (((Ext1SrcScal == 8 && ExtDstScal == 32) ||
+       ((Ext1SrcScal == 8 || Ext1SrcScal == 16) && ExtDstScal == 64)) &&
+      Ext1SrcTy == Ext2SrcTy)
+    return true;
+
+  return false;
+}
+
+void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                        MachineIRBuilder &B, bool isSExt, Register DstReg,
+                        Register SrcReg1, Register SrcReg2) {
+  LLT SrcTy = MRI.getType(SrcReg1);
+  LLT MidTy = SrcTy.changeElementSize(SrcTy.getScalarSizeInBits() * 2);
+  unsigned Opc = isSExt ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
+  Register Ext1Reg = B.buildInstr(Opc, {MidTy}, {SrcReg1}).getReg(0);
+  Register Ext2Reg = B.buildInstr(Opc, {MidTy}, {SrcReg2}).getReg(0);
+  Register AddReg =
+      B.buildInstr(MI.getOpcode(), {MidTy}, {Ext1Reg, Ext2Reg}).getReg(0);
+
+  // G_SUB has to sign-extend the result.
+  // G_ADD needs to sext from sext and can sext or zext from zext, so the
+  // original opcode is used.
+  if (MI.getOpcode() == TargetOpcode::G_ADD)
+    B.buildInstr(Opc, {DstReg}, {AddReg});
+  else
+    B.buildSExt(DstReg, AddReg);
+
+  MI.eraseFromParent();
+}
+
 bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,
                         CombinerHelper &Helper, GISelChangeObserver &Observer) {
   // Try simplify G_UADDO with 8 or 16 bit operands to wide G_ADD and TBNZ if
@@ -772,8 +823,8 @@ void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -805,7 +856,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree *MDT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());

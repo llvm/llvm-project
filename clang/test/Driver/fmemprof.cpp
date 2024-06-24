@@ -1,7 +1,7 @@
-// RUN: %clangxx -target x86_64-linux-gnu -fmemory-profile %s -### 2>&1 | FileCheck %s
-// RUN: %clangxx -target x86_64-linux-gnu -fmemory-profile=foo %s -### 2>&1 | FileCheck %s --check-prefix=DIR
-// RUN: %clangxx -target x86_64-linux-gnu -fmemory-profile -fno-memory-profile %s -### 2>&1 | FileCheck %s --check-prefix=OFF
-// RUN: %clangxx -target x86_64-linux-gnu -fmemory-profile=foo -fno-memory-profile %s -### 2>&1 | FileCheck %s --check-prefix=OFF
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile %s -### 2>&1 | FileCheck %s
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile=foo %s -### 2>&1 | FileCheck %s --check-prefix=DIR
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile -fno-memory-profile %s -### 2>&1 | FileCheck %s --check-prefix=OFF
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile=foo -fno-memory-profile %s -### 2>&1 | FileCheck %s --check-prefix=OFF
 // CHECK: "-cc1" {{.*}} "-fmemory-profile"
 // CHECK: ld{{.*}}libclang_rt.memprof{{.*}}libclang_rt.memprof_cxx
 // DIR: "-cc1" {{.*}} "-fmemory-profile=foo"
@@ -9,7 +9,7 @@
 // OFF-NOT: "-fmemory-profile"
 // OFF-NOT: libclang_rt.memprof
 
-// RUN: %clangxx -target x86_64-linux-gnu -fmemory-profile-use=foo %s -### 2>&1 | FileCheck %s --check-prefix=USE
+// RUN: %clangxx --target=x86_64-linux-gnu -fmemory-profile-use=foo %s -### 2>&1 | FileCheck %s --check-prefix=USE
 // USE: "-cc1" {{.*}} "-fmemory-profile-use=foo"
 
 // RUN: not %clangxx --target=x86_64-linux-gnu -fmemory-profile -fmemory-profile-use=foo %s -### 2>&1 | FileCheck %s --check-prefix=CONFLICTWITHMEMPROFINSTR

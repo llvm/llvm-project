@@ -30,6 +30,13 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
+        {"SPV_INTEL_cache_controls",
+         SPIRV::Extension::Extension::SPV_INTEL_cache_controls},
+        {"SPV_INTEL_global_variable_fpga_decorations",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_global_variable_fpga_decorations},
+        {"SPV_INTEL_global_variable_host_access",
+         SPIRV::Extension::Extension::SPV_INTEL_global_variable_host_access},
         {"SPV_INTEL_optnone", SPIRV::Extension::Extension::SPV_INTEL_optnone},
         {"SPV_INTEL_usm_storage_classes",
          SPIRV::Extension::Extension::SPV_INTEL_usm_storage_classes},
@@ -47,6 +54,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_KHR_bit_instructions},
         {"SPV_KHR_linkonce_odr",
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
+        {"SPV_INTEL_inline_assembly",
+         SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",
@@ -55,6 +64,10 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_INTEL_variable_length_array},
         {"SPV_INTEL_function_pointers",
          SPIRV::Extension::Extension::SPV_INTEL_function_pointers},
+        {"SPV_KHR_shader_clock",
+         SPIRV::Extension::Extension::SPV_KHR_shader_clock},
+        {"SPV_KHR_cooperative_matrix",
+         SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
 };
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,

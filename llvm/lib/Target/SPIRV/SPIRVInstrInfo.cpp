@@ -47,6 +47,16 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   }
 }
 
+bool SPIRVInstrInfo::isInlineAsmDefInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstrInfo::isTypeDeclInstr(const MachineInstr &MI) const {
   auto &MRI = MI.getMF()->getRegInfo();
   if (MI.getNumDefs() >= 1 && MI.getOperand(0).isReg()) {
@@ -246,7 +256,8 @@ void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_fID ||
+  if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_ID64 ||
+      MI.getOpcode() == SPIRV::GET_fID || MI.getOpcode() == SPIRV::GET_fID64 ||
       MI.getOpcode() == SPIRV::GET_pID32 ||
       MI.getOpcode() == SPIRV::GET_pID64 || MI.getOpcode() == SPIRV::GET_vfID ||
       MI.getOpcode() == SPIRV::GET_vID || MI.getOpcode() == SPIRV::GET_vpID32 ||

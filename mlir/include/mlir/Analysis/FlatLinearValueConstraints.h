@@ -66,6 +66,10 @@ public:
   /// Return the kind of this object.
   Kind getKind() const override { return Kind::FlatLinearConstraints; }
 
+  /// Flag to control if conservative semi-affine bounds should be added in
+  /// `addBound()`.
+  enum class AddConservativeSemiAffineBounds { No = 0, Yes };
+
   /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
@@ -77,21 +81,39 @@ public:
   /// as a closed bound by +1/-1 respectively. In case of an EQ bound, it can
   /// only be added as a closed bound.
   ///
+  /// Conservative bounds for semi-affine expressions will be added if
+  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently only
+  /// covers semi-affine `mod` expressions, so `addBound()` will still fail if
+  /// it encounters a semi-affine `floordiv`, `ceildiv`, or `mul`. Note: If
+  /// enabled it is possible for the resulting constraint set to become empty if
+  /// a precondition of a conservative bound is found not to hold.
+  ///
   /// Note: The dimensions/symbols of this FlatLinearConstraints must match the
   /// dimensions/symbols of the affine map.
-  LogicalResult addBound(presburger::BoundType type, unsigned pos,
-                         AffineMap boundMap, bool isClosedBound);
+  LogicalResult addBound(
+      presburger::BoundType type, unsigned pos, AffineMap boundMap,
+      bool isClosedBound,
+      AddConservativeSemiAffineBounds = AddConservativeSemiAffineBounds::No);
 
   /// Adds a bound for the variable at the specified position with constraints
   /// being drawn from the specified bound map. In case of an EQ bound, the
   /// bound map is expected to have exactly one result. In case of a LB/UB, the
   /// bound map may have more than one result, for each of which an inequality
   /// is added.
+  ///
+  /// Conservative bounds for semi-affine expressions will be added if
+  /// `AddConservativeSemiAffineBounds` is set to `Yes`. This currently only
+  /// covers semi-affine `mod` expressions, so `addBound()` will still fail if
+  /// it encounters a semi-affine `floordiv`, `ceildiv`, or `mul`. Note: If
+  /// enabled it is possible for the resulting constraint set to become empty if
+  /// a precondition of a conservative bound is found not to hold.
+  ///
   /// Note: The dimensions/symbols of this FlatLinearConstraints must match the
   /// dimensions/symbols of the affine map. By default the lower bound is closed
   /// and the upper bound is open.
-  LogicalResult addBound(presburger::BoundType type, unsigned pos,
-                         AffineMap boundMap);
+  LogicalResult addBound(
+      presburger::BoundType type, unsigned pos, AffineMap boundMap,
+      AddConservativeSemiAffineBounds = AddConservativeSemiAffineBounds::No);
 
   /// The `addBound` overload above hides the inherited overloads by default, so
   /// we explicitly introduce them here.
@@ -193,7 +215,8 @@ protected:
   /// Note: This is a shared helper function of `addLowerOrUpperBound` and
   ///       `composeMatchingMap`.
   LogicalResult flattenAlignedMapAndMergeLocals(
-      AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
+      AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
+      bool addConservativeSemiAffineBounds = false);
 
   /// Prints the number of constraints, dimensions, symbols and locals in the
   /// FlatLinearConstraints. Also, prints for each variable whether there is
@@ -468,18 +491,19 @@ public:
 /// Flattens 'expr' into 'flattenedExpr', which contains the coefficients of the
 /// dimensions, symbols, and additional variables that represent floor divisions
 /// of dimensions, symbols, and in turn other floor divisions.  Returns failure
-/// if 'expr' could not be flattened (i.e., semi-affine is not yet handled).
+/// if 'expr' could not be flattened (i.e., an unhandled semi-affine was found).
 /// 'cst' contains constraints that connect newly introduced local variables
 /// to existing dimensional and symbolic variables. See documentation for
 /// AffineExprFlattener on how mod's and div's are flattened.
-LogicalResult getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
-                                     unsigned numSymbols,
-                                     SmallVectorImpl<int64_t> *flattenedExpr,
-                                     FlatLinearConstraints *cst = nullptr);
+LogicalResult
+getFlattenedAffineExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
+                       SmallVectorImpl<int64_t> *flattenedExpr,
+                       FlatLinearConstraints *cst = nullptr,
+                       bool addConservativeSemiAffineBounds = false);
 
 /// Flattens the result expressions of the map to their corresponding flattened
 /// forms and set in 'flattenedExprs'. Returns failure if any expression in the
-/// map could not be flattened (i.e., semi-affine is not yet handled). 'cst'
+/// map could not be flattened (i.e., an unhandled semi-affine was found). 'cst'
 /// contains constraints that connect newly introduced local variables to
 /// existing dimensional and / symbolic variables. See documentation for
 /// AffineExprFlattener on how mod's and div's are flattened. For all affine
@@ -490,7 +514,8 @@ LogicalResult getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
 LogicalResult
 getFlattenedAffineExprs(AffineMap map,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
-                        FlatLinearConstraints *cst = nullptr);
+                        FlatLinearConstraints *cst = nullptr,
+                        bool addConservativeSemiAffineBounds = false);
 LogicalResult
 getFlattenedAffineExprs(IntegerSet set,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,

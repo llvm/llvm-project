@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=52 %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPteams_simple
 subroutine teams_simple()

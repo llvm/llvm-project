@@ -227,6 +227,8 @@ private:
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
+  void SelectTable(MachineInstr &I, MachineRegisterInfo &MRI, unsigned NumVecs,
+                   unsigned Opc1, unsigned Opc2, bool isExt);
 
   bool selectIndexedExtLoad(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectIndexedLoad(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -595,8 +597,14 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
 /// Given a register bank, and size in bits, return the smallest register class
 /// that can represent that combination.
 static const TargetRegisterClass *
-getMinClassForRegBank(const RegisterBank &RB, unsigned SizeInBits,
+getMinClassForRegBank(const RegisterBank &RB, TypeSize SizeInBits,
                       bool GetAllRegSet = false) {
+  if (SizeInBits.isScalable()) {
+    assert(RB.getID() == AArch64::FPRRegBankID &&
+           "Expected FPR regbank for scalable type size");
+    return &AArch64::ZPRRegClass;
+  }
+
   unsigned RegBankID = RB.getID();
 
   if (RegBankID == AArch64::GPRRegBankID) {
@@ -937,8 +945,9 @@ getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
   Register SrcReg = I.getOperand(1).getReg();
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
-  unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+  TypeSize DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  TypeSize SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
 
   // Special casing for cross-bank copies of s1s. We can technically represent
   // a 1-bit value with any size of register. The minimum size for a GPR is 32
@@ -949,7 +958,7 @@ getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
   // register bank. Or make a new helper that carries along some constraint
   // information.
   if (SrcRegBank != DstRegBank && (DstSize == 1 && SrcSize == 1))
-    SrcSize = DstSize = 32;
+    SrcSize = DstSize = TypeSize::getFixed(32);
 
   return {getMinClassForRegBank(SrcRegBank, SrcSize, true),
           getMinClassForRegBank(DstRegBank, DstSize, true)};
@@ -1014,8 +1023,8 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       return false;
     }
 
-    unsigned SrcSize = TRI.getRegSizeInBits(*SrcRC);
-    unsigned DstSize = TRI.getRegSizeInBits(*DstRC);
+    const TypeSize SrcSize = TRI.getRegSizeInBits(*SrcRC);
+    const TypeSize DstSize = TRI.getRegSizeInBits(*DstRC);
     unsigned SubReg;
 
     // If the source bank doesn't support a subregister copy small enough,
@@ -4658,7 +4667,6 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
     Register LHS, Register RHS, CmpInst::Predicate CC,
     AArch64CC::CondCode Predicate, AArch64CC::CondCode OutCC,
     MachineIRBuilder &MIB) const {
-  // TODO: emit CMN as an optimization.
   auto &MRI = *MIB.getMRI();
   LLT OpTy = MRI.getType(LHS);
   unsigned CCmpOpc;
@@ -4666,10 +4674,12 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   if (CmpInst::isIntPredicate(CC)) {
     assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
     C = getIConstantVRegValWithLookThrough(RHS, MRI);
-    if (C && C->Value.ult(32))
+    if (!C || C->Value.sgt(31) || C->Value.slt(-31))
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+    else if (C->Value.ule(31))
       CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
     else
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMNWi : AArch64::CCMNXi;
   } else {
     assert(OpTy.getSizeInBits() == 16 || OpTy.getSizeInBits() == 32 ||
            OpTy.getSizeInBits() == 64);
@@ -4694,6 +4704,8 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
       MIB.buildInstr(CCmpOpc, {}, {LHS});
   if (CCmpOpc == AArch64::CCMPWi || CCmpOpc == AArch64::CCMPXi)
     CCmp.addImm(C->Value.getZExtValue());
+  else if (CCmpOpc == AArch64::CCMNWi || CCmpOpc == AArch64::CCMNXi)
+    CCmp.addImm(C->Value.abs().getZExtValue());
   else
     CCmp.addReg(RHS);
   CCmp.addImm(NZCV).addImm(Predicate);
@@ -6537,6 +6549,25 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_tbl2:
+    SelectTable(I, MRI, 2, AArch64::TBLv8i8Two, AArch64::TBLv16i8Two, false);
+    return true;
+  case Intrinsic::aarch64_neon_tbl3:
+    SelectTable(I, MRI, 3, AArch64::TBLv8i8Three, AArch64::TBLv16i8Three,
+                false);
+    return true;
+  case Intrinsic::aarch64_neon_tbl4:
+    SelectTable(I, MRI, 4, AArch64::TBLv8i8Four, AArch64::TBLv16i8Four, false);
+    return true;
+  case Intrinsic::aarch64_neon_tbx2:
+    SelectTable(I, MRI, 2, AArch64::TBXv8i8Two, AArch64::TBXv16i8Two, true);
+    return true;
+  case Intrinsic::aarch64_neon_tbx3:
+    SelectTable(I, MRI, 3, AArch64::TBXv8i8Three, AArch64::TBXv16i8Three, true);
+    return true;
+  case Intrinsic::aarch64_neon_tbx4:
+    SelectTable(I, MRI, 4, AArch64::TBXv8i8Four, AArch64::TBXv16i8Four, true);
+    return true;
   case Intrinsic::swift_async_context_addr:
     auto Sub = MIB.buildInstr(AArch64::SUBXri, {I.getOperand(0).getReg()},
                               {Register(AArch64::FP)})
@@ -6550,6 +6581,30 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     return true;
   }
   return false;
+}
+
+void AArch64InstructionSelector::SelectTable(MachineInstr &I,
+                                             MachineRegisterInfo &MRI,
+                                             unsigned NumVec, unsigned Opc1,
+                                             unsigned Opc2, bool isExt) {
+  Register DstReg = I.getOperand(0).getReg();
+  unsigned Opc = MRI.getType(DstReg) == LLT::fixed_vector(8, 8) ? Opc1 : Opc2;
+
+  // Create the REG_SEQUENCE
+  SmallVector<Register, 4> Regs;
+  for (unsigned i = 0; i < NumVec; i++)
+    Regs.push_back(I.getOperand(i + 2 + isExt).getReg());
+  Register RegSeq = createQTuple(Regs, MIB);
+
+  Register IdxReg = I.getOperand(2 + NumVec + isExt).getReg();
+  MachineInstrBuilder Instr;
+  if (isExt) {
+    Register Reg = I.getOperand(2).getReg();
+    Instr = MIB.buildInstr(Opc, {DstReg}, {Reg, RegSeq, IdxReg});
+  } else
+    Instr = MIB.buildInstr(Opc, {DstReg}, {RegSeq, IdxReg});
+  constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+  I.eraseFromParent();
 }
 
 InstructionSelector::ComplexRendererFns
