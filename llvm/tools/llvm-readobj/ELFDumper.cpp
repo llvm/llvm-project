@@ -7396,11 +7396,12 @@ void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
     StringRef Value = this->getDynamicString(Entry.getVal());
     ListScope L(this->W, "Path");
     while (!Value.empty()) {
-      auto [front, back] = Value.split(':');
-      this->W.printString(front);
-      Value = back;
+      auto [Front, Back] = Value.split(':');
+      this->W.printString(Front);
+      Value = Back;
     }
-  } break;
+    break;
+  }
   case DT_FLAGS:
     FormatFlags(ArrayRef(ElfDynamicDTFlags));
     break;
