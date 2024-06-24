@@ -507,6 +507,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
   case BuiltinType::Id:
+#define AARCH64_SCALAR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
       {

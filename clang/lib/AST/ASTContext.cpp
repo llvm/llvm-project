@@ -2245,6 +2245,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = NumEls * ElBits * NF;                                              \
     Align = NumEls * ElBits;                                                   \
     break;
+#define AARCH64_SCALAR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:                                                        \
+    Width = 8;                                                                 \
+    Align = 8;                                                                 \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
@@ -4372,6 +4377,11 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   case BuiltinType::Id:                                                        \
     return {getIntTypeForBitwidth(ElBits, false),                              \
             llvm::ElementCount::getFixed(NumEls), NF};
+#define AARCH64_SCALAR_TYPE_MFLOAT(Name, MangledName, Id, SingletonId, NumEls, \
+                                   ElBits, NF)                                 \
+  case BuiltinType::Id:                                                        \
+    return {getIntTypeForBitwidth(ElBits, false),                              \
+            llvm::ElementCount::getFixed(NumEls), NF};
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
@@ -4439,6 +4449,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
     return SingletonId;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
 #define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)
+#define AARCH64_SCALAR_TYPE(Name, MangledName, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);

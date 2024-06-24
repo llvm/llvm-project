@@ -2496,6 +2496,9 @@ bool Type::isSVESizelessBuiltinType() const {
 #define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
   case BuiltinType::Id:                                                        \
     return false;
+#define AARCH64_SCALAR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:                                                        \
+    return false;
 #include "clang/Basic/AArch64SVEACLETypes.def"
     default:
       return false;
