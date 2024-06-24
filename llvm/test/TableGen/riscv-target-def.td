@@ -183,9 +183,9 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 
 // CHECK: #ifdef GET_RISCVExtensionBitmaskTable_IMPL
 // CHECK-NEXT: static const RISCVExtensionBitmask ExtensionBitmask[]={
-// CHECK-NEXT:     {"f", 0, 8589934592ULL},
-// CHECK-NEXT:     {"i", 0, 1ULL},
-// CHECK-NEXT:     {"zicsr", 0, 1024ULL},
-// CHECK-NEXT:     {"zifencei", 0, 8192ULL},
+// CHECK-NEXT:     {"f", 0, 33ULL},
+// CHECK-NEXT:     {"i", 0, 0ULL},
+// CHECK-NEXT:     {"zicsr", 0, 10ULL},
+// CHECK-NEXT:     {"zifencei", 0, 13ULL},
 // CHECK-NEXT: };
 // CHECK-NEXT: #endif

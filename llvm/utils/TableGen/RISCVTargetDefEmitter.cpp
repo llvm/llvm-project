@@ -223,6 +223,15 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B,
   return Value;
 }
 
+static unsigned getBitPosFromValue(uint64_t Val) {
+  int Pos = 0;
+  while (Val > 1) {
+    Pos += 1;
+    Val >>= 1;
+  }
+  return Pos;
+}
+
 static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
   std::vector<Record *> Extensions =
@@ -253,7 +262,7 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
     OS << "    {"
        << "\"" << ExtName << "\""
-       << ", " << GroupIDVal << ", " << BitmaskVal << "ULL"
+       << ", " << GroupIDVal << ", " << getBitPosFromValue(BitmaskVal) << "ULL"
        << "},\n";
   }
   OS << "};\n";
