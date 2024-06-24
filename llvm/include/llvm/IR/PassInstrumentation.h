@@ -149,11 +149,6 @@ public:
     AnalysesClearedCallbacks.emplace_back(std::move(C));
   }
 
-  template <typename CallableT>
-  void registerClassToPassNameCallback(CallableT C) {
-    ClassToPassNameCallbacks.emplace_back(std::move(C));
-  }
-
   /// Add a class name to pass name mapping for use by pass instrumentation.
   void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
@@ -190,7 +185,6 @@ private:
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
 
-  SmallVector<llvm::unique_function<void ()>, 4> ClassToPassNameCallbacks;
   DenseMap<StringRef, std::string> ClassToPassName;
 };
 
