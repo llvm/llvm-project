@@ -209,7 +209,7 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
   // If the client wants to know about all new instructions, tell it.
   if (InsertedPHIs) InsertedPHIs->push_back(InsertedPHI);
 
-  LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI << "\n");
+  LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *InsertedPHI);
   return InsertedPHI.getReg(0);
 }
 
@@ -239,16 +239,18 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
   // Insert a COPY if needed to satisfy register class constraints for the using
   // MO. Or, if possible, just constrain the class for NewVR to avoid the need
   // for a COPY.
-  const TargetRegisterClass *UseRC =
-      dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
-  if (NewVR && UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
-    MachineBasicBlock *UseBB = UseMI->getParent();
-    MachineInstr *InsertedCopy =
-        InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
-                     RegAttrs, MRI, TII)
-        .addReg(NewVR);
-    NewVR = InsertedCopy->getOperand(0).getReg();
-    LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy << "\n");
+  if (NewVR) {
+    const TargetRegisterClass *UseRC =
+        dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
+    if (UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
+      MachineBasicBlock *UseBB = UseMI->getParent();
+      MachineInstr *InsertedCopy =
+          InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
+                       RegAttrs, MRI, TII)
+              .addReg(NewVR);
+      NewVR = InsertedCopy->getOperand(0).getReg();
+      LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy);
+    }
   }
   U.setReg(NewVR);
 }
