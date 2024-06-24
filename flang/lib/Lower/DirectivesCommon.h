@@ -148,17 +148,13 @@ static inline void genOmpAccAtomicCaptureStatement(
     mlir::Operation *atomicCaptureOp = nullptr) {
   // Generate `atomic.read` operation for atomic assigment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Value oldToAddress = toAddress;
-  if (fromAddress.getType() != oldToAddress.getType()) {
+  mlir::Type fromTy = fromAddress.getType();
+  mlir::Type toTy = toAddress.getType();
+  if (fromTy != toTy) {
     auto insertionPoint = firOpBuilder.saveInsertionPoint();
     if (atomicCaptureOp)
       firOpBuilder.setInsertionPoint(atomicCaptureOp);
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(loc, elementType);
-    auto declareOp = firOpBuilder.create<hlfir::DeclareOp>(
-        loc, alloca, ".atomic.read.temp", /*shape=*/nullptr,
-        llvm::ArrayRef<mlir::Value>{},
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-    toAddress = declareOp.getBase();
+    toAddress = firOpBuilder.create<fir::ConvertOp>(loc, fromTy, toAddress);
     if (atomicCaptureOp)
       firOpBuilder.restoreInsertionPoint(insertionPoint);
   }
@@ -182,24 +178,6 @@ static inline void genOmpAccAtomicCaptureStatement(
   } else {
     firOpBuilder.create<mlir::acc::AtomicReadOp>(
         loc, fromAddress, toAddress, mlir::TypeAttr::get(elementType));
-  }
-
-  if (fromAddress.getType() != oldToAddress.getType()) {
-    auto insertionPoint = firOpBuilder.saveInsertionPoint();
-    if (atomicCaptureOp)
-      firOpBuilder.setInsertionPointAfter(atomicCaptureOp);
-    mlir::Value load = firOpBuilder.create<fir::LoadOp>(loc, toAddress);
-    if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(elementType)) {
-      mlir::Value extractValue =
-          fir::factory::Complex{firOpBuilder, loc}.extractComplexPart(load,
-                                                                      false);
-      load = extractValue;
-    }
-    mlir::Value convert = firOpBuilder.create<fir::ConvertOp>(
-        loc, fir::unwrapRefType(oldToAddress.getType()), load);
-    firOpBuilder.create<fir::StoreOp>(loc, convert, oldToAddress);
-    if (atomicCaptureOp)
-      firOpBuilder.restoreInsertionPoint(insertionPoint);
   }
 }
 
