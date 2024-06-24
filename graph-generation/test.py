@@ -13,6 +13,8 @@ def config_logger():
 
 config_logger()
 
+REAL_WORLD_DIR = 'vul-parser-benchmark/tests'
+
 def update_paths(root):
     src = '/home/thebesttv/vul/llvm-project/graph-generation'
     dst = root
@@ -28,6 +30,10 @@ def get_directories(root):
 def get_test_cases(root):
     # get all directories under root
     directories = get_directories(root)
+    # 额外处理真实项目测试集：https://github.com/thebesttv/vul-parser-benchmark
+    if 'vul-parser-benchmark' in directories:
+        directories += [os.path.join(REAL_WORLD_DIR, d)
+                        for d in get_directories(os.path.join(root, REAL_WORLD_DIR))]
     logging.info(f'Found {len(directories)} directories')
     results = []
     for dir in directories:
@@ -51,10 +57,16 @@ def read_output(path):
 
 def run_case(root, dir, input_path, output_path, tool_path):
     logging.info(f"Running test case: {dir}")
+
+    extra_options = []
+    if dir.startswith(REAL_WORLD_DIR):
+        logging.info("  Real-world testcase! Do not generate NPE good source")
+        extra_options += ['--no-npe-good-source']
+
     original_output = read_output(output_path)
     os.remove(output_path)
 
-    cmd = f'{tool_path} {input_path}'
+    cmd = f'{tool_path} {" ".join(extra_options)} {input_path}'
     subprocess.run(cmd, shell=True, \
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, \
                    check=True)
