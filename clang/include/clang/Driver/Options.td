@@ -8770,3 +8770,11 @@ def spirv : DXCFlag<"spirv">,
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;
+def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Disable the wasm-opt optimizer">,
+  MarshallingInfoFlag<LangOpts<"NoWasmOpt">>;
+def wasm_opt : Flag<["--"], "wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Enable the wasm-opt optimizer (default)">,
+  MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
