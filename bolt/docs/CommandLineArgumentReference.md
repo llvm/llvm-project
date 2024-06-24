@@ -804,8 +804,8 @@
 
 - `--stale-matching-min-matched-block=<uint>`
 
-  Minimum percent of exact match block for a function to be considered for
-  profile inference.
+  Percentage threshold of matched basic blocks at which stale profile inference
+  is executed.
 
 - `--stale-threshold=<uint>`
 
