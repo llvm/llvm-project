@@ -743,7 +743,7 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   }
 
   // Adjust the load offset.
-  auto laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
+  auto laneId = rewriter.create<gpu::LaneIdOp>(loc);
   FailureOr<AffineMap> offsets =
       nvgpu::getLaneIdToLdMatrixMatrixCoord(rewriter, loc, *params);
   if (failed(offsets)) {
@@ -782,7 +782,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
             "conversion to distributed non-ldmatrix compatible load");
   }
 
-  Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
+  Value laneId = rewriter.create<gpu::LaneIdOp>(loc);
   SmallVector<Value, 4> elements;
 
   // This is the individual element type.
@@ -917,7 +917,7 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
     return rewriter.notifyMatchFailure(op, "not mma sync reg info");
 
   VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
-  Value laneId = rewriter.create<gpu::LaneIdOp>(loc, /*upperBound=*/nullptr);
+  Value laneId = rewriter.create<gpu::LaneIdOp>(loc);
 
   for (unsigned i = 0; i < vectorType.getShape()[0]; i++) {
     Value logicalValueId = rewriter.create<arith::ConstantOp>(

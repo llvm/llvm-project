@@ -27,8 +27,7 @@ namespace arm_sme {
 /// Pass to enable Armv9 Streaming SVE mode.
 std::unique_ptr<Pass> createEnableArmStreamingPass(
     const ArmStreamingMode = ArmStreamingMode::Streaming,
-    const ArmZaMode = ArmZaMode::Disabled, bool ifRequiredByOps = false,
-    bool ifContainsScalableVectors = false);
+    const ArmZaMode = ArmZaMode::Disabled, bool onlyIfRequiredByOps = false);
 
 /// Pass that fuses 'arm_sme.outerproduct' ops into 2-way or 4-way widening
 /// variants.

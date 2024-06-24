@@ -316,10 +316,7 @@ protected:
     };
   }
 
-  TestAST build(bool ResetPragmaIncludes = true) {
-    if (ResetPragmaIncludes) PI = PragmaIncludes();
-    return TestAST(Inputs);
-  }
+  TestAST build() { return TestAST(Inputs); }
 
   void createEmptyFiles(llvm::ArrayRef<StringRef> FileNames) {
     for (llvm::StringRef File : FileNames)
@@ -380,56 +377,6 @@ TEST_F(PragmaIncludeTest, IWYUKeep) {
   EXPECT_TRUE(PI.shouldKeep(FM.getFile("export2.h").get()));
   EXPECT_TRUE(PI.shouldKeep(FM.getFile("export3.h").get()));
   EXPECT_TRUE(PI.shouldKeep(FM.getFile("std/set").get()));
-}
-
-TEST_F(PragmaIncludeTest, AssociatedHeader) {
-  createEmptyFiles({"foo/main.h", "bar/main.h", "bar/other.h", "std/vector"});
-  auto IsKeep = [&](llvm::StringRef Name, TestAST &AST) {
-    return PI.shouldKeep(AST.fileManager().getFile(Name).get());
-  };
-
-  Inputs.FileName = "main.cc";
-  Inputs.ExtraArgs.push_back("-isystemstd");
-  {
-    Inputs.Code = R"cpp(
-      #include "foo/main.h"
-      #include "bar/main.h"
-    )cpp";
-    auto AST = build();
-    EXPECT_TRUE(IsKeep("foo/main.h", AST));
-    EXPECT_FALSE(IsKeep("bar/main.h", AST)) << "not first include";
-  }
-
-  {
-    Inputs.Code = R"cpp(
-      #include "bar/other.h"
-      #include "bar/main.h"
-    )cpp";
-    auto AST = build();
-    EXPECT_FALSE(IsKeep("bar/other.h", AST));
-    EXPECT_FALSE(IsKeep("bar/main.h", AST)) << "not first include";
-  }
-
-  {
-    Inputs.Code = R"cpp(
-      #include "foo/main.h"
-      #include "bar/other.h" // IWYU pragma: associated
-      #include <vector> // IWYU pragma: associated
-    )cpp";
-    auto AST = build();
-    EXPECT_TRUE(IsKeep("foo/main.h", AST));
-    EXPECT_TRUE(IsKeep("bar/other.h", AST));
-    EXPECT_TRUE(IsKeep("std/vector", AST));
-  }
-
-  Inputs.FileName = "vector.cc";
-  {
-    Inputs.Code = R"cpp(
-      #include <vector>
-    )cpp";
-    auto AST = build();
-    EXPECT_FALSE(IsKeep("std/vector", AST)) << "stdlib is not associated";
-  }
 }
 
 TEST_F(PragmaIncludeTest, IWYUPrivate) {
@@ -630,7 +577,7 @@ TEST_F(PragmaIncludeTest, OutlivesFMAndSM) {
   Inputs.MakeAction = nullptr; // Don't populate PI anymore.
 
   // Now this build gives us a new File&Source Manager.
-  TestAST Processed = build(/*ResetPragmaIncludes=*/false);
+  TestAST Processed = build();
   auto &FM = Processed.fileManager();
   auto PrivateFE = FM.getFile("private.h");
   assert(PrivateFE);
@@ -663,7 +610,7 @@ TEST_F(PragmaIncludeTest, CanRecordManyTimes) {
   // any IWYU pragmas. Make sure strings from previous recordings are still
   // alive.
   Inputs.Code = "";
-  build(/*ResetPragmaIncludes=*/false);
+  build();
   EXPECT_EQ(Public, "\"public.h\"");
 }
 } // namespace

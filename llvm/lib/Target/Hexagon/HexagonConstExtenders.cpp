@@ -218,8 +218,8 @@ namespace {
     HexagonConstExtenders() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineDominatorTree>();
+      AU.addPreserved<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -569,7 +569,7 @@ namespace {
 
 INITIALIZE_PASS_BEGIN(HexagonConstExtenders, "hexagon-cext-opt",
       "Hexagon constant-extender optimization", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(HexagonConstExtenders, "hexagon-cext-opt",
       "Hexagon constant-extender optimization", false, false)
 
@@ -1973,7 +1973,7 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   HST = &MF.getSubtarget<HexagonSubtarget>();
   HII = HST->getInstrInfo();
   HRI = HST->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MDT = &getAnalysis<MachineDominatorTree>();
   MRI = &MF.getRegInfo();
   AssignmentMap IMap;
 

@@ -5,31 +5,8 @@ Implementation plans for ``-fbounds-safety``
 .. contents::
    :local:
 
-Gradual updates with experimental flag
-======================================
-
-The feature will be implemented as a series of smaller PRs and we will guard our
-implementation with an experimental flag ``-fexperimental-bounds-safety`` until
-the usable model is fully available. Once the model is ready for use, we will
-expose the flag ``-fbounds-safety``.
-
-Possible patch sets
--------------------
-
-* External bounds annotations and the (late) parsing logic.
-* Internal bounds annotations (wide pointers) and their parsing logic.
-* Clang code generation for wide pointers with debug information.
-* Pointer cast semantics involving bounds annotations (this could be divided
-  into multiple sub-PRs).
-* CFG analysis for pairs of related pointer and count assignments and the likes.
-* Bounds check expressions in AST and the Clang code generation (this could also
-  be divided into multiple sub-PRs).
-
-Proposed implementation
-=======================
-
 External bounds annotations
----------------------------
+===========================
 
 The bounds annotations are C type attributes appertaining to pointer types. If
 an attribute is added to the position of a declaration attribute, e.g., ``int
@@ -37,7 +14,7 @@ an attribute is added to the position of a declaration attribute, e.g., ``int
 type of the declaration (``int *``).
 
 New sugar types
----------------
+===============
 
 An external bounds annotation creates a type sugar of the underlying pointer
 types. We will introduce a new sugar type, ``DynamicBoundsPointerType`` to
@@ -52,7 +29,7 @@ overloading. However, this design requires a separate logic to walk through the
 entire type hierarchy to check type compatibility of bounds annotations.
 
 Late parsing for C
-------------------
+==================
 
 A bounds annotation such as ``__counted_by(count)`` can be added to type of a
 struct field declaration where count is another field of the same struct
@@ -66,7 +43,7 @@ same logic. This requires introducing late parsing logic for C/C++ type
 attributes.
 
 Internal bounds annotations
----------------------------
+===========================
 
 ``__indexable`` and ``__bidi_indexable`` alter pointer representations to be
 equivalent to a struct with the pointer and the corresponding bounds fields.
@@ -88,7 +65,7 @@ operations returning wide pointers. Alternatively, a new ``TEK`` and an
 expression emitter dedicated to wide pointers could be introduced.
 
 Default bounds annotations
---------------------------
+==========================
 
 The model may implicitly add ``__bidi_indexable`` or ``__single`` depending on
 the context of the declaration that has the pointer type. ``__bidi_indexable``
@@ -102,7 +79,7 @@ This also requires the parser to reset the type of the declaration with the
 newly created type with the right default attribute.
 
 Promotion expression
---------------------
+====================
 
 A new expression will be introduced to represent the conversion from a pointer
 with an external bounds annotation, such as ``__counted_by``, to
@@ -111,7 +88,7 @@ CastExprs because it requires an extra subexpression(s) to provide the bounds
 information necessary to create a wide pointer.
 
 Bounds check expression
------------------------
+=======================
 
 Bounds checks are part of semantics defined in the ``-fbounds-safety`` language
 model. Hence, exposing the bounds checks and other semantic actions in the AST
@@ -121,7 +98,7 @@ and has the additional sub-expressions that are necessary to perform the check
 according to the kind.
 
 Paired assignment check
------------------------
+=======================
 
 ``-fbounds-safety`` enforces that variables or fields related with the same
 external bounds annotation (e.g., ``buf`` and ``count`` related with
@@ -146,7 +123,7 @@ provides a linear view of statements within each ``CFGBlock`` (Clang
 ``CFGBlock`` represents a single basic block in a source-level CFG).
 
 Bounds check optimizations
---------------------------
+==========================
 
 In ``-fbounds-safety``, the Clang frontend emits run-time checks for every
 memory dereference if the type system or analyses in the frontend couldn’t
@@ -252,3 +229,27 @@ solution.
 
 ``-fbounds-safety`` is not currently supported in C++, but we believe the
 general approach would be applicable for future efforts.
+
+Upstreaming plan
+================
+
+Gradual updates with experimental flag
+--------------------------------------
+
+The upstreaming will take place as a series of smaller PRs and we will guard our
+implementation with an experimental flag ``-fexperimental-bounds-safety`` until
+the usable model is fully upstreamed. Once the model is ready for use, we will
+expose the flag ``-fbounds-safety``.
+
+Possible patch sets
+-------------------
+
+* External bounds annotations and the (late) parsing logic.
+* Internal bounds annotations (wide pointers) and their parsing logic.
+* Clang code generation for wide pointers with debug information.
+* Pointer cast semantics involving bounds annotations (this could be divided
+  into multiple sub-PRs).
+* CFG analysis for pairs of related pointer and count assignments and the likes.
+* Bounds check expressions in AST and the Clang code generation (this could also
+  be divided into multiple sub-PRs).
+

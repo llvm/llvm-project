@@ -630,7 +630,7 @@ bool generateDsymCompanion(
 
   // Emit the Dwarf sections contents.
   for (const MCSection &Sec : MCAsm) {
-    if (Sec.empty())
+    if (Sec.begin() == Sec.end())
       continue;
 
     uint64_t Pos = OutFile.tell();

@@ -144,7 +144,7 @@ namespace fir {
 static void addCanonicalizerPassWithoutRegionSimplification(
     mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+  config.enableRegionSimplification = false;
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
@@ -260,7 +260,7 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // simplify the IR
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+  config.enableRegionSimplification = false;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
@@ -295,7 +295,6 @@ inline void createDefaultFIROptimizerPassPipeline(
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
-  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());
@@ -373,22 +372,24 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));
 
   // Add function attributes
-  mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
+  fir::FunctionAttrTypes functionAttrs;
 
   if (config.FramePointerKind != llvm::FramePointerKind::None ||
       config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
       config.NoSignedZerosFPMath || config.UnsafeFPMath) {
     if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
-      framePointerKind =
+      functionAttrs.framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
     else if (config.FramePointerKind == llvm::FramePointerKind::All)
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::All;
     else
-      framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttr({framePointerKind, config.NoInfsFPMath,
+    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
         config.NoNaNsFPMath, config.ApproxFuncFPMath,
-        config.NoSignedZerosFPMath, config.UnsafeFPMath}));
+        config.NoSignedZerosFPMath, config.UnsafeFPMath));
   }
 
   fir::addFIRToLLVMPass(pm, config);

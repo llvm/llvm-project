@@ -1639,16 +1639,11 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
-                                            const MCSymbol *TargetLocation,
-                                            MCContext *Ctx) override {
-    assert((DirectCall.getOpcode() == X86::CALL64pcrel32 ||
-            (DirectCall.getOpcode() == X86::JMP_4 && isTailCall(DirectCall))) &&
+  bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
+                                 MCContext *Ctx) override {
+    assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
+            (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
            "64-bit direct (tail) call instruction expected");
-
-    InstructionListType Code;
-    // Create a new indirect call by converting the previous direct call.
-    MCInst Inst = DirectCall;
     const auto NewOpcode =
         (Inst.getOpcode() == X86::CALL64pcrel32) ? X86::CALL64m : X86::JMP32m;
     Inst.setOpcode(NewOpcode);
@@ -1669,8 +1664,7 @@ public:
     Inst.insert(Inst.begin(),
                 MCOperand::createReg(X86::RIP));        // BaseReg
 
-    Code.emplace_back(Inst);
-    return Code;
+    return true;
   }
 
   void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {

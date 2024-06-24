@@ -8,7 +8,7 @@
 ;;   int x[sz];
 ;; }
 
-; CHECK: #dbg_declare(ptr %vla, ![[#]], !DIExpression(),
+; CHECK: llvm.dbg.declare(metadata ptr %vla, metadata ![[#]], metadata !DIExpression())
 
 @sz = dso_local global i32 0, align 4
 

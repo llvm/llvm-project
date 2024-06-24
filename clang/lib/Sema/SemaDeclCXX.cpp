@@ -1806,7 +1806,6 @@ static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
 static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                        Stmt *Body,
                                        Sema::CheckConstexprKind Kind);
-static bool CheckConstexprMissingReturn(Sema &SemaRef, const FunctionDecl *Dcl);
 
 // Check whether a function declaration satisfies the requirements of a
 // constexpr function definition or a constexpr constructor definition. If so,
@@ -2412,9 +2411,20 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     }
   } else {
     if (ReturnStmts.empty()) {
+      // C++1y doesn't require constexpr functions to contain a 'return'
+      // statement. We still do, unless the return type might be void, because
+      // otherwise if there's no return statement, the function cannot
+      // be used in a core constant expression.
+      bool OK = SemaRef.getLangOpts().CPlusPlus14 &&
+                (Dcl->getReturnType()->isVoidType() ||
+                 Dcl->getReturnType()->isDependentType());
       switch (Kind) {
       case Sema::CheckConstexprKind::Diagnose:
-        if (!CheckConstexprMissingReturn(SemaRef, Dcl))
+        SemaRef.Diag(Dcl->getLocation(),
+                     OK ? diag::warn_cxx11_compat_constexpr_body_no_return
+                        : diag::err_constexpr_body_no_return)
+            << Dcl->isConsteval();
+        if (!OK)
           return false;
         break;
 
@@ -2482,28 +2492,6 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   }
 
   return true;
-}
-
-static bool CheckConstexprMissingReturn(Sema &SemaRef,
-                                        const FunctionDecl *Dcl) {
-  bool IsVoidOrDependentType = Dcl->getReturnType()->isVoidType() ||
-                               Dcl->getReturnType()->isDependentType();
-  // Skip emitting a missing return error diagnostic for non-void functions
-  // since C++23 no longer mandates constexpr functions to yield constant
-  // expressions.
-  if (SemaRef.getLangOpts().CPlusPlus23 && !IsVoidOrDependentType)
-    return true;
-
-  // C++14 doesn't require constexpr functions to contain a 'return'
-  // statement. We still do, unless the return type might be void, because
-  // otherwise if there's no return statement, the function cannot
-  // be used in a core constant expression.
-  bool OK = SemaRef.getLangOpts().CPlusPlus14 && IsVoidOrDependentType;
-  SemaRef.Diag(Dcl->getLocation(),
-               OK ? diag::warn_cxx11_compat_constexpr_body_no_return
-                  : diag::err_constexpr_body_no_return)
-      << Dcl->isConsteval();
-  return OK;
 }
 
 bool Sema::CheckImmediateEscalatingFunctionDefinition(
@@ -3508,9 +3496,9 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     break;
   }
 
-  bool isInstField = (DS.getStorageClassSpec() == DeclSpec::SCS_unspecified ||
-                      DS.getStorageClassSpec() == DeclSpec::SCS_mutable) &&
-                     !isFunc && TemplateParameterLists.empty();
+  bool isInstField = ((DS.getStorageClassSpec() == DeclSpec::SCS_unspecified ||
+                       DS.getStorageClassSpec() == DeclSpec::SCS_mutable) &&
+                      !isFunc);
 
   if (DS.hasConstexprSpecifier() && isInstField) {
     SemaDiagnosticBuilder B =
@@ -3559,6 +3547,28 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     }
 
     IdentifierInfo *II = Name.getAsIdentifierInfo();
+
+    // Member field could not be with "template" keyword.
+    // So TemplateParameterLists should be empty in this case.
+    if (TemplateParameterLists.size()) {
+      TemplateParameterList* TemplateParams = TemplateParameterLists[0];
+      if (TemplateParams->size()) {
+        // There is no such thing as a member field template.
+        Diag(D.getIdentifierLoc(), diag::err_template_member)
+            << II
+            << SourceRange(TemplateParams->getTemplateLoc(),
+                TemplateParams->getRAngleLoc());
+      } else {
+        // There is an extraneous 'template<>' for this member.
+        Diag(TemplateParams->getTemplateLoc(),
+            diag::err_template_member_noparams)
+            << II
+            << SourceRange(TemplateParams->getTemplateLoc(),
+                TemplateParams->getRAngleLoc());
+      }
+      return nullptr;
+    }
+
     if (D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId) {
       Diag(D.getIdentifierLoc(), diag::err_member_with_template_arguments)
           << II
@@ -18684,15 +18694,11 @@ bool Sema::DefineUsedVTables() {
 
     bool DefineVTable = true;
 
+    // If this class has a key function, but that key function is
+    // defined in another translation unit, we don't need to emit the
+    // vtable even though we're using it.
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
-    // V-tables for non-template classes with an owning module are always
-    // uniquely emitted in that module.
-    if (Class->isInCurrentModuleUnit())
-      DefineVTable = true;
-    else if (KeyFunction && !KeyFunction->hasBody()) {
-      // If this class has a key function, but that key function is
-      // defined in another translation unit, we don't need to emit the
-      // vtable even though we're using it.
+    if (KeyFunction && !KeyFunction->hasBody()) {
       // The key function is in another translation unit.
       DefineVTable = false;
       TemplateSpecializationKind TSK =
@@ -18737,7 +18743,7 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
+    if (VTablesUsed[Canonical])
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

@@ -219,9 +219,6 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
-void mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags) {
-  unwrap(flags)->skipRegions();
-}
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//

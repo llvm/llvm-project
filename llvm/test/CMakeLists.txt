@@ -59,6 +59,7 @@ configure_lit_site_cfg(
 set(LLVM_TEST_DEPENDS
           BugpointPasses
           FileCheck
+          LLVMHello
           LLVMWindowsDriver
           UnitTests
           bugpoint

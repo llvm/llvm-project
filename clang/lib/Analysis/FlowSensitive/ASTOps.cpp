@@ -100,8 +100,7 @@ getFieldsForInitListExpr(const InitListT *InitList) {
   std::vector<const FieldDecl *> Fields;
 
   if (InitList->getType()->isUnionType()) {
-    if (const FieldDecl *Field = InitList->getInitializedFieldInUnion())
-      Fields.push_back(Field);
+    Fields.push_back(InitList->getInitializedFieldInUnion());
     return Fields;
   }
 
@@ -138,11 +137,9 @@ RecordInitListHelper::RecordInitListHelper(
   // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
   SmallVector<Expr *> InitsForUnion;
   if (Ty->isUnionType() && Inits.empty()) {
-    assert(Fields.size() <= 1);
-    if (!Fields.empty()) {
-      ImplicitValueInitForUnion.emplace(Fields.front()->getType());
-      InitsForUnion.push_back(&*ImplicitValueInitForUnion);
-    }
+    assert(Fields.size() == 1);
+    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
+    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
     Inits = InitsForUnion;
   }
 

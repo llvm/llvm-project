@@ -11,7 +11,6 @@
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolTableEntry.h"
 #include <cstdint>
 
 namespace llvm {
@@ -30,7 +29,7 @@ class MCSymbolCOFF : public MCSymbol {
   };
 
 public:
-  MCSymbolCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
+  MCSymbolCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
       : MCSymbol(SymbolKindCOFF, Name, isTemporary) {}
 
   uint16_t getType() const {

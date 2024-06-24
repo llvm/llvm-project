@@ -23,19 +23,17 @@
 
 namespace llvm {
 
-class MCAssembler;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
-class MCFragment {
+class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
-  friend class MCAssembler;
-  friend class MCSection;
 
 public:
   enum FragmentType : uint8_t {
     FT_Align,
+    FT_NeverAlign,
     FT_Data,
     FT_CompactEncodedInst,
     FT_Fill,
@@ -54,23 +52,31 @@ public:
   };
 
 private:
-  // The next fragment within the section.
-  MCFragment *Next = nullptr;
-
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
-  /// The offset of this fragment in its section.
-  uint64_t Offset = 0;
+  /// The atom this fragment is in, as represented by its defining symbol.
+  const MCSymbol *Atom;
+
+  /// The offset of this fragment in its section. This is ~0 until
+  /// initialized.
+  uint64_t Offset;
 
   /// The layout order of this fragment.
-  unsigned LayoutOrder = 0;
+  unsigned LayoutOrder;
+
+  /// The subsection this fragment belongs to. This is 0 if the fragment is not
+  // in any subsection.
+  unsigned SubsectionNumber = 0;
 
   FragmentType Kind;
 
+  /// Whether fragment is being laid out.
+  bool IsBeingLaidOut;
+
 protected:
-  bool HasInstructions : 1;
-  bool LinkerRelaxable : 1;
+  bool HasInstructions;
+  bool LinkerRelaxable = false;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -86,14 +92,13 @@ public:
   /// This method will dispatch to the appropriate subclass.
   void destroy();
 
-  MCFragment *getNext() const { return Next; }
-
   FragmentType getKind() const { return Kind; }
 
   MCSection *getParent() const { return Parent; }
   void setParent(MCSection *Value) { Parent = Value; }
 
-  const MCSymbol *getAtom() const;
+  const MCSymbol *getAtom() const { return Atom; }
+  void setAtom(const MCSymbol *Value) { Atom = Value; }
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
@@ -103,6 +108,9 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
+
+  void setSubsectionNumber(unsigned Value) { SubsectionNumber = Value; }
+  unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
 class MCDummyFragment : public MCFragment {
@@ -334,6 +342,27 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Align;
+  }
+};
+
+class MCNeverAlignFragment : public MCFragment {
+  /// The alignment the end of the next fragment should avoid.
+  unsigned Alignment;
+
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo &STI;
+
+public:
+  MCNeverAlignFragment(unsigned Alignment, const MCSubtargetInfo &STI,
+                       MCSection *Sec = nullptr)
+      : MCFragment(FT_NeverAlign, false, Sec), Alignment(Alignment), STI(STI) {}
+
+  unsigned getAlignment() const { return Alignment; }
+
+  const MCSubtargetInfo &getSubtargetInfo() const { return STI; }
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_NeverAlign;
   }
 };
 

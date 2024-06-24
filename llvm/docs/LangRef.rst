@@ -812,10 +812,6 @@ doesn't). These kinds of structs (we may call them homogeneous scalable vector
 structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
 
-Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
-alignments are not larger than that of a TOC entry. Optimizations should not
-increase their alignments to mitigate TOC overflow.
-
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
@@ -1602,10 +1598,8 @@ Currently, only the following parameter attributes are defined:
     through this pointer argument (even though it may read from the memory that
     the pointer points to).
 
-    This attribute is understood in the same way as the ``memory(write)``
-    attribute. That is, the pointer may still be read as long as the read is
-    not observable outside the function. See the ``memory`` documentation for
-    precise semantics.
+    If a function reads from a writeonly pointer argument, the behavior is
+    undefined.
 
 ``writable``
     This attribute is only meaningful in conjunction with ``dereferenceable(N)``
@@ -1978,21 +1972,6 @@ example:
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
       argument memory.
-
-    The supported access kinds are:
-
-    - ``readwrite``: Any kind of access to the location is allowed.
-    - ``read``: The location is only read. Writing to the location is immediate
-      undefined behavior. This includes the case where the location is read from
-      and then the same value is written back.
-    - ``write``: Only writes to the location are observable outside the function
-      call. However, the function may still internally read the location after
-      writing it, as this is not observable. Reading the location prior to
-      writing it results in a poison value.
-    - ``none``: No reads or writes to the location are observed outside the
-      function. It is always valid to read and write allocas, and to read global
-      constants, even if ``memory(none)`` is used, as these effects are not
-      externally observable.
 
     The supported memory location kinds are:
 
@@ -5679,7 +5658,7 @@ it. For example:
 
     call void asm sideeffect "something bad", ""(), !srcloc !42
     ...
-    !42 = !{ i64 1234567 }
+    !42 = !{ i32 1234567 }
 
 It is up to the front-end to make sense of the magic numbers it places
 in the IR. If the MDNode contains multiple constants, the code generator
@@ -6309,11 +6288,11 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug records <debugrecords>`
-(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
+expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
+(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
 referenced LLVM variable relates to the source language variable. Debug
-expressions are interpreted left-to-right: start by pushing the value/address
-operand of the record onto a stack, then repeatedly push and evaluate
+intrinsics are interpreted left-to-right: start by pushing the value/address
+operand of the intrinsic onto a stack, then repeatedly push and evaluate
 opcodes from the DIExpression until the final variable description is produced.
 
 The current supported opcode vocabulary is limited:
@@ -6410,24 +6389,23 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-      #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DILocation(line: 10, scope: !12)
+    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
 
     IR for "**ptr = 4;"
     --------------
-      #dbg_value(i32 4, !17,
-        !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
-        !21)
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DILocation(line: 10, scope: !12)
+    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
+                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -6438,48 +6416,45 @@ sense that a debugger might modify its value), whereas *implicit locations*
 describe merely the actual *value* of a source variable which might not exist
 in registers or in memory (see ``DW_OP_stack_value``).
 
-A ``#dbg_declare`` record describes an indirect value (the address) of a
-source variable. The first operand of the record must be an address of some
-kind. A DIExpression operand to the record refines this address to produce a
+A ``llvm.dbg.declare`` intrinsic describes an indirect value (the address) of a
+source variable. The first operand of the intrinsic must be an address of some
+kind. A DIExpression attached to the intrinsic refines this address to produce a
 concrete location for the source variable.
 
-A ``#dbg_value`` record describes the direct value of a source variable.
-The first operand of the record may be a direct or indirect value. A
-DIExpression operand to the record refines the first operand to produce a
+A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
+The first operand of the intrinsic may be a direct or indirect value. A
+DIExpression attached to the intrinsic refines the first operand to produce a
 direct value. For example, if the first operand is an indirect value, it may be
 necessary to insert ``DW_OP_deref`` into the DIExpression in order to produce a
-valid debug record.
+valid debug intrinsic.
 
 .. note::
 
    A DIExpression is interpreted in the same way regardless of which kind of
-   debug record it's attached to.
-
-   DIExpressions are always printed and parsed inline; they can never be
-   referenced by an ID (e.g. ``!1``).
+   debug intrinsic it's attached to.
 
 .. code-block:: text
 
-    !DIExpression(DW_OP_deref)
-    !DIExpression(DW_OP_plus_uconst, 3)
-    !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-    !DIExpression(DW_OP_bit_piece, 3, 7)
-    !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
-    !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
-    !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
+    !0 = !DIExpression(DW_OP_deref)
+    !1 = !DIExpression(DW_OP_plus_uconst, 3)
+    !1 = !DIExpression(DW_OP_constu, 3, DW_OP_plus)
+    !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
+    !3 = !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
+    !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
+    !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
 """"""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
-link together (:ref:`#dbg_assign records <debugrecords>`) and instructions
-that store in IR. See `Debug Info Assignment Tracking
-<AssignmentTracking.html>`_ for more info.
+link together `@llvm.dbg.assign` intrinsics (:ref:`debug
+intrinsics<dbg_intrinsics>`) and instructions that store in IR. See `Debug Info
+Assignment Tracking <AssignmentTracking.html>`_ for more info.
 
 .. code-block:: llvm
 
     store i32 %a, ptr %a.addr, align 4, !DIAssignID !2
-    #dbg_assign(%a, !1, !DIExpression(), !2, %a.addr, !DIExpression(), !3)
+    llvm.dbg.assign(metadata %a, metadata !1, metadata !DIExpression(), !2, metadata %a.addr, metadata !DIExpression()), !dbg !3
 
     !2 = distinct !DIAssignID()
 
@@ -6493,18 +6468,17 @@ DIArgList
    also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug records <debugrecords>` in combination with a
-``DIExpression`` that uses the
+used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
+``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
 ``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
 within a function, it must only be used as a function argument, must always be
 inlined, and cannot appear in named metadata.
 
 .. code-block:: text
 
-    #dbg_value(!DIArgList(i32 %a, i32 %b),
-               !16,
-               !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus),
-               !26)
+    llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %b),
+                   metadata !16,
+                   metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
 
 DIFlags
 """""""
@@ -11411,10 +11385,10 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of the allocated object that it
-   is :ref:`based <pointeraliasing>` on. This means that it points into that
-   allocated object, or to its end. Note that the object does not have to be
-   live anymore; being in-bounds of a deallocated object is sufficient.
+ * The base pointer has an *in bounds* address of an allocated object, which
+   means that it points into an allocated object, or to its end. Note that the
+   object does not have to be live anymore; being in-bounds of a deallocated
+   object is sufficient.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
@@ -12983,12 +12957,12 @@ an extra level of indentation. As an example:
     #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
-These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
-Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
-passed to LLVM; it is an error for both records and intrinsics to appear in the
-same module. More information about debug records can be found in the `LLVM
-Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
-document.
+These debug records are an optional replacement for
+:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
+``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
+records and intrinsics to appear in the same module. More information about
+debug records can be found in the `LLVM Source Level Debugging
+<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
 
 .. _intrinsics:
 
@@ -14432,7 +14406,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
-                                                   i32 <bitmap-bits>)
+                                                   i32 <bitmap-bytes>)
 
 Overview:
 """""""""
@@ -14450,7 +14424,7 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bits required by the function to
+The third argument is the number of bitmap bytes required by the function to
 record the number of test vectors executed for each boolean expression.
 
 Semantics:
@@ -14462,27 +14436,24 @@ to generate the appropriate data structures and the code to instrument MC/DC
 test vectors in a format that can be written out by a compiler runtime and
 consumed via the ``llvm-profdata`` tool.
 
-'``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.instrprof.mcdc.condbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 ::
 
-      declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
-                                                        i32 <bitmap-index>,
-                                                        ptr <mcdc-temp-addr>)
+      declare void @llvm.instrprof.mcdc.condbitmap.update(ptr <name>, i64 <hash>,
+                                                          i32 <condition-id>,
+                                                          ptr <mcdc-temp-addr>,
+                                                          i1 <bool-value>)
 
 Overview:
 """""""""
 
-The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
-test vector execution after each boolean expression has been fully executed.
-The overall value of the condition bitmap, after it has been successively
-updated with the true or false evaluation of each condition, uniquely identifies
-an executed MC/DC test vector and is used as a bit index into the global test
-vector bitmap.
+The '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic is used to track
+MC/DC condition evaluation for each condition in a boolean expression.
 
 Arguments:
 """"""""""
@@ -14494,10 +14465,64 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the bit index into the global test vector bitmap
+The third argument is an ID of a condition to track. This value is used as a
+bit index into the condition bitmap.
+
+The fourth argument is the address of the condition bitmap.
+
+The fifth argument is the boolean value representing the evaluation of the
+condition (true or false)
+
+Semantics:
+""""""""""
+
+This intrinsic represents the update of a condition bitmap that is local to a
+function and will cause the ``-instrprof`` pass to generate the code to
+instrument the control flow around each condition in a boolean expression. The
+ID of each condition corresponds to a bit index in the condition bitmap which
+is set based on the evaluation of the condition.
+
+'``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
+                                                        i32 <bitmap-bytes>)
+                                                        i32 <bitmap-index>,
+                                                        ptr <mcdc-temp-addr>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
+test vector execution after each boolean expression has been fully executed.
+The overall value of the condition bitmap, after it has been successively
+updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
+the true or false evaluation of each condition, uniquely identifies an executed
+MC/DC test vector and is used as a bit index into the global test vector
+bitmap.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is the number of bitmap bytes required by the function to
+record the number of test vectors executed for each boolean expression.
+
+The fourth argument is the byte index into the global test vector bitmap
 corresponding to the function.
 
-The fourth argument is the address of the condition bitmap, which contains a
+The fifth argument is the address of the condition bitmap, which contains a
 value representing an executed MC/DC test vector. It is loaded and used as the
 bit index of the test vector bitmap.
 
@@ -15401,228 +15426,6 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
-'``llvm.asin.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.asin`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.asin.f32(float  %Val)
-      declare double    @llvm.asin.f64(double %Val)
-      declare x86_fp80  @llvm.asin.f80(x86_fp80  %Val)
-      declare fp128     @llvm.asin.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.asin.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.asin.*``' intrinsics return the arcsine of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``asin``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
-'``llvm.acos.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.acos`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.acos.f32(float  %Val)
-      declare double    @llvm.acos.f64(double %Val)
-      declare x86_fp80  @llvm.acos.f80(x86_fp80  %Val)
-      declare fp128     @llvm.acos.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.acos.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.acos.*``' intrinsics return the arccosine of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``acos``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
-'``llvm.atan.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.atan`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.atan.f32(float  %Val)
-      declare double    @llvm.atan.f64(double %Val)
-      declare x86_fp80  @llvm.atan.f80(x86_fp80  %Val)
-      declare fp128     @llvm.atan.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.atan.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.atan.*``' intrinsics return the arctangent of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``atan``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
-'``llvm.sinh.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.sinh`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.sinh.f32(float  %Val)
-      declare double    @llvm.sinh.f64(double %Val)
-      declare x86_fp80  @llvm.sinh.f80(x86_fp80  %Val)
-      declare fp128     @llvm.sinh.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.sinh.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.sinh.*``' intrinsics return the hyperbolic sine of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``sinh``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
-'``llvm.cosh.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.cosh`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.cosh.f32(float  %Val)
-      declare double    @llvm.cosh.f64(double %Val)
-      declare x86_fp80  @llvm.cosh.f80(x86_fp80  %Val)
-      declare fp128     @llvm.cosh.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.cosh.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.cosh.*``' intrinsics return the hyperbolic cosine of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``cosh``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
-'``llvm.tanh.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.tanh`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.tanh.f32(float  %Val)
-      declare double    @llvm.tanh.f64(double %Val)
-      declare x86_fp80  @llvm.tanh.f80(x86_fp80  %Val)
-      declare fp128     @llvm.tanh.f128(fp128 %Val)
-      declare ppc_fp128 @llvm.tanh.ppcf128(ppc_fp128  %Val)
-
-Overview:
-"""""""""
-
-The '``llvm.tanh.*``' intrinsics return the hyperbolic tangent of the operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Return the same value as a corresponding libm '``tanh``' function but without
-trapping or setting ``errno``.
-
-When specified with the fast-math-flag 'afn', the result may be approximated
-using a less accurate calculation.
-
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16080,100 +15883,6 @@ The returned value is completely identical to the input except for the sign bit;
 in particular, if the input is a NaN, then the quiet/signaling bit and payload
 are perfectly preserved.
 
-.. _i_fminmax_family:
-
-'``llvm.min.*``' Intrinsics Comparation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Standard:
-"""""""""
-
-IEEE754 and ISO C define some min/max operations, and they have some differences
-on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
-
-.. list-table::
-   :header-rows: 2
-
-   * - ``ISO C``
-     - fmin/fmax
-     - fmininum/fmaximum
-     - fminimum_num/fmaximum_num
-
-   * - ``IEEE754``
-     - minNum/maxNum (2008)
-     - minimum/maximum (2019)
-     - minimumNumber/maximumNumber (2019)
-
-   * - ``+0.0 vs -0.0``
-     - either one
-     - +0.0 > -0.0
-     - +0.0 > -0.0
-
-   * - ``NUM vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - NUM, invalid exception
-
-   * - ``qNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``NUM vs qNaN``
-     - NUM, no exception
-     - qNaN, no exception
-     - NUM, no exception
-
-LLVM Implementation:
-""""""""""""""""""""
-
-LLVM implements all ISO C flavors as listed in this table.
-Only basic intrinsics list here. The constrained version
-ones may have different behaivor on exception.
-
-Since some architectures implement minNum/maxNum with +0.0>-0.0,
-so we define internal ISD::MINNUM_IEEE and ISD::MAXNUM_IEEE.
-They will be helpful to implement minimumnum/maximumnum.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 16 28 28 28
-
-   * - Operation
-     - minnum/maxnum
-     - minimum/maximum
-     - minimumnum/maximumnum
-
-   * - ``NUM vs qNaN``
-     - NUM, no exception
-     - qNaN, no exception
-     - NUM, no exception
-
-   * - ``NUM vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - NUM, invalid exception
-
-   * - ``qNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``sNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``+0.0 vs -0.0``
-     - either one
-     - +0.0(max)/-0.0(min)
-     - +0.0(max)/-0.0(min)
-
-   * - ``NUM vs NUM``
-     - larger(max)/smaller(min)
-     - larger(max)/smaller(min)
-     - larger(max)/smaller(min)
-
 .. _i_minnum:
 
 '``llvm.minnum.*``' Intrinsic
@@ -16354,98 +16063,6 @@ If either operand is a NaN, returns NaN. Otherwise returns the greater
 of the two arguments. -0.0 is considered to be less than +0.0 for this
 intrinsic. Note that these are the semantics specified in the draft of
 IEEE 754-2019.
-
-.. _i_minimumnum:
-
-'``llvm.minimumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.minimumnum`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.minimumnum.f32(float %Val0, float %Val1)
-      declare double    @llvm.minimumnum.f64(double %Val0, double %Val1)
-      declare x86_fp80  @llvm.minimumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
-      declare fp128     @llvm.minimumnum.f128(fp128 %Val0, fp128 %Val1)
-      declare ppc_fp128 @llvm.minimumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
-
-Overview:
-"""""""""
-
-The '``llvm.minimumnum.*``' intrinsics return the minimum of the two
-arguments, not propagating NaNs and treating -0.0 as less than +0.0.
-
-
-Arguments:
-""""""""""
-
-The arguments and return value are floating-point numbers of the same
-type.
-
-Semantics:
-""""""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the lesser of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
-
-Note that these are the semantics of minimumNumber specified in IEEE 754-2019.
-
-It has some different with '``llvm.minnum.*``': 
-1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
-2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
-
-.. _i_maximumnum:
-
-'``llvm.maximumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.maximumnum`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare float     @llvm.maximumnum.f32(float %Val0, float %Val1)
-      declare double    @llvm.maximumnum.f64(double %Val0, double %Val1)
-      declare x86_fp80  @llvm.maximumnum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
-      declare fp128     @llvm.maximumnum.f128(fp128 %Val0, fp128 %Val1)
-      declare ppc_fp128 @llvm.maximumnum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
-
-Overview:
-"""""""""
-
-The '``llvm.maximumnum.*``' intrinsics return the maximum of the two
-arguments, not propagating NaNs and treating -0.0 as less than +0.0.
-
-
-Arguments:
-""""""""""
-
-The arguments and return value are floating-point numbers of the same
-type.
-
-Semantics:
-""""""""""
-If both operands are NaNs (including sNaN), returns qNaN. If one operand
-is NaN (including sNaN) and another operand is a number, return the number.
-Otherwise returns the greater of the two arguments. -0.0 is considered to
-be less than +0.0 for this intrinsic.
-
-Note that these are the semantics of maximumNumber specified in IEEE 754-2019.
-
-It has some different with '``llvm.maxnum.*``': 
-1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
-2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
 
 .. _int_copysign:
 
@@ -19253,65 +18870,6 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
-.. _int_vector_reduce_fmaximumnum:
-
-'``llvm.vector.reduce.fmaximumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
-      declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
-
-Overview:
-"""""""""
-
-The '``llvm.vector.reduce.fmaximumnum.*``' intrinsics do a floating-point
-``MAX`` reduction of a vector, returning the result as a scalar. The return type
-matches the element-type of the vector input.
-
-This instruction has the same comparison semantics as the '``llvm.maximumnum.*``'
-intrinsic. That is, this intrinsic not propagates NaNs (even sNaNs) and +0.0 is
-considered greater than -0.0. If all elements of the vector are NaNs, the result is NaN.
-
-Arguments:
-""""""""""
-The argument to this intrinsic must be a vector of floating-point values.
-
-.. _int_vector_reduce_fminimumnum:
-
-'``llvm.vector.reduce.fminimumnum.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
-      declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
-
-Overview:
-"""""""""
-
-The '``llvm.vector.reduce.fminimumnum.*``' intrinsics do a floating-point
-``MIN`` reduction of a vector, returning the result as a scalar. The return type
-matches the element-type of the vector input.
-
-This instruction has the same comparison semantics as the '``llvm.minimumnum.*``'
-intrinsic. That is, this intrinsic not propagates NaNs (even sNaNs) and -0.0 is
-considered less than +0.0. If all elements of the vector are NaNs, the result is NaN.
-
-Arguments:
-""""""""""
-The argument to this intrinsic must be a vector of floating-point values.
-
-
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21498,107 +21056,6 @@ Examples:
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
-.. _int_vp_minimumnum:
-
-'``llvm.vp.minimumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <16 x float>  @llvm.vp.minimumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
-      declare <vscale x 4 x float>  @llvm.vp.minimumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
-      declare <256 x double>  @llvm.vp.minimumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
-
-Overview:
-"""""""""
-
-Predicated floating-point minimum of two vectors of floating-point values,
-not propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
-operation.
-
-Semantics:
-""""""""""
-
-The '``llvm.vp.minimumnum``' intrinsic performs floating-point minimumNumber (:ref:`minimumnum <i_minimumnum>`)
-of the first and second vector operand on each enabled lane, the result being
-NaN if both operands are NaN. Even sNaN vs Num results NUM. -0.0 is considered
-to be less than +0.0 for this intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
-The operation is performed in the default floating-point environment.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call <4 x float> @llvm.vp.minimumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
-      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-
-      %t = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> %a, <4 x float> %b)
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
-
-
-.. _int_vp_maximumnum:
-
-'``llvm.vp.maximumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <16 x float>  @llvm.vp.maximumnum.v16f32 (<16 x float> <left_op>, <16 x float> <right_op>, <16 x i1> <mask>, i32 <vector_length>)
-      declare <vscale x 4 x float>  @llvm.vp.maximumnum.nxv4f32 (<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
-      declare <256 x double>  @llvm.vp.maximumnum.v256f64 (<256 x double> <left_op>, <256 x double> <right_op>, <256 x i1> <mask>, i32 <vector_length>)
-
-Overview:
-"""""""""
-
-Predicated floating-point maximum of two vectors of floating-point values,
-not propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two operands and the result have the same vector of floating-point type. The
-third operand is the vector mask and has the same number of elements as the
-result vector type. The fourth operand is the explicit vector length of the
-operation.
-
-Semantics:
-""""""""""
-
-The '``llvm.vp.maximumnum``' intrinsic performs floating-point maximumNumber (:ref:`maximumnum <i_maximumnum>`)
-of the first and second vector operand on each enabled lane, the result being
-NaN if both operands are NaN. sNaN vs Num results NUM. -0.0 is considered
-to be less than +0.0 for this intrinsic. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
-The operation is performed in the default floating-point environment.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call <4 x float> @llvm.vp.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
-      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-
-      %t = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b, <4 x i1> %mask, i32 %evl)
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
-
-
-
 .. _int_vp_fadd:
 
 '``llvm.vp.fadd.*``' Intrinsics
@@ -22996,146 +22453,6 @@ Examples:
       %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
       %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
       %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
-
-
-.. _int_vp_reduce_fmaximumnum:
-
-'``llvm.vp.reduce.fmaximumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare float @llvm.vp.reduce.fmaximumnum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
-      declare double @llvm.vp.reduce.fmaximumnum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
-
-Overview:
-"""""""""
-
-Predicated floating-point ``MAX`` reduction of a vector and a scalar starting
-value, returning the result as a scalar.
-
-
-Arguments:
-""""""""""
-
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
-on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
-vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
-operation.
-
-Semantics:
-""""""""""
-
-The '``llvm.vp.reduce.fmaximumnum``' intrinsic performs the floating-point ``MAX``
-reduction (:ref:`llvm.vector.reduce.fmaximumnum <int_vector_reduce_fmaximumnum>`) of
-the vector operand ``val`` on each enabled lane, taking the maximum of that and
-the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value (i.e. having no effect on the reduction operation). If the vector
-length is zero, the result is the start value.
-
-The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
-flags are set or only the ``nnan`` is set, the neutral value is ``-Infinity``.
-If ``ninf`` is set, then the neutral value is the smallest floating-point value
-for the result type.
-
-This instruction has the same comparison semantics as the
-:ref:`llvm.vector.reduce.fmaximumnum <int_vector_reduce_fmaximumnum>` intrinsic (and
-thus the '``llvm.maximumnum.*``' intrinsic). That is, the result will always be a
-number unless all of the elements in the vector and the starting value is
-``NaN``. Namely, this intrinsic not propagates ``NaN``, even for ``sNaN``.
-Also, -0.0 is considered less than +0.0.
-
-To ignore the start value, the neutral value can be used.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call float @llvm.vp.reduce.fmaximumnum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
-      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
-      ; are treated as though %mask were false for those lanes.
-
-      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
-      %reduction = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %masked.a)
-      %also.r = call float @llvm.maximumnum.f32(float %reduction, float %start)
-
-
-.. _int_vp_reduce_fminimumnum:
-
-'``llvm.vp.reduce.fminimumnum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare float @llvm.vp.reduce.fminimumnum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
-      declare double @llvm.vp.reduce.fminimumnum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
-
-Overview:
-"""""""""
-
-Predicated floating-point ``MIN`` reduction of a vector and a scalar starting
-value, returning the result as a scalar.
-
-
-Arguments:
-""""""""""
-
-The first operand is the start value of the reduction, which must be a scalar
-floating-point type equal to the result type. The second operand is the vector
-on which the reduction is performed and must be a vector of floating-point
-values whose element type is the result/start type. The third operand is the
-vector mask and is a vector of boolean values with the same number of elements
-as the vector operand. The fourth operand is the explicit vector length of the
-operation.
-
-Semantics:
-""""""""""
-
-The '``llvm.vp.reduce.fminimumnum``' intrinsic performs the floating-point ``MIN``
-reduction (:ref:`llvm.vector.reduce.fminimumnum <int_vector_reduce_fminimumnum>`) of
-the vector operand ``val`` on each enabled lane, taking the minimum of that and
-the scalar ``start_value``. Disabled lanes are treated as containing the
-neutral value (i.e. having no effect on the reduction operation). If the vector
-length is zero, the result is the start value.
-
-The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
-flags are set or only the ``nnan`` is set, the neutral value is ``+Infinity``.
-If ``ninf`` is set, then the neutral value is the largest floating-point value
-for the result type.
-
-This instruction has the same comparison semantics as the
-:ref:`llvm.vector.reduce.fminimumnum <int_vector_reduce_fminimumnum>` intrinsic (and
-thus the '``llvm.minimumnum.*``' intrinsic). That is, the result will always be a
-number unless all of the elements in the vector and the starting value is
-``NaN``. Namely, this intrinsic not propagates ``NaN``, even for ``sNaN``.
-Also, -0.0 is considered less than +0.0.
-
-To ignore the start value, the neutral value can be used.
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %r = call float @llvm.vp.reduce.fmaximumnum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
-      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
-      ; are treated as though %mask were false for those lanes.
-
-      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
-      %reduction = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %masked.a)
-      %also.r = call float @llvm.maximumnum.f32(float %reduction, float %start)
 
 
 .. _int_get_active_lane_mask:
@@ -26927,42 +26244,6 @@ same values as the libm ``cos`` functions would, and handles error
 conditions in the same way.
 
 
-'``llvm.experimental.constrained.tan``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.tan(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
-first operand.
-
-Arguments:
-""""""""""
-
-The first argument and the return type are floating-point numbers of the same
-type.
-
-The second and third arguments specify the rounding mode and exception
-behavior as described above.
-
-Semantics:
-""""""""""
-
-This function returns the tangent of the specified operand, returning the
-same values as the libm ``tan`` functions would, and handles error
-conditions in the same way.
-
-
 '``llvm.experimental.constrained.exp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -27441,70 +26722,6 @@ Semantics:
 """"""""""
 
 This function follows semantics specified in the draft of IEEE 754-2019.
-
-
-'``llvm.experimental.constrained.maximumnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.maximumnum(<type> <op1>, <type> <op2>
-                                                metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.maximumnum``' intrinsic returns the maximum
-of the two arguments, not propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows semantics specified in IEEE 754-2019.
-
-
-'``llvm.experimental.constrained.minimumnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <type>
-      @llvm.experimental.constrained.minimumnum(<type> <op1>, <type> <op2>
-                                                metadata <exception behavior>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.constrained.minimumnum``' intrinsic returns the minimum
-of the two arguments, not propagating NaNs and treating -0.0 as less than +0.0.
-
-Arguments:
-""""""""""
-
-The first two arguments and the return value are floating-point numbers
-of the same type.
-
-The third argument specifies the exception behavior as described above.
-
-Semantics:
-""""""""""
-
-This function follows semantics specified in IEEE 754-2019.
 
 
 '``llvm.experimental.constrained.ceil``' Intrinsic
@@ -29888,7 +29105,7 @@ Lowering:
 Lowers to a call to `objc_storeWeak <https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-storeweak>`_.
 
 Preserving Debug Information Intrinsics
----------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These intrinsics are used to carry certain debuginfo together with
 IR-level operations. For example, it may be desirable to

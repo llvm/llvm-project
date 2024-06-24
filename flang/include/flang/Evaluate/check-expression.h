@@ -77,26 +77,23 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &,
 // specification expressions.
 
 template <typename A>
-void CheckSpecificationExpr(const A &, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
-extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
-extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
+void CheckSpecificationExpr(
+    const A &, const semantics::Scope &, FoldingContext &);
+extern template void CheckSpecificationExpr(
+    const Expr<SomeType> &x, const semantics::Scope &, FoldingContext &);
+extern template void CheckSpecificationExpr(
+    const Expr<SomeInteger> &x, const semantics::Scope &, FoldingContext &);
 extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
+    const semantics::Scope &, FoldingContext &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeType>> &x, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
+    FoldingContext &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeInteger>> &x, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
+    FoldingContext &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &x, const semantics::Scope &,
-    FoldingContext &, bool forElementalFunctionResult);
+    FoldingContext &);
 
 // Contiguity & "simple contiguity" (9.5.4)
 template <typename A>

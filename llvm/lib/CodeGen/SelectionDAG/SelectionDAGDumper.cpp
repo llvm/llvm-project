@@ -96,8 +96,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
   case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
-  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
-  case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
   case ISD::ATOMIC_LOAD_UINC_WRAP:
     return "AtomicLoadUIncWrap";
   case ISD::ATOMIC_LOAD_UDEC_WRAP:
@@ -203,10 +201,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FMINIMUM:            return "strict_fminimum";
   case ISD::FMAXIMUM:                   return "fmaximum";
   case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
-  case ISD::FMINIMUMNUM:               return "fminimumnum";
-  case ISD::STRICT_FMINIMUMNUM:        return "strict_fminimumnum";
-  case ISD::FMAXIMUMNUM:               return "fmaximumnum";
-  case ISD::STRICT_FMAXIMUMNUM:        return "strict_fmaximumnum";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
@@ -297,8 +291,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SMAX:                       return "smax";
   case ISD::UMIN:                       return "umin";
   case ISD::UMAX:                       return "umax";
-  case ISD::SCMP:                       return "scmp";
-  case ISD::UCMP:                       return "ucmp";
 
   case ISD::FLDEXP:                     return "fldexp";
   case ISD::STRICT_FLDEXP:              return "strict_fldexp";
@@ -534,10 +526,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
   case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-    return "vecreduce_fmaximumnum";
-  case ISD::VECREDUCE_FMINIMUMNUM:
-    return "vecreduce_fminimumnum";
   case ISD::STACKMAP:
     return "stackmap";
   case ISD::PATCHPOINT:

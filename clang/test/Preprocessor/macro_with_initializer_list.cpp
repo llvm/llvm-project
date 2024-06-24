@@ -3,7 +3,7 @@
 namespace std {
   template <class X>
   class initializer_list {
-    public: const X *a, *b;
+    public:
     initializer_list();
   };
 }

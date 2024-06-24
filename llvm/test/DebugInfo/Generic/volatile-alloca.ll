@@ -17,9 +17,9 @@
 ; }
 
 ; CHECK: alloca i64
-; CHECK-NOT: #dbg_value
-; CHECK: #dbg_declare
-; CHECK-NOT: #dbg_value
+; CHECK-NOT: call void @llvm.dbg.value
+; CHECK: call void @llvm.dbg.declare
+; CHECK-NOT: call void @llvm.dbg.value
 
 source_filename = "volatile.c"
 

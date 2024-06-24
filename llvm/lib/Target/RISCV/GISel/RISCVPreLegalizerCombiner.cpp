@@ -109,8 +109,8 @@ void RISCVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineDominatorTree>();
+  AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -142,8 +142,7 @@ bool RISCVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  MachineDominatorTree *MDT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());

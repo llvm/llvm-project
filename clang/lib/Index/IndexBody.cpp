@@ -268,7 +268,7 @@ public:
         }
         return true;
       };
-      bool IsPropCall = isa_and_nonnull<PseudoObjectExpr>(Containing);
+      bool IsPropCall = Containing && isa<PseudoObjectExpr>(Containing);
       // Implicit property message sends are not 'implicit'.
       if ((E->isImplicit() || IsPropCall) &&
           !(IsPropCall &&

@@ -403,9 +403,9 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
   if (GetContext().directive != llvm::acc::Directive::ACCD_declare)
     return;
   for (const auto &object : list.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
@@ -435,7 +435,7 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
                 declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
-            [&](const parser::Name &name) {
+            [&](const Fortran::parser::Name &name) {
               // TODO: check common block
             }},
         object.u);
@@ -674,9 +674,9 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
   const auto &objects{std::get<parser::AccObjectList>(list.t)};
 
   for (const auto &object : objects.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 const auto *type{name->symbol->GetType()};
                 if (type->IsNumeric(TypeCategory::Integer) &&

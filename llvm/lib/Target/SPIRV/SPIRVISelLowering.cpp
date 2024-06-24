@@ -339,7 +339,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                          GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg()));
         break;
       case SPIRV::OpPtrCastToGeneric:
-      case SPIRV::OpGenericCastToPtr:
         validateAccessChain(STI, MRI, GR, MI);
         break;
       case SPIRV::OpInBoundsPtrAccessChain:

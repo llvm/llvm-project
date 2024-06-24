@@ -37,7 +37,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace {
-
 enum class ProcessState {
   Unknown,
   Dead,
@@ -71,12 +70,6 @@ struct StatFields {
   long unsigned stime;
   long cutime;
   long cstime;
-  // In proc_pid_stat(5) this field is specified as priority
-  // but documented as realtime priority. To keep with the adopted
-  // nomenclature in ProcessInstanceInfo, we adopt the documented
-  // naming here.
-  long realtime_priority;
-  long priority;
   // .... other things. We don't need them below
 };
 }
@@ -98,16 +91,14 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   if (Rest.empty())
     return false;
   StatFields stat_fields;
-  if (sscanf(
-          Rest.data(),
-          "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld",
-          &stat_fields.pid, stat_fields.comm, &stat_fields.state,
-          &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
-          &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
-          &stat_fields.minflt, &stat_fields.cminflt, &stat_fields.majflt,
-          &stat_fields.cmajflt, &stat_fields.utime, &stat_fields.stime,
-          &stat_fields.cutime, &stat_fields.cstime,
-          &stat_fields.realtime_priority, &stat_fields.priority) < 0) {
+  if (sscanf(Rest.data(),
+             "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld",
+             &stat_fields.pid, stat_fields.comm, &stat_fields.state,
+             &stat_fields.ppid, &stat_fields.pgrp, &stat_fields.session,
+             &stat_fields.tty_nr, &stat_fields.tpgid, &stat_fields.flags,
+             &stat_fields.minflt, &stat_fields.cminflt, &stat_fields.majflt,
+             &stat_fields.cmajflt, &stat_fields.utime, &stat_fields.stime,
+             &stat_fields.cutime, &stat_fields.cstime) < 0) {
     return false;
   }
 
@@ -124,11 +115,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     return ts;
   };
 
-  // Priority (nice) values run from 19 to -20 inclusive (in linux). In the
-  // prpsinfo struct pr_nice is a char.
-  auto priority_value = static_cast<int8_t>(
-      (stat_fields.priority < 0 ? 0x80 : 0x00) | (stat_fields.priority & 0x7f));
-
   ProcessInfo.SetParentProcessID(stat_fields.ppid);
   ProcessInfo.SetProcessGroupID(stat_fields.pgrp);
   ProcessInfo.SetProcessSessionID(stat_fields.session);
@@ -136,7 +122,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   ProcessInfo.SetSystemTime(convert(stat_fields.stime));
   ProcessInfo.SetCumulativeUserTime(convert(stat_fields.cutime));
   ProcessInfo.SetCumulativeSystemTime(convert(stat_fields.cstime));
-  ProcessInfo.SetPriorityValue(priority_value);
   switch (stat_fields.state) {
   case 'R':
     State = ProcessState::Running;
@@ -171,7 +156,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     State = ProcessState::Unknown;
     break;
   }
-  ProcessInfo.SetIsZombie(State == ProcessState::Zombie);
 
   if (State == ProcessState::Unknown) {
     LLDB_LOG(log, "Unknown process state {0}", stat_fields.state);

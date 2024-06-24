@@ -15,7 +15,7 @@ define void @foo() {
 
 define internal void @bar(ptr %p) {
 ; CHECK-LABEL: define {{.*}}void @bar()
-; CHECK-NEXT:    #dbg_value(ptr undef, !3, !DIExpression(), !5
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata !3, metadata !DIExpression()), !dbg !5
   call void @llvm.dbg.value(metadata ptr %p, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }

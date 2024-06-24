@@ -366,7 +366,6 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
-    unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -403,31 +402,6 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
-      ++ReachableCaseCount;
-    }
-
-    BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (ReachableCaseCount > 1 &&
-        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
-      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
-                                                    /*UndefAllowed*/ false);
-      // The default dest is unreachable if all cases are covered.
-      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
-        BasicBlock *NewUnreachableBB =
-            BasicBlock::Create(BB->getContext(), "default.unreachable",
-                               BB->getParent(), DefaultDest);
-        new UnreachableInst(BB->getContext(), NewUnreachableBB);
-
-        DefaultDest->removePredecessor(BB);
-        SI->setDefaultDest(NewUnreachableBB);
-
-        if (SuccessorsCount[DefaultDest] == 1)
-          DTU.applyUpdates({{DominatorTree::Delete, BB, DefaultDest}});
-        DTU.applyUpdates({{DominatorTree::Insert, BB, NewUnreachableBB}});
-
-        ++NumDeadCases;
-        Changed = true;
-      }
     }
   }
 
@@ -1309,12 +1283,6 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
-#if defined(EXPENSIVE_CHECKS)
-    assert(DT->verify(DominatorTree::VerificationLevel::Full));
-#else
-    assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-#endif // EXPENSIVE_CHECKS
-
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

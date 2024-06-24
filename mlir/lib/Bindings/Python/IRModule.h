@@ -22,7 +22,6 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
-#include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -574,15 +573,14 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, py::object fileObject, bool binary,
-             bool skipRegions);
+             bool assumeVerified, py::object fileObject, bool binary);
   void print(PyAsmState &state, py::object fileObject, bool binary);
 
   pybind11::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
-                          bool assumeVerified, bool skipRegions);
+                          bool assumeVerified);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const pybind11::object &fileObject,

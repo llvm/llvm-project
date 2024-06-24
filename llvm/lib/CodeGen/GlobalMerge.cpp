@@ -63,7 +63,6 @@
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -642,7 +641,7 @@ bool GlobalMergeImpl::run(Module &M) {
   IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
-  MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>
+  DenseMap<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 16>>
       Globals, ConstGlobals, BSSGlobals;
   bool Changed = false;
   setMustKeepGlobalVariables(M);

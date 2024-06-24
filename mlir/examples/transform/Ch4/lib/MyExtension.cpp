@@ -160,8 +160,9 @@ mlir::transform::HasOperandSatisfyingOp::apply(
 void mlir::transform::HasOperandSatisfyingOp::getEffects(
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
   onlyReadsPayload(effects);
-  onlyReadsHandle(getOpMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  onlyReadsHandle(getOp(), effects);
+  producesHandle(getPosition(), effects);
+  producesHandle(getResults(), effects);
 }
 
 // Verify well-formedness of the operation and emit diagnostics if it is

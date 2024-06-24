@@ -29,10 +29,9 @@
 namespace std {
   typedef decltype(sizeof(int)) size_t;
   template<typename T> struct initializer_list {
-    const T* ptr; size_t sz;
     initializer_list(const T *, size_t);
-    const T* begin();
-    const T* end();
+    T* begin();
+    T* end();
   };
 }
 

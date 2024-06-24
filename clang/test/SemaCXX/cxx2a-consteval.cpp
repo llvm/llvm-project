@@ -1195,17 +1195,13 @@ namespace GH66562 {
 
 namespace ns
 {
-    consteval int foo(int x) { return 1; } // expected-note {{declared here}}  \
-                                           // expected-note {{passing argument to parameter 'x' here}}
+    consteval int foo(int x) { return 1; } // expected-note {{declared here}}
 }
 
 template <class A>
 struct T {
-    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}} \
-                                             // expected-error {{cannot initialize a parameter of type 'int' with an rvalue of type 'char *'}}
+    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}}
 };
-
-template class T<char*>; // expected-note {{in instantiation}}
 
 }
 

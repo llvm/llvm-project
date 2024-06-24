@@ -147,12 +147,12 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
       const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "std::is_constant_evaluated" << E->getSourceRange();
+          << "std::is_constant_evaluated";
     } else {
       const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "__builtin_is_constant_evaluated" << E->getSourceRange();
+          << "__builtin_is_constant_evaluated";
     }
   }
 

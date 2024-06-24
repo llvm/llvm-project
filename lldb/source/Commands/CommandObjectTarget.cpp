@@ -784,8 +784,7 @@ public:
 
     options.SetRootValueObjectName(root_name);
 
-    if (llvm::Error error = valobj_sp->Dump(s, options))
-      s << "error: " << toString(std::move(error));
+    valobj_sp->Dump(s, options);
   }
 
   static size_t GetVariableCallback(void *baton, const char *name,

@@ -203,7 +203,8 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   if (ShowSourceName)
     renderSourceName(OS, WholeFile);
 
-  renderTableHeader(OS, ViewDepth);
+  renderTableHeader(OS, (ViewDepth > 0) ? 0 : getFirstUncoveredLineNo(),
+                    ViewDepth);
 
   // We need the expansions, instantiations, and branches sorted so we can go
   // through them while we iterate lines.

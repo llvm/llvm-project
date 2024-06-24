@@ -1570,7 +1570,8 @@ static void addSymbolizer(
   LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
                     LabelAddrsRef.end());
   llvm::sort(LabelAddrs);
-  LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
+  LabelAddrs.resize(std::unique(LabelAddrs.begin(), LabelAddrs.end()) -
+                    LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
     auto Name = std::make_unique<std::string>();

@@ -225,14 +225,14 @@ static void gatherMemoryEffects(
 
 /// Return the entity yielded by a region, or a null value if the region
 /// is not terminated by a yield.
-static mlir::OpOperand *getYieldedEntity(mlir::Region &region) {
+static mlir::Value getYieldedEntity(mlir::Region &region) {
   if (region.empty() || region.back().empty())
     return nullptr;
   if (auto yield = mlir::dyn_cast<hlfir::YieldOp>(region.back().back()))
-    return &yield.getEntityMutable();
+    return yield.getEntity();
   if (auto elementalAddr =
           mlir::dyn_cast<hlfir::ElementalAddrOp>(region.back().back()))
-    return &elementalAddr.getYieldOp().getEntityMutable();
+    return elementalAddr.getYieldOp().getEntity();
   return nullptr;
 }
 
@@ -244,7 +244,7 @@ static void gatherAssignEffects(
     hlfir::RegionAssignOp regionAssign,
     bool userDefAssignmentMayOnlyWriteToAssignedVariable,
     llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &assignEffects) {
-  mlir::OpOperand *assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
+  mlir::Value assignedVar = getYieldedEntity(regionAssign.getLhsRegion());
   assert(assignedVar && "lhs cannot be an empty region");
   assignEffects.emplace_back(mlir::MemoryEffects::Write::get(), assignedVar);
 
@@ -389,8 +389,8 @@ void Scheduler::saveEvaluationIfConflict(mlir::Region &yieldRegion,
   // with a finalizer, or a user defined assignment where the LHS is
   // intent(inout)).
   if (yieldIsImplicitRead) {
-    mlir::OpOperand *entity = getYieldedEntity(yieldRegion);
-    if (entity && hlfir::isFortranVariableType(entity->get().getType()))
+    mlir::Value entity = getYieldedEntity(yieldRegion);
+    if (entity && hlfir::isFortranVariableType(entity.getType()))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), entity);
   }
   if (!leafRegionsMayOnlyRead && anyWrite(effects)) {
@@ -600,9 +600,9 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
 }
 
 mlir::Value hlfir::SaveEntity::getSavedValue() {
-  mlir::OpOperand *saved = getYieldedEntity(*yieldRegion);
+  mlir::Value saved = getYieldedEntity(*yieldRegion);
   assert(saved && "SaveEntity must contain region terminated by YieldOp");
-  return saved->get();
+  return saved;
 }
 
 //===----------------------------------------------------------------------===//

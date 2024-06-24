@@ -1042,8 +1042,7 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.enableRegionSimplification = false;
 
     mlir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,

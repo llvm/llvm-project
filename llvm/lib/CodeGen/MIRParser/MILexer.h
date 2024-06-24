@@ -69,7 +69,6 @@ struct MIToken {
     kw_contract,
     kw_afn,
     kw_reassoc,
-    kw_nusw,
     kw_nuw,
     kw_nsw,
     kw_exact,

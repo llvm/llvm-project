@@ -27,8 +27,3 @@ DataLayoutSpecInterface mlir::impl::getDataLayoutSpec(Operation *op) {
   return op->getAttrOfType<DataLayoutSpecAttr>(
       DLTIDialect::kDataLayoutAttrName);
 }
-
-TargetSystemSpecInterface mlir::impl::getTargetSystemSpec(Operation *op) {
-  return op->getAttrOfType<TargetSystemSpecAttr>(
-      DLTIDialect::kTargetSystemDescAttrName);
-}

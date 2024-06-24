@@ -21,7 +21,6 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
-    rewrite.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.
@@ -449,14 +448,12 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     IRModule.cpp
     IRTypes.cpp
     Pass.cpp
-    Rewrite.cpp
 
     # Headers must be included explicitly so they are installed.
     Globals.h
     IRModule.h
     Pass.h
     PybindUtils.h
-    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS

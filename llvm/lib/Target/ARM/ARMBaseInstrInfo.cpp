@@ -6060,8 +6060,6 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-      if (RepeatedSequenceLocs.size() < 2)
-        return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
   }

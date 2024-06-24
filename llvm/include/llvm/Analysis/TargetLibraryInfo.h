@@ -315,9 +315,14 @@ public:
 
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo(TargetLibraryInfo &&TLI) = default;
+  TargetLibraryInfo(TargetLibraryInfo &&TLI)
+      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
-  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) = default;
+  TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
+    Impl = TLI.Impl;
+    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
+    return *this;
+  }
 
   /// Determine whether a callee with the given TLI can be inlined into
   /// caller with this TLI, based on 'nobuiltin' attributes. When requested,

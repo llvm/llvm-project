@@ -38,8 +38,8 @@ llvm::omp::Clause getClauseIdForClass(C &&) {
 } // namespace detail
 
 static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
-  return Fortran::common::visit(
-      [](auto &&s) { return detail::getClauseIdForClass(s); }, clause.u);
+  return std::visit([](auto &&s) { return detail::getClauseIdForClass(s); },
+                    clause.u);
 }
 
 namespace Fortran::lower::omp {
@@ -83,7 +83,7 @@ struct SymbolAndDesignatorExtractor {
 
   template <typename T>
   static SymbolWithDesignator visit(const evaluate::Expr<T> &e) {
-    return Fortran::common::visit([](auto &&s) { return visit(s); }, e.u);
+    return std::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   static void verify(const SymbolWithDesignator &sd) {
@@ -112,7 +112,7 @@ struct SymbolAndDesignatorExtractor {
 SymbolWithDesignator getSymbolAndDesignator(const MaybeExpr &expr) {
   if (!expr)
     return SymbolWithDesignator{};
-  return Fortran::common::visit(
+  return std::visit(
       [](auto &&s) { return SymbolAndDesignatorExtractor::visit(s); }, expr->u);
 }
 
@@ -153,7 +153,7 @@ Object makeObject(const parser::OmpObject &object,
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
-  if (!object.ref())
+  if (!object.id())
     return std::nullopt;
 
   auto maybeRef = evaluate::ExtractDataRef(*object.ref());
@@ -278,7 +278,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
       // clang-format on
   );
 
-  return Fortran::common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::DefinedOpName &s) {
             return DefinedOperator{
@@ -294,7 +294,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
 ProcedureDesignator
 makeProcedureDesignator(const parser::ProcedureDesignator &inp,
                         semantics::SemanticsContext &semaCtx) {
-  return ProcedureDesignator{Fortran::common::visit(
+  return ProcedureDesignator{std::visit(
       common::visitors{
           [&](const parser::Name &t) { return makeObject(t, semaCtx); },
           [&](const parser::ProcComponentRef &t) {
@@ -306,7 +306,7 @@ makeProcedureDesignator(const parser::ProcedureDesignator &inp,
 
 ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
                                         semantics::SemanticsContext &semaCtx) {
-  return Fortran::common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::DefinedOperator &s) {
             return ReductionOperator{makeDefinedOperator(s, semaCtx)};
@@ -366,7 +366,7 @@ Allocate make(const parser::OmpClause::Allocate &inp,
 
   using Tuple = decltype(Allocate::t);
 
-  return Allocate{Fortran::common::visit(
+  return Allocate{std::visit(
       common::visitors{
           // simple-modifier
           [&](const wrapped::AllocateModifier::Allocator &v) -> Tuple {
@@ -531,7 +531,7 @@ Depend make(const parser::OmpClause::Depend &inp,
       // clang-format on
   );
 
-  return Depend{Fortran::common::visit( //
+  return Depend{std::visit( //
       common::visitors{
           // Doacross
           [&](const wrapped::Source &s) -> Variant {
@@ -793,7 +793,7 @@ Linear make(const parser::OmpClause::Linear &inp,
 
   using Tuple = decltype(Linear::t);
 
-  return Linear{Fortran::common::visit(
+  return Linear{std::visit(
       common::visitors{
           [&](const wrapped::WithModifier &s) -> Tuple {
             return {
@@ -949,7 +949,7 @@ Order make(const parser::OmpClause::Order &inp,
   auto &t1 = std::get<wrapped::Type>(inp.v.t);
 
   auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](parser::OmpOrderModifier::Kind k) { return convert1(k); }, s.u);
   };
   return Order{
@@ -1212,7 +1212,7 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 
 Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
-  return Fortran::common::visit(
+  return std::visit(
       [&](auto &&s) {
         return makeClause(getClauseId(cls), clause::make(s, semaCtx),
                           cls.source);

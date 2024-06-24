@@ -48,7 +48,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/StreamFile.h"
-#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -1818,8 +1817,51 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
     error = expr_result_valobj_sp->GetError();
 
   if (error.Success()) {
-    std::string result = lldb_private::toString(expr_result);
-    error.SetErrorString(result + "for the expression '" + expr_str + "'");
+    switch (expr_result) {
+    case eExpressionSetupError:
+      error.SetErrorStringWithFormat(
+          "expression setup error for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionParseError:
+      error.SetErrorStringWithFormat(
+          "expression parse error for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionResultUnavailable:
+      error.SetErrorStringWithFormat(
+          "expression error fetching result for the expression '%s'",
+          expr_str.c_str());
+      break;
+    case eExpressionCompleted:
+      break;
+    case eExpressionDiscarded:
+      error.SetErrorStringWithFormat(
+          "expression discarded for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionInterrupted:
+      error.SetErrorStringWithFormat(
+          "expression interrupted for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionHitBreakpoint:
+      error.SetErrorStringWithFormat(
+          "expression hit breakpoint for the expression '%s'",
+          expr_str.c_str());
+      break;
+    case eExpressionTimedOut:
+      error.SetErrorStringWithFormat(
+          "expression timed out for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionStoppedForDebug:
+      error.SetErrorStringWithFormat("expression stop at entry point "
+                                     "for debugging for the "
+                                     "expression '%s'",
+                                     expr_str.c_str());
+      break;
+    case eExpressionThreadVanished:
+      error.SetErrorStringWithFormat(
+          "expression thread vanished for the expression '%s'",
+          expr_str.c_str());
+      break;
+    }
   }
   return error;
 }

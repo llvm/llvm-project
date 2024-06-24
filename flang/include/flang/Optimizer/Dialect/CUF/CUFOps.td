@@ -17,7 +17,6 @@
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
-include "flang/Optimizer/Dialect/FIRAttr.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -250,9 +249,7 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
     Variadic<Index>:$lowerbound,
     Variadic<Index>:$upperbound,
     Variadic<Index>:$step,
-    OptionalAttr<I64Attr>:$n,
-    Variadic<AnyType>:$reduceOperands,
-    OptionalAttr<ArrayAttr>:$reduceAttrs
+    OptionalAttr<I64Attr>:$n
   );
 
   let regions = (region AnyRegion:$region);
@@ -261,27 +258,9 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
     `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
                 custom<CUFKernelValues>($block, type($block))
         ( `,` `stream` `=` $stream^ )? `>` `>` `>`
-        ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
         attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    /// Get Number of variadic operands
-    unsigned getNumOperands(unsigned idx) {
-      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
-        getOperandSegmentSizeAttr());
-      return static_cast<unsigned>(segments[idx]);
-    }
-    // Get Number of reduction operands
-    unsigned getNumReduceOperands() {
-      return getNumOperands(7);
-    }
-    /// Does the operation hold operands for reduction variables
-    bool hasReduceOperands() {
-      return getNumReduceOperands() > 0;
-    }
   }];
 
   let hasVerifier = 1;

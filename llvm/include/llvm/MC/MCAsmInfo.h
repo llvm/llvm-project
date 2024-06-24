@@ -393,7 +393,7 @@ protected:
   /// for ELF targets.  Defaults to true.
   bool HasSingleParameterDotFile = true;
 
-  /// True if the target has a four strings .file directive, strings separated
+  /// True if the target has a four strings .file directive, strings seperated
   /// by comma. Defaults to false.
   bool HasFourStringsDotFile = false;
 

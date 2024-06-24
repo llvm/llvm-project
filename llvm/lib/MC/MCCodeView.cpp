@@ -26,6 +26,8 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
+CodeViewContext::CodeViewContext() = default;
+
 CodeViewContext::~CodeViewContext() {
   // If someone inserted strings into the string table but never actually
   // emitted them somewhere, clean up the fragment.
@@ -136,7 +138,7 @@ void CodeViewContext::recordCVLoc(MCContext &Ctx, const MCSymbol *Label,
 
 MCDataFragment *CodeViewContext::getStringTableFragment() {
   if (!StrTabFragment) {
-    StrTabFragment = MCCtx->allocFragment<MCDataFragment>();
+    StrTabFragment = new MCDataFragment();
     // Start a new string table out with a null byte.
     StrTabFragment->getContents().push_back('\0');
   }
@@ -448,9 +450,9 @@ void CodeViewContext::emitInlineLineTableForFunction(MCObjectStreamer &OS,
                                                      const MCSymbol *FnEndSym) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  auto *F = MCCtx->allocFragment<MCCVInlineLineTableFragment>(
-      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym);
-  OS.insert(F);
+  new MCCVInlineLineTableFragment(PrimaryFunctionId, SourceFileId,
+                                  SourceLineNum, FnStartSym, FnEndSym,
+                                  OS.getCurrentSectionOnly());
 }
 
 MCFragment *CodeViewContext::emitDefRange(
@@ -459,10 +461,8 @@ MCFragment *CodeViewContext::emitDefRange(
     StringRef FixedSizePortion) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  auto *F =
-      MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
-  OS.insert(F);
-  return F;
+  return new MCCVDefRangeFragment(Ranges, FixedSizePortion,
+                           OS.getCurrentSectionOnly());
 }
 
 static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,

@@ -16,7 +16,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/DirectoryLookup.h"
-#include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -91,9 +90,7 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned isModuleHeader : 1;
 
-  /// Whether this header is a `textual header` in a module. If a header is
-  /// textual in one module and normal in another module, this bit will not be
-  /// set, only `isModuleHeader`.
+  /// Whether this header is a `textual header` in a module.
   LLVM_PREFERRED_TYPE(bool)
   unsigned isTextualModuleHeader : 1;
 
@@ -122,6 +119,13 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
 
+  /// The ID number of the controlling macro.
+  ///
+  /// This ID number will be non-zero when there is a controlling
+  /// macro whose IdentifierInfo may not yet have been loaded from
+  /// external storage.
+  unsigned ControllingMacroID = 0;
+
   /// If this file has a \#ifndef XXX (or equivalent) guard that
   /// protects the entire contents of the file, this is the identifier
   /// for the macro that controls whether or not it has any effect.
@@ -130,7 +134,7 @@ struct HeaderFileInfo {
   /// the controlling macro of this header, since
   /// getControllingMacro() is able to load a controlling macro from
   /// external storage.
-  LazyIdentifierInfoPtr LazyControllingMacro;
+  const IdentifierInfo *ControllingMacro = nullptr;
 
   /// If this header came from a framework include, this is the name
   /// of the framework.
@@ -576,7 +580,7 @@ public:
   /// no-op \#includes.
   void SetFileControllingMacro(FileEntryRef File,
                                const IdentifierInfo *ControllingMacro) {
-    getFileInfo(File).LazyControllingMacro = ControllingMacro;
+    getFileInfo(File).ControllingMacro = ControllingMacro;
   }
 
   /// Determine whether this file is intended to be safe from

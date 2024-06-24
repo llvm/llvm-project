@@ -868,7 +868,6 @@ protected:
 public:
   FuchsiaTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    this->WIntType = TargetInfo::UnsignedInt;
     this->MCountName = "__mcount";
     this->TheCXXABI.set(TargetCXXABI::Fuchsia);
   }

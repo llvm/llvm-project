@@ -37,18 +37,17 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
         is meant to be used for passing additional options that are not in the
         attribute.
       }],
-      "std::optional<::mlir::SmallVector<char, 0>>", "serializeToObject",
-      (ins "::mlir::Operation*":$module,
-           "const ::mlir::gpu::TargetOptions&":$options)>,
+      "std::optional<SmallVector<char, 0>>", "serializeToObject",
+      (ins "Operation*":$module, "const gpu::TargetOptions&":$options)>,
     InterfaceMethod<[{
         Creates a GPU object attribute from a binary string.
 
         The `object` parameter is a binary string. The `options` parameter is
         meant to be used for passing additional options that are not in the
         attribute.
-      }], "::mlir::Attribute", "createObject",
-        (ins "const ::llvm::SmallVector<char, 0>&":$object,
-             "const ::mlir::gpu::TargetOptions&":$options)>
+      }], "Attribute", "createObject",
+        (ins "const SmallVector<char, 0>&":$object,
+             "const gpu::TargetOptions&":$options)>
   ];
 }
 
@@ -113,10 +112,9 @@ def OffloadingLLVMTranslationAttrInterface :
         The first argument has to be a GPU binary operation.
         If the function fails at any point, it must return `failure`.
       }],
-      "::mlir::LogicalResult", "embedBinary",
-      (ins "::mlir::Operation*":$binaryOp,
-           "::llvm::IRBuilderBase&":$hostBuilder,
-           "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)
+      "LogicalResult", "embedBinary",
+      (ins "Operation*":$binaryOp, "llvm::IRBuilderBase&":$hostBuilder,
+           "LLVM::ModuleTranslation&":$hostModuleTranslation)
     >,
     InterfaceMethod<[{
         Translates a `gpu.launch_func` op into a sequence of LLVM IR
@@ -130,10 +128,10 @@ def OffloadingLLVMTranslationAttrInterface :
         respectively. If the function fails at any point, it must return
         `failure`.
       }],
-      "::mlir::LogicalResult", "launchKernel",
-      (ins "::mlir::Operation*":$launchFunc, "::mlir::Operation*":$binaryOp,
-           "::llvm::IRBuilderBase&":$hostBuilder,
-           "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)
+      "LogicalResult", "launchKernel",
+      (ins "Operation*":$launchFunc, "Operation*":$binaryOp,
+           "llvm::IRBuilderBase&":$hostBuilder,
+           "LLVM::ModuleTranslation&":$hostModuleTranslation)
     >
   ];
 }

@@ -8,10 +8,9 @@
 // RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
 namespace std {
-template <typename E>
+template <typename>
 class initializer_list {
 public:
-  const E *a, *b;
   initializer_list() noexcept {}
 };
 

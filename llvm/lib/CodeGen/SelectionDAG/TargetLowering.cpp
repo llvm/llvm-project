@@ -951,11 +951,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedVectorElts(
 
 // Attempt to form ext(avgfloor(A, B)) from shr(add(ext(A), ext(B)), 1).
 //      or to form ext(avgceil(A, B)) from shr(add(ext(A), ext(B), 1), 1).
-static SDValue combineShiftToAVG(SDValue Op,
-                                 TargetLowering::TargetLoweringOpt &TLO,
+static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
                                  const TargetLowering &TLI,
                                  const APInt &DemandedBits,
-                                 const APInt &DemandedElts, unsigned Depth) {
+                                 const APInt &DemandedElts,
+                                 unsigned Depth) {
   assert((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA) &&
          "SRL or SRA node is required here!");
   // Is the right shift using an immediate value of 1?
@@ -1006,7 +1006,6 @@ static SDValue combineShiftToAVG(SDValue Op,
   // If the shift is unsigned (srl):
   //  - Needs >= 1 zero bit for both operands.
   //  - Needs 1 demanded bit zero and >= 2 sign bits.
-  SelectionDAG &DAG = TLO.DAG;
   unsigned ShiftOpc = Op.getOpcode();
   bool IsSigned = false;
   unsigned KnownBits;
@@ -1060,14 +1059,12 @@ static SDValue combineShiftToAVG(SDValue Op,
   unsigned MinWidth =
       std::max<unsigned>(VT.getScalarSizeInBits() - KnownBits, 8);
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_ceil(MinWidth));
-  if (NVT.getScalarSizeInBits() > VT.getScalarSizeInBits())
-    return SDValue();
   if (VT.isVector())
     NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  if (TLO.LegalTypes() && !TLI.isOperationLegal(AVGOpc, NVT)) {
+  if (!TLI.isOperationLegalOrCustom(AVGOpc, NVT)) {
     // If we could not transform, and (both) adds are nuw/nsw, we can use the
     // larger type size to do the transform.
-    if (TLO.LegalOperations() && !TLI.isOperationLegal(AVGOpc, VT))
+    if (!TLI.isOperationLegalOrCustom(AVGOpc, VT))
       return SDValue();
     if (DAG.willNotOverflowAdd(IsSigned, Add.getOperand(0),
                                Add.getOperand(1)) &&
@@ -1077,12 +1074,6 @@ static SDValue combineShiftToAVG(SDValue Op,
     else
       return SDValue();
   }
-
-  // Don't create a AVGFLOOR node with a scalar constant unless its legal as
-  // this is likely to stop other folds (reassociation, value tracking etc.)
-  if (!IsCeil && !TLI.isOperationLegal(AVGOpc, NVT) &&
-      (isa<ConstantSDNode>(ExtOpA) || isa<ConstantSDNode>(ExtOpB)))
-    return SDValue();
 
   SDLoc DL(Op);
   SDValue ResultAVG =
@@ -2011,7 +2002,7 @@ bool TargetLowering::SimplifyDemandedBits(
     }
 
     // Try to match AVG patterns (after shift simplification).
-    if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
@@ -2122,7 +2113,7 @@ bool TargetLowering::SimplifyDemandedBits(
     }
 
     // Try to match AVG patterns (after shift simplification).
-    if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
@@ -8469,83 +8460,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   return MinMax;
 }
 
-SDValue TargetLowering::createSelectForFMINIMUMNUM_FMAXIMUMNUM(
-    SDNode *Node, SelectionDAG &DAG) const {
-  unsigned Opcode = Node->getOpcode();
-  assert((Opcode == ISD::FMINIMUMNUM || Opcode == ISD::FMAXIMUMNUM ||
-          Opcode == ISD::STRICT_FMINIMUMNUM ||
-          Opcode == ISD::STRICT_FMAXIMUMNUM) &&
-         "Wrong opcode");
-
-  if (Node->getFlags().hasNoNaNs()) {
-    ISD::CondCode Pred = Opcode == ISD::FMINIMUMNUM ? ISD::SETLT : ISD::SETGT;
-    SDValue Op1 = Node->getOperand(0);
-    SDValue Op2 = Node->getOperand(1);
-    SDValue SelCC = DAG.getSelectCC(SDLoc(Node), Op1, Op2, Op1, Op2, Pred);
-    // Copy FMF flags, but always set the no-signed-zeros flag
-    // as this is implied by the FMINNUM/FMAXNUM semantics.
-    SDNodeFlags Flags = Node->getFlags();
-    Flags.setNoSignedZeros(true);
-    SelCC->setFlags(Flags);
-    return SelCC;
-  }
-
-  return SDValue();
-}
-
-SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
-                                                      SelectionDAG &DAG) const {
-  SDLoc dl(Node);
-  unsigned NewOp = Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINNUM_IEEE
-                                                         : ISD::FMAXNUM_IEEE;
-  EVT VT = Node->getValueType(0);
-
-  if (VT.isScalableVector())
-    report_fatal_error(
-        "Expanding fminimumnum/fmaximumnum for scalable vectors is undefined.");
-
-  if (isOperationLegalOrCustom(NewOp, VT)) {
-    SDValue Quiet0 = Node->getOperand(0);
-    SDValue Quiet1 = Node->getOperand(1);
-
-    if (!Node->getFlags().hasNoNaNs()) {
-      // Insert canonicalizes if it's possible we need to quiet to get correct
-      // sNaN behavior.
-      if (!DAG.isKnownNeverSNaN(Quiet0)) {
-        Quiet0 =
-            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0, Node->getFlags());
-      }
-      if (!DAG.isKnownNeverSNaN(Quiet1)) {
-        Quiet1 =
-            DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1, Node->getFlags());
-      }
-    }
-
-    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
-  }
-
-  // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
-  // instead if there are no NaNs and there can't be an incompatible zero
-  // compare: at least one operand isn't +/-0, or there are no signed-zeros.
-  if ((Node->getFlags().hasNoNaNs() ||
-       (DAG.isKnownNeverNaN(Node->getOperand(0)) &&
-        DAG.isKnownNeverNaN(Node->getOperand(1)))) &&
-      (Node->getFlags().hasNoSignedZeros() ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(0)) ||
-       DAG.isKnownNeverZeroFloat(Node->getOperand(1)))) {
-    unsigned IEEE2018Op =
-        Node->getOpcode() == ISD::FMINIMUMNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
-    if (isOperationLegalOrCustom(IEEE2018Op, VT))
-      return DAG.getNode(IEEE2018Op, dl, VT, Node->getOperand(0),
-                         Node->getOperand(1), Node->getFlags());
-  }
-
-  if (SDValue SelCC = createSelectForFMINIMUMNUM_FMAXIMUMNUM(Node, DAG))
-    return SelCC;
-
-  return SDValue();
-}
-
 /// Returns a true value if if this FPClassTest can be performed with an ordered
 /// fcmp to 0, and a false value if it's an unordered fcmp to 0. Returns
 /// std::nullopt if it cannot be performed as a compare with 0.
@@ -9309,49 +9223,6 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
                        DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
-}
-
-SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
-  SDLoc dl(N);
-  EVT VT = N->getValueType(0);
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  unsigned Opc = N->getOpcode();
-  bool IsFloor = Opc == ISD::AVGFLOORS || Opc == ISD::AVGFLOORU;
-  bool IsSigned = Opc == ISD::AVGCEILS || Opc == ISD::AVGFLOORS;
-  unsigned ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
-  assert((Opc == ISD::AVGFLOORS || Opc == ISD::AVGCEILS ||
-          Opc == ISD::AVGFLOORU || Opc == ISD::AVGCEILU) &&
-         "Unknown AVG node");
-
-  // If the operands are already extended, we can add+shift.
-  bool IsExt =
-      (IsSigned && DAG.ComputeNumSignBits(LHS) >= 2 &&
-       DAG.ComputeNumSignBits(RHS) >= 2) ||
-      (!IsSigned && DAG.computeKnownBits(LHS).countMinLeadingZeros() >= 1 &&
-       DAG.computeKnownBits(RHS).countMinLeadingZeros() >= 1);
-  if (IsExt) {
-    SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
-    if (!IsFloor)
-      Sum = DAG.getNode(ISD::ADD, dl, VT, Sum, DAG.getConstant(1, dl, VT));
-    return DAG.getNode(ShiftOpc, dl, VT, Sum,
-                       DAG.getShiftAmountConstant(1, VT, dl));
-  }
-
-  // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))
-  // avgceilu(lhs, rhs) -> sub(or(lhs,rhs),lshr(xor(lhs,rhs),1))
-  // avgfloors(lhs, rhs) -> add(and(lhs,rhs),ashr(xor(lhs,rhs),1))
-  // avgflooru(lhs, rhs) -> add(and(lhs,rhs),lshr(xor(lhs,rhs),1))
-  unsigned SumOpc = IsFloor ? ISD::ADD : ISD::SUB;
-  unsigned SignOpc = IsFloor ? ISD::AND : ISD::OR;
-  LHS = DAG.getFreeze(LHS);
-  RHS = DAG.getFreeze(RHS);
-  SDValue Sign = DAG.getNode(SignOpc, dl, VT, LHS, RHS);
-  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
-  SDValue Shift =
-      DAG.getNode(ShiftOpc, dl, VT, Xor, DAG.getShiftAmountConstant(1, VT, dl));
-  return DAG.getNode(SumOpc, dl, VT, Sign, Shift);
 }
 
 SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
@@ -10435,27 +10306,6 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getSelect(dl, VT, Overflow, Result, SumDiff);
 }
 
-SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
-  unsigned Opcode = Node->getOpcode();
-  SDValue LHS = Node->getOperand(0);
-  SDValue RHS = Node->getOperand(1);
-  EVT VT = LHS.getValueType();
-  EVT ResVT = Node->getValueType(0);
-  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDLoc dl(Node);
-
-  auto LTPredicate = (Opcode == ISD::UCMP ? ISD::SETULT : ISD::SETLT);
-  auto GTPredicate = (Opcode == ISD::UCMP ? ISD::SETUGT : ISD::SETGT);
-
-  SDValue IsLT = DAG.getSetCC(dl, BoolVT, LHS, RHS, LTPredicate);
-  SDValue IsGT = DAG.getSetCC(dl, BoolVT, LHS, RHS, GTPredicate);
-  SDValue SelectZeroOrOne =
-      DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
-                    DAG.getConstant(0, dl, ResVT));
-  return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
-                       SelectZeroOrOne);
-}
-
 SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
   bool IsSigned = Opcode == ISD::SSHLSAT;
@@ -11160,32 +11010,13 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // of comparisons and selects.
   bool MinMaxLegal = isOperationLegal(ISD::FMINNUM, SrcVT) &&
                      isOperationLegal(ISD::FMAXNUM, SrcVT);
-  bool MinMaxIEEELegal = isOperationLegal(ISD::FMINNUM_IEEE, SrcVT) &&
-                         isOperationLegal(ISD::FMAXNUM_IEEE, SrcVT);
-  bool MinMaxNumLegal = isOperationLegal(ISD::FMINIMUMNUM, SrcVT) &&
-                        isOperationLegal(ISD::FMAXIMUMNUM, SrcVT);
-  bool CanonLegal = isOperationLegal(ISD::FCANONICALIZE, SrcVT);
-  if (AreExactFloatBounds &&
-      (MinMaxNumLegal || ((MinMaxIEEELegal || MinMaxLegal) && CanonLegal))) {
+  if (AreExactFloatBounds && MinMaxLegal) {
     SDValue Clamped = Src;
 
-    if (MinMaxNumLegal) {
-      Clamped = DAG.getNode(ISD::FMAXIMUMNUM, dl, SrcVT, Clamped, MinFloatNode);
-      Clamped = DAG.getNode(ISD::FMINIMUMNUM, dl, SrcVT, Clamped, MaxFloatNode);
-    } else if (MinMaxIEEELegal && CanonLegal) {
-      Clamped = DAG.getNode(ISD::FCANONICALIZE, dl, SrcVT, Clamped);
-      Clamped =
-          DAG.getNode(ISD::FMAXNUM_IEEE, dl, SrcVT, Clamped, MinFloatNode);
-      Clamped =
-          DAG.getNode(ISD::FMINNUM_IEEE, dl, SrcVT, Clamped, MaxFloatNode);
-    } else if (MinMaxLegal && CanonLegal) {
-      // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
-      Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
-      // Clamp by MaxFloat from above. NaN cannot occur.
-      Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
-    } else {
-      llvm_unreachable("No usable fmax/fmin instructions!");
-    }
+    // Clamp Src by MinFloat from below. If Src is NaN the result is MinFloat.
+    Clamped = DAG.getNode(ISD::FMAXNUM, dl, SrcVT, Clamped, MinFloatNode);
+    // Clamp by MaxFloat from above. NaN cannot occur.
+    Clamped = DAG.getNode(ISD::FMINNUM, dl, SrcVT, Clamped, MaxFloatNode);
     // Convert clamped value to integer.
     SDValue FpToInt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
                                   dl, DstVT, Clamped);

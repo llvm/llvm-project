@@ -181,8 +181,9 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  producesHandle(getOperation()->getOpResults(), effects);
-  consumesHandle(getAllocaMutable(), effects);
+  producesHandle(getGlobal(), effects);
+  producesHandle(getGetGlobal(), effects);
+  consumesHandle(getAlloca(), effects);
   modifiesPayload(effects);
 }
 
@@ -248,7 +249,7 @@ transform::MemRefEraseDeadAllocAndStoresOp::applyToOne(
 
 void transform::MemRefEraseDeadAllocAndStoresOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTargetMutable(), effects);
+  transform::onlyReadsHandle(getTarget(), effects);
   transform::modifiesPayload(effects);
 }
 void transform::MemRefEraseDeadAllocAndStoresOp::build(OpBuilder &builder,

@@ -11,7 +11,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 
@@ -22,7 +21,7 @@ class MCSymbolXCOFF : public MCSymbol {
   enum XCOFFSymbolFlags : uint16_t { SF_EHInfo = 0x0001 };
 
 public:
-  MCSymbolXCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
+  MCSymbolXCOFF(const StringMapEntry<bool> *Name, bool isTemporary)
       : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
 
   static bool classof(const MCSymbol *S) { return S->isXCOFF(); }

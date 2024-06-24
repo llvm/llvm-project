@@ -41,10 +41,8 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF),
-      TracksSubRegLiveness(EnableSubRegLiveness.getNumOccurrences()
-                               ? EnableSubRegLiveness
-                               : MF->getSubtarget().enableSubRegLiveness()) {
+    : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
+                                   EnableSubRegLiveness) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);

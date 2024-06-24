@@ -2063,17 +2063,16 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   case Instruction::Shl: {
     // shl X, C --> mul X, (1 << C)
     Constant *C;
-    if (match(BO1, m_ImmConstant(C))) {
-      Constant *ShlOne = ConstantFoldBinaryOpOperands(
-          Instruction::Shl, ConstantInt::get(Ty, 1), C, DL);
-      assert(ShlOne && "Constant folding of immediate constants failed");
+    if (match(BO1, m_Constant(C))) {
+      Constant *ShlOne = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C);
       return {Instruction::Mul, BO0, ShlOne};
     }
     break;
   }
   case Instruction::Or: {
-    // or disjoin X, C --> add X, C
-    if (cast<PossiblyDisjointInst>(BO)->isDisjoint())
+    // or X, C --> add X, C (when X and C have no common bits set)
+    const APInt *C;
+    if (match(BO1, m_APInt(C)) && MaskedValueIsZero(BO0, *C, DL))
       return {Instruction::Add, BO0, BO1};
     break;
   }

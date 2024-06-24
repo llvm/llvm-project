@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
 // RUN: %clang_cc1 -verify -std=c++11 -fdelayed-template-parsing %s
-// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
 template<typename T>
 void f0() {
@@ -510,26 +509,3 @@ namespace LambdaInDefaultMemberInitializer {
   }
   template void f<int>();
 }
-
-#if __cplusplus >= 201703L
-namespace GH35052 {
-
-template <typename F> constexpr int func(F f) {
-  if constexpr (f(1UL)) {
-    return 1;
-  }
-  return 0;
-}
-
-int main() {
-  auto predicate = [](auto v) /*implicit constexpr*/ -> bool {
-    return v == 1;
-  };
-
-  static_assert(predicate(1));
-  return func(predicate);
-}
-
-} // namespace GH35052
-
-#endif

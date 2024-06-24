@@ -508,14 +508,6 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__STDC_UTF_16__", "1");
   Builder.defineMacro("__STDC_UTF_32__", "1");
 
-  // __has_embed definitions
-  Builder.defineMacro("__STDC_EMBED_NOT_FOUND__",
-                      llvm::itostr(static_cast<int>(EmbedResult::NotFound)));
-  Builder.defineMacro("__STDC_EMBED_FOUND__",
-                      llvm::itostr(static_cast<int>(EmbedResult::Found)));
-  Builder.defineMacro("__STDC_EMBED_EMPTY__",
-                      llvm::itostr(static_cast<int>(EmbedResult::Empty)));
-
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
 

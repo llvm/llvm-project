@@ -432,7 +432,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     };
 
     auto DeriveNameSpace = [&](ItaniumPartialDemangler &ItaniumPartialDemangler,
-      std::string DemangledName) {
+      std::string &DemangledName) {
       if (ItaniumPartialDemangler.partialDemangle(DemangledName.c_str()))
         return std::string("");
       std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());

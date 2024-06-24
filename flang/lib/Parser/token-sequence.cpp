@@ -347,8 +347,7 @@ ProvenanceRange TokenSequence::GetProvenanceRange() const {
 }
 
 const TokenSequence &TokenSequence::CheckBadFortranCharacters(
-    Messages &messages, const Prescanner &prescanner,
-    bool allowAmpersand) const {
+    Messages &messages, const Prescanner &prescanner) const {
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
@@ -363,8 +362,6 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
           ++j;
           continue;
         }
-      } else if (ch == '&' && allowAmpersand) {
-        continue;
       }
       if (ch < ' ' || ch >= '\x7f') {
         messages.Say(GetTokenProvenanceRange(j),
@@ -378,7 +375,9 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
   return *this;
 }
 
-bool TokenSequence::BadlyNestedParentheses() const {
+const TokenSequence &TokenSequence::CheckBadParentheses(
+    Messages &messages) const {
+  // First, a quick pass with no allocation for the common case
   int nesting{0};
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
@@ -392,14 +391,8 @@ bool TokenSequence::BadlyNestedParentheses() const {
       }
     }
   }
-  return nesting != 0;
-}
-
-const TokenSequence &TokenSequence::CheckBadParentheses(
-    Messages &messages) const {
-  if (BadlyNestedParentheses()) {
+  if (nesting != 0) {
     // There's an error; diagnose it
-    std::size_t tokens{SizeInTokens()};
     std::vector<std::size_t> stack;
     for (std::size_t j{0}; j < tokens; ++j) {
       CharBlock token{TokenAt(j)};

@@ -11,12 +11,13 @@
 + (void)initialize {
 }
 
-// BARE: @"\01+[ObjCClass load]"{{\(.*\)}} #1
+// PREINLINE: declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+// BARE: @"\01+[ObjCClass load]"{{\(.*\)}} #2
 + (void)load __attribute__((no_instrument_function)) {
 }
 
-// PREINLINE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #1
-// BARE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #1
+// PREINLINE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #2
+// BARE: @"\01-[ObjCClass dealloc]"{{\(.*\)}} #2
 - (void)dealloc __attribute__((no_instrument_function)) {
 }
 

@@ -638,10 +638,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
-                FShiftArgs[0] == FShiftArgs[1]) {
-              computeKnownBits(I, Known, Depth, CxtI);
-              break;
-            }
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
           }
         }
       }
@@ -720,10 +718,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
-                FShiftArgs[0] == FShiftArgs[1]) {
-              computeKnownBits(I, Known, Depth, CxtI);
-              break;
-            }
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
           }
         }
       }
@@ -895,6 +891,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
 
     computeKnownBits(I, Known, Depth, CxtI);
+    break;
+  }
+  case Instruction::URem: {
+    APInt AllOnes = APInt::getAllOnes(BitWidth);
+    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
+        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
+      return I;
+
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Call: {

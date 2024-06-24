@@ -144,7 +144,7 @@ public:
       return CatchTypeInfo{nullptr, 0x40};
   }
 
-  bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
+  bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -977,9 +977,11 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
                          PolymorphicBase);
 }
 
-bool MicrosoftCXXABI::shouldTypeidBeNullChecked(QualType SrcRecordTy) {
+bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
+                                                QualType SrcRecordTy) {
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
-  return !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
+  return IsDeref &&
+         !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
 }
 
 static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,

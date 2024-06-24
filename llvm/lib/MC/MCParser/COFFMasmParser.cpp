@@ -35,11 +35,12 @@ class COFFMasmParser : public MCAsmParserExtension {
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
-  bool ParseSectionSwitch(StringRef SectionName, unsigned Characteristics);
+  bool ParseSectionSwitch(StringRef SectionName, unsigned Characteristics,
+                          SectionKind Kind);
 
   bool ParseSectionSwitch(StringRef SectionName, unsigned Characteristics,
-                          StringRef COMDATSymName, COFF::COMDATType Type,
-                          Align Alignment);
+                          SectionKind Kind, StringRef COMDATSymName,
+                          COFF::COMDATType Type, Align Alignment);
 
   bool ParseDirectiveProc(StringRef, SMLoc);
   bool ParseDirectiveEndProc(StringRef, SMLoc);
@@ -183,21 +184,27 @@ class COFFMasmParser : public MCAsmParserExtension {
   }
 
   bool ParseSectionDirectiveCode(StringRef, SMLoc) {
-    return ParseSectionSwitch(".text", COFF::IMAGE_SCN_CNT_CODE |
-                                           COFF::IMAGE_SCN_MEM_EXECUTE |
-                                           COFF::IMAGE_SCN_MEM_READ);
+    return ParseSectionSwitch(".text",
+                              COFF::IMAGE_SCN_CNT_CODE
+                            | COFF::IMAGE_SCN_MEM_EXECUTE
+                            | COFF::IMAGE_SCN_MEM_READ,
+                              SectionKind::getText());
   }
 
   bool ParseSectionDirectiveInitializedData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                           COFF::IMAGE_SCN_MEM_READ |
-                                           COFF::IMAGE_SCN_MEM_WRITE);
+    return ParseSectionSwitch(".data",
+                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
+                            | COFF::IMAGE_SCN_MEM_READ
+                            | COFF::IMAGE_SCN_MEM_WRITE,
+                              SectionKind::getData());
   }
 
   bool ParseSectionDirectiveUninitializedData(StringRef, SMLoc) {
-    return ParseSectionSwitch(".bss", COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
-                                          COFF::IMAGE_SCN_MEM_READ |
-                                          COFF::IMAGE_SCN_MEM_WRITE);
+    return ParseSectionSwitch(".bss",
+                              COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA
+                            | COFF::IMAGE_SCN_MEM_READ
+                            | COFF::IMAGE_SCN_MEM_WRITE,
+                              SectionKind::getBSS());
   }
 
   /// Stack of active procedure definitions.
@@ -211,22 +218,21 @@ public:
 } // end anonymous namespace.
 
 bool COFFMasmParser::ParseSectionSwitch(StringRef SectionName,
-                                        unsigned Characteristics) {
-  return ParseSectionSwitch(SectionName, Characteristics, "",
+                                        unsigned Characteristics,
+                                        SectionKind Kind) {
+  return ParseSectionSwitch(SectionName, Characteristics, Kind, "",
                             (COFF::COMDATType)0, Align(16));
 }
 
-bool COFFMasmParser::ParseSectionSwitch(StringRef SectionName,
-                                        unsigned Characteristics,
-                                        StringRef COMDATSymName,
-                                        COFF::COMDATType Type,
-                                        Align Alignment) {
+bool COFFMasmParser::ParseSectionSwitch(
+    StringRef SectionName, unsigned Characteristics, SectionKind Kind,
+    StringRef COMDATSymName, COFF::COMDATType Type, Align Alignment) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in section switching directive");
   Lex();
 
   MCSection *Section = getContext().getCOFFSection(SectionName, Characteristics,
-                                                   COMDATSymName, Type);
+                                                   Kind, COMDATSymName, Type);
   Section->setAlignment(Alignment);
   getStreamer().switchSection(Section);
 
@@ -358,7 +364,7 @@ bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
     Flags &= ~COFF::IMAGE_SCN_MEM_WRITE;
   }
 
-  MCSection *Section = getContext().getCOFFSection(SectionName, Flags, "",
+  MCSection *Section = getContext().getCOFFSection(SectionName, Flags, Kind, "",
                                                    (COFF::COMDATType)(0));
   if (Alignment != 0) {
     Section->setAlignment(Align(Alignment));
@@ -388,9 +394,10 @@ bool COFFMasmParser::ParseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
     return TokError("expected identifier in includelib directive");
 
   unsigned Flags = COFF::IMAGE_SCN_MEM_PRELOAD | COFF::IMAGE_SCN_MEM_16BIT;
+  SectionKind Kind = SectionKind::getData();
   getStreamer().pushSection();
   getStreamer().switchSection(getContext().getCOFFSection(
-      ".drectve", Flags, "", (COFF::COMDATType)(0)));
+      ".drectve", Flags, Kind, "", (COFF::COMDATType)(0)));
   getStreamer().emitBytes("/DEFAULTLIB:");
   getStreamer().emitBytes(Lib);
   getStreamer().emitBytes(" ");

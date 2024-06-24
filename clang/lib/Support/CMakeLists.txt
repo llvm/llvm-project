@@ -15,7 +15,7 @@ set(clangSupport_sources
 
 add_clang_library(clangSupport ${clangSupport_sources})
 
-if (TARGET obj.clangSupport)
+if (NOT XCODE)
   add_library(clangSupport_tablegen ALIAS obj.clangSupport)
 elseif (NOT LLVM_LINK_LLVM_DYLIB)
   add_library(clangSupport_tablegen ALIAS clangSupport)

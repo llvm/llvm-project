@@ -350,17 +350,18 @@ ObjCLanguageRuntime::EncodingToTypeSP ObjCLanguageRuntime::GetEncodingToType() {
   return nullptr;
 }
 
-std::optional<uint64_t>
-ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
+bool ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type,
+                                         uint64_t &size) {
   void *opaque_ptr = compiler_type.GetOpaqueQualType();
-  uint64_t cached_size = m_type_size_cache.Lookup(opaque_ptr);
-  if (cached_size > 0)
-    return cached_size;
+  size = m_type_size_cache.Lookup(opaque_ptr);
+  // an ObjC object will at least have an ISA, so 0 is definitely not OK
+  if (size > 0)
+    return true;
 
   ClassDescriptorSP class_descriptor_sp =
       GetClassDescriptorFromClassName(compiler_type.GetTypeName());
   if (!class_descriptor_sp)
-    return {};
+    return false;
 
   int32_t max_offset = INT32_MIN;
   uint64_t sizeof_max = 0;
@@ -376,13 +377,11 @@ ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type) {
     }
   }
 
-  uint64_t size = 8 * (max_offset + sizeof_max);
-  if (found && size > 0) {
+  size = 8 * (max_offset + sizeof_max);
+  if (found)
     m_type_size_cache.Insert(opaque_ptr, size);
-    return size;
-  }
 
-  return {};
+  return found;
 }
 
 lldb::BreakpointPreconditionSP

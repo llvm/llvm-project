@@ -15,7 +15,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/StructuredData.h"
-#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -148,7 +147,8 @@ public:
   ProcessInstanceInfo() = default;
 
   ProcessInstanceInfo(const char *name, const ArchSpec &arch, lldb::pid_t pid)
-      : ProcessInfo(name, arch, pid) {}
+      : ProcessInfo(name, arch, pid), m_euid(UINT32_MAX), m_egid(UINT32_MAX),
+        m_parent_pid(LLDB_INVALID_PROCESS_ID) {}
 
   void Clear() {
     ProcessInfo::Clear();
@@ -237,16 +237,6 @@ public:
            m_cumulative_system_time.tv_usec > 0;
   }
 
-  std::optional<int8_t> GetPriorityValue() const { return m_priority_value; }
-
-  void SetPriorityValue(int8_t priority_value) {
-    m_priority_value = priority_value;
-  }
-
-  void SetIsZombie(bool is_zombie) { m_zombie = is_zombie; }
-
-  std::optional<bool> IsZombie() const { return m_zombie; }
-
   void Dump(Stream &s, UserIDResolver &resolver) const;
 
   static void DumpTableHeader(Stream &s, bool show_args, bool verbose);
@@ -260,12 +250,10 @@ protected:
   lldb::pid_t m_parent_pid = LLDB_INVALID_PROCESS_ID;
   lldb::pid_t m_process_group_id = LLDB_INVALID_PROCESS_ID;
   lldb::pid_t m_process_session_id = LLDB_INVALID_PROCESS_ID;
-  struct timespec m_user_time;
-  struct timespec m_system_time;
-  struct timespec m_cumulative_user_time;
-  struct timespec m_cumulative_system_time;
-  std::optional<int8_t> m_priority_value = std::nullopt;
-  std::optional<bool> m_zombie = std::nullopt;
+  struct timespec m_user_time {};
+  struct timespec m_system_time {};
+  struct timespec m_cumulative_user_time {};
+  struct timespec m_cumulative_system_time {};
 };
 
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;

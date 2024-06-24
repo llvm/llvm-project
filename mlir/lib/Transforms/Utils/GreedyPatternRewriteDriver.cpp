@@ -875,13 +875,8 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
           // After applying patterns, make sure that the CFG of each of the
           // regions is kept up to date.
-          if (config.enableRegionSimplification !=
-              GreedySimplifyRegionLevel::Disabled) {
-            continueRewrites |= succeeded(simplifyRegions(
-                rewriter, region,
-                /*mergeBlocks=*/config.enableRegionSimplification ==
-                    GreedySimplifyRegionLevel::Aggressive));
-          }
+          if (config.enableRegionSimplification)
+            continueRewrites |= succeeded(simplifyRegions(rewriter, region));
         },
         {&region}, iteration);
   } while (continueRewrites);

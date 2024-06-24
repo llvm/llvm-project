@@ -91,11 +91,13 @@ QueryRef QueryParser::endQuery(QueryRef queryRef) {
   llvm::StringRef extra = line;
   llvm::StringRef extraTrimmed = extra.ltrim(" \t\v\f\r");
 
-  if (extraTrimmed.starts_with('\n') || extraTrimmed.starts_with("\r\n"))
+  if ((!extraTrimmed.empty() && extraTrimmed[0] == '\n') ||
+      (extraTrimmed.size() >= 2 && extraTrimmed[0] == '\r' &&
+       extraTrimmed[1] == '\n'))
     queryRef->remainingContent = extra;
   else {
     llvm::StringRef trailingWord = lexWord();
-    if (trailingWord.starts_with('#')) {
+    if (!trailingWord.empty() && trailingWord.front() == '#') {
       line = line.drop_until([](char c) { return c == '\n'; });
       line = line.drop_while([](char c) { return c == '\n'; });
       return endQuery(queryRef);

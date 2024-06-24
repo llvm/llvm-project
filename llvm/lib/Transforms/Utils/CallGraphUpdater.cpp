@@ -67,20 +67,16 @@ bool CallGraphUpdater::finalize() {
 
         FAM.clear(*DeadFn, DeadFn->getName());
         AM->clear(*DeadSCC, DeadSCC->getName());
-        LCG->markDeadFunction(*DeadFn);
+        LCG->removeDeadFunction(*DeadFn);
 
         // Mark the relevant parts of the call graph as invalid so we don't
         // visit them.
         UR->InvalidatedSCCs.insert(DeadSCC);
         UR->InvalidatedRefSCCs.insert(&DeadRC);
-        UR->DeadFunctions.push_back(DeadFn);
-      } else {
-        // The CGSCC infrastructure batch deletes functions at the end of the
-        // call graph walk, so only erase the function if we're not using that
-        // infrastructure.
-        // The function is now really dead and de-attached from everything.
-        DeadFn->eraseFromParent();
       }
+
+      // The function is now really dead and de-attached from everything.
+      DeadFn->eraseFromParent();
     }
   }
 

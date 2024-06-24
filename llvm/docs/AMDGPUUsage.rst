@@ -4811,10 +4811,10 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        - vgprs_used = align(arch_vgprs, 4)
                                                                       + acc_vgprs
                                                        - max(0, ceil(vgprs_used / 8) - 1)
-                                                     GFX10-GFX12 (wavefront size 64)
+                                                     GFX10-GFX11 (wavefront size 64)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 4) - 1)
-                                                     GFX10-GFX12 (wavefront size 32)
+                                                     GFX10-GFX11 (wavefront size 32)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 8) - 1)
 
@@ -4848,7 +4848,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX9
                                                        - sgprs_used 0..112
                                                        - 2 * max(0, ceil(sgprs_used / 16) - 1)
-                                                     GFX10-GFX12
+                                                     GFX10-GFX11
                                                        Reserved, must be 0.
                                                        (128 SGPRs always
                                                        allocated.)
@@ -5028,7 +5028,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``COMPUTE_PGM_RSRC1.CDBG_USER``.
      26      1 bit   FP16_OVFL                       GFX6-GFX8
                                                        Reserved, must be 0.
-                                                     GFX9-GFX12
+                                                     GFX9-GFX11
                                                        Wavefront starts execution
                                                        with specified fp16 overflow
                                                        mode.
@@ -5047,7 +5047,7 @@ The fields used by CP for code objects before V3 also match those specified in
      28:27   2 bits                                  Reserved, must be 0.
      29      1 bit    WGP_MODE                       GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX12
+                                                     GFX10-GFX11
                                                        - If 0 execute work-groups in
                                                          CU wavefront execution mode.
                                                        - If 1 execute work-groups on
@@ -5059,7 +5059,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.WGP_MODE``.
      30      1 bit    MEM_ORDERED                    GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX12
+                                                     GFX10-GFX11
                                                        Controls the behavior of the
                                                        s_waitcnt's vmcnt and vscnt
                                                        counters.
@@ -5082,7 +5082,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.MEM_ORDERED``.
      31      1 bit    FWD_PROGRESS                   GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX12
+                                                     GFX10-GFX11
                                                        - If 0 execute SIMD wavefronts
                                                          using oldest first policy.
                                                        - If 1 execute SIMD wavefronts to
@@ -5980,33 +5980,6 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 
-.. _amdgpu-fence-as:
-
-Fence and Address Spaces
-++++++++++++++++++++++++++++++
-
-LLVM fences do not have address space information, thus, fence
-codegen usually needs to conservatively synchronize all address spaces.
-
-In the case of OpenCL, where fences only need to synchronize
-user-specified address spaces, this can result in extra unnecessary waits.
-For instance, a fence that is supposed to only synchronize local memory will
-also have to wait on all global memory operations, which is unnecessary.
-
-:doc:`Memory Model Relaxation Annotations <MemoryModelRelaxationAnnotations>` can
-be used as an optimization hint for fences to solve this problem.
-The AMDGPU backend recognizes the following tags on fences:
-
-- ``amdgpu-as:local`` - fence only the local address space
-- ``amdgpu-as:global``- fence only the global address space
-
-.. note::
-
-  As an optimization hint, those tags are not guaranteed to survive until
-  code generation. Optimizations are free to drop the tags to allow for
-  better code optimization, at the cost of synchronizing additional address
-  spaces.
-
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
 
 Memory Model GFX6-GFX9
@@ -6344,9 +6317,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit.
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic load
@@ -6378,9 +6363,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -6583,9 +6573,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                            - If OpenCL and
                                                              address space is
                                                              not generic, omit.
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Must happen after
                                                              any preceding
                                                              local/generic
@@ -6621,9 +6623,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -6953,9 +6967,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -7896,9 +7915,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - s_waitcnt vmcnt(0)
                                                              must happen after
                                                              any preceding
@@ -7957,9 +7988,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -8030,9 +8066,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -8400,9 +8441,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - s_waitcnt vmcnt(0)
                                                              must happen after
                                                              any preceding
@@ -8448,9 +8501,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -8518,9 +8583,21 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -9141,9 +9218,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -9245,9 +9327,14 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -10203,9 +10290,21 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - s_waitcnt vmcnt(0)
                                                              must happen after
                                                              any preceding
@@ -10264,9 +10363,14 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -10337,9 +10441,14 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -10738,9 +10847,21 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - s_waitcnt vmcnt(0)
                                                              must happen after
                                                              any preceding
@@ -10799,9 +10920,21 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -10866,9 +10999,21 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              local, omit
                                                              vmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -11517,9 +11662,14 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -11621,9 +11771,14 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              address space is
                                                              not generic, omit
                                                              lgkmcnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
@@ -12469,9 +12624,21 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0) and vscnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt
@@ -12554,9 +12721,14 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0) and vscnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt
@@ -12920,9 +13092,21 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0) and vscnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt
@@ -12981,9 +13165,21 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0) and vscnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate. If
+                                                             fence had an
+                                                             address space then
+                                                             set to address
+                                                             space of OpenCL
+                                                             fence flag, or to
+                                                             generic if both
+                                                             local and global
+                                                             flags are
+                                                             specified.
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt
@@ -13535,9 +13731,14 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                              address space is
                                                              local, omit
                                                              vmcnt(0) and vscnt(0).
-                                                           - See :ref:`amdgpu-fence-as` for
-                                                             more details on fencing specific
-                                                             address spaces.
+                                                           - However, since LLVM
+                                                             currently has no
+                                                             address space on
+                                                             the fence need to
+                                                             conservatively
+                                                             always generate
+                                                             (see comment for
+                                                             previous fence).
                                                            - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0), s_waitcnt

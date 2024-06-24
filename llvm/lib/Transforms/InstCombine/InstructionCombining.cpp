@@ -206,7 +206,7 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
       !GEP->getSourceElementType()->isIntegerTy(8)) {
     replaceInstUsesWith(
         *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
-                                 Offset, "", GEP->getNoWrapFlags()));
+                                 Offset, "", GEP->isInBounds()));
     eraseInstFromFunction(*Inst);
   }
   return Offset;
@@ -642,11 +642,9 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
   RHS = Op->getOperand(1);
   if (TopOpcode == Instruction::Add || TopOpcode == Instruction::Sub) {
     Constant *C;
-    if (match(Op, m_Shl(m_Value(), m_ImmConstant(C)))) {
+    if (match(Op, m_Shl(m_Value(), m_Constant(C)))) {
       // X << C --> X * (1 << C)
-      RHS = ConstantFoldBinaryInstruction(
-          Instruction::Shl, ConstantInt::get(Op->getType(), 1), C);
-      assert(RHS && "Constant folding of immediate constants failed");
+      RHS = ConstantExpr::getShl(ConstantInt::get(Op->getType(), 1), C);
       return Instruction::Mul;
     }
     // TODO: We can add other conversions e.g. shr => div etc.
@@ -2332,10 +2330,10 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Propagate 'inbounds' and metadata from existing instructions.
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
-  GEPNoWrapFlags NW = GEP.getNoWrapFlags();
+  bool IsInBounds = GEP.isInBounds();
   Type *Ty = GEP.getSourceElementType();
-  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", NW);
-  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", NW);
+  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", IsInBounds);
+  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", IsInBounds);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
@@ -2941,9 +2939,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
                   m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          return GetElementPtrInst::Create(Builder.getInt8Ty(),
-                                           GEP.getPointerOperand(), V,
-                                           GEP.getNoWrapFlags());
+          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
+          NewGEP->setIsInBounds(GEP.isInBounds());
+          return NewGEP;
         }
       }
     }
@@ -2974,10 +2973,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           cast<OverflowingBinaryOperator>(GEP.getOperand(1))->hasNoSignedWrap(),
           Idx1, Idx2);
       auto *NewPtr =
-          Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
+          Builder.CreateGEP(GEP.getResultElementType(), GEP.getPointerOperand(),
                             Idx1, "", IsInBounds);
       return replaceInstUsesWith(
-          GEP, Builder.CreateGEP(GEP.getSourceElementType(), NewPtr, Idx2, "",
+          GEP, Builder.CreateGEP(GEP.getResultElementType(), NewPtr, Idx2, "",
                                  IsInBounds));
     }
     ConstantInt *C;
@@ -2992,12 +2991,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       bool IsInBounds = CanPreserveInBounds(
           /*IsNSW=*/true, Idx1, C);
       auto *NewPtr = Builder.CreateGEP(
-          GEP.getSourceElementType(), GEP.getPointerOperand(),
+          GEP.getResultElementType(), GEP.getPointerOperand(),
           Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "",
           IsInBounds);
       return replaceInstUsesWith(
           GEP,
-          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
+          Builder.CreateGEP(GEP.getResultElementType(), NewPtr,
                             Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
                             "", IsInBounds));
     }

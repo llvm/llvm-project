@@ -19,9 +19,9 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
-  std::shared_timed_mutex m;
-  (void)m;
+int main(int, char**)
+{
+    std::shared_timed_mutex m;
 
   return 0;
 }

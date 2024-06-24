@@ -55,12 +55,7 @@ enum : unsigned { Log2MaxSectionAlignment = 13 };
 // doesn't even have actual data (if common or bss).
 class Chunk {
 public:
-  enum Kind : uint8_t {
-    SectionKind,
-    SectionECKind,
-    OtherKind,
-    ImportThunkKind
-  };
+  enum Kind : uint8_t { SectionKind, OtherKind, ImportThunkKind };
   Kind kind() const { return chunkKind; }
 
   // Returns the size of this chunk (even if this is a common or BSS.)
@@ -125,10 +120,6 @@ public:
   llvm::Triple::ArchType getArch() const;
   std::optional<chpe_range_type> getArm64ECRangeType() const;
 
-  // ARM64EC entry thunk associated with the chunk.
-  Defined *getEntryThunk() const;
-  void setEntryThunk(Defined *entryThunk);
-
 protected:
   Chunk(Kind k = OtherKind) : chunkKind(k), hasData(true), p2Align(0) {}
 
@@ -185,7 +176,7 @@ public:
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
 
-  static bool classof(const Chunk *c) { return c->kind() >= OtherKind; }
+  static bool classof(const Chunk *c) { return c->kind() != SectionKind; }
 
 protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
@@ -219,7 +210,7 @@ public:
 };
 
 // A chunk corresponding a section of an input file.
-class SectionChunk : public Chunk {
+class SectionChunk final : public Chunk {
   // Identical COMDAT Folding feature accesses section internal data.
   friend class ICF;
 
@@ -240,8 +231,8 @@ public:
     Symbol *operator*() const { return file->getSymbol(I->SymbolTableIndex); }
   };
 
-  SectionChunk(ObjFile *file, const coff_section *header, Kind k = SectionKind);
-  static bool classof(const Chunk *c) { return c->kind() <= SectionECKind; }
+  SectionChunk(ObjFile *file, const coff_section *header);
+  static bool classof(const Chunk *c) { return c->kind() == SectionKind; }
   size_t getSize() const { return header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *buf) const;
@@ -400,16 +391,6 @@ private:
 
   uint32_t relocsSize = 0;
   uint32_t sectionNameSize = 0;
-};
-
-// A section chunk corresponding a section of an EC input file.
-class SectionChunkEC final : public SectionChunk {
-public:
-  static bool classof(const Chunk *c) { return c->kind() == SectionECKind; }
-
-  SectionChunkEC(ObjFile *file, const coff_section *header)
-      : SectionChunk(file, header, SectionECKind) {}
-  Defined *entryThunk = nullptr;
 };
 
 // Inline methods to implement faux-virtual dispatch for SectionChunk.
@@ -792,17 +773,6 @@ inline bool Chunk::isHotPatchable() const {
   else if (isa<ImportThunkChunk>(this))
     return true;
   return false;
-}
-
-inline Defined *Chunk::getEntryThunk() const {
-  if (auto *c = dyn_cast<const SectionChunkEC>(this))
-    return c->entryThunk;
-  return nullptr;
-}
-
-inline void Chunk::setEntryThunk(Defined *entryThunk) {
-  if (auto c = dyn_cast<SectionChunkEC>(this))
-    c->entryThunk = entryThunk;
 }
 
 void applyMOV32T(uint8_t *off, uint32_t v);

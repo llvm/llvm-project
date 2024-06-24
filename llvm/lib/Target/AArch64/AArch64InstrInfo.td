@@ -107,7 +107,7 @@ def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPC_IMMO()">,
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicateWithAll<(all_of FeatureFPARMv8), "fp-armv8">;
-def HasNEON          : Predicate<"Subtarget->isNeonAvailable()">,
+def HasNEON          : Predicate<"Subtarget->hasNEON()">,
                                  AssemblerPredicateWithAll<(all_of FeatureNEON), "neon">;
 def HasSM4           : Predicate<"Subtarget->hasSM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSM4), "sm4">;
@@ -235,10 +235,11 @@ def HasSMEF16F16orSMEF8F16
                 "sme-f16f16 or sme-f8f16">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
-// so don't need the additional check for 'isNeonAvailable'.
-def HasNEONandIsStreamingSafe
-    : Predicate<"Subtarget->hasNEON()">,
-      AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
+// they should be enabled if either has been specified.
+def HasNEONorSME
+    : Predicate<"Subtarget->hasNEON() || Subtarget->hasSME()">,
+                AssemblerPredicateWithAll<(any_of FeatureNEON, FeatureSME),
+                "neon or sme">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -321,6 +322,8 @@ def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
+
+def IsNeonAvailable : Predicate<"Subtarget->isNeonAvailable()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -1347,7 +1350,7 @@ def : Pat<(v2f32 (int_aarch64_neon_bfdot
                              VectorIndexS:$idx)>;
 }
 
-let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {
+let Predicates = [HasNEONorSME, HasBF16] in {
 def BFCVT : BF16ToSinglePrecision<"bfcvt">;
 // Round FP32 to BF16.
 def : Pat<(bf16 (any_fpround (f32 FPR32:$Rn))), (BFCVT $Rn)>;
@@ -4916,18 +4919,6 @@ def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXNMDrr FPR64:$Rn, FPR64:$Rm)>;
 def : Pat<(v1f64 (fminnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINNMDrr FPR64:$Rn, FPR64:$Rm)>;
-def : Pat<(fminnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
-          (FMINNMDrr FPR64:$a, FPR64:$b)>;
-def : Pat<(fminnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
-          (FMINNMSrr FPR32:$a, FPR32:$b)>;
-def : Pat<(fmaxnum_ieee (f64 FPR64:$a), (f64 FPR64:$b)),
-          (FMAXNMDrr FPR64:$a, FPR64:$b)>;
-def : Pat<(fmaxnum_ieee (f32 FPR32:$a), (f32 FPR32:$b)),
-          (FMAXNMSrr FPR32:$a, FPR32:$b)>;
-def : Pat<(f32 (fcanonicalize f32:$a)),
-          (FMINSrr   f32:$a, f32:$a)>;
-def : Pat<(f64 (fcanonicalize f64:$a)),
-          (FMINDrr   f64:$a, f64:$a)>;
 
 //===----------------------------------------------------------------------===//
 // Floating point three operand instructions.
@@ -5798,9 +5789,9 @@ defm FACGT    : SIMDThreeScalarFPCmp<1, 1, 0b101, "facgt",
 defm FCMEQ    : SIMDThreeScalarFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;
 defm FCMGE    : SIMDThreeScalarFPCmp<1, 0, 0b100, "fcmge", AArch64fcmge>;
 defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
-defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONandIsStreamingSafe>;
-defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONandIsStreamingSafe>;
-defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONandIsStreamingSafe>;
+defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONorSME>;
+defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONorSME>;
+defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONorSME>;
 defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", int_aarch64_neon_sqadd>;
 defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
@@ -5829,7 +5820,7 @@ let Predicates = [HasRDM] in {
 
 defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
                                           int_aarch64_neon_fmulx,
-                                          [HasNEONandIsStreamingSafe]>;
+                                          [HasNEONorSME]>;
 
 let Predicates = [HasNEON] in {
 def : InstAlias<"cmls $dst, $src1, $src2",
@@ -5903,9 +5894,9 @@ defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu">;
 def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
 defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs">;
 defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu">;
-defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe">;
-defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx">;
-defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
+defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe", HasNEONorSME>;
+defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx", HasNEONorSME>;
+defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte", HasNEONorSME>;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
@@ -5924,7 +5915,7 @@ def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
 
 // Round FP64 to BF16.
-let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in
+let Predicates = [HasNEONorSME, HasBF16] in
 def : Pat<(bf16 (any_fpround (f64 FPR64:$Rn))),
           (BFCVT (FCVTXNv1i64 $Rn))>;
 
@@ -6025,7 +6016,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-let Predicates = [HasNEONandIsStreamingSafe] in {
+let Predicates = [HasNEON] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -6035,7 +6026,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
+let Predicates = [HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6127,7 +6118,7 @@ def : Pat <(f64 (uint_to_fp (i32
                           (LDURSi GPR64sp:$Rn, simm9:$offset), ssub))>;
 // 64-bits -> double are handled in target specific dag combine:
 // performIntToFpCombine.
-} // let Predicates = [HasNEONandIsStreamingSafe]
+} // let Predicates = [HasNEON]
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three different-sized vector instructions.
@@ -8388,7 +8379,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 
 // Same as above, but the first element is populated using
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
-let Predicates = [HasNEON] in {
+let Predicates = [IsNeonAvailable] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
                           SDPatternOperator ExtLoad, Instruction LD1>
     : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),

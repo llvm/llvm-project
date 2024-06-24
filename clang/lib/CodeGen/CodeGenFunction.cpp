@@ -818,8 +818,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
-    if (SanOpts.has(SanitizerKind::NumericalStability))
-      Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
       Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
   }
@@ -2637,6 +2635,7 @@ CodeGenFunction::SanitizerScope::~SanitizerScope() {
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    const llvm::Twine &Name,
+                                   llvm::BasicBlock *BB,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
   if (IsSanitizerScope)
@@ -2644,11 +2643,11 @@ void CodeGenFunction::InsertHelper(llvm::Instruction *I,
 }
 
 void CGBuilderInserter::InsertHelper(
-    llvm::Instruction *I, const llvm::Twine &Name,
+    llvm::Instruction *I, const llvm::Twine &Name, llvm::BasicBlock *BB,
     llvm::BasicBlock::iterator InsertPt) const {
-  llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+  llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
   if (CGF)
-    CGF->InsertHelper(I, Name, InsertPt);
+    CGF->InsertHelper(I, Name, BB, InsertPt);
 }
 
 // Emits an error if we don't have a valid set of target features for the
@@ -2952,7 +2951,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     SourceLocation SecondaryLoc, llvm::Value *Alignment,
     llvm::Value *OffsetValue, llvm::Value *TheCheck,
     llvm::Instruction *Assumption) {
-  assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
+  assert(Assumption && isa<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
              llvm::Intrinsic::getDeclaration(
                  Builder.GetInsertBlock()->getParent()->getParent(),

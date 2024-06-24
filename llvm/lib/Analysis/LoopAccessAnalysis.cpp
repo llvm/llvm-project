@@ -2389,7 +2389,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
+void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                  const TargetLibraryInfo *TLI,
                                  DominatorTree *DT) {
   // Holds the Load and Store instructions.
@@ -2430,8 +2430,10 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
 
       // With both a non-vectorizable memory instruction and a convergent
       // operation, found in this loop, no reason to continue the search.
-      if (HasComplexMemInst && HasConvergentOp)
-        return false;
+      if (HasComplexMemInst && HasConvergentOp) {
+        CanVecMem = false;
+        return;
+      }
 
       // Avoid hitting recordAnalysis multiple times.
       if (HasComplexMemInst)
@@ -2506,8 +2508,10 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     } // Next instr.
   } // Next block.
 
-  if (HasComplexMemInst)
-    return false;
+  if (HasComplexMemInst) {
+    CanVecMem = false;
+    return;
+  }
 
   // Now we have two lists that hold the loads and the stores.
   // Next, we find the pointers that they use.
@@ -2516,7 +2520,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // care if the pointers are *restrict*.
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
-    return true;
+    CanVecMem = true;
+    return;
   }
 
   MemoryDepChecker::DepCandidates DependentAccesses;
@@ -2569,7 +2574,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
-    return true;
+    CanVecMem = true;
+    return;
   }
 
   for (LoadInst *LD : Loads) {
@@ -2616,7 +2622,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // other reads in this loop then is it safe to vectorize.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
-    return true;
+    CanVecMem = true;
+    return;
   }
 
   // Build dependence sets and check whether we need a runtime pointer bounds
@@ -2635,20 +2642,21 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
-    return false;
+    CanVecMem = false;
+    return;
   }
 
   LLVM_DEBUG(
     dbgs() << "LAA: May be able to perform a memory runtime check if needed.\n");
 
-  bool DepsAreSafe = true;
+  CanVecMem = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
-                                          Accesses.getDependenciesToCheck(),
-                                          Accesses.getUnderlyingObjects());
+    CanVecMem = DepChecker->areDepsSafe(DependentAccesses,
+                                        Accesses.getDependenciesToCheck(),
+                                        Accesses.getUnderlyingObjects());
 
-    if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
+    if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       // Clear the dependency checks. We assume they are not needed.
@@ -2668,30 +2676,30 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
-        return false;
+        CanVecMem = false;
+        return;
       }
-      DepsAreSafe = true;
+
+      CanVecMem = true;
     }
   }
 
   if (HasConvergentOp) {
     recordAnalysis("CantInsertRuntimeCheckWithConvergent")
-        << "cannot add control dependency to convergent operation";
+      << "cannot add control dependency to convergent operation";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because a runtime check "
                          "would be needed with a convergent operation\n");
-    return false;
+    CanVecMem = false;
+    return;
   }
 
-  if (DepsAreSafe) {
+  if (CanVecMem)
     LLVM_DEBUG(
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
                << (PtrRtChecking->Need ? "" : " don't")
                << " need runtime memory checks.\n");
-    return true;
-  }
-
-  emitUnsafeDependenceRemark();
-  return false;
+  else
+    emitUnsafeDependenceRemark();
 }
 
 void LoopAccessInfo::emitUnsafeDependenceRemark() {
@@ -3040,7 +3048,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                                   MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop())
-    CanVecMem = analyzeLoop(AA, LI, TLI, DT);
+    analyzeLoop(AA, LI, TLI, DT);
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {

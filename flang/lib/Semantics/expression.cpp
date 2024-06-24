@@ -172,8 +172,7 @@ public:
   void Dump(llvm::raw_ostream &);
 
 private:
-  MaybeExpr TryDefinedOp(
-      const std::vector<const char *> &, parser::MessageFixedText);
+  MaybeExpr TryDefinedOp(std::vector<const char *>, parser::MessageFixedText);
   MaybeExpr TryBoundOp(const Symbol &, int passIndex);
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
   std::optional<ActualArgument> AnalyzeVariable(const parser::Variable &);
@@ -4411,7 +4410,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
 }
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
-    const std::vector<const char *> &oprs, parser::MessageFixedText error) {
+    std::vector<const char *> oprs, parser::MessageFixedText error) {
   if (oprs.size() == 1) {
     return TryDefinedOp(oprs[0], error);
   }

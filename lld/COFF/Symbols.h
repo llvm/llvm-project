@@ -106,7 +106,7 @@ protected:
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
 
-  unsigned symbolKind : 8;
+  const unsigned symbolKind : 8;
   unsigned isExternal : 1;
 
 public:

@@ -644,25 +644,16 @@ void TypePrinter::printDependentAddressSpaceAfter(
 void TypePrinter::printDependentSizedExtVectorBefore(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
-    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printDependentSizedExtVectorAfter(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
-  if (Policy.UseHLSLTypes) {
-    OS << ", ";
-    if (T->getSizeExpr())
-      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-    OS << ">";
-  } else {
-    OS << " __attribute__((ext_vector_type(";
-    if (T->getSizeExpr())
-      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-    OS << ")))";
-  }
+  OS << " __attribute__((ext_vector_type(";
+  if (T->getSizeExpr())
+    T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+  OS << ")))";
   printAfter(T->getElementType(), OS);
 }
 
@@ -824,23 +815,14 @@ void TypePrinter::printDependentVectorAfter(
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) {
-  if (Policy.UseHLSLTypes)
-    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
-
-  if (Policy.UseHLSLTypes) {
-    OS << ", ";
-    OS << T->getNumElements();
-    OS << ">";
-  } else {
-    OS << " __attribute__((ext_vector_type(";
-    OS << T->getNumElements();
-    OS << ")))";
-  }
+  OS << " __attribute__((ext_vector_type(";
+  OS << T->getNumElements();
+  OS << ")))";
 }
 
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,

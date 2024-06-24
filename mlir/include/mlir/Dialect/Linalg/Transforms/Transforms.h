@@ -873,9 +873,9 @@ tileToForallOpUsingTileSizes(RewriterBase &builder, TilingInterface op,
 /// Transformation information returned after reduction tiling.
 struct ForallReductionTilingResult {
   /// The partial reduction tiled op generated.
-  SmallVector<Operation *> parallelTiledOps;
+  Operation *parallelTiledOp;
   /// The final reduction operation merging all the partial reductions.
-  SmallVector<Operation *> mergeOps;
+  Operation *mergeOp;
   /// Initial values used for partial reductions.
   SmallVector<Value> initialValues;
   /// The `scf.forall` operation that iterate over the tiles.

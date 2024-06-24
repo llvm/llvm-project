@@ -141,7 +141,9 @@ INLINE void chunk_state_update(blake3_chunk_state *self, const uint8_t *input,
     input_len -= BLAKE3_BLOCK_LEN;
   }
 
-  chunk_state_fill_buf(self, input, input_len);
+  size_t take = chunk_state_fill_buf(self, input, input_len);
+  input += take;
+  input_len -= take;
 }
 
 INLINE output_t chunk_state_output(const blake3_chunk_state *self) {

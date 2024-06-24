@@ -26,17 +26,13 @@ if (CLANGD_ENABLE_REMOTE)
     clangdRemoteIndexProto
     clangdRemoteIndexServiceProto
     clangdRemoteMarshalling
+    clangBasic
     clangDaemon
     clangdSupport
 
     DEPENDS
     clangdRemoteIndexProto
     clangdRemoteIndexServiceProto
-    )
-
-  clang_target_link_libraries(clangdRemoteIndex
-    PRIVATE
-    clangBasic
     )
 
   add_subdirectory(marshalling)

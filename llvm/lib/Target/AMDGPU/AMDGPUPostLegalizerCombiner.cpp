@@ -465,8 +465,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -494,8 +494,7 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());

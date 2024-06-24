@@ -281,9 +281,7 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXIMUMNUM:
-  case TargetOpcode::G_FMINIMUMNUM: {
+  case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     TypeSize Size = Ty.getSizeInBits();
 

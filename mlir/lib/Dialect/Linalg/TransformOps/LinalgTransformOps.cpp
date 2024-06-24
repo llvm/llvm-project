@@ -369,11 +369,12 @@ void transform::BufferizeToAllocationOp::getEffects(
   if (getBufferizeDestinationOnly()) {
     // The destination is replaced with a newly allocated buffer, but the op
     // itself remains in place.
-    onlyReadsHandle(getTargetMutable(), effects);
+    onlyReadsHandle(getTarget(), effects);
   } else {
-    consumesHandle(getTargetMutable(), effects);
+    consumesHandle(getTarget(), effects);
   }
-  producesHandle(getOperation()->getOpResults(), effects);
+  producesHandle(getAllocatedBuffer(), effects);
+  producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
 }
 
@@ -462,7 +463,7 @@ DiagnosedSilenceableFailure transform::DecomposeInterfaceOp::applyToOne(
 
 void transform::EliminateLinalgOpAnchoredEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getTarget(), effects);
   modifiesPayload(effects);
 }
 
@@ -1039,9 +1040,9 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::FuseIntoContainingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getProducerOpMutable(), effects);
-  onlyReadsHandle(getContainingOpMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getProducerOp(), effects);
+  onlyReadsHandle(getContainingOp(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -1390,8 +1391,8 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
 
 void transform::MultiTileSizesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTargetMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  onlyReadsHandle(getTarget(), effects);
+  producesHandle(getResults(), effects);
   if (isa<TransformParamTypeInterface>(getLowSize().getType()))
     onlyReadsPayload(effects);
   else
@@ -1477,9 +1478,9 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::PackOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTargetMutable(), effects);
-  transform::onlyReadsHandle(getPackedSizesMutable(), effects);
-  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::consumesHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getPackedSizes(), effects);
+  transform::producesHandle(getPackedOp(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -1548,9 +1549,9 @@ SmallVector<OpFoldResult> PackGreedilyOp::getMixedMatmulPackedSizes() {
 
 void transform::PackGreedilyOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTargetMutable(), effects);
-  transform::onlyReadsHandle(getMatmulPackedSizesMutable(), effects);
-  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::consumesHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getMatmulPackedSizes(), effects);
+  transform::producesHandle(getPackedOp(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -1760,9 +1761,11 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
 
 void PadOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getPadToMultipleOfMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getPadToMultipleOf(), effects);
+  producesHandle(getPadded(), effects);
+  producesHandle(getPad(), effects);
+  producesHandle(getCopy(), effects);
   modifiesPayload(effects);
 }
 
@@ -1989,9 +1992,9 @@ LogicalResult transform::HoistPadBuildPackingLoopNestOp::verify() {
 
 void transform::HoistPadBuildPackingLoopNestOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTargetMutable(), effects);
-  transform::onlyReadsHandle(getLoopMutable(), effects);
-  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getLoop(), effects);
+  transform::producesHandle(getPackingLoop(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -2132,8 +2135,8 @@ transform::ReplaceOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::ReplaceOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  producesHandle(getReplacement(), effects);
   modifiesPayload(effects);
 }
 
@@ -2358,10 +2361,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
 void SplitOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
+  consumesHandle(getTarget(), effects);
   if (getDynamicSplitPoint())
-    onlyReadsHandle(getDynamicSplitPointMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+    onlyReadsHandle(getDynamicSplitPoint(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -2522,10 +2525,8 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
     return emitDefaultSilenceableFailure(target);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->parallelTiledOps)
-    results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
-    results.push_back(mergeOp);
+  results.push_back(result->parallelTiledOp);
+  results.push_back(result->mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
 }
@@ -2576,10 +2577,8 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
   }
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->parallelTiledOps)
-    results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
-    results.push_back(mergeOp);
+  results.push_back(result->parallelTiledOp);
+  results.push_back(result->mergeOp);
   results.push_back(result->loops);
   return DiagnosedSilenceableFailure::success();
 }
@@ -2828,9 +2827,10 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
 
 void transform::TileUsingForOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getDynamicSizesMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getDynamicSizes(), effects);
+  producesHandle(getTiledLinalgOp(), effects);
+  producesHandle(getLoops(), effects);
   modifiesPayload(effects);
 }
 
@@ -2995,12 +2995,12 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
 
 void transform::TileUsingForallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getTileSizesMutable(), effects);
-  onlyReadsHandle(getNumThreadsMutable(), effects);
-  onlyReadsHandle(getPackedNumThreadsMutable(), effects);
-  onlyReadsHandle(getPackedTileSizesMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getTileSizes(), effects);
+  onlyReadsHandle(getNumThreads(), effects);
+  onlyReadsHandle(getPackedNumThreads(), effects);
+  onlyReadsHandle(getPackedTileSizes(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -3178,8 +3178,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
 void transform::VectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getVectorSizesMutable(), effects);
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getVectorSizes(), effects);
   modifiesPayload(effects);
 }
 

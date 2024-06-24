@@ -74,8 +74,7 @@ function compute-projects-to-test() {
       fi
     ;;
     clang)
-      # lldb is temporarily removed to alleviate Linux pre-commit CI waiting times
-      for p in clang-tools-extra compiler-rt cross-project-tests; do
+      for p in clang-tools-extra compiler-rt lldb cross-project-tests; do
         echo $p
       done
     ;;

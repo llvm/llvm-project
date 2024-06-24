@@ -434,11 +434,6 @@ def umin       : SDNode<"ISD::UMIN"      , SDTIntBinOp,
 def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 
-def scmp       : SDNode<"ISD::SCMP"      , SDTIntBinOp,
-                                  []>;
-def ucmp       : SDNode<"ISD::UCMP"      , SDTIntBinOp,
-                                  []>;
-
 def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
@@ -487,8 +482,6 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
-def vecreduce_fminimumnum : SDNode<"ISD::VECREDUCE_FMINIMUMNUM", SDTFPVecReduce>;
-def vecreduce_fmaximumnum : SDNode<"ISD::VECREDUCE_FMAXIMUMNUM", SDTFPVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -509,10 +502,6 @@ def fmaxnum_ieee  : SDNode<"ISD::FMAXNUM_IEEE", SDTFPBinOp,
 def fminimum   : SDNode<"ISD::FMINIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximum   : SDNode<"ISD::FMAXIMUM"   , SDTFPBinOp,
-                        [SDNPCommutative, SDNPAssociative]>;
-def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
-                        [SDNPCommutative, SDNPAssociative]>;
-def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
@@ -616,12 +605,6 @@ def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
 def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
-                               SDTFPBinOp, [SDNPHasChain,
-                                            SDNPCommutative, SDNPAssociative]>;
-def strict_fminimumnum   : SDNode<"ISD::STRICT_FMINIMUMNUM",
-                               SDTFPBinOp, [SDNPHasChain,
-                                            SDNPCommutative, SDNPAssociative]>;
-def strict_fmaximumnum   : SDNode<"ISD::STRICT_FMAXIMUMNUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
@@ -1597,12 +1580,6 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
-def any_fmaximumnum   : PatFrags<(ops node:$lhs, node:$rhs),
-                              [(strict_fmaximumnum node:$lhs, node:$rhs),
-                               (fmaximumnum node:$lhs, node:$rhs)]>;
-def any_fminimumnum   : PatFrags<(ops node:$lhs, node:$rhs),
-                              [(strict_fminimumnum node:$lhs, node:$rhs),
-                               (fminimumnum node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;
@@ -1703,38 +1680,60 @@ multiclass ternary_atomic_op_ord {
   }
 }
 
-multiclass binary_atomic_op<SDNode atomic_op> {
-  foreach vt = [ i8, i16, i32, i64 ] in {
-    def _#vt : PatFrag<(ops node:$ptr, node:$val),
-                       (atomic_op  node:$ptr, node:$val)> {
-      let IsAtomic = true;
-      let MemoryVT = vt;
-    }
-
-    defm NAME#_#vt  : binary_atomic_op_ord;
+multiclass binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
+  def _8 : PatFrag<(ops node:$ptr, node:$val),
+                   (atomic_op  node:$ptr, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = !if(IsInt, i8, ?);
   }
-}
-
-multiclass binary_atomic_op_fp<SDNode atomic_op> {
-  foreach vt = [ f16, bf16, v2f16, v2bf16, f32, f64 ] in {
-    def _#vt : PatFrag<(ops node:$ptr, node:$val),
-                       (atomic_op node:$ptr, node:$val)> {
-      let IsAtomic = true;
-      let MemoryVT = vt;
-    }
+  def _16 : PatFrag<(ops node:$ptr, node:$val),
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = !if(IsInt, i16, f16);
   }
+  def _32 : PatFrag<(ops node:$ptr, node:$val),
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = !if(IsInt, i32, f32);
+  }
+  def _64 : PatFrag<(ops node:$ptr, node:$val),
+                    (atomic_op node:$ptr, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = !if(IsInt, i64, f64);
+  }
+
+  defm NAME#_8  : binary_atomic_op_ord;
+  defm NAME#_16 : binary_atomic_op_ord;
+  defm NAME#_32 : binary_atomic_op_ord;
+  defm NAME#_64 : binary_atomic_op_ord;
 }
 
 multiclass ternary_atomic_op<SDNode atomic_op> {
-  foreach vt = [ i8, i16, i32, i64 ] in {
-    def _#vt : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                       (atomic_op node:$ptr, node:$cmp, node:$val)> {
-      let IsAtomic = true;
-      let MemoryVT = vt;
-    }
-
-    defm NAME#_#vt  : ternary_atomic_op_ord;
+  def _8 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                   (atomic_op  node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = i8;
   }
+  def _16 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = i16;
+  }
+  def _32 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = i32;
+  }
+  def _64 : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
+                    (atomic_op node:$ptr, node:$cmp, node:$val)> {
+    let IsAtomic = true;
+    let MemoryVT = i64;
+  }
+
+  defm NAME#_8  : ternary_atomic_op_ord;
+  defm NAME#_16 : ternary_atomic_op_ord;
+  defm NAME#_32 : ternary_atomic_op_ord;
+  defm NAME#_64 : ternary_atomic_op_ord;
 }
 
 defm atomic_load_add  : binary_atomic_op<atomic_load_add>;

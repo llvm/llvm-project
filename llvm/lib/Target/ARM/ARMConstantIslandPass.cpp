@@ -229,7 +229,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -399,7 +399,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isPositionIndependentOrROPI =
       STI->getTargetLowering()->isPositionIndependent() || STI->isROPI();
   AFI = MF->getInfo<ARMFunctionInfo>();
-  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  DT = &getAnalysis<MachineDominatorTree>();
 
   isThumb = AFI->isThumbFunction();
   isThumb1 = AFI->isThumb1OnlyFunction();
