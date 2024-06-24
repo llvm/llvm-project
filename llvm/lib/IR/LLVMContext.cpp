@@ -171,6 +171,12 @@ void LLVMContext::setDiagnosticsMisExpectTolerance(
 uint32_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
   return pImpl->DiagnosticsMisExpectTolerance.value_or(0);
 }
+void LLVMContext::setAnnotationDiagsRequested(bool Requested) {
+  pImpl->AnnotationsDiagsRequested = Requested;
+}
+bool LLVMContext::getAnnotationDiagsRequested() const {
+  return pImpl->AnnotationsDiagsRequested;
+}
 
 bool LLVMContext::isDiagnosticsHotnessThresholdSetFromPSI() const {
   return !pImpl->DiagnosticsHotnessThreshold.has_value();

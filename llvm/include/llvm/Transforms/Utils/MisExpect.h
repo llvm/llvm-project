@@ -76,6 +76,9 @@ void checkExpectAnnotations(Instruction &I,
                             const ArrayRef<uint32_t> ExistingWeights,
                             bool IsFrontend);
 
+void checkMissingAnnotations(Instruction &I,
+                             const ArrayRef<uint32_t> ExistingWeights,
+                             bool IsFrontendInstr);
 } // namespace misexpect
 } // namespace llvm
 
