@@ -144,7 +144,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     auto *CI = cast<CallInst>(CB);
     assert(CI->getCalledFunction() && "Cannot lower an indirect call!");
 
-    IRBuilder<> Builder(CI->getIterator());
+    IRBuilder<> Builder(CI->getParent(), CI->getIterator());
     SmallVector<Value *, 8> Args(CI->args());
     SmallVector<llvm::OperandBundleDef, 1> BundleList;
     CI->getOperandBundlesAsDefs(BundleList);

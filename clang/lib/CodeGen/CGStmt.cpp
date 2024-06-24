@@ -3076,7 +3076,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   if (IsGCCAsmGoto && !CBRRegResults.empty()) {
     for (llvm::BasicBlock *Succ : CBR->getIndirectDests()) {
       llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-      Builder.SetInsertPoint(--(Succ->end()));
+      Builder.SetInsertPoint(Succ, --(Succ->end()));
       EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
                     ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
                     ResultTypeRequiresCast, ResultRegIsFlagReg);

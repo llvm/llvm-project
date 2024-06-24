@@ -316,7 +316,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   // ; end:                                 ; preds = %loop-exit, %special-cases
   // ;   %q_5 = phi i32 [ %q_4, %loop-exit ], [ %retVal, %special-cases ]
   // ;   ret i32 %q_5
-  Builder.SetInsertPoint(End->begin());
+  Builder.SetInsertPoint(End, End->begin());
   PHINode *Q_5 = Builder.CreatePHI(DivTy, 2);
 
   // Populate the Phis, since all values have now been created. Our Phis were:

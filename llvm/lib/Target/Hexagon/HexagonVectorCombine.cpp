@@ -1460,7 +1460,8 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     InsertAt = &*std::next(InsertAt->getIterator());
   }
 
-  IRBuilder Builder(InsertAt->getIterator(), InstSimplifyFolder(HVC.DL));
+  IRBuilder Builder(InsertAt->getParent(), InsertAt->getIterator(),
+                    InstSimplifyFolder(HVC.DL));
   Value *AlignAddr = nullptr; // Actual aligned address.
   Value *AlignVal = nullptr;  // Right-shift amount (for valign).
 
@@ -1740,7 +1741,8 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
   // TODO: Add multiplication of vectors by scalar registers (up to 4 bytes).
 
   Value *X = Op.X.Val, *Y = Op.Y.Val;
-  IRBuilder Builder(In.getIterator(), InstSimplifyFolder(HVC.DL));
+  IRBuilder Builder(In.getParent(), In.getIterator(),
+                    InstSimplifyFolder(HVC.DL));
 
   auto roundUpWidth = [](unsigned Width) -> unsigned {
     if (Width <= 32 && !isPowerOf2_32(Width)) {

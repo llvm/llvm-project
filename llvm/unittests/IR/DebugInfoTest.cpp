@@ -698,7 +698,7 @@ TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
   SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
   Builder.CreateCall(DbgDeclare, Args);
   auto IP = BB->getFirstInsertionPt();
-  Builder.SetInsertPoint(IP);
+  Builder.SetInsertPoint(BB.get(), IP);
 }
 
 TEST(AssignmentTrackingTest, InstrMethods) {

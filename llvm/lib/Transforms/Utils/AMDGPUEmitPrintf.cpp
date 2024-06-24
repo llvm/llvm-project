@@ -134,7 +134,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.CreateCondBr(Cmp, WhileDone, While);
 
   // Add one to the computed length.
-  Builder.SetInsertPoint(WhileDone->begin());
+  Builder.SetInsertPoint(WhileDone, WhileDone->begin());
   auto Begin = Builder.CreatePtrToInt(Str, Int64Ty);
   auto End = Builder.CreatePtrToInt(PtrPhi, Int64Ty);
   auto Len = Builder.CreateSub(End, Begin);
@@ -142,7 +142,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 
   // Final join.
   BranchInst::Create(Join, WhileDone);
-  Builder.SetInsertPoint(Join->begin());
+  Builder.SetInsertPoint(Join, Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
   LenPhi->addIncoming(Zero, Prev);

@@ -2253,7 +2253,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   BasicBlock *Preheader = CLI->getPreheader();
   Value *TripCount = CLI->getTripCount();
 
-  Builder.SetInsertPoint(BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
 
   IRBuilder<>::InsertPoint AfterIP = OMPBuilder.applyWorkshareLoop(
       DL, CLI, AllocaIP, true, OMP_SCHEDULE_Static, nullptr, false, false,
@@ -2317,7 +2317,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
   Value *IV = CLI->getIndVar();
   BasicBlock *ExitBlock = CLI->getExit();
 
-  Builder.SetInsertPoint(BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   OMPBuilder.applyWorkshareLoop(DL, CLI, AllocaIP, /*NeedsBarrier=*/true,
@@ -2507,7 +2507,7 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
       Loc, LoopBodyGen, StartVal, StopVal, StepVal,
       /*IsSigned=*/false, /*InclusiveStop=*/false);
 
-  Builder.SetInsertPoint(BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   // Collect all the info from CLI, as it isn't usable after the call to
@@ -2649,7 +2649,7 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
       Loc, LoopBodyGen, StartVal, StopVal, StepVal,
       /*IsSigned=*/false, /*InclusiveStop=*/false);
 
-  Builder.SetInsertPoint(BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
   InsertPointTy AllocaIP = Builder.saveIP();
 
   // Collect all the info from CLI, as it isn't usable after the call to
@@ -4850,7 +4850,7 @@ static bool findGEPZeroOne(Value *Ptr, Value *&Zero, Value *&One) {
 static OpenMPIRBuilder::InsertPointTy
 sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getPoint());
+  IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
   Result = Builder.CreateFAdd(LHS, RHS, "red.add");
   return Builder.saveIP();
 }
@@ -4858,7 +4858,7 @@ sumReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getPoint());
+  IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);
@@ -4868,7 +4868,7 @@ sumAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
 static OpenMPIRBuilder::InsertPointTy
 xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
              Value *&Result) {
-  IRBuilder<> Builder(IP.getPoint());
+  IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
   Result = Builder.CreateXor(LHS, RHS, "red.xor");
   return Builder.saveIP();
 }
@@ -4876,7 +4876,7 @@ xorReduction(OpenMPIRBuilder::InsertPointTy IP, Value *LHS, Value *RHS,
 static OpenMPIRBuilder::InsertPointTy
 xorAtomicReduction(OpenMPIRBuilder::InsertPointTy IP, Type *Ty, Value *LHS,
                    Value *RHS) {
-  IRBuilder<> Builder(IP.getPoint());
+  IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
   Value *Partial = Builder.CreateLoad(Ty, RHS, "red.partial");
   Builder.CreateAtomicRMW(AtomicRMWInst::Xor, LHS, Partial, std::nullopt,
                           AtomicOrdering::Monotonic);

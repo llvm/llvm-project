@@ -2970,12 +2970,13 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
     value = doFallback(CGF, value);
   } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
-    CGF.Builder.SetInsertPoint(++llvm::BasicBlock::iterator(call));
+    CGF.Builder.SetInsertPoint(call->getParent(),
+                               ++llvm::BasicBlock::iterator(call));
     value = doAfterCall(CGF, value);
   } else if (llvm::InvokeInst *invoke = dyn_cast<llvm::InvokeInst>(value)) {
     // Place the retain at the beginning of the normal destination block.
     llvm::BasicBlock *BB = invoke->getNormalDest();
-    CGF.Builder.SetInsertPoint(BB->begin());
+    CGF.Builder.SetInsertPoint(BB, BB->begin());
     value = doAfterCall(CGF, value);
 
   // Bitcasts can arise because of related-result returns.  Rewrite
@@ -2983,7 +2984,7 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
   } else if (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(value)) {
     // Change the insert point to avoid emitting the fall-back call after the
     // bitcast.
-    CGF.Builder.SetInsertPoint(bitcast->getIterator());
+    CGF.Builder.SetInsertPoint(bitcast->getParent(), bitcast->getIterator());
     llvm::Value *operand = bitcast->getOperand(0);
     operand = emitARCOperationAfterCall(CGF, operand, doAfterCall, doFallback);
     bitcast->setOperand(0, operand);

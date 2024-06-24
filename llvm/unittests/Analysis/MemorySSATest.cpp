@@ -121,7 +121,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -132,14 +132,14 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
   // Add the store
-  B.SetInsertPoint(Entry->begin());
+  B.SetInsertPoint(Entry, Entry->begin());
   StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *EntryStoreAccess = Updater.createMemoryAccessInBB(
       EntryStore, nullptr, Entry, MemorySSA::Beginning);
   Updater.insertDef(cast<MemoryDef>(EntryStoreAccess));
 
   // Add the load
-  B.SetInsertPoint(Merge->begin());
+  B.SetInsertPoint(Merge, Merge->begin());
   LoadInst *FirstLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // MemoryPHI should not already exist.
@@ -156,7 +156,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
 
   // Create a store on the left
   // Add the store
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   StoreInst *LeftStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *LeftStoreAccess = Updater.createMemoryAccessInBB(
       LeftStore, nullptr, Left, MemorySSA::Beginning);
@@ -167,7 +167,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_NE(MP, nullptr);
 
   // Add the second load
-  B.SetInsertPoint(Merge->begin());
+  B.SetInsertPoint(Merge, Merge->begin());
   LoadInst *SecondLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // Create the load memory access
@@ -181,7 +181,7 @@ TEST_F(MemorySSATest, CreateLoadsAndStoreUpdater) {
   EXPECT_EQ(MergePhi->getIncomingValue(0), EntryStoreAccess);
   EXPECT_EQ(MergePhi->getIncomingValue(1), LeftStoreAccess);
   // Now create a store below the existing one in the entry
-  B.SetInsertPoint(--Entry->end());
+  B.SetInsertPoint(Entry, --Entry->end());
   StoreInst *SecondEntryStore = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *SecondEntryStoreAccess = Updater.createMemoryAccessInBB(
       SecondEntryStore, nullptr, Entry, MemorySSA::End);
@@ -210,7 +210,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -220,7 +220,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
   MemorySSAUpdater Updater(&MSSA);
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   // Add the store
   StoreInst *SI = B.CreateStore(B.getInt8(16), PointerArg);
   MemoryAccess *StoreAccess =
@@ -232,7 +232,7 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   EXPECT_NE(MP, nullptr);
 
   // Add the load
-  B.SetInsertPoint(Merge->begin());
+  B.SetInsertPoint(Merge, Merge->begin());
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
   // Create the load memory acccess
@@ -253,7 +253,7 @@ TEST_F(MemorySSATest, SinkLoad) {
   BasicBlock *Merge(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
   B.CreateCondBr(B.getTrue(), Left, Right);
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   Argument *PointerArg = &*F->arg_begin();
   B.SetInsertPoint(Left);
   B.CreateBr(Merge);
@@ -261,10 +261,10 @@ TEST_F(MemorySSATest, SinkLoad) {
   B.CreateBr(Merge);
 
   // Load in left block
-  B.SetInsertPoint(Left->begin());
+  B.SetInsertPoint(Left, Left->begin());
   LoadInst *LoadInst1 = B.CreateLoad(B.getInt8Ty(), PointerArg);
   // Store in merge block
-  B.SetInsertPoint(Merge->begin());
+  B.SetInsertPoint(Merge, Merge->begin());
   B.CreateStore(B.getInt8(16), PointerArg);
 
   setupAnalyses();

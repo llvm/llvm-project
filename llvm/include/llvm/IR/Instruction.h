@@ -44,13 +44,6 @@ template <> struct ilist_alloc_traits<Instruction> {
 iterator_range<simple_ilist<DbgRecord>::iterator>
 getDbgRecordRange(DbgMarker *);
 
-/// Class used to generate an insert position (ultimately always a
-/// BasicBlock::iterator, which it will implicitly convert to) from either:
-/// - An Instruction, inserting immediately prior. This will soon be marked as
-///   deprecated.
-/// - A BasicBlock, inserting at the end.
-/// - An iterator, inserting at its position.
-/// - Any nullptr value, giving a blank iterator (not valid for insertion).
 class InsertPosition {
   using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
                                        ilist_parent<BasicBlock>>;
@@ -58,6 +51,8 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
+  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+  // "BasicBlock::iterator")
   InsertPosition(Instruction *InsertBefore);
   InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}

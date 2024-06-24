@@ -150,7 +150,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     // We've computed IDF, now insert new phi-nodes there.
     SmallVector<PHINode *, 4> InsertedPHIsForVar;
     for (auto *FrontierBB : IDFBlocks) {
-      IRBuilder<> B(FrontierBB->begin());
+      IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       R.Defines[FrontierBB] = PN;
       InsertedPHIsForVar.push_back(PN);

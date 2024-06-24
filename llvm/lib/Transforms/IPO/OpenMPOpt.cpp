@@ -1722,7 +1722,8 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(&Entry,
+                                     Entry.getFirstNonPHIOrDbgOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =

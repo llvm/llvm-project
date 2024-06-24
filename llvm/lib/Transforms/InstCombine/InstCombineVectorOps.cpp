@@ -1123,7 +1123,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // Note that the same block can be a predecessor more than once,
   // and we need to preserve that invariant for the PHI node.
   BuilderTy::InsertPointGuard Guard(Builder);
-  Builder.SetInsertPoint(UseBB->getFirstNonPHIIt());
+  Builder.SetInsertPoint(UseBB, UseBB->getFirstNonPHIIt());
   auto *PHI =
       Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
   for (BasicBlock *Pred : Preds)

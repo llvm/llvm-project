@@ -1217,7 +1217,7 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
   // Compute offset/size for each PHI incoming pointer.
   for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i) {
     BasicBlock *IncomingBlock = PHI.getIncomingBlock(i);
-    Builder.SetInsertPoint(IncomingBlock->getFirstInsertionPt());
+    Builder.SetInsertPoint(IncomingBlock, IncomingBlock->getFirstInsertionPt());
     SizeOffsetValue EdgeData = compute_(PHI.getIncomingValue(i));
 
     if (!EdgeData.bothKnown()) {
