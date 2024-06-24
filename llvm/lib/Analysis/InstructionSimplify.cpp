@@ -7155,7 +7155,7 @@ Value *llvm::simplifyInstruction(Instruction *I, const SimplifyQuery &SQ) {
   /// If called on unreachable code, the instruction may simplify to itself.
   /// Make life easier for users by detecting that case here, and returning a
   /// safe value instead.
-  return Result == I ? UndefValue::get(I->getType()) : Result;
+  return Result == I ? PoisonValue::get(I->getType()) : Result;
 }
 
 /// Implementation of recursive simplification through an instruction's
