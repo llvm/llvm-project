@@ -79,7 +79,7 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
   StringRef ArchExtBase = IsNegated ? ArchExt.drop_front(2) : ArchExt;
 
   if (auto AE = parseArchExtension(ArchExtBase)) {
-    assert(!(AE.has_value() && AE->NegFeature.empty()));
+    assert(!(AE.has_value() && AE->NegTargetFeature.empty()));
     return IsNegated ? AE->NegTargetFeature : AE->PosTargetFeature;
   }
 
