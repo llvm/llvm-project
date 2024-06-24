@@ -179,7 +179,7 @@ body:             |
   DTU.deleteBB(&*BB4);
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
-  ASSERT_TRUE(DT.getNode(&*BB4) == nullptr);
+  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }
 
 TEST_F(MachineDomTreeUpdaterTest, LazyUpdateBasicOperations) {
@@ -270,7 +270,7 @@ body:             |
   DTU.deleteBB(&*BB4);
   EXPECT_EQ(BB1->succ_size(), 1u);
   ASSERT_TRUE(DT.dominates(&*BB1, &*BB2));
-  ASSERT_FALSE(DT.getNode(&*BB4) == nullptr);
+  ASSERT_NE(DT.getNode(&*BB4), nullptr);
   DTU.flush();
-  ASSERT_TRUE(DT.getNode(&*BB4) == nullptr);
+  ASSERT_EQ(DT.getNode(&*BB4), nullptr);
 }
