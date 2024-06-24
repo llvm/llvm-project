@@ -1607,6 +1607,10 @@ void TargetLoweringBase::computeRegisterProperties(
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
+          // Skip RISCV vector tuple types since they don't involve in any
+          // widen/narrow operation.
+          if (SVT.isRISCVVectorTuple())
+            continue;
           if (SVT.getVectorElementType() == EltVT &&
               SVT.isScalableVector() == IsScalable &&
               SVT.getVectorElementCount().getKnownMinValue() >

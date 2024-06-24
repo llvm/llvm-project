@@ -76,10 +76,10 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlseg2.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call riscv_mf2x2 @llvm.riscv.vlseg2.riscv_mf2x2(riscv_mf2x2 undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 1 x i32>,<vscale x 1 x i32>} %0, 1
+  %1 = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.riscv_mf2x2(riscv_mf2x2 %0, i64 1)
   ret <vscale x 1 x i32> %1
 }
 
@@ -153,10 +153,10 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlseg2.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call riscv_m1x2 @llvm.riscv.vlseg2.riscv_m1x2(riscv_m1x2 undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 2 x i32>,<vscale x 2 x i32>} %0, 1
+  %1 = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.riscv_m1x2(riscv_m1x2 %0, i64 1)
   ret <vscale x 2 x i32> %1
 }
 
@@ -233,10 +233,10 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg2.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call riscv_m2x2 @llvm.riscv.vlseg2.riscv_m2x2(riscv_m2x2 undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 4 x i32>,<vscale x 4 x i32>} %0, 1
+  %1 = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.riscv_m2x2(riscv_m2x2 %0, i64 1)
   ret <vscale x 4 x i32> %1
 }
 
@@ -313,10 +313,10 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlseg2.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call riscv_m4x2 @llvm.riscv.vlseg2.riscv_m4x2(riscv_m4x2 undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 8 x i32>,<vscale x 8 x i32>} %0, 1
+  %1 = call <vscale x 8 x i32> @llvm.vector.extract.nxv8i32.riscv_m4x2(riscv_m4x2 %0, i64 1)
   ret <vscale x 8 x i32> %1
 }
 
@@ -403,15 +403,15 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i32 %vl) nounwind {
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    ret
 entry:
-  %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg3.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i32 %vl)
+  %0 = tail call riscv_m2x3 @llvm.riscv.vlseg3.riscv_m2x3(riscv_m2x3 undef, ptr %base, i32 %vl, i32 5)
   call void asm sideeffect "",
   "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %1 = extractvalue {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} %0, 1
+  %1 = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.riscv_m2x3(riscv_m2x3 %0, i64 1)
   ret <vscale x 4 x i32> %1
 }
 
-declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlseg2.nxv1i32(<vscale x 1 x i32>,<vscale x 1 x i32>, ptr , i32)
-declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlseg2.nxv2i32(<vscale x 2 x i32>,<vscale x 2 x i32>, ptr , i32)
-declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg2.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>, ptr , i32)
-declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlseg2.nxv8i32(<vscale x 8 x i32>,<vscale x 8 x i32>, ptr , i32)
-declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg3.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>, ptr , i32)
+declare riscv_mf2x2 @llvm.riscv.vlseg2.riscv_mf2x2(riscv_mf2x2, ptr , i32, i32)
+declare riscv_m1x2 @llvm.riscv.vlseg2.riscv_m1x2(riscv_m1x2, ptr , i32, i32)
+declare riscv_m2x2 @llvm.riscv.vlseg2.riscv_m2x2(riscv_m2x2, ptr , i32, i32)
+declare riscv_m4x2 @llvm.riscv.vlseg2.riscv_m4x2(riscv_m4x2, ptr , i32, i32)
+declare riscv_m2x3 @llvm.riscv.vlseg3.riscv_m2x3(riscv_m2x3, ptr , i32, i32)

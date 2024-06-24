@@ -7235,17 +7235,19 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     EVT N1VT = N1.getValueType();
     assert(VT.isVector() && N1VT.isVector() &&
            "Extract subvector VTs must be vectors!");
-    assert(VT.getVectorElementType() == N1VT.getVectorElementType() &&
-           "Extract subvector VTs must have the same element type!");
-    assert((VT.isFixedLengthVector() || N1VT.isScalableVector()) &&
+    if (!N1VT.isRISCVVectorTuple())
+      assert(VT.getVectorElementType() == N1VT.getVectorElementType() &&
+             "Extract subvector VTs must have the same element type!");
+    assert((VT.isFixedLengthVector() || N1VT.isScalableVector() ||
+            N1VT.isRISCVVectorTuple()) &&
            "Cannot extract a scalable vector from a fixed length vector!");
     assert((VT.isScalableVector() != N1VT.isScalableVector() ||
             VT.getVectorMinNumElements() <= N1VT.getVectorMinNumElements()) &&
            "Extract subvector must be from larger vector to smaller vector!");
     assert(N2C && "Extract subvector index must be a constant");
     assert((VT.isScalableVector() != N1VT.isScalableVector() ||
-            (VT.getVectorMinNumElements() + N2C->getZExtValue()) <=
-                N1VT.getVectorMinNumElements()) &&
+            ((N1VT.isRISCVVectorTuple() ? 0 : VT.getVectorMinNumElements()) +
+             N2C->getZExtValue()) <= N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
     assert(N2C->getAPIntValue().getBitWidth() ==
                TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
@@ -7468,18 +7470,23 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Dest and insert subvector source types must match!");
     assert(VT.isVector() && N2VT.isVector() &&
            "Insert subvector VTs must be vectors!");
-    assert(VT.getVectorElementType() == N2VT.getVectorElementType() &&
-           "Insert subvector VTs must have the same element type!");
-    assert((VT.isScalableVector() || N2VT.isFixedLengthVector()) &&
-           "Cannot insert a scalable vector into a fixed length vector!");
+    if (!VT.isRISCVVectorTuple()) {
+      assert(VT.getVectorElementType() == N2VT.getVectorElementType() &&
+             "Insert subvector VTs must have the same element type!");
+      assert((VT.isScalableVector() || N2VT.isFixedLengthVector()) &&
+             "Cannot insert a scalable vector into a fixed length vector!");
+    }
+    if (VT.isRISCVVectorTuple())
+      assert(N2VT.isScalableVector() &&
+             "Cannot insert a fixed length vector into a RISCV vector tuple!");
     assert((VT.isScalableVector() != N2VT.isScalableVector() ||
             VT.getVectorMinNumElements() >= N2VT.getVectorMinNumElements()) &&
            "Insert subvector must be from smaller vector to larger vector!");
     assert(isa<ConstantSDNode>(N3) &&
            "Insert subvector index must be constant");
     assert((VT.isScalableVector() != N2VT.isScalableVector() ||
-            (N2VT.getVectorMinNumElements() + N3->getAsZExtVal()) <=
-                VT.getVectorMinNumElements()) &&
+            ((VT.isRISCVVectorTuple() ? 0 : N2VT.getVectorMinNumElements()) +
+             N3->getAsZExtVal()) <= VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
     assert(N3->getAsAPIntVal().getBitWidth() ==
                TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&

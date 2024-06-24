@@ -420,3 +420,49 @@ entry:
   %0 = tail call <vscale x 1 x i1> asm "vmand.mm $0, $1, $2", "={v0},{v1},{v2}"(<vscale x 1 x i1> %in, <vscale x 1 x i1> %in2)
   ret <vscale x 1 x i1> %0
 }
+
+define void @test_vector_tuple_type(riscv_m1x3 %val, ptr %base) nounwind {
+; CHECK-LABEL: test_vector_tuple_type:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vsseg3e8.v v8, (a0)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  tail call void asm "vsseg3e8.v $0, ($1)", "^vr,r"(riscv_m1x3 %val, ptr %base)
+  ret void
+}
+
+define void @test_vector_tuple_type2(riscv_m2x4 %val, riscv_m1x7 %val2, riscv_m1x7 %val3, ptr %base) nounwind {
+; CHECK-LABEL: test_vector_tuple_type2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vl1r.v v23, (a0)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v24, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v25, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v26, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v27, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v28, (a0)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vl1r.v v29, (a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vsseg3e8.v v8, (a1)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vsseg7e8.v v16, (a1)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vsseg7e8.v v23, (a1)
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ret
+entry:
+  tail call void asm "vsseg3e8.v $0, ($1)", "^vr,r"(riscv_m2x4 %val, ptr %base)
+  tail call void asm "vsseg7e8.v $0, ($1)", "^vr,r"(riscv_m1x7 %val2, ptr %base)
+  tail call void asm "vsseg7e8.v $0, ($1)", "^vr,r"(riscv_m1x7 %val3, ptr %base)
+  ret void
+}

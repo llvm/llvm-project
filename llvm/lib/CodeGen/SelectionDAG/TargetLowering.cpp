@@ -3046,7 +3046,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     return false;
 
   // TODO: For now we assume we know nothing about scalable vectors.
-  if (VT.isScalableVector())
+  if (VT.isScalableVector() || VT.isRISCVVectorTuple())
     return false;
 
   assert(VT.getVectorNumElements() == NumElts &&

@@ -611,11 +611,11 @@ foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
     let NF = nf in {
       def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<[untyped],
+        : VReg<[!cast<ValueType>("riscv_m" # m # "x" # nf)],
                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
                m>;
       def "VRN" # nf # "M" # m
-        : VReg<[untyped],
+        : VReg<[!cast<ValueType>("riscv_m" # m # "x" # nf)],
                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
                     !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
                m>;

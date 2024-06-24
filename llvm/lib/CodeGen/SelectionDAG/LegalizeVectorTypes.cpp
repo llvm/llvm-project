@@ -7250,7 +7250,7 @@ static std::optional<EVT> findMemType(SelectionDAG &DAG,
   // element type and is evenly divisible with the WidenVT.
   for (EVT MemVT : reverse(MVT::vector_valuetypes())) {
     // Skip vector MVTs which don't match the scalable property of WidenVT.
-    if (Scalable != MemVT.isScalableVector())
+    if (Scalable != MemVT.isScalableVector() || MemVT.isRISCVVectorTuple())
       continue;
     unsigned MemVTWidth = MemVT.getSizeInBits().getKnownMinValue();
     auto Action = TLI.getTypeAction(*DAG.getContext(), MemVT);

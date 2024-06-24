@@ -1651,6 +1651,12 @@ MCRegister RISCVAsmParser::matchRegisterNameHelper(StringRef Name) const {
     Reg = MatchRegisterAltName(Name);
   if (isRVE() && Reg >= RISCV::X16 && Reg <= RISCV::X31)
     Reg = RISCV::NoRegister;
+
+  // Replace vector tuple with the starting register, e.g. V4M4_V8M4 -> V4
+  for (int i = 30; i >= 0; --i)
+    if (Name.starts_with("V" + utostr(i)))
+      return RISCV::V0 + i;
+
   return Reg;
 }
 
