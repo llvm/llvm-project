@@ -446,23 +446,23 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!ER)
     return State;
 
-  const auto *Orig = ER->getSuperRegion()->getAs<TypedValueRegion>();
-  if (!Orig)
+  const auto *SuperR = ER->getSuperRegion()->getAs<TypedValueRegion>();
+  if (!SuperR)
     return State;
 
   // FIXME: We ought to able to check objects as well. Maybe
   // UninitializedObjectChecker could help?
-  if (!Orig->getValueType()->isArrayType())
+  if (!SuperR->getValueType()->isArrayType())
     return State;
 
   SValBuilder &SVB = C.getSValBuilder();
   ASTContext &Ctx = SVB.getContext();
 
-  const QualType ElemTy = Ctx.getBaseElementType(Orig->getValueType());
+  const QualType ElemTy = Ctx.getBaseElementType(SuperR->getValueType());
   const NonLoc Zero = SVB.makeZeroArrayIndex();
 
   Loc FirstElementVal =
-      State->getLValue(ElemTy, Zero, loc::MemRegionVal(Orig)).castAs<Loc>();
+      State->getLValue(ElemTy, Zero, loc::MemRegionVal(SuperR)).castAs<Loc>();
 
   // Ensure that we wouldn't read uninitialized value.
   if (Filter.CheckCStringUninitializedRead &&
@@ -516,7 +516,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     return State;
 
   SVal LastElementVal =
-      State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(Orig));
+      State->getLValue(ElemTy, LastIdx, loc::MemRegionVal(SuperR));
   if (!isa<Loc>(LastElementVal))
     return State;
 
@@ -531,9 +531,9 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     }
     llvm::SmallString<258> Buf;
     llvm::raw_svector_ostream OS(Buf);
-    OS << "The last (";
-    printIdxWithOrdinalSuffix(OS, IdxInt->getExtValue() + 1);
-    OS << ") element to access in the ";
+    OS << "The last accessed element (at index ";
+    OS << IdxInt->getExtValue();
+    OS << ") in the ";
     printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
     OS << " argument is undefined";
     emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());

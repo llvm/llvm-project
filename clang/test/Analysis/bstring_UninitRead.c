@@ -23,7 +23,7 @@ void memcpy_array_fully_uninit(char *dst) {
 void memcpy_array_partially_uninit(char *dst) {
   char buf[10];
   buf[0] = 'i';
-  memcpy(dst, buf, 10); // expected-warning{{The last (10th) element to access in the 2nd argument is undefined}}
+  memcpy(dst, buf, 10); // expected-warning{{The last accessed element (at index 9) in the 2nd argument is undefined}}
                         // expected-note@-1{{Other elements might also be undefined}}
   (void)buf;
 }
@@ -38,7 +38,7 @@ void memcpy_array_only_init_portion(char *dst) {
 void memcpy_array_partially_init_error(char *dst) {
   char buf[10];
   buf[0] = 'i';
-  memcpy(dst, buf, 2); // expected-warning{{The last (2nd) element to access in the 2nd argument is undefined}}
+  memcpy(dst, buf, 2); // expected-warning{{The last accessed element (at index 1) in the 2nd argument is undefined}}
                       // expected-note@-1{{Other elements might also be undefined}}
   (void)buf;
 }
