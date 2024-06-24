@@ -7294,7 +7294,8 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
-  if (!MaxFactors.hasVector())
+  if (all_of(VPlans,
+             [](std::unique_ptr<VPlan> &P) { return P->hasScalarVFOnly(); }))
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
