@@ -219,6 +219,9 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
+void mlirOpPrintingFlagsSkipRegions(MlirOpPrintingFlags flags) {
+  unwrap(flags)->skipRegions();
+}
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//
@@ -904,6 +907,10 @@ intptr_t mlirBlockGetNumArguments(MlirBlock block) {
 MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type,
                                MlirLocation loc) {
   return wrap(unwrap(block)->addArgument(unwrap(type), unwrap(loc)));
+}
+
+void mlirBlockEraseArgument(MlirBlock block, unsigned index) {
+  return unwrap(block)->eraseArgument(index);
 }
 
 MlirValue mlirBlockInsertArgument(MlirBlock block, intptr_t pos, MlirType type,

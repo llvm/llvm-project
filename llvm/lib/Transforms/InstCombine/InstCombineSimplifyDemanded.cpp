@@ -209,8 +209,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedMask & ~RHSKnown.Zero, LHSKnown,
                              Depth + 1))
       return I;
-    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
-    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Depth, SQ.getWithInstruction(CxtI));
@@ -242,8 +240,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       I->dropPoisonGeneratingFlags();
       return I;
     }
-    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
-    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Depth, SQ.getWithInstruction(CxtI));
@@ -290,9 +286,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       auto *Xor = Builder.CreateXor(LHS, RHS);
       return Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Xor);
     }
-
-    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
-    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
                                          Depth, SQ.getWithInstruction(CxtI));
@@ -375,8 +368,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (SimplifyDemandedBits(I, 2, DemandedMask, RHSKnown, Depth + 1) ||
         SimplifyDemandedBits(I, 1, DemandedMask, LHSKnown, Depth + 1))
       return I;
-    assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
-    assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     // If the operands are constants, see if we can simplify them.
     // This is similar to ShrinkDemandedConstant, but for a select we want to
@@ -455,7 +446,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       InputKnown.makeNonNegative();
     Known = InputKnown.zextOrTrunc(BitWidth);
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
   case Instruction::SExt: {
@@ -481,12 +471,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       CastInst *NewCast = new ZExtInst(I->getOperand(0), VTy);
       NewCast->takeName(I);
       return InsertNewInstWith(NewCast, I->getIterator());
-     }
+    }
 
     // If the sign bit of the input is known set or clear, then we know the
     // top bits of the result.
     Known = InputKnown.sext(BitWidth);
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     break;
   }
   case Instruction::Add: {
@@ -649,8 +638,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
-                FShiftArgs[0] == FShiftArgs[1])
-              return nullptr;
+                FShiftArgs[0] == FShiftArgs[1]) {
+              computeKnownBits(I, Known, Depth, CxtI);
+              break;
+            }
           }
         }
       }
@@ -696,7 +687,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
       Known = KnownBits::shl(Known,
                              KnownBits::makeConstant(APInt(BitWidth, ShiftAmt)),
@@ -730,8 +720,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
-                FShiftArgs[0] == FShiftArgs[1])
-              return nullptr;
+                FShiftArgs[0] == FShiftArgs[1]) {
+              computeKnownBits(I, Known, Depth, CxtI);
+              break;
+            }
           }
         }
       }
@@ -772,7 +764,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         I->dropPoisonGeneratingFlags();
         return I;
       }
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShiftAmt);
       Known.One.lshrInPlace(ShiftAmt);
       if (ShiftAmt)
@@ -819,7 +810,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return I;
       }
 
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now plus sign bits.
       APInt HighBits(APInt::getHighBitsSet(
           BitWidth, std::min(SignBits + ShiftAmt - 1, BitWidth)));
@@ -900,21 +890,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         if (LHSKnown.isNegative() && LowBits.intersects(LHSKnown.One))
           Known.One |= ~LowBits;
 
-        assert(!Known.hasConflict() && "Bits known to be one AND zero?");
         break;
       }
     }
 
     computeKnownBits(I, Known, Depth, CxtI);
-    break;
-  }
-  case Instruction::URem: {
-    APInt AllOnes = APInt::getAllOnes(BitWidth);
-    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
-      return I;
-
-    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Call: {
@@ -978,8 +958,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
         // TODO: Should be 1-extend
         RHSKnown = RHSKnown.anyextOrTrunc(BitWidth);
-        assert(!RHSKnown.hasConflict() && "Bits known to be one AND zero?");
-        assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
         Known = LHSKnown & RHSKnown;
         KnownBitsComputed = true;

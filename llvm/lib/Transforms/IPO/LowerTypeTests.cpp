@@ -879,7 +879,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
         NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
@@ -2074,7 +2074,7 @@ bool LowerTypeTestsModule::lower() {
     CfiFunctionLinkage Linkage;
     MDNode *FuncMD; // {name, linkage, type[, type...]}
   };
-  DenseMap<StringRef, ExportedFunctionInfo> ExportedFunctions;
+  MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
     // A set of all functions that are address taken by a live global object.
     DenseSet<GlobalValue::GUID> AddressTaken;

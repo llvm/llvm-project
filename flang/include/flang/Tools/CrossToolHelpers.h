@@ -20,11 +20,66 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
 
+// Flang Extension Point Callbacks
+class FlangEPCallBacks {
+public:
+  void registerFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerFIRInlinerCallback(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIRInlinerCallback.push_back(C);
+  }
+
+  void registerFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIROptLastEPCallbacks.push_back(C);
+  }
+
+  void invokeFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeFIRInlinerCallback(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIRInlinerCallback)
+      C(pm, optLevel);
+  };
+
+  void invokeFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
+private:
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIRInlinerCallback;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIROptLastEPCallbacks;
+};
+
 /// Configuriation for the MLIR to LLVM pass pipeline.
-struct MLIRToLLVMPassPipelineConfig {
+struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
     OptLevel = level;
   }
@@ -67,6 +122,7 @@ struct MLIRToLLVMPassPipelineConfig {
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
+  bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
 };
 
 struct OffloadModuleOpts {
@@ -74,16 +130,16 @@ struct OffloadModuleOpts {
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {},
-      bool NoGPULib = false)
+      bool OpenMPIsGPU, bool OpenMPForceUSM, uint32_t OpenMPVersion,
+      std::string OMPHostIRFile = {}, bool NoGPULib = false)
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
-        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile),
-        NoGPULib(NoGPULib) {}
+        OpenMPForceUSM(OpenMPForceUSM), OpenMPVersion(OpenMPVersion),
+        OMPHostIRFile(OMPHostIRFile), NoGPULib(NoGPULib) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
@@ -92,8 +148,9 @@ struct OffloadModuleOpts {
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
-        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
-        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(Opts.NoGPULib) {}
+        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPForceUSM(Opts.OpenMPForceUSM),
+        OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile),
+        NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -102,6 +159,7 @@ struct OffloadModuleOpts {
   bool OpenMPNoNestedParallelism = false;
   bool OpenMPIsTargetDevice = false;
   bool OpenMPIsGPU = false;
+  bool OpenMPForceUSM = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
   bool NoGPULib = false;
@@ -109,13 +167,16 @@ struct OffloadModuleOpts {
 
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
-void setOffloadModuleInterfaceAttributes(
+[[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
     mlir::ModuleOp &module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
     offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
     offloadMod.setIsGPU(Opts.OpenMPIsGPU);
+    if (Opts.OpenMPForceUSM) {
+      offloadMod.setRequires(mlir::omp::ClauseRequires::unified_shared_memory);
+    }
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
@@ -127,10 +188,18 @@ void setOffloadModuleInterfaceAttributes(
   }
 }
 
-void setOpenMPVersionAttribute(mlir::ModuleOp &module, int64_t version) {
+[[maybe_unused]] static void setOpenMPVersionAttribute(
+    mlir::ModuleOp &module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));
+}
+
+[[maybe_unused]] static int64_t getOpenMPVersionAttribute(
+    mlir::ModuleOp module, int64_t fallback = -1) {
+  if (mlir::Attribute verAttr = module->getAttr("omp.version"))
+    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+  return fallback;
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

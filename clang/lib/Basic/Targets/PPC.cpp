@@ -91,6 +91,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       IsISA3_1 = true;
     } else if (Feature == "+quadword-atomics") {
       HasQuadwordAtomics = true;
+    } else if (Feature == "+aix-shared-lib-tls-model-opt") {
+      HasAIXShLibTLSModelOpt = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -580,6 +582,9 @@ bool PPCTargetInfo::initFeatureMap(
   Features["aix-small-local-exec-tls"] = false;
   Features["aix-small-local-dynamic-tls"] = false;
 
+  // Turn off TLS model opt by default.
+  Features["aix-shared-lib-tls-model-opt"] = false;
+
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
                         .Case("e500", true)
@@ -722,6 +727,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("isa-v30-instructions", IsISA3_0)
       .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
+      .Case("aix-shared-lib-tls-model-opt", HasAIXShLibTLSModelOpt)
       .Default(false);
 }
 
@@ -901,6 +907,19 @@ ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
 }
 
 bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+  llvm::Triple Triple = getTriple();
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
+                        VALUE)                                                 \
+  .Case(NAME, true)
+    return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+        .Default(false);
+  }
+
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_supports() is only supported for AIX and Linux.");
+
 #define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
   return llvm::StringSwitch<bool>(FeatureStr)
 #include "llvm/TargetParser/PPCTargetParser.def"
@@ -910,7 +929,7 @@ bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
   llvm::Triple Triple = getTriple();
   if (Triple.isOSAIX()) {
-#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, OP, VALUE) .Case(NAME, true)
+#define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, OP, VALUE) .Case(NAME, true)
     return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
         .Default(false);

@@ -5,7 +5,7 @@
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAll(global int* dst) {
-;; 	dst[0] = sub_group_non_uniform_all(0); 
+;; 	dst[0] = sub_group_non_uniform_all(0);
 ;; }
 ;;
 ;; kernel void testSubGroupNonUniformAny(global int* dst) {

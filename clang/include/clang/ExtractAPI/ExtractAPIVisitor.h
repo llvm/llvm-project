@@ -21,6 +21,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -127,7 +128,7 @@ public:
 protected:
   /// Collect API information for the enum constants and associate with the
   /// parent enum.
-  void recordEnumConstants(EnumRecord *EnumRecord,
+  void recordEnumConstants(SymbolReference Container,
                            const EnumDecl::enumerator_range Constants);
 
   /// Collect API information for the Objective-C methods and associate with the
@@ -194,6 +195,15 @@ protected:
     return Bases;
   }
 
+  APIRecord::RecordKind getKindForDisplay(const CXXRecordDecl *Decl) {
+    if (Decl->isUnion())
+      return APIRecord::RK_Union;
+    if (Decl->isStruct())
+      return APIRecord::RK_Struct;
+
+    return APIRecord::RK_CXXClass;
+  }
+
   StringRef getOwningModuleName(const Decl &D) {
     if (auto *OwningModule = D.getImportedOwningModule())
       return OwningModule->Name;
@@ -239,12 +249,8 @@ protected:
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
             API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator) {
+      if (Record->IsEmbeddedInVarDeclarator)
         NewRecordContext->stealRecordChain(*Record);
-        auto *NewRecord = cast<APIRecord>(NewRecordContext);
-        if (NewRecord->Comment.empty())
-          NewRecord->Comment = Record->Comment;
-      }
     }
   }
 };
@@ -385,17 +391,6 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
-  SmallString<128> QualifiedNameBuffer;
-  // Collect symbol information.
-  StringRef Name = Decl->getName();
-  if (Name.empty())
-    Name = getTypedefName(Decl);
-  if (Name.empty()) {
-    llvm::raw_svector_ostream OS(QualifiedNameBuffer);
-    Decl->printQualifiedName(OS);
-    Name = QualifiedNameBuffer;
-  }
-
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
   PresumedLoc Loc =
@@ -411,13 +406,29 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
       DeclarationFragmentsBuilder::getFragmentsForEnum(Decl);
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
-  auto *ER = API.createRecord<EnumRecord>(
-      USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
-      AvailabilityInfo::createFromDecl(Decl), Comment, Declaration, SubHeading,
-      isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+
+  // Collect symbol information.
+  SymbolReference ParentContainer;
+
+  if (Decl->hasNameForLinkage()) {
+    StringRef Name = Decl->getName();
+    if (Name.empty())
+      Name = getTypedefName(Decl);
+
+    auto *ER = API.createRecord<EnumRecord>(
+        USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
+        AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
+        SubHeading, isInSystemHeader(Decl), false);
+    ParentContainer = SymbolReference(ER);
+  } else {
+    // If this an anonymous enum then the parent scope of the constants is the
+    // top level namespace.
+    ParentContainer = {};
+  }
 
   // Now collect information about the enumerators in this enum.
-  getDerivedExtractAPIVisitor().recordEnumConstants(ER, Decl->enumerators());
+  getDerivedExtractAPIVisitor().recordEnumConstants(ParentContainer,
+                                                    Decl->enumerators());
 
   return true;
 }
@@ -599,13 +610,6 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-  APIRecord::RecordKind Kind;
-  if (Decl->isUnion())
-    Kind = APIRecord::RecordKind::RK_Union;
-  else if (Decl->isStruct())
-    Kind = APIRecord::RecordKind::RK_Struct;
-  else
-    Kind = APIRecord::RecordKind::RK_CXXClass;
   auto Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
 
   CXXClassRecord *Record;
@@ -619,13 +623,15 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
         SubHeading, Template(Decl->getDescribedClassTemplate()), Access,
         isInSystemHeader(Decl));
-  } else
+  } else {
     Record = API.createRecord<CXXClassRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, Kind, Access, isInSystemHeader(Decl),
-        isEmbeddedInVarDeclarator(*Decl));
+        SubHeading, APIRecord::RecordKind::RK_CXXClass, Access,
+        isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
+  }
 
+  Record->KindForDisplay = getKindForDisplay(Decl);
   Record->Bases = getBases(Decl);
 
   return true;
@@ -849,6 +855,7 @@ bool ExtractAPIVisitorBase<Derived>::
       Template(Decl), DeclarationFragmentsBuilder::getAccessControl(Decl),
       isInSystemHeader(Decl));
 
+  CTPSR->KindForDisplay = getKindForDisplay(Decl);
   CTPSR->Bases = getBases(Decl);
 
   return true;
@@ -1192,7 +1199,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
 /// parent enum.
 template <typename Derived>
 void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
-    EnumRecord *EnumRecord, const EnumDecl::enumerator_range Constants) {
+    SymbolReference Container, const EnumDecl::enumerator_range Constants) {
   for (const auto *Constant : Constants) {
     // Collect symbol information.
     StringRef Name = Constant->getName();
@@ -1213,9 +1220,8 @@ void ExtractAPIVisitorBase<Derived>::recordEnumConstants(
         DeclarationFragmentsBuilder::getSubHeading(Constant);
 
     API.createRecord<EnumConstantRecord>(
-        USR, Name, createHierarchyInformationForDecl(*Constant), Loc,
-        AvailabilityInfo::createFromDecl(Constant), Comment, Declaration,
-        SubHeading, isInSystemHeader(Constant));
+        USR, Name, Container, Loc, AvailabilityInfo::createFromDecl(Constant),
+        Comment, Declaration, SubHeading, isInSystemHeader(Constant));
   }
 }
 
@@ -1464,7 +1470,17 @@ public:
 
   bool shouldDeclBeIncluded(const Decl *D) const { return true; }
   const RawComment *fetchRawCommentForDecl(const Decl *D) const {
-    return this->Context.getRawCommentForDeclNoCache(D);
+    if (const auto *Comment = this->Context.getRawCommentForDeclNoCache(D))
+      return Comment;
+
+    if (const auto *Declarator = dyn_cast<DeclaratorDecl>(D)) {
+      const auto *TagTypeDecl = Declarator->getType()->getAsTagDecl();
+      if (TagTypeDecl && TagTypeDecl->isEmbeddedInDeclarator() &&
+          TagTypeDecl->isCompleteDefinition())
+        return this->Context.getRawCommentForDeclNoCache(TagTypeDecl);
+    }
+
+    return nullptr;
   }
 };
 

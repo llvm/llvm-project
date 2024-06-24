@@ -120,7 +120,7 @@ public:
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
       Direction, Fortran::common::optional<bool> isUnformatted,
-      const Terminator &);
+      IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
       const char *path, std::size_t pathLen);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);

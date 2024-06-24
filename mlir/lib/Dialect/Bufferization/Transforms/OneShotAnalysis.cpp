@@ -611,7 +611,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (!usesRead.empty()) {
+  if (options.checkParallelRegions && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of
@@ -1382,14 +1382,27 @@ LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options,
                                    BufferizationStatistics *statistics) {
+  // copy-before-write deactivates the analysis. It cannot be used together with
+  // test-analysis-only.
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
-  if (!options.copyBeforeWrite) {
-    // If a buffer is copied before every write, no analysis is needed.
+
+  if (options.copyBeforeWrite) {
+    // Copy buffer before each write. No analysis is needed.
+  } else {
+    // Run One-Shot Analysis and insert buffer copies (on the tensor level)
+    // only where needed. This is the default and much more efficient than
+    // copy-before-write.
     if (failed(insertTensorCopies(op, options, statistics)))
       return failure();
+
+    // If test-analysis-only is set, the IR was annotated with RaW conflict
+    // markers (attributes) during One-Shot Analysis.
+    if (options.testAnalysisOnly)
+      return success();
   }
-  if (options.testAnalysisOnly)
-    return success();
+
+  // Bufferize the op and its nested ops. If options.copyBeforeWrite is set,
+  // a new buffer copy is allocated every time a buffer is written to.
   return bufferizeOp(op, options, statistics);
 }

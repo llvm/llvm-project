@@ -367,7 +367,8 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   bool Negative = false;
   unsigned EltBits = EltTy->getScalarSizeInBits();
-  switch (VPI.getIntrinsicID()) {
+  Intrinsic::ID VID = VPI.getIntrinsicID();
+  switch (VID) {
   default:
     llvm_unreachable("Expecting a VP reduction intrinsic");
   case Intrinsic::vp_reduce_add:
@@ -387,12 +388,17 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
     return ConstantInt::get(EltTy->getContext(),
                             APInt::getSignedMinValue(EltBits));
   case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmaximum:
     Negative = true;
     [[fallthrough]];
-  case Intrinsic::vp_reduce_fmin: {
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fminimum: {
+    bool PropagatesNaN = VID == Intrinsic::vp_reduce_fminimum ||
+                         VID == Intrinsic::vp_reduce_fmaximum;
     FastMathFlags Flags = VPI.getFastMathFlags();
     const fltSemantics &Semantics = EltTy->getFltSemantics();
-    return !Flags.noNaNs() ? ConstantFP::getQNaN(EltTy, Negative)
+    return (!Flags.noNaNs() && !PropagatesNaN)
+               ? ConstantFP::getQNaN(EltTy, Negative)
            : !Flags.noInfs()
                ? ConstantFP::getInfinity(EltTy, Negative)
                : ConstantFP::get(EltTy,
@@ -479,6 +485,18 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
     transferDecorations(*Reduction, VPI);
     Reduction =
         Builder.CreateBinaryIntrinsic(Intrinsic::minnum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fmaximum:
+    Reduction = Builder.CreateFPMaximumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::maximum, Reduction, Start);
+    break;
+  case Intrinsic::vp_reduce_fminimum:
+    Reduction = Builder.CreateFPMinimumReduce(RedOp);
+    transferDecorations(*Reduction, VPI);
+    Reduction =
+        Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Reduction, Start);
     break;
   case Intrinsic::vp_reduce_fadd:
     Reduction = Builder.CreateFAddReduce(Start, RedOp);

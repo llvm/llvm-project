@@ -14,11 +14,19 @@
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
+
+// This option controls wether or not we emit ELF attributes for ABI features,
+// like RISC-V atomics or X3 usage.
+static cl::opt<bool>
+    RiscvAbiAttr("riscv-abi-attributes",
+              cl::desc("Enable emitting RISC-V ELF attributes for ABI features"),
+              cl::init(false), cl::Hidden);
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
@@ -76,8 +84,7 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
     emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
   }
 
-  if (STI.hasFeature(RISCV::FeatureAbiAttributes) &&
-      STI.hasFeature(RISCV::FeatureStdExtA)) {
+  if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
     unsigned AtomicABITag = STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence)
                                 ? RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6C
                                 : RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6S;

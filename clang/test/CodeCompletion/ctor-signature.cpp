@@ -17,7 +17,7 @@ void foo() {
 }
 
 namespace std {
-template <typename> struct initializer_list {};
+template <typename E> struct initializer_list { const E *a, *b; };
 } // namespace std
 
 struct Bar {

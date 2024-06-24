@@ -15,6 +15,7 @@
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -26,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::object;
 using namespace llvm::opt;
 
 namespace {
@@ -568,6 +570,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
   if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
@@ -1241,6 +1249,16 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
+
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(Config.InputFilename);
+  if (!BinaryOrErr)
+    return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+  auto *Binary = (*BinaryOrErr).getBinary();
+  if (!Binary->isMachO() && !Binary->isMachOUniversalBinary())
+    return createStringError(errc::invalid_argument,
+                             "input file: %s is not a Mach-O file",
+                             Config.InputFilename.str().c_str());
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);

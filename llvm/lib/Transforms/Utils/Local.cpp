@@ -231,7 +231,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights);
+          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -1603,7 +1603,8 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DII->getExpression()->getActiveBits(DII->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
@@ -1629,7 +1630,8 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
   const DataLayout &DL = DVR->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DVR->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DVR->getExpression()->getActiveBits(DVR->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
@@ -2230,6 +2232,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
     Assign->setAddress(NewV);
@@ -2290,6 +2294,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DII->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
@@ -2351,6 +2356,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DVR->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;

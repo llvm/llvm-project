@@ -33,14 +33,6 @@ if(MSVC)
       ??_U@YAPEAX_K@Z
       ??_V@YAXPEAX@Z
       ??3@YAXPEAX_K@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@H@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@M@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@N@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@PEBX@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@P6AAEAV01@AEAV01@@Z@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@D@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@PEBD@Z
-      ?_Facet_Register@std@@YAXPEAV_Facet_base@1@@Z
     )
   else()
     set(clang_repl_exports ${clang_repl_exports}
@@ -50,14 +42,6 @@ if(MSVC)
       ??_U@YAPAXI@Z
       ??_V@YAXPAX@Z
       ??_V@YAXPAXI@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@H@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@M@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@N@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@PBX@Z
-      ??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QAEAAV01@P6AAAV01@AAV01@@Z@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAAV?$basic_ostream@DU?$char_traits@D@std@@@0@AAV10@D@Z
-      ??$?6U?$char_traits@D@std@@@std@@YAAAV?$basic_ostream@DU?$char_traits@D@std@@@0@AAV10@PBD@Z
-      ?_Facet_Register@std@@YAXPAV_Facet_base@1@@Z
     )
   endif()
 
@@ -77,10 +61,7 @@ clang_target_link_libraries(clang-repl PRIVATE
   clangInterpreter
   )
 
-# Support plugins.
-if(CLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(clang-repl)
-endif()
+export_executable_symbols_for_plugins(clang-repl)
 
 # The clang-repl binary can get huge with static linking in debug mode.
 # Some 32-bit targets use PLT slots with limited branch range by default and we

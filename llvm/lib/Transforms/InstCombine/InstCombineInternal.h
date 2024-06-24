@@ -354,8 +354,9 @@ private:
   }
 
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI) const {
-    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI) ==
+                                  const Instruction &CxtI,
+                                  bool IsNSW = false) const {
+    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI, IsNSW) ==
            OverflowResult::NeverOverflows;
   }
 
@@ -461,7 +462,7 @@ public:
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
                              PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, InsertAt->getIterator());
+    InsertNewInstWith(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.

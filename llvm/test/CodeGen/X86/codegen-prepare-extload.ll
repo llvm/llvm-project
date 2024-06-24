@@ -546,7 +546,8 @@ define i32 @promotionOfArgEndsUpInValue(ptr %addr) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[VAL:%.*]] = load i16, ptr [[ADDR]], align 2
 ; OPT-NEXT:    [[CONV3:%.*]] = sext i16 [[VAL]] to i32
-; OPT-NEXT:    [[PROMOTED1:%.*]] = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i32
+; OPT-NEXT:    [[CMP:%.*]] = icmp ne ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), @a
+; OPT-NEXT:    [[PROMOTED1:%.*]] = zext i1 [[CMP]] to i32
 ; OPT-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV3]], [[PROMOTED1]]
 ; OPT-NEXT:    ret i32 [[ADD]]
 ;
@@ -554,14 +555,16 @@ define i32 @promotionOfArgEndsUpInValue(ptr %addr) {
 ; DISABLE-SAME: ptr [[ADDR:%.*]]) {
 ; DISABLE-NEXT:  entry:
 ; DISABLE-NEXT:    [[VAL:%.*]] = load i16, ptr [[ADDR]], align 2
-; DISABLE-NEXT:    [[EXT:%.*]] = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i16
+; DISABLE-NEXT:    [[CMP:%.*]] = icmp ne ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), @a
+; DISABLE-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i16
 ; DISABLE-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[VAL]], [[EXT]]
 ; DISABLE-NEXT:    [[CONV3:%.*]] = sext i16 [[ADD]] to i32
 ; DISABLE-NEXT:    ret i32 [[CONV3]]
 ;
 entry:
   %val = load i16, ptr %addr
-  %ext = zext i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i16
+  %cmp = icmp ne ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), @a
+  %ext = zext i1 %cmp to i16
   %add = add nuw nsw i16 %val, %ext
   %conv3 = sext i16 %add to i32
   ret i32 %conv3

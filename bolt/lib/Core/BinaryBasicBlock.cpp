@@ -131,11 +131,10 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         break;
       }
       case 2:
-        Valid = (CondBranch &&
-                 (TBB == getConditionalSuccessor(true)->getLabel() &&
-                  ((!UncondBranch && !FBB) ||
-                   (UncondBranch &&
-                    FBB == getConditionalSuccessor(false)->getLabel()))));
+        Valid =
+            CondBranch && TBB == getConditionalSuccessor(true)->getLabel() &&
+            (UncondBranch ? FBB == getConditionalSuccessor(false)->getLabel()
+                          : !FBB);
         break;
       }
     }

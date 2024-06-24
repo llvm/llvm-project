@@ -234,8 +234,6 @@ define i64 @test_pr62954_scalar_epilogue_required(ptr %A, ptr noalias %B, ptr %C
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw <16 x i64> zeroinitializer, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1]] = sub nsw <16 x i64> zeroinitializer, [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i64> [[VECTOR_RECUR]], <16 x i64> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i64> [[TMP0]], <16 x i64> [[TMP1]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i64> [[TMP1]], i32 15
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32

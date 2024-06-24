@@ -1318,11 +1318,9 @@ void SimplifyIntrinsicsPass::runOnOperation() {
 
           // Support only floating point and integer arguments
           // now (e.g. logical is skipped here).
-          if (!arg1Type->isa<mlir::FloatType>() &&
-              !arg1Type->isa<mlir::IntegerType>())
+          if (!mlir::isa<mlir::FloatType, mlir::IntegerType>(*arg1Type))
             return;
-          if (!arg2Type->isa<mlir::FloatType>() &&
-              !arg2Type->isa<mlir::IntegerType>())
+          if (!mlir::isa<mlir::FloatType, mlir::IntegerType>(*arg2Type))
             return;
 
           auto typeGenerator = [&type](fir::FirOpBuilder &builder) {

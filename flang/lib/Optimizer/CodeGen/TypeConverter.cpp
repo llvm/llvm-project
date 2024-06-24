@@ -13,8 +13,9 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "DescriptorModel.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -36,7 +37,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
           module.getContext(), getTargetTriple(module), getKindMapping(module),
           getTargetCPU(module), getTargetFeatures(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
-                                                forceUnifiedTBAATree)) {
+                                                forceUnifiedTBAATree)),
+      dataLayout{&dl} {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.
@@ -114,6 +116,11 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
   addConversion([&](mlir::NoneType none) {
     return mlir::LLVM::LLVMStructType::getLiteral(
         none.getContext(), std::nullopt, /*isPacked=*/false);
+  });
+  addConversion([&](fir::DummyScopeType dscope) {
+    // DummyScopeType values must not have any uses after PreCGRewrite.
+    // Convert it here to i1 just in case it survives.
+    return mlir::IntegerType::get(&getContext(), 1);
   });
   // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
   // materialization of conversion around function calls that is not working
@@ -238,7 +245,10 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // [dims]
   if (rank == unknownRank()) {
     if (auto seqTy = mlir::dyn_cast<SequenceType>(ele))
-      rank = seqTy.getDimension();
+      if (seqTy.hasUnknownShape())
+        rank = Fortran::common::maxRank;
+      else
+        rank = seqTy.getDimension();
     else
       rank = 0;
   }
