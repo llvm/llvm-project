@@ -1494,7 +1494,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
       }
 
       if (NewRecipe) {
-        unsigned NumDefVal = NewRecipe->getNumDefinedValues();
+        [[maybe_unused]] unsigned NumDefVal = NewRecipe->getNumDefinedValues();
         assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
                "New recipe must define the same number of values as the "
                "original.");
@@ -1502,7 +1502,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
             NumDefVal <= 1 &&
             "Only supports recipes with a single definition or without users.");
         NewRecipe->insertBefore(CurRecipe);
-        if (NumDefVal > 0) {
+        if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(NewRecipe)) {
           VPValue *CurVPV = CurRecipe->getVPSingleValue();
           CurVPV->replaceAllUsesWith(NewRecipe->getVPSingleValue());
         }
