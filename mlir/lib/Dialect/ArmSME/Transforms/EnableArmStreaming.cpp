@@ -99,9 +99,10 @@ struct EnableArmStreamingPass
     }
 
     if (ifScalableAndSupported) {
-      // FIXME: This should be based on target information. This currently errs
-      // on the side of caution. If possible gathers/scatters should be lowered
-      // regular vector loads/stores before invoking this pass.
+      // FIXME: This should be based on target information (i.e., the presence
+      // of FEAT_SME_FA64). This currently errs on the side of caution. If
+      // possible gathers/scatters should be lowered regular vector loads/stores
+      // before invoking this pass.
       auto disallowedOperations = opList<vector::GatherOp, vector::ScatterOp>();
       bool isCompatibleScalableFunction = false;
       function.walk([&](Operation *op) {
