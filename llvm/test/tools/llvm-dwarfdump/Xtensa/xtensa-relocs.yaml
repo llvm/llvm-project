@@ -1,0 +1,93 @@
+# Tests Xtensa relocations. We provide a .debug_info section with multiple
+# DW_AT_high_pc entries (that's one of the attributes for which relocations are
+# resolved by llvm-dwarfdump) and we add a relocation for each of them.
+#
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+# To add more tests you need to modify the Content of the .debug_abbrev and
+# .debug_info sections. To do that create a test.s which matches the assembly
+# code below, run the command that follows and copy over the "Content" value of
+# the respective sections:
+#
+# ```
+# $ cat test.s
+# .section .debug_abbrev,"",@progbits
+#  .byte 1                  # Abbreviation Code
+#  .byte 0x11               # DW_TAG_compile_unit
+#  .byte 0                  # DW_CHILDREN_no
+#
+# # Add a DW_AT_high_pc for each relocation we test.
+#  .rept 2                  # (UPDATE HERE)
+#  .byte 0x12               # DW_AT_high_pc
+#  .byte 0x01               # DW_FORM_addr
+#  .endr
+#
+#  .byte 0                  # EOM(1)
+#  .byte 0                  # EOM(2)
+#  .byte 0                  # EOM(3)
+#
+# .section .debug_info,"",@progbits
+#  .4byte 2+4+1+1+4*2       # Length of Unit (UPDATE HERE)
+#  .2byte 4                 # DWARF version number
+#  .4byte .debug_abbrev     # Offset Into Abbrev. Section
+#  .byte 4                  # Address Size (in bytes)
+#  .byte 1                  # Abbrev 1
+#  .4byte 0x00000042        # Test 1
+#  .4byte 0x00000042        # Test 2
+# $ llvm-mc test.s -filetype obj -triple xtensa -o - | obj2yaml
+# ```
+#
+# Note that you may need xtensa-enabled llvm-mc.
+# I used a version from https://github.com/espressif/llvm-project.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_XTENSA
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '01110012011201000000'
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '1000000004000000000004014200000042000000'
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x4
+    Info:            .debug_info
+    Relocations:
+
+      # Test 1
+      # 0x42 with R_XTENSA_NONE(0x1) = 0x42
+      # CHECK: DW_AT_high_pc (0x00000042)
+      - Offset:          0x0000000C # 0xC + 4*0
+        Symbol:          v1
+        Type:            R_XTENSA_NONE
+
+      # Test 2
+      # 0x42 with R_XTENSA_32(0xFFFFFFFF) = 0x00000041
+      # CHECK-NEXT: DW_AT_high_pc (0x00000041)
+      - Offset:          0x00000010 # 0xC + 4*1
+        Symbol:          vFFFFFFFF
+        Type:            R_XTENSA_32
+
+Symbols:
+  - Name:            v1
+    Type:            STT_SECTION
+    Section:         .debug_info
+    Value:           0x00000001
+  - Name:            vFFFFFFFF
+    Type:            STT_SECTION
+    Section:         .debug_info
+    Value:           0xFFFFFFFF
