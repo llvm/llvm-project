@@ -81,7 +81,10 @@ def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
 }
 
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
-def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32>;
+def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 1;
+}
 def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
 def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
   let HasClamp = 1;

@@ -150,6 +150,7 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
     GFX(1210), // gfx1210
+    GFX(1211), // gfx1211
     {CudaArch::Generic, "generic", ""},
     // clang-format on
 };
