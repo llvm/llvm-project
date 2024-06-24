@@ -278,11 +278,11 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
-                                                  DyadicFloat<Bits> b) {
+LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
+                                                  const DyadicFloat<Bits> &b) {
   DyadicFloat<Bits> result;
   result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
-  result.exponent = a.exponent + b.exponent + int(Bits);
+  result.exponent = a.exponent + b.exponent + static_cast<int>(Bits);
 
   if (!(a.mantissa.is_zero() || b.mantissa.is_zero())) {
     result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
@@ -309,7 +309,7 @@ multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
 // Simple exponentiation implementation for printf. Only handles positive
 // exponents, since division isn't implemented.
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
+LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(const DyadicFloat<Bits> &a,
                                               uint32_t power) {
   DyadicFloat<Bits> result = 1.0;
   DyadicFloat<Bits> cur_power = a;
@@ -325,7 +325,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
 }
 
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a,
+LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(const DyadicFloat<Bits> &a,
                                                   int32_t pow_2) {
   DyadicFloat<Bits> result = a;
   result.exponent += pow_2;
