@@ -3128,9 +3128,9 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     if (auto *LI = dyn_cast<LoadInst>(I)) {
       // Load
       auto *Ty = I->getType();
-      // NOTE: Now we assume conditional faulting load/store is supported when
-      // creating new instructions, but it's easy to extend it for vector types
-      // in the future.
+      // NOTE: Now we assume conditional faulting load/store is supported for
+      // scalar only when creating new instructions, but it's easy to extend it
+      // for vector types in the future.
       assert(!Ty->isVectorTy() && "not implemented");
       auto *V0 = Builder.CreateMaskedLoad(FixedVectorType::get(Ty, 1), Op0,
                                           LI->getAlign(), Mask);
