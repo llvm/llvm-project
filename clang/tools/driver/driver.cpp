@@ -256,6 +256,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   const char *ProgName =
       ToolContext.NeedsPrependArg ? ToolContext.PrependArg : ToolContext.Path;
 
+  // clang-format off
+  // Cratels: 判断当前是否工作在CL mode
+  // clang-cl 是一个Clang驱动器的另一个命令行接口的选择，是被设计用来兼容Visual C++ 的编译器。
+  // clang-format on
   bool ClangCLMode =
       IsClangCL(getDriverMode(ProgName, llvm::ArrayRef(Args).slice(1)));
 
@@ -287,6 +291,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     // Cratels: ExecuteCC1Tool执行cc1工具，即只执行 clang 的前端而不作为整个编译器来使用
     // clang-format on
     return ExecuteCC1Tool(Args, ToolContext);
+
+  // clang-format off
+  // Cratels:
+  //
+  // 后面为clang作为完整编译器的执行代码
+  //
+  //
+  // clang-format on
 
   // Cratels: 作为 driver，完整编译器开始执行
   // Handle options that need handling before the real command line parsing in
@@ -335,6 +347,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
+  llvm::outs() << Path << "\n";
 
   // Whether the cc1 tool should be called inside the current process, or if we
   // should spawn a new clang subprocess (old behavior).
