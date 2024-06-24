@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+m,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+v,+zvfh,+m,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+zvfh,+m,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 declare <vscale x 1 x bfloat> @llvm.vp.merge.nxv1bf16(<vscale x 1 x i1>, <vscale x 1 x bfloat>, <vscale x 1 x bfloat>, i32)
 

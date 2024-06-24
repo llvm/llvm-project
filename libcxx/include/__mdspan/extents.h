@@ -165,7 +165,7 @@ public:
   template <class... _DynVals>
     requires(sizeof...(_DynVals) != __size_dynamic_)
   _LIBCPP_HIDE_FROM_ABI constexpr __maybe_static_array(_DynVals... __vals) {
-    static_assert((sizeof...(_DynVals) == __size_), "Invalid number of values.");
+    static_assert(sizeof...(_DynVals) == __size_, "Invalid number of values.");
     _TDynamic __values[__size_] = {static_cast<_TDynamic>(__vals)...};
     for (size_t __i = 0; __i < __size_; __i++) {
       _TStatic __static_val = _StaticValues::__get(__i);
@@ -185,7 +185,7 @@ public:
   template <class _Tp, size_t _Size>
     requires(_Size != __size_dynamic_)
   _LIBCPP_HIDE_FROM_ABI constexpr __maybe_static_array(const span<_Tp, _Size>& __vals) {
-    static_assert((_Size == __size_) || (__size_ == dynamic_extent));
+    static_assert(_Size == __size_ || __size_ == dynamic_extent);
     for (size_t __i = 0; __i < __size_; __i++) {
       _TStatic __static_val = _StaticValues::__get(__i);
       if (__static_val == _DynTag) {

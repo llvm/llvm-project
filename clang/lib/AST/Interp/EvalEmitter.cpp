@@ -66,7 +66,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD) && EvalResult.empty())
+  if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
     EvalResult.setInvalid();
 
   return std::move(this->EvalResult);

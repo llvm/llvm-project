@@ -89,15 +89,15 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
 
 MutableArrayRef<InstrProfValueData>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
-    const Instruction *I, uint32_t &NumVals, uint64_t &TotalCount,
-    uint32_t &NumCandidates) {
-  bool Res =
-      getValueProfDataFromInst(*I, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueDataArray.get(), NumVals, TotalCount);
+    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates) {
+  uint32_t NumVals;
+  auto Res = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
+                                      MaxNumPromotions, NumVals, TotalCount);
   if (!Res) {
     NumCandidates = 0;
     return MutableArrayRef<InstrProfValueData>();
   }
+  ValueDataArray = std::move(Res);
   NumCandidates = getProfitablePromotionCandidates(I, NumVals, TotalCount);
   return MutableArrayRef<InstrProfValueData>(ValueDataArray.get(), NumVals);
 }

@@ -426,19 +426,19 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 typedef underlying_type<launch>::type __launch_underlying_type;
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR launch operator&(launch __x, launch __y) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator&(launch __x, launch __y) {
   return static_cast<launch>(static_cast<__launch_underlying_type>(__x) & static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR launch operator|(launch __x, launch __y) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator|(launch __x, launch __y) {
   return static_cast<launch>(static_cast<__launch_underlying_type>(__x) | static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR launch operator^(launch __x, launch __y) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator^(launch __x, launch __y) {
   return static_cast<launch>(static_cast<__launch_underlying_type>(__x) ^ static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR launch operator~(launch __x) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator~(launch __x) {
   return static_cast<launch>(~static_cast<__launch_underlying_type>(__x) & 3);
 }
 
@@ -1384,11 +1384,10 @@ class __packaged_task_base;
 
 template <class _Rp, class... _ArgTypes>
 class __packaged_task_base<_Rp(_ArgTypes...)> {
-  __packaged_task_base(const __packaged_task_base&);
-  __packaged_task_base& operator=(const __packaged_task_base&);
-
 public:
   _LIBCPP_HIDE_FROM_ABI __packaged_task_base() {}
+  __packaged_task_base(const __packaged_task_base&) = delete;
+  __packaged_task_base& operator=(const __packaged_task_base&) = delete;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   virtual ~__packaged_task_base() {}
   virtual void __move_to(__packaged_task_base*) _NOEXCEPT = 0;

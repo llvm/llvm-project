@@ -5,10 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
-// This bug was first fixed in LLVM 19
+
+// This bug was first fixed in LLVM 19. This can't be XFAIL because
+// the test is a no-op (and would XPASS) on some targets.
 // UNSUPPORTED: using-built-library-before-llvm-19
+
 // XFAIL: availability-synchronization_library-missing
 
 #include <atomic>

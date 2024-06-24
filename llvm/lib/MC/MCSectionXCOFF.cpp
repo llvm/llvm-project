@@ -25,7 +25,7 @@ void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
 
 void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
-                                          const MCExpr *Subsection) const {
+                                          uint32_t Subsection) const {
   if (getKind().isText()) {
     if (getMappingClass() != XCOFF::XMC_PR)
       report_fatal_error("Unhandled storage-mapping class for .text csect");

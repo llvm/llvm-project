@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -target-feature +outline-atomics -verify -emit-llvm -o - %s
 // REQUIRES: aarch64-registered-target
 
 // Test that functions with the correct target attributes can use the correct NEON intrinsics.
@@ -39,6 +40,11 @@ void bf16(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8
   vld1_bf16(0);
   vcvt_f32_bf16(v4bf16);
   vcvt_bf16_f32(v4f32);
+}
+
+__attribute__((target("arch=armv8-a")))
+uint64x2_t test_v8(uint64x2_t a, uint64x2_t b) {
+  return veorq_u64(a, b);
 }
 
 __attribute__((target("arch=armv8.1-a")))

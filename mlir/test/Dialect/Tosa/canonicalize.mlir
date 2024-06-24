@@ -684,7 +684,7 @@ func.func @canonicalize_concat_slice_on_non_concat_axis(%arg0 : tensor<1x12x12xf
 
 // -----
 
-// CHECK-LABEL
+// CHECK-LABEL: @fold_log_exp
 func.func @fold_log_exp(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   // CHECK: return %arg{{.*}} : tensor<?x1xf32>
   %0 = tosa.exp %arg0 : (tensor<?x1xf32>) -> tensor<?x1xf32>

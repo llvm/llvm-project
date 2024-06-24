@@ -1,7 +1,9 @@
 // RUN: %clang_hwasan -Wl,--build-id -g %s -o %t
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
 
-// REQUIRES: pointer-tagging
+// This doesn't work on X86, because that uses instrument-with-calls which
+// disables frame records.
+// REQUIRES: aarch64-target-arch
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
