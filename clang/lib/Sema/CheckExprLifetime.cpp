@@ -8,6 +8,8 @@
 
 #include "CheckExprLifetime.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/PointerIntPair.h"
 
@@ -964,11 +966,26 @@ static bool pathOnlyInitializesGslPointer(IndirectLocalPath &Path) {
   return false;
 }
 
-void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
+void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
                        Expr *Init) {
-  LifetimeResult LR = getEntityLifetime(&Entity);
-  LifetimeKind LK = LR.getInt();
-  const InitializedEntity *ExtendingEntity = LR.getPointer();
+  LifetimeKind LK = LK_FullExpression;
+
+  const AssignedEntity *AEntity = nullptr;
+  // Local variables for initialized entity.
+  const InitializedEntity *InitEntity = nullptr;
+  const InitializedEntity *ExtendingEntity = nullptr;
+  if (auto IEntityP = std::get_if<const InitializedEntity *>(&CEntity)) {
+    InitEntity = *IEntityP;
+    auto LTResult = getEntityLifetime(InitEntity);
+    LK = LTResult.getInt();
+    ExtendingEntity = LTResult.getPointer();
+  } else if (auto AEntityP = std::get_if<const AssignedEntity *>(&CEntity)) {
+    AEntity = *AEntityP;
+    if (AEntity->LHS->getType()->isPointerType()) // builtin pointer type
+      LK = LK_Extended;
+  } else {
+    llvm_unreachable("unexpected kind");
+  }
 
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
@@ -1028,6 +1045,7 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
+        assert(InitEntity && "Expect only on initializing the entity");
         // Update the storage duration of the materialized temporary.
         // FIXME: Rebuild the expression instead of mutating it.
         MTE->setExtendingDecl(ExtendingEntity->getDecl(),
@@ -1036,6 +1054,7 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
         return true;
 
       case PathLifetimeKind::ShouldExtend:
+        assert(InitEntity && "Expect only on initializing the entity");
         // We're supposed to lifetime-extend the temporary along this path (per
         // the resolution of DR1815), but we don't support that yet.
         //
@@ -1053,16 +1072,23 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
         if (pathContainsInit(Path))
           return false;
 
-        SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
-            << RK << !Entity.getParent()
-            << ExtendingEntity->getDecl()->isImplicit()
-            << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
+        if (InitEntity) {
+          SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
+              << RK << !InitEntity->getParent()
+              << ExtendingEntity->getDecl()->isImplicit()
+              << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
+        } else {
+          SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
+              << AEntity->LHS << DiagRange;
+        }
         break;
       }
       break;
     }
 
     case LK_MemInitializer: {
+      assert(InitEntity && "Expect only on initializing the entity");
+
       if (isa<MaterializeTemporaryExpr>(L)) {
         // Under C++ DR1696, if a mem-initializer (or a default member
         // initializer used by the absence of one) would lifetime-extend a
@@ -1077,7 +1103,7 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
                 << true;
             return false;
           }
-          bool IsSubobjectMember = ExtendingEntity != &Entity;
+          bool IsSubobjectMember = ExtendingEntity != InitEntity;
           SemaRef.Diag(DiagLoc, shouldLifetimeExtendThroughPath(Path) !=
                                         PathLifetimeKind::NoExtend
                                     ? diag::err_dangling_member
@@ -1137,6 +1163,7 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
     }
 
     case LK_New:
+      assert(InitEntity && "Expect only on initializing the entity");
       if (isa<MaterializeTemporaryExpr>(L)) {
         if (IsGslPtrInitWithGslTempOwner)
           SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
@@ -1145,7 +1172,7 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
           SemaRef.Diag(DiagLoc, RK == RK_ReferenceBinding
                                     ? diag::warn_new_dangling_reference
                                     : diag::warn_new_dangling_initializer_list)
-              << !Entity.getParent() << DiagRange;
+              << !InitEntity->getParent() << DiagRange;
       } else {
         // We can't determine if the allocation outlives the local declaration.
         return false;
@@ -1154,13 +1181,14 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 
     case LK_Return:
     case LK_StmtExprResult:
+      assert(InitEntity && "Expect only on initializing the entity");
       if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
         // We can't determine if the local variable outlives the statement
         // expression.
         if (LK == LK_StmtExprResult)
           return false;
         SemaRef.Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
-            << Entity.getType()->isReferenceType() << DRE->getDecl()
+            << InitEntity->getType()->isReferenceType() << DRE->getDecl()
             << isa<ParmVarDecl>(DRE->getDecl()) << DiagRange;
       } else if (isa<BlockExpr>(L)) {
         SemaRef.Diag(DiagLoc, diag::err_ret_local_block) << DiagRange;
@@ -1172,8 +1200,8 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
         SemaRef.Diag(DiagLoc, diag::warn_ret_addr_label) << DiagRange;
       } else if (auto *CLE = dyn_cast<CompoundLiteralExpr>(L)) {
         SemaRef.Diag(DiagLoc, diag::warn_ret_stack_addr_ref)
-            << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
-            << DiagRange;
+            << InitEntity->getType()->isReferenceType() << CLE->getInitializer()
+            << 2 << DiagRange;
       } else {
         // P2748R5: Disallow Binding a Returned Glvalue to a Temporary.
         // [stmt.return]/p6: In a function whose return type is a reference,
@@ -1181,12 +1209,12 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
         // a return statement that binds the returned reference to a temporary
         // expression ([class.temporary]) is ill-formed.
         if (SemaRef.getLangOpts().CPlusPlus26 &&
-            Entity.getType()->isReferenceType())
+            InitEntity->getType()->isReferenceType())
           SemaRef.Diag(DiagLoc, diag::err_ret_local_temp_ref)
-              << Entity.getType()->isReferenceType() << DiagRange;
+              << InitEntity->getType()->isReferenceType() << DiagRange;
         else
           SemaRef.Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
-              << Entity.getType()->isReferenceType() << DiagRange;
+              << InitEntity->getType()->isReferenceType() << DiagRange;
       }
       break;
     }
