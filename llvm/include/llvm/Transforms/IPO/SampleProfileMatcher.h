@@ -87,7 +87,8 @@ class SampleProfileMatcher {
   HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
 
   // The new functions from IR.
-  HashKeyMap<std::unordered_map, FunctionId, Function *> NewIRFunctions;
+  HashKeyMap<std::unordered_map, FunctionId, Function *>
+      FunctionsWithoutProfile;
 
   // Pointer to the Profile Symbol List in the reader.
   std::shared_ptr<ProfileSymbolList> PSL;
@@ -133,7 +134,7 @@ public:
     freeContainer(FuncCallsiteMatchStates);
     freeContainer(FlattenedProfiles);
 
-    freeContainer(NewIRFunctions);
+    freeContainer(FunctionsWithoutProfile);
     freeContainer(FuncToProfileNameMap);
   }
 

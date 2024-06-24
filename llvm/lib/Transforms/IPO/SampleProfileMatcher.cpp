@@ -151,8 +151,8 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
 
 Function *
 SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName) {
-  auto R = NewIRFunctions.find(IRFuncName);
-  if (R == NewIRFunctions.end())
+  auto R = FunctionsWithoutProfile.find(IRFuncName);
+  if (R == FunctionsWithoutProfile.end())
     return nullptr;
   return R->second;
 }
@@ -770,7 +770,7 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
 
     LLVM_DEBUG(dbgs() << "Function " << CanonFName
                       << " is not in profile or profile symbol list.\n");
-    NewIRFunctions[FunctionId(CanonFName)] = &F;
+    FunctionsWithoutProfile[FunctionId(CanonFName)] = &F;
   }
 }
 
