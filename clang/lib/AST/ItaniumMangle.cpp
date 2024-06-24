@@ -3430,6 +3430,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     type_name = MangledName;                                                   \
     Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
     break;
+#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF)                                        \
+  case BuiltinType::Id:                                                        \
+    type_name = MangledName;                                                   \
+    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \

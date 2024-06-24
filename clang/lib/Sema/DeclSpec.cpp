@@ -379,6 +379,7 @@ bool Declarator::isDeclarationOfFunction() const {
 #include "clang/Basic/OpenCLImageTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case TST_##Name:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+    case TST_ArmMFloat8_t: // AARCH64_OPAQUE_TYPE
       return false;
 
     case TST_decltype_auto:
@@ -613,6 +614,8 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case DeclSpec::TST_##Name:                                                   \
     return #Name;
+  case DeclSpec::TST_ArmMFloat8_t: // AARCH64_OPAQUE_TYPE
+    return "__mfp8";
 #include "clang/Basic/HLSLIntangibleTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }

@@ -2484,9 +2484,18 @@ bool Type::isSVESizelessBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
       // SVE Types
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF)
 #include "clang/Basic/AArch64SVEACLETypes.def"
       return true;
+    case BuiltinType::ArmMFloat8:
+      return false;
     default:
       return false;
     }
@@ -3438,9 +3447,19 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return #ExtType;
 #include "clang/Basic/OpenCLExtensionTypes.def"
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case Id: \
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case Id:                                                                     \
     return Name;
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case Id:                                                                     \
+    return Name;
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case Id:                                                                     \
+    return Name;
+#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF)
+  case ArmMFloat8:
+    return "__mfp8";
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \

@@ -325,6 +325,8 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   static const TST TST_##Name = clang::TST_##Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+  // AARCH64_OPAQUE_TYPE
+  static const TST TST_ArmMFloat8_t = clang::TST_ArmMFloat8_t;
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers

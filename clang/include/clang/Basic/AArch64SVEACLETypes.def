@@ -97,6 +97,12 @@
   SVE_TYPE(Name, Id, SingletonId)
 #endif
 
+#ifndef AARCH64_OPAQUE_TYPE
+#define AARCH64_OPAQUE_TYPE(Name, MangledName, Id, SingletonId, NumEls, \
+                            ElBits, NF) \
+  SVE_TYPE(Name, Id, SingletonId)
+#endif
+
 //===- Vector point types -----------------------------------------------===//
 
 SVE_VECTOR_TYPE_INT("__SVInt8_t",  "__SVInt8_t",  SveInt8,  SveInt8Ty, 16,  8, 1, true)
@@ -190,6 +196,8 @@ SVE_PREDICATE_TYPE_ALL("__clang_svboolx4_t", "svboolx4_t", SveBoolx4, SveBoolx4T
 
 SVE_OPAQUE_TYPE("__SVCount_t", "__SVCount_t", SveCount, SveCountTy)
 
+AARCH64_OPAQUE_TYPE("__MFloat8_t", "__MFloat8_t", ArmMFloat8, ArmMFloat8Ty, 1, 8, 1)
+
 #undef SVE_VECTOR_TYPE
 #undef SVE_VECTOR_TYPE_BFLOAT
 #undef SVE_VECTOR_TYPE_FLOAT
@@ -197,4 +205,5 @@ SVE_OPAQUE_TYPE("__SVCount_t", "__SVCount_t", SveCount, SveCountTy)
 #undef SVE_PREDICATE_TYPE
 #undef SVE_PREDICATE_TYPE_ALL
 #undef SVE_OPAQUE_TYPE
+#undef AARCH64_OPAQUE_TYPE
 #undef SVE_TYPE

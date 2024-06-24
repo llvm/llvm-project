@@ -1248,6 +1248,8 @@ bool AArch64TargetInfo::hasBFloat16Type() const {
   return true;
 }
 
+bool AArch64TargetInfo::hasArmMFloat8Type() const { return true; }
+
 TargetInfo::CallingConvCheckResult
 AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {

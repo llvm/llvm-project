@@ -68,6 +68,7 @@ namespace clang {
     TST_Accum,   // ISO/IEC JTC1 SC22 WG14 N1169 Extension
     TST_Fract,
     TST_BFloat16,
+    TST_ArmMFloat8_t, // AARCH64_OPAQUE_TYPE
     TST_float,
     TST_double,
     TST_float128,
