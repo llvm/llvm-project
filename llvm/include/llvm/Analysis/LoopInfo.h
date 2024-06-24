@@ -385,8 +385,8 @@ public:
   /// Return the source code span of the loop.
   LocRange getLocRange() const;
 
-  /// Return a string containing the location of the loop (file name + line
-  /// number if present, otherwise module name). Meant to be used for debug
+  /// Return a string containing the debug location of the loop (file name +
+  /// line number if present, otherwise module name). Meant to be used for debug
   /// printing within LLVM_DEBUG.
   std::string getLocStr() const;
 

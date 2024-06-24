@@ -2403,8 +2403,8 @@ bool LoopAccessInfo::canAnalyzeLoop() {
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "LAA: Found a loop: " << TheLoop->getHeader()->getName()
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "LAA: Found an analyzable loop: "
+                    << TheLoop->getHeader()->getName() << "\n");
   return true;
 }
 

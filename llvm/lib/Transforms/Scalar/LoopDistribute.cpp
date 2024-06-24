@@ -686,8 +686,8 @@ public:
     if (!Dependences || Dependences->empty())
       return fail("NoUnsafeDeps", "no unsafe dependences to isolate");
 
-    LLVM_DEBUG(dbgs() << "LDist: Found a loop: " << L->getHeader()->getName()
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "LDist: Found a candidate loop: "
+                      << L->getHeader()->getName() << "\n");
 
     InstPartitionContainer Partitions(L, LI, DT);
 

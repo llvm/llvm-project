@@ -7,7 +7,7 @@
 ; }
 
 ; CHECK-LABEL: 'negative_step'
-; CHECK: LAA: Found a loop: loop
+; CHECK: LAA: Found an analyzable loop: loop
 ; CHECK: LAA: Checking memory dependencies
 ; CHECK-NEXT: LAA: Src Scev: {(4092 + %A),+,-4}<nw><%loop>Sink Scev: {(4088 + %A)<nuw>,+,-4}<nw><%loop>(Induction step: -1)
 ; CHECK-NEXT: LAA: Distance for   store i32 %add, ptr %gep.A.plus.1, align 4 to   %l = load i32, ptr %gep.A, align 4: -4
@@ -39,7 +39,7 @@ exit:
 ; }
 
 ; CHECK-LABEL: 'positive_step'
-; CHECK: LAA: Found a loop: loop
+; CHECK: LAA: Found an analyzable loop: loop
 ; CHECK: LAA: Checking memory dependencies
 ; CHECK-NEXT: LAA: Src Scev: {(4 + %A)<nuw>,+,4}<nuw><%loop>Sink Scev: {%A,+,4}<nw><%loop>(Induction step: 1)
 ; CHECK-NEXT: LAA: Distance for   %l = load i32, ptr %gep.A, align 4 to   store i32 %add, ptr %gep.A.minus.1, align 4: -4
