@@ -282,6 +282,12 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
 
+* Added the following functions for accessing a Target Extension Type's data:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
