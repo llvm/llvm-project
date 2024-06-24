@@ -51,6 +51,7 @@ add_header_library(
   HDRS
     div.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits

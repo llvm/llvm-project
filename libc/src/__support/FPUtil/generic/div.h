@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
