@@ -2335,10 +2335,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
   };
 
   auto checkFailureInSplitting =
-      [&](bool hasFailed, Operation *op) -> DiagnosedSilenceableFailure {
+      [&](bool hasFailed, Location loc) -> DiagnosedSilenceableFailure {
     if (hasFailed) {
       auto diag = emitDefiniteFailure() << "internal failure in splitting";
-      diag.attachNote(op->getLoc()) << "target op";
+      diag.attachNote(loc) << "target op";
       return diag;
     }
     return DiagnosedSilenceableFailure::success();
@@ -2376,7 +2376,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
       // Propagate errors.
       DiagnosedSilenceableFailure diag =
-          checkFailureInSplitting(!head && !tail, target);
+          checkFailureInSplitting(!head && !tail, target->getLoc());
       if (diag.isDefiniteFailure())
         return diag;
 
@@ -2408,8 +2408,8 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
           getDimension(), std::get<1>(pair));
 
       // Propagate errors.
-      DiagnosedSilenceableFailure diagSplit =
-          checkFailureInSplitting(!first.back() && !second.back(), target);
+      DiagnosedSilenceableFailure diagSplit = checkFailureInSplitting(
+          !first.back() && !second.back(), target->getLoc());
       if (diagSplit.isDefiniteFailure())
         return diag;
 
