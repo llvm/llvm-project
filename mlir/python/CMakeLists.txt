@@ -456,6 +456,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     IRModule.h
     Pass.h
     PybindUtils.h
+    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS

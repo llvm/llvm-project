@@ -153,3 +153,13 @@ TEST(LlvmLibcFcntlTest, FcntlGetLkWrite) {
 
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
+
+TEST(LlvmLibcFcntlTest, UseAfterClose) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_use_after_close.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  ASSERT_EQ(-1, LIBC_NAMESPACE::fcntl(fd, F_GETFL));
+  ASSERT_ERRNO_EQ(EBADF);
+}

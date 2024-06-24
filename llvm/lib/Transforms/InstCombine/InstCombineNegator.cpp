@@ -391,12 +391,12 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg",
                                /* HasNUW */ false, IsNSW);
     // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
-    auto *Op1C = dyn_cast<Constant>(I->getOperand(1));
-    if (!Op1C || !IsTrulyNegation)
+    Constant *Op1C;
+    if (!match(I->getOperand(1), m_ImmConstant(Op1C)) || !IsTrulyNegation)
       return nullptr;
     return Builder.CreateMul(
         I->getOperand(0),
-        ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
+        Builder.CreateShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
         I->getName() + ".neg", /* HasNUW */ false, IsNSW);
   }
   case Instruction::Or: {

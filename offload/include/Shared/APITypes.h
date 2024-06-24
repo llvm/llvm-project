@@ -116,6 +116,16 @@ static_assert(sizeof(KernelArgsTy) ==
                   (8 * sizeof(int32_t) + 3 * sizeof(int64_t) +
                    4 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
+
+/// Flat array of kernel launch parameters and their total size.
+struct KernelLaunchParamsTy {
+  /// Size of the Data array.
+  size_t Size = 0;
+  /// Flat array of kernel parameters.
+  void *Data = nullptr;
+  /// Ptrs to the Data entries. Only strictly required for the host plugin.
+  void **Ptrs = nullptr;
+};
 }
 
 #endif // OMPTARGET_SHARED_API_TYPES_H

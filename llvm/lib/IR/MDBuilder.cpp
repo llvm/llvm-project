@@ -35,8 +35,8 @@ MDNode *MDBuilder::createFPMath(float Accuracy) {
 }
 
 MDNode *MDBuilder::createBranchWeights(uint32_t TrueWeight,
-                                       uint32_t FalseWeight) {
-  return createBranchWeights({TrueWeight, FalseWeight});
+                                       uint32_t FalseWeight, bool IsExpected) {
+  return createBranchWeights({TrueWeight, FalseWeight}, IsExpected);
 }
 
 MDNode *MDBuilder::createLikelyBranchWeights() {
@@ -49,15 +49,19 @@ MDNode *MDBuilder::createUnlikelyBranchWeights() {
   return createBranchWeights(1, (1U << 20) - 1);
 }
 
-MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights) {
+MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
+                                       bool IsExpected) {
   assert(Weights.size() >= 1 && "Need at least one branch weights!");
 
-  SmallVector<Metadata *, 4> Vals(Weights.size() + 1);
+  unsigned int Offset = IsExpected ? 2 : 1;
+  SmallVector<Metadata *, 4> Vals(Weights.size() + Offset);
   Vals[0] = createString("branch_weights");
+  if (IsExpected)
+    Vals[1] = createString("expected");
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   for (unsigned i = 0, e = Weights.size(); i != e; ++i)
-    Vals[i + 1] = createConstant(ConstantInt::get(Int32Ty, Weights[i]));
+    Vals[i + Offset] = createConstant(ConstantInt::get(Int32Ty, Weights[i]));
 
   return MDNode::get(Context, Vals);
 }
