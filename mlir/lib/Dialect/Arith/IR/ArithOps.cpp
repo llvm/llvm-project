@@ -1204,7 +1204,9 @@ OpFoldResult arith::RemFOp::fold(FoldAdaptor adaptor) {
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(),
                                       [](const APFloat &a, const APFloat &b) {
                                         APFloat result(a);
-                                        (void)result.remainder(b);
+                                        // Mirror behavior of llvm.frem which
+                                        // behaves like libm's fmod(a, b).
+                                        (void)result.mod(b);
                                         return result;
                                       });
 }
