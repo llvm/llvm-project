@@ -1972,7 +1972,10 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
           .addDef(GlobalWorkSize)
           .addUse(GR->getSPIRVTypeID(SpvFieldTy))
           .addUse(GWSPtr);
-      Const = GR->getOrCreateConsIntArray(0, MIRBuilder, SpvFieldTy);
+      const SPIRVSubtarget &ST =
+          cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+      Const = GR->getOrCreateConstIntArray(0, Size, *MIRBuilder.getInsertPt(),
+                                           SpvFieldTy, *ST.getInstrInfo());
     } else {
       Const = GR->buildConstantInt(0, MIRBuilder, SpvTy);
     }

@@ -394,7 +394,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
     Constant *Val, MachineInstr &I, SPIRVType *SpvType,
     const SPIRVInstrInfo &TII, Constant *CA, unsigned BitWidth,
     unsigned ElemCnt, bool ZeroAsNull) {
-  // Find a constant vector in DT or build a new one.
+  // Find a constant vector or array in DT or build a new one.
   Register Res = DT.find(CA, CurMF);
   // If no values are attached, the composite is null constant.
   bool IsNull = Val->isNullValue() && ZeroAsNull;
@@ -474,20 +474,20 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(APFloat Val,
                                     ZeroAsNull);
 }
 
-Register
-SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
-                                             SPIRVType *SpvType,
-                                             const SPIRVInstrInfo &TII) {
+Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
+    uint64_t Val, size_t Num, MachineInstr &I, SPIRVType *SpvType,
+    const SPIRVInstrInfo &TII) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);
   assert(LLVMTy->isArrayTy());
   const ArrayType *LLVMArrTy = cast<ArrayType>(LLVMTy);
   Type *LLVMBaseTy = LLVMArrTy->getElementType();
-  auto *ConstInt = ConstantInt::get(LLVMBaseTy, Val);
-  auto *ConstArr =
-      ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), {ConstInt});
+  Constant *CI = ConstantInt::get(LLVMBaseTy, Val);
+  SmallVector<Constant *> NumCI(Num, CI);
+  Constant *ConstArr =
+      ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), NumCI);
   SPIRVType *SpvBaseTy = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
   unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
-  return getOrCreateCompositeOrNull(ConstInt, I, SpvType, TII, ConstArr, BW,
+  return getOrCreateCompositeOrNull(CI, I, SpvType, TII, ConstArr, BW,
                                     LLVMArrTy->getNumElements());
 }
 
@@ -543,24 +543,6 @@ SPIRVGlobalRegistry::getOrCreateConsIntVector(uint64_t Val,
   return getOrCreateIntCompositeOrNull(Val, MIRBuilder, SpvType, EmitIR,
                                        ConstVec, BW,
                                        SpvType->getOperand(2).getImm());
-}
-
-Register
-SPIRVGlobalRegistry::getOrCreateConsIntArray(uint64_t Val,
-                                             MachineIRBuilder &MIRBuilder,
-                                             SPIRVType *SpvType, bool EmitIR) {
-  const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  assert(LLVMTy->isArrayTy());
-  const ArrayType *LLVMArrTy = cast<ArrayType>(LLVMTy);
-  Type *LLVMBaseTy = LLVMArrTy->getElementType();
-  const auto ConstInt = ConstantInt::get(LLVMBaseTy, Val);
-  auto ConstArr =
-      ConstantArray::get(const_cast<ArrayType *>(LLVMArrTy), {ConstInt});
-  SPIRVType *SpvBaseTy = getSPIRVTypeForVReg(SpvType->getOperand(1).getReg());
-  unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
-  return getOrCreateIntCompositeOrNull(Val, MIRBuilder, SpvType, EmitIR,
-                                       ConstArr, BW,
-                                       LLVMArrTy->getNumElements());
 }
 
 Register
