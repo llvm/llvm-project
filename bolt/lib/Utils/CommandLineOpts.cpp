@@ -128,6 +128,11 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::opt<bool>
+    MatchProfileWithFunctionHash("match-profile-with-function-hash",
+                                 cl::desc("Match profile with function hash"),
+                                 cl::Hidden, cl::cat(BoltCategory));
+
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),
