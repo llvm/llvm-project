@@ -3515,7 +3515,7 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
     llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
   // frame.
-  SmallString<64> FuncName(CLANG_TRAP_PREFIX);
+  SmallString<64> FuncName(ClangTrapPrefix);
 
   FuncName += "$";
   FuncName += Category;

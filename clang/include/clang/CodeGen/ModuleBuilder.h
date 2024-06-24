@@ -29,7 +29,7 @@ namespace llvm {
 }
 
 // Prefix of the name of the artificial inline frame.
-inline constexpr llvm::StringRef CLANG_TRAP_PREFIX = "__clang_trap_msg";
+inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
   class CodeGenOptions;
