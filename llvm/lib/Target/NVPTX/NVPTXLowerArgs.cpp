@@ -383,7 +383,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     IRBuilder<> IRB(&Func->getEntryBlock().front());
 
     // Cast argument to param address space
-    AddrSpaceCastInst *CastToParam =
+    auto *CastToParam =
         cast<AddrSpaceCastInst>(IRB.CreateAddrSpaceCast(
             Arg, IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getName() + ".param"));
 

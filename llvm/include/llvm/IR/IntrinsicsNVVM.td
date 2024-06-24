@@ -1599,7 +1599,8 @@ def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
 // sm70+, PTX7.7+
 def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
-                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback]>;
+                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
+                                   "llvm.nvvm.ptr.param.to.gen">;
 
 // Move intrinsics, used in nvvm internally
 
