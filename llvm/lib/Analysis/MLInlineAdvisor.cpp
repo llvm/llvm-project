@@ -187,8 +187,8 @@ unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
   return CG.lookup(F) ? FunctionLevels.at(CG.lookup(F)) : 0;
 }
 
-void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
-  if (!LastSCC || ForceStop)
+void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
+  if (!CurSCC || ForceStop)
     return;
   FPICache.clear();
   // Function passes executed between InlinerPass runs may have changed the
@@ -235,15 +235,15 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
   // (Re)use NodesInLastSCC to remember the nodes in the SCC right now,
   // in case the SCC is split before onPassExit and some nodes are split out
   assert(NodesInLastSCC.empty());
-  for (const auto &N : *LastSCC)
+  for (const auto &N : *CurSCC)
     NodesInLastSCC.insert(&N);
 }
 
-void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
+void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *CurSCC) {
   // No need to keep this around - function passes will invalidate it.
   if (!KeepFPICache)
     FPICache.clear();
-  if (!LastSCC || ForceStop)
+  if (!CurSCC || ForceStop)
     return;
   // Keep track of the nodes and edges we last saw. Then, in onPassEntry,
   // we update the node count and edge count from the subset of these nodes that
@@ -259,7 +259,7 @@ void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
   }
 
   // Check on nodes that may have got added to SCC
-  for (const auto &N : *LastSCC) {
+  for (const auto &N : *CurSCC) {
     assert(!N.isDead());
     auto I = NodesInLastSCC.insert(&N);
     if (I.second)
