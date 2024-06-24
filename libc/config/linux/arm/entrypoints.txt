@@ -165,6 +165,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
 
+    # stdlib.h external entrypoints
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
