@@ -514,7 +514,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
     BasicBlock *Parent = PHI->getParent();
-    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
+    Builder.SetInsertPoint(Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -526,7 +526,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new

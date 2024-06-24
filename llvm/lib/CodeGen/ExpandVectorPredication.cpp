@@ -667,7 +667,7 @@ void CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
     auto *M = VPI.getModule();
     Function *VScaleFunc =
         Intrinsic::getDeclaration(M, Intrinsic::vscale, Int32Ty);
-    IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
+    IRBuilder<> Builder(VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
     Value *VScale = Builder.CreateCall(VScaleFunc, {}, "vscale");
     MaxEVL = Builder.CreateMul(VScale, FactorConst, "scalable_size",

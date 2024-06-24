@@ -70,7 +70,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // Create phi that will merge results of either sqrt and replace all uses.
   BasicBlock *JoinBB = LibCallTerm->getSuccessor(0);
   JoinBB->setName(CurrBB.getName() + ".split");
-  Builder.SetInsertPoint(JoinBB, JoinBB->begin());
+  Builder.SetInsertPoint(JoinBB->begin());
   PHINode *Phi = Builder.CreatePHI(Ty, 2);
   Call->replaceAllUsesWith(Phi);
 

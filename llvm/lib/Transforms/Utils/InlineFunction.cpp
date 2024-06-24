@@ -1611,7 +1611,7 @@ static void HandleByValArgumentInit(Type *ByValType, Value *Dst, Value *Src,
                                     Module *M, BasicBlock *InsertBlock,
                                     InlineFunctionInfo &IFI,
                                     Function *CalledFunc) {
-  IRBuilder<> Builder(InsertBlock, InsertBlock->begin());
+  IRBuilder<> Builder(InsertBlock->begin());
 
   Value *Size =
       Builder.getInt64(M->getDataLayout().getTypeStoreSize(ByValType));
@@ -2611,7 +2611,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
-    IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
+    IRBuilder<> builder(FirstNewBlock->begin());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];
       // Don't mark swifterror allocas. They can't have bitcast uses.
@@ -2666,8 +2666,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // code with llvm.stacksave/llvm.stackrestore intrinsics.
   if (InlinedFunctionInfo.ContainsDynamicAllocas) {
     // Insert the llvm.stacksave.
-    CallInst *SavedPtr = IRBuilder<>(&*FirstNewBlock, FirstNewBlock->begin())
-                             .CreateStackSave("savedstack");
+    CallInst *SavedPtr =
+        IRBuilder<>(FirstNewBlock->begin()).CreateStackSave("savedstack");
 
     // Insert a call to llvm.stackrestore before any return instructions in the
     // inlined function.
