@@ -26,6 +26,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
+    "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/textmate/mlir.json",
 ])
 
