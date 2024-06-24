@@ -5686,12 +5686,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
       getBundlesForFunclet(CalleePtr);
 
-  // Add the pointer-authentication bundle.
-  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
-
   if (SanOpts.has(SanitizerKind::KCFI) &&
       !isa_and_nonnull<FunctionDecl>(TargetDecl))
     EmitKCFIOperandBundle(ConcreteCallee, BundleList);
+
+  // Add the pointer-authentication bundle.
+  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())

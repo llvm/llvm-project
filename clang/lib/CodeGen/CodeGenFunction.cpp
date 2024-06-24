@@ -863,10 +863,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   // Add pointer authentication attributes.
   const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
-  if (CodeGenOpts.PointerAuth.ReturnAddresses)
-    Fn->addFnAttr("ptrauth-returns");
   if (CodeGenOpts.PointerAuth.FunctionPointers)
     Fn->addFnAttr("ptrauth-calls");
+  if (CodeGenOpts.PointerAuth.ReturnAddresses)
+    Fn->addFnAttr("ptrauth-returns");
   if (CodeGenOpts.PointerAuth.IndirectGotos)
     Fn->addFnAttr("ptrauth-indirect-gotos");
   if (CodeGenOpts.PointerAuth.AuthTraps)
@@ -3014,22 +3014,6 @@ llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {
   return llvm::DebugLoc();
 }
 
-void CodeGenFunction::EmitPointerAuthOperandBundle(
-                          const CGPointerAuthInfo &pointerAuth,
-                          SmallVectorImpl<llvm::OperandBundleDef> &bundles) {
-  if (!pointerAuth.isSigned()) return;
-
-  auto key = Builder.getInt32(pointerAuth.getKey());
-
-  llvm::Value *discriminator = pointerAuth.getDiscriminator();
-  if (!discriminator) {
-    discriminator = Builder.getSize(0);
-  }
-
-  llvm::Value *args[] = { key, discriminator };
-  bundles.emplace_back("ptrauth", args);
-}
-
 static llvm::Value *EmitPointerAuthCommon(CodeGenFunction &CGF,
                                           const CGPointerAuthInfo &pointerAuth,
                                           llvm::Value *pointer,
@@ -3140,4 +3124,20 @@ llvm::Value *CodeGenFunction::emitBoolVecConversion(llvm::Value *SrcVec,
     ShuffleMask[MaskIdx] = MaskIdx;
 
   return Builder.CreateShuffleVector(SrcVec, ShuffleMask, Name);
+}
+
+void CodeGenFunction::EmitPointerAuthOperandBundle(
+    const CGPointerAuthInfo &PointerAuth,
+    SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  if (!PointerAuth.isSigned())
+    return;
+
+  auto *Key = Builder.getInt32(PointerAuth.getKey());
+
+  llvm::Value *Discriminator = PointerAuth.getDiscriminator();
+  if (!Discriminator)
+    Discriminator = Builder.getSize(0);
+
+  llvm::Value *Args[] = {Key, Discriminator};
+  Bundles.emplace_back("ptrauth", Args);
 }

@@ -856,7 +856,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
            "Keys for virtual and non-virtual member functions must match");
     auto *NonVirtualDiscriminator = AuthInfo.getDiscriminator();
     DiscriminatorPHI->addIncoming(NonVirtualDiscriminator, FnNonVirtual);
-    PointerAuth = CGPointerAuthInfo(Schema.getKey(), DiscriminatorPHI);
+    PointerAuth = CGPointerAuthInfo(
+        Schema.getKey(), Schema.getAuthenticationMode(), Schema.isIsaPointer(),
+        Schema.authenticatesNullValues(), DiscriminatorPHI);
   }
 
   CGCallee Callee(FPT, CalleePtr, PointerAuth);

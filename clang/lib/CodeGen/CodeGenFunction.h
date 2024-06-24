@@ -4432,8 +4432,6 @@ public:
   llvm::Value *EmitPointerAuthResignCall(llvm::Value *pointer,
                                          const CGPointerAuthInfo &curInfo,
                                          const CGPointerAuthInfo &newInfo);
-  void EmitPointerAuthOperandBundle(const CGPointerAuthInfo &info,
-                          SmallVectorImpl<llvm::OperandBundleDef> &bundles);
 
   CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
                                         Address storageAddress);
@@ -4461,6 +4459,10 @@ public:
   }
 
   bool isPointerKnownNonNull(const Expr *E);
+
+  void EmitPointerAuthOperandBundle(
+      const CGPointerAuthInfo &Info,
+      SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.

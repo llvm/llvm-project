@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 
+#include "CGPointerAuthInfo.h"
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTFwd.h"
@@ -56,36 +57,6 @@ public:
     return CalleeProtoTy;
   }
   const GlobalDecl getCalleeDecl() const { return CalleeDecl; }
-};
-
-/// Information necessary for pointer authentication.
-class CGPointerAuthInfo {
-  unsigned Signed : 1;
-  unsigned Key : 31;
-  llvm::Value *Discriminator;
-
-public:
-  CGPointerAuthInfo() { Signed = false; }
-  CGPointerAuthInfo(unsigned key, llvm::Value *discriminator)
-      : Discriminator(discriminator) {
-    assert(!discriminator || discriminator->getType()->isIntegerTy() ||
-           discriminator->getType()->isPointerTy());
-    Signed = true;
-    Key = key;
-  }
-
-  explicit operator bool() const { return isSigned(); }
-
-  bool isSigned() const { return Signed; }
-
-  unsigned getKey() const {
-    assert(isSigned());
-    return Key;
-  }
-  llvm::Value *getDiscriminator() const {
-    assert(isSigned());
-    return Discriminator;
-  }
 };
 
 /// All available information about a concrete callee.
@@ -224,9 +195,9 @@ public:
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
-  void setPointerAuthInfo(CGPointerAuthInfo pointerAuth) {
+  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
     assert(isOrdinary());
-    OrdinaryInfo.PointerAuthInfo = pointerAuth;
+    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {

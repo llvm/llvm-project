@@ -5540,7 +5540,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = CGF.CGM.getFunctionPointer(GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5627,7 +5627,10 @@ static CGCallee EmitSignedFunctionPointerCallee(CodeGenFunction &CGF,
   auto functionType =
     functionPointerExpr->getType()->castAs<PointerType>()->getPointeeType();
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>());
-  CGPointerAuthInfo pointerAuth(key, discriminator);
+  CGPointerAuthInfo pointerAuth(key, PointerAuthenticationMode::SignAndAuth,
+                                /* isaIsaPointer */ false,
+                                /* authenticatesNullValues */ false,
+                                discriminator);
   CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }

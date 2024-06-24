@@ -942,6 +942,14 @@ public:
                                     ForDefinition_t IsForDefinition
                                       = NotForDefinition);
 
+  // Return the function body address of the given function.
+  llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
+
+  llvm::ConstantInt *
+  getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
+                                   GlobalDecl schemaDecl, QualType schemaType);
+  uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
+
   /// Return a function pointer for a reference to the given function.
   /// This correctly handles weak references, but does not apply a
   /// pointer signature.
@@ -951,15 +959,16 @@ public:
   /// Return the ABI-correct function pointer value for a reference
   /// to the given function.  This will apply a pointer signature if
   /// necessary, caching the result for the given function.
-  llvm::Constant *getFunctionPointer(GlobalDecl GD,
-                                     llvm::Type *Ty = nullptr);
+  llvm::Constant *getFunctionPointer(GlobalDecl GD, llvm::Type *Ty = nullptr);
 
   /// Return the ABI-correct function pointer value for a reference
   /// to the given function.  This will apply a pointer signature if
-  /// necessary, but will only cache the result if \p FD is passed.
-  llvm::Constant *getFunctionPointer(llvm::Constant *pointer,
-                                     QualType functionType,
+  /// necessary, but will only cache the result if \p GD is passed.
+  llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
+                                     QualType FunctionType,
                                      GlobalDecl GD = GlobalDecl());
+
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
 
   llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
                                            llvm::Type *Ty = nullptr);
@@ -968,8 +977,6 @@ public:
                                            QualType functionType,
                                            const FunctionDecl *FD = nullptr);
 
-  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType functionType);
-
   CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType functionType);
 
   llvm::Constant *getConstantSignedPointer(llvm::Constant *pointer,
@@ -977,14 +984,6 @@ public:
                                            llvm::Constant *storageAddress,
                                            GlobalDecl schemaDecl,
                                            QualType schemaType);
-
-  llvm::ConstantInt *
-  getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
-                                   GlobalDecl schemaDecl, QualType schemaType);
-  uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
-
-  // Return the function body address of the given function.
-  llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
   llvm::Constant *
   getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
