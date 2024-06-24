@@ -882,6 +882,7 @@ public:
   bool matchZextInteger(const MachineInstr &MI, APInt &MatchInfo);
   bool matchSextInteger(const MachineInstr &MI, APInt &MatchInfo);
   bool matchTruncInteger(const MachineInstr &MI, APInt &MatchInfo);
+  bool matchAnyextInteger(const MachineInstr &MI, APInt &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

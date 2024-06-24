@@ -1779,10 +1779,19 @@ def TruncInteger: GICombineRule<
    [{ return Helper.matchTruncInteger(*${mi}, ${matchinfo}); }]),
    (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])>;
 
+def AnyExtInteger: GICombineRule<
+   (defs root:$root, apint_matchinfo:$matchinfo),
+   (match (G_CONSTANT $int, $imm),
+          (G_ANYEXT $root, $int):$mi,
+   [{ return Helper.matchAnyextInteger(*${mi}, ${matchinfo}); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])>;
+
+
 def cast_const_combines: GICombineGroup<[
   ZextInteger,
   SextInteger,
-  TruncInteger
+  TruncInteger,
+  AnyExtInteger
 ]>;
 
 

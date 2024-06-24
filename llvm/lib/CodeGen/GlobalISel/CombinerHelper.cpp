@@ -7491,3 +7491,27 @@ bool CombinerHelper::matchTruncInteger(const MachineInstr &MI,
 
   return true;
 }
+
+bool CombinerHelper::matchAnyextInteger(const MachineInstr &MI,
+                                        APInt &MatchInfo) {
+  const GAnyExt *Anyext = cast<GAnyExt>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Anyext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Anyext->getReg(0));
+  LLT SrcTy = MRI.getType(Anyext->getSrcReg());
+  const auto &TLI = getTargetLowering();
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  // Some targets like RISCV prefer to sign extend some types.
+  if (TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy)))
+    MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+  else
+    MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+
+  return true;
+}
