@@ -202,10 +202,16 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   case AtomicRMWInst::Min:
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+    break;
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+    if (!I.use_empty()) {
+      // Bail out because the way we would calculate the result value is
+      // incorrect in the presence of NaNs and infinities.
+      return;
+    }
     break;
   }
 
