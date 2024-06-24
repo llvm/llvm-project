@@ -163,7 +163,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   for (fir::SequenceType::Extent dim : seqTy.getShape()) {
     if (dim == seqTy.getUnknownExtent()) {
       auto subrangeTy = mlir::LLVM::DISubrangeAttr::get(
-          context, nullptr, nullptr, nullptr, nullptr);
+          context, /*count=*/nullptr, /*lowerBound=*/nullptr,
+          /*upperBound*/ nullptr, /*stride*/ nullptr);
       elements.push_back(subrangeTy);
     } else {
       auto intTy = mlir::IntegerType::get(context, 64);
