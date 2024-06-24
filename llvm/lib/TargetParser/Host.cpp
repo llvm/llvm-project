@@ -1574,14 +1574,13 @@ StringRef sys::getHostCPUName() {
   StringRef Name = detail::getHostCPUNameForRISCV(Content);
   if (!Name.empty())
     return Name;
-#else
+#endif
 #if __riscv_xlen == 64
   return "generic-rv64";
 #elif __riscv_xlen == 32
   return "generic-rv32";
 #else
 #error "Unhandled value of __riscv_xlen"
-#endif
 #endif
 }
 #elif defined(__sparc__)
