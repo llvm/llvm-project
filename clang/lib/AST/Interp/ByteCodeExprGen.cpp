@@ -3404,10 +3404,15 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD,
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
+VarCreationState ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
+
+  // This case is EvalEmitter-only. If we won't create any instructions for the
+  // initializer anyway, don't bother creating the variable in the first place.
+  if (!this->isActive())
+    return VarCreationState::NotCreated();
 
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
@@ -4237,7 +4242,10 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType())) {
-          if (!this->visitVarDecl(VD))
+          auto VarState = this->visitVarDecl(VD);
+          if (VarState.notCreated())
+            return true;
+          if (!VarState)
             return false;
           // Retry.
           return this->visitDeclRef(VD, E);
@@ -4247,7 +4255,10 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       if (const auto *VD = dyn_cast<VarDecl>(D);
           VD && VD->getAnyInitializer() &&
           VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-        if (!this->visitVarDecl(VD))
+        auto VarState = this->visitVarDecl(VD);
+        if (VarState.notCreated())
+          return true;
+        if (!VarState)
           return false;
         // Retry.
         return this->visitDeclRef(VD, E);
