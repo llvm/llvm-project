@@ -78,7 +78,7 @@ if.end:
   ret void
 }
 
-;; successor 1 branches to successor 0
+;; successor 1 branches to successor 0.
 define void @succ1to0(ptr %p, ptr %q, i32 %a) {
 ; CHECK-LABEL: @succ1to0(
 ; CHECK-NEXT:  entry:
@@ -105,7 +105,7 @@ if.then:
   br label %if.end
 }
 
-;; successor 0 branches to successor 1
+;; successor 0 branches to successor 1.
 define void @succ0to1(i32 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-LABEL: @succ0to1(
 ; CHECK-NEXT:  entry:
@@ -125,13 +125,83 @@ entry:
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  store i32 1, ptr %q, align 4
+  store i32 1, ptr %q
   br label %if.end
 
 if.true:
-  %0 = load i32, ptr %b, align 4
-  store i32 %0, ptr %p, align 4
+  %0 = load i32, ptr %b
+  store i32 %0, ptr %p
   br label %if.false
+
+if.end:
+  ret void
+}
+
+;; load after store can be hoisted.
+define i64 @load_after_store(i32 %a, ptr %b, ptr %p, ptr %q) {
+; CHECK-LABEL: @load_after_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> <i32 1>, ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i16> @llvm.masked.load.v1i16.p0(ptr [[P:%.*]], i32 2, <1 x i1> [[TMP0]], <1 x i16> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i16> [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr [[Q:%.*]], i32 8, <1 x i1> [[TMP0]], <1 x i64> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP3]] to i64
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i16 [[TMP2]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[ZEXT]], [[TMP4]]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[COND]], i64 [[ADD]], i64 0
+; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
+;
+entry:
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %if.true, label %if.end
+
+if.true:
+  store i32 1, ptr %b
+  %0 = load i16, ptr %p
+  %1 = load i64, ptr %q
+  %zext = zext i16 %0 to i64
+  %add = add i64 %zext, %1
+  ret i64 %add
+
+if.end:
+  ret i64 0
+}
+
+define void @load_skip_memory_read(i32 %a, ptr %b, ptr %p, ptr %q) {
+; CHECK-LABEL: @load_skip_memory_read(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i1 [[TMP4]] to <1 x i1>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP5]], <1 x i32> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i32> [[TMP6]] to i32
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_END:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.false:
+; CHECK-NEXT:    call void @read_memory_only()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  call void @read_memory_only()
+  %0 = load i32, ptr %q, align 4
+  br label %if.end
+
+if.true:
+  %1 = load i32, ptr %b, align 4
+  store i32 %1, ptr %p, align 4
+  br label %if.end
 
 if.end:
   ret void
@@ -327,44 +397,6 @@ entry:
 if.false:
   %add = add i32 %a, 2
   store i32 %add, ptr %q, align 4
-  br label %if.end
-
-if.true:
-  %1 = load i32, ptr %b, align 4
-  store i32 %1, ptr %p, align 4
-  br label %if.end
-
-if.end:
-  ret void
-}
-
-define void @load_skip_memory_read(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @load_skip_memory_read(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
-; CHECK-NEXT:    [[TMP1:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[B:%.*]], i32 4, <1 x i1> [[TMP0]], <1 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i32> [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <1 x i32>
-; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP3]], ptr [[P:%.*]], i32 4, <1 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[COND]], true
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i1 [[TMP4]] to <1 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP5]], <1 x i32> poison)
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i32> [[TMP6]] to i32
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_END:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if.false:
-; CHECK-NEXT:    call void @read_memory_only()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %cond = icmp eq i32 %a, 0
-  br i1 %cond, label %if.true, label %if.false
-
-if.false:
-  call void @read_memory_only()
-  %0 = load i32, ptr %q, align 4
   br label %if.end
 
 if.true:
