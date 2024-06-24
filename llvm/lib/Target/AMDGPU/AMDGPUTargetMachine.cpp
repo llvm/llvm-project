@@ -1437,11 +1437,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   // since FastRegAlloc does the replacements itself.
   addPass(createVirtRegRewriter(false));
 
-  // At this point, the sgpr-regalloc has been done and it is good to have the
-  // stack slot coloring to try to optimize the SGPR spill stack indices before
-  // attempting the custom SGPR spill lowering.
-  addPass(&StackSlotColoringID);
-
   // Equivalent of PEI for SGPRs.
   addPass(&SILowerSGPRSpillsID);
   addPass(&SIPreAllocateWWMRegsID);
