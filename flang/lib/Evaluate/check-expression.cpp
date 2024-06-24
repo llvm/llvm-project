@@ -650,7 +650,8 @@ public:
               return std::holds_alternative<characteristics::DummyProcedure>(
                   dummy.u);
             })};
-        if (iter != procChars->dummyArguments.end()) {
+        if (iter != procChars->dummyArguments.end() &&
+            ultimate.name().ToString() != "__builtin_c_funloc") {
           return "reference to function '"s + ultimate.name().ToString() +
               "' with dummy procedure argument '" + iter->name + '\'';
         }
