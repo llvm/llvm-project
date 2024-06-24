@@ -25,6 +25,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include <memory>
+#include <stack>
 
 // FIXME: Fix dependency here.
 #include "llvm/CASObjectFormats/Encoding.h"
