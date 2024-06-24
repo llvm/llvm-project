@@ -202,6 +202,19 @@ define <8 x i8> @abs_different(<8 x i8> %a) {
   ret <8 x i8> %r
 }
 
+define <4 x i32> @poison_intrinsic(<2 x i16> %l256) {
+; CHECK-LABEL: @poison_intrinsic(
+; CHECK-NEXT:    [[L266:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[L256:%.*]], i1 false)
+; CHECK-NEXT:    [[L267:%.*]] = zext <2 x i16> [[L266]] to <2 x i32>
+; CHECK-NEXT:    [[L271:%.*]] = shufflevector <2 x i32> [[L267]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[L271]]
+;
+  %l266 = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %l256, i1 false)
+  %l267 = zext <2 x i16> %l266 to <2 x i32>
+  %l271 = shufflevector <2 x i32> %l267, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  ret <4 x i32> %l271
+}
+
 define <8 x half> @splat0(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splat0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
@@ -938,15 +951,14 @@ define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 }
 
 define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %val) {
-; CHECK-LABEL: define void @maximal_legal_fpmath(
-; CHECK-SAME: ptr [[ADDR1:%.*]], ptr [[ADDR2:%.*]], ptr [[RESULT:%.*]], float [[VAL:%.*]]) {
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL]], i64 0
+; CHECK-LABEL: @maximal_legal_fpmath(
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1]], align 4
-; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2]], align 4
+; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1:%.*]], align 4
+; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <16 x float> [[TMP1]], [[VEC2]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd reassoc contract <16 x float> [[VEC1]], [[TMP2]]
-; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT]], align 4
+; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %splatinsert = insertelement <4 x float> poison, float %val, i64 0

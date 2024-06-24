@@ -80,6 +80,11 @@ namespace {
     /// all simplifications to users of an IV.
     void simplifyUsers(PHINode *CurrIV, IVVisitor *V = nullptr);
 
+    void pushIVUsers(Instruction *Def,
+                     SmallPtrSet<Instruction *, 16> &Simplified,
+                     SmallVectorImpl<std::pair<Instruction *, Instruction *>>
+                         &SimpleIVUsers);
+
     Value *foldIVUser(Instruction *UseInst, Instruction *IVOperand);
 
     bool eliminateIdentitySCEV(Instruction *UseInst, Instruction *IVOperand);
@@ -839,11 +844,9 @@ bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
 }
 
 /// Add all uses of Def to the current IV's worklist.
-static void pushIVUsers(
-  Instruction *Def, Loop *L,
-  SmallPtrSet<Instruction*,16> &Simplified,
-  SmallVectorImpl< std::pair<Instruction*,Instruction*> > &SimpleIVUsers) {
-
+void SimplifyIndvar::pushIVUsers(
+    Instruction *Def, SmallPtrSet<Instruction *, 16> &Simplified,
+    SmallVectorImpl<std::pair<Instruction *, Instruction *>> &SimpleIVUsers) {
   for (User *U : Def->users()) {
     Instruction *UI = cast<Instruction>(U);
 
@@ -913,7 +916,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
   // Push users of the current LoopPhi. In rare cases, pushIVUsers may be
   // called multiple times for the same LoopPhi. This is the proper thing to
   // do for loop header phis that use each other.
-  pushIVUsers(CurrIV, L, Simplified, SimpleIVUsers);
+  pushIVUsers(CurrIV, Simplified, SimpleIVUsers);
 
   while (!SimpleIVUsers.empty()) {
     std::pair<Instruction*, Instruction*> UseOper =
@@ -960,7 +963,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       continue;
 
     if (eliminateIVUser(UseInst, IVOperand)) {
-      pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
+      pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
       continue;
     }
 
@@ -968,14 +971,14 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       if (strengthenBinaryOp(BO, IVOperand)) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
-        pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
+        pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
       }
     }
 
     // Try to use integer induction for FPToSI of float induction directly.
     if (replaceFloatIVWithIntegerIV(UseInst)) {
       // Re-queue the potentially new direct uses of IVOperand.
-      pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
+      pushIVUsers(IVOperand, Simplified, SimpleIVUsers);
       continue;
     }
 
@@ -985,7 +988,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
       continue;
     }
     if (isSimpleIVUser(UseInst, L, SE)) {
-      pushIVUsers(UseInst, L, Simplified, SimpleIVUsers);
+      pushIVUsers(UseInst, Simplified, SimpleIVUsers);
     }
   }
 }

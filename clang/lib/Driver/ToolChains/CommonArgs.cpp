@@ -164,6 +164,14 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   return true;
 }
 
+static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
+  if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
+      (Triple.isAndroid() && Triple.isRISCV64()))
+    return false;
+
+  return true;
+}
+
 static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
   default:
@@ -176,38 +184,91 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   }
 }
 
+// True if a target-specific option requires the frame chain to be preserved,
+// even if new frame records are not created.
+static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
+                                        const llvm::Triple &Triple) {
+  if (Triple.isARM() || Triple.isThumb()) {
+    // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
+    // options require the frame pointer register to be reserved (or point to a
+    // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
+    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+      StringRef V = A->getValue();
+      return V != "none";
+    }
+    return false;
+  }
+  return false;
+}
+
+// True if a target-specific option causes -fno-omit-frame-pointer to also
+// cause frame records to be created in leaf functions.
+static bool framePointerImpliesLeafFramePointer(const llvm::opt::ArgList &Args,
+                                                const llvm::Triple &Triple) {
+  if (Triple.isARM() || Triple.isThumb()) {
+    // For 32-bit Arm, the -mframe-chain=aapcs+leaf option causes the
+    // -fno-omit-frame-pointer optiion to imply -mno-omit-leaf-frame-pointer,
+    // but does not by itself imply either option.
+    if (Arg *A = Args.getLastArg(options::OPT_mframe_chain)) {
+      StringRef V = A->getValue();
+      return V == "aapcs+leaf";
+    }
+    return false;
+  }
+  return false;
+}
+
 clang::CodeGenOptions::FramePointerKind
 getFramePointerKind(const llvm::opt::ArgList &Args,
                     const llvm::Triple &Triple) {
-  // We have 4 states:
+  // There are three things to consider here:
+  // * Should a frame record be created for non-leaf functions?
+  // * Should a frame record be created for leaf functions?
+  // * Is the frame pointer register reserved, i.e. must it always point to
+  //   either a new, valid frame record or be un-modified?
   //
-  //  00) leaf retained, non-leaf retained
-  //  01) leaf retained, non-leaf omitted (this is invalid)
-  //  10) leaf omitted, non-leaf retained
-  //      (what -momit-leaf-frame-pointer was designed for)
-  //  11) leaf omitted, non-leaf omitted
+  //  Not all combinations of these are valid:
+  //  * It's not useful to have leaf frame records without non-leaf ones.
+  //  * It's not useful to have frame records without reserving the frame
+  //    pointer.
   //
-  //  "omit" options taking precedence over "no-omit" options is the only way
-  //  to make 3 valid states representable
-  llvm::opt::Arg *A =
-      Args.getLastArg(clang::driver::options::OPT_fomit_frame_pointer,
-                      clang::driver::options::OPT_fno_omit_frame_pointer);
+  // | Non-leaf | Leaf | Reserved |
+  // | N        | N    | N        | FramePointerKind::None
+  // | N        | N    | Y        | FramePointerKind::Reserved
+  // | N        | Y    | N        | Invalid
+  // | N        | Y    | Y        | Invalid
+  // | Y        | N    | N        | Invalid
+  // | Y        | N    | Y        | FramePointerKind::NonLeaf
+  // | Y        | Y    | N        | Invalid
+  // | Y        | Y    | Y        | FramePointerKind::All
+  //
+  // The FramePointerKind::Reserved case is currently only reachable for Arm,
+  // which has the -mframe-chain= option which can (in combination with
+  // -fno-omit-frame-pointer) specify that the frame chain must be valid,
+  // without requiring new frame records to be created.
 
-  bool OmitFP = A && A->getOption().matches(
-                         clang::driver::options::OPT_fomit_frame_pointer);
-  bool NoOmitFP = A && A->getOption().matches(
-                           clang::driver::options::OPT_fno_omit_frame_pointer);
-  bool OmitLeafFP =
-      Args.hasFlag(clang::driver::options::OPT_momit_leaf_frame_pointer,
-                   clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
-                   Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-                       (Triple.isAndroid() && Triple.isRISCV64()));
-  if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
-      (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
-    if (OmitLeafFP)
-      return clang::CodeGenOptions::FramePointerKind::NonLeaf;
-    return clang::CodeGenOptions::FramePointerKind::All;
+  bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
+  bool EnableFP =
+      mustUseNonLeafFramePointerForTarget(Triple) ||
+      Args.hasFlag(clang::driver::options::OPT_fno_omit_frame_pointer,
+                   clang::driver::options::OPT_fomit_frame_pointer, DefaultFP);
+
+  bool DefaultLeafFP =
+      useLeafFramePointerForTargetByDefault(Triple) ||
+      (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
+  bool EnableLeafFP = Args.hasFlag(
+      clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
+      clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+
+  bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
+
+  if (EnableFP) {
+    if (EnableLeafFP)
+      return clang::CodeGenOptions::FramePointerKind::All;
+    return clang::CodeGenOptions::FramePointerKind::NonLeaf;
   }
+  if (FPRegReserved)
+    return clang::CodeGenOptions::FramePointerKind::Reserved;
   return clang::CodeGenOptions::FramePointerKind::None;
 }
 

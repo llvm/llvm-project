@@ -85,8 +85,8 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   DWARFDIE die = GetDIE(entry);
   if (!die)
     return true;
-  // Clang erroneously emits index entries for declaration DIEs in case when the
-  // definition is in a type unit (llvm.org/pr77696). Weed those out.
+  // Clang used to erroneously emit index entries for declaration DIEs in case
+  // when the definition is in a type unit (llvm.org/pr77696).
   if (die.IsStructUnionOrClass() &&
       die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return true;

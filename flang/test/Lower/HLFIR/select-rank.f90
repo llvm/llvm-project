@@ -319,7 +319,7 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = fir.is_assumed_size %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> i1
 ! CHECK:           cf.cond_br %[[VAL_6]], ^bb1, ^bb2
 ! CHECK:         ^bb1:
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {uniq_name = "_QFtest_simple_caseEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {uniq_name = "_QFtest_simple_caseEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_7]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb2:
@@ -362,7 +362,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr2(%[[VAL_8]]#0) fastmath<contract> : (!fir.box<!fir.array<?x?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {uniq_name = "_QFtest_rank_starEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {uniq_name = "_QFtest_rank_starEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_9]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb4:
@@ -431,7 +431,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr2(%[[VAL_7]]#0) fastmath<contract> : (!fir.box<!fir.array<?x?xf32>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {fortran_attrs = #fir.var_attrs<asynchronous, target>, uniq_name = "_QFtest_rank_star_attributesEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {fortran_attrs = #fir.var_attrs<asynchronous, target>, uniq_name = "_QFtest_rank_star_attributesEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_8]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
@@ -469,7 +469,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr2_implicit(%[[VAL_14]]#1) fastmath<contract> : (!fir.ref<!fir.array<?x?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_rank_star_contiguousEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_rank_star_contiguousEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_15]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb4:
@@ -518,7 +518,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrc0_implicit(%[[VAL_16]]#0) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_8]]#1 typeparams %[[VAL_7]] {uniq_name = "_QFtest_rank_star_contiguous_characterEx"} : (!fir.box<!fir.array<*:!fir.char<1,?>>>, i64) -> (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.box<!fir.array<*:!fir.char<1,?>>>)
+! CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_7]] {uniq_name = "_QFtest_rank_star_contiguous_characterEx"} : (!fir.box<!fir.array<*:!fir.char<1,?>>>, i64) -> (!fir.box<!fir.array<*:!fir.char<1,?>>>, !fir.box<!fir.array<*:!fir.char<1,?>>>)
 ! CHECK:           fir.call @_QPrcdefault(%[[VAL_17]]#0) fastmath<contract> : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb4:
@@ -568,7 +568,7 @@ end subroutine
 ! CHECK:           fir.call @_QPra0(%[[VAL_10]]#0) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_simple_allocEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_simple_allocEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
 ! CHECK:           fir.call @_QPradefault(%[[VAL_11]]#0) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
@@ -588,7 +588,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = fir.box_rank %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> i8
 ! CHECK:           fir.select_case %[[VAL_4]] : i8 [#fir.point, %[[VAL_3]], ^bb2, unit, ^bb1]
 ! CHECK:         ^bb1:
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_character_allocEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_character_allocEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
 ! CHECK:           cf.br ^bb3
 ! CHECK:         ^bb2:
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
@@ -614,7 +614,7 @@ end subroutine
 ! CHECK:           %[[VAL_10:.*]] = fir.box_rank %[[VAL_8]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> i8
 ! CHECK:           fir.select_case %[[VAL_10]] : i8 [#fir.point, %[[VAL_9]], ^bb2, unit, ^bb1]
 ! CHECK:         ^bb1:
-! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_8]]#1 typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_character_ptrEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, i64) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_8]]#0 typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_character_ptrEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, i64) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
 ! CHECK:           cf.br ^bb3
 ! CHECK:         ^bb2:
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -634,7 +634,7 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = fir.box_rank %[[VAL_4]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> i8
 ! CHECK:           fir.select_case %[[VAL_6]] : i8 [#fir.point, %[[VAL_5]], ^bb2, unit, ^bb1]
 ! CHECK:         ^bb1:
-! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_4]]#1 typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_assumed_character_ptrEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_4]]#0 typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_assumed_character_ptrEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>)
 ! CHECK:           cf.br ^bb3
 ! CHECK:         ^bb2:
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -661,7 +661,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrup1(%[[VAL_8]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb3:
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {uniq_name = "_QFtest_polymorphicEx"} : (!fir.class<!fir.array<*:none>>) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {uniq_name = "_QFtest_polymorphicEx"} : (!fir.class<!fir.array<*:none>>) -> (!fir.class<!fir.array<*:none>>, !fir.class<!fir.array<*:none>>)
 ! CHECK:           fir.call @_QPrupdefault(%[[VAL_9]]#0) fastmath<contract> : (!fir.class<!fir.array<*:none>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
@@ -711,7 +711,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1(%[[VAL_20]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb7
 ! CHECK:         ^bb6:
-! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_4]]#1 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPr0(%[[VAL_11]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_21]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb7
@@ -741,14 +741,14 @@ end subroutine
 ! CHECK:           fir.call @_QPr1(%[[VAL_32]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb13
 ! CHECK:         ^bb12:
-! CHECK:           %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_4]]#1 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPr1(%[[VAL_23]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_33]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb13
 ! CHECK:         ^bb13:
 ! CHECK:           cf.br ^bb20
 ! CHECK:         ^bb14:
-! CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_3]]#1 {uniq_name = "_QFtest_nested_select_rankEx1"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_3]]#0 {uniq_name = "_QFtest_nested_select_rankEx1"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_35:.*]] = arith.constant 0 : i8
 ! CHECK:           %[[VAL_36:.*]] = arith.constant 1 : i8
 ! CHECK:           %[[VAL_37:.*]] = fir.is_assumed_size %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> i1
@@ -770,7 +770,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1(%[[VAL_43]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb19
 ! CHECK:         ^bb18:
-! CHECK:           %[[VAL_44:.*]]:2 = hlfir.declare %[[VAL_4]]#1 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_44:.*]]:2 = hlfir.declare %[[VAL_4]]#0 {uniq_name = "_QFtest_nested_select_rankEx2"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_34]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_44]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb19
@@ -789,7 +789,7 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = fir.is_assumed_size %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> i1
 ! CHECK:           cf.cond_br %[[VAL_5]], ^bb1, ^bb2
 ! CHECK:         ^bb1:
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]]#1 {uniq_name = "_QFtest_branchingEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]]#0 {uniq_name = "_QFtest_branchingEx"} : (!fir.box<!fir.array<*:f32>>) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.call @_QPjump() fastmath<contract> : () -> !fir.logical<4>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.logical<4>) -> i1
 ! CHECK:           %[[VAL_9:.*]] = arith.constant true
