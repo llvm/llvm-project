@@ -410,7 +410,7 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
     PIC->registerClassToPassNameCallback([this, PIC]() {
       // MSVC requires this to be captured if it's used inside decltype.
       // Other compilers consider it an unused lambda capture.
-      (void) this;
+      (void)this;
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
