@@ -3055,7 +3055,8 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
   // 1. target does not have corresponding conditional faulting load/store.
   // 2. it's volatile or atomic.
   // 3. there is a load/store that can not be hoisted in the same bb.
-  // 4. there is a non-load/store that may have side effects in the same bb.
+  // 4. there is a non-load/store that's not safe to speculatively execute
+  //    in the same bb.
   // 5. any operand of it does not dominate the branch.
   // 6. it's a store and a memory read is skipped.
   auto HoistInstsInBB = [&](BasicBlock *BB) {
@@ -3086,12 +3087,13 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
           return false;
         auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
         // a load from alloca is always safe.
-        if (!IsLoadFromAlloca(I) && !TTI.hasConditionalFaultingLoadStoreForType(Type))
+        if (!IsLoadFromAlloca(I) &&
+            !TTI.hasConditionalFaultingLoadStoreForType(Type))
           return false;
         if (SI && SkipMemoryRead)
           return false;
         HoistedInsts.insert(&I);
-      } else if (I.mayHaveSideEffects())
+      } else if (!I.isTerminator() && !isSafeToSpeculativelyExecute(&I))
         return false;
       // Conservative aliasing check.
       else if (I.mayReadFromMemory())

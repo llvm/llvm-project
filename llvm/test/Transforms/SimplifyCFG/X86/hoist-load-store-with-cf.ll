@@ -169,8 +169,8 @@ if.end:
   ret i64 0
 }
 
-define void @load_skip_memory_read(i32 %a, ptr %b, ptr %p, ptr %q) {
-; CHECK-LABEL: @load_skip_memory_read(
+define i32 @load_skip_speculatable_memory_read(i32 %a, ptr %b, ptr %p, ptr %q) {
+; CHECK-LABEL: @load_skip_speculatable_memory_read(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND]] to <1 x i1>
@@ -182,29 +182,27 @@ define void @load_skip_memory_read(i32 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i1 [[TMP4]] to <1 x i1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[Q:%.*]], i32 4, <1 x i1> [[TMP5]], <1 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i32> [[TMP6]] to i32
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_END:%.*]], label [[IF_FALSE:%.*]]
-; CHECK:       if.false:
-; CHECK-NEXT:    call void @read_memory_only()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[READ:%.*]] = call i32 @read_memory_only()
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[COND]], i32 0, i32 [[READ]]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
   %cond = icmp eq i32 %a, 0
   br i1 %cond, label %if.true, label %if.false
 
 if.false:
-  call void @read_memory_only()
-  %0 = load i32, ptr %q, align 4
+  %read = call i32 @read_memory_only()
+  %0 = load i32, ptr %q
   br label %if.end
 
 if.true:
-  %1 = load i32, ptr %b, align 4
-  store i32 %1, ptr %p, align 4
+  %1 = load i32, ptr %b
+  store i32 %1, ptr %p
   br label %if.end
 
 if.end:
-  ret void
+  %phi = phi i32 [%read, %if.false], [0, %if.true]
+  ret i32 %phi
 }
 
 ; i8 is not supported by conditional faulting
@@ -442,7 +440,7 @@ if.end:
   ret void
 }
 
-declare void @read_memory_only() readonly nounwind willreturn
+declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7}
