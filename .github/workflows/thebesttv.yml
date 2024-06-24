@@ -27,11 +27,12 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1
         with:
-          create-symlink: true
           variant: sccache
       - name: Generate CMake
         run: |
-          ./build-release.sh
+          ./build-release.sh \
+              -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
       - name: Build tool
         run: |
           ./graph-generation/tool -h
