@@ -303,7 +303,7 @@ def OMPC_NumThreads : Clause<"num_threads"> {
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
 }
-def OMPC_OMX_Bare : Clause<"ompx_bare"> {
+def OMPC_OMPX_Bare : Clause<"ompx_bare"> {
   let clangClass = "OMPXBareClause";
 }
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
@@ -2026,7 +2026,7 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMX_Bare>,
+    VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams];
