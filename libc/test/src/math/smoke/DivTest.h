@@ -107,11 +107,9 @@ public:
     if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, min_normal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
                                   func(neg_max_normal, min_denormal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_MATH_ERRNO(ERANGE);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero, func(min_denormal, max_normal),
                                   FE_UNDERFLOW | FE_INEXACT);
@@ -124,7 +122,6 @@ public:
     if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
       EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, min_normal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(neg_max_normal, min_denormal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
@@ -145,7 +142,6 @@ public:
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
                                   func(neg_max_normal, min_denormal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_MATH_ERRNO(ERANGE);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(min_denormal, func(min_denormal, max_normal),
                                   FE_UNDERFLOW | FE_INEXACT);

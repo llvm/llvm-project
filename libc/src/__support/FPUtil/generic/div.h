@@ -116,12 +116,7 @@ div(InType x, InType y) {
   DyadicFloat result(result_sign, result_exp, q);
   result.mantissa += r != 0;
 
-  OutType output = static_cast<OutType>(result);
-
-  if (test_except(FE_OVERFLOW | FE_UNDERFLOW) != 0)
-    set_errno_if_required(ERANGE);
-
-  return output;
+  return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
 } // namespace LIBC_NAMESPACE::fputil::generic
