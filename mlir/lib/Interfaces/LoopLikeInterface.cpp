@@ -8,6 +8,8 @@
 
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
+#include "mlir/IR/IRMapping.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -112,4 +114,44 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
   }
 
   return success();
+}
+
+LoopLikeOpInterface mlir::createFused(LoopLikeOpInterface target,
+                                      LoopLikeOpInterface source,
+                                      RewriterBase &rewriter,
+                                      NewYieldValuesFn newYieldValuesFn,
+                                      FuseTerminatorFn fuseTerminatorFn) {
+  auto targetIterArgs = target.getRegionIterArgs();
+  auto targetInductionVar = *target.getLoopInductionVars();
+  SmallVector<Value> targetYieldOperands(target.getYieldedValues());
+  auto sourceIterArgs = source.getRegionIterArgs();
+  auto sourceInductionVar = *source.getLoopInductionVars();
+  SmallVector<Value> sourceYieldOperands(source.getYieldedValues());
+  auto sourceRegion = source.getLoopRegions().front();
+  LoopLikeOpInterface fusedLoop = *target.replaceWithAdditionalYields(
+      rewriter, source.getInits(), /*replaceInitOperandUsesInLoop=*/false,
+      newYieldValuesFn);
+
+  // Map control operands.
+  IRMapping mapping;
+  mapping.map(targetInductionVar, *fusedLoop.getLoopInductionVars());
+  mapping.map(targetIterArgs,
+              fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
+  mapping.map(targetYieldOperands,
+              fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
+  mapping.map(sourceInductionVar, *fusedLoop.getLoopInductionVars());
+  mapping.map(sourceIterArgs,
+              fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
+  mapping.map(sourceYieldOperands,
+              fusedLoop.getYieldedValues().take_back(sourceIterArgs.size()));
+  // Append everything except the terminator into the fused operation.
+  rewriter.setInsertionPoint(
+      fusedLoop.getLoopRegions().front()->front().getTerminator());
+  for (Operation &op : sourceRegion->front().without_terminator())
+    rewriter.clone(op, mapping);
+
+  // TODO: Replace with corresponding interface method if added
+  fuseTerminatorFn(rewriter, source, fusedLoop, mapping);
+
+  return fusedLoop;
 }

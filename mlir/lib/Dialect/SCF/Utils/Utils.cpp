@@ -1082,91 +1082,12 @@ bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
       target.getLoopSteps() == source.getLoopSteps();
   auto forAllTarget = dyn_cast<scf::ForallOp>(*target);
   auto forAllSource = dyn_cast<scf::ForallOp>(*source);
+  // TODO: Decouple checks on concrete loop types and move this function
+  // somewhere for general utility for `LoopLikeOpInterface`
   if (forAllTarget && forAllSource)
     return iterSpaceEq &&
            forAllTarget.getMapping() == forAllSource.getMapping();
   return iterSpaceEq;
-}
-
-template <typename LoopTy>
-void fuseTerminator(RewriterBase &rewriter, LoopTy source, LoopTy &fused,
-                    IRMapping &mapping) {}
-
-template <>
-void fuseTerminator(RewriterBase &rewriter, scf::ForallOp source,
-                    scf::ForallOp &fused, IRMapping &mapping) {
-  // Fuse the old terminator in_parallel ops into the new one.
-  scf::InParallelOp fusedTerm = fused.getTerminator();
-  rewriter.setInsertionPointToEnd(fusedTerm.getBody());
-  for (Operation &op : source.getTerminator().getYieldingOps())
-    rewriter.clone(op, mapping);
-}
-
-template <>
-void fuseTerminator(RewriterBase &rewriter, scf::ForOp source,
-                    scf::ForOp &fused, IRMapping &mapping) {
-  // Build fused yield results by appropriately mapping original yield operands.
-  auto newTerm = rewriter.clone(*fused.getBody()->getTerminator(), mapping);
-  rewriter.replaceOp(fused.getBody()->getTerminator(), newTerm);
-}
-
-// TODO: We should maybe add a method to LoopLikeOpInterface that will
-// facilitate this transformation. For now, this acts as a placeholder.
-template <>
-void fuseTerminator(RewriterBase &rewriter, LoopLikeOpInterface source,
-                    LoopLikeOpInterface &fused, IRMapping &mapping) {
-  if (isa<scf::ForOp>(source) && isa<scf::ForOp>(fused)) {
-    fuseTerminator(rewriter, cast<scf::ForOp>(source), cast<scf::ForOp>(fused),
-                   mapping);
-  } else if (isa<scf::ForallOp>(source) && isa<scf::ForallOp>(fused)) {
-    fuseTerminator(rewriter, cast<scf::ForallOp>(source),
-                   cast<scf::ForallOp>(fused), mapping);
-  } else if (isa<scf::ParallelOp>(source) && isa<scf::ParallelOp>(fused)) {
-    fuseTerminator(rewriter, cast<scf::ParallelOp>(source),
-                   cast<scf::ParallelOp>(fused), mapping);
-  } else {
-    llvm_unreachable("unsupported loop types.");
-    return;
-  }
-}
-
-LoopLikeOpInterface createFused(LoopLikeOpInterface target,
-                                LoopLikeOpInterface source,
-                                RewriterBase &rewriter,
-                                NewYieldValuesFn newYieldValuesFn) {
-  auto targetIterArgs = target.getRegionIterArgs();
-  auto targetInductionVar = *target.getLoopInductionVars();
-  SmallVector<Value> targetYieldOperands(target.getYieldedValues());
-  auto sourceIterArgs = source.getRegionIterArgs();
-  auto sourceInductionVar = *source.getLoopInductionVars();
-  SmallVector<Value> sourceYieldOperands(source.getYieldedValues());
-  auto sourceRegion = source.getLoopRegions().front();
-  LoopLikeOpInterface fusedLoop = *target.replaceWithAdditionalYields(
-      rewriter, source.getInits(), /*replaceInitOperandUsesInLoop=*/false,
-      newYieldValuesFn);
-
-  // Map control operands.
-  IRMapping mapping;
-  mapping.map(targetInductionVar, *fusedLoop.getLoopInductionVars());
-  mapping.map(targetIterArgs,
-              fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
-  mapping.map(targetYieldOperands,
-              fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
-  mapping.map(sourceInductionVar, *fusedLoop.getLoopInductionVars());
-  mapping.map(sourceIterArgs,
-              fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
-  mapping.map(sourceYieldOperands,
-              fusedLoop.getYieldedValues().take_back(sourceIterArgs.size()));
-  // Append everything except the terminator into the fused operation.
-  rewriter.setInsertionPoint(
-      fusedLoop.getLoopRegions().front()->front().getTerminator());
-  for (Operation &op : sourceRegion->front().without_terminator())
-    rewriter.clone(op, mapping);
-
-  // TODO: Replace with corresponding interface method if added
-  fuseTerminator(rewriter, source, fusedLoop, mapping);
-
-  return fusedLoop;
 }
 
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
@@ -1177,6 +1098,15 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
         // `ForallOp` does not have yields, rather an `InParallelOp` terminator.
         return ValueRange{};
+      },
+      [&](RewriterBase &b, LoopLikeOpInterface source,
+          LoopLikeOpInterface &target, IRMapping mapping) {
+        auto sourceForall = cast<scf::ForallOp>(source);
+        auto targetForall = cast<scf::ForallOp>(target);
+        scf::InParallelOp fusedTerm = targetForall.getTerminator();
+        b.setInsertionPointToEnd(fusedTerm.getBody());
+        for (Operation &op : sourceForall.getTerminator().getYieldingOps())
+          b.clone(op, mapping);
       }));
   rewriter.replaceOp(source,
                      fusedLoop.getResults().take_back(source.getNumResults()));
@@ -1191,12 +1121,21 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
       target, source, rewriter,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
         return source.getYieldedValues();
+      },
+      [&](RewriterBase &b, LoopLikeOpInterface source,
+          LoopLikeOpInterface &target, IRMapping mapping) {
+        auto sourceFor = cast<scf::ForOp>(source);
+        auto targetFor = cast<scf::ForOp>(target);
+        auto newTerm = b.clone(*targetFor.getBody()->getTerminator(), mapping);
+        b.replaceOp(targetFor.getBody()->getTerminator(), newTerm);
       }));
   rewriter.replaceOp(source,
                      fusedLoop.getResults().take_back(source.getNumResults()));
   return fusedLoop;
 }
 
+// TODO: Finish refactoring this a la the above, but likely requires additional
+// interface methods.
 scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
     scf::ParallelOp target, scf::ParallelOp source, RewriterBase &rewriter) {
   Block *block1 = target.getBody();
