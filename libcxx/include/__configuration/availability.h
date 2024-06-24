@@ -353,6 +353,12 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19
 #define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
 
+// This controls the availability of populating cache for directory entry
+// filesystem system. A directory_iterator builds cache for directory_entry
+// in the library.
+#define _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19
+#define _LIBCPP_AVAILABILITY_FILESYSTEM_FULLY_POPULATED_CACHED_ENTRY _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE
+
 // Define availability attributes that depend on _LIBCPP_HAS_NO_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and
 // should not be vendor-specific.
