@@ -2967,11 +2967,6 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
-static bool isLoadFromAlloca(const Instruction &I) {
-  return isa<LoadInst>(I) &&
-         isa<AllocaInst>(getUnderlyingObject(I.getOperand(0)));
-}
-
 /// Hoist load/store instructions from the conditional successor blocks up into
 /// the block.
 ///
@@ -3048,6 +3043,12 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     if (Succ->hasAddressTaken())
       return false;
 
+  // Not use isa<AllocaInst>(getUnderlyingObject(I.getOperand(0)) to avoid
+  // checking all intermediate operands dominate the branch.
+  auto IsLoadFromAlloca = [](const Instruction &I) {
+    return isa<LoadInst>(I) && isa<AllocaInst>((I.getOperand(0)));
+  };
+
   // Collect hoisted loads/stores.
   SmallSetVector<Instruction *, 4> HoistedInsts;
   // Not hoist load/store if
@@ -3085,7 +3086,7 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
           return false;
         auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
         // a load from alloca is always safe.
-        if (!isLoadFromAlloca(I) && !TTI.hasConditionalFaultingLoadStoreForType(Type))
+        if (!IsLoadFromAlloca(I) && !TTI.hasConditionalFaultingLoadStoreForType(Type))
           return false;
         if (SI && SkipMemoryRead)
           return false;
@@ -3112,7 +3113,7 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
   Value *VCondNot = nullptr;
   for (auto *I : HoistedInsts) {
     // Only need to move the position for load from alloca.
-    if (isLoadFromAlloca(*I)) {
+    if (IsLoadFromAlloca(*I)) {
       I->moveBefore(BI);
       continue;
     }
@@ -3150,8 +3151,8 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
 
   // Erase the hoisted instrutions in reverse order to avoid use-w/o-define
   // error.
-  std::for_each(HoistedInsts.rbegin(), HoistedInsts.rend(), [](auto I) {
-    if (!isLoadFromAlloca(*I))
+  std::for_each(HoistedInsts.rbegin(), HoistedInsts.rend(), [&](auto I) {
+    if (!IsLoadFromAlloca(*I))
       I->eraseFromParent();
   });
 
