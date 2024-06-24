@@ -2162,19 +2162,20 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
-
-    if (ST->hasSVE())
+    if (ST->useSVEForFixedLengthVectors() &&
+        (ST->isSVEAvailable() || EnableFixedwidthAutovecInStreamingMode))
       return TypeSize::getFixed(
           std::max(ST->getMinSVEVectorSizeInBits(), 128u));
-
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    else if (ST->isNeonAvailable())
+      return TypeSize::getFixed(128);
+    else
+      return TypeSize::getFixed(0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
+    if (ST->isSVEAvailable() || (ST->isSVEorStreamingSVEAvailable() &&
+                                 EnableScalableAutovecInStreamingMode))
+      return TypeSize::getScalable(128);
+    else
       return TypeSize::getScalable(0);
-
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
