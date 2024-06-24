@@ -1727,14 +1727,7 @@ lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
   return pos->second;
 }
 
-DWARFDIE
-SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
-  // This method can be called without going through the symbol vendor so we
-  // need to lock the module.
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-
-  SymbolFileDWARF *symbol_file = nullptr;
-
+SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
   // Anytime we get a "lldb::user_id_t" from an lldb_private::SymbolFile API we
   // must make sure we use the correct DWARF file when resolving things. On
   // MacOSX, when using SymbolFileDWARFDebugMap, we will use multiple
@@ -1742,30 +1735,44 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   // references to other DWARF objects and we must be ready to receive a
   // "lldb::user_id_t" that specifies a DIE from another SymbolFileDWARF
   // instance.
+
   std::optional<uint32_t> file_index = die_ref.file_index();
+
+  // If the file index matches, then we have the right SymbolFileDWARF already.
+  // This will work for both .dwo file and DWARF in .o files for mac. Also if
+  // both the file indexes are invalid, then we have a match.
+  if (GetFileIndex() == file_index)
+    return this;
+
   if (file_index) {
-    if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile()) {
-      symbol_file = debug_map->GetSymbolFileByOSOIndex(*file_index); // OSO case
-      if (symbol_file)
-        return symbol_file->DebugInfo().GetDIE(die_ref.section(),
-                                               die_ref.die_offset());
-      return DWARFDIE();
-    }
-
+      // We have a SymbolFileDWARFDebugMap, so let it find the right file
+\    if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
+      return debug_map->GetSymbolFileByOSOIndex(*file_index);
+    
+    // Handle the .dwp file case correctly
     if (*file_index == DIERef::k_file_index_mask)
-      symbol_file = GetDwpSymbolFile().get(); // DWP case
-    else
-      symbol_file = this->DebugInfo()
-                        .GetUnitAtIndex(*die_ref.file_index())
-                        ->GetDwoSymbolFile(); // DWO case
-  } else if (die_ref.die_offset() == DW_INVALID_OFFSET) {
-    return DWARFDIE();
+      return GetDwpSymbolFile().get(); // DWP case
+
+    // Handle the .dwo file case correctly
+    return DebugInfo().GetUnitAtIndex(*die_ref.file_index())
+        ->GetDwoSymbolFile(); // DWO case
   }
+  return this;
+}
 
+DWARFDIE
+SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
+  if (die_ref.die_offset() == DW_INVALID_OFFSET)
+    return DWARFDIE();
+
+  // This method can be called without going through the symbol vendor so we
+  // need to lock the module.
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  SymbolFileDWARF *symbol_file = GetDIERefSymbolFile(die_ref);
   if (symbol_file)
-    return symbol_file->GetDIE(die_ref);
-
-  return DebugInfo().GetDIE(die_ref.section(), die_ref.die_offset());
+    return symbol_file->DebugInfo().GetDIE(die_ref.section(),
+                                           die_ref.die_offset());
+  return DWARFDIE();
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
