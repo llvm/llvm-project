@@ -56,6 +56,9 @@ static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
                clEnumValN(SkipMLPolicyCriteria::IfCallerIsNotCold,
                           "if-caller-not-cold", "if the caller is not cold")));
 
+static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
+                                          cl::Hidden, cl::init(""));
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -73,7 +76,8 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty())
     AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName);
+        M.getContext(), FeatureMap, DecisionName,
+        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)
