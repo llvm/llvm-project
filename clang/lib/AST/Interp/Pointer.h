@@ -618,6 +618,7 @@ private:
   friend class DeadBlock;
   friend class MemberPointer;
   friend struct InitMap;
+  friend class DynamicAllocator;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
