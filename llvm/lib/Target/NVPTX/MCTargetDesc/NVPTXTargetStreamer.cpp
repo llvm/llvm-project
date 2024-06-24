@@ -46,7 +46,8 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
                            const MCSection *Section) {
   // FIXME: the checks for the DWARF sections are very fragile and should be
   // fixed up in a followup patch.
-  if (!Section || Section->isText())
+  if (!Section || Section->getKind().isText() ||
+      Section->getKind().isWriteable())
     return false;
   return Section == FI->getDwarfAbbrevSection() ||
          Section == FI->getDwarfInfoSection() ||

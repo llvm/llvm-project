@@ -116,17 +116,6 @@ extern const char* const IdSymbolic[];
 
 } // namespace VGPRIndexMode
 
-namespace UCVersion {
-
-struct GFXVersion {
-  StringLiteral Symbol;
-  unsigned Code;
-};
-
-ArrayRef<GFXVersion> getGFXVersions();
-
-} // namespace UCVersion
-
 } // namespace AMDGPU
 } // namespace llvm
 

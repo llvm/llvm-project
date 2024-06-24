@@ -30,7 +30,7 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_functions.h>
-#include <__fwd/ostream.h>
+#include <ostream>
 #include <ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

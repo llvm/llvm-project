@@ -878,9 +878,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
           StackID == TargetStackID::ScalableVector) &&
          "Unexpected stack ID for the frame object.");
   if (StackID == TargetStackID::Default) {
-    assert(getOffsetOfLocalArea() == 0 && "LocalAreaOffset is not 0!");
-    Offset = StackOffset::getFixed(MFI.getObjectOffset(FI) +
-                                   MFI.getOffsetAdjustment());
+    Offset =
+        StackOffset::getFixed(MFI.getObjectOffset(FI) - getOffsetOfLocalArea() +
+                              MFI.getOffsetAdjustment());
   } else if (StackID == TargetStackID::ScalableVector) {
     Offset = StackOffset::getScalable(MFI.getObjectOffset(FI));
   }

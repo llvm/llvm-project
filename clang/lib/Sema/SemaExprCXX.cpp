@@ -2074,7 +2074,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (DirectInitRange.isValid()) {
     assert(Initializer && "Have parens but no initializer.");
     InitStyle = CXXNewInitializationStyle::Parens;
-  } else if (isa_and_nonnull<InitListExpr>(Initializer))
+  } else if (Initializer && isa<InitListExpr>(Initializer))
     InitStyle = CXXNewInitializationStyle::Braces;
   else {
     assert((!Initializer || isa<ImplicitValueInitExpr>(Initializer) ||
@@ -3823,7 +3823,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete))
+        else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize =
             UsualDeallocFnInfo(*this,
                                DeclAccessPair::make(OperatorDelete, AS_public))
@@ -8595,7 +8595,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
-  while (isa_and_nonnull<CapturedDecl>(DC))
+  while (DC && isa<CapturedDecl>(DC))
     DC = DC->getParent();
   assert(
       CurrentLSI->CallOperator == DC &&
@@ -9172,7 +9172,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   //  - Teach the handful of places that iterate over FunctionScopes to
   //    stop at the outermost enclosing lexical scope."
   DeclContext *DC = CurContext;
-  while (isa_and_nonnull<CapturedDecl>(DC))
+  while (DC && isa<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
   if (IsInLambdaDeclContext && CurrentLSI &&

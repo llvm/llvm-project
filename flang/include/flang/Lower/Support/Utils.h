@@ -69,8 +69,7 @@ static Fortran::lower::SomeExpr ignoreEvConvert(const A &x) {
 inline Fortran::lower::SomeExpr
 ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
                     Fortran::common::TypeCategory::Integer, 8>> &x) {
-  return Fortran::common::visit(
-      [](const auto &v) { return ignoreEvConvert(v); }, x.u);
+  return std::visit([](const auto &v) { return ignoreEvConvert(v); }, x.u);
 }
 
 /// Zip two containers of the same size together and flatten the pairs. `flatZip
@@ -120,8 +119,7 @@ public:
     return 0u;
   }
   static unsigned getHashValue(const Fortran::evaluate::Subscript &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   static unsigned getHashValue(const Fortran::evaluate::Triplet &x) {
     return getHashValue(x.lower()) - getHashValue(x.upper()) * 5u -
@@ -156,8 +154,7 @@ public:
     return getHashValue(x.GetComponent()) * 13u;
   }
   static unsigned getHashValue(const Fortran::evaluate::DataRef &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   static unsigned getHashValue(const Fortran::evaluate::ComplexPart &x) {
     return getHashValue(x.complex()) - static_cast<unsigned>(x.part());
@@ -250,9 +247,8 @@ public:
     return getHashValue(sym.get());
   }
   static unsigned getHashValue(const Fortran::evaluate::Substring &x) {
-    return 61u *
-               Fortran::common::visit(
-                   [&](const auto &p) { return getHashValue(p); }, x.parent()) -
+    return 61u * std::visit([&](const auto &p) { return getHashValue(p); },
+                            x.parent()) -
            getHashValue(x.lower()) - (getHashValue(x.lower()) + 1u);
   }
   static unsigned
@@ -274,8 +270,7 @@ public:
   }
   static unsigned
   getHashValue(const Fortran::evaluate::ProcedureDesignator &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   static unsigned getHashValue(const Fortran::evaluate::ProcedureRef &x) {
     unsigned args = 13u;
@@ -326,18 +321,15 @@ public:
   }
   template <typename A>
   static unsigned getHashValue(const Fortran::evaluate::Expr<A> &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   static unsigned getHashValue(
       const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   template <typename A>
   static unsigned getHashValue(const Fortran::evaluate::Designator<A> &x) {
-    return Fortran::common::visit(
-        [&](const auto &v) { return getHashValue(v); }, x.u);
+    return std::visit([&](const auto &v) { return getHashValue(v); }, x.u);
   }
   template <int BITS>
   static unsigned
@@ -386,7 +378,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::Subscript &x,
                       const Fortran::evaluate::Subscript &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   static bool isEqual(const Fortran::evaluate::Triplet &x,
@@ -419,7 +411,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::DataRef &x,
                       const Fortran::evaluate::DataRef &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   static bool isEqual(const Fortran::evaluate::ComplexPart &x,
@@ -507,10 +499,10 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::Substring &x,
                       const Fortran::evaluate::Substring &y) {
-    return Fortran::common::visit(
+    return std::visit(
                [&](const auto &p, const auto &q) { return isEqual(p, q); },
                x.parent(), y.parent()) &&
-           isEqual(x.lower(), y.lower()) && isEqual(x.upper(), y.upper());
+           isEqual(x.lower(), y.lower()) && isEqual(x.lower(), y.lower());
   }
   static bool isEqual(const Fortran::evaluate::StaticDataObject::Pointer &x,
                       const Fortran::evaluate::StaticDataObject::Pointer &y) {
@@ -537,7 +529,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::ProcedureDesignator &x,
                       const Fortran::evaluate::ProcedureDesignator &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   static bool isEqual(const Fortran::evaluate::ProcedureRef &x,
@@ -599,19 +591,19 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Expr<A> &x,
                       const Fortran::evaluate::Expr<A> &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   static bool
   isEqual(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x,
           const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Designator<A> &x,
                       const Fortran::evaluate::Designator<A> &y) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
   }
   template <int BITS>

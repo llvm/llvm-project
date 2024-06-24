@@ -47,17 +47,16 @@ bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
   return name == g_this || name == g_promise || name == g_coro_frame;
 }
 
-llvm::Error CPPLanguageRuntime::GetObjectDescription(Stream &str,
-                                                     ValueObject &object) {
+bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
+                                              ValueObject &object) {
   // C++ has no generic way to do this.
-  return llvm::createStringError("C++ does not support object descriptions");
+  return false;
 }
 
-llvm::Error
-CPPLanguageRuntime::GetObjectDescription(Stream &str, Value &value,
-                                         ExecutionContextScope *exe_scope) {
+bool CPPLanguageRuntime::GetObjectDescription(
+    Stream &str, Value &value, ExecutionContextScope *exe_scope) {
   // C++ has no generic way to do this.
-  return llvm::createStringError("C++ does not support object descriptions");
+  return false;
 }
 
 bool contains_lambda_identifier(llvm::StringRef &str_ref) {

@@ -93,7 +93,7 @@ static void CheckCoindexedStatOrErrmsg(SemanticsContext &context,
       }
     }
   }};
-  Fortran::common::visit(CoindexedCheck, statOrErrmsg.u);
+  std::visit(CoindexedCheck, statOrErrmsg.u);
 }
 
 static void CheckSyncStatList(

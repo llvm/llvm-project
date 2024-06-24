@@ -30,8 +30,9 @@ struct __libcpp_locale_guard {
 
   locale_t __old_loc_;
 
-  __libcpp_locale_guard(__libcpp_locale_guard const&)            = delete;
-  __libcpp_locale_guard& operator=(__libcpp_locale_guard const&) = delete;
+private:
+  __libcpp_locale_guard(__libcpp_locale_guard const&);
+  __libcpp_locale_guard& operator=(__libcpp_locale_guard const&);
 };
 #elif defined(_LIBCPP_MSVCRT_LIKE)
 struct __libcpp_locale_guard {

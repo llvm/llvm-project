@@ -42,16 +42,15 @@ Additions:
   * rsqrt*
   * __STDC_IEC_60559_DFP__ functions (_Decimal32, _Decimal64, _Decimal128)
   * compoundn*
-  * totalorder* |check|
-  * totalordermag* |check|
-  * getpayload* |check|
-  * setpayload* |check|
-  * setpayloadsig* |check|
+  * totalorder*
+  * totalordermag*
+  * getpayload*
+  * setpayload*
   * iscannonical
   * issignaling
   * issubnormal
   * iszero
-  * llogb* |check|
+  * llogb*
   * pown*
   * powr*
   * rootn*

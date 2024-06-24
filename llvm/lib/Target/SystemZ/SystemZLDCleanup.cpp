@@ -58,7 +58,7 @@ FunctionPass *llvm::createSystemZLDCleanupPass(SystemZTargetMachine &TM) {
 
 void SystemZLDCleanup::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineDominatorTree>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -75,8 +75,7 @@ bool SystemZLDCleanup::runOnMachineFunction(MachineFunction &F) {
     return false;
   }
 
-  MachineDominatorTree *DT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
   return VisitNode(DT->getRootNode(), 0);
 }
 

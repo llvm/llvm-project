@@ -199,7 +199,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (getAssembler().isSymbolLinkerVisible(*Symbol))
-    insert(getContext().allocFragment<MCDataFragment>());
+    insert(new MCDataFragment());
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
@@ -519,13 +519,11 @@ void MCMachOStreamer::finishImpl() {
   // Set the fragment atom associations by tracking the last seen atom defining
   // symbol.
   for (MCSection &Sec : getAssembler()) {
-    cast<MCSectionMachO>(Sec).allocAtoms();
     const MCSymbol *CurrentAtom = nullptr;
-    size_t I = 0;
     for (MCFragment &Frag : Sec) {
       if (const MCSymbol *Symbol = DefiningSymbolMap.lookup(&Frag))
         CurrentAtom = Symbol;
-      cast<MCSectionMachO>(Sec).setAtom(I++, CurrentAtom);
+      Frag.setAtom(CurrentAtom);
     }
   }
 
@@ -555,9 +553,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
   Asm.registerSection(*CGProfileSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(CGProfileSection);
-  CGProfileSection->addFragment(*Frag);
+  auto *Frag = new MCDataFragment(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
@@ -597,9 +593,7 @@ void MCMachOStreamer::createAddrSigSection() {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   Asm.registerSection(*AddrSigSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(AddrSigSection);
-  AddrSigSection->addFragment(*Frag);
+  auto *Frag = new MCDataFragment(AddrSigSection);
   // We will generate a series of pointer-sized symbol relocations at offset
   // 0x0. Set the section size to be large enough to contain a single pointer
   // (instead of emitting a zero-sized section) so these relocations are

@@ -3162,8 +3162,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
                      DeclSpec::SCS_static &&
                  DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
                      DeclSpec::SCS_typedef &&
-                 !DS.isFriendSpecified() &&
-                 TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate) {
+                 !DS.isFriendSpecified()) {
         // It's a default member initializer.
         if (BitfieldSize.get())
           Diag(Tok, getLangOpts().CPlusPlus20
@@ -3262,7 +3261,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       } else if (ThisDecl)
         Actions.AddInitializerToDecl(ThisDecl, Init.get(),
                                      EqualLoc.isInvalid());
-    } else if (ThisDecl && DeclaratorInfo.isStaticMember())
+    } else if (ThisDecl && DS.getStorageClassSpec() == DeclSpec::SCS_static)
       // No initializer.
       Actions.ActOnUninitializedDecl(ThisDecl);
 

@@ -57,7 +57,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -109,7 +108,6 @@ cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
     "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
     cl::desc("Load bitcode directly into the new debug info format (regardless "
              "of input format)"));
-extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 extern bool WriteNewDbgInfoFormatToBitcode;
 extern cl::opt<bool> WriteNewDbgInfoFormat;
@@ -2130,8 +2128,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
-  case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
-    return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -4359,7 +4355,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
+        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
@@ -6953,10 +6949,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         else
           continue; // ignore and continue.
 
-        unsigned Offset = getBranchWeightOffset(MD);
-
         // If branch weight doesn't match, just strip branch weight.
-        if (MD->getNumOperands() != Offset + ExpectedNumOperands)
+        if (MD->getNumOperands() != 1 + ExpectedNumOperands)
           I.setMetadata(LLVMContext::MD_prof, nullptr);
       }
     }
@@ -7333,13 +7327,7 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
   std::vector<FunctionSummary::EdgeTy> Ret;
-  // In the case of new profile formats, there are two Record entries per
-  // Edge. Otherwise, conservatively reserve up to Record.size.
-  if (!IsOldProfileFormat && (HasProfile || HasRelBF))
-    Ret.reserve(Record.size() / 2);
-  else
-    Ret.reserve(Record.size());
-
+  Ret.reserve(Record.size());
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     bool HasTailCall = false;

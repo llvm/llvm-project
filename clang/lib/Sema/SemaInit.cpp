@@ -313,8 +313,6 @@ class InitListChecker {
   InitListExpr *FullyStructuredList = nullptr;
   NoInitExpr *DummyExpr = nullptr;
   SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr;
-  EmbedExpr *CurEmbed = nullptr; // Save current embed we're processing.
-  unsigned CurEmbedIndex = 0;
 
   NoInitExpr *getDummyInit() {
     if (!DummyExpr)
@@ -503,42 +501,6 @@ class InitListChecker {
   void CheckEmptyInitializable(const InitializedEntity &Entity,
                                SourceLocation Loc);
 
-  Expr *HandleEmbed(EmbedExpr *Embed, const InitializedEntity &Entity) {
-    Expr *Result = nullptr;
-    // Undrestand which part of embed we'd like to reference.
-    if (!CurEmbed) {
-      CurEmbed = Embed;
-      CurEmbedIndex = 0;
-    }
-    // Reference just one if we're initializing a single scalar.
-    uint64_t ElsCount = 1;
-    // Otherwise try to fill whole array with embed data.
-    if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
-      ValueDecl *ArrDecl = Entity.getParent()->getDecl();
-      auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
-      assert(AType && "expected array type when initializing array");
-      ElsCount = Embed->getDataElementCount();
-      if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
-        ElsCount = std::min(CAType->getSize().getZExtValue(),
-                            ElsCount - CurEmbedIndex);
-      if (ElsCount == Embed->getDataElementCount()) {
-        CurEmbed = nullptr;
-        CurEmbedIndex = 0;
-        return Embed;
-      }
-    }
-
-    Result = new (SemaRef.Context)
-        EmbedExpr(SemaRef.Context, Embed->getLocation(), Embed->getData(),
-                  CurEmbedIndex, ElsCount);
-    CurEmbedIndex += ElsCount;
-    if (CurEmbedIndex >= Embed->getDataElementCount()) {
-      CurEmbed = nullptr;
-      CurEmbedIndex = 0;
-    }
-    return Result;
-  }
-
 public:
   InitListChecker(
       Sema &S, const InitializedEntity &Entity, InitListExpr *IL, QualType &T,
@@ -551,7 +513,7 @@ public:
       : InitListChecker(S, Entity, IL, T, /*VerifyOnly=*/true,
                         /*TreatUnavailableAsInvalid=*/false,
                         /*InOverloadResolution=*/false,
-                        &AggrDeductionCandidateParamTypes) {}
+                        &AggrDeductionCandidateParamTypes){};
 
   bool HadError() { return hadError; }
 
@@ -1481,21 +1443,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-
-      // In the presence of a braced-init-list within the initializer, we should
-      // not perform brace-elision, even if brace elision would otherwise be
-      // applicable. For example, given:
-      //
-      // template <class T> struct Foo {
-      //   T t[2];
-      // };
-      //
-      // Foo t = {{1, 2}};
-      //
-      // we don't want the (T, T) but rather (T [2]) in terms of the initializer
-      // {{1, 2}}.
-      if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
-          !isa_and_present<ConstantArrayType>(
+      if (!isa_and_nonnull<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
         ++Index;
         AggrDeductionCandidateParamTypes->push_back(ElemType);
@@ -1511,9 +1459,6 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       // Brace elision is never performed if the element is not an
       // assignment-expression.
       if (Seq || isa<InitListExpr>(expr)) {
-        if (auto *Embed = dyn_cast<EmbedExpr>(expr)) {
-          expr = HandleEmbed(Embed, Entity);
-        }
         if (!VerifyOnly) {
           ExprResult Result = Seq.Perform(SemaRef, TmpEntity, Kind, expr);
           if (Result.isInvalid())
@@ -1527,8 +1472,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           UpdateStructuredListElement(StructuredList, StructuredIndex,
                                       getDummyInit());
         }
-        if (!CurEmbed)
-          ++Index;
+        ++Index;
         if (AggrDeductionCandidateParamTypes)
           AggrDeductionCandidateParamTypes->push_back(ElemType);
         return;
@@ -1721,8 +1665,6 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
     ++Index;
     ++StructuredIndex;
     return;
-  } else if (auto *Embed = dyn_cast<EmbedExpr>(expr)) {
-    expr = HandleEmbed(Embed, Entity);
   }
 
   ExprResult Result;
@@ -1744,16 +1686,14 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
   else {
     ResultExpr = Result.getAs<Expr>();
 
-    if (ResultExpr != expr && !VerifyOnly && !CurEmbed) {
+    if (ResultExpr != expr && !VerifyOnly) {
       // The type was promoted, update initializer list.
       // FIXME: Why are we updating the syntactic init list?
       IList->setInit(Index, ResultExpr);
     }
   }
-
   UpdateStructuredListElement(StructuredList, StructuredIndex, ResultExpr);
-  if (!CurEmbed)
-    ++Index;
+  ++Index;
   if (AggrDeductionCandidateParamTypes)
     AggrDeductionCandidateParamTypes->push_back(DeclType);
 }
@@ -1992,30 +1932,6 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
 
-static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
-                                                  QualType InitType,
-                                                  ASTContext &Context) {
-  // Only one initializer, it's an embed and the types match;
-  EmbedExpr *EE =
-      ExprList.size() == 1
-          ? dyn_cast_if_present<EmbedExpr>(ExprList[0]->IgnoreParens())
-          : nullptr;
-  if (!EE)
-    return false;
-
-  if (InitType->isArrayType()) {
-    const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-    QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
-    const bool TypesMatch =
-        Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-        (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-    if (TypesMatch)
-      return true;
-  }
-  return false;
-}
-
 void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                      InitListExpr *IList, QualType &DeclType,
                                      llvm::APSInt elementIndex,
@@ -2031,12 +1947,6 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       hadError = true;
       return;
     }
-  }
-
-  if (canInitializeArrayWithEmbedDataString(IList->inits(), DeclType,
-                                            SemaRef.Context)) {
-    EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
-    IList->setInit(0, Embed->getDataStringLiteral());
   }
 
   // Check for the special-case of initializing an array with a string.
@@ -2141,24 +2051,13 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     if (maxElementsKnown && elementIndex == maxElements)
       break;
 
-    InitializedEntity ElementEntity = InitializedEntity::InitializeElement(
-        SemaRef.Context, StructuredIndex, Entity);
-
-    unsigned EmbedElementIndexBeforeInit = CurEmbedIndex;
+    InitializedEntity ElementEntity =
+      InitializedEntity::InitializeElement(SemaRef.Context, StructuredIndex,
+                                           Entity);
     // Check this element.
     CheckSubElementType(ElementEntity, IList, elementType, Index,
                         StructuredList, StructuredIndex);
     ++elementIndex;
-    if ((CurEmbed || isa<EmbedExpr>(Init)) && elementType->isScalarType()) {
-      if (CurEmbed) {
-        elementIndex =
-            elementIndex + CurEmbedIndex - EmbedElementIndexBeforeInit - 1;
-      } else {
-        auto Embed = cast<EmbedExpr>(Init);
-        elementIndex = elementIndex + Embed->getDataElementCount() -
-                       EmbedElementIndexBeforeInit - 1;
-      }
-    }
 
     // If the array is of incomplete type, keep track of the number of
     // elements in the initializer.
@@ -2295,7 +2194,7 @@ void InitListChecker::CheckStructUnionTypes(
 
     // Designated inits always initialize fields, so if we see one, all
     // remaining base classes have no explicit initializer.
-    if (isa_and_nonnull<DesignatedInitExpr>(Init))
+    if (Init && isa<DesignatedInitExpr>(Init))
       Init = nullptr;
 
     // C++ [over.match.class.deduct]p1.6:
@@ -6451,7 +6350,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     // class member of array type from a parenthesized initializer list.
     else if (S.getLangOpts().CPlusPlus &&
              Entity.getKind() == InitializedEntity::EK_Member &&
-             isa_and_nonnull<InitListExpr>(Initializer)) {
+             Initializer && isa<InitListExpr>(Initializer)) {
       TryListInitialization(S, Entity, Kind, cast<InitListExpr>(Initializer),
                             *this, TreatUnavailableAsInvalid);
       AddParenthesizedArrayInitStep(DestType);
@@ -8894,7 +8793,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   // constant expressions here in order to perform narrowing checks =(
   EnterExpressionEvaluationContext Evaluated(
       S, EnterExpressionEvaluationContext::InitList,
-      isa_and_nonnull<InitListExpr>(CurInit.get()));
+      CurInit.get() && isa<InitListExpr>(CurInit.get()));
 
   // C++ [class.abstract]p2:
   //   no objects of an abstract class can be created except as subobjects
@@ -9164,18 +9063,19 @@ ExprResult InitializationSequence::Perform(Sema &S,
           }
         }
       }
-      Expr *Init = CurInit.get();
+
       CheckedConversionKind CCK =
           Kind.isCStyleCast()       ? CheckedConversionKind::CStyleCast
           : Kind.isFunctionalCast() ? CheckedConversionKind::FunctionalCast
           : Kind.isExplicitCast()   ? CheckedConversionKind::OtherCast
                                     : CheckedConversionKind::Implicit;
-      ExprResult CurInitExprRes = S.PerformImplicitConversion(
-          Init, Step->Type, *Step->ICS, getAssignmentAction(Entity), CCK);
+      ExprResult CurInitExprRes =
+        S.PerformImplicitConversion(CurInit.get(), Step->Type, *Step->ICS,
+                                    getAssignmentAction(Entity), CCK);
       if (CurInitExprRes.isInvalid())
         return ExprError();
 
-      S.DiscardMisalignedMemberAddress(Step->Type.getTypePtr(), Init);
+      S.DiscardMisalignedMemberAddress(Step->Type.getTypePtr(), CurInit.get());
 
       CurInit = CurInitExprRes;
 
@@ -9330,11 +9230,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
     case SK_CAssignment: {
       QualType SourceType = CurInit.get()->getType();
-      Expr *Init = CurInit.get();
 
       // Save off the initial CurInit in case we need to emit a diagnostic
-      ExprResult InitialCurInit = Init;
-      ExprResult Result = Init;
+      ExprResult InitialCurInit = CurInit;
+      ExprResult Result = CurInit;
       Sema::AssignConvertType ConvTy =
         S.CheckSingleAssignmentConstraints(Step->Type, Result, true,
             Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);
@@ -9478,57 +9377,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // Wrap it in a construction of a std::initializer_list<T>.
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
-
-      if (!Step->Type->isDependentType()) {
-        QualType ElementType;
-        [[maybe_unused]] bool IsStdInitializerList =
-            S.isStdInitializerList(Step->Type, &ElementType);
-        assert(IsStdInitializerList &&
-               "StdInitializerList step to non-std::initializer_list");
-        const CXXRecordDecl *Record =
-            Step->Type->getAsCXXRecordDecl()->getDefinition();
-        assert(Record && Record->isCompleteDefinition() &&
-               "std::initializer_list should have already be "
-               "complete/instantiated by this point");
-
-        auto InvalidType = [&] {
-          S.Diag(Record->getLocation(),
-                 diag::err_std_initializer_list_malformed)
-              << Step->Type.getUnqualifiedType();
-          return ExprError();
-        };
-
-        if (Record->isUnion() || Record->getNumBases() != 0 ||
-            Record->isPolymorphic())
-          return InvalidType();
-
-        RecordDecl::field_iterator Field = Record->field_begin();
-        if (Field == Record->field_end())
-          return InvalidType();
-
-        // Start pointer
-        if (!Field->getType()->isPointerType() ||
-            !S.Context.hasSameType(Field->getType()->getPointeeType(),
-                                   ElementType.withConst()))
-          return InvalidType();
-
-        if (++Field == Record->field_end())
-          return InvalidType();
-
-        // Size or end pointer
-        if (const auto *PT = Field->getType()->getAs<PointerType>()) {
-          if (!S.Context.hasSameType(PT->getPointeeType(),
-                                     ElementType.withConst()))
-            return InvalidType();
-        } else {
-          if (Field->isBitField() ||
-              !S.Context.hasSameType(Field->getType(), S.Context.getSizeType()))
-            return InvalidType();
-        }
-
-        if (++Field != Record->field_end())
-          return InvalidType();
-      }
 
       // Bind the result, in case the library has given initializer_list a
       // non-trivial destructor.
@@ -11044,6 +10892,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // FIXME: The "second phase of [over.match.list] case can also
     // theoretically happen here, but it's not clear whether we can
     // ever have a parameter of the right type.
+    bool SuppressUserConversions = Kind.isCopyInit();
+
     if (TD) {
       SmallVector<Expr *, 8> TmpInits;
       for (Expr *E : Inits)
@@ -11053,12 +10903,12 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TmpInits.push_back(E);
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
-          /*SuppressUserConversions=*/false,
+          SuppressUserConversions,
           /*PartialOverloading=*/false, AllowExplicit, ADLCallKind::NotADL,
           /*PO=*/{}, AllowAggregateDeductionCandidate);
     } else {
       AddOverloadCandidate(GD, FoundDecl, Inits, Candidates,
-                           /*SuppressUserConversions=*/false,
+                           SuppressUserConversions,
                            /*PartialOverloading=*/false, AllowExplicit);
     }
   };
@@ -11090,14 +10940,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         //   if e_i is of array type and x_i is a braced-init-list, T_i is an
         //   rvalue reference to the declared type of e_i and
         // C++ [over.match.class.deduct]p1.9:
-        //   if e_i is of array type and x_i is a string-literal, T_i is an
+        //   if e_i is of array type and x_i is a bstring-literal, T_i is an
         //   lvalue reference to the const-qualified declared type of e_i and
         // C++ [over.match.class.deduct]p1.10:
         //   otherwise, T_i is the declared type of e_i
         for (int I = 0, E = ListInit->getNumInits();
              I < E && !isa<PackExpansionType>(ElementTypes[I]); ++I)
           if (ElementTypes[I]->isArrayType()) {
-            if (isa<InitListExpr, DesignatedInitExpr>(ListInit->getInit(I)))
+            if (isa<InitListExpr>(ListInit->getInit(I)))
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
             else if (isa<StringLiteral>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))

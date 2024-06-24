@@ -61,7 +61,10 @@ clang_target_link_libraries(clang-repl PRIVATE
   clangInterpreter
   )
 
-export_executable_symbols_for_plugins(clang-repl)
+# Support plugins.
+if(CLANG_PLUGIN_SUPPORT)
+  export_executable_symbols_for_plugins(clang-repl)
+endif()
 
 # The clang-repl binary can get huge with static linking in debug mode.
 # Some 32-bit targets use PLT slots with limited branch range by default and we

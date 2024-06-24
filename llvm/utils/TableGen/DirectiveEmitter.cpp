@@ -228,9 +228,6 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   GenerateEnumClass(associations, OS, "Association",
                     /*Prefix=*/"", DirLang, /*ExportEnums=*/false);
 
-  GenerateEnumClass(DirLang.getCategories(), OS, "Category", /*Prefix=*/"",
-                    DirLang, /*ExportEnums=*/false);
-
   // Emit Directive enumeration
   GenerateEnumClass(DirLang.getDirectives(), OS, "Directive",
                     DirLang.getDirectivePrefix(), DirLang,
@@ -267,7 +264,6 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "constexpr std::size_t getMaxLeafCount() { return "
      << GetMaxLeafCount(DirLang) << "; }\n";
   OS << "Association getDirectiveAssociation(Directive D);\n";
-  OS << "Category getDirectiveCategory(Directive D);\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
     OS << "\n";
@@ -747,29 +743,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
          << "::" << getAssocName(F->second) << ";\n";
     }
   }
-  OS << "  } // switch (Dir)\n";
-  OS << "  llvm_unreachable(\"Unexpected directive\");\n";
-  OS << "}\n";
-}
-
-static void GenerateGetDirectiveCategory(const DirectiveLanguage &DirLang,
-                                         raw_ostream &OS) {
-  std::string LangNamespace = "llvm::" + DirLang.getCppNamespace().str();
-  std::string CategoryTypeName = LangNamespace + "::Category";
-  std::string CategoryNamespace = CategoryTypeName + "::";
-
-  OS << '\n';
-  OS << CategoryTypeName << ' ' << LangNamespace << "::getDirectiveCategory("
-     << GetDirectiveType(DirLang) << " Dir) {\n";
-  OS << "  switch (Dir) {\n";
-
-  for (Record *R : DirLang.getDirectives()) {
-    Directive D{R};
-    OS << "  case " << GetDirectiveName(DirLang, R) << ":\n";
-    OS << "    return " << CategoryNamespace
-       << D.getCategory()->getValueAsString("name") << ";\n";
-  }
-  OS << "  } // switch (Dir)\n";
+  OS << "  } // switch(Dir)\n";
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
   OS << "}\n";
 }
@@ -1221,9 +1195,6 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // getDirectiveAssociation(Directive D)
   GenerateGetDirectiveAssociation(DirLang, OS);
-
-  // getDirectiveCategory(Directive D)
-  GenerateGetDirectiveCategory(DirLang, OS);
 
   // Leaf table for getLeafConstructs, etc.
   EmitLeafTable(DirLang, OS, "LeafConstructTable");

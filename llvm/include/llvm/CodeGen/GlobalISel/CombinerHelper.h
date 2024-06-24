@@ -954,10 +954,8 @@ private:
   ///
   /// * G_FMAXNUM
   /// * G_FMAXIMUM
-  /// * G_FMAXIMUMNUM
   /// * G_FMINNUM
   /// * G_FMINIMUM
-  /// * G_FMINIMUMNUM
   ///
   /// Helper function for matchFPSelectToMinMax.
   unsigned getFPMinMaxOpcForSelect(CmpInst::Predicate Pred, LLT DstTy,

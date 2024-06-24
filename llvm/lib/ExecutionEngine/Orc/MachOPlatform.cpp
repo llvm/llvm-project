@@ -206,12 +206,9 @@ private:
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
-    MachOObjCCatListSectionName,   MachOObjCCatList2SectionName,
-    MachOObjCClassListSectionName, MachOObjCClassRefsSectionName,
-    MachOObjCConstSectionName,     MachOObjCDataSectionName,
-    MachOObjCProtoListSectionName, MachOObjCProtoRefsSectionName,
-    MachOObjCNLCatListSectionName, MachOObjCNLClassListSectionName,
-    MachOObjCSelRefsSectionName};
+    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
+    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
+    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
 
 static StringRef ObjCRuntimeObjectSectionsText[] = {
     MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,

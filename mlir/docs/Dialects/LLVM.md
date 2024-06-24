@@ -179,7 +179,7 @@ Example:
 
 ```mlir
 llvm.func @func() attributes {
-  passthrough = ["readonly",           // value-less attribute
+  passthrough = ["noinline",           // value-less attribute
                  ["alignstack", "4"],  // integer attribute with value
                  ["other", "attr"]]    // attribute unknown to LLVM
 } {

@@ -257,10 +257,6 @@ public:
     provenanceMap_.Put(pm);
   }
 
-  void MarkPossibleFixedFormContinuation() {
-    possibleFixedFormContinuations_.push_back(BufferedBytes());
-  }
-
   std::size_t BufferedBytes() const;
   void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
@@ -273,7 +269,6 @@ private:
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
-  std::list<std::size_t> possibleFixedFormContinuations_;
 };
 
 class AllCookedSources {

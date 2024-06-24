@@ -310,7 +310,8 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems
     // wrong, but it does happen for the split-backedge.ll test case.
-    PollLocations.erase(llvm::unique(PollLocations), PollLocations.end());
+    PollLocations.erase(std::unique(PollLocations.begin(), PollLocations.end()),
+                        PollLocations.end());
 
     // Insert a poll at each point the analysis pass identified
     // The poll location must be the terminator of a loop latch block.

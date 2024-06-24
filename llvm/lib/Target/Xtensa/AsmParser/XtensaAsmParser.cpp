@@ -572,7 +572,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
   case AsmToken::Integer:
     if (!SR)
       return ParseStatus::NoMatch;
-    RegName = getLexer().getTok().getString();
+    RegName = StringRef(std::to_string(getLexer().getTok().getIntVal()));
     RegNo = MatchRegisterName(RegName);
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);

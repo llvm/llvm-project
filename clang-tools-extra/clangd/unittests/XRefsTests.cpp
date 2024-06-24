@@ -771,7 +771,7 @@ TEST(LocateSymbol, All) {
         namespace std
         {
           template<class _E>
-          class [[initializer_list]] { const _E *a, *b; };
+          class [[initializer_list]] {};
         }
 
         ^auto i = {1,2};

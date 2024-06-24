@@ -340,15 +340,13 @@ public:
              Qualified Qual = Qualified::AsWritten) const;
 
   /// Debugging aid that dumps the template name.
-  void dump(raw_ostream &OS, const ASTContext &Context) const;
+  void dump(raw_ostream &OS) const;
 
   /// Debugging aid that dumps the template name to standard
   /// error.
   void dump() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    ID.AddPointer(Storage.getOpaqueValue());
-  }
+  void Profile(llvm::FoldingSetNodeID &ID);
 
   /// Retrieve the template name as a void pointer.
   void *getAsVoidPointer() const { return Storage.getOpaqueValue(); }

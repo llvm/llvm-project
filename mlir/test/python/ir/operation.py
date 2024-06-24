@@ -631,7 +631,7 @@ def testOperationPrint():
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     module.operation.print(state)
 
-    # Test print with options.
+    # Test get_asm with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
     # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
     module.operation.print(
@@ -640,13 +640,6 @@ def testOperationPrint():
         pretty_debug_info=True,
         print_generic_op_form=True,
         use_local_scope=True,
-    )
-
-    # Test print with skip_regions option
-    # CHECK: func.func @f1(%arg0: i32) -> i32
-    # CHECK-NOT: func.return
-    module.body.operations[0].print(
-        skip_regions=True,
     )
 
 

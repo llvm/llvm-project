@@ -22,6 +22,12 @@ p ExpectedValue
 # CHECK: llvm::Expected is error
 p ExpectedError
 
+# CHECK: llvm::Optional = {value = 9}
+p OptionalValue
+
+# CHECK: llvm::Optional is not initialized
+p OptionalNone
+
 # CHECK: llvm::SmallVector of Size 3, Capacity 5 = {10, 11, 12}
 p SmallVector
 
@@ -31,7 +37,7 @@ p SmallString
 # CHECK: "bar"
 p StringRef
 
-# CHECK: "{{foo|\(missing .*\)}}barbaz"
+# CHECK: "foobarbaz"
 p Twine
 
 # CHECK: llvm::StringMap with 2 elements = {["foo"] = 123, ["bar"] = 456}

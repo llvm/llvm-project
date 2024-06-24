@@ -467,7 +467,7 @@ Value *LibCallsShrinkWrap::generateCondForPow(CallInst *CI,
 void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
   assert(Cond != nullptr && "ShrinkWrapCI is not expecting an empty call inst");
   MDNode *BranchWeights =
-      MDBuilder(CI->getContext()).createUnlikelyBranchWeights();
+      MDBuilder(CI->getContext()).createBranchWeights(1, 2000);
 
   Instruction *NewInst =
       SplitBlockAndInsertIfThen(Cond, CI, false, BranchWeights, &DTU);

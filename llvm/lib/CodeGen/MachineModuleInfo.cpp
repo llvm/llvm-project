@@ -185,7 +185,7 @@ INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",
                 "Machine Module Information", false, false)
 char MachineModuleInfoWrapperPass::ID = 0;
 
-static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
+static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
                              std::vector<const MDNode *> &LocInfos) {
   // Look up a LocInfo for the buffer this diagnostic is coming from.
   unsigned BufNum = SrcMgr.FindBufferContainingLoc(SMD.getLoc());
@@ -195,7 +195,7 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 
   // If the inline asm had metadata associated with it, pull out a location
   // cookie corresponding to which line the error occurred on.
-  uint64_t LocCookie = 0;
+  unsigned LocCookie = 0;
   if (LocInfo) {
     unsigned ErrorLine = SMD.getLineNo() - 1;
     if (ErrorLine >= LocInfo->getNumOperands())
@@ -218,7 +218,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
                  const SourceMgr &SrcMgr,
                  std::vector<const MDNode *> &LocInfos) {
-        uint64_t LocCookie = 0;
+        unsigned LocCookie = 0;
         if (IsInlineAsm)
           LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
         Ctx.diagnose(

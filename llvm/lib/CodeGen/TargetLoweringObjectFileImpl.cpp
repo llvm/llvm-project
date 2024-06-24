@@ -1696,7 +1696,7 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     }
   }
 
-  return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
+  return getContext().getCOFFSection(Name, Characteristics, Kind, COMDATSymName,
                                      Selection);
 }
 
@@ -1755,12 +1755,12 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       if (getContext().getTargetTriple().isWindowsGNUEnvironment())
         raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
-      return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
-                                         Selection, UniqueID);
+      return getContext().getCOFFSection(Name, Characteristics, Kind,
+                                         COMDATSymName, Selection, UniqueID);
     } else {
       SmallString<256> TmpData;
       getMangler().getNameWithPrefix(TmpData, GO, /*CannotUsePrivateLabel=*/true);
-      return getContext().getCOFFSection(Name, Characteristics, TmpData,
+      return getContext().getCOFFSection(Name, Characteristics, Kind, TmpData,
                                          Selection, UniqueID);
     }
   }
@@ -1817,9 +1817,9 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
   unsigned UniqueID = NextUniqueID++;
 
-  return getContext().getCOFFSection(SecName, Characteristics, COMDATSymName,
-                                     COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE,
-                                     UniqueID);
+  return getContext().getCOFFSection(
+      SecName, Characteristics, Kind, COMDATSymName,
+      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
 bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
@@ -1846,8 +1846,10 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   GetObjCImageInfo(M, Version, Flags, Section);
   if (!Section.empty()) {
     auto &C = getContext();
-    auto *S = C.getCOFFSection(Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                            COFF::IMAGE_SCN_MEM_READ);
+    auto *S = C.getCOFFSection(Section,
+                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                   COFF::IMAGE_SCN_MEM_READ,
+                               SectionKind::getReadOnly());
     Streamer.switchSection(S);
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
@@ -1927,17 +1929,21 @@ void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
         Ctx.getCOFFSection(".CRT$XCU", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                           COFF::IMAGE_SCN_MEM_READ);
+                                           COFF::IMAGE_SCN_MEM_READ,
+                           SectionKind::getReadOnly());
     StaticDtorSection =
         Ctx.getCOFFSection(".CRT$XTX", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                           COFF::IMAGE_SCN_MEM_READ);
+                                           COFF::IMAGE_SCN_MEM_READ,
+                           SectionKind::getReadOnly());
   } else {
     StaticCtorSection = Ctx.getCOFFSection(
         ".ctors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE);
+                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
+        SectionKind::getData());
     StaticDtorSection = Ctx.getCOFFSection(
         ".dtors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE);
+                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
+        SectionKind::getData());
   }
 }
 
@@ -1975,7 +1981,8 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
     if (AddPrioritySuffix)
       OS << format("%05u", Priority);
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
-        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ);
+        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
+        SectionKind::getReadOnly());
     return Ctx.getAssociativeCOFFSection(Sec, KeySym, 0);
   }
 
@@ -1986,7 +1993,8 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
   return Ctx.getAssociativeCOFFSection(
       Ctx.getCOFFSection(Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                    COFF::IMAGE_SCN_MEM_READ |
-                                   COFF::IMAGE_SCN_MEM_WRITE),
+                                   COFF::IMAGE_SCN_MEM_WRITE,
+                         SectionKind::getData()),
       KeySym, 0);
 }
 
@@ -2104,7 +2112,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     }
 
     if (!COMDATSymName.empty())
-      return getContext().getCOFFSection(".rdata", Characteristics,
+      return getContext().getCOFFSection(".rdata", Characteristics, Kind,
                                          COMDATSymName,
                                          COFF::IMAGE_COMDAT_SELECT_ANY);
   }

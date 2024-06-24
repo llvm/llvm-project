@@ -2,8 +2,7 @@
 // RUN: mlir-opt %s -enable-arm-streaming=streaming-mode=streaming-locally -verify-diagnostics | FileCheck %s -check-prefix=CHECK-LOCALLY
 // RUN: mlir-opt %s -enable-arm-streaming=streaming-mode=streaming-compatible -verify-diagnostics | FileCheck %s -check-prefix=CHECK-COMPATIBLE
 // RUN: mlir-opt %s -enable-arm-streaming=za-mode=new-za -verify-diagnostics | FileCheck %s -check-prefix=CHECK-ENABLE-ZA
-// RUN: mlir-opt %s -enable-arm-streaming=if-required-by-ops -verify-diagnostics | FileCheck %s -check-prefix=IF-REQUIRED
-// RUN: mlir-opt %s -enable-arm-streaming=if-contains-scalable-vectors -verify-diagnostics | FileCheck %s -check-prefix=IF-SCALABLE
+// RUN: mlir-opt %s -enable-arm-streaming=only-if-required-by-ops -verify-diagnostics | FileCheck %s -check-prefix=IF-REQUIRED
 
 // CHECK-LABEL: @arm_streaming
 // CHECK-SAME: attributes {arm_streaming}
@@ -39,17 +38,3 @@ func.func @requires_arm_streaming() {
 // IF-REQUIRED: @does_not_require_arm_streaming
 // IF-REQUIRED-NOT: arm_streaming
 func.func @does_not_require_arm_streaming() { return }
-
-// IF-SCALABLE-LABEL: @contains_scalable_vectors
-// IF-SCALABLE-SAME: attributes {arm_streaming}
-func.func @contains_scalable_vectors(%vec: vector<[4]xf32>) -> vector<[4]xf32> {
-  %0 = arith.addf %vec, %vec : vector<[4]xf32>
-  return %0 : vector<[4]xf32>
-}
-
-// IF-SCALABLE-LABEL: @no_scalable_vectors
-// IF-SCALABLE-NOT: arm_streaming
-func.func @no_scalable_vectors(%vec: vector<4xf32>) -> vector<4xf32> {
-  %0 = arith.addf %vec, %vec : vector<4xf32>
-  return %0 : vector<4xf32>
-}

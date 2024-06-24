@@ -44,7 +44,7 @@ protected:
   struct Pair {
     Block *first, *second;
   };
-  LIBC_INLINE Pair get_last_blocks() {
+  Pair get_last_blocks() {
     if (REVERSE_ORDER)
       return {current, current->next};
     Block *prev = nullptr;
@@ -55,20 +55,20 @@ protected:
     return {curr, prev};
   }
 
-  LIBC_INLINE Block *get_last_block() { return get_last_blocks().first; }
+  Block *get_last_block() { return get_last_blocks().first; }
 
 public:
-  LIBC_INLINE constexpr BlockStore() = default;
-  LIBC_INLINE ~BlockStore() = default;
+  constexpr BlockStore() = default;
+  ~BlockStore() = default;
 
   class Iterator {
     Block *block;
     size_t index;
 
   public:
-    LIBC_INLINE constexpr Iterator(Block *b, size_t i) : block(b), index(i) {}
+    constexpr Iterator(Block *b, size_t i) : block(b), index(i) {}
 
-    LIBC_INLINE Iterator &operator++() {
+    Iterator &operator++() {
       if (REVERSE_ORDER) {
         if (index == 0)
           return *this;
@@ -92,24 +92,23 @@ public:
       return *this;
     }
 
-    LIBC_INLINE T &operator*() {
+    T &operator*() {
       size_t true_index = REVERSE_ORDER ? index - 1 : index;
       return *reinterpret_cast<T *>(block->data + sizeof(T) * true_index);
     }
 
-    LIBC_INLINE bool operator==(const Iterator &rhs) const {
+    bool operator==(const Iterator &rhs) const {
       return block == rhs.block && index == rhs.index;
     }
 
-    LIBC_INLINE bool operator!=(const Iterator &rhs) const {
+    bool operator!=(const Iterator &rhs) const {
       return block != rhs.block || index != rhs.index;
     }
   };
 
-  LIBC_INLINE static void
-  destroy(BlockStore<T, BLOCK_SIZE, REVERSE_ORDER> *block_store);
+  static void destroy(BlockStore<T, BLOCK_SIZE, REVERSE_ORDER> *block_store);
 
-  LIBC_INLINE T *new_obj() {
+  T *new_obj() {
     if (fill_count == BLOCK_SIZE) {
       AllocChecker ac;
       auto new_block = new (ac) Block();
@@ -129,7 +128,7 @@ public:
     return obj;
   }
 
-  [[nodiscard]] LIBC_INLINE bool push_back(const T &value) {
+  [[nodiscard]] bool push_back(const T &value) {
     T *ptr = new_obj();
     if (ptr == nullptr)
       return false;
@@ -137,12 +136,12 @@ public:
     return true;
   }
 
-  LIBC_INLINE T &back() {
+  T &back() {
     return *reinterpret_cast<T *>(get_last_block()->data +
                                   sizeof(T) * (fill_count - 1));
   }
 
-  LIBC_INLINE void pop_back() {
+  void pop_back() {
     fill_count--;
     if (fill_count || current == &first)
       return;
@@ -160,16 +159,16 @@ public:
     fill_count = BLOCK_SIZE;
   }
 
-  LIBC_INLINE bool empty() const { return current == &first && !fill_count; }
+  bool empty() const { return current == &first && !fill_count; }
 
-  LIBC_INLINE Iterator begin() {
+  Iterator begin() {
     if (REVERSE_ORDER)
       return Iterator(current, fill_count);
     else
       return Iterator(&first, 0);
   }
 
-  LIBC_INLINE Iterator end() {
+  Iterator end() {
     if (REVERSE_ORDER)
       return Iterator(&first, 0);
     else
@@ -178,7 +177,7 @@ public:
 };
 
 template <typename T, size_t BLOCK_SIZE, bool REVERSE_ORDER>
-LIBC_INLINE void BlockStore<T, BLOCK_SIZE, REVERSE_ORDER>::destroy(
+void BlockStore<T, BLOCK_SIZE, REVERSE_ORDER>::destroy(
     BlockStore<T, BLOCK_SIZE, REVERSE_ORDER> *block_store) {
   if (REVERSE_ORDER) {
     auto current = block_store->current;

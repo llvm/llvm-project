@@ -53,8 +53,8 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
     AU.addRequired<WebAssemblyExceptionInfo>();
@@ -387,7 +387,7 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
 
   const auto &MLI = getAnalysis<MachineLoopInfo>();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto &MDT = getAnalysis<MachineDominatorTree>();
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
 

@@ -1255,12 +1255,11 @@ public:
   /// be promoted to a larger size, needs to be expanded to some other code
   /// sequence, or the target has a custom expander for it.
   LegalizeAction getOperationAction(unsigned Op, EVT VT) const {
+    if (VT.isExtended()) return Expand;
     // If a target-specific SDNode requires legalization, require the target
     // to provide custom legalization for it.
     if (Op >= std::size(OpActions[0]))
       return Custom;
-    if (VT.isExtended())
-      return Expand;
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
@@ -2910,8 +2909,6 @@ public:
     case ISD::FMAXNUM_IEEE:
     case ISD::FMINIMUM:
     case ISD::FMAXIMUM:
-    case ISD::FMINIMUMNUM:
-    case ISD::FMAXIMUMNUM:
     case ISD::AVGFLOORS:
     case ISD::AVGFLOORU:
     case ISD::AVGCEILS:
@@ -5132,8 +5129,6 @@ public:
   /// through to the default expansion/soften to libcall, we might introduce a
   /// link-time dependency on libm into a file that originally did not have one.
   SDValue createSelectForFMINNUM_FMAXNUM(SDNode *Node, SelectionDAG &DAG) const;
-  SDValue createSelectForFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
-                                                 SelectionDAG &DAG) const;
 
   /// Return a reciprocal estimate value for the input operand.
   /// \p Enabled is a ReciprocalEstimate enum with value either 'Unspecified' or
@@ -5265,9 +5260,6 @@ public:
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
-  SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
@@ -5353,11 +5345,6 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandABD(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand vector/scalar AVGCEILS/AVGCEILU/AVGFLOORS/AVGFLOORU nodes.
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandAVG(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
   /// scalar types. Returns SDValue() if expand fails.
   /// \param N Node to expand
@@ -5433,10 +5420,6 @@ public:
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
   SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
-
-  /// Method for building the DAG expansion of ISD::[US]CMP. This
-  /// method accepts integers as its arguments
-  SDValue expandCMP(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::[US]SHLSAT. This
   /// method accepts integers as its arguments.

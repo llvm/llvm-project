@@ -21,7 +21,7 @@ void t2(void)
 
 // Verify those things do occur normally.
 // CHECK-LABEL: @t2
-// CHECK:       #dbg_declare
+// CHECK:       call{{.*}}llvm.dbg
 // CHECK:       !dbg
 // CHECK:       }
 

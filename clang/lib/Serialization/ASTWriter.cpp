@@ -926,8 +926,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_CONDITIONAL_STACK);
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
-  RECORD(PP_UNSAFE_BUFFER_USAGE);
-  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1993,7 +1991,7 @@ namespace {
     std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
-      unsigned DataLen = 1 + sizeof(IdentifierID) + 4;
+      unsigned DataLen = 1 + 4 + 4;
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
@@ -2028,11 +2026,10 @@ namespace {
                           | Data.HFI.IndexHeaderMapHeader;
       LE.write<uint8_t>(Flags);
 
-      if (Data.HFI.LazyControllingMacro.isID())
-        LE.write<IdentifierID>(Data.HFI.LazyControllingMacro.getID());
+      if (!Data.HFI.ControllingMacro)
+        LE.write<uint32_t>(Data.HFI.ControllingMacroID);
       else
-        LE.write<IdentifierID>(
-            Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
+        LE.write<uint32_t>(Writer.getIdentifierRef(Data.HFI.ControllingMacro));
 
       unsigned Offset = 0;
       if (!Data.HFI.Framework.empty()) {
@@ -2520,12 +2517,6 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     Stream.EmitRecord(PP_CONDITIONAL_STACK, Record);
     Record.clear();
   }
-
-  // Write the safe buffer opt-out region map in PP
-  for (SourceLocation &S : PP.serializeSafeBufferOptOutMap())
-    AddSourceLocation(S, Record);
-  Stream.EmitRecord(PP_UNSAFE_BUFFER_USAGE, Record);
-  Record.clear();
 
   // Enter the preprocessor block.
   Stream.EnterSubblock(PREPROCESSOR_BLOCK_ID, 3);
@@ -3270,18 +3261,17 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 /// Write the representation of a type to the AST stream.
 void ASTWriter::WriteType(QualType T) {
   TypeIdx &IdxRef = TypeIdxs[T];
-  if (IdxRef.getValue() == 0) // we haven't seen this type before.
-    IdxRef = TypeIdx(0, NextTypeID++);
+  if (IdxRef.getIndex() == 0) // we haven't seen this type before.
+    IdxRef = TypeIdx(NextTypeID++);
   TypeIdx Idx = IdxRef;
 
-  assert(Idx.getModuleFileIndex() == 0 && "Re-writing a type from a prior AST");
-  assert(Idx.getValue() >= FirstTypeID && "Writing predefined type");
+  assert(Idx.getIndex() >= FirstTypeID && "Re-writing a type from a prior AST");
 
   // Emit the type's representation.
   uint64_t Offset = ASTTypeWriter(*this).write(T) - DeclTypesBlockStartOffset;
 
   // Record the offset for this type.
-  uint64_t Index = Idx.getValue() - FirstTypeID;
+  unsigned Index = Idx.getIndex() - FirstTypeID;
   if (TypeOffsets.size() == Index)
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
@@ -3337,7 +3327,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
       continue;
 
     KindDeclPairs.push_back(D->getKind());
-    KindDeclPairs.push_back(GetDeclRef(D).getRawValue());
+    KindDeclPairs.push_back(GetDeclRef(D).get());
   }
 
   ++NumLexicalDeclContexts;
@@ -3354,10 +3344,12 @@ void ASTWriter::WriteTypeDeclOffsets() {
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(TYPE_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of types
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // base type index
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // types block
   unsigned TypeOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size()};
+    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size(),
+                                       FirstTypeID - NUM_PREDEF_TYPE_IDS};
     Stream.EmitRecordWithBlob(TypeOffsetAbbrev, Record, bytes(TypeOffsets));
   }
 
@@ -3389,7 +3381,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
     Info.FirstDeclIndex = FileGroupedDeclIDs.size();
     llvm::stable_sort(Info.DeclIDs);
     for (auto &LocDeclEntry : Info.DeclIDs)
-      FileGroupedDeclIDs.push_back(LocDeclEntry.second.getRawValue());
+      FileGroupedDeclIDs.push_back(LocDeclEntry.second.get());
   }
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -3460,9 +3452,7 @@ public:
   std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, Selector Sel,
                       data_type_ref Methods) {
-    unsigned KeyLen =
-        2 + (Sel.getNumArgs() ? Sel.getNumArgs() * sizeof(IdentifierID)
-                              : sizeof(IdentifierID));
+    unsigned KeyLen = 2 + (Sel.getNumArgs()? Sel.getNumArgs() * 4 : 4);
     unsigned DataLen = 4 + 2 + 2; // 2 bytes for each of the method counts
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
@@ -3487,7 +3477,7 @@ public:
     if (N == 0)
       N = 1;
     for (unsigned I = 0; I != N; ++I)
-      LE.write<IdentifierID>(
+      LE.write<uint32_t>(
           Writer.getIdentifierRef(Sel.getIdentifierInfoForSlot(I)));
   }
 
@@ -3798,7 +3788,7 @@ public:
       InterestingIdentifierOffsets->push_back(Out.tell());
 
     unsigned KeyLen = II->getLength() + 1;
-    unsigned DataLen = sizeof(IdentifierID); // bytes for the persistent ID << 1
+    unsigned DataLen = 4; // 4 bytes for the persistent ID << 1
     if (isInterestingIdentifier(II, MacroOffset)) {
       DataLen += 2; // 2 bytes for builtin ID
       DataLen += 2; // 2 bytes for flags
@@ -3824,11 +3814,11 @@ public:
 
     auto MacroOffset = Writer.getMacroDirectivesOffset(II);
     if (!isInterestingIdentifier(II, MacroOffset)) {
-      LE.write<IdentifierID>(ID << 1);
+      LE.write<uint32_t>(ID << 1);
       return;
     }
 
-    LE.write<IdentifierID>((ID << 1) | 0x01);
+    LE.write<uint32_t>((ID << 1) | 0x01);
     uint32_t Bits = (uint32_t)II->getObjCOrBuiltinID();
     assert((Bits & 0xffff) == Bits && "ObjCOrBuiltinID too big for ASTReader.");
     LE.write<uint16_t>(Bits);
@@ -3860,10 +3850,6 @@ public:
 };
 
 } // namespace
-
-/// If the \param IdentifierID ID is a local Identifier ID. If the higher
-/// bits of ID is 0, it implies that the ID doesn't come from AST files.
-static bool isLocalIdentifierID(IdentifierID ID) { return !(ID >> 32); }
 
 /// Write the identifier table into the AST file.
 ///
@@ -3909,7 +3895,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (isLocalIdentifierID(ID) || II->hasChangedSinceDeserialization() ||
+      if (ID >= FirstIdentID || II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
@@ -3943,6 +3929,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(IDENTIFIER_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of identifiers
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first ID
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
   unsigned IdentifierOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
@@ -3952,7 +3939,8 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 #endif
 
   RecordData::value_type Record[] = {IDENTIFIER_OFFSET,
-                                     IdentifierOffsets.size()};
+                                     IdentifierOffsets.size(),
+                                     FirstIdentID - NUM_PREDEF_IDENT_IDS};
   Stream.EmitRecordWithBlob(IdentifierOffsetAbbrev, Record,
                             bytes(IdentifierOffsets));
 
@@ -3960,10 +3948,6 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
   // defined as macros, poisoned, or similar unusual things).
   if (!InterestingIdents.empty())
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
-}
-
-void ASTWriter::handleVTable(CXXRecordDecl *RD) {
-  PendingEmittingVTables.push_back(RD);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4046,13 +4030,11 @@ public:
     unsigned KeyLen = 1;
     switch (Name.getKind()) {
     case DeclarationName::Identifier:
-    case DeclarationName::CXXLiteralOperatorName:
-    case DeclarationName::CXXDeductionGuideName:
-      KeyLen += sizeof(IdentifierID);
-      break;
     case DeclarationName::ObjCZeroArgSelector:
     case DeclarationName::ObjCOneArgSelector:
     case DeclarationName::ObjCMultiArgSelector:
+    case DeclarationName::CXXLiteralOperatorName:
+    case DeclarationName::CXXDeductionGuideName:
       KeyLen += 4;
       break;
     case DeclarationName::CXXOperatorName:
@@ -4080,7 +4062,7 @@ public:
     case DeclarationName::Identifier:
     case DeclarationName::CXXLiteralOperatorName:
     case DeclarationName::CXXDeductionGuideName:
-      LE.write<IdentifierID>(Writer.getIdentifierRef(Name.getIdentifier()));
+      LE.write<uint32_t>(Writer.getIdentifierRef(Name.getIdentifier()));
       return;
     case DeclarationName::ObjCZeroArgSelector:
     case DeclarationName::ObjCOneArgSelector:
@@ -4450,7 +4432,7 @@ void ASTWriter::WriteDeclContextVisibleUpdate(const DeclContext *DC) {
 
   // Write the lookup table
   RecordData::value_type Record[] = {UPDATE_VISIBLE,
-                                     getDeclID(cast<Decl>(DC)).getRawValue()};
+                                     getDeclID(cast<Decl>(DC)).get()};
   Stream.EmitRecordWithBlob(UpdateVisibleAbbrev, Record, LookupTable);
 }
 
@@ -4798,15 +4780,8 @@ void ASTWriter::SetIdentifierOffset(const IdentifierInfo *II, uint32_t Offset) {
   IdentifierID ID = IdentifierIDs[II];
   // Only store offsets new to this AST file. Other identifier names are looked
   // up earlier in the chain and thus don't need an offset.
-  if (!isLocalIdentifierID(ID))
-    return;
-
-  // For local identifiers, the module file index must be 0.
-
-  assert(ID != 0);
-  ID -= NUM_PREDEF_IDENT_IDS;
-  assert(ID < IdentifierOffsets.size());
-  IdentifierOffsets[ID] = Offset;
+  if (ID >= FirstIdentID)
+    IdentifierOffsets[ID - FirstIdentID] = Offset;
 }
 
 /// Note that the selector Sel occurs at the given offset
@@ -5159,13 +5134,6 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
-
-  // Write all classes need to emit the vtable definitions if required.
-  if (isWritingStdCXXNamedModules())
-    for (CXXRecordDecl *RD : PendingEmittingVTables)
-      GetDeclRef(RD);
-  else
-    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5320,17 +5288,6 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
-
-  RecordData VTablesToEmit;
-  for (CXXRecordDecl *RD : PendingEmittingVTables) {
-    if (!wasDeclEmitted(RD))
-      continue;
-
-    AddDeclRef(RD, VTablesToEmit);
-  }
-
-  if (!VTablesToEmit.empty())
-    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -5458,11 +5415,13 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
+        writeBaseIDOrNone(M.BaseIdentifierID, M.LocalNumIdentifiers);
         writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
         writeBaseIDOrNone(M.BasePreprocessedEntityID,
                           M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
+        writeBaseIDOrNone(M.BaseTypeIndex, M.LocalNumTypes);
       }
     }
     RecordData::value_type Record[] = {MODULE_OFFSET_MAP};
@@ -5668,7 +5627,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
       continue;
 
     NewGlobalKindDeclPairs.push_back(D->getKind());
-    NewGlobalKindDeclPairs.push_back(GetDeclRef(D).getRawValue());
+    NewGlobalKindDeclPairs.push_back(GetDeclRef(D).get());
   }
 
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
@@ -6136,9 +6095,9 @@ static TypeID MakeTypeID(ASTContext &Context, QualType T,
     return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
 
   if (T == Context.AutoDeductTy)
-    return TypeIdx(0, PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
   if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(0, PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
 
   return IdxForType(T).asTypeID(FastQuals);
 }
@@ -6151,7 +6110,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
     assert(!T.getLocalFastQualifiers());
 
     TypeIdx &Idx = TypeIdxs[T];
-    if (Idx.getValue() == 0) {
+    if (Idx.getIndex() == 0) {
       if (DoneWritingDeclsAndTypes) {
         assert(0 && "New type seen after serializing all the types to emit!");
         return TypeIdx();
@@ -6159,7 +6118,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
 
       // We haven't seen this type before. Assign it a new ID and put it
       // into the queue of types to emit.
-      Idx = TypeIdx(0, NextTypeID++);
+      Idx = TypeIdx(NextTypeID++);
       DeclTypesToEmit.push(T);
     }
     return Idx;
@@ -6170,11 +6129,11 @@ void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
   if (!wasDeclEmitted(D))
     return;
 
-  AddDeclRef(D, Record);
+  Record.push_back(GetDeclRef(D).get());
 }
 
 void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
-  Record.push_back(GetDeclRef(D).getRawValue());
+  Record.push_back(GetDeclRef(D).get());
 }
 
 LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
@@ -6656,25 +6615,21 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   // Note, this will get called multiple times, once one the reader starts up
   // and again each time it's done reading a PCH or module.
+  FirstTypeID = NUM_PREDEF_TYPE_IDS + Chain->getTotalNumTypes();
+  FirstIdentID = NUM_PREDEF_IDENT_IDS + Chain->getTotalNumIdentifiers();
   FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
+  NextTypeID = FirstTypeID;
+  NextIdentID = FirstIdentID;
   NextMacroID = FirstMacroID;
   NextSelectorID = FirstSelectorID;
   NextSubmoduleID = FirstSubmoduleID;
 }
 
 void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
+  // Always keep the highest ID. See \p TypeRead() for more information.
   IdentifierID &StoredID = IdentifierIDs[II];
-  unsigned OriginalModuleFileIndex = StoredID >> 32;
-
-  // Always keep the local identifier ID. See \p TypeRead() for more
-  // information.
-  if (OriginalModuleFileIndex == 0 && StoredID)
-    return;
-
-  // Otherwise, keep the highest ID since the module file comes later has
-  // higher module file indexes.
   if (ID > StoredID)
     StoredID = ID;
 }
@@ -6687,24 +6642,13 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
-  // Always take the type index that comes in later module files.
-  // This copes with an interesting
+  // Always take the highest-numbered type index. This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,
   // later, deserialize the type from another AST. In this case, we want to
-  // keep the entry from a later module so that we can properly write it out to
+  // keep the higher-numbered entry so that we can properly write it out to
   // the AST file.
   TypeIdx &StoredIdx = TypeIdxs[T];
-
-  // Ignore it if the type comes from the current being written module file.
-  // Since the current module file being written logically has the highest
-  // index.
-  unsigned ModuleFileIndex = StoredIdx.getModuleFileIndex();
-  if (ModuleFileIndex == 0 && StoredIdx.getValue())
-    return;
-
-  // Otherwise, keep the highest ID since the module file comes later has
-  // higher module file indexes.
-  if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
+  if (Idx.getIndex() >= StoredIdx.getIndex())
     StoredIdx = Idx;
 }
 

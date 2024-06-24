@@ -3015,9 +3015,6 @@ public:
 // WebAssembly reference types
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-// AMDGPU types
-#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
-#include "clang/Basic/AMDGPUTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -6053,27 +6050,30 @@ class DeducedTemplateSpecializationType : public DeducedType,
 
   DeducedTemplateSpecializationType(TemplateName Template,
                                     QualType DeducedAsType,
-                                    bool IsDeducedAsDependent, QualType Canon)
+                                    bool IsDeducedAsDependent)
       : DeducedType(DeducedTemplateSpecialization, DeducedAsType,
                     toTypeDependence(Template.getDependence()) |
                         (IsDeducedAsDependent
                              ? TypeDependence::DependentInstantiation
                              : TypeDependence::None),
-                    Canon),
+                    DeducedAsType.isNull() ? QualType(this, 0)
+                                           : DeducedAsType.getCanonicalType()),
         Template(Template) {}
 
 public:
   /// Retrieve the name of the template that we are deducing.
   TemplateName getTemplateName() const { return Template;}
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
+  void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getTemplateName(), getDeducedType(), isDependentType());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
                       QualType Deduced, bool IsDependent) {
     Template.Profile(ID);
-    Deduced.Profile(ID);
+    QualType CanonicalType =
+        Deduced.isNull() ? Deduced : Deduced.getCanonicalType();
+    ID.AddPointer(CanonicalType.getAsOpaquePtr());
     ID.AddBoolean(IsDependent || Template.isDependent());
   }
 

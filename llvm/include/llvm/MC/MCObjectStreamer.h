@@ -41,6 +41,7 @@ class raw_pwrite_stream;
 /// implementation.
 class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
+  MCSection::iterator CurInsertionPoint;
   bool EmitEHFrame;
   bool EmitDebugFrame;
   SmallVector<MCSymbol *, 2> PendingLabels;
@@ -93,7 +94,7 @@ public:
   void insert(MCFragment *F) {
     flushPendingLabels(F);
     MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->addFragment(*F);
+    CurSection->getFragmentList().insert(CurInsertionPoint, F);
     F->setParent(CurSection);
   }
 
@@ -156,6 +157,8 @@ public:
                             unsigned MaxBytesToEmit = 0) override;
   void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                               const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,

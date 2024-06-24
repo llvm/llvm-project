@@ -63,9 +63,10 @@ public:
   virtual ~IRBuilderDefaultInserter();
 
   virtual void InsertHelper(Instruction *I, const Twine &Name,
+                            BasicBlock *BB,
                             BasicBlock::iterator InsertPt) const {
-    if (InsertPt.isValid())
-      I->insertInto(InsertPt.getNodeParent(), InsertPt);
+    if (BB)
+      I->insertInto(BB, InsertPt);
     I->setName(Name);
   }
 };
@@ -82,8 +83,9 @@ public:
       : Callback(std::move(Callback)) {}
 
   void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
     Callback(I);
   }
 };
@@ -141,7 +143,7 @@ public:
   /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
-    Inserter.InsertHelper(I, Name, InsertPt);
+    Inserter.InsertHelper(I, Name, BB, InsertPt);
     AddMetadataToInst(I);
     return I;
   }
@@ -1014,18 +1016,6 @@ public:
   /// Create call to the maximum intrinsic.
   Value *CreateMaximum(Value *LHS, Value *RHS, const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
-  }
-
-  /// Create call to the minimumnum intrinsic.
-  Value *CreateMinimumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::minimumnum, LHS, RHS, nullptr,
-                                 Name);
-  }
-
-  /// Create call to the maximum intrinsic.
-  Value *CreateMaximumNum(Value *LHS, Value *RHS, const Twine &Name = "") {
-    return CreateBinaryIntrinsic(Intrinsic::maximumnum, LHS, RHS, nullptr,
-                                 Name);
   }
 
   /// Create call to the copysign intrinsic.

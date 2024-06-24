@@ -340,9 +340,6 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   // to grab the return value from the return register(s), or it can be a LOAD
   // to load a value returned by reference via a stack slot.
 
-  if (CallEnd->getOpcode() == ISD::EH_LABEL)
-    CallEnd = CallEnd->getOperand(0).getNode();
-
   bool HasDef = !SI.CLI.RetTy->isVoidTy();
   if (HasDef) {
     if (CallEnd->getOpcode() == ISD::LOAD)

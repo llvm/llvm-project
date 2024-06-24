@@ -98,7 +98,6 @@ static cl::opt<bool>
 
 using CostType = InstructionCost::CostType;
 using PartitionID = unsigned;
-using GetTTIFn = function_ref<const TargetTransformInfo &(Function &)>;
 
 static bool isEntryPoint(const Function *F) {
   return AMDGPU::isEntryFunctionCC(F->getCallingConv());
@@ -215,12 +214,13 @@ static SplitModuleLogger &operator<<(SplitModuleLogger &SML, const Ty &Val) {
 
 /// Calculate the cost of each function in \p M
 /// \param SML Log Helper
-/// \param GetTTI Abstract getter for TargetTransformInfo.
+/// \param TM TargetMachine instance used to retrieve TargetTransformInfo.
 /// \param M Module to analyze.
 /// \param CostMap[out] Resulting Function -> Cost map.
 /// \return The module's total cost.
 static CostType
-calculateFunctionCosts(SplitModuleLogger &SML, GetTTIFn GetTTI, Module &M,
+calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
+                       Module &M,
                        DenseMap<const Function *, CostType> &CostMap) {
   CostType ModuleCost = 0;
   CostType KernelCost = 0;
@@ -230,7 +230,8 @@ calculateFunctionCosts(SplitModuleLogger &SML, GetTTIFn GetTTI, Module &M,
       continue;
 
     CostType FnCost = 0;
-    const auto &TTI = GetTTI(Fn);
+    TargetTransformInfo TTI = TM.getTargetTransformInfo(Fn);
+
     for (const auto &BB : Fn) {
       for (const auto &I : BB) {
         auto Cost =
@@ -437,9 +438,8 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   // assign X to a partition as usual, but when we get to Y, we check if it's
   // worth also putting it in Y's partition.
   const CostType LargeKernelThreshold =
-      LargeKernelFactor
-          ? CostType(((ModuleCost / NumParts) * LargeKernelFactor))
-          : std::numeric_limits<CostType>::max();
+      LargeKernelFactor ? CostType(((ModuleCost / NumParts) * LargeKernelFactor))
+                        : std::numeric_limits<CostType>::max();
 
   std::vector<DenseSet<const Function *>> Partitions;
   Partitions.resize(NumParts);
@@ -604,9 +604,10 @@ static void externalize(GlobalValue &GV) {
   if (!GV.hasName())
     GV.setName("__llvmsplit_unnamed");
 }
+} // end anonymous namespace
 
-static void splitAMDGPUModule(
-    GetTTIFn GetTTI, Module &M, unsigned N,
+void llvm::splitAMDGPUModule(
+    const AMDGPUTargetMachine &TM, Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
 
   SplitModuleLogger SML(M);
@@ -647,7 +648,7 @@ static void splitAMDGPUModule(
   // Start by calculating the cost of every function in the module, as well as
   // the module's overall cost.
   DenseMap<const Function *, CostType> FnCosts;
-  const CostType ModuleCost = calculateFunctionCosts(SML, GetTTI, M, FnCosts);
+  const CostType ModuleCost = calculateFunctionCosts(SML, TM, M, FnCosts);
 
   // Gather every kernel into a WorkList, then sort it by descending total cost
   // of the kernel so the biggest kernels are seen first.
@@ -740,17 +741,4 @@ static void splitAMDGPUModule(
   SML << TotalFnImpls << " function definitions across all modules ("
       << format("%0.2f", (float(TotalFnImpls) / FnCosts.size()) * 100)
       << "% of original module)\n";
-}
-} // namespace
-
-PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
-                                             ModuleAnalysisManager &MAM) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  const auto TTIGetter = [&FAM](Function &F) -> const TargetTransformInfo & {
-    return FAM.getResult<TargetIRAnalysis>(F);
-  };
-  splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);
-  // We don't change the original module.
-  return PreservedAnalyses::all();
 }

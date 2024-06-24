@@ -87,8 +87,7 @@ liveins:
   - { reg: '$rsi', virtual-reg: '%14' }
 frameInfo:
   maxAlignment:    1
-machineFunctionInfo:
-  amxProgModel: ManagedRA
+machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:

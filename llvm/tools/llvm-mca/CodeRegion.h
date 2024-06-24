@@ -104,9 +104,11 @@ public:
   dropInstructions(const llvm::SmallPtrSetImpl<const llvm::MCInst *> &Insts) {
     if (Insts.empty())
       return Instructions;
-    llvm::erase_if(Instructions, [&Insts](const llvm::MCInst &Inst) {
-      return Insts.contains(&Inst);
-    });
+    Instructions.erase(std::remove_if(Instructions.begin(), Instructions.end(),
+                                      [&Insts](const llvm::MCInst &Inst) {
+                                        return Insts.contains(&Inst);
+                                      }),
+                       Instructions.end());
     return Instructions;
   }
 

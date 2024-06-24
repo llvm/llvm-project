@@ -28,13 +28,10 @@ public:
   SemaARM(Sema &S);
 
   enum ArmStreamingType {
-    ArmNonStreaming, /// Intrinsic is only available in normal mode
-    ArmStreaming,    /// Intrinsic is only available in Streaming-SVE mode.
-    ArmStreamingCompatible, /// Intrinsic is available both in normal and
-                            /// Streaming-SVE mode.
-    VerifyRuntimeMode       /// Intrinsic is available in normal mode with
-                            /// SVE flags, or in Streaming-SVE mode with SME
-                            /// flags. Do Sema checks for the runtime mode.
+    ArmNonStreaming,
+    ArmStreaming,
+    ArmStreamingCompatible,
+    ArmStreamingOrSVE2p1
   };
 
   bool CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,

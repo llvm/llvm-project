@@ -841,10 +841,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(SectionName,
-                                    MainCFISecCOFF->getCharacteristics() |
-                                        COFF::IMAGE_SCN_LNK_COMDAT,
-                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(
+          SectionName,
+          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
+          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 
@@ -1235,6 +1235,8 @@ void MCStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                       unsigned MaxBytesToEmit) {}
 void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                    unsigned MaxBytesToEmit) {}
+void MCStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                                         const MCSubtargetInfo &STI) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
 void MCStreamer::emitBundleAlignMode(Align Alignment) {}

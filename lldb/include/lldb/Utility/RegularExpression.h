@@ -31,13 +31,7 @@ public:
   /// \param[in] string
   ///     An llvm::StringRef that represents the regular expression to compile.
   //      String is not referenced anymore after the object is constructed.
-  //
-  /// \param[in] flags
-  ///     An llvm::Regex::RegexFlags that modifies the matching behavior. The
-  ///     default is NoFlags.
-  explicit RegularExpression(
-      llvm::StringRef string,
-      llvm::Regex::RegexFlags flags = llvm::Regex::NoFlags);
+  explicit RegularExpression(llvm::StringRef string);
 
   ~RegularExpression() = default;
 

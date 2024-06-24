@@ -13,7 +13,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -65,7 +64,6 @@ namespace {
     MachineFrameInfo *MFI = nullptr;
     const TargetInstrInfo *TII = nullptr;
     const MachineBlockFrequencyInfo *MBFI = nullptr;
-    SlotIndexes *Indexes = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
@@ -154,14 +152,6 @@ namespace {
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
-
-      // In some Target's pipeline, register allocation (RA) might be
-      // split into multiple phases based on register class. So, this pass
-      // may be invoked multiple times requiring it to save these analyses to be
-      // used by RA later.
-      AU.addPreserved<LiveIntervals>();
-      AU.addPreserved<LiveDebugVariables>();
-
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -506,11 +496,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     ++I;
   }
 
-  for (MachineInstr *MI : toErase) {
-    if (Indexes)
-      Indexes->removeMachineInstrFromMaps(*MI);
+  for (MachineInstr *MI : toErase)
     MI->eraseFromParent();
-  }
 
   return changed;
 }
@@ -528,7 +515,6 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  Indexes = &getAnalysis<SlotIndexes>();
 
   bool Changed = false;
 

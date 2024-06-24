@@ -5,14 +5,15 @@
 
 define void @f() !dbg !3 {
 entry:
-  ; CHECK-NOT: #dbg_value
-  ; CHECK: #dbg_value(i32 42, !8, !DIExpression(),
+  ; CHECK-NOT: call void @llvm.dbg.value
+  ; CHECK: call void @llvm.dbg.value(metadata i32 42, metadata !8, metadata !DIExpression())
   call void @llvm.dbg.value(metadata i32 42, i64 0, metadata !8, metadata !9), !dbg !10
-  ; CHECK-NOT: #dbg_value
+  ; CHECK-NOT: call void @llvm.dbg.value
   call void @llvm.dbg.value(metadata i32 0, i64 1, metadata !8, metadata !9), !dbg !10
   ret void
 }
 
+; CHECK: declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

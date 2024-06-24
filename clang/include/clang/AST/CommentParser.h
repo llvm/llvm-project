@@ -100,14 +100,6 @@ public:
   ArrayRef<Comment::Argument>
   parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
 
-  /// Parse arguments for \throws command supported args are in form of class
-  /// or template.
-  ArrayRef<Comment::Argument>
-  parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
-
-  ArrayRef<Comment::Argument>
-  parseParCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs);
-
   BlockCommandComment *parseBlockCommand();
   InlineCommandComment *parseInlineCommand();
 
@@ -126,3 +118,4 @@ public:
 } // end namespace clang
 
 #endif
+

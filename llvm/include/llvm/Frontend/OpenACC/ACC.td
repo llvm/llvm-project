@@ -268,7 +268,6 @@ def ACCC_Unknown : Clause<"unknown"> {
 // 2.12
 def ACC_Atomic : Directive<"atomic"> {
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.6.5
@@ -294,7 +293,6 @@ def ACC_Data : Directive<"data"> {
     VersionedClause<ACCC_Present>
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.13
@@ -310,7 +308,6 @@ def ACC_Declare : Directive<"declare"> {
     VersionedClause<ACCC_Link>
   ];
   let association = AS_None;
-  let category = CA_Declarative;
 }
 
 // 2.5.3
@@ -337,7 +334,6 @@ def ACC_Kernels : Directive<"kernels"> {
     VersionedClause<ACCC_VectorLength>
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.5.1
@@ -367,7 +363,6 @@ def ACC_Parallel : Directive<"parallel"> {
     VersionedClause<ACCC_Self>
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.5.2
@@ -396,7 +391,6 @@ def ACC_Serial : Directive<"serial"> {
     VersionedClause<ACCC_Self>
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.9
@@ -417,13 +411,11 @@ def ACC_Loop : Directive<"loop"> {
     VersionedClause<ACCC_Seq>
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 
 // 2.10
 def ACC_Cache : Directive<"cache"> {
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.14.1
@@ -434,7 +426,6 @@ def ACC_Init : Directive<"init"> {
     VersionedClause<ACCC_If>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.15.1
@@ -451,7 +442,6 @@ def ACC_Routine : Directive<"routine"> {
     VersionedClause<ACCC_NoHost>
   ];
   let association = AS_Declaration;
-  let category = CA_Declarative;
 }
 
 // 2.14.3
@@ -471,7 +461,6 @@ def ACC_Set : Directive<"set"> {
     VersionedClause<ACCC_DeviceType>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.14.2
@@ -482,7 +471,6 @@ def ACC_Shutdown : Directive<"shutdown"> {
     VersionedClause<ACCC_If>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.14.4
@@ -502,7 +490,6 @@ def ACC_Update : Directive<"update"> {
     VersionedClause<ACCC_Self>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.16.3
@@ -512,7 +499,6 @@ def ACC_Wait : Directive<"wait"> {
     VersionedClause<ACCC_If>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.14.6
@@ -530,7 +516,6 @@ def ACC_EnterData : Directive<"enter data"> {
     VersionedClause<ACCC_Copyin>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.14.7
@@ -549,7 +534,6 @@ def ACC_ExitData : Directive<"exit data"> {
     VersionedClause<ACCC_Detach>
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 
 // 2.8
@@ -562,7 +546,6 @@ def ACC_HostData : Directive<"host_data"> {
     VersionedClause<ACCC_UseDevice>
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 
 // 2.11
@@ -601,7 +584,6 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Seq>
   ];
   let leafConstructs = [ACC_Kernels, ACC_Loop];
-  let category = CA_Executable;
 }
 
 // 2.11
@@ -641,7 +623,6 @@ def ACC_ParallelLoop : Directive<"parallel loop"> {
     VersionedClause<ACCC_Seq>
   ];
   let leafConstructs = [ACC_Parallel, ACC_Loop];
-  let category = CA_Executable;
 }
 
 // 2.11
@@ -678,11 +659,9 @@ def ACC_SerialLoop : Directive<"serial loop"> {
     VersionedClause<ACCC_Seq>
   ];
   let leafConstructs = [ACC_Serial, ACC_Loop];
-  let category = CA_Executable;
 }
 
 def ACC_Unknown : Directive<"unknown"> {
   let isDefault = true;
   let association = AS_None;
-  let category = CA_Utility;
 }

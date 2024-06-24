@@ -80,8 +80,7 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
-          AddrDelta));
+      MCOS->insert(new MCPseudoProbeAddrFragment(AddrDelta));
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.
@@ -147,7 +146,7 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
     dbgs() << "Group [\n";
     MCPseudoProbeTable::DdgPrintIndent += 2;
   });
-  assert(!isRoot() && "Root should be handled separately");
+  assert(!isRoot() && "Root should be handled seperately");
 
   // Emit probes grouped by GUID.
   LLVM_DEBUG({

@@ -499,7 +499,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
     const auto &SymB = cast<MCSymbolWasm>(RefB->getSymbol());
 
-    if (FixupSection.isText()) {
+    if (FixupSection.getKind().isText()) {
       Ctx.reportError(Fixup.getLoc(),
                       Twine("symbol '") + SymB.getName() +
                           "' unsupported subtraction expression used in "
@@ -561,13 +561,13 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     // later gets changed again to a func symbol?] or it can be a real
     // function symbol, in which case it can be left as-is.
 
-    if (!FixupSection.isMetadata())
+    if (!FixupSection.getKind().isMetadata())
       report_fatal_error("relocations for function or section offsets are "
                          "only supported in metadata sections");
 
     const MCSymbol *SectionSymbol = nullptr;
     const MCSection &SecA = SymA->getSection();
-    if (SecA.isText()) {
+    if (SecA.getKind().isText()) {
       auto SecSymIt = SectionFunctions.find(&SecA);
       if (SecSymIt == SectionFunctions.end())
         report_fatal_error("section doesn\'t have defining symbol");
@@ -627,9 +627,9 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 
   if (FixupSection.isWasmData()) {
     DataRelocations.push_back(Rec);
-  } else if (FixupSection.isText()) {
+  } else if (FixupSection.getKind().isText()) {
     CodeRelocations.push_back(Rec);
-  } else if (FixupSection.isMetadata()) {
+  } else if (FixupSection.getKind().isMetadata()) {
     CustomSectionsRelocations[&FixupSection].push_back(Rec);
   } else {
     llvm_unreachable("unexpected section type");
@@ -1498,7 +1498,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       continue;
 
     // Code is handled separately
-    if (Section.isText())
+    if (Section.getKind().isText())
       continue;
 
     if (Section.isWasmData()) {
@@ -1524,7 +1524,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       }
     } else {
       // Create custom sections
-      assert(Section.isMetadata());
+      assert(Sec.getKind().isMetadata());
 
       StringRef Name = SectionName;
 
@@ -1857,21 +1857,27 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       report_fatal_error(".fini_array sections are unsupported");
     if (!WS.getName().starts_with(".init_array"))
       continue;
-    auto IT = WS.begin();
-    if (IT == WS.end())
+    if (WS.getFragmentList().empty())
       continue;
+
+    // init_array is expected to contain a single non-empty data fragment
+    if (WS.getFragmentList().size() != 3)
+      report_fatal_error("only one .init_array section fragment supported");
+
+    auto IT = WS.begin();
     const MCFragment &EmptyFrag = *IT;
     if (EmptyFrag.getKind() != MCFragment::FT_Data)
       report_fatal_error(".init_array section should be aligned");
 
-    const MCFragment &AlignFrag = *EmptyFrag.getNext();
+    IT = std::next(IT);
+    const MCFragment &AlignFrag = *IT;
     if (AlignFrag.getKind() != MCFragment::FT_Align)
       report_fatal_error(".init_array section should be aligned");
     if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
         Align(is64Bit() ? 8 : 4))
       report_fatal_error(".init_array section should be aligned for pointers");
 
-    const MCFragment &Frag = *AlignFrag.getNext();
+    const MCFragment &Frag = *std::next(IT);
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .init_array section");
 

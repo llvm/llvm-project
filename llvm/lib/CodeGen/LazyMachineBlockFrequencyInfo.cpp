@@ -64,8 +64,7 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
 
   auto &MBPI = getAnalysis<MachineBranchProbabilityInfo>();
   auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
   LLVM_DEBUG(dbgs() << "Building MachineBlockFrequencyInfo on the fly\n");
   LLVM_DEBUG(if (MLI) dbgs() << "LoopInfo is available\n");
 

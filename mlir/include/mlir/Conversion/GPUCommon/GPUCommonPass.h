@@ -46,6 +46,9 @@ class LLVMDialect;
 #define GEN_PASS_DECL_GPUTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 
+using OwnedBlob = std::unique_ptr<std::vector<char>>;
+using BlobGenerator =
+    std::function<OwnedBlob(const std::string &, Location, StringRef)>;
 using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
     Operation *, llvm::LLVMContext &, StringRef)>;
 
@@ -63,9 +66,10 @@ struct FunctionCallBuilder {
 
 /// Collect a set of patterns to convert from the GPU dialect to LLVM and
 /// populate converter for gpu types.
-void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         RewritePatternSet &patterns,
-                                         bool kernelBarePtrCallConv = false);
+void populateGpuToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    StringRef gpuBinaryAnnotation = {}, bool kernelBarePtrCallConv = false,
+    SymbolTable *cachedModuleTable = nullptr);
 
 /// A function that maps a MemorySpace enum to a target-specific integer value.
 using MemorySpaceMapping = std::function<unsigned(gpu::AddressSpace)>;

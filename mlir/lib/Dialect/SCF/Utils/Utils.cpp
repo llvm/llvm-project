@@ -18,17 +18,26 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
+
+namespace {
+// This structure is to pass and return sets of loop parameters without
+// confusing the order.
+struct LoopParams {
+  Value lowerBound;
+  Value upperBound;
+  Value step;
+};
+} // namespace
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
@@ -373,7 +382,7 @@ LogicalResult mlir::loopUnrollByFactor(
     int64_t stepCst = stepCstOp.value();
     assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
            "expected positive loop bounds and step");
-    int64_t tripCount = llvm::divideCeilSigned(ubCst - lbCst, stepCst);
+    int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
 
     if (unrollFactor == 1) {
       if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))
@@ -464,9 +473,17 @@ LogicalResult mlir::loopUnrollByFactor(
   return success();
 }
 
-Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
-                                     OpFoldResult lb, OpFoldResult ub,
-                                     OpFoldResult step) {
+/// Transform a loop with a strictly positive step
+///   for %i = %lb to %ub step %s
+/// into a 0-based loop with step 1
+///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
+///     %i = %ii * %s + %lb
+/// Insert the induction variable remapping in the body of `inner`, which is
+/// expected to be either `loop` or another loop perfectly nested under `loop`.
+/// Insert the definition of new bounds immediate before `outer`, which is
+/// expected to be either `loop` or its parent in the loop nest.
+static LoopParams emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
+                                           Value lb, Value ub, Value step) {
   // For non-index types, generate `arith` instructions
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
@@ -478,38 +495,32 @@ Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
   if (auto stepCst = getConstantIntValue(step))
     isStepOne = stepCst.value() == 1;
 
-  Type rangeType = getType(lb);
-  assert(rangeType == getType(ub) && rangeType == getType(step) &&
-         "expected matching types");
-
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
   // of the loop to go from 0 to the number of iterations, if necessary.
   if (isZeroBased && isStepOne)
     return {lb, ub, step};
 
-  OpFoldResult diff = ub;
-  if (!isZeroBased) {
-    diff = rewriter.createOrFold<arith::SubIOp>(
-        loc, getValueOrCreateConstantIntOp(rewriter, loc, ub),
-        getValueOrCreateConstantIntOp(rewriter, loc, lb));
-  }
-  OpFoldResult newUpperBound = diff;
-  if (!isStepOne) {
-    newUpperBound = rewriter.createOrFold<arith::CeilDivSIOp>(
-        loc, getValueOrCreateConstantIntOp(rewriter, loc, diff),
-        getValueOrCreateConstantIntOp(rewriter, loc, step));
-  }
+  Value diff = isZeroBased ? ub : rewriter.create<arith::SubIOp>(loc, ub, lb);
+  Value newUpperBound =
+      isStepOne ? diff : rewriter.create<arith::CeilDivSIOp>(loc, diff, step);
 
-  OpFoldResult newLowerBound = rewriter.getZeroAttr(rangeType);
-  OpFoldResult newStep = rewriter.getOneAttr(rangeType);
+  Value newLowerBound = isZeroBased
+                            ? lb
+                            : rewriter.create<arith::ConstantOp>(
+                                  loc, rewriter.getZeroAttr(lb.getType()));
+  Value newStep = isStepOne
+                      ? step
+                      : rewriter.create<arith::ConstantOp>(
+                            loc, rewriter.getIntegerAttr(step.getType(), 1));
 
   return {newLowerBound, newUpperBound, newStep};
 }
 
-void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
-                                        Value normalizedIv, OpFoldResult origLb,
-                                        OpFoldResult origStep) {
+/// Get back the original induction variable values after loop normalization
+static void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
+                                         Value normalizedIv, Value origLb,
+                                         Value origStep) {
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
   bool isStepOne = isConstantIntValue(origStep, 1);
@@ -517,15 +528,12 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
 
   Value scaled = normalizedIv;
   if (!isStepOne) {
-    Value origStepValue =
-        getValueOrCreateConstantIntOp(rewriter, loc, origStep);
-    scaled = rewriter.create<arith::MulIOp>(loc, normalizedIv, origStepValue);
+    scaled = rewriter.create<arith::MulIOp>(loc, normalizedIv, origStep);
     preserve.insert(scaled.getDefiningOp());
   }
   denormalizedIv = scaled;
   if (!isZeroBased) {
-    Value origLbValue = getValueOrCreateConstantIntOp(rewriter, loc, origLb);
-    denormalizedIv = rewriter.create<arith::AddIOp>(loc, scaled, origLbValue);
+    denormalizedIv = rewriter.create<arith::AddIOp>(loc, scaled, origLb);
     preserve.insert(denormalizedIv.getDefiningOp());
   }
 
@@ -626,17 +634,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     Value lb = loop.getLowerBound();
     Value ub = loop.getUpperBound();
     Value step = loop.getStep();
-    auto newLoopRange =
+    auto newLoopParams =
         emitNormalizedLoopBounds(rewriter, loop.getLoc(), lb, ub, step);
 
     rewriter.modifyOpInPlace(loop, [&]() {
-      loop.setLowerBound(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
-                                                       newLoopRange.offset));
-      loop.setUpperBound(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
-                                                       newLoopRange.size));
-      loop.setStep(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
-                                                 newLoopRange.stride));
+      loop.setLowerBound(newLoopParams.lowerBound);
+      loop.setUpperBound(newLoopParams.upperBound);
+      loop.setStep(newLoopParams.step);
     });
+
     rewriter.setInsertionPointToStart(innermost.getBody());
     denormalizeInductionVariable(rewriter, loop.getLoc(),
                                  loop.getInductionVar(), lb, step);
@@ -772,16 +778,18 @@ void mlir::collapseParallelLoops(
     llvm::sort(dims);
 
   // Normalize ParallelOp's iteration pattern.
-  SmallVector<Value, 3> normalizedUpperBounds;
+  SmallVector<Value, 3> normalizedLowerBounds, normalizedSteps,
+      normalizedUpperBounds;
   for (unsigned i = 0, e = loops.getNumLoops(); i < e; ++i) {
     OpBuilder::InsertionGuard g2(rewriter);
     rewriter.setInsertionPoint(loops);
     Value lb = loops.getLowerBound()[i];
     Value ub = loops.getUpperBound()[i];
     Value step = loops.getStep()[i];
-    auto newLoopRange = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
-    normalizedUpperBounds.push_back(getValueOrCreateConstantIntOp(
-        rewriter, loops.getLoc(), newLoopRange.size));
+    auto newLoopParams = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
+    normalizedLowerBounds.push_back(newLoopParams.lowerBound);
+    normalizedUpperBounds.push_back(newLoopParams.upperBound);
+    normalizedSteps.push_back(newLoopParams.step);
 
     rewriter.setInsertionPointToStart(loops.getBody());
     denormalizeInductionVariable(rewriter, loc, loops.getInductionVars()[i], lb,

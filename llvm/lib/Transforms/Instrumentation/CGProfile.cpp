@@ -78,14 +78,14 @@ static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
         if (!CB)
           continue;
         if (CB->isIndirectCall()) {
+          InstrProfValueData ValueData[8];
           uint32_t ActualNumValueData;
           uint64_t TotalC;
-          auto ValueData = getValueProfDataFromInst(
-              *CB, IPVK_IndirectCallTarget, 8, ActualNumValueData, TotalC);
-          if (!ValueData)
+          if (!getValueProfDataFromInst(*CB, IPVK_IndirectCallTarget, 8,
+                                        ValueData, ActualNumValueData, TotalC))
             continue;
-          for (const auto &VD : ArrayRef<InstrProfValueData>(
-                   ValueData.get(), ActualNumValueData)) {
+          for (const auto &VD :
+               ArrayRef<InstrProfValueData>(ValueData, ActualNumValueData)) {
             UpdateCounts(TTI, &F, Symtab.getFunction(VD.Value), VD.Count);
           }
           continue;

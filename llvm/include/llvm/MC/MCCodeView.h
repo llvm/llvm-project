@@ -143,7 +143,7 @@ struct MCCVFunctionInfo {
 /// Holds state from .cv_file and .cv_loc directives for later emission.
 class CodeViewContext {
 public:
-  CodeViewContext(MCContext *MCCtx) : MCCtx(MCCtx) {}
+  CodeViewContext();
   ~CodeViewContext();
 
   CodeViewContext &operator=(const CodeViewContext &other) = delete;
@@ -223,8 +223,6 @@ public:
   std::pair<StringRef, unsigned> addToStringTable(StringRef S);
 
 private:
-  MCContext *MCCtx;
-
   /// Map from string to string table offset.
   StringMap<unsigned> StringTable;
 

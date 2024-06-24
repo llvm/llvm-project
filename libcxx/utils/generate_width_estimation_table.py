@@ -99,7 +99,7 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = r"""
+DATA_ARRAY_TEMPLATE = """
 /// The entries of the characters with an estimated width of 2.
 ///
 /// Contains the entries for [format.string.std]/12

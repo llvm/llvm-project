@@ -461,11 +461,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         options.SetVariableFormatDisplayLanguage(
             result_valobj_sp->GetPreferredDisplayLanguage());
 
-        if (llvm::Error error =
-                result_valobj_sp->Dump(output_stream, options)) {
-          result.AppendError(toString(std::move(error)));
-          return false;
-        }
+        result_valobj_sp->Dump(output_stream, options);
 
         if (suppress_result)
           if (auto result_var_sp =

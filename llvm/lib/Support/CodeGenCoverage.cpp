@@ -21,6 +21,8 @@
 
 using namespace llvm;
 
+static sys::SmartMutex<true> OutputMutex;
+
 CodeGenCoverage::CodeGenCoverage() = default;
 
 void CodeGenCoverage::setCovered(uint64_t RuleID) {
@@ -77,7 +79,6 @@ bool CodeGenCoverage::parse(MemoryBuffer &Buffer, StringRef BackendName) {
 bool CodeGenCoverage::emit(StringRef CoveragePrefix,
                            StringRef BackendName) const {
   if (!CoveragePrefix.empty() && !RuleCoverage.empty()) {
-    static sys::SmartMutex<true> OutputMutex;
     sys::SmartScopedLock<true> Lock(OutputMutex);
 
     // We can handle locking within a process easily enough but we don't want to

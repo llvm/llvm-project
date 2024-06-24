@@ -29,13 +29,13 @@
 
 ; CHECK: if.then:
 ; CHECK-NEXT: %1 = load float
-; CHECK-NEXT: #dbg_value(float %storemerge, ![[var:[0-9]+]], !DIExpression(),
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var:[0-9]+]], metadata !DIExpression())
 
 ; CHECK: if.else:
 ; CHECK-NEXT: %2 = load float
 ; CHECK-NEXT: %3 = load float
 ; CHECK-NEXT: %div = fdiv float
-; CHECK: #dbg_value(float %storemerge, ![[var]], !DIExpression(),
+; CHECK: call void @llvm.dbg.value(metadata float %storemerge, metadata ![[var]], metadata !DIExpression())
 
 %class.a = type { i8 }
 

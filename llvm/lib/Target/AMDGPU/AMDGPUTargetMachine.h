@@ -76,7 +76,7 @@ public:
 
   bool splitModule(Module &M, unsigned NumParts,
                    function_ref<void(std::unique_ptr<Module> MPart)>
-                       ModuleCallback) override;
+                       ModuleCallback) const override;
 };
 
 //===----------------------------------------------------------------------===//

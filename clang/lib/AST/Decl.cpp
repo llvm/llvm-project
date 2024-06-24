@@ -2390,9 +2390,6 @@ bool VarDecl::hasInit() const {
     if (P->hasUnparsedDefaultArg() || P->hasUninstantiatedDefaultArg())
       return false;
 
-  if (auto *Eval = getEvaluatedStmt())
-    return Eval->Value.isValid();
-
   return !Init.isNull();
 }
 
@@ -2405,8 +2402,10 @@ Expr *VarDecl::getInit() {
 
   auto *Eval = getEvaluatedStmt();
 
-  return cast<Expr>(Eval->Value.get(
-      Eval->Value.isOffset() ? getASTContext().getExternalSource() : nullptr));
+  return cast_if_present<Expr>(
+      Eval->Value.isOffset()
+          ? Eval->Value.get(getASTContext().getExternalSource())
+          : Eval->Value.get(nullptr));
 }
 
 Stmt **VarDecl::getInitAddress() {

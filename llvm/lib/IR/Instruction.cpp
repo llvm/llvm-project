@@ -25,25 +25,39 @@
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
-InsertPosition::InsertPosition(Instruction *InsertBefore)
-    : InsertAt(InsertBefore ? InsertBefore->getIterator()
-                            : InstListType::iterator()) {}
-InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
-    : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         InstListType::iterator InsertBefore)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // When called with an iterator, there must be a block to insert into.
+  BasicBlock *BB = InsertBefore->getParent();
+  assert(BB && "Instruction to insert before is not in a basic block!");
+  insertInto(BB, InsertBefore);
+}
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         InsertPosition InsertBefore)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
-  // When called with an iterator, there must be a block to insert into.
-  if (InstListType::iterator InsertIt = InsertBefore; InsertIt.isValid()) {
-    BasicBlock *BB = InsertIt.getNodeParent();
+                         Instruction *InsertBefore)
+  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // If requested, insert this instruction into a basic block...
+  if (InsertBefore) {
+    BasicBlock *BB = InsertBefore->getParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    insertInto(BB, InsertBefore);
+    insertInto(BB, InsertBefore->getIterator());
   }
 }
 
+Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+                         BasicBlock *InsertAtEnd)
+    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+
+  // If requested, append this instruction into the basic block.
+  if (InsertAtEnd)
+    insertInto(InsertAtEnd, InsertAtEnd->end());
+}
+
 Instruction::~Instruction() {
-  assert(!getParent() && "Instruction still linked in the program!");
+  assert(!Parent && "Instruction still linked in the program!");
 
   // Replace any extant metadata uses of this instruction with undef to
   // preserve debug info accuracy. Some alternatives include:
@@ -62,6 +76,10 @@ Instruction::~Instruction() {
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
+void Instruction::setParent(BasicBlock *P) {
+  Parent = P;
+}
+
 const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
@@ -78,7 +96,7 @@ void Instruction::removeFromParent() {
 }
 
 void Instruction::handleMarkerRemoval() {
-  if (!getParent()->IsNewDbgInfoFormat || !DebugMarker)
+  if (!Parent->IsNewDbgInfoFormat || !DebugMarker)
     return;
 
   DebugMarker->removeMarker();
@@ -311,12 +329,11 @@ void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
-  assert(getParent() && Other->getParent() &&
+  assert(Parent && Other->Parent &&
          "instructions without BB parents have no order");
-  assert(getParent() == Other->getParent() &&
-         "cross-BB instruction order comparison");
-  if (!getParent()->isInstrOrderValid())
-    const_cast<BasicBlock *>(getParent())->renumberInstructions();
+  assert(Parent == Other->Parent && "cross-BB instruction order comparison");
+  if (!Parent->isInstrOrderValid())
+    Parent->renumberInstructions();
   return Order < Other->Order;
 }
 
@@ -1251,23 +1268,12 @@ Instruction *Instruction::cloneImpl() const {
 
 void Instruction::swapProfMetadata() {
   MDNode *ProfileData = getBranchWeightMDNode(*this);
-  if (!ProfileData)
-    return;
-  unsigned FirstIdx = getBranchWeightOffset(ProfileData);
-  if (ProfileData->getNumOperands() != 2 + FirstIdx)
+  if (!ProfileData || ProfileData->getNumOperands() != 3)
     return;
 
-  unsigned SecondIdx = FirstIdx + 1;
-  SmallVector<Metadata *, 4> Ops;
-  // If there are more weights past the second, we can't swap them
-  if (ProfileData->getNumOperands() > SecondIdx + 1)
-    return;
-  for (unsigned Idx = 0; Idx < FirstIdx; ++Idx) {
-    Ops.push_back(ProfileData->getOperand(Idx));
-  }
-  // Switch the order of the weights
-  Ops.push_back(ProfileData->getOperand(SecondIdx));
-  Ops.push_back(ProfileData->getOperand(FirstIdx));
+  // The first operand is the name. Fetch them backwards and build a new one.
+  Metadata *Ops[] = {ProfileData->getOperand(0), ProfileData->getOperand(2),
+                     ProfileData->getOperand(1)};
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
 }

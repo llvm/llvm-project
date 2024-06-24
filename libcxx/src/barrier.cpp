@@ -63,10 +63,10 @@ _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base* __construct_barrier_algorith
   return new __barrier_algorithm_base(__expected);
 }
 _LIBCPP_EXPORTED_FROM_ABI bool
-__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) noexcept {
+__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) {
   return __barrier->__arrive(__old_phase);
 }
-_LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier) {
   delete __barrier;
 }
 

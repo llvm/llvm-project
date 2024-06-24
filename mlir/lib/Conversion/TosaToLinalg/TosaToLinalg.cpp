@@ -2324,10 +2324,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     auto loc = rfft2d.getLoc();
     auto input = rfft2d.getInput();
     auto elementType =
-        dyn_cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
-    if (!elementType)
-      return rewriter.notifyMatchFailure(rfft2d,
-                                         "only supports float element types");
+        cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
 
     // Compute the output type and set of dynamic sizes
     llvm::SmallVector<Value> dynamicSizes;

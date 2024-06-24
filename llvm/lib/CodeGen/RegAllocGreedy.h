@@ -425,7 +425,7 @@ private:
                ZeroCostFoldedReloads || Copies);
     }
 
-    void add(const RAGreedyStats &other) {
+    void add(RAGreedyStats other) {
       Reloads += other.Reloads;
       FoldedReloads += other.FoldedReloads;
       ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;

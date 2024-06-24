@@ -296,6 +296,8 @@ public:
 
   static CompilerDeclContext GetContainingDeclContext(const DWARFDIE &die);
 
+  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
+
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
@@ -458,6 +460,8 @@ protected:
   DWARFDIE
   FindBlockContainingSpecification(const DWARFDIE &die,
                                    dw_offset_t spec_block_die_offset);
+
+  bool DIEDeclContextsMatch(const DWARFDIE &die1, const DWARFDIE &die2);
 
   bool ClassContainsSelector(const DWARFDIE &class_die, ConstString selector);
 

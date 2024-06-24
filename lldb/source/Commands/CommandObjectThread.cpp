@@ -383,7 +383,7 @@ public:
                                 eCommandProcessMustBePaused),
         m_step_type(step_type), m_step_scope(step_scope),
         m_class_options("scripted step") {
-    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
+    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
       m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
@@ -1386,10 +1386,7 @@ public:
     Stream &strm = result.GetOutputStream();
     ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
     if (exception_object_sp) {
-      if (llvm::Error error = exception_object_sp->Dump(strm)) {
-        result.AppendError(toString(std::move(error)));
-        return false;
-      }
+      exception_object_sp->Dump(strm);
     }
 
     ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
@@ -1441,12 +1438,9 @@ public:
       return false;
     }
     ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
-    if (exception_object_sp) {
-      if (llvm::Error error = exception_object_sp->Dump(strm)) {
-        result.AppendError(toString(std::move(error)));
-        return false;
-      }
-    } else
+    if (exception_object_sp)
+      exception_object_sp->Dump(strm);
+    else
       strm.Printf("(no siginfo)\n");
     strm.PutChar('\n');
 

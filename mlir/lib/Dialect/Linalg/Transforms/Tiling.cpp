@@ -833,19 +833,16 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   // 7. Merge the partial reductions.
   b.setInsertionPointAfter(forallOp);
-  FailureOr<MergeResult> mergeResult =
+  Operation *mergeOp =
       op.mergeReductions(b, loc, forallOp->getResults(), reductionDim);
-  if (failed(mergeResult)) {
-    return failure();
-  }
-  b.replaceOp(op, mergeResult->replacements);
+  b.replaceOp(op, mergeOp->getResults());
 
   // 8. Return.
   ForallReductionTilingResult results;
   results.initialValues = initTensors;
   results.loops = forallOp;
-  results.parallelTiledOps.push_back(tiledOp);
-  results.mergeOps.append(mergeResult->mergeOps);
+  results.parallelTiledOp = tiledOp;
+  results.mergeOp = mergeOp;
   return results;
 }
 

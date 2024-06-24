@@ -32,8 +32,8 @@ public:
   ABIArgInfo classifyArgumentType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
-                   AggValueSlot Slot) const override;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
   bool isUnsupportedType(QualType T) const;
   ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, unsigned MaxSize) const;
 };
@@ -213,8 +213,8 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   FI.setEffectiveCallingConvention(getRuntimeCC());
 }
 
-RValue NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                               QualType Ty, AggValueSlot Slot) const {
+Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty) const {
   llvm_unreachable("NVPTX does not support varargs");
 }
 

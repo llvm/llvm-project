@@ -93,7 +93,8 @@ class SourceCoverageViewText : public SourceCoverageView {
 
   void renderTitle(raw_ostream &OS, StringRef Title) override;
 
-  void renderTableHeader(raw_ostream &OS, unsigned IndentLevel) override;
+  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
+                         unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewText(StringRef SourceName, const MemoryBuffer &File,

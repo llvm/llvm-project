@@ -139,9 +139,7 @@ Stmt* ParentMap::getParent(Stmt* S) const {
 }
 
 Stmt *ParentMap::getParentIgnoreParens(Stmt *S) const {
-  do {
-    S = getParent(S);
-  } while (isa_and_nonnull<ParenExpr>(S));
+  do { S = getParent(S); } while (S && isa<ParenExpr>(S));
   return S;
 }
 
@@ -157,8 +155,7 @@ Stmt *ParentMap::getParentIgnoreParenCasts(Stmt *S) const {
 Stmt *ParentMap::getParentIgnoreParenImpCasts(Stmt *S) const {
   do {
     S = getParent(S);
-  } while (isa_and_nonnull<Expr>(S) &&
-           cast<Expr>(S)->IgnoreParenImpCasts() != S);
+  } while (S && isa<Expr>(S) && cast<Expr>(S)->IgnoreParenImpCasts() != S);
 
   return S;
 }

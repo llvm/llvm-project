@@ -203,6 +203,10 @@ private:
   /// were adjusted.
   bool layoutOnce(MCAsmLayout &Layout);
 
+  /// Perform one layout iteration of the given section and return true
+  /// if any offsets were adjusted.
+  bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
+
   /// Perform relaxation on a single fragment - returns true if the fragment
   /// changes as a result of relaxation.
   bool relaxFragment(MCAsmLayout &Layout, MCFragment &F);
