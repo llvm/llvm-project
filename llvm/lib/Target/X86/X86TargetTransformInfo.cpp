@@ -177,11 +177,15 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 }
 
 bool X86TTIImpl::hasConditionalFaultingLoadStoreForType(Type *Ty) const {
+  if (!ST->hasCF())
+    return false;
+  if (!Ty)
+    return true;
   // Conditional faulting is supported by CFCMOV, which only accepts
   // 16/32/64-bit operands.
-  // NOTE: Though VMOVSS/VMOVSD suppresses memory fault with zero mask, it has
-  // performance penalty.
-  if (!ST->hasCF() || !Ty || !Ty->isIntegerTy())
+  // TODO: Support f32/f64 with VMOVSS/VMOVSD with zero mask when it's
+  // profitable.
+  if (!Ty->isIntegerTy())
     return false;
   switch (cast<IntegerType>(Ty)->getBitWidth()) {
   default:

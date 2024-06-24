@@ -3029,7 +3029,8 @@ static bool isLoadFromAlloca(const Instruction &I) {
 ///   are handled first.
 bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     BasicBlock *BB) {
-  if (!HoistLoadsStoresWithCondFaulting)
+  if (!HoistLoadsStoresWithCondFaulting ||
+      !TTI.hasConditionalFaultingLoadStoreForType())
     return false;
 
   auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
