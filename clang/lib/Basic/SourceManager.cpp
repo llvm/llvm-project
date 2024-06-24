@@ -49,9 +49,10 @@ using llvm::MemoryBuffer;
 
 #define DEBUG_TYPE "source-manager"
 
-STATISTIC(
-    MaxUsedSLocBytes,
-    "Maximum number of bytes used by source locations (both loaded and local)");
+// Reaching a limit of 2^31 results in a hard error. This metric allows to track
+// if particular invocation of the compiler is close to it.
+STATISTIC(MaxUsedSLocBytes, "Maximum number of bytes used by source locations "
+                            "(both loaded and local).");
 
 //===----------------------------------------------------------------------===//
 // SourceManager Helper Classes
