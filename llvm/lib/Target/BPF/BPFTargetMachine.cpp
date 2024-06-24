@@ -113,7 +113,8 @@ static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
                                             "BPFPreserveStaticOffsetPass");
 }
 
-void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void BPFTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
 #define GET_PASS_REGISTRY "BPFPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 

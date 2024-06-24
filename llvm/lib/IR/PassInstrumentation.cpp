@@ -24,11 +24,6 @@ void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
 
 StringRef
 PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
-  if (!ClassToPassNameCallbacks.empty()) {
-    for (auto &Fn : ClassToPassNameCallbacks)
-      Fn();
-    ClassToPassNameCallbacks.clear();
-  }
   return ClassToPassName[ClassName];
 }
 

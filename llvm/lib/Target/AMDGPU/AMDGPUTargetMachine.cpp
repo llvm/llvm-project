@@ -658,7 +658,8 @@ Error AMDGPUTargetMachine::buildCodeGenPipeline(
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
-void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
