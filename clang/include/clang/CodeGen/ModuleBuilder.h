@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
   class Constant;
@@ -28,7 +29,7 @@ namespace llvm {
 }
 
 // Prefix of the name of the artificial inline frame.
-#define CLANG_TRAP_PREFIX "__clang_trap_msg"
+inline constexpr llvm::StringRef CLANG_TRAP_PREFIX = "__clang_trap_msg";
 
 namespace clang {
   class CodeGenOptions;
