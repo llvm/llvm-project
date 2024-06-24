@@ -1,0 +1,29 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/ppt",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "line": 12,
+                    "column": 10
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "line": 19,
+                    "column": 5
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "line": 9,
+                    "column": 40
+                }
+            ]
+        }
+    ]
+}

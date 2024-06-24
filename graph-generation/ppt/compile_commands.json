@@ -1,0 +1,7 @@
+[
+    {
+        "command": "cc -c main.c",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/ppt",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c"
+    }
+]
