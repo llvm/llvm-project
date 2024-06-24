@@ -7428,9 +7428,13 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
   LLT SrcTy = MRI.getType(Src);
   const auto &TLI = getTargetLowering();
 
+  const MachineFunction &MF = *MO.getParent()->getMF();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+
   // Convert zext nneg to sext if sext is the preferred form for the target.
   if (isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}}) &&
-      TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy))) {
+      TLI.isSExtCheaperThanZExt(SrcTy, DstTy, DL, Ctx)) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
     return true;
   }
@@ -7507,8 +7511,12 @@ bool CombinerHelper::matchAnyextInteger(const MachineInstr &MI,
   if (!isConstantLegalOrBeforeLegalizer(DstTy))
     return false;
 
+  const MachineFunction &MF = *MI.getMF();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto &DL = MF.getDataLayout();
+
   // Some targets like RISCV prefer to sign extend some types.
-  if (TLI.isSExtCheaperThanZExt(getMVTForLLT(SrcTy), getMVTForLLT(DstTy)))
+  if (TLI.isSExtCheaperThanZExt(SrcTy, DstTy, DL, Ctx))
     MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
   else
     MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
