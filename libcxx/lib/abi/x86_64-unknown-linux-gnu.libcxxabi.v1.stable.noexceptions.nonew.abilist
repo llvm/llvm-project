@@ -18,7 +18,8 @@
 {'is_defined': False, 'name': '_ZdaPv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdaPvSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdlPv', 'type': 'FUNC'}
-{'is_defined': False, 'name': '_ZdlPvSt11align_val_t', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZdlPvm', 'type': 'FUNC'}
+{'is_defined': False, 'name': '_ZdlPvmSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_Znam', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZnamSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_Znwm', 'type': 'FUNC'}
