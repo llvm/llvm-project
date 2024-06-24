@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=loop-vectorize -mtriple=s390x-linux-gnu -vectorizer-min-trip-count=8 < %s | FileCheck %s
 
 define i32 @main(i32 %arg, ptr nocapture readnone %arg1) #0 {
-;CHECK: vector.body:
+; CHECK-NOT: vector.body:
 entry:
   %0 = alloca i8, align 1
   br label %loop

@@ -68,6 +68,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::PtrAdd:
     // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
+    return Type::getVoidTy(Ctx);
   default:
     break;
   }
@@ -248,8 +251,9 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
-          .Case<VPPredInstPHIRecipe, VPWidenPHIRecipe, VPScalarIVStepsRecipe,
-                VPWidenGEPRecipe>([this](const VPRecipeBase *R) {
+          .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
+                VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
+                VPWidenCanonicalIVRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
