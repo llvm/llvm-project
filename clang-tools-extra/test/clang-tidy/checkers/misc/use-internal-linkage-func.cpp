@@ -1,4 +1,6 @@
 // RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
+// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- \
+// RUN:   -config="{CheckOptions: {misc-use-internal-linkage.FixMode: 'UseStatic'}}"  -- -I%S/Inputs/use-internal-linkage
 
 #include "func.h"
 

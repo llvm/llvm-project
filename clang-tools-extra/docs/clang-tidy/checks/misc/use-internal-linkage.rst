@@ -25,3 +25,16 @@ Example:
   }
   // already declared as extern
   extern int v2;
+
+Options
+-------
+
+.. option:: FixMode
+
+  Selects the fix mode when fixing automatically.
+
+  ``None``
+    Don't fix automatically.
+
+  ``UseStatic``
+    Add ``static`` for internal linkage variable and function.

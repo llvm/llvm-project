@@ -18,6 +18,26 @@
 
 using namespace clang::ast_matchers;
 
+namespace clang::tidy {
+
+template <>
+struct OptionEnumMapping<misc::UseInternalLinkageCheck::FixModeKind> {
+  static llvm::ArrayRef<
+      std::pair<misc::UseInternalLinkageCheck::FixModeKind, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<misc::UseInternalLinkageCheck::FixModeKind,
+                               StringRef>
+        Mapping[] = {
+            {misc::UseInternalLinkageCheck::FixModeKind::None, "None"},
+            {misc::UseInternalLinkageCheck::FixModeKind::UseStatic,
+             "UseStatic"},
+        };
+    return {Mapping};
+  }
+};
+
+} // namespace clang::tidy
+
 namespace clang::tidy::misc {
 
 namespace {
@@ -57,6 +77,16 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
 
 } // namespace
 
+UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
+                                                 ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      HeaderFileExtensions(Context->getHeaderFileExtensions()),
+      FixMode(Options.get("FixMode", FixModeKind::UseStatic)) {}
+
+void UseInternalLinkageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "FixMode", FixMode);
+}
+
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
   auto Common =
       allOf(isFirstDecl(), isAllRedeclsInMainFile(HeaderFileExtensions),
@@ -86,7 +116,8 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     SourceLocation FixLoc = FD->getTypeSpecStartLoc();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
-    DB << FixItHint::CreateInsertion(FixLoc, "static ");
+    if (FixMode == FixModeKind::UseStatic)
+      DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var")) {
@@ -94,7 +125,8 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     SourceLocation FixLoc = VD->getTypeSpecStartLoc();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
-    DB << FixItHint::CreateInsertion(FixLoc, "static ");
+    if (FixMode == FixModeKind::UseStatic)
+      DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   llvm_unreachable("");
