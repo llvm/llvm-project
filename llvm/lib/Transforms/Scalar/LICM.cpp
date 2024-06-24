@@ -144,6 +144,11 @@ cl::opt<unsigned> IntAssociationUpperLimit(
         "Set upper limit for the number of transformations performed "
         "during a single round of hoisting the reassociated expressions."));
 
+static cl::opt<bool> ForceLicmConditionalAccessPromotion(
+    "licm-conditional-access-promotion", cl::Hidden, cl::init(true),
+    cl::desc("Enable promotion of conditional accesses of loop-invariant"
+             " locations"));
+
 // Experimental option to allow imprecision in LICM in pathological cases, in
 // exchange for faster compile. This is to be removed if MemorySSA starts to
 // address the same issue. LICM calls MemorySSAWalker's
@@ -227,15 +232,18 @@ struct LoopInvariantCodeMotion {
 
   LoopInvariantCodeMotion(unsigned LicmMssaOptCap,
                           unsigned LicmMssaNoAccForPromotionCap,
-                          bool LicmAllowSpeculation)
+                          bool LicmAllowSpeculation,
+                          bool LicmConditionalAccessPromotion)
       : LicmMssaOptCap(LicmMssaOptCap),
         LicmMssaNoAccForPromotionCap(LicmMssaNoAccForPromotionCap),
-        LicmAllowSpeculation(LicmAllowSpeculation) {}
+        LicmAllowSpeculation(LicmAllowSpeculation),
+        LicmConditionalAccessPromotion(LicmConditionalAccessPromotion) {}
 
 private:
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
   bool LicmAllowSpeculation;
+  bool LicmConditionalAccessPromotion;
 };
 
 struct LegacyLICMPass : public LoopPass {
@@ -243,9 +251,11 @@ struct LegacyLICMPass : public LoopPass {
   LegacyLICMPass(
       unsigned LicmMssaOptCap = SetLicmMssaOptCap,
       unsigned LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap,
-      bool LicmAllowSpeculation = true)
-      : LoopPass(ID), LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                           LicmAllowSpeculation) {
+      bool LicmAllowSpeculation = true,
+      bool LicmConditionalAccessPromotion = false)
+      : LoopPass(ID),
+        LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap, LicmAllowSpeculation,
+             LicmConditionalAccessPromotion) {
     initializeLegacyLICMPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -308,7 +318,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
   LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
-                               Opts.AllowSpeculation);
+                               Opts.AllowSpeculation,
+                               Opts.ConditionalAccessPromotion);
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.AC, &AR.TLI, &AR.TTI,
                       &AR.SE, AR.MSSA, &ORE))
     return PreservedAnalyses::all();
@@ -342,7 +353,8 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   OptimizationRemarkEmitter ORE(LN.getParent());
 
   LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
-                               Opts.AllowSpeculation);
+                               Opts.AllowSpeculation,
+                               Opts.ConditionalAccessPromotion);
 
   Loop &OutermostLoop = LN.getOutermostLoop();
   bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, &AR.AC,
@@ -517,7 +529,8 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
               DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
-              LicmAllowSpeculation, HasReadsOutsideSet);
+              LicmAllowSpeculation, HasReadsOutsideSet,
+              LicmConditionalAccessPromotion);
         }
         Promoted |= LocalPromoted;
       } while (LocalPromoted);
@@ -1850,15 +1863,35 @@ class LoopPromoter : public LoadAndStorePromoter {
     return PN;
   }
 
-  void promoteConditionalAccess(BasicBlock *ExitBlock, Value *LiveInValue,
-                                Value *PtrToExitBB,
-                                BasicBlock::iterator InsertPos) {
+  void updateMemorySSA(MemoryAccess *&MSSAInsertPoint, MemorySSAUpdater &MSSAU,
+                       Instruction *MemAccInstr) {
+    MemoryAccess *NewMemAcc;
+    if (!MSSAInsertPoint) {
+      NewMemAcc = MSSAU.createMemoryAccessInBB(
+          MemAccInstr, nullptr, MemAccInstr->getParent(), MemorySSA::Beginning);
+    } else {
+      NewMemAcc =
+          MSSAU.createMemoryAccessAfter(MemAccInstr, nullptr, MSSAInsertPoint);
+    }
+    MSSAInsertPoint = NewMemAcc;
+    MSSAU.insertDef(cast<MemoryDef>(NewMemAcc), /*RenameUses*/ true);
+    // FIXME: true for safety, false may still be correct.
+  }
+
+  Instruction *promoteConditionalAccess(BasicBlock *ExitBlock,
+                                        Value *LiveInValue, Value *PtrToExitBB,
+                                        BasicBlock::iterator InsertPos,
+                                        const AAMDNodes &AATags) {
     Value *FlagValue = FlagSSAUpdater.GetValueInMiddleOfBlock(ExitBlock);
     IRBuilder<> Builder(&*InsertPos);
     Type *DataType = LiveInValue->getType();
     Value *Ptr = Builder.CreatePointerCast(PtrToExitBB,
                                            PointerType::getUnqual(DataType));
-    Builder.CreateConditionalStore(LiveInValue, Ptr, FlagValue);
+    auto CondStore =
+        Builder.CreateConditionalStore(LiveInValue, Ptr, FlagValue);
+
+    CondStore->setAAMetadata(AATags);
+    return CondStore;
   }
 
 public:
@@ -1892,10 +1925,14 @@ public:
       LiveInValue = maybeInsertLCSSAPHI(LiveInValue, ExitBlock);
       Value *Ptr = maybeInsertLCSSAPHI(SomePtr, ExitBlock);
       BasicBlock::iterator InsertPos = LoopInsertPts[i];
+
       if (ConditionalAccessShouldBePromoted) {
-        promoteConditionalAccess(ExitBlock, LiveInValue, Ptr, InsertPos);
+        auto CondStore = promoteConditionalAccess(ExitBlock, LiveInValue, Ptr,
+                                                  InsertPos, AATags);
+        updateMemorySSA(MSSAInsertPts[i], MSSAU, CondStore);
         continue;
       }
+
       StoreInst *NewSI = new StoreInst(LiveInValue, Ptr, InsertPos);
       if (UnorderedAtomic)
         NewSI->setOrdering(AtomicOrdering::Unordered);
@@ -1919,18 +1956,7 @@ public:
       if (AATags)
         NewSI->setAAMetadata(AATags);
 
-      MemoryAccess *MSSAInsertPoint = MSSAInsertPts[i];
-      MemoryAccess *NewMemAcc;
-      if (!MSSAInsertPoint) {
-        NewMemAcc = MSSAU.createMemoryAccessInBB(
-            NewSI, nullptr, NewSI->getParent(), MemorySSA::Beginning);
-      } else {
-        NewMemAcc =
-            MSSAU.createMemoryAccessAfter(NewSI, nullptr, MSSAInsertPoint);
-      }
-      MSSAInsertPts[i] = NewMemAcc;
-      MSSAU.insertDef(cast<MemoryDef>(NewMemAcc), true);
-      // FIXME: true for safety, false may still be correct.
+      updateMemorySSA(MSSAInsertPts[i], MSSAU, NewSI);
     }
   }
 
@@ -1999,7 +2025,7 @@ bool llvm::promoteLoopAccessesToScalars(
     const TargetLibraryInfo *TLI, TargetTransformInfo *TTI, Loop *CurLoop,
     MemorySSAUpdater &MSSAU, ICFLoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE, bool AllowSpeculation,
-    bool HasReadsOutsideSet) {
+    bool HasReadsOutsideSet, bool ConditionalAccessPromotion) {
   // Verify inputs.
   assert(LI != nullptr && DT != nullptr && CurLoop != nullptr &&
          SafetyInfo != nullptr &&
@@ -2011,6 +2037,9 @@ bool llvm::promoteLoopAccessesToScalars(
       dbgs() << "  " << *Ptr << "\n";
   });
   ++NumPromotionCandidates;
+
+  if (ForceLicmConditionalAccessPromotion.getNumOccurrences() != 0)
+    ConditionalAccessPromotion = ForceLicmConditionalAccessPromotion.getValue();
 
   Value *SomePtr = *PointerMustAliases.begin();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
@@ -2152,7 +2181,7 @@ bool llvm::promoteLoopAccessesToScalars(
           if (StoreSafety == StoreSafetyUnknown)
             StoreSafety = StoreSafe;
           Alignment = std::max(Alignment, InstAlignment);
-        } else if (SetLicmConditionalAccessPromotion &&
+        } else if (ConditionalAccessPromotion &&
                    (!SawConditionalLIStore || (InstAlignment > Alignment))) {
           SawConditionalLIStore = true;
           if (PointerOperandName.empty())
@@ -2239,7 +2268,7 @@ bool llvm::promoteLoopAccessesToScalars(
     return false;
 
   const bool PromoteConditionalAccesses =
-      SetLicmConditionalAccessPromotion && SawConditionalLIStore;
+      ConditionalAccessPromotion && SawConditionalLIStore;
   bool ConditionalAccessShouldBePromoted = false;
   SmallVector<PHINode *, 16> FlagPHIs;
   SSAUpdater FlagSSAUpdater(&FlagPHIs);

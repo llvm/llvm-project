@@ -184,9 +184,9 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
-static cl::opt<bool> EnableGlobalAnalyses(
-    "enable-global-analyses", cl::init(true), cl::Hidden,
-    cl::desc("Enable inter-procedural analyses"));
+static cl::opt<bool>
+    EnableGlobalAnalyses("enable-global-analyses", cl::init(true), cl::Hidden,
+                         cl::desc("Enable inter-procedural analyses"));
 
 static cl::opt<bool>
     RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
@@ -455,13 +455,16 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   // after loop rotation.
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                        /*AllowSpeculation=*/false));
+                        /*AllowSpeculation=*/false,
+                        Level == OptimizationLevel::O3));
 
   LPM1.addPass(LoopRotatePass(/* Disable header duplication */ true,
                               isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
-  LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                        /*AllowSpeculation=*/true));
+  LPM1.addPass(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+               /*AllowSpeculation=*/true,
+               /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3));
   LPM1.addPass(SimpleLoopUnswitchPass());
   if (EnableLoopFlatten)
     LPM1.addPass(LoopFlattenPass());
@@ -636,15 +639,18 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // after loop rotation.
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                        /*AllowSpeculation=*/false));
+                        /*AllowSpeculation=*/false,
+                        /*ConditionalAccessPromotion*/ false));
 
   // Disable header duplication in loop rotation at -Oz.
   LPM1.addPass(LoopRotatePass(EnableLoopHeaderDuplication ||
                                   Level != OptimizationLevel::Oz,
                               isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
-  LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                        /*AllowSpeculation=*/true));
+  LPM1.addPass(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+               /*AllowSpeculation=*/true,
+               /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3));
   LPM1.addPass(
       SimpleLoopUnswitchPass(/* NonTrivial */ Level == OptimizationLevel::O3));
   if (EnableLoopFlatten)
@@ -743,7 +749,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-               /*AllowSpeculation=*/true),
+               /*AllowSpeculation=*/true,
+               /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3),
       /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
   FPM.addPass(LowerConditionalStoreIntrinsicPass());
   FPM.addPass(CoroElidePass());
@@ -1270,7 +1277,9 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     ExtraPasses.addPass(InstCombinePass());
     LoopPassManager LPM;
     LPM.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                         /*AllowSpeculation=*/true));
+                         /*AllowSpeculation=*/true,
+                         /*ConditionalAccessPromotion*/ Level ==
+                             OptimizationLevel::O3));
     LPM.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                        OptimizationLevel::O3));
     ExtraPasses.addPass(
@@ -1354,7 +1363,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   //      unroll pass when IsFullLTO=false.
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-               /*AllowSpeculation=*/true),
+               /*AllowSpeculation=*/true,
+               /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3),
       /*UseMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
   FPM.addPass(LowerConditionalStoreIntrinsicPass());
 
@@ -1435,7 +1445,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // LoopVersioningLICM pass might increase new LICM opportunities.
     OptimizePM.addPass(createFunctionToLoopPassAdaptor(
         LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-                 /*AllowSpeculation=*/true),
+                 /*AllowSpeculation=*/true,
+                 /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3),
         /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
   }
 
@@ -1951,7 +1962,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   FunctionPassManager MainFPM;
   MainFPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
-               /*AllowSpeculation=*/true),
+               /*AllowSpeculation=*/true,
+               /*ConditionalAccessPromotion*/ Level == OptimizationLevel::O3),
       /*USeMemorySSA=*/true, /*UseBlockFrequencyInfo=*/false));
   MainFPM.addPass(LowerConditionalStoreIntrinsicPass());
 

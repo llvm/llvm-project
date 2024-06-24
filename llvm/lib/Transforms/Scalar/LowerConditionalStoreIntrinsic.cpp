@@ -46,7 +46,7 @@ static void lowerCondStoreIntr(Instruction &Instr) {
   auto *Val = CallInstr->getOperand(0);
   auto *Ptr = CallInstr->getOperand(1);
   auto Alignment = CallInstr->getParamAlign(1);
-  auto *Cond = CallInstr->getOperand(3);
+  auto *Cond = CallInstr->getOperand(2);
 
   Instruction *ThenBlock =
       SplitBlockAndInsertIfThen(Cond, CallInstr, /*Unreachable*/ false);
@@ -63,7 +63,7 @@ static bool lowerCondStoreIntrinsicForFunc(Function &F) {
   for (BasicBlock &BB : F)
     for (Instruction &Instr : llvm::make_early_inc_range(llvm::reverse(BB)))
       if (isCondStoreIntr(Instr)) {
-        lowerCondStoreIntr(Instr, BB);
+        lowerCondStoreIntr(Instr);
         Changed = true;
       }
   return Changed;
