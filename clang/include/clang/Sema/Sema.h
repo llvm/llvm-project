@@ -3786,8 +3786,7 @@ public:
                                 StringRef Name);
 
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                              StringRef &Str, bool &isDefault);
+  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
   bool checkTargetClonesAttrString(
       SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
