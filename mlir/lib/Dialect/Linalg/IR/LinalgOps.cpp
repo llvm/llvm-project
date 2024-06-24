@@ -2740,22 +2740,17 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
 
 LogicalResult WinogradFilterTransformOp::verify() {
   auto filterType = cast<ShapedType>(getFilter().getType());
-  auto outputType = cast<ShapedType>(getOutput().getType());
-  auto filterElemType = filterType.getElementType();
-  auto outputElemType = outputType.getElementType();
-  if (filterElemType != outputElemType) {
-    return emitOpError() << "expected element type of input " << filterElemType
-                         << " to match element type of output "
-                         << outputElemType;
-  }
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  int64_t filterH = filterShape[1];
+  int64_t filterW = filterShape[2];
+  int64_t r = getR();
 
-  unsigned filterRank = filterType.getRank();
-  if (filterRank != 4)
-    return emitOpError() << "expected rank of input is 4";
-
-  unsigned outputRank = outputType.getRank();
-  if (outputRank != 6)
-    return emitOpError() << "expected rank of output is 6";
+  if (filterH != r && filterH != 1)
+    return failure();
+  if (filterW != r && filterW != 1)
+    return failure();
+  if (filterH == 1 && filterW == 1)
+    return failure();
 
   return success();
 }
@@ -2766,22 +2761,42 @@ LogicalResult WinogradFilterTransformOp::verify() {
 
 LogicalResult WinogradInputTransformOp::verify() {
   auto inputType = cast<ShapedType>(getInput().getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputH = inputShape[1];
+  int64_t inputW = inputShape[2];
   auto outputType = cast<ShapedType>(getOutput().getType());
-  auto inputElemType = inputType.getElementType();
-  auto outputElemType = outputType.getElementType();
-  if (inputElemType != outputElemType) {
-    return emitOpError() << "expected element type of input " << inputElemType
-                         << " to match element type of output "
-                         << outputElemType;
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputTileH = outputShape[0];
+  int64_t outputTileW = outputShape[1];
+  int64_t outputH = outputShape[2];
+  int64_t outputW = outputShape[3];
+  int m = getM();
+  int r = getR();
+  bool leftTransform = inputH != 1;
+  bool rightTransform = inputW != 1;
+
+  if (!leftTransform && !rightTransform)
+    return failure();
+
+  if (leftTransform) {
+    int64_t tileH = (inputH - (r - 1)) / m;
+    if (inputH != tileH * m + (r - 1))
+      return failure();
+    if (tileH != outputTileH)
+      return failure();
+    if (outputH != m + r - 1)
+      return failure();
   }
 
-  unsigned inputRank = inputType.getRank();
-  if (inputRank != 4)
-    return emitOpError() << "expected rank of input is 4";
-
-  unsigned outputRank = outputType.getRank();
-  if (outputRank != 6)
-    return emitOpError() << "expected rank of output is 6";
+  if (rightTransform) {
+    int64_t tileW = (inputW - (r - 1)) / m;
+    if (inputW != tileW * m + (r - 1))
+      return failure();
+    if (tileW != outputTileW)
+      return failure();
+    if (outputW != m + r - 1)
+      return failure();
+  }
 
   return success();
 }
@@ -2792,22 +2807,36 @@ LogicalResult WinogradInputTransformOp::verify() {
 
 LogicalResult WinogradOutputTransformOp::verify() {
   auto valueType = cast<ShapedType>(getValue().getType());
+  ArrayRef<int64_t> valueShape = valueType.getShape();
+  int64_t valueTileH = valueShape[0];
+  int64_t valueTileW = valueShape[1];
+  int64_t valueH = valueShape[2];
+  int64_t valueW = valueShape[3];
   auto outputType = cast<ShapedType>(getOutput().getType());
-  auto valueElemType = valueType.getElementType();
-  auto outputElemType = outputType.getElementType();
-  if (valueElemType != outputElemType) {
-    return emitOpError() << "expected element type of value " << valueElemType
-                         << " to match element type of output "
-                         << outputElemType;
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputH = outputShape[1];
+  int64_t outputW = outputShape[2];
+  int m = getM();
+  int r = getR();
+  bool leftTransform = valueH != 1;
+  bool rightTransform = valueW != 1;
+
+  if (!leftTransform && !rightTransform)
+    return failure();
+
+  if (leftTransform) {
+    if (valueH != m + r - 1)
+      return failure();
+    if (outputH != m * valueTileH)
+      return failure();
   }
 
-  unsigned valueRank = valueType.getRank();
-  if (valueRank != 6)
-    return emitOpError() << "expected rank of input is 6";
-
-  unsigned outputRank = outputType.getRank();
-  if (outputRank != 4)
-    return emitOpError() << "expected rank of output is 4";
+  if (rightTransform) {
+    if (valueW != m + r - 1)
+      return failure();
+    if (outputW != m * valueTileW)
+      return failure();
+  }
 
   return success();
 }

@@ -154,7 +154,8 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform"> {
+def Linalg_WinogradFilterTransformOp :
+    Linalg_Op<"winograd_filter_transform", [AllElementTypesMatch<["filter", "output"]>]> {
   let summary = "Winograd filter transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -174,13 +175,13 @@ def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform"> {
     transformation (G x g x G^T) in the Winograd Conv2D algorithm.
   }];
 
-  let arguments = (ins AnyRankedTensor:$filter,
-                       AnyRankedTensor:$output,
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$filter,
+                       TensorRankOf<[AnyType], [6]>:$output,
                        I64Attr:$m,
                        I64Attr:$r
   );
 
-  let results = (outs AnyRankedTensor:$result);
+  let results = (outs TensorRankOf<[AnyType], [6]>:$result);
   let assemblyFormat = [{
     attr-dict
     `m` `(` $m `)`
@@ -192,7 +193,8 @@ def Linalg_WinogradFilterTransformOp : Linalg_Op<"winograd_filter_transform"> {
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform"> {
+def Linalg_WinogradInputTransformOp :
+    Linalg_Op<"winograd_input_transform", [AllElementTypesMatch<["input", "output"]>]> {
   let summary = "Winograd input transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -212,13 +214,13 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform"> {
     transformation (B^T x d x B) in the Winograd Conv2D algorithm.
   }];
 
-  let arguments = (ins AnyRankedTensor:$input,
-                       AnyRankedTensor:$output,
+  let arguments = (ins TensorRankOf<[AnyType], [4]>:$input,
+                       TensorRankOf<[AnyType], [6]>:$output,
                        I64Attr:$m,
                        I64Attr:$r
   );
 
-  let results = (outs AnyRankedTensor:$result);
+  let results = (outs TensorRankOf<[AnyType], [6]>:$result);
   let assemblyFormat = [{
     attr-dict
     `m` `(` $m `)`
@@ -230,7 +232,8 @@ def Linalg_WinogradInputTransformOp : Linalg_Op<"winograd_input_transform"> {
   let hasVerifier = 1;
 }
 
-def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform"> {
+def Linalg_WinogradOutputTransformOp :
+    Linalg_Op<"winograd_output_transform", [AllElementTypesMatch<["value", "output"]>]> {
   let summary = "Winograd output transform operator";
   let description = [{
     Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
@@ -250,13 +253,13 @@ def Linalg_WinogradOutputTransformOp : Linalg_Op<"winograd_output_transform"> {
     transformation (A^T x y x A) in the Winograd Conv2D algorithm.
   }];
 
-  let arguments = (ins AnyRankedTensor:$value,
-                       AnyRankedTensor:$output,
+  let arguments = (ins TensorRankOf<[AnyType], [6]>:$value,
+                       TensorRankOf<[AnyType], [4]>:$output,
                        I64Attr:$m,
                        I64Attr:$r
   );
 
-  let results = (outs AnyRankedTensor:$result);
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
   let assemblyFormat = [{
     attr-dict
     `m` `(` $m `)`
