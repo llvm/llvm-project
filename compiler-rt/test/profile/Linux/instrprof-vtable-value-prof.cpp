@@ -12,19 +12,19 @@
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-test.profraw | FileCheck %s --check-prefixes=COMMON,RAW
 
 // Generate indexed profile from raw profile and show the data.
-// RUN: llvm-profdata merge %t-test.profraw -o %t-test.profdata
+// RUN: llvm-profdata merge --keep-vtable-symbols %t-test.profraw -o %t-test.profdata
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-test.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // Generate text profile from raw and indexed profiles respectively and show the data.
-// RUN: llvm-profdata merge --text %t-test.profraw -o %t-raw.proftext
+// RUN: llvm-profdata merge --keep-vtable-symbols --text %t-test.profraw -o %t-raw.proftext
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t-raw.proftext | FileCheck %s --check-prefix=ICTEXT
-// RUN: llvm-profdata merge --text %t-test.profdata -o %t-indexed.proftext
+// RUN: llvm-profdata merge --keep-vtable-symbols --text %t-test.profdata -o %t-indexed.proftext
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
 
 // Generate indexed profile from text profiles and show the data
-// RUN: llvm-profdata merge --binary %t-raw.proftext -o %t-text.profraw
+// RUN: llvm-profdata merge --keep-vtable-symbols --binary %t-raw.proftext -o %t-text.profraw
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-text.profraw | FileCheck %s --check-prefixes=COMMON,INDEXED
-// RUN: llvm-profdata merge --binary %t-indexed.proftext -o %t-text.profdata
+// RUN: llvm-profdata merge --keep-vtable-symbols --binary %t-indexed.proftext -o %t-text.profdata
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t-text.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // COMMON: Counters:
