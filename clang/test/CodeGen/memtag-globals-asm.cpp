@@ -51,11 +51,11 @@
 // CHECK-A: .memtag global_int
 // CHECK-A: .globl global_int
 // CHECK-A: .p2align 4, 0x0
-// CHECK-A: .size global_int, 16
+// CHECK-A: .size global_int, 4
 int global_int;
 // CHECK-B: .memtag _ZL9local_int
 // CHECK-B: .local _ZL9local_int
-// CHECK-B: .comm _ZL9local_int,16,16
+// CHECK-B: .comm _ZL9local_int,4,16
 static int local_int;
 
 // CHECK-C: .memtag _ZL12local_buffer
@@ -66,14 +66,14 @@ static char local_buffer[16];
 // CHECK-D: .p2align 4, 0x0
 // CHECK-D: _ZL22local_buffer_local_end:
 // CHECK-D: .xword _ZL12local_buffer+16
-// CHECK-D: .size _ZL22local_buffer_local_end, 16
+// CHECK-D: .size _ZL22local_buffer_local_end, 8
 static char* local_buffer_local_end = &local_buffer[16];
 // CHECK-E: .memtag local_buffer_global_end
 // CHECK-E: .globl local_buffer_global_end
 // CHECK-E  .p2align 4, 0x0
 // CHECK-E: local_buffer_global_end:
 // CHECK-E: .xword _ZL12local_buffer+16
-// CHECK-E: .size local_buffer_global_end, 16
+// CHECK-E: .size local_buffer_global_end, 8
 char* local_buffer_global_end = &local_buffer[16];
 
 // CHECK-F: .memtag global_buffer
@@ -85,13 +85,13 @@ char global_buffer[16];
 // CHECK-G: .p2align 4, 0x0
 // CHECK-G: _ZL23global_buffer_local_end:
 // CHECK-G: .xword global_buffer+16
-// CHECK-G: .size _ZL23global_buffer_local_end, 16
+// CHECK-G: .size _ZL23global_buffer_local_end, 8
 static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .memtag global_buffer_global_end
 // CHECK-H: .p2align 4, 0x0
 // CHECK-H: global_buffer_global_end:
 // CHECK-H: .xword global_buffer+16
-// CHECK-H: .size global_buffer_global_end, 16
+// CHECK-H: .size global_buffer_global_end, 8
 char* global_buffer_global_end = &global_buffer[16];
 
 class MyClass {
@@ -104,7 +104,7 @@ class MyClass {
 // CHECK-I: .memtag _ZN7MyClass12my_class_intE
 // CHECK-I: .globl _ZN7MyClass12my_class_intE
 // CHECK-I: .p2align 4, 0x0
-// CHECK-I: .size _ZN7MyClass12my_class_intE, 16
+// CHECK-I: .size _ZN7MyClass12my_class_intE, 4
 int MyClass::my_class_int;
 // CHECK-NOT: .memtag _ZN7MyClass18my_class_const_intE
 const int MyClass::my_class_const_int = 1;
@@ -112,28 +112,28 @@ const int MyClass::my_class_const_int = 1;
 // CHECK-J: .memtag global_my_class
 // CHECK-J: .globl global_my_class
 // CHECK-J: .p2align 4, 0x0
-// CHECK-J: .size global_my_class, 16
+// CHECK-J: .size global_my_class, 8
 MyClass global_my_class;
 // CHECK-K: .memtag _ZL14local_my_class
 // CHECK-K: .p2align 4, 0x0
-// CHECK-K: .size _ZL14local_my_class, 16
+// CHECK-K: .size _ZL14local_my_class, 8
 static MyClass local_my_class;
 
 // CHECK-NOT: .memtag _ZL18local_const_string
 static const char local_const_string[] = "this is a local string";
 // CHECK-L: .memtag _ZL12local_string
 // CHECK-L: .p2align 4, 0x0
-// CHECK-L: .size _ZL12local_string, 32
+// CHECK-L: .size _ZL12local_string, 23
 static char local_string[] = "this is a local string";
 
 // CHECK-M: .memtag global_atomic_int
 // CHECK-M: .globl global_atomic_int
 // CHECK-M: .p2align 4, 0x0
-// CHECK-M: .size global_atomic_int, 16
+// CHECK-M: .size global_atomic_int, 4
 _Atomic(int) global_atomic_int;
 // CHECK-N: .memtag _ZL16local_atomic_int
 // CHECK-N: .local _ZL16local_atomic_int
-// CHECK-N: .comm _ZL16local_atomic_int,16,16
+// CHECK-N: .comm _ZL16local_atomic_int,4,16
 static _Atomic(int) local_atomic_int;
 
 union MyUnion {
@@ -144,11 +144,11 @@ union MyUnion {
 // CHECK-O: .memtag global_union
 // CHECK-O: .globl global_union
 // CHECK-O: .p2align 4, 0x0
-// CHECK-O: .size global_union, 16
+// CHECK-O: .size global_union, 4
 MyUnion global_union;
 // CHECK-P: .memtag _ZL11local_union
 // CHECK-P: .local _ZL11local_union
-// CHECK-P: .comm _ZL11local_union,16,16
+// CHECK-P: .comm _ZL11local_union,4,16
 static MyUnion local_union;
 
 // CHECK-NOT: .memtag {{.*}}global_tls
@@ -180,7 +180,7 @@ const void* export_pointers(int c) {
 int f(int x) {
   // CHECK-R: .memtag _ZZ1fiE12function_int
   // CHECK-R: .local _ZZ1fiE12function_int
-  // CHECK-R: .comm _ZZ1fiE12function_int,16,16
+  // CHECK-R: .comm _ZZ1fiE12function_int,4,16
   static int function_int = 0;
   /// Prevent non-const `f` from being promoted to a constant and inlined.
   function_int += x;
