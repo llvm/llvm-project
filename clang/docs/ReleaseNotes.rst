@@ -71,6 +71,11 @@ C++ Specific Potentially Breaking Changes
 
   To fix this, update libstdc++ to version 14.1.1 or greater.
 
+- Clang now emits errors when Thread Safety Analysis trylock attributes are
+  applied to functions or methods with incompatible return values, such as
+  constructors, destructors, and void-returning functions. This only affects the
+  ``TRY_ACQUIRE`` and ``TRY_ACQUIRE_SHARED`` attributes (and any synonyms).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -728,6 +733,11 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Clang's Thread Safety Analysis now evaluates trylock success arguments of enum
+  types rather than silently defaulting to false. This fixes a class of false
+  negatives where the analysis failed to detect unchecked access to guarded
+  data.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
