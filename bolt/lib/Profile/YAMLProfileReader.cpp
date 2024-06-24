@@ -458,7 +458,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         It->second.push_back(BF);
     }
 
-    size_t I = 0; size_t N = YamlBP.Functions.size();
     for (auto YamlBF : YamlBP.Functions) {
       if (YamlBF.Used)
         continue;
@@ -487,7 +486,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       }
 
       if (ClosestNameBF &&
-          MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
+          MinEditDistance <= opts::NameSimilarityFunctionMatchingThreshold) {
         matchProfileToFunction(YamlBF, *ClosestNameBF);
         ++MatchedWithNameSimilarity;
       }
