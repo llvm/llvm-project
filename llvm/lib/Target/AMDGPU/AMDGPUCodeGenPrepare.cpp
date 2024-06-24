@@ -1118,7 +1118,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (ReqdAccuracy < 1.0f)
     return false;
 
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
+  IRBuilder<> Builder(std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(DivFMF);
   Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 

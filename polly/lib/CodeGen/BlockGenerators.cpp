@@ -630,9 +630,9 @@ void BlockGenerator::generateConditionalExecution(
 
   // Put the client code into the conditional block and continue in the merge
   // block afterwards.
-  Builder.SetInsertPoint(ThenBlock, ThenBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(ThenBlock->getFirstInsertionPt());
   GenThenFunc();
-  Builder.SetInsertPoint(TailBlock, TailBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(TailBlock->getFirstInsertionPt());
 }
 
 static std::string getInstName(Value *Val) {
