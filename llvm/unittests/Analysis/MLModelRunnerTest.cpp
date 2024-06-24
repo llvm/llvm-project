@@ -81,8 +81,8 @@ public:
 static const char *M1Selector = "the model that subtracts";
 static const char *M2Selector = "the model that adds";
 
-static auto Hash1 = MD5::hash(arrayRefFromStringRef(M1Selector));
-static auto Hash2 = MD5::hash(arrayRefFromStringRef(M2Selector));
+static MD5::MD5Result Hash1 = MD5::hash(arrayRefFromStringRef(M1Selector));
+static MD5::MD5Result Hash2 = MD5::hash(arrayRefFromStringRef(M2Selector));
 class ComposedAOTModel final {
   DiffAOTModel M1;
   AdditionAOTModel M2;
