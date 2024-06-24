@@ -2061,7 +2061,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["zvfh"] = ExtMask & (1 << 30);       // RISCV_HWPROBE_EXT_ZVFH
   Features["zvfhmin"] = ExtMask & (1ULL << 31); // RISCV_HWPROBE_EXT_ZVFHMIN
   Features["zfa"] = ExtMask & (1ULL << 32);     // RISCV_HWPROBE_EXT_ZFA
-  Features["ztso"] = ExtMask & (1ULL << 33);    // RISCV_HWPROBE_EXT_ZTSO
+  // TODO: set ztso when it is no longer experimental.
+  // Features["ztso"] = ExtMask & (1ULL << 33);    // RISCV_HWPROBE_EXT_ZTSO
   Features["zacas"] = ExtMask & (1ULL << 34);   // RISCV_HWPROBE_EXT_ZACAS
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
