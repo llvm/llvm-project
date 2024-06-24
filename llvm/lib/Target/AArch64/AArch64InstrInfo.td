@@ -214,11 +214,11 @@ def HasSMEF8F32     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
-    : Predicate<"Subtarget->hasSVE() || Subtarget->isStreaming()">,
+    : Predicate<"Subtarget->hasSVE() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasSVE2orSME
-    : Predicate<"Subtarget->hasSVE2() || Subtarget->isStreaming()">,
+    : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
                 "sve2 or sme">;
 def HasSVE2orSME2
@@ -226,7 +226,7 @@ def HasSVE2orSME2
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
 def HasSVE2p1_or_HasSME
-    : Predicate<"Subtarget->hasSVE2p1() || Subtarget->isStreaming()">,
+    : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
 def HasSVE2p1_or_HasSME2
     : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
