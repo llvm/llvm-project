@@ -1473,7 +1473,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       VPRecipeBase *NewRecipe = nullptr;
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
-      if (!CurRecipe || CurRecipe->getNumDefinedValues() > 1)
+      if (!CurRecipe)
         continue;
 
       auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
@@ -1498,6 +1498,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
         assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
                "New recipe must define the same number of values as the "
                "original.");
+        assert(
+            NumDefVal <= 1 &&
+            "Only supports recipes with a single definition or without users.");
         NewRecipe->insertBefore(CurRecipe);
         if (NumDefVal > 0) {
           VPValue *CurVPV = CurRecipe->getVPSingleValue();
