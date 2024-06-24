@@ -1371,7 +1371,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   // sinking.
   auto InsertPt = BB->getFirstInsertionPt();
   if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(InsertPt);
+    Self.Builder.SetInsertPoint(&*BB, InsertPt);
     return Self.Builder.CreateNot(Cond);
   }
 
@@ -1417,7 +1417,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (Iv2Start != Identity)
     return nullptr;
 
-  Builder.SetInsertPoint(BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
