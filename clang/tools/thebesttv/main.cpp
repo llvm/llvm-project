@@ -648,6 +648,7 @@ void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
                 nextFid = locator.getFid(nextJsonLoc);
                 if (nextFid != -1)
                     break;
+                nextIt++;
             }
         }
 
