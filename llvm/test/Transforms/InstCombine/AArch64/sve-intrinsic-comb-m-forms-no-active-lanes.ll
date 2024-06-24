@@ -1321,4 +1321,3294 @@ define <vscale x 2 x i64> @replace_uqsub_intrinsic_i64(<vscale x 2 x i64> %a, <v
   ret <vscale x 2 x i64> %1
 }
 
-attributes #0 = { "target-features"="+sve,+sve2" }
+define dso_local <vscale x 16 x i8> @test_svabs_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svabs_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svabs_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svabs_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fabs.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fabs.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svabs_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svabs_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg) #1
+
+
+define dso_local <vscale x 8 x half> @test_svabs_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svabs_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fabs.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <8 x i16> @test_svaddqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_svaddqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.addqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.addqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <8 x i16> @test_svandqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_svandqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.andqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.andqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local i16 @test_svandv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i16 @test_svandv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 1
+;
+entry:
+  %0 = tail call i16 @llvm.aarch64.sve.andv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i16 %0
+}
+
+
+declare i16 @llvm.aarch64.sve.andv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svasrd_m(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svasrd_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, i32 1)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, i32 immarg) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svasrd_z(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svasrd_z(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 8 x i16> @test_svasrd_x(<vscale x 8 x i16> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svasrd_x(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.asrd.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %a, i32 1)
+  ret <vscale x 8 x i16> %0
+}
+
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.asrd.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, i32 immarg) #1
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_m(<vscale x 8 x bfloat> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_m(
+; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_z(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_z(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_m2(<vscale x 8 x bfloat> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvt_bf16_m2(
+; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %1
+}
+
+
+declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg) #1
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>) #1
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_m(<vscale x 8 x bfloat> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_m(
+; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_x(<vscale x 8 x bfloat> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_x(
+; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_m2(<vscale x 8 x bfloat> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvtnt_bf16_m2(
+; CHECK-SAME: <vscale x 8 x bfloat> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat> %a, <vscale x 8 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 8 x bfloat> %1
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svbrka_m(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrka_m(
+; CHECK-SAME: <vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brka.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brka.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrka_z(<vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrka_z(
+; CHECK-SAME: <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brka.z.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brka.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrkb_m(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrkb_m(
+; CHECK-SAME: <vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkb.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrkb_z(<vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrkb_z(
+; CHECK-SAME: <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrkn_z(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrkn_z(
+; CHECK-SAME: <vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrkpa_z(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrkpa_z(
+; CHECK-SAME: <vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpa.z.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkpa.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svbrkpb_z(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svbrkpb_z(
+; CHECK-SAME: <vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>) #1
+
+
+define dso_local i32 @test_clasta(i32 noundef %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local i32 @test_clasta(
+; CHECK-SAME: i32 noundef [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  %0 = bitcast i32 %a to float
+  %1 = bitcast <vscale x 4 x i32> %b to <vscale x 4 x float>
+  %2 = tail call float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1> zeroinitializer, float %0, <vscale x 4 x float> %1)
+  %3 = bitcast float %2 to i32
+  ret i32 %3
+}
+
+
+declare <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1>) #1
+
+
+define dso_local i32 @test_clastb(i32 noundef %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local i32 @test_clastb(
+; CHECK-SAME: i32 noundef [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  %0 = bitcast i32 %a to float
+  %1 = bitcast <vscale x 4 x i32> %b to <vscale x 4 x float>
+  %2 = tail call float @llvm.aarch64.sve.clastb.n.nxv4f32(<vscale x 4 x i1> zeroinitializer, float %0, <vscale x 4 x float> %1)
+  %3 = bitcast float %2 to i32
+  ret i32 %3
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcls_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcls_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svcls_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcls_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcls_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcls_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcls_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcls_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svclz_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svclz_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svclz_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svclz_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svclz_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svclz_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svclz_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svclz_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpeq_vec(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpeq_vec(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.fcmpeq.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %0)
+  ret <vscale x 16 x i1> %1
+}
+
+
+declare <vscale x 8 x i1> @llvm.aarch64.sve.fcmpeq.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpeq_imm(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpeq_imm(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 2, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpeq_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpeq_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpgt_vec(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpgt_vec(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpgt_imm(<vscale x 8 x half> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpgt_imm(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.fcmpgt.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH4000, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer))
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %0)
+  ret <vscale x 16 x i1> %1
+}
+
+
+declare <vscale x 8 x i1> @llvm.aarch64.sve.fcmpgt.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpgt_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpgt_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpge_vec(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpge_vec(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpge_imm(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpge_imm(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 2, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpge_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpge_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmplt_vec(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmplt_vec(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b, <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i1> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmplt_imm(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmplt_imm(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpgt.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 2, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i1> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmplt_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmplt_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmplt.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmplt.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmple_vec(<vscale x 4 x float> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmple_vec(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.fcmpge.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b, <vscale x 4 x float> %a)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
+  ret <vscale x 16 x i1> %1
+}
+
+
+declare <vscale x 4 x i1> @llvm.aarch64.sve.fcmpge.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>) #1
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmple_imm(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmple_imm(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 2, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i1> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmple_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmple_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmple.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmple.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpne_vec(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpne_vec(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpne_imm(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpne_imm(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 2, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+define dso_local <vscale x 16 x i1> @test_svcmpne_wide(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svcmpne_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 2, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer))
+  ret <vscale x 16 x i1> %0
+}
+
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svcnot_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnot_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svcnot_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnot_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcnot_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnot_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcnot_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnot_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnot.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcnt_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnt_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svcnt_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnt_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcnt_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnt_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svcnt_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svcnt_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local i64 @test_svcntp(<vscale x 16 x i1> %b)  #0 {
+; CHECK-LABEL: define dso_local i64 @test_svcntp(
+; CHECK-SAME: <vscale x 16 x i1> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %0 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %b)
+  %1 = tail call i64 @llvm.aarch64.sve.cntp.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> %0)
+  ret i64 %1
+}
+
+
+declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1>) #1
+
+
+declare i64 @llvm.aarch64.sve.cntp.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcompact(<vscale x 4 x float> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcompact(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.compact.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.compact.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svdup_m(<vscale x 16 x i8> %a, i8 noundef %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svdup_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], i8 noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, i8 %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svdup_z(i8 noundef %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svdup_z(
+; CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i8 %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svdup_m2(<vscale x 16 x i8> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svdup_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], i8 1)
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, i8 1)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svdup_x()  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svdup_x(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, i8 0)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <8 x i16> @test_sveorqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_sveorqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.eorqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.eorqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local i16 @test_sveorv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i16 @test_sveorv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %0 = tail call i16 @llvm.aarch64.sve.eorv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i16 %0
+}
+
+
+declare i16 @llvm.aarch64.sve.eorv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <8 x half> @test_svaddqv_f(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x half> @test_svaddqv_f(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <8 x half> @llvm.aarch64.sve.addqv.v8f16.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <8 x half> %0
+}
+
+
+declare <8 x half> @llvm.aarch64.sve.addqv.v8f16.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local half @test_svaddv_f(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local half @test_svaddv_f(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret half 0xH0000
+;
+entry:
+  %0 = tail call half @llvm.aarch64.sve.faddv.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret half %0
+}
+
+
+declare half @llvm.aarch64.sve.faddv.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svdup_f_m(<vscale x 4 x float> %a, float noundef %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svdup_f_m(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> %a, <vscale x 4 x i1> zeroinitializer, float %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float) #1
+
+
+define dso_local <vscale x 4 x float> @test_svdup_f_z(float noundef %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svdup_f_z(
+; CHECK-SAME: float noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> zeroinitializer, float %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svdup_f_m2(<vscale x 8 x half> %a)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svdup_f_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], half 0xH3C00)
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, half 0xH3C00)
+  ret <vscale x 8 x half> %1
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, half) #1
+
+
+define dso_local <vscale x 8 x half> @test_svdup_f_x()  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svdup_f_x(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, half 0xH0000)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_m(<vscale x 8 x half> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half>, <vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_z(<vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_z(
+; CHECK-SAME: <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half> zeroinitializer, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f64(<vscale x 8 x half>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_m2(<vscale x 8 x half> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> undef, <vscale x 4 x i1> [[TMP2]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP3]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %0)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fcvt.f16f32(<vscale x 8 x half> %a, <vscale x 4 x i1> %2, <vscale x 4 x float> %b)
+  ret <vscale x 8 x half> %3
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtlt_f32_m(<vscale x 4 x float> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtlt_f32_m(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtlt.f32f16(<vscale x 4 x float> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.fcvtlt.f32f16(<vscale x 4 x float>, <vscale x 4 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 2 x double> @test_svcvtlt_f64_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x double> @test_svcvtlt_f64_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x double> undef
+;
+entry:
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvtlt.f64f32(<vscale x 2 x double> undef, <vscale x 2 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 2 x double> %0
+}
+
+
+declare <vscale x 2 x double> @llvm.aarch64.sve.fcvtlt.f64f32(<vscale x 2 x double>, <vscale x 2 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 2 x double> @test_svcvtlt_f64_m2(<vscale x 2 x double> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x double> @test_svcvtlt_f64_m2(
+; CHECK-SAME: <vscale x 2 x double> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvtlt.f64f32(<vscale x 2 x double> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %1 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fcvtlt.f64f32(<vscale x 2 x double> %a, <vscale x 2 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 2 x double> %1
+}
+
+
+declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 immarg) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvtnt_f32_m(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtnt_f32_m(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvtnt_f32_x(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtnt_f32_x(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtnt_f32_m2(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtnt_f32_m2(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> undef, <vscale x 2 x i1> [[TMP2]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
+  %2 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> %2, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %3
+}
+
+
+declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvtx_f32_m(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtx_f32_m(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvtx_f32_x(<vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtx_f32_x(
+; CHECK-SAME: <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> undef, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtx_f32_z(<vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtx_f32_z(
+; CHECK-SAME: <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> zeroinitializer, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtx_f32_m2(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtx_f32_m2(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> undef, <vscale x 2 x i1> [[TMP2]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
+  %2 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtx.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> %2, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %3
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_m(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_m(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtxnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.fcvtxnt.f32f64(<vscale x 4 x float>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_x(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_x(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtxnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_m2(<vscale x 4 x float> %a, <vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvtxnt_f32_m2(
+; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtxnt.f32f64(<vscale x 4 x float> undef, <vscale x 2 x i1> [[TMP2]], <vscale x 2 x double> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %0)
+  %2 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 4 x float> @llvm.aarch64.sve.fcvtxnt.f32f64(<vscale x 4 x float> %a, <vscale x 2 x i1> %2, <vscale x 2 x double> %b)
+  ret <vscale x 4 x float> %3
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_s32_m(<vscale x 4 x i32> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_s32_m(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_s32_z(<vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_s32_z(
+; CHECK-SAME: <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.i32f64(<vscale x 4 x i32> zeroinitializer, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.i32f64(<vscale x 4 x i32>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_s32_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_s32_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_s32_m2(<vscale x 4 x i32> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_s32_m2(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzs.nxv4i32.nxv4f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_u32_m(<vscale x 4 x i32> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_u32_m(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.i32f16(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.i32f16(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_u32_z(<vscale x 2 x double> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_u32_z(
+; CHECK-SAME: <vscale x 2 x double> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.i32f64(<vscale x 4 x i32> zeroinitializer, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x double> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.i32f64(<vscale x 4 x i32>, <vscale x 2 x i1>, <vscale x 2 x double>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_u32_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_u32_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.nxv4i32.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.nxv4i32.nxv4f32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svcvt_u32_m2(<vscale x 4 x i32> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svcvt_u32_m2(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.nxv4i32.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.fcvtzu.nxv4i32.nxv4f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svlogb_m(<vscale x 4 x i32> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svlogb_m(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svlogb_z(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svlogb_z(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svlogb_x(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svlogb_x(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svlogb_m2(<vscale x 4 x i32> %a, <vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svlogb_m2(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.flogb.nxv4f32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %0, <vscale x 4 x float> %b)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <4 x float> @test_svmaxnmqv(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <4 x float> @test_svmaxnmqv(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+;
+entry:
+  %0 = tail call <4 x float> @llvm.aarch64.sve.fmaxnmqv.v4f32.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <4 x float> %0
+}
+
+
+declare <4 x float> @llvm.aarch64.sve.fmaxnmqv.v4f32.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local float @test_svmaxnmv(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local float @test_svmaxnmv(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+entry:
+  %0 = tail call float @llvm.aarch64.sve.fmaxnmv.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret float %0
+}
+
+
+declare float @llvm.aarch64.sve.fmaxnmv.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <4 x float> @test_svmaxqv_f(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <4 x float> @test_svmaxqv_f(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <4 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000, float 0xFFF0000000000000>
+;
+entry:
+  %0 = tail call <4 x float> @llvm.aarch64.sve.fmaxqv.v4f32.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <4 x float> %0
+}
+
+
+declare <4 x float> @llvm.aarch64.sve.fmaxqv.v4f32.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local float @test_svmaxv_f(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local float @test_svmaxv_f(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret float 0xFFF0000000000000
+;
+entry:
+  %0 = tail call float @llvm.aarch64.sve.fmaxv.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret float %0
+}
+
+
+declare float @llvm.aarch64.sve.fmaxv.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <4 x float> @test_svminnmqv(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <4 x float> @test_svminnmqv(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+;
+entry:
+  %0 = tail call <4 x float> @llvm.aarch64.sve.fminnmqv.v4f32.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <4 x float> %0
+}
+
+
+declare <4 x float> @llvm.aarch64.sve.fminnmqv.v4f32.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local float @test_svminnmv(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local float @test_svminnmv(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret float 0x7FF8000000000000
+;
+entry:
+  %0 = tail call float @llvm.aarch64.sve.fminnmv.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret float %0
+}
+
+
+declare float @llvm.aarch64.sve.fminnmv.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <4 x float> @test_svminqv_f(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local <4 x float> @test_svminqv_f(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <4 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000, float 0x7FF0000000000000>
+;
+entry:
+  %0 = tail call <4 x float> @llvm.aarch64.sve.fminqv.v4f32.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret <4 x float> %0
+}
+
+
+declare <4 x float> @llvm.aarch64.sve.fminqv.v4f32.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local float @test_svminv_f(<vscale x 4 x float> %b)  #0 {
+; CHECK-LABEL: define dso_local float @test_svminv_f(
+; CHECK-SAME: <vscale x 4 x float> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+entry:
+  %0 = tail call float @llvm.aarch64.sve.fminv.nxv4f32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %b)
+  ret float %0
+}
+
+
+declare float @llvm.aarch64.sve.fminv.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svneg_f_m(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_f_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svneg_f_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_f_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svneg_f_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_f_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svneg_f_m2(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_f_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %1
+}
+
+
+define dso_local <vscale x 8 x half> @test_svrecpx_m(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrecpx_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svrecpx_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrecpx_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svrecpx_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrecpx_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svrecpx_m2(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrecpx_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frecpx.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %1
+}
+
+
+define dso_local <vscale x 8 x half> @test_svrinti_m(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrinti_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frinti.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.frinti.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svrinta_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrinta_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frinta.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.frinta.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svrintp_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrintp_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.frintp.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svrintz_m2(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svrintz_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintz.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.frintz.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %1
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.frintz.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svsqrt_m(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svsqrt_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x half>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svsqrt_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svsqrt_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svsqrt_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svsqrt_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 8 x half> @test_svsqrt_m2(<vscale x 8 x half> %a, <vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svsqrt_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fsqrt.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %1
+}
+
+
+define dso_local noundef <vscale x 8 x bfloat> @test_ld1(ptr nocapture noundef readnone %a)  #0 {
+; CHECK-LABEL: define dso_local noundef <vscale x 8 x bfloat> @test_ld1(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> zeroinitializer
+;
+entry:
+  ret <vscale x 8 x bfloat> zeroinitializer
+}
+
+
+define dso_local noundef <vscale x 8 x half> @test_ld1_vnum(ptr nocapture noundef readnone %a)  #0 {
+; CHECK-LABEL: define dso_local noundef <vscale x 8 x half> @test_ld1_vnum(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  ret <vscale x 8 x half> zeroinitializer
+}
+
+
+define dso_local <vscale x 4 x i32> @test_ld1_gather(<vscale x 4 x i32> %a)  #2 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ld1_gather(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 0)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, i64) #3
+
+
+define dso_local <vscale x 4 x i32> @test_ld1_gather_offset(ptr noundef readonly %b, <vscale x 4 x i32> %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ld1_gather_offset(
+; CHECK-SAME: ptr noundef readonly [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.sxtw.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %b, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.sxtw.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #5
+
+
+define dso_local <vscale x 4 x i32> @test_ld1_gather_index(ptr noundef readonly %b, <vscale x 4 x i32> %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ld1_gather_index(
+; CHECK-SAME: ptr noundef readonly [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.sxtw.index.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %b, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.sxtw.index.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #5
+
+
+define dso_local <vscale x 4 x i32> @test_ld1_gather_offset_s32(i64 noundef %b, <vscale x 4 x i32> %a)  #2 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ld1_gather_offset_s32(
+; CHECK-SAME: i64 noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_ld1_gather_index_s32(i64 noundef %b, <vscale x 4 x i32> %a)  #2 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ld1_gather_index_s32(
+; CHECK-SAME: i64 noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = shl i64 %b, 2
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 %0)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <vscale x 8 x bfloat> @test_ld1ro(ptr noundef readonly %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_ld1ro(
+; CHECK-SAME: ptr noundef readonly [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1ro.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1ro.nxv8bf16(<vscale x 8 x i1>, ptr) #5
+
+
+define dso_local <vscale x 8 x bfloat> @test_ld1rq(ptr noundef readonly %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_ld1rq(
+; CHECK-SAME: ptr noundef readonly [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1>, ptr) #5
+
+
+define dso_local noundef <vscale x 2 x i64> @test_ld1sw_s64(ptr nocapture noundef readnone %a)  #0 {
+; CHECK-LABEL: define dso_local noundef <vscale x 2 x i64> @test_ld1sw_s64(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+;
+entry:
+  ret <vscale x 2 x i64> zeroinitializer
+}
+
+
+define dso_local noundef <vscale x 2 x i64> @test_ld1uw_u64(ptr nocapture noundef readnone %a)  #0 {
+; CHECK-LABEL: define dso_local noundef <vscale x 2 x i64> @test_ld1uw_u64(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+;
+entry:
+  ret <vscale x 2 x i64> zeroinitializer
+}
+
+
+define dso_local <vscale x 16 x bfloat> @test_ld2(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 16 x bfloat> @test_ld2(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer, i64 8)
+; CHECK-NEXT:    ret <vscale x 16 x bfloat> [[TMP1]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 0
+  %2 = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> poison, <vscale x 8 x bfloat> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 1
+  %4 = tail call <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat> %2, <vscale x 8 x bfloat> %3, i64 8)
+  ret <vscale x 16 x bfloat> %4
+}
+
+
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv8bf16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 16 x bfloat> @llvm.vector.insert.nxv16bf16.nxv8bf16(<vscale x 16 x bfloat>, <vscale x 8 x bfloat>, i64 immarg) #6
+
+
+define dso_local <vscale x 16 x half> @test_ld2_vnum(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 16 x half> @test_ld2_vnum(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP0]], <vscale x 8 x half> zeroinitializer, i64 8)
+; CHECK-NEXT:    ret <vscale x 16 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv8f16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %0, 0
+  %2 = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %0, 1
+  %4 = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> %2, <vscale x 8 x half> %3, i64 8)
+  ret <vscale x 16 x half> %4
+}
+
+
+declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv8f16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half>, <vscale x 8 x half>, i64 immarg) #6
+
+
+define dso_local <vscale x 24 x bfloat> @test_ld3(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 24 x bfloat> @test_ld3(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> poison, <vscale x 8 x bfloat> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> [[TMP1]], <vscale x 8 x bfloat> zeroinitializer, i64 16)
+; CHECK-NEXT:    ret <vscale x 24 x bfloat> [[TMP2]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 0
+  %2 = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> poison, <vscale x 8 x bfloat> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 1
+  %4 = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> %2, <vscale x 8 x bfloat> %3, i64 8)
+  %5 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 2
+  %6 = tail call <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat> %4, <vscale x 8 x bfloat> %5, i64 16)
+  ret <vscale x 24 x bfloat> %6
+}
+
+
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv8bf16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 24 x bfloat> @llvm.vector.insert.nxv24bf16.nxv8bf16(<vscale x 24 x bfloat>, <vscale x 8 x bfloat>, i64 immarg) #6
+
+
+define dso_local <vscale x 24 x half> @test_ld3_vnum(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 24 x half> @test_ld3_vnum(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> poison, <vscale x 8 x half> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> [[TMP0]], <vscale x 8 x half> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> [[TMP1]], <vscale x 8 x half> zeroinitializer, i64 16)
+; CHECK-NEXT:    ret <vscale x 24 x half> [[TMP2]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv8f16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 0
+  %2 = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> poison, <vscale x 8 x half> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 1
+  %4 = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> %2, <vscale x 8 x half> %3, i64 8)
+  %5 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 2
+  %6 = tail call <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half> %4, <vscale x 8 x half> %5, i64 16)
+  ret <vscale x 24 x half> %6
+}
+
+
+declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv8f16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 24 x half> @llvm.vector.insert.nxv24f16.nxv8f16(<vscale x 24 x half>, <vscale x 8 x half>, i64 immarg) #6
+
+
+define dso_local <vscale x 32 x bfloat> @test_ld4(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 32 x bfloat> @test_ld4(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP0]], <vscale x 8 x bfloat> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP1]], <vscale x 8 x bfloat> zeroinitializer, i64 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> [[TMP2]], <vscale x 8 x bfloat> zeroinitializer, i64 24)
+; CHECK-NEXT:    ret <vscale x 32 x bfloat> [[TMP3]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 0
+  %2 = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 1
+  %4 = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> %2, <vscale x 8 x bfloat> %3, i64 8)
+  %5 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 2
+  %6 = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> %4, <vscale x 8 x bfloat> %5, i64 16)
+  %7 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %0, 3
+  %8 = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> %6, <vscale x 8 x bfloat> %7, i64 24)
+  ret <vscale x 32 x bfloat> %8
+}
+
+
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv8bf16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat>, <vscale x 8 x bfloat>, i64 immarg) #6
+
+
+define dso_local <vscale x 32 x half> @test_ld4_vnum(ptr noundef %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 32 x half> @test_ld4_vnum(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP0]], <vscale x 8 x half> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP1]], <vscale x 8 x half> zeroinitializer, i64 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP2]], <vscale x 8 x half> zeroinitializer, i64 24)
+; CHECK-NEXT:    ret <vscale x 32 x half> [[TMP3]]
+;
+entry:
+  %0 = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv8f16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 0
+  %2 = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> %1, i64 0)
+  %3 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 1
+  %4 = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> %2, <vscale x 8 x half> %3, i64 8)
+  %5 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 2
+  %6 = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> %4, <vscale x 8 x half> %5, i64 16)
+  %7 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %0, 3
+  %8 = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> %6, <vscale x 8 x half> %7, i64 24)
+  ret <vscale x 32 x half> %8
+}
+
+
+declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv8f16(<vscale x 8 x i1>, ptr) #5
+
+
+declare <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half>, <vscale x 8 x half>, i64 immarg) #6
+
+
+define dso_local <vscale x 8 x bfloat> @test_ldff1(ptr noundef %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_ldff1(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x bfloat> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldff1.nxv8bf16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 8 x bfloat> %0
+}
+
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ldff1.nxv8bf16(<vscale x 8 x i1>, ptr) #8
+
+
+define dso_local <vscale x 8 x half> @test_ldff1_vnum(ptr noundef %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_ldff1_vnum(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.ldff1.nxv8f16(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.ldff1.nxv8f16(<vscale x 8 x i1>, ptr) #8
+
+
+define dso_local <vscale x 4 x i32> @test_ldff1_gather(<vscale x 4 x i32> %a)  #9 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldff1_gather(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 0)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, i64) #8
+
+
+define dso_local <vscale x 4 x i32> @test_ldff1_gather_offset(ptr noundef %b, <vscale x 4 x i32> %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldff1_gather_offset(
+; CHECK-SAME: ptr noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.sxtw.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %b, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.sxtw.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #8
+
+
+define dso_local <vscale x 4 x i32> @test_ldff1_gather_index(ptr noundef %b, <vscale x 4 x i32> %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldff1_gather_index(
+; CHECK-SAME: ptr noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.sxtw.index.nxv4i32(<vscale x 4 x i1> zeroinitializer, ptr %b, <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.sxtw.index.nxv4i32(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #8
+
+
+define dso_local <vscale x 4 x i32> @test_ldff1_gather_offset_s32(i64 noundef %b, <vscale x 4 x i32> %a)  #9 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldff1_gather_offset_s32(
+; CHECK-SAME: i64 noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_ldff1_gather_index_s32(i64 noundef %b, <vscale x 4 x i32> %a)  #9 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldff1_gather_index_s32(
+; CHECK-SAME: i64 noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = shl i64 %b, 2
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldff1.gather.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 %0)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_ldnf1(ptr noundef %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_ldnf1(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnf1.nxv16i8(<vscale x 16 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ldnf1.nxv16i8(<vscale x 16 x i1>, ptr) #8
+
+
+define dso_local <vscale x 8 x i16> @test_ldnf1_vnum(ptr noundef %a)  #7 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_ldnf1_vnum(
+; CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x i8> @llvm.aarch64.sve.ldnf1.nxv8i8(<vscale x 8 x i1> zeroinitializer, ptr %a)
+  %1 = zext <vscale x 8 x i8> %0 to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %1
+}
+
+
+declare <vscale x 8 x i8> @llvm.aarch64.sve.ldnf1.nxv8i8(<vscale x 8 x i1>, ptr) #8
+
+
+define dso_local <vscale x 16 x i8> @test_ldnt1(ptr noundef readonly %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_ldnt1(
+; CHECK-SAME: ptr noundef readonly [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1>, ptr) #5
+
+
+define dso_local <vscale x 16 x i8> @test_ldnt1_vnum(ptr noundef readonly %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_ldnt1_vnum(
+; CHECK-SAME: ptr noundef readonly [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> zeroinitializer, ptr %a)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_ldnt1_gather(<vscale x 4 x i32> %a)  #2 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldnt1_gather(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 0)
+  %1 = zext <vscale x 4 x i8> %0 to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %1
+}
+
+
+declare <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.scalar.offset.nxv4i8.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, i64) #3
+
+
+define dso_local <vscale x 4 x i32> @test_ldnt1_gather_offset(ptr noundef %b, <vscale x 4 x i32> %a)  #4 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_ldnt1_gather_offset(
+; CHECK-SAME: ptr noundef [[B:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4i8(<vscale x 4 x i1> zeroinitializer, ptr %b, <vscale x 4 x i32> %a)
+  %1 = zext <vscale x 4 x i8> %0 to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %1
+}
+
+
+declare <vscale x 4 x i8> @llvm.aarch64.sve.ldnt1.gather.uxtw.nxv4i8(<vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #5
+
+
+define dso_local <vscale x 16 x i8> @test_svneg_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svneg_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.neg.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.neg.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svneg_z(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_z(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svneg_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svneg_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.neg.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.neg.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 8 x half> @test_svneg_x(<vscale x 8 x half> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svneg_x(
+; CHECK-SAME: <vscale x 8 x half> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.fneg.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svnot_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svnot_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svnot_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svnot_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svnot_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svnot_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svnot_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svnot_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.not.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <8 x i16> @test_svorqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_svorqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.orqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.orqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local i16 @test_svorv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i16 @test_svorv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %0 = tail call i16 @llvm.aarch64.sve.orv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i16 %0
+}
+
+
+declare i16 @llvm.aarch64.sve.orv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svrbit_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svrbit_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svrbit_z(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svrbit_z(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svrbit_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svrbit_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svrbit_x(<vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svrbit_x(
+; CHECK-SAME: <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> undef
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.rbit.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+define dso_local <vscale x 8 x i16> @test_svrevb_m(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svrevb_m(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svrevh_z(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrevh_z(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
+
+
+define dso_local <vscale x 8 x i16> @test_svrevb_m2(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svrevb_m2(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %0, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %1
+}
+
+
+define dso_local <vscale x 2 x i64> @test_svrevw_x(<vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_svrevw_x(
+; CHECK-SAME: <vscale x 2 x i64> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x i64> undef
+;
+entry:
+  %0 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %0
+}
+
+
+declare <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>) #1
+
+
+define dso_local i64 @test_svaddv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i64 @test_svaddv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %0 = tail call i64 @llvm.aarch64.sve.saddv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i64 %0
+}
+
+
+declare i64 @llvm.aarch64.sve.saddv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_i16_m(<vscale x 8 x half> %a, <vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_i16_m(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x half> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtf.nxv8f16.nxv8i16(<vscale x 8 x half> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x half> %0
+}
+
+
+declare <vscale x 8 x half> @llvm.aarch64.sve.scvtf.nxv8f16.nxv8i16(<vscale x 8 x half>, <vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 4 x float> @test_svcvt_f32_i32_z(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svcvt_f32_i32_z(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.scvtf.nxv4f32.nxv4i32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x float> %0
+}
+
+
+declare <vscale x 4 x float> @llvm.aarch64.sve.scvtf.nxv4f32.nxv4i32(<vscale x 4 x float>, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
+
+
+define dso_local <vscale x 8 x half> @test_svcvt_f16_i16_m2(<vscale x 8 x half> %a, <vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svcvt_f16_i16_m2(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtf.nxv8f16.nxv8i16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i16> [[B]])
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %1 = tail call <vscale x 8 x half> @llvm.aarch64.sve.scvtf.nxv8f16.nxv8i16(<vscale x 8 x half> %a, <vscale x 8 x i1> %0, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x half> %1
+}
+
+
+define dso_local <vscale x 2 x double> @test_svcvt_f64_i64_x(<vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x double> @test_svcvt_f64_i64_x(
+; CHECK-SAME: <vscale x 2 x i64> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x double> undef
+;
+entry:
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.scvtf.nxv2f64.nxv2i64(<vscale x 2 x double> undef, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x double> %0
+}
+
+
+declare <vscale x 2 x double> @llvm.aarch64.sve.scvtf.nxv2f64.nxv2i64(<vscale x 2 x double>, <vscale x 2 x i1>, <vscale x 2 x i64>) #1
+
+
+define dso_local <8 x i16> @test_svmaxqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_svmaxqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.smaxqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.smaxqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local i16 @test_svmaxv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i16 @test_svmaxv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %0 = tail call i16 @llvm.aarch64.sve.umaxv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i16 %0
+}
+
+
+declare i16 @llvm.aarch64.sve.umaxv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <8 x i16> @test_svminqv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <8 x i16> @test_svminqv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+;
+entry:
+  %0 = tail call <8 x i16> @llvm.aarch64.sve.uminqv.v8i16.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <8 x i16> %0
+}
+
+
+declare <8 x i16> @llvm.aarch64.sve.uminqv.v8i16.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local i16 @test_svminv(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local i16 @test_svminv(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 32767
+;
+entry:
+  %0 = tail call i16 @llvm.aarch64.sve.sminv.nxv8i16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret i16 %0
+}
+
+
+declare i16 @llvm.aarch64.sve.sminv.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svqabs_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqabs_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqabs.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.sqabs.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 8 x i16> @test_svqabs_z(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqabs_z(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqabs.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sqabs.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svqabs_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqabs_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqabs.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqabs.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 8 x i16> @test_svqabs_x(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqabs_x(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqabs.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+define dso_local <vscale x 16 x i8> @test_svqneg_m(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqneg_m(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqneg.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %0
+}
+
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.sqneg.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>) #1
+
+
+define dso_local <vscale x 8 x i16> @test_svqneg_z(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqneg_z(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqneg.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sqneg.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 16 x i8> @test_svqneg_m2(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svqneg_m2(
+; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqneg.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[B]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %1 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.sqneg.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %0, <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %1
+}
+
+
+define dso_local <vscale x 8 x i16> @test_svqneg_x(<vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svqneg_x(
+; CHECK-SAME: <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> undef
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sqneg.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+define dso_local void @test_st1(ptr nocapture noundef readnone %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local void @test_st1(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  ret void
+}
+
+
+define dso_local void @test_st1_vnum(ptr nocapture noundef readnone %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local void @test_st1_vnum(
+; CHECK-SAME: ptr nocapture noundef readnone [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  ret void
+}
+
+
+define dso_local void @test_st1_scatter(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #10 {
+; CHECK-LABEL: define dso_local void @test_st1_scatter(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 0)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.st1.scatter.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>, i64) #11
+
+
+define dso_local void @test_st1_scatter_offset(ptr noundef %a, <vscale x 4 x i32> %c, <vscale x 4 x i32> %b)  #12 {
+; CHECK-LABEL: define dso_local void @test_st1_scatter_offset(
+; CHECK-SAME: ptr noundef [[A:%.*]], <vscale x 4 x i32> [[C:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.st1.scatter.uxtw.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i32> %c)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.st1.scatter.uxtw.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #13
+
+
+define dso_local void @test_st1_scatter_index(ptr noundef %a, <vscale x 4 x i32> %c, <vscale x 4 x i32> %b)  #12 {
+; CHECK-LABEL: define dso_local void @test_st1_scatter_index(
+; CHECK-SAME: ptr noundef [[A:%.*]], <vscale x 4 x i32> [[C:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.st1.scatter.sxtw.index.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i32> %c)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.st1.scatter.sxtw.index.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #13
+
+
+define dso_local void @test_st2(ptr nocapture noundef %a, <vscale x 8 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st2(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 8 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %b, i64 4)
+  tail call void @llvm.aarch64.sve.st2.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i1> zeroinitializer, ptr %a)
+  ret void
+}
+
+
+declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32>, i64 immarg) #6
+
+
+declare void @llvm.aarch64.sve.st2.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, ptr nocapture) #15
+
+
+define dso_local void @test_st2_vnum(ptr nocapture noundef %a, <vscale x 8 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st2_vnum(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 8 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %b, i64 4)
+  %2 = getelementptr <vscale x 4 x i32>, ptr %a, i64 1
+  tail call void @llvm.aarch64.sve.st2.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i1> zeroinitializer, ptr %2)
+  ret void
+}
+
+
+define dso_local void @test_st3(ptr nocapture noundef %a, <vscale x 12 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st3(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 12 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 4)
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 8)
+  tail call void @llvm.aarch64.sve.st3.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i1> zeroinitializer, ptr %a)
+  ret void
+}
+
+
+declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32>, i64 immarg) #6
+
+
+declare void @llvm.aarch64.sve.st3.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, ptr nocapture) #15
+
+
+define dso_local void @test_st3_vnum(ptr nocapture noundef %a, <vscale x 12 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st3_vnum(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 12 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 4)
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv12i32(<vscale x 12 x i32> %b, i64 8)
+  %3 = getelementptr <vscale x 4 x i32>, ptr %a, i64 1
+  tail call void @llvm.aarch64.sve.st3.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i1> zeroinitializer, ptr %3)
+  ret void
+}
+
+
+define dso_local void @test_st4(ptr nocapture noundef %a, <vscale x 16 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st4(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 16 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 4)
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 8)
+  %3 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 12)
+  tail call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i32> %3, <vscale x 4 x i1> zeroinitializer, ptr %a)
+  ret void
+}
+
+
+declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32>, i64 immarg) #6
+
+
+declare void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i1>, ptr nocapture) #15
+
+
+define dso_local void @test_st4_vnum(ptr nocapture noundef %a, <vscale x 16 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_st4_vnum(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 16 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 4)
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 8)
+  %3 = tail call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %b, i64 12)
+  %4 = getelementptr <vscale x 4 x i32>, ptr %a, i64 1
+  tail call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i32> %3, <vscale x 4 x i1> zeroinitializer, ptr %4)
+  ret void
+}
+
+
+define dso_local void @test_stnt1(ptr nocapture noundef %a, <vscale x 4 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_stnt1(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.stnt1.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, ptr %a)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.stnt1.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr nocapture) #15
+
+
+define dso_local void @test_stnt1_vnum(ptr nocapture noundef %a, <vscale x 4 x i32> %b)  #14 {
+; CHECK-LABEL: define dso_local void @test_stnt1_vnum(
+; CHECK-SAME: ptr nocapture noundef [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = getelementptr <vscale x 4 x i32>, ptr %a, i64 1
+  tail call void @llvm.aarch64.sve.stnt1.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, ptr %0)
+  ret void
+}
+
+
+define dso_local void @test_stnt1_scatter(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #10 {
+; CHECK-LABEL: define dso_local void @test_stnt1_scatter(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.stnt1.scatter.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %a, i64 0)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.stnt1.scatter.scalar.offset.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>, i64) #11
+
+
+define dso_local void @test_stnt1_scatter_offset(ptr noundef %a, <vscale x 4 x i32> %c, <vscale x 4 x i32> %b)  #12 {
+; CHECK-LABEL: define dso_local void @test_stnt1_scatter_offset(
+; CHECK-SAME: ptr noundef [[A:%.*]], <vscale x 4 x i32> [[C:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4i32(<vscale x 4 x i32> %b, <vscale x 4 x i1> zeroinitializer, ptr %a, <vscale x 4 x i32> %c)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.stnt1.scatter.uxtw.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, ptr, <vscale x 4 x i32>) #13
+
+
+define dso_local void @test_stnt1_scatter_index(ptr noundef %a, <vscale x 2 x i64> %c, <vscale x 2 x i64> %b)  #12 {
+; CHECK-LABEL: define dso_local void @test_stnt1_scatter_index(
+; CHECK-SAME: ptr noundef [[A:%.*]], <vscale x 2 x i64> [[C:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.aarch64.sve.stnt1.scatter.index.nxv2i64(<vscale x 2 x i64> %b, <vscale x 2 x i1> zeroinitializer, ptr %a, <vscale x 2 x i64> %c)
+  ret void
+}
+
+
+declare void @llvm.aarch64.sve.stnt1.scatter.index.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, ptr, <vscale x 2 x i64>) #13
+
+
+define dso_local <vscale x 8 x i16> @test_svextb_m(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svextb_m(
+; CHECK-SAME: <vscale x 8 x i16> [[A:%.*]], <vscale x 8 x i16> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.sxtb.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> zeroinitializer, <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %0
+}
+
+
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sxtb.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>) #1
+
+
+define dso_local <vscale x 2 x i64> @test_svexth_z(<vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_svexth_z(
+; CHECK-SAME: <vscale x 2 x i64> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxth.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %0
+}
+
+
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sxth.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 2 x i64> @test_svextb_m2(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 2 x i64> @test_svextb_m2(
+; CHECK-SAME: <vscale x 2 x i64> [[A:%.*]], <vscale x 2 x i64> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[B]])
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %1 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %0, <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %1
+}
+
+
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svextw_x(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svextw_x(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sxth.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sxth.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svrecpe_m(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrecpe_m(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svrecpe_z(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrecpe_z(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svrecpe_x(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrecpe_x(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svrecpe_m2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrecpe_m2(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.urecpe.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %0, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %1
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svrsqrte_m(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrsqrte_m(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>) #1
+
+
+define dso_local <vscale x 4 x i32> @test_svrsqrte_z(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrsqrte_z(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svrsqrte_x(<vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrsqrte_x(
+; CHECK-SAME: <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %0
+}
+
+
+define dso_local <vscale x 4 x i32> @test_svrsqrte_m2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b)  #0 {
+; CHECK-LABEL: define dso_local <vscale x 4 x i32> @test_svrsqrte_m2(
+; CHECK-SAME: <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+;
+entry:
+  %0 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %1 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ursqrte.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %0, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %1
+}
+
+
+declare float @llvm.aarch64.sve.clasta.n.nxv4f32(<vscale x 4 x i1>, float, <vscale x 4 x float>) #16
+
+
+declare float @llvm.aarch64.sve.clastb.n.nxv4f32(<vscale x 4 x i1>, float, <vscale x 4 x float>) #16
+
+attributes #0 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #1 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #2 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #3 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #4 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #5 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #6 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #7 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #8 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #9 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #10 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #11 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #12 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #13 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #14 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #15 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
+attributes #16 = {"target-features"="+bf16,+f64mm,+fp-armv8,+fullfp16,+neon,+outline-atomics,+sve,+sve2,+sve2p1,+v8a,-fmv"}
