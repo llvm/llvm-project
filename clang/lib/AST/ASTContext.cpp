@@ -1110,6 +1110,15 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   CurrentCXXNamedModule = M;
 }
 
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+  if (!M1 != !M2)
+    return false;
+
+  assert(M1 && "Shouldn't call `isInSameModule` if both M1 and M2 are none.");
+  return M1->getPrimaryModuleInterfaceName() ==
+         M2->getPrimaryModuleInterfaceName();
+}
+
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
   if (!ExternCContext)
     ExternCContext = ExternCContextDecl::Create(*this, getTranslationUnitDecl());
