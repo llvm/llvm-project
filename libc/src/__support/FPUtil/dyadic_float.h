@@ -107,7 +107,10 @@ template <size_t Bits> struct DyadicFloat {
       T d_hi =
           FPBits<T>::create_value(sign, 2 * FPBits<T>::EXP_BIAS, IMPLICIT_MASK)
               .get_val();
-      return T(2) * d_hi;
+      // volatile prevents constant propagation that would result in infinity
+      // always being returned no matter the current rounding mode.
+      volatile T two(2.0);
+      return two * d_hi;
     }
 
     bool denorm = false;
@@ -179,10 +182,18 @@ template <size_t Bits> struct DyadicFloat {
       output_bits_t clear_exp = static_cast<output_bits_t>(
           output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
+
       if (!(r_bits & FPBits<T>::EXP_MASK)) {
         // Output is denormal after rounding, clear the implicit bit for 80-bit
         // long double.
         r_bits -= IMPLICIT_MASK;
+
+        // TODO: IEEE Std 754-2019 lets implementers choose whether to check for
+        // "tininess" before or after rounding for base-2 formats, as long as
+        // the same choice is made for all operations. Our choice to check after
+        // rounding might not be the same as the hardware's.
+        if (round_and_sticky)
+          raise_except_if_required(FE_UNDERFLOW);
       }
 
       return FPBits<T>(r_bits).get_val();

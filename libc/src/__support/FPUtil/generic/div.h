@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
@@ -17,7 +16,6 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h"
 
@@ -35,14 +33,6 @@ div(InType x, InType y) {
   using InStorageType = typename InFPBits::StorageType;
   using DyadicFloat =
       DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::FRACTION_LEN))>;
-  using DyadicMantissaType = typename DyadicFloat::MantissaType;
-
-  // +1 for the implicit bit.
-  constexpr int DYADIC_EXTRA_MANTISSA_LEN =
-      DyadicMantissaType::BITS - (InFPBits::FRACTION_LEN + 1);
-  // +1 for the extra fractional bit in q.
-  constexpr int Q_EXTRA_FRACTION_LEN =
-      InFPBits::FRACTION_LEN + 1 - OutFPBits::FRACTION_LEN;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
@@ -104,120 +94,33 @@ div(InType x, InType y) {
   DyadicFloat xd(x);
   DyadicFloat yd(y);
 
-  bool would_q_be_subnormal = xd.mantissa < yd.mantissa;
-  int q_exponent = xd.get_unbiased_exponent() - yd.get_unbiased_exponent() -
-                   would_q_be_subnormal;
+  // Number of iterations = full output precision + 1 rounding bit + 1 potential
+  // leading 0.
+  constexpr size_t NUM_ITERS = OutFPBits::FRACTION_LEN + 3;
+  int result_exp = xd.exponent - yd.exponent - (NUM_ITERS - 1);
 
-  if (q_exponent + OutFPBits::EXP_BIAS >= OutFPBits::MAX_BIASED_EXPONENT) {
-    set_errno_if_required(ERANGE);
-    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+  InStorageType q = 0;
+  InStorageType r = static_cast<InStorageType>(xd.mantissa >> 2);
+  InStorageType yd_mant_in = static_cast<InStorageType>(yd.mantissa >> 1);
 
-    switch (get_round()) {
-    case FE_TONEAREST:
-      return OutFPBits::inf(result_sign).get_val();
-    case FE_DOWNWARD:
-      if (result_sign.is_pos())
-        return OutFPBits::max_normal(result_sign).get_val();
-      return OutFPBits::inf(result_sign).get_val();
-    case FE_UPWARD:
-      if (result_sign.is_pos())
-        return OutFPBits::inf(result_sign).get_val();
-      return OutFPBits::max_normal(result_sign).get_val();
-    default:
-      return OutFPBits::max_normal(result_sign).get_val();
-    }
-  }
-
-  if (q_exponent < -OutFPBits::EXP_BIAS - OutFPBits::FRACTION_LEN) {
-    set_errno_if_required(ERANGE);
-    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
-
-    switch (quick_get_round()) {
-    case FE_DOWNWARD:
-      if (result_sign.is_pos())
-        return OutFPBits::zero(result_sign).get_val();
-      return OutFPBits::min_subnormal(result_sign).get_val();
-    case FE_UPWARD:
-      if (result_sign.is_pos())
-        return OutFPBits::min_subnormal(result_sign).get_val();
-      return OutFPBits::zero(result_sign).get_val();
-    default:
-      return OutFPBits::zero(result_sign).get_val();
-    }
-  }
-
-  InStorageType q = 1;
-  InStorageType xd_mant_in = static_cast<InStorageType>(
-      xd.mantissa >> (DYADIC_EXTRA_MANTISSA_LEN - would_q_be_subnormal));
-  InStorageType yd_mant_in =
-      static_cast<InStorageType>(yd.mantissa >> DYADIC_EXTRA_MANTISSA_LEN);
-  InStorageType r = xd_mant_in - yd_mant_in;
-
-  for (size_t i = 0; i < InFPBits::FRACTION_LEN + 1; i++) {
+  for (size_t i = 0; i < NUM_ITERS; ++i) {
     q <<= 1;
-    InStorageType t = r << 1;
-    if (t < yd_mant_in) {
-      r = t;
-    } else {
+    r <<= 1;
+    if (r >= yd_mant_in) {
       q += 1;
-      r = t - yd_mant_in;
+      r -= yd_mant_in;
     }
   }
 
-  bool round;
-  bool sticky;
-  OutStorageType result;
+  DyadicFloat result(result_sign, result_exp, q);
+  result.mantissa += r != 0;
 
-  if (q_exponent > -OutFPBits::EXP_BIAS) {
-    // Result is normal.
+  OutType output = static_cast<OutType>(result);
 
-    InStorageType round_mask = InStorageType(1) << (Q_EXTRA_FRACTION_LEN - 1);
-    round = (q & round_mask) != 0;
-    InStorageType sticky_mask = round_mask - 1;
-    sticky = (q & sticky_mask) != 0;
+  if (test_except(FE_OVERFLOW | FE_UNDERFLOW) != 0)
+    set_errno_if_required(ERANGE);
 
-    result = OutFPBits::create_value(
-                 result_sign,
-                 static_cast<OutStorageType>(q_exponent + OutFPBits::EXP_BIAS),
-                 static_cast<OutStorageType>(q >> Q_EXTRA_FRACTION_LEN))
-                 .uintval();
-
-  } else {
-    // Result is subnormal.
-
-    // +1 because the leading bit is now part of the fraction.
-    int extra_fraction_len =
-        Q_EXTRA_FRACTION_LEN + 1 - q_exponent - OutFPBits::EXP_BIAS;
-
-    InStorageType round_mask = InStorageType(1) << (extra_fraction_len - 1);
-    round = (q & round_mask) != 0;
-    InStorageType sticky_mask = round_mask - 1;
-    sticky = (q & sticky_mask) != 0;
-
-    result = OutFPBits::create_value(
-                 result_sign, 0,
-                 static_cast<OutStorageType>(q >> extra_fraction_len))
-                 .uintval();
-  }
-
-  if (round || sticky)
-    raise_except_if_required(FE_INEXACT);
-
-  bool lsb = (result & 1) != 0;
-
-  switch (quick_get_round()) {
-  case FE_TONEAREST:
-    if (round && (lsb || sticky))
-      ++result;
-    break;
-  case FE_UPWARD:
-    ++result;
-    break;
-  default:
-    break;
-  }
-
-  return cpp::bit_cast<OutType>(result);
+  return output;
 }
 
 } // namespace LIBC_NAMESPACE::fputil::generic

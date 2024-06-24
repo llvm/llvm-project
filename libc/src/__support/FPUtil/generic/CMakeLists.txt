@@ -51,7 +51,6 @@ add_header_library(
   HDRS
     div.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -59,7 +58,6 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
 )
