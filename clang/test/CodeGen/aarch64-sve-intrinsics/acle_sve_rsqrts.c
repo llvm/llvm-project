@@ -5,7 +5,15 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -24,7 +32,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.frsqrts.x.nxv8f16(<vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-svfloat16_t test_svrsqrts_f16(svfloat16_t op1, svfloat16_t op2)
+svfloat16_t test_svrsqrts_f16(svfloat16_t op1, svfloat16_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svrsqrts,_f16,,)(op1, op2);
 }
@@ -39,7 +47,7 @@ svfloat16_t test_svrsqrts_f16(svfloat16_t op1, svfloat16_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.frsqrts.x.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_svrsqrts_f32(svfloat32_t op1, svfloat32_t op2)
+svfloat32_t test_svrsqrts_f32(svfloat32_t op1, svfloat32_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svrsqrts,_f32,,)(op1, op2);
 }
@@ -54,7 +62,7 @@ svfloat32_t test_svrsqrts_f32(svfloat32_t op1, svfloat32_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.frsqrts.x.nxv2f64(<vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
-svfloat64_t test_svrsqrts_f64(svfloat64_t op1, svfloat64_t op2)
+svfloat64_t test_svrsqrts_f64(svfloat64_t op1, svfloat64_t op2) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svrsqrts,_f64,,)(op1, op2);
 }

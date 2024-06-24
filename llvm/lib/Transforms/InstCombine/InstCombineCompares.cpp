@@ -3933,6 +3933,52 @@ foldICmpUSubSatOrUAddSatWithConstant(ICmpInst::Predicate Pred,
       ConstantInt::get(Op1->getType(), EquivInt));
 }
 
+static Instruction *
+foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
+                                   const APInt &C,
+                                   InstCombiner::BuilderTy &Builder) {
+  std::optional<ICmpInst::Predicate> NewPredicate = std::nullopt;
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_NE:
+    if (C.isZero())
+      NewPredicate = Pred;
+    else if (C.isOne())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
+    else if (C.isAllOnes())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
+    break;
+
+  case ICmpInst::ICMP_SGT:
+    if (C.isAllOnes())
+      NewPredicate = ICmpInst::ICMP_UGE;
+    else if (C.isZero())
+      NewPredicate = ICmpInst::ICMP_UGT;
+    break;
+
+  case ICmpInst::ICMP_SLT:
+    if (C.isZero())
+      NewPredicate = ICmpInst::ICMP_ULT;
+    else if (C.isOne())
+      NewPredicate = ICmpInst::ICMP_ULE;
+    break;
+
+  default:
+    break;
+  }
+
+  if (!NewPredicate)
+    return nullptr;
+
+  if (I->getIntrinsicID() == Intrinsic::scmp)
+    NewPredicate = ICmpInst::getSignedPredicate(*NewPredicate);
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  return new ICmpInst(*NewPredicate, LHS, RHS);
+}
+
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
 Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                                                              IntrinsicInst *II,
@@ -3954,6 +4000,11 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     if (Instruction *R = foldCtpopPow2Test(Cmp, II, C, Builder, Q))
       return R;
   } break;
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    if (auto *Folded = foldICmpOfCmpIntrinsicWithConstant(Pred, II, C, Builder))
+      return Folded;
+    break;
   }
 
   if (Cmp.isEquality())

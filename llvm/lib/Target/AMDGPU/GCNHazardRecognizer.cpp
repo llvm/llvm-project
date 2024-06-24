@@ -16,7 +16,6 @@
 #include "SIMachineFunctionInfo.h"
 #if LLPC_BUILD_GFX12
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #endif /* LLPC_BUILD_GFX12 */
 #include "llvm/CodeGen/MachineFunction.h"

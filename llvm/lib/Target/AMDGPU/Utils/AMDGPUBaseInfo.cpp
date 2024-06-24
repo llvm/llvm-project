@@ -385,6 +385,15 @@ struct SingleUseExceptionInfo {
   bool IsInvalidSingleUseProducer;
 };
 
+#if LLPC_BUILD_GFX12
+struct DPMACCInstructionInfo {
+  uint16_t Opcode;
+  bool IsDPMACCInstruction;
+};
+
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
+#endif /* LLPC_BUILD_GFX12 */
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -630,6 +639,13 @@ bool isInvalidSingleUseProducerInst(unsigned Opc) {
   return Info && Info->IsInvalidSingleUseProducer;
 }
 
+#if LLPC_BUILD_GFX12
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
+}
+
+#endif /* LLPC_BUILD_GFX12 */
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
