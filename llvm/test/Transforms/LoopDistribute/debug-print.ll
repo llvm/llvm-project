@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=loop-distribute -enable-loop-distribute \
 ; RUN:   -debug-only=loop-distribute -disable-output 2>&1 %s | FileCheck %s
 

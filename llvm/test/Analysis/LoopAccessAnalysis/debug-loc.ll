@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes='print<access-info>' -debug-only=loop-accesses \
 ; RUN:   -disable-output -S %s 2>&1 | FileCheck %s
 
