@@ -13,18 +13,11 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <numeric>
-
 #include <numeric>
 #include <optional>
 
@@ -102,10 +95,10 @@ static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division, which will be positive.
 /// The final division expression is normalized by GCD.
-static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
-                                unsigned ubIneq, unsigned lbIneq,
-                                MutableArrayRef<DynamicAPInt> expr,
-                                DynamicAPInt &divisor) {
+static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
+                       unsigned ubIneq, unsigned lbIneq,
+                       MutableArrayRef<DynamicAPInt> expr,
+                       DynamicAPInt &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
   assert(ubIneq <= cst.getNumInequalities() &&
@@ -127,7 +120,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
       break;
 
   if (i < e)
-    return failure();
+    return false;
 
   // Then, check if the constant term is of the proper form.
   // Due to the form of the upper/lower bound inequalities, the sum of their
@@ -139,7 +132,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   // Check if `c` satisfies the condition `0 <= c <= divisor - 1`.
   // This also implictly checks that `divisor` is positive.
   if (!(0 <= c && c <= divisor - 1)) // NOLINT
-    return failure();
+    return false;
 
   // The inequality pair can be used to extract the division.
   // Set `expr` to the dividend of the division except the constant term, which
@@ -154,7 +147,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
   normalizeDivisionByGCD(expr, divisor);
 
-  return success();
+  return true;
 }
 
 /// Check if the pos^th variable can be represented as a division using
@@ -168,10 +161,9 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division. The final division expression is
 /// normalized by GCD.
-static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
-                                unsigned eqInd,
-                                MutableArrayRef<DynamicAPInt> expr,
-                                DynamicAPInt &divisor) {
+static bool getDivRepr(const IntegerRelation &cst, unsigned pos, unsigned eqInd,
+                       MutableArrayRef<DynamicAPInt> expr,
+                       DynamicAPInt &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
   assert(eqInd <= cst.getNumEqualities() && "Invalid equality position");
@@ -182,7 +174,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   // Equality must involve the pos-th variable and hence `tempDiv` != 0.
   DynamicAPInt tempDiv = cst.atEq(eqInd, pos);
   if (tempDiv == 0)
-    return failure();
+    return false;
   int signDiv = tempDiv < 0 ? -1 : 1;
 
   // The divisor is always a positive integer.
@@ -195,7 +187,7 @@ static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
   expr.back() = -signDiv * cst.atEq(eqInd, cst.getNumCols() - 1);
   normalizeDivisionByGCD(expr, divisor);
 
-  return success();
+  return true;
 }
 
 // Returns `false` if the constraints depends on a variable for which an
@@ -246,7 +238,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
       // Attempt to get divison representation from ubPos, lbPos.
-      if (failed(getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor)))
+      if (!getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor))
         continue;
 
       if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
@@ -259,7 +251,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   }
   for (unsigned eqPos : eqIndices) {
     // Attempt to get divison representation from eqPos.
-    if (failed(getDivRepr(cst, pos, eqPos, dividend, divisor)))
+    if (!getDivRepr(cst, pos, eqPos, dividend, divisor))
       continue;
 
     if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))

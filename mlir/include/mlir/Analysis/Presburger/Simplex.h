@@ -20,12 +20,7 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/StringSaver.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 namespace mlir {
@@ -450,7 +445,7 @@ protected:
   /// lexicopositivity of the basis transform. The row must have a non-positive
   /// sample value. If this is not possible, return failure. This occurs when
   /// the constraints have no solution or the sample value is zero.
-  LogicalResult moveRowUnknownToColumn(unsigned row);
+  bool moveRowUnknownToColumn(unsigned row);
 
   /// Given a row that has a non-integer sample value, add an inequality to cut
   /// away this fractional sample value from the polytope without removing any
@@ -464,7 +459,7 @@ protected:
   ///
   /// Return failure if the tableau became empty, and success if it didn't.
   /// Failure status indicates that the polytope was integer empty.
-  LogicalResult addCut(unsigned row);
+  bool addCut(unsigned row);
 
   /// Undo the addition of the last constraint. This is only called while
   /// rolling back.
@@ -516,7 +511,7 @@ private:
   MaybeOptimum<SmallVector<Fraction, 8>> getRationalSample() const;
 
   /// Make the tableau configuration consistent.
-  LogicalResult restoreRationalConsistency();
+  bool restoreRationalConsistency();
 
   /// Return whether the specified row is violated;
   bool rowIsViolated(unsigned row) const;
@@ -631,7 +626,7 @@ private:
   /// Return failure if the tableau became empty, indicating that the polytope
   /// is always integer empty in the current symbol domain.
   /// Return success otherwise.
-  LogicalResult doNonBranchingPivots();
+  bool doNonBranchingPivots();
 
   /// Get a row that is always violated in the current domain, if one exists.
   std::optional<unsigned> maybeGetAlwaysViolatedRow();
@@ -652,7 +647,7 @@ private:
   /// at the time of the call. (This function may modify the symbol domain, but
   /// failure statu indicates that the polytope was empty for all symbol values
   /// in the initial domain.)
-  LogicalResult addSymbolicCut(unsigned row);
+  bool addSymbolicCut(unsigned row);
 
   /// Get the numerator of the symbolic sample of the specific row.
   /// This is an affine expression in the symbols with integer coefficients.
@@ -825,7 +820,7 @@ private:
   ///
   /// Returns success if the unknown was successfully restored to a non-negative
   /// sample value, failure otherwise.
-  LogicalResult restoreRow(Unknown &u);
+  bool restoreRow(Unknown &u);
 
   /// Find a pivot to change the sample value of row in the specified
   /// direction while preserving tableau consistency, except that if the
