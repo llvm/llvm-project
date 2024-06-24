@@ -801,6 +801,15 @@ struct MultiSizeSpecificationBase {
   /// Number of tiles associated with each size.
   T lowTripCount, highTripCount;
 };
+
+template <typename T>
+struct ContinuousTileSizeSpecificationBase {
+  /// Tile sizes.
+  SmallVector<T> tileSizes;
+  /// Number of tiles associated with each size.
+  SmallVector<T> tripCounts;
+};
+
 } // namespace detail
 
 /// A description of a multi-size tiling comprising tile sizes and numbers of
@@ -810,6 +819,11 @@ struct MultiSizeSpecification
     : public detail::MultiSizeSpecificationBase<Value> {};
 struct StaticMultiSizeSpecification
     : public detail::MultiSizeSpecificationBase<int64_t> {};
+
+struct ContinuousTileSizeSpecification
+    : public detail::ContinuousTileSizeSpecificationBase<Value> {};
+struct StaticContinuousTileSizeSpecification
+    : public detail::ContinuousTileSizeSpecificationBase<int64_t> {};
 
 /// Emits the IR computing the multi-sized tiling specification with two tile
 /// sizes not exceeding `targetSize`, each divisible by `sizeDivisor`, such
@@ -846,6 +860,13 @@ FailureOr<StaticMultiSizeSpecification>
 computeStaticMultiTileSizes(LinalgOp op, unsigned dimension, int64_t targetSize,
                             int64_t divisor);
 
+FailureOr<StaticContinuousTileSizeSpecification>
+computeStaticContinuousTileSizes(LinalgOp op, unsigned dimension,
+                                 unsigned targetSize);
+FailureOr<ContinuousTileSizeSpecification>
+computeContinuousTileSizes(OpBuilder &builder, TilingInterface op,
+                           unsigned dimension, OpFoldResult targetSize,
+                           bool emitAssertions);
 /// Rewrite a TilingInterface `op` to a tiled `scf.forall`, applying
 /// tiling by `numThreads`.
 /// If non-empty, the `mapping` is added as an attribute to the
@@ -1691,6 +1712,13 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 /// Patterns to block pack Linalg matmul ops.
 void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
+
+/// Adds patterns that reduce the rank of named contraction ops that have
+/// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
+/// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
+/// `linalg.batch_matmul` with unit batch size will convert to `linalg.matmul`
+/// and a `linalg.matvec` with with unit spatial dim in lhs will convert to a `linalg.dot`.
+void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg
 } // namespace mlir

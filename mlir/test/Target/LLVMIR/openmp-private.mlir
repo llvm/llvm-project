@@ -140,3 +140,97 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
   llvm.store %1, %arg2 : f32, !llvm.ptr
   omp.yield(%arg2 : !llvm.ptr)
 }
+
+// Tests fix for Fujitsu test suite test: 0007_0019.f90: the
+// `llvm.mlir.addressof` op needs access to the parent module when lowering
+// from the LLVM dialect to LLVM IR. If such op is used inside an `omp.private`
+// op instance that was not created/cloned inside the module, we would get a
+// seg fault due to trying to access a null pointer.
+
+// CHECK-LABEL: define internal void @lower_region_with_addressof..omp_par
+// CHECK:         omp.par.region:
+// CHECK:           br label %[[PAR_REG_BEG:.*]]
+// CHECK:         [[PAR_REG_BEG]]:
+// CHECK:           %[[PRIVATIZER_GEP:.*]] = getelementptr double, ptr @_QQfoo, i64 111
+// CHECK:           call void @bar(ptr %[[PRIVATIZER_GEP]])
+// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
+llvm.func @lower_region_with_addressof() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr
+  omp.parallel private(@_QFlower_region_with_addressof_privatizer %1 -> %arg0 : !llvm.ptr) {
+    %c0 = llvm.mlir.constant(111 : i64) : i64
+    %2 = llvm.getelementptr %arg0[%c0] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%2) : (!llvm.ptr) -> ()
+
+    %c1 = llvm.mlir.constant(222 : i64) : i64
+    %3 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+    %4 = llvm.getelementptr %3[%c1] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%4) : (!llvm.ptr) -> ()
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+
+llvm.mlir.global linkonce constant @_QQfoo() {addr_space = 0 : i32} : !llvm.array<3 x i8> {
+  %0 = llvm.mlir.constant("foo") : !llvm.array<3 x i8>
+  llvm.return %0 : !llvm.array<3 x i8>
+}
+
+llvm.func @bar(!llvm.ptr)
+
+
+// Tests fix for Fujitsu test suite test: 0275_0032.f90. The MLIR to LLVM
+// translation logic assumed that reduction arguments to an `omp.parallel`
+// op are always the last set of arguments to the op. However, this is a
+// wrong assumption since private args come afterward. This tests the fix
+// that we access the different sets of args properly.
+
+// CHECK-LABEL: define internal void @private_and_reduction_..omp_par
+// CHECK-DAG:    %[[PRV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK-DAG:     %[[RED_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
+
+// CHECK:         omp.par.region:
+// CHECK:           br label %[[PAR_REG_BEG:.*]]
+// CHECK:         [[PAR_REG_BEG]]:
+// CHECK-NEXT:      %{{.*}} = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[RED_ALLOC]], align 8
+// CHECK-NEXT:      store float 8.000000e+00, ptr %[[PRV_ALLOC]], align 4
+
+llvm.func @private_and_reduction_() attributes {fir.internal_name = "_QPprivate_and_reduction", frame_pointer = #llvm.framePointerKind<all>, target_cpu = "x86-64"} {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
+  %2 = llvm.alloca %0 x f32 {bindc_name = "to_priv"} : (i64) -> !llvm.ptr
+  omp.parallel reduction(byref @reducer.part %1 -> %arg0 : !llvm.ptr) private(@privatizer.part %2 -> %arg1 : !llvm.ptr) {
+    %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+    %4 = llvm.mlir.constant(8.000000e+00 : f32) : f32
+    llvm.store %4, %arg1 : f32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+
+omp.private {type = private} @privatizer.part : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f32 {bindc_name = "to_priv", pinned} : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+}
+
+omp.declare_reduction @reducer.part : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} combiner {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  omp.yield(%arg0 : !llvm.ptr)
+}  cleanup {
+^bb0(%arg0: !llvm.ptr):
+  omp.yield
+}

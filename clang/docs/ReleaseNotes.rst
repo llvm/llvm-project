@@ -71,6 +71,11 @@ C++ Specific Potentially Breaking Changes
 
   To fix this, update libstdc++ to version 14.1.1 or greater.
 
+- Clang now emits errors when Thread Safety Analysis trylock attributes are
+  applied to functions or methods with incompatible return values, such as
+  constructors, destructors, and void-returning functions. This only affects the
+  ``TRY_ACQUIRE`` and ``TRY_ACQUIRE_SHARED`` attributes (and any synonyms).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -95,12 +100,16 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Removed the global alias that was pointing to AArch64 Function Multiversioning
+  ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
+  suffix got removed from the name mangling. The alias interacts badly with
+  GlobalOpt (see the issue #96197).
+  
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
   earlier versions of Clang unless such code is built with the compiler option
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
-
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -286,6 +295,9 @@ Resolutions to C++ Defect Reports
 
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
+
+- Clang now performs type-only lookup for the name in ``using enum`` declaration.
+  (`CWG2877: Type-only lookup for using-enum-declarator <https://cplusplus.github.io/CWG/issues/2877.html>`_).
 
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
@@ -508,6 +520,11 @@ Attribute Changes in Clang
      };
 
 
+- Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
+  ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
+  The attributes declare constraints about a function's behavior pertaining to blocking and
+  heap memory allocation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -717,6 +734,11 @@ Bug Fixes in This Version
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
+- Clang's Thread Safety Analysis now evaluates trylock success arguments of enum
+  types rather than silently defaulting to false. This fixes a class of false
+  negatives where the analysis failed to detect unchecked access to guarded
+  data.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -909,7 +931,9 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
+- Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

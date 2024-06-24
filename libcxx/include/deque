@@ -632,11 +632,11 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI deque(deque&& __c) _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
+  _LIBCPP_HIDE_FROM_ABI deque(deque&& __c) noexcept(is_nothrow_move_constructible<allocator_type>::value);
   _LIBCPP_HIDE_FROM_ABI deque(deque&& __c, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_HIDE_FROM_ABI deque& operator=(deque&& __c)
-      _NOEXCEPT_(__alloc_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_HIDE_FROM_ABI deque&
+  operator=(deque&& __c) noexcept(__alloc_traits::propagate_on_container_move_assignment::value &&
+                                  is_nothrow_move_assignable<allocator_type>::value);
 
   _LIBCPP_HIDE_FROM_ABI void assign(initializer_list<value_type> __il) { assign(__il.begin(), __il.end()); }
 #endif // _LIBCPP_CXX03_LANG
@@ -1309,7 +1309,7 @@ deque<_Tp, _Allocator>::deque(initializer_list<value_type> __il, const allocator
 }
 
 template <class _Tp, class _Allocator>
-inline deque<_Tp, _Allocator>::deque(deque&& __c) _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+inline deque<_Tp, _Allocator>::deque(deque&& __c) noexcept(is_nothrow_move_constructible<allocator_type>::value)
     : __map_(std::move(__c.__map_)), __start_(std::move(__c.__start_)), __size_(std::move(__c.__size_)) {
   __c.__start_ = 0;
   __c.__size() = 0;
@@ -1333,8 +1333,9 @@ inline deque<_Tp, _Allocator>::deque(deque&& __c, const __type_identity_t<alloca
 }
 
 template <class _Tp, class _Allocator>
-inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) _NOEXCEPT_(
-    __alloc_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<allocator_type>::value) {
+inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) noexcept(
+    __alloc_traits::propagate_on_container_move_assignment::value &&
+    is_nothrow_move_assignable<allocator_type>::value) {
   __move_assign(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1349,8 +1350,8 @@ void deque<_Tp, _Allocator>::__move_assign(deque& __c, false_type) {
 }
 
 template <class _Tp, class _Allocator>
-void deque<_Tp, _Allocator>::__move_assign(deque& __c, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
+void deque<_Tp, _Allocator>::__move_assign(deque& __c,
+                                           true_type) noexcept(is_nothrow_move_assignable<allocator_type>::value) {
   clear();
   shrink_to_fit();
   __move_assign(__c);

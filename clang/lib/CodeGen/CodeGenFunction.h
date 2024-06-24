@@ -4417,6 +4417,10 @@ public:
 
   bool isPointerKnownNonNull(const Expr *E);
 
+  void EmitPointerAuthOperandBundle(
+      const CGPointerAuthInfo &Info,
+      SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
+
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
   static std::string getNonTrivialCopyConstructorStr(QualType QT,

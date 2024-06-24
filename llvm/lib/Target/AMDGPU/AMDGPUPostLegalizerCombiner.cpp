@@ -100,7 +100,7 @@ public:
   bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
-  // signed buffer laod instructions.
+  // signed buffer load instructions.
   bool matchCombineSignExtendInReg(
       MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
   void applyCombineSignExtendInReg(
