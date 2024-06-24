@@ -32319,7 +32319,7 @@ static SDValue getFlagsOfCmpZeroFori1(SelectionDAG &DAG, const SDLoc &DL,
   return SDValue(CmpZero.getNode(), 1);
 }
 
-SDValue X86TargetLowering::visitMaskedLoadForCondFaulting(
+SDValue X86TargetLowering::visitMaskedLoad(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
     SDValue &NewLoad, SDValue Ptr, SDValue PassThru, SDValue Mask) const {
   // @llvm.masked.load.*(ptr, alignment, mask, passthru)
@@ -32339,9 +32339,10 @@ SDValue X86TargetLowering::visitMaskedLoadForCondFaulting(
   return DAG.getBitcast(VTy, NewLoad);
 }
 
-SDValue X86TargetLowering::visitMaskedStoreForCondFaulting(
-    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
-    SDValue Ptr, SDValue Val, SDValue Mask) const {
+SDValue X86TargetLowering::visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue Chain,
+                                            MachineMemOperand *MMO, SDValue Ptr,
+                                            SDValue Val, SDValue Mask) const {
   // llvm.masked.store.*(Src0, Ptr, alignment, Mask)
   // ->
   // _, flags = SUB 0, mask

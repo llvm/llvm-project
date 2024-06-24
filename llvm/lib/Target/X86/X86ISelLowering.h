@@ -1560,17 +1560,13 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
-    SDValue visitMaskedLoadForCondFaulting(SelectionDAG &DAG, const SDLoc &DL,
-                                           SDValue Chain,
-                                           MachineMemOperand *MMO,
-                                           SDValue &NewLoad, SDValue Ptr,
-                                           SDValue PassThru,
-                                           SDValue Mask) const override;
-    SDValue visitMaskedStoreForCondFaulting(SelectionDAG &DAG, const SDLoc &DL,
-                                            SDValue Chain,
-                                            MachineMemOperand *MMO, SDValue Ptr,
-                                            SDValue Val,
-                                            SDValue Mask) const override;
+    SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                            MachineMemOperand *MMO, SDValue &NewLoad,
+                            SDValue Ptr, SDValue PassThru,
+                            SDValue Mask) const override;
+    SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                             MachineMemOperand *MMO, SDValue Ptr, SDValue Val,
+                             SDValue Mask) const override;
 
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.

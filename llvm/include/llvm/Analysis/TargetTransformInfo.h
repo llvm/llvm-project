@@ -1115,7 +1115,7 @@ public:
 
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
-  bool hasConditionalFaultingLoadStoreForType(Type *Ty = nullptr) const;
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
 
   /// \return the target-provided register class ID for the provided type,
   /// accounting for type promotion and other type-legalization techniques that
@@ -1960,8 +1960,7 @@ public:
   virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
-  virtual bool
-  hasConditionalFaultingLoadStoreForType(Type *Ty = nullptr) const = 0;
+  virtual bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
@@ -2549,9 +2548,8 @@ public:
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
   }
-  bool
-  hasConditionalFaultingLoadStoreForType(Type *Ty = nullptr) const override {
-    return Impl.hasConditionalFaultingLoadStoreForType(Ty);
+  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const override {
+    return Impl.hasConditionalLoadStoreForType(Ty);
   }
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {

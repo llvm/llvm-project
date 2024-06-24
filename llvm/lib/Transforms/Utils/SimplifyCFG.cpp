@@ -3026,7 +3026,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
 bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     BasicBlock *BB) {
   if (!HoistLoadsStoresWithCondFaulting ||
-      !TTI.hasConditionalFaultingLoadStoreForType())
+      !TTI.hasConditionalLoadStoreForType())
     return false;
 
   auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -3087,8 +3087,7 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
           return false;
         auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
         // a load from alloca is always safe.
-        if (!IsLoadFromAlloca(I) &&
-            !TTI.hasConditionalFaultingLoadStoreForType(Type))
+        if (!IsLoadFromAlloca(I) && !TTI.hasConditionalLoadStoreForType(Type))
           return false;
         if (SI && SkipMemoryRead)
           return false;

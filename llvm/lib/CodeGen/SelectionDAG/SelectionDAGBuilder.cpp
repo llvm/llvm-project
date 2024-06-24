@@ -4788,12 +4788,12 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
-      (!IsCompressing && TTI.hasConditionalFaultingLoadStoreForType(
+      (!IsCompressing && TTI.hasConditionalLoadStoreForType(
                              I.getArgOperand(0)->getType()->getScalarType()))
-          ? TLI.visitMaskedStoreForCondFaulting(DAG, sdl, getMemoryRoot(), MMO,
-                                                Ptr, Src0, Mask)
+          ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
+                                 Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
-                               VT, MMO, ISD::UNINDEXED, false /* Truncating */,
+                               VT, MMO, ISD::UNINDEXED, /*Truncating=*/false,
                                IsCompressing);
   DAG.setRoot(StoreNode);
   setValue(&I, StoreNode);
@@ -4973,10 +4973,9 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   // The Load/Res may point to different values.
   SDValue Load;
   SDValue Res;
-  if (!IsExpanding && TTI.hasConditionalFaultingLoadStoreForType(
+  if (!IsExpanding && TTI.hasConditionalLoadStoreForType(
                           Src0Operand->getType()->getScalarType()))
-    Res = TLI.visitMaskedLoadForCondFaulting(DAG, sdl, InChain, MMO, Load, Ptr,
-                                             Src0, Mask);
+    Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =
         DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,

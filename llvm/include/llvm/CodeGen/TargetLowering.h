@@ -3895,15 +3895,17 @@ public:
                            const SDValue OldRHS, SDValue &Chain,
                            bool IsSignaling = false) const;
 
-  virtual SDValue visitMaskedLoadForCondFaulting(
-      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
-      SDValue &NewLoad, SDValue Ptr, SDValue PassThru, SDValue Mask) const {
+  virtual SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL,
+                                  SDValue Chain, MachineMemOperand *MMO,
+                                  SDValue &NewLoad, SDValue Ptr,
+                                  SDValue PassThru, SDValue Mask) const {
     llvm_unreachable("Not Implemented");
   }
 
-  virtual SDValue visitMaskedStoreForCondFaulting(
-      SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
-      SDValue Ptr, SDValue Val, SDValue Mask) const {
+  virtual SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Chain, MachineMemOperand *MMO,
+                                   SDValue Ptr, SDValue Val,
+                                   SDValue Mask) const {
     llvm_unreachable("Not Implemented");
   }
 

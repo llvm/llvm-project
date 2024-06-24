@@ -176,7 +176,7 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
-bool X86TTIImpl::hasConditionalFaultingLoadStoreForType(Type *Ty) const {
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
   if (!ST->hasCF())
     return false;
   if (!Ty)
@@ -5923,7 +5923,7 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
   Type *ScalarTy = DataTy->getScalarType();
 
   if (ST->hasCF() && IsSingleElementVector &&
-      hasConditionalFaultingLoadStoreForType(ScalarTy))
+      hasConditionalLoadStoreForType(ScalarTy))
     return true;
 
   if (!ST->hasAVX())
