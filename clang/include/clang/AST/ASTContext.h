@@ -467,6 +467,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// This is the top-level (C++20) Named module we are building.
   Module *CurrentCXXNamedModule = nullptr;
 
+  /// Help structures to decide whether two `const Module *` belongs
+  /// to the same conceptual module to avoid the expensive to string comparison
+  /// if possible.
+  ///
+  /// Not serialized intentionally.
+  llvm::StringMap<const Module *> PrimaryModuleNameMap;
+  llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
+
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
   static constexpr unsigned FunctionProtoTypesLog2InitSize = 12;
