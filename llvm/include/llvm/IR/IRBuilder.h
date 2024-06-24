@@ -173,37 +173,13 @@ public:
   BasicBlock::iterator GetInsertPoint() const { return InsertPt; }
   LLVMContext &getContext() const { return Context; }
 
-  /// This specifies that created instructions should be appended to the
-  /// end of the specified block.
-  void SetInsertPoint(BasicBlock *TheBB) {
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
-
-  /// This specifies that created instructions should be inserted before
-  /// the specified instruction.
-  void SetInsertPoint(Instruction *I) {
-    BB = I->getParent();
-    InsertPt = I->getIterator();
-    assert(InsertPt != BB->end() && "Can't read debug loc from end()");
-    SetCurrentDebugLocation(I->getStableDebugLoc());
-  }
-
   /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void SetInsertPoint(BasicBlock *TheBB, BasicBlock::iterator IP) {
-    BB = TheBB;
+  /// specified insert position.
+  void SetInsertPoint(InsertPosition IP) {
+    BB = IP.getBasicBlock();
     InsertPt = IP;
-    if (IP != TheBB->end())
-      SetCurrentDebugLocation(IP->getStableDebugLoc());
-  }
-
-  /// This specifies that created instructions should be inserted at
-  /// the specified point, but also requires that \p IP is dereferencable.
-  void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP->getParent();
-    InsertPt = IP;
-    SetCurrentDebugLocation(IP->getStableDebugLoc());
+    if (InsertPt != BB->end())
+      SetCurrentDebugLocation(InsertPt->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
@@ -286,7 +262,7 @@ public:
   /// Sets the current insert point to a previously-saved location.
   void restoreIP(InsertPoint IP) {
     if (IP.isSet())
-      SetInsertPoint(IP.getBlock(), IP.getPoint());
+      SetInsertPoint(IP.getPoint());
     else
       ClearInsertionPoint();
   }
@@ -2677,44 +2653,20 @@ public:
                      ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
       : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles) {}
 
-  explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder,
-                     MDNode *FPMathTag = nullptr,
+  explicit IRBuilder(InsertPosition IP, MDNode *FPMathTag = nullptr,
                      ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
-        Folder(Folder) {
-    SetInsertPoint(TheBB);
-  }
-
-  explicit IRBuilder(BasicBlock *TheBB, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
-    SetInsertPoint(TheBB);
-  }
-
-  explicit IRBuilder(Instruction *IP, MDNode *FPMathTag = nullptr,
-                     ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
-      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter, FPMathTag,
-                      OpBundles) {
+      : IRBuilderBase(IP.getBasicBlock()->getContext(), this->Folder,
+                      this->Inserter, FPMathTag, OpBundles) {
     SetInsertPoint(IP);
   }
 
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles),
+  explicit IRBuilder(InsertPosition IP, FolderTy Folder,
+                     MDNode *FPMathTag = nullptr,
+                     ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
+      : IRBuilderBase(IP.getBasicBlock()->getContext(), this->Folder,
+                      this->Inserter, FPMathTag, OpBundles),
         Folder(Folder) {
-    SetInsertPoint(TheBB, IP);
-  }
-
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP,
-            MDNode *FPMathTag = nullptr,
-            ArrayRef<OperandBundleDef> OpBundles = std::nullopt)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag, OpBundles) {
-    SetInsertPoint(TheBB, IP);
+    SetInsertPoint(IP);
   }
 
   /// Avoid copying the full IRBuilder. Prefer using InsertPointGuard

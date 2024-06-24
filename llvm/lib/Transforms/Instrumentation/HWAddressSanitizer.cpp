@@ -1622,7 +1622,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     A.removeAttr(llvm::Attribute::WriteOnly);
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
-  IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
+  IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
                    Mapping.WithFrameRecord &&

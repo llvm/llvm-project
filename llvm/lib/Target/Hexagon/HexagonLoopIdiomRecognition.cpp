@@ -1115,7 +1115,7 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       assert(Ty0 == DestTy);
       // In order to create the trunc, P must have the promoted type.
       P->mutateType(Ty0);
-      Value *T = IRBuilder<>(ExitB, End).CreateTrunc(P, PTy);
+      Value *T = IRBuilder<>(End).CreateTrunc(P, PTy);
       // In order for the RAUW to work, the types of P and T must match.
       P->mutateType(PTy);
       P->replaceAllUsesWith(T);
@@ -1462,7 +1462,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
   // them right after the loop exit.
   // Take advantage of the loop-closed SSA form, which has all the post-
   // loop values in phi nodes.
-  IRB.SetInsertPoint(ExitB, ExitB->getFirstInsertionPt());
+  IRB.SetInsertPoint(ExitB->getFirstInsertionPt());
   for (auto P = ExitB->begin(), Q = ExitB->end(); P != Q; ++P) {
     if (!isa<PHINode>(P))
       break;

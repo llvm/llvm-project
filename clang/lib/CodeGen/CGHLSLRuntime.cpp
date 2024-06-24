@@ -436,7 +436,7 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.shader"))
       continue;
-    IRBuilder<> B(&F.getEntryBlock(), F.getEntryBlock().begin());
+    IRBuilder<> B(F.getEntryBlock().begin());
     for (auto *Fn : CtorFns)
       B.CreateCall(FunctionCallee(Fn));
 

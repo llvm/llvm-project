@@ -62,7 +62,7 @@ TEST(SSAUpdaterBulk, SimpleMerge) {
   Value *SubOp2 = B.CreateSub(FirstArg, ConstantInt::get(I32Ty, 4));
   B.CreateBr(MergeBB);
 
-  B.SetInsertPoint(MergeBB, MergeBB->begin());
+  B.SetInsertPoint(MergeBB->begin());
   auto *I1 = cast<Instruction>(B.CreateAdd(AddOp1, ConstantInt::get(I32Ty, 5)));
   auto *I2 = cast<Instruction>(B.CreateAdd(AddOp2, ConstantInt::get(I32Ty, 6)));
   auto *I3 = cast<Instruction>(B.CreateAdd(SubOp1, SubOp2));

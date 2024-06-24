@@ -1956,8 +1956,7 @@ void AddressSanitizer::instrumentUnusualSizeOrAlignment(
 void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit,
                                                   GlobalValue *ModuleName) {
   // Set up the arguments to our poison/unpoison functions.
-  IRBuilder<> IRB(&GlobalInit.front(),
-                  GlobalInit.front().getFirstInsertionPt());
+  IRBuilder<> IRB(GlobalInit.front().getFirstInsertionPt());
 
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr = ConstantExpr::getPointerCast(ModuleName, IntptrTy);
@@ -2869,7 +2868,7 @@ bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee AsanInitFunction =
         declareSanitizerInitFunction(*F.getParent(), kAsanInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(AsanInitFunction, {});
     return true;
   }

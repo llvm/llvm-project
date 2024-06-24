@@ -3026,8 +3026,7 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
 
     // Compute the end value for the additional bypass (if applicable).
     if (AdditionalBypass.first) {
-      B.SetInsertPoint(AdditionalBypass.first,
-                       AdditionalBypass.first->getFirstInsertionPt());
+      B.SetInsertPoint(AdditionalBypass.first->getFirstInsertionPt());
       EndValueFromAdditionalBypass =
           emitTransformedIndex(B, AdditionalBypass.second, II.getStartValue(),
                                Step, II.getKind(), II.getInductionBinOp());
@@ -3441,8 +3440,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   // Fix LCSSA phis not already fixed earlier. Extracts may need to be generated
   // in the exit block, so update the builder.
-  State.Builder.SetInsertPoint(State.CFG.ExitBB,
-                               State.CFG.ExitBB->getFirstNonPHIIt());
+  State.Builder.SetInsertPoint(State.CFG.ExitBB->getFirstNonPHIIt());
   for (const auto &KV : Plan.getLiveOuts())
     KV.second->fixPhi(Plan, State);
 
@@ -3485,7 +3483,7 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   PHINode *ScalarHeaderPhi = LO->getPhi();
   auto *InitScalarFOR =
       ScalarHeaderPhi->getIncomingValueForBlock(LoopScalarPreHeader);
-  Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
+  Builder.SetInsertPoint(LoopScalarPreHeader->begin());
   auto *ScalarPreheaderPhi =
       Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
   for (auto *BB : predecessors(LoopScalarPreHeader)) {

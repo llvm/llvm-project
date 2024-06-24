@@ -123,7 +123,7 @@ llvm::Value *CodeGen::getCXXDestructorImplicitParam(
   CGF.CurCodeDecl = D;
   CGF.CurFuncDecl = D;
   CGF.CurFn = InsertBlock->getParent();
-  CGF.Builder.SetInsertPoint(InsertBlock, InsertPoint);
+  CGF.Builder.SetInsertPoint(InsertPoint);
   return CGM.getCXXABI().getCXXDestructorImplicitParam(
       CGF, D, Type, ForVirtualBase, Delegating);
 }

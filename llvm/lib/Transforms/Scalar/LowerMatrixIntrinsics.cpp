@@ -1656,7 +1656,7 @@ public:
     // condition holds, they alias, otherwise they are guaranteed to not
     // overlap.
     Check1->getTerminator()->eraseFromParent();
-    Builder.SetInsertPoint(Check1, Check1->begin());
+    Builder.SetInsertPoint(Check1->begin());
     Value *LoadEnd = Builder.CreateAdd(
         LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
         "load.end", true, true);
@@ -1664,7 +1664,7 @@ public:
                          Fusion);
 
     // Copy load operand to new alloca.
-    Builder.SetInsertPoint(Copy, Copy->begin());
+    Builder.SetInsertPoint(Copy->begin());
     auto *VT = cast<FixedVectorType>(Load->getType());
     // Use an array type for the alloca, to avoid potentially huge alignment
     // requirements for large vector types.
@@ -1674,7 +1674,7 @@ public:
 
     Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
-    Builder.SetInsertPoint(Fusion, Fusion->begin());
+    Builder.SetInsertPoint(Fusion->begin());
     PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
     PHI->addIncoming(Load->getPointerOperand(), Check0);
     PHI->addIncoming(Load->getPointerOperand(), Check1);

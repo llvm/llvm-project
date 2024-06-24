@@ -139,7 +139,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   if (Pred != CmpInst::ICMP_EQ)
     return false;
 
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  IRBuilder<> Builder(PhiBB->getFirstInsertionPt());
 
   if (ShVal0 == ShVal1)
     ++NumGuardedRotates;

@@ -11374,12 +11374,11 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
   if (IsPHI || (E->State != TreeEntry::NeedToGather &&
                 doesNotNeedToSchedule(E->Scalars))) {
-    Builder.SetInsertPoint(LastInst->getParent(), LastInstIt);
+    Builder.SetInsertPoint(LastInstIt);
   } else {
     // Set the insertion point after the last instruction in the bundle. Set the
     // debug location to Front.
     Builder.SetInsertPoint(
-        LastInst->getParent(),
         LastInst->getNextNonDebugInstruction()->getIterator());
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
@@ -12615,8 +12614,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (PostponedPHIs && E->VectorizedValue)
         return E->VectorizedValue;
       auto *PH = cast<PHINode>(VL0);
-      Builder.SetInsertPoint(PH->getParent(),
-                             PH->getParent()->getFirstNonPHIIt());
+      Builder.SetInsertPoint(PH->getParent()->getFirstNonPHIIt());
       Builder.SetCurrentDebugLocation(PH->getDebugLoc());
       if (PostponedPHIs || !E->VectorizedValue) {
         PHINode *NewPhi = Builder.CreatePHI(VecTy, PH->getNumIncomingValues());
@@ -12624,8 +12622,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         Value *V = NewPhi;
 
         // Adjust insertion point once all PHI's have been generated.
-        Builder.SetInsertPoint(PH->getParent(),
-                               PH->getParent()->getFirstInsertionPt());
+        Builder.SetInsertPoint(PH->getParent()->getFirstInsertionPt());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
 
         V = FinalShuffle(V, E, VecTy);
@@ -13497,10 +13494,9 @@ Value *BoUpSLP::vectorizeTree(
   EntryToLastInstruction.clear();
 
   if (ReductionRoot)
-    Builder.SetInsertPoint(ReductionRoot->getParent(),
-                           ReductionRoot->getIterator());
+    Builder.SetInsertPoint(ReductionRoot->getIterator());
   else
-    Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+    Builder.SetInsertPoint(F->getEntryBlock().begin());
 
   // Postpone emission of PHIs operands to avoid cyclic dependencies issues.
   (void)vectorizeTree(VectorizableTree[0].get(), /*PostponedPHIs=*/true);
@@ -13754,13 +13750,11 @@ Value *BoUpSLP::vectorizeTree(
              "instructions");
       if (auto *VecI = dyn_cast<Instruction>(Vec)) {
         if (auto *PHI = dyn_cast<PHINode>(VecI))
-          Builder.SetInsertPoint(PHI->getParent(),
-                                 PHI->getParent()->getFirstNonPHIIt());
+          Builder.SetInsertPoint(PHI->getParent()->getFirstNonPHIIt());
         else
-          Builder.SetInsertPoint(VecI->getParent(),
-                                 std::next(VecI->getIterator()));
+          Builder.SetInsertPoint(std::next(VecI->getIterator()));
       } else {
-        Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+        Builder.SetInsertPoint(F->getEntryBlock().begin());
       }
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       // Required to update internally referenced instructions.
@@ -13866,8 +13860,7 @@ Value *BoUpSLP::vectorizeTree(
             Instruction *IncomingTerminator =
                 PH->getIncomingBlock(I)->getTerminator();
             if (isa<CatchSwitchInst>(IncomingTerminator)) {
-              Builder.SetInsertPoint(VecI->getParent(),
-                                     std::next(VecI->getIterator()));
+              Builder.SetInsertPoint(std::next(VecI->getIterator()));
             } else {
               Builder.SetInsertPoint(PH->getIncomingBlock(I)->getTerminator());
             }
@@ -13881,7 +13874,7 @@ Value *BoUpSLP::vectorizeTree(
         User->replaceUsesOfWith(Scalar, NewInst);
       }
     } else {
-      Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
+      Builder.SetInsertPoint(F->getEntryBlock().begin());
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       User->replaceUsesOfWith(Scalar, NewInst);
     }
@@ -14051,8 +14044,7 @@ Value *BoUpSLP::vectorizeTree(
                                       It != MinBWs.end() &&
                                       ReductionBitWidth != It->second.first) {
     IRBuilder<>::InsertPointGuard Guard(Builder);
-    Builder.SetInsertPoint(ReductionRoot->getParent(),
-                           ReductionRoot->getIterator());
+    Builder.SetInsertPoint(ReductionRoot->getIterator());
     Vec = Builder.CreateIntCast(
         Vec,
         VectorType::get(Builder.getIntNTy(ReductionBitWidth),

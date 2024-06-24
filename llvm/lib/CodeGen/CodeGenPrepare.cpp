@@ -2355,7 +2355,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
+  Builder.SetInsertPoint(EndBlock->begin());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -6306,7 +6306,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         NewBaseInsertBB = &BaseGEP->getFunction()->getEntryBlock();
         NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
       }
-      IRBuilder<> NewBaseBuilder(NewBaseInsertBB, NewBaseInsertPt);
+      IRBuilder<> NewBaseBuilder(NewBaseInsertPt);
       // Create a new base.
       Value *BaseIndex = ConstantInt::get(PtrIdxTy, BaseOffset);
       NewBaseGEP = OldBase;

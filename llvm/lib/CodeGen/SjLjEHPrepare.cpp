@@ -182,7 +182,7 @@ void SjLjEHPrepareImpl::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
   Type *LPadType = LPI->getType();
   Value *LPadVal = PoisonValue::get(LPadType);
   auto *SelI = cast<Instruction>(SelVal);
-  IRBuilder<> Builder(SelI->getParent(), std::next(SelI->getIterator()));
+  IRBuilder<> Builder(std::next(SelI->getIterator()));
   LPadVal = Builder.CreateInsertValue(LPadVal, ExnVal, 0, "lpad.val");
   LPadVal = Builder.CreateInsertValue(LPadVal, SelVal, 1, "lpad.val");
 
@@ -206,8 +206,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
 
   // Fill in the function context structure.
   for (LandingPadInst *LPI : LPads) {
-    IRBuilder<> Builder(LPI->getParent(),
-                        LPI->getParent()->getFirstInsertionPt());
+    IRBuilder<> Builder(LPI->getParent()->getFirstInsertionPt());
 
     // Reference the __data field.
     Value *FCData =

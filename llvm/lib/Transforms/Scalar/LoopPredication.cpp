@@ -782,7 +782,7 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   BI->setCondition(AllChecks);
   if (InsertAssumesOfPredicatedGuardsConditions) {
     BasicBlock *IfTrueBB = BI->getSuccessor(0);
-    Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
+    Builder.SetInsertPoint(IfTrueBB->getFirstInsertionPt());
     // If this block has other predecessors, we might not be able to use Cond.
     // In this case, create a Phi where every other input is `true` and input
     // from guard block is Cond.

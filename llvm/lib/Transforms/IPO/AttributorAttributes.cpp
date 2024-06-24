@@ -7469,7 +7469,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                                    unsigned ArgNo, BasicBlock::iterator IP) {
     assert(PrivType && "Expected privatizable type!");
 
-    IRBuilder<NoFolder> IRB(IP->getParent(), IP);
+    IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = F.getParent()->getDataLayout();
 
     // Traverse the type, build GEPs and stores.

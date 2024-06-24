@@ -558,7 +558,7 @@ bool MemProfiler::maybeInsertMemProfInitAtFunctionEntry(Function &F) {
   if (F.getName().contains(" load]")) {
     FunctionCallee MemProfInitFunction =
         declareSanitizerInitFunction(*F.getParent(), MemProfInitName, {});
-    IRBuilder<> IRB(&F.front(), F.front().begin());
+    IRBuilder<> IRB(F.front().begin());
     IRB.CreateCall(MemProfInitFunction, {});
     return true;
   }

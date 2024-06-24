@@ -1188,7 +1188,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   EXPECT_EQ(DL1, Call1->getDebugLoc());
 
   Call1->setDebugLoc(DL2);
-  Builder.SetInsertPoint(Call1->getParent(), Call1->getIterator());
+  Builder.SetInsertPoint(Call1->getIterator());
   EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
   auto Call2 = Builder.CreateCall(Callee, std::nullopt);
   EXPECT_EQ(DL2, Call2->getDebugLoc());
@@ -1311,10 +1311,10 @@ TEST_F(IRBuilderTest, CTAD) {
   // The block BB is empty, so don't test this one.
   // IRBuilder Builder5(BB->getTerminator());
   // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
-  IRBuilder Builder6(BB, BB->end(), Folder);
+  IRBuilder Builder6(BB->end(), Folder);
   static_assert(
       std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
-  IRBuilder Builder7(BB, BB->end());
+  IRBuilder Builder7(BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 }
