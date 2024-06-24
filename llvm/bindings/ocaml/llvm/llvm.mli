@@ -331,6 +331,12 @@ module AtomicRMWBinOp : sig
   | UMin
   | FAdd
   | FSub
+  | FMax
+  | FMin
+  | UInc_Wrap
+  | UDec_Wrap
+  | Cond_Sub
+  | Sub_Clamp
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].

@@ -3289,6 +3289,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::UDecWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UDEC_WRAP;
     break;
+  case AtomicRMWInst::CondSub:
+    Opcode = TargetOpcode::G_ATOMICRMW_COND_SUB;
+    break;
+  case AtomicRMWInst::SubClamp:
+    Opcode = TargetOpcode::G_ATOMICRMW_SUB_CLAMP;
+    break;
   }
 
   MIRBuilder.buildAtomicRMW(

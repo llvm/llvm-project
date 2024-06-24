@@ -906,6 +906,34 @@ define void @uinc_udec_wrap_atomics(ptr %word) {
   ret void
 }
 
+define void @cond_sub_clamp_atomics(ptr %word) {
+; CHECK: %atomicrmw.condsub0 = atomicrmw cond_sub ptr %word, i32 64 monotonic
+  %atomicrmw.condsub0 = atomicrmw cond_sub ptr %word, i32 64 monotonic
+
+; CHECK: %atomicrmw.condsub1 = atomicrmw cond_sub ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub1 = atomicrmw cond_sub ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub2 = atomicrmw volatile cond_sub ptr %word, i32 128 seq_cst
+  %atomicrmw.condsub2 = atomicrmw volatile cond_sub ptr %word, i32 128 seq_cst
+
+; CHECK: %atomicrmw.condsub0.syncscope = atomicrmw cond_sub ptr %word, i32 27 syncscope("agent") monotonic
+  %atomicrmw.condsub0.syncscope = atomicrmw cond_sub ptr %word, i32 27 syncscope("agent") monotonic
+
+; CHECK: %atomicrmw.subclamp0 = atomicrmw sub_clamp ptr %word, i32 99 monotonic
+  %atomicrmw.subclamp0 = atomicrmw sub_clamp ptr %word, i32 99 monotonic
+
+; CHECK: %atomicrmw.subclamp1 = atomicrmw sub_clamp ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp1 = atomicrmw sub_clamp ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp2 = atomicrmw volatile sub_clamp ptr %word, i32 12 seq_cst
+  %atomicrmw.subclamp2 = atomicrmw volatile sub_clamp ptr %word, i32 12 seq_cst
+
+; CHECK: %atomicrmw.subclamp0.syncscope = atomicrmw sub_clamp ptr %word, i32 5 syncscope("system") monotonic
+  %atomicrmw.subclamp0.syncscope = atomicrmw sub_clamp ptr %word, i32 5 syncscope("system") monotonic
+
+  ret void
+}
+
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic

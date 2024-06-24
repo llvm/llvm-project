@@ -41,6 +41,8 @@ bool isIdempotentRMW(AtomicRMWInst& RMWI) {
     case AtomicRMWInst::Sub:
     case AtomicRMWInst::Or:
     case AtomicRMWInst::Xor:
+    case AtomicRMWInst::CondSub:
+    case AtomicRMWInst::SubClamp:
       return C->isZero();
     case AtomicRMWInst::And:
       return C->isMinusOne();

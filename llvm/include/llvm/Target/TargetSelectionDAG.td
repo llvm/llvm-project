@@ -722,6 +722,10 @@ def atomic_load_uinc_wrap : SDNode<"ISD::ATOMIC_LOAD_UINC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 def atomic_load_udec_wrap : SDNode<"ISD::ATOMIC_LOAD_UDEC_WRAP", SDTAtomic2,
                     [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_cond_sub : SDNode<"ISD::ATOMIC_LOAD_COND_SUB", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
+def atomic_load_sub_clamp : SDNode<"ISD::ATOMIC_LOAD_SUB_CLAMP", SDTAtomic2,
+                    [SDNPHasChain, SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,
                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;

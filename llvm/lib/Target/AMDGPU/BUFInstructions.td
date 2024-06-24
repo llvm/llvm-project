@@ -1126,7 +1126,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 
 let OtherPredicates = [HasGFX10_BEncoding] in {
   defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
-    "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
+    "buffer_atomic_csub", VGPR_32, i32
   >;
 }
 

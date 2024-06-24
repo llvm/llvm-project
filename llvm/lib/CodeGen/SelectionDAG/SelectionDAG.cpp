@@ -8570,24 +8570,18 @@ SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDValue Chain, SDValue Ptr, SDValue Val,
                                 MachineMemOperand *MMO) {
-  assert((Opcode == ISD::ATOMIC_LOAD_ADD ||
-          Opcode == ISD::ATOMIC_LOAD_SUB ||
-          Opcode == ISD::ATOMIC_LOAD_AND ||
-          Opcode == ISD::ATOMIC_LOAD_CLR ||
-          Opcode == ISD::ATOMIC_LOAD_OR ||
-          Opcode == ISD::ATOMIC_LOAD_XOR ||
-          Opcode == ISD::ATOMIC_LOAD_NAND ||
-          Opcode == ISD::ATOMIC_LOAD_MIN ||
-          Opcode == ISD::ATOMIC_LOAD_MAX ||
-          Opcode == ISD::ATOMIC_LOAD_UMIN ||
-          Opcode == ISD::ATOMIC_LOAD_UMAX ||
-          Opcode == ISD::ATOMIC_LOAD_FADD ||
-          Opcode == ISD::ATOMIC_LOAD_FSUB ||
-          Opcode == ISD::ATOMIC_LOAD_FMAX ||
+  assert((Opcode == ISD::ATOMIC_LOAD_ADD || Opcode == ISD::ATOMIC_LOAD_SUB ||
+          Opcode == ISD::ATOMIC_LOAD_AND || Opcode == ISD::ATOMIC_LOAD_CLR ||
+          Opcode == ISD::ATOMIC_LOAD_OR || Opcode == ISD::ATOMIC_LOAD_XOR ||
+          Opcode == ISD::ATOMIC_LOAD_NAND || Opcode == ISD::ATOMIC_LOAD_MIN ||
+          Opcode == ISD::ATOMIC_LOAD_MAX || Opcode == ISD::ATOMIC_LOAD_UMIN ||
+          Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
+          Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-          Opcode == ISD::ATOMIC_SWAP ||
+          Opcode == ISD::ATOMIC_LOAD_COND_SUB ||
+          Opcode == ISD::ATOMIC_LOAD_SUB_CLAMP || Opcode == ISD::ATOMIC_SWAP ||
           Opcode == ISD::ATOMIC_STORE) &&
          "Invalid Atomic Op");
 

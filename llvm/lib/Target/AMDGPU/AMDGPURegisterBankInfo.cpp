@@ -4887,7 +4887,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_global_atomic_fadd:
-    case Intrinsic::amdgcn_global_atomic_csub:
     case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_global_atomic_fmax:
     case Intrinsic::amdgcn_global_atomic_fmin_num:
@@ -4899,7 +4898,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fmax_num:
     case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
-    case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128:
@@ -5222,6 +5220,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_FMAX:
   case AMDGPU::G_ATOMICRMW_UINC_WRAP:
   case AMDGPU::G_ATOMICRMW_UDEC_WRAP:
+  case AMDGPU::G_ATOMICRMW_COND_SUB:
+  case AMDGPU::G_ATOMICRMW_SUB_CLAMP:
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());

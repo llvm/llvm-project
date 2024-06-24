@@ -825,7 +825,9 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_COND_SUB,
+			       G_ATOMICRMW_SUB_CLAMP
 
 Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
 operands.

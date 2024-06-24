@@ -1501,11 +1501,15 @@ llvm.func @atomicrmw(
   %15 = llvm.atomicrmw uinc_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
   // CHECK: atomicrmw udec_wrap ptr %{{.*}}, i32 %{{.*}} monotonic
   %16 = llvm.atomicrmw udec_wrap %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw cond_sub ptr %{{.*}}, i32 %{{.*}} monotonic
+  %17 = llvm.atomicrmw cond_sub %i32_ptr, %i32 monotonic : !llvm.ptr, i32
+  // CHECK: atomicrmw sub_clamp ptr %{{.*}}, i32 %{{.*}} monotonic
+  %18 = llvm.atomicrmw sub_clamp %i32_ptr, %i32 monotonic : !llvm.ptr, i32
 
   // CHECK: atomicrmw volatile
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
-  %17 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  %19 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
   llvm.return
 }
 

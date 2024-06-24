@@ -80,6 +80,8 @@ Changes to the LLVM IR
     removed. The next argument has been changed from byte index to bit
     index.
 
+* Added ``cond_sub`` and ``sub_clamp`` operations to ``atomicrmw``.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -131,6 +133,10 @@ Changes to the AMDGPU Backend
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
+* Removed ``llvm.amdgcn.atomic.cond.sub.u32`` and
+  ``llvm.amdgcn.atomic.csub.u32`` intrinsics. :ref:`atomicrmw <i_atomicrmw>`
+  should be used instead with ``cond_sub`` and ``sub_clamp``.
 
 Changes to the ARM Backend
 --------------------------

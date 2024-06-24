@@ -6014,6 +6014,15 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::CondSub:
+  case AtomicRMWInst::SubClamp:
+    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
+      unsigned Size = IntTy->getBitWidth();
+      if (Size == 32)
+        return AtomicExpansionKind::None;
+    }
+
+    return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());

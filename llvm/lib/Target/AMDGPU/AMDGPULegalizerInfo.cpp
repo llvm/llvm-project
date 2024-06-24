@@ -1637,6 +1637,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  auto &Atomics32 =
+      getActionDefinitionsBuilder({G_ATOMICRMW_COND_SUB, G_ATOMICRMW_SUB_CLAMP})
+          .legalFor({{S32, GlobalPtr}, {S32, LocalPtr}, {S32, RegionPtr}});
+  if (ST.hasFlatAddressSpace()) {
+    Atomics32.legalFor({{S32, FlatPtr}});
+  }
+
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
@@ -6031,9 +6038,6 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fmax:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX;
-  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
-  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
-    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32;
   default:
     llvm_unreachable("unhandled atomic opcode");
   }

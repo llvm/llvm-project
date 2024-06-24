@@ -718,6 +718,8 @@ defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
 defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
 defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
+defm atomic_load_cond_sub : SIAtomicM0Glue2 <"LOAD_COND_SUB">;
+defm atomic_load_sub_clamp : SIAtomicM0Glue2 <"LOAD_SUB_CLAMP">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;

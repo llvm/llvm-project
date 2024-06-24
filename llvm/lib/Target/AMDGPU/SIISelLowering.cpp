@@ -949,6 +949,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::ATOMIC_LOAD_FMAX,
                        ISD::ATOMIC_LOAD_UINC_WRAP,
                        ISD::ATOMIC_LOAD_UDEC_WRAP,
+                       ISD::ATOMIC_LOAD_COND_SUB,
+                       ISD::ATOMIC_LOAD_SUB_CLAMP,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_W_CHAIN});
 
@@ -1317,16 +1319,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
-  case Intrinsic::amdgcn_global_atomic_csub: {
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(CI.getType());
-    Info.ptrVal = CI.getOperand(0);
-    Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad |
-                  MachineMemOperand::MOStore |
-                  MachineMemOperand::MOVolatile;
-    return true;
-  }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
@@ -1349,7 +1341,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1447,7 +1438,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
   switch (II->getIntrinsicID()) {
-  case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
   case Intrinsic::amdgcn_ds_fmax:
@@ -1460,7 +1450,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
-  case Intrinsic::amdgcn_global_atomic_csub:
   case Intrinsic::amdgcn_global_atomic_fadd:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_global_atomic_fmax:
@@ -8864,9 +8853,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
-  case Intrinsic::amdgcn_raw_buffer_atomic_cond_sub_u32:
-    return lowerRawBufferAtomicIntrin(Op, DAG,
-                                      AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
@@ -8908,9 +8894,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_dec:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
-  case Intrinsic::amdgcn_struct_buffer_atomic_cond_sub_u32:
-    return lowerStructBufferAtomicIntrin(Op, DAG,
-                                         AMDGPUISD::BUFFER_ATOMIC_COND_SUB_U32);
 
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
@@ -15808,7 +15791,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_INC:
   case AMDGPUISD::BUFFER_ATOMIC_DEC:
   case AMDGPUISD::BUFFER_ATOMIC_CMPSWAP:
-  case AMDGPUISD::BUFFER_ATOMIC_CSUB:
   case AMDGPUISD::BUFFER_ATOMIC_FADD:
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:

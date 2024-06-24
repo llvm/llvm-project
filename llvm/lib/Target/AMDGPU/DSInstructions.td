@@ -733,17 +733,6 @@ defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
 defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
 
-multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  def : DSAtomicRetPat<inst, vt,
-                        !cast<PatFrag>(frag#"_local_addrspace")>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    def : DSAtomicRetPat<noRetInst, vt,
-                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
-}
-
-defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
@@ -1005,7 +994,34 @@ multiclass DSAtomicRetNoRetPat_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
   }
 }
 
+multiclass DSAtomicRetNoRetPatCondSub_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                         ValueType vt, string frag> {
+  let OtherPredicates = [LDSRequiresM0Init] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_local_m0_"#vt)>;
+    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+      def : DSAtomicRetPat<noRetInst, vt,
+                           !cast<PatFrag>(frag#"_local_m0_noret_"#vt), /* complexity */ 1>;
+  }
 
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
+                         !cast<PatFrag>(frag#"_local_"#vt)>;
+    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+      def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(noRetInst)#"_gfx9"), vt,
+                           !cast<PatFrag>(frag#"_local_noret_"#vt), /* complexity */ 1>;
+  }
+
+  let OtherPredicates = [HasGDS] in {
+    def : DSAtomicRetPat<inst, vt,
+                         !cast<PatFrag>(frag#"_region_m0_"#vt),
+                         /* complexity */ 0, /* gds */ 1>;
+    let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+      def : DSAtomicRetPat<noRetInst, vt,
+                           !cast<PatFrag>(frag#"_region_m0_noret_"#vt),
+                           /* complexity */ 1, /* gds */ 1>;
+  }
+}
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 // Caution, the order of src and cmp is the *opposite* of the BUFFER_ATOMIC_CMPSWAP opcode.
@@ -1087,6 +1103,18 @@ let SubtargetPredicate = HasAtomicDsPkAdd16Insts in {
 defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "atomic_load_fadd">;
 defm : DSAtomicRetNoRetPat_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
+
+defm : DSAtomicRetNoRetPat_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_sub_clamp">;
+
+let SubtargetPredicate = isGFX12Plus in {
+
+//defm : DSAtomicRetNoRetPat_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_cond_sub">;
+
+defm : DSAtomicRetNoRetPatCondSub_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_cond_sub">;
+
+defm : DSAtomicRetNoRetPat_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_sub_clamp">;
+
+} // let SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;

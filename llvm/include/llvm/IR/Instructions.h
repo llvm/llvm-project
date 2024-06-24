@@ -750,8 +750,16 @@ public:
     /// *p = ((old == 0) || (old u> v)) ? v : (old - 1)
     UDecWrap,
 
+    /// Subtract only if result would be positive.
+    /// *p = (old u>= v) ? old - v : old
+    CondSub,
+
+    /// Subtract with clamping of negative results to zero.
+    /// *p = (old u>= v) ? old - v : 0
+    SubClamp,
+
     FIRST_BINOP = Xchg,
-    LAST_BINOP = UDecWrap,
+    LAST_BINOP = SubClamp,
     BAD_BINOP
   };
 

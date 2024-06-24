@@ -106,6 +106,10 @@ def AtomicBinOpUIncWrap : LLVM_EnumAttrCase<"uinc_wrap",
                                             "uinc_wrap", "UIncWrap", 15>;
 def AtomicBinOpUDecWrap : LLVM_EnumAttrCase<"udec_wrap",
                                             "udec_wrap", "UDecWrap", 16>;
+def AtomicBinOpCondSub : LLVM_EnumAttrCase<"cond_sub",
+                                           "cond_sub", "CondSub", 17>;
+def AtomicBinOpSubClamp : LLVM_EnumAttrCase<"sub_clamp",
+                                            "sub_clamp", "SubClamp", 18>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -118,7 +122,7 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpNand, AtomicBinOpOr, AtomicBinOpXor, AtomicBinOpMax,
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
-     AtomicBinOpUDecWrap],
+     AtomicBinOpUDecWrap, AtomicBinOpCondSub, AtomicBinOpSubClamp],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }
