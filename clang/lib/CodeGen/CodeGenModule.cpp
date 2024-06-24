@@ -4259,8 +4259,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     llvm::Constant *ResolverConstant = GetOrCreateMultiVersionResolver(GD);
     if (auto *IFunc = dyn_cast<llvm::GlobalIFunc>(ResolverConstant)) {
       ResolverConstant = IFunc->getResolver();
-      if (FD->isTargetClonesMultiVersion() ||
-          FD->isTargetVersionMultiVersion()) {
+      if (FD->isTargetClonesMultiVersion() &&
+          !getTarget().getTriple().isAArch64()) {
         std::string MangledName = getMangledNameImpl(
             *this, GD, FD, /*OmitMultiVersionMangling=*/true);
         if (!GetGlobalValue(MangledName + ".ifunc")) {
