@@ -2968,7 +2968,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
 }
 
 static bool isLoadFromAlloca(const Instruction &I) {
-  return isa<LoadInst>(I) && isa<AllocaInst>(I.getOperand(0));
+  return isa<LoadInst>(I) &&
+         isa<AllocaInst>(getUnderlyingObject(I.getOperand(0)));
 }
 
 /// Hoist load/store instructions from the conditional successor blocks up into
@@ -3065,35 +3066,33 @@ bool SimplifyCFGOpt::hoistLoadStoreWithCondFaultingFromSuccessors(
     //
     // b/c BB is only predecessor and BranchInst does not define any value.
     auto OpsDominatesBranch = [&](Instruction &I) {
-      return llvm::none_of(I.operands(), [&](Value *Op) {
+      return llvm::all_of(I.operands(), [&](Value *Op) {
         if (auto *J = dyn_cast<Instruction>(Op)) {
           if (HoistedInsts.contains(J))
-            return false;
-          if (J->getParent() == I.getParent())
             return true;
+          if (J->getParent() == I.getParent())
+            return false;
         }
-        return false;
+        return true;
       });
     };
     for (auto &I : *BB) {
       auto *LI = dyn_cast<LoadInst>(&I);
       auto *SI = dyn_cast<StoreInst>(&I);
       if (LI || SI) {
-        // a load from alloca is always safe.
-        if (isLoadFromAlloca(I)) {
-          HoistedInsts.insert(&I);
-          continue;
-        }
-        auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
         bool IsSimple = (LI && LI->isSimple()) || (SI && SI->isSimple());
-        if (!TTI.hasConditionalFaultingLoadStoreForType(Type) || !IsSimple ||
-            !OpsDominatesBranch(I))
+        if (!IsSimple || !OpsDominatesBranch(I))
+          return false;
+        auto *Type = LI ? I.getType() : I.getOperand(0)->getType();
+        // a load from alloca is always safe.
+        if (!isLoadFromAlloca(I) && !TTI.hasConditionalFaultingLoadStoreForType(Type))
           return false;
         if (SI && SkipMemoryRead)
           return false;
         HoistedInsts.insert(&I);
       } else if (I.mayHaveSideEffects())
         return false;
+      // Conservative aliasing check.
       else if (I.mayReadFromMemory())
         SkipMemoryRead = true;
     }
