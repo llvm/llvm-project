@@ -743,20 +743,6 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     CallerType.Func = CallerDecl->getType()->getAs<FunctionProtoType>();
   }
 
-  if (Context.getTargetInfo().getTriple().isPPC()) {
-    if (Context.getTargetInfo().getTriple().isOSAIX())
-      return Diag(St->getBeginLoc(), diag::err_aix_musttail_unsupported);
-    else if (!Context.getTargetInfo().hasFeature("pcrelative-memops")) {
-      if (Context.getTargetInfo().hasFeature("longcall"))
-        return Diag(St->getBeginLoc(), diag::err_ppc_impossible_musttail) << 0;
-      else if (!CE->getDirectCallee())
-        return Diag(St->getBeginLoc(), diag::err_ppc_impossible_musttail) << 1;
-      else if (isa_and_nonnull<FunctionDecl>(CE->getCalleeDecl()) &&
-               !cast<FunctionDecl>(CE->getCalleeDecl())->isDefined())
-        return Diag(St->getBeginLoc(), diag::err_ppc_impossible_musttail) << 2;
-    }
-  }
-
   const Expr *CalleeExpr = CE->getCallee()->IgnoreParens();
   const auto *CalleeBinOp = dyn_cast<BinaryOperator>(CalleeExpr);
   SourceLocation CalleeLoc = CE->getCalleeDecl()

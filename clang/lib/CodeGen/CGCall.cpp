@@ -5751,8 +5751,29 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
-    else if (IsMustTail)
+    else if (IsMustTail) {
+      if (getTarget().getTriple().isPPC()) {
+        if (getTarget().getTriple().isOSAIX())
+          CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
+        else if (!getTarget().hasFeature("pcrelative-memops")) {
+          if (getTarget().hasFeature("longcall"))
+            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 0;
+          else if (Call->isIndirectCall())
+            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 1;
+          else if (isa_and_nonnull<FunctionDecl>(TargetDecl) &&
+                   cast<FunctionDecl>(TargetDecl)->isWeak())
+            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 2;
+          else if (isa_and_nonnull<FunctionDecl>(TargetDecl) &&
+                   !cast<FunctionDecl>(TargetDecl)->isDefined())
+            // The undefined callee may be a forward declaration. Without
+            // knowning all symbols in the module, we won't know the symbol is
+            // defined or not. Collect all these symbols for later diagnosing.
+            CGM.addUndefinedGlobalForTailCall(
+                {cast<FunctionDecl>(TargetDecl), Loc});
+        }
+      }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+    }
   }
 
   // Add metadata for calls to MSAllocator functions
