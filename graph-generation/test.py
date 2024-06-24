@@ -22,9 +22,12 @@ def update_paths(root):
 '''.format(src=src, dst=dst)
     subprocess.run(cmd, shell=True, check=True)
 
+def get_directories(root):
+    return [d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
+
 def get_test_cases(root):
     # get all directories under root
-    directories = [d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
+    directories = get_directories(root)
     logging.info(f'Found {len(directories)} directories')
     results = []
     for dir in directories:
