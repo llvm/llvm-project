@@ -7622,7 +7622,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
   FunctionEffectSet::Conflicts Errs;
-  bool Success = FX.insert(NewEC, Errs);
+  [[maybe_unused]] bool Success = FX.insert(NewEC, Errs);
   assert(Success && "effect conflicts should have been diagnosed above");
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
