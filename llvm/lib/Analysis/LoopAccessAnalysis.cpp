@@ -2848,21 +2848,6 @@ static Value *stripGetElementPtr(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   return GEP->getOperand(InductionOperand);
 }
 
-/// If a value has only one user that is a CastInst, return it.
-static Value *getUniqueCastUse(Value *Ptr, Loop *Lp, Type *Ty) {
-  Value *UniqueCast = nullptr;
-  for (User *U : Ptr->users()) {
-    CastInst *CI = dyn_cast<CastInst>(U);
-    if (CI && CI->getType() == Ty) {
-      if (!UniqueCast)
-        UniqueCast = CI;
-      else
-        return nullptr;
-    }
-  }
-  return UniqueCast;
-}
-
 /// Get the stride of a pointer access in a loop. Looks for symbolic
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
 static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
@@ -2925,21 +2910,14 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     return nullptr;
 
   // Look for the loop invariant symbolic value.
-  const SCEVUnknown *U = dyn_cast<SCEVUnknown>(V);
-  if (!U) {
-    const auto *C = dyn_cast<SCEVIntegralCastExpr>(V);
-    if (!C)
-      return nullptr;
-    U = dyn_cast<SCEVUnknown>(C->getOperand());
-    if (!U)
-      return nullptr;
+  if (isa<SCEVUnknown>(V))
+    return V;
 
-    // Match legacy behavior - this is not needed for correctness
-    if (!getUniqueCastUse(U->getValue(), Lp, V->getType()))
-      return nullptr;
-  }
+  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
+    if (isa<SCEVUnknown>(C->getOperand()))
+      return V;
 
-  return V;
+  return nullptr;
 }
 
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
