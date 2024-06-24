@@ -24,6 +24,11 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          create-symlink: true
+          variant: sccache
       - name: Generate CMake
         run: |
           ./build-release.sh
