@@ -898,18 +898,21 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       attrs.name.GetStringRef(), GetClangDeclContextContainingDIE(def_die, nullptr),
       GetOwningClangModule(def_die), attrs.decl, enumerator_clang_type,
       attrs.is_scoped_enum);
-
-  clang::DeclContext *type_decl_ctx =
-      TypeSystemClang::GetDeclContextForType(clang_type);
-  LinkDeclContextToDIE(type_decl_ctx, def_die);
-  if (decl_die != def_die)
-    LinkDeclContextToDIE(type_decl_ctx, decl_die);
-
   TypeSP type_sp =
       dwarf->MakeType(def_die.GetID(), attrs.name, attrs.byte_size, nullptr,
                       attrs.type.Reference().GetID(), Type::eEncodingIsUID,
                       &attrs.decl, clang_type, Type::ResolveState::Forward,
                       TypePayloadClang(GetOwningClangModule(def_die)));
+
+  clang::DeclContext *type_decl_ctx =
+      TypeSystemClang::GetDeclContextForType(clang_type);
+  LinkDeclContextToDIE(type_decl_ctx, decl_die);
+  if (decl_die != def_die) {
+    LinkDeclContextToDIE(type_decl_ctx, def_die);
+    dwarf->GetDIEToType()[def_die.GetDIE()] = type_sp.get();
+    // Declaration DIE is inserted into the type map in ParseTypeFromDWARF
+  }
+
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (def_die.HasChildren()) {
@@ -1862,19 +1865,23 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         attrs.exports_symbols);
   }
 
-  // Store a forward declaration to this class type in case any
-  // parameters in any class methods need it for the clang types for
-  // function prototypes.
-  clang::DeclContext *type_decl_ctx =
-      TypeSystemClang::GetDeclContextForType(clang_type);
-  LinkDeclContextToDIE(type_decl_ctx, def_die);
-  if (decl_die != def_die)
-    LinkDeclContextToDIE(type_decl_ctx, decl_die);
   TypeSP type_sp = dwarf->MakeType(
       def_die.GetID(), attrs.name, attrs.byte_size, nullptr, LLDB_INVALID_UID,
       Type::eEncodingIsUID, &attrs.decl, clang_type,
       Type::ResolveState::Forward,
       TypePayloadClang(OptionalClangModuleID(), attrs.is_complete_objc_class));
+
+  // Store a forward declaration to this class type in case any
+  // parameters in any class methods need it for the clang types for
+  // function prototypes.
+  clang::DeclContext *type_decl_ctx =
+      TypeSystemClang::GetDeclContextForType(clang_type);
+  LinkDeclContextToDIE(type_decl_ctx, decl_die);
+  if (decl_die != def_die) {
+    LinkDeclContextToDIE(type_decl_ctx, def_die);
+    dwarf->GetDIEToType()[def_die.GetDIE()] = type_sp.get();
+    // Declaration DIE is inserted into the type map in ParseTypeFromDWARF
+  }
 
   // Add our type to the unique type map so we don't end up creating many
   // copies of the same type over and over in the ASTContext for our
