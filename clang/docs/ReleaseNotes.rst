@@ -229,6 +229,10 @@ C++20 Feature Support
   will now work.
   (#GH62925).
 
+- Clang refactored the BMI format to make it possible to support no transitive changes
+  mode for modules. See `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for
+  details.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

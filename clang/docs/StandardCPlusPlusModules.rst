@@ -652,6 +652,134 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
+Experimental No Transitive Change
+---------------------------------
+
+Starting with clang19.x, we introduced an experimental feature: the non-transitive
+change for modules, aimed at reducing unnecessary recompilations. For example,
+
+.. code-block:: c++
+
+  // m-partA.cppm
+  export module m:partA;
+
+  // m-partB.cppm
+  export module m:partB;
+  export int getB() { return 44; }
+
+  // m.cppm
+  export module m;
+  export import :partA;
+  export import :partB;
+
+  // useBOnly.cppm
+  export module useBOnly;
+  import m;
+  export int B() {
+    return getB();
+  }
+
+  // Use.cc
+  import useBOnly;
+  int get() {
+    return B();
+  }
+
+Now let's compile the project (For brevity, some commands are omitted.):
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+then let's change the interface of ``m-partA.cppm`` to:
+
+.. code-block:: c++
+
+  // m-partA.v1.cppm
+  export module m:partA;
+  export int getA() { return 43; }
+
+Let's compile the BMI for `useBOnly` again:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 m-partA.cppm --precompile -o m-partA.pcm
+  $ clang++ -std=c++20 m-partB.cppm --precompile -o m-partB.pcm
+  $ clang++ -std=c++20 m.cppm --precompile -o m.pcm -fprebuilt-module-path=.
+  $ clang++ -std=c++20 useBOnly.cppm --precompile -o useBOnly.pcm -fprebuilt-module-path=.
+  $ md5sum useBOnly.pcm
+  07656bf4a6908626795729295f9608da  useBOnly.pcm
+
+We observed that the contents of useBOnly.pcm remain unchanged.
+Consequently, if the build system bases recompilation decisions on directly imported modules only,
+it becomes possible to skip the recompilation of Use.cc.
+It should be fine because the altered interfaces do not affect Use.cc in any way.
+This concept is called as no transitive changes.
+
+When clang generates a BMI, it records the hash values of all potentially contributory BMIs
+into the currently written BMI. This ensures that build systems are not required to consider
+transitively imported modules when deciding on recompilations.
+
+The definition for potential contributory BMIs is implementation defined. We don't intend to
+display detailed rules for users. The contract is:
+
+1. It is a severe bug if a BMI remains unchanged erroneously following an observable change
+   that affects its users.
+2. It is an potential improvement opportunity if a BMI changes after an unobservable change
+   happens.
+
+We suggest build systems to support this feature as a configurable option for a long time.
+So that users can go back to the transitive change mode safely at any time.
+
+Interactions with Reduced BMI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With reduced BMI, the no transitive change feature can be more powerful if the change
+can be reduced. For example,
+
+.. code-block:: c++
+
+  // A.cppm
+  export module A;
+  export int a() { return 44; }
+
+  // B.cppm
+  export module B;
+  import A;
+  export int b() { return a(); }
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+And let's change the implementation for ``A.cppm`` into:
+
+.. code-block:: c++
+
+  export module A;
+  int a_impl() { return 99; }
+  export int a() { return a_impl(); }
+
+and recompile the example:
+
+.. code-block:: console
+
+  $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
+  $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
+  $md5sum B.pcm
+  6c2bd452ca32ab418bf35cd141b060b9  B.pcm
+
+We should find the contents of ``B.pcm`` keeps the same. In such case, the build system is
+allowed to skip recompilations of TUs which solely and directly dependent on module B.
+
 Performance Tips
 ----------------
 
