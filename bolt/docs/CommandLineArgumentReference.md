@@ -259,10 +259,6 @@
 
   Always use long jumps/nops for Linux kernel static keys
 
-- `--match-profile-with-function-hash`
-
-  Match profile with function hash
-
 - `--max-data-relocations=<uint>`
 
   Maximum number of data relocations to process
