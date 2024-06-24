@@ -377,6 +377,10 @@ namespace llvm {
     /// By default, it is set to false
     unsigned MisExpect : 1;
 
+    /// When set to true, enable MissingAnnotations diagnostics
+    /// By default, it is set to false
+    unsigned MissingAnnotations : 1;
+
     /// When set to true, const objects with relocatable address values are put
     /// into the RO data section.
     unsigned XCOFFReadOnlyPointers : 1;
