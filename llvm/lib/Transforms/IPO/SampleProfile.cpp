@@ -1711,9 +1711,9 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       // Use uint32_t saturated arithmetic to adjust the incoming weights,
       // if needed. Sample counts in profiles are 64-bit unsigned values,
       // but internally branch weights are expressed as 32-bit values.
-      if (Weight > std::numeric_limits<uint32_t>::max()) {
+      if (Weight >= std::numeric_limits<uint32_t>::max()) {
         LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)\n");
-        Weight = std::numeric_limits<uint32_t>::max();
+        Weight = std::numeric_limits<uint32_t>::max() - 1;
       }
       if (!SampleProfileUseProfi) {
         // Weight is added by one to avoid propagation errors introduced by
