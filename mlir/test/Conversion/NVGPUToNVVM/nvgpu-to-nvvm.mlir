@@ -496,7 +496,7 @@ func.func @mbarrier() {
     
   // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  // CHECK: nvvm.mbarrier.test_wait.shared %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
 
   func.return 
@@ -526,7 +526,7 @@ func.func @mbarrier_nocomplete() {
     
   // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  // CHECK: nvvm.mbarrier.test_wait.shared %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
 
   func.return 
