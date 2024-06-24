@@ -171,11 +171,11 @@ struct TypeCloner {
         for (unsigned i = 0; i < IntParams.size(); i++)
           IntParams[i] = LLVMGetTargetExtTypeIntParam(Src, i);
 
-        LLVMTypeRef TargtExtTy = LLVMTargetExtTypeInContext(
+        LLVMTypeRef TargetExtTy = LLVMTargetExtTypeInContext(
             Ctx, Name, TypeParams.data(), TypeParams.size(), IntParams.data(),
             IntParams.size());
 
-        return TargtExtTy;
+        return TargetExtTy;
       }
     }
 
