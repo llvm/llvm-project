@@ -18,24 +18,28 @@
 ; CHECK-SPIRV-DAG: %[[#Const16:]] = OpConstant %[[#Long]] 16
 ; CHECK-SPIRV-DAG: %[[#One16:]] = OpConstantComposite %[[#Arr16]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]] %[[#One]]
 ; CHECK-SPIRV-DAG: %[[#Zero16:]] = OpConstantNull %[[#Arr16]]
+
+; The first set of functions.
 ; CHECK-SPIRV-DAG: %[[#PtrArr3:]] = OpTypePointer UniformConstant %[[#Arr3]]
 ; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr3]] UniformConstant %[[#One3]]
 ; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr3]] UniformConstant %[[#Zero3]]
 ; CHECK-SPIRV-DAG: %[[#PtrArr16:]] = OpTypePointer UniformConstant %[[#Arr16]]
 ; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr16]] UniformConstant %[[#One16]]
 ; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr16]] UniformConstant %[[#Zero16]]
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
-; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
-; CHECK-SPIRV: OpFunctionEnd
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
-; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
-; CHECK-SPIRV: OpFunctionEnd
+
+; The second set of functions.
+; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr3]] UniformConstant %[[#One3]]
+; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr3]] UniformConstant %[[#Zero3]]
+; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr16]] UniformConstant %[[#One16]]
+; CHECK-SPIRV-DAG: OpVariable %[[#PtrArr16]] UniformConstant %[[#Zero16]]
 
 %Vec3 = type { <3 x i8> }
 %Vec16 = type { <16 x i8> }
 
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
+; CHECK-SPIRV: OpFunctionEnd
 define spir_kernel void @foo(ptr addrspace(1) noundef align 16 %arg) {
   %a1 = getelementptr inbounds %Vec3, ptr addrspace(1) %arg, i64 1
   call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a1, i8 0, i64 3, i1 false)
@@ -44,7 +48,35 @@ define spir_kernel void @foo(ptr addrspace(1) noundef align 16 %arg) {
   ret void
 }
 
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
+; CHECK-SPIRV: OpFunctionEnd
 define spir_kernel void @bar(ptr addrspace(1) noundef align 16 %arg) {
+  %a1 = getelementptr inbounds %Vec16, ptr addrspace(1) %arg, i64 1
+  call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a1, i8 0, i64 16, i1 false)
+  %a2 = getelementptr inbounds %Vec16, ptr addrspace(1) %arg, i64 1
+  call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a2, i8 1, i64 16, i1 false)
+  ret void
+}
+
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const3]] Aligned 4
+; CHECK-SPIRV: OpFunctionEnd
+define spir_kernel void @foo_2(ptr addrspace(1) noundef align 16 %arg) {
+  %a1 = getelementptr inbounds %Vec3, ptr addrspace(1) %arg, i64 1
+  call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a1, i8 0, i64 3, i1 false)
+  %a2 = getelementptr inbounds %Vec3, ptr addrspace(1) %arg, i64 1
+  call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a2, i8 1, i64 3, i1 false)
+  ret void
+}
+
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
+; CHECK-SPIRV: OpCopyMemorySized %[[#]] %[[#]] %[[#Const16]] Aligned 4
+; CHECK-SPIRV: OpFunctionEnd
+define spir_kernel void @bar_2(ptr addrspace(1) noundef align 16 %arg) {
   %a1 = getelementptr inbounds %Vec16, ptr addrspace(1) %arg, i64 1
   call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 %a1, i8 0, i64 16, i1 false)
   %a2 = getelementptr inbounds %Vec16, ptr addrspace(1) %arg, i64 1

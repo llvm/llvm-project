@@ -486,12 +486,12 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   unsigned BW = getScalarOrVectorBitWidth(SpvBaseTy);
   // The following is reasonably unique key that is better that [Val]. The naive
   // alternative would be something along the lines of:
-  //  SmallVector<Constant *> NumCI(Num, CI);
-  //  Constant *UniqueKey =
-  //    ConstantArray::get(const_cast<ArrayType*>(LLVMArrTy), NumCI);
+  //   SmallVector<Constant *> NumCI(Num, CI);
+  //   Constant *UniqueKey =
+  //     ConstantArray::get(const_cast<ArrayType*>(LLVMArrTy), NumCI);
   // that would be a truly unique but dangerous key, because it could lead to
-  // creation of constant of arbitrary length (that is the parameter of memset)
-  // which were missing in an original module.
+  // the creation of constants of arbitrary length (that is, the parameter of
+  // memset) which were missing in the original module.
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
        ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
