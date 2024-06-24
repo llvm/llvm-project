@@ -174,3 +174,8 @@ bool SymbolFileDWARFDwo::GetDebugInfoHadFrameVariableErrors() const {
 void SymbolFileDWARFDwo::SetDebugInfoHadFrameVariableErrors() {
   return GetBaseSymbolFile().SetDebugInfoHadFrameVariableErrors();
 }
+
+SymbolFileDWARF *
+SymbolFileDWARFDwo::GetDIERefSymbolFile(const DIERef &die_ref) {
+  return GetBaseSymbolFile().GetDIERefSymbolFile(die_ref);
+}

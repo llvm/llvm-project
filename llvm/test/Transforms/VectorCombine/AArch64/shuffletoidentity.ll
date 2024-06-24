@@ -202,6 +202,19 @@ define <8 x i8> @abs_different(<8 x i8> %a) {
   ret <8 x i8> %r
 }
 
+define <4 x i32> @poison_intrinsic(<2 x i16> %l256) {
+; CHECK-LABEL: @poison_intrinsic(
+; CHECK-NEXT:    [[L266:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[L256:%.*]], i1 false)
+; CHECK-NEXT:    [[L267:%.*]] = zext <2 x i16> [[L266]] to <2 x i32>
+; CHECK-NEXT:    [[L271:%.*]] = shufflevector <2 x i32> [[L267]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[L271]]
+;
+  %l266 = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %l256, i1 false)
+  %l267 = zext <2 x i16> %l266 to <2 x i32>
+  %l271 = shufflevector <2 x i32> %l267, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  ret <4 x i32> %l271
+}
+
 define <8 x half> @splat0(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splat0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer

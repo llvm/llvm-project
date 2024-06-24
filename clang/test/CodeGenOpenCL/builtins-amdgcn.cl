@@ -605,9 +605,9 @@ void test_s_getreg(volatile global uint *out)
 }
 
 // CHECK-LABEL: @test_get_local_id(
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.x(), !range [[$WI_RANGE:![0-9]*]], !noundef
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.y(), !range [[$WI_RANGE]], !noundef
-// CHECK: tail call{{.*}} i32 @llvm.amdgcn.workitem.id.z(), !range [[$WI_RANGE]], !noundef
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.x()
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.y()
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.z()
 void test_get_local_id(int d, global int *out)
 {
 	switch (d) {
@@ -891,6 +891,5 @@ void test_set_fpenv(unsigned long env) {
   __builtin_amdgcn_set_fpenv(env);
 }
 
-// CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }

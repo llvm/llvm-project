@@ -715,7 +715,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     const Expr *Init = nullptr;
     if (ElementNo < ILE->getNumInits())
       Init = ILE->getInit(ElementNo++);
-    if (Init && isa<NoInitExpr>(Init))
+    if (isa_and_nonnull<NoInitExpr>(Init))
       continue;
 
     // Zero-sized fields are not emitted, but their initializers may still
@@ -1061,6 +1061,24 @@ public:
     return Visit(E->getInitializer(), T);
   }
 
+  llvm::Constant *ProduceIntToIntCast(const Expr *E, QualType DestType) {
+    QualType FromType = E->getType();
+    // See also HandleIntToIntCast in ExprConstant.cpp
+    if (FromType->isIntegerType())
+      if (llvm::Constant *C = Visit(E, FromType))
+        if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+          unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
+          unsigned DstWidth = CGM.getContext().getIntWidth(DestType);
+          if (DstWidth == SrcWidth)
+            return CI;
+          llvm::APInt A = FromType->isSignedIntegerType()
+                              ? CI->getValue().sextOrTrunc(DstWidth)
+                              : CI->getValue().zextOrTrunc(DstWidth);
+          return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
+        }
+    return nullptr;
+  }
+
   llvm::Constant *VisitCastExpr(const CastExpr *E, QualType destType) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
       CGM.EmitExplicitCastExprType(ECE, Emitter.CGF);
@@ -1142,23 +1160,8 @@ public:
     case CK_IntToOCLSampler:
       llvm_unreachable("global sampler variables are not generated");
 
-    case CK_IntegralCast: {
-      QualType FromType = subExpr->getType();
-      // See also HandleIntToIntCast in ExprConstant.cpp
-      if (FromType->isIntegerType())
-        if (llvm::Constant *C = Visit(subExpr, FromType))
-          if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
-            unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
-            unsigned DstWidth = CGM.getContext().getIntWidth(destType);
-            if (DstWidth == SrcWidth)
-              return CI;
-            llvm::APInt A = FromType->isSignedIntegerType()
-                                ? CI->getValue().sextOrTrunc(DstWidth)
-                                : CI->getValue().zextOrTrunc(DstWidth);
-            return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
-          }
-      return nullptr;
-    }
+    case CK_IntegralCast:
+      return ProduceIntToIntCast(subExpr, destType);
 
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
@@ -1249,15 +1252,42 @@ public:
     return llvm::ConstantInt::get(CGM.getLLVMContext(), I->getValue());
   }
 
+  static APValue withDestType(ASTContext &Ctx, const Expr *E, QualType SrcType,
+                              QualType DestType, const llvm::APSInt &Value) {
+    if (!Ctx.hasSameType(SrcType, DestType)) {
+      if (DestType->isFloatingType()) {
+        llvm::APFloat Result =
+            llvm::APFloat(Ctx.getFloatTypeSemantics(DestType), 1);
+        llvm::RoundingMode RM =
+            E->getFPFeaturesInEffect(Ctx.getLangOpts()).getRoundingMode();
+        if (RM == llvm::RoundingMode::Dynamic)
+          RM = llvm::RoundingMode::NearestTiesToEven;
+        Result.convertFromAPInt(Value, Value.isSigned(), RM);
+        return APValue(Result);
+      }
+    }
+    return APValue(Value);
+  }
+
   llvm::Constant *EmitArrayInitialization(const InitListExpr *ILE, QualType T) {
     auto *CAT = CGM.getContext().getAsConstantArrayType(ILE->getType());
     assert(CAT && "can't emit array init for non-constant-bound array");
+    uint64_t NumInitElements = ILE->getNumInits();
     const uint64_t NumElements = CAT->getZExtSize();
+    for (const auto *Init : ILE->inits()) {
+      if (const auto *Embed =
+              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+        NumInitElements += Embed->getDataElementCount() - 1;
+        if (NumInitElements > NumElements) {
+          NumInitElements = NumElements;
+          break;
+        }
+      }
+    }
 
     // Initialising an array requires us to automatically
     // initialise any elements that have not been initialised explicitly
-    uint64_t NumInitableElts =
-        std::min<uint64_t>(ILE->getNumInits(), NumElements);
+    uint64_t NumInitableElts = std::min<uint64_t>(NumInitElements, NumElements);
 
     QualType EltType = CAT->getElementType();
 
@@ -1270,23 +1300,61 @@ public:
     }
 
     // Copy initializer elements.
-    SmallVector<llvm::Constant*, 16> Elts;
+    SmallVector<llvm::Constant *, 16> Elts;
     if (fillC && fillC->isNullValue())
       Elts.reserve(NumInitableElts + 1);
     else
       Elts.reserve(NumElements);
 
     llvm::Type *CommonElementType = nullptr;
-    for (unsigned i = 0; i < NumInitableElts; ++i) {
-      const Expr *Init = ILE->getInit(i);
-      llvm::Constant *C = Emitter.tryEmitPrivateForMemory(Init, EltType);
+    auto Emit = [&](const Expr *Init, unsigned ArrayIndex) {
+      llvm::Constant *C = nullptr;
+      C = Emitter.tryEmitPrivateForMemory(Init, EltType);
       if (!C)
-        return nullptr;
-      if (i == 0)
+        return false;
+      if (ArrayIndex == 0)
         CommonElementType = C->getType();
       else if (C->getType() != CommonElementType)
         CommonElementType = nullptr;
       Elts.push_back(C);
+      return true;
+    };
+
+    unsigned ArrayIndex = 0;
+    QualType DestTy = CAT->getElementType();
+    for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
+      const Expr *Init = ILE->getInit(i);
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+        StringLiteral *SL = EmbedS->getDataStringLiteral();
+        llvm::APSInt Value(CGM.getContext().getTypeSize(DestTy),
+                           DestTy->isUnsignedIntegerType());
+        llvm::Constant *C;
+        for (unsigned I = EmbedS->getStartingElementPos(),
+                      N = EmbedS->getDataElementCount();
+             I != EmbedS->getStartingElementPos() + N; ++I) {
+          Value = SL->getCodeUnit(I);
+          if (DestTy->isIntegerType()) {
+            C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value);
+          } else {
+            C = Emitter.tryEmitPrivateForMemory(
+                withDestType(CGM.getContext(), Init, EmbedS->getType(), DestTy,
+                             Value),
+                EltType);
+          }
+          if (!C)
+            return nullptr;
+          Elts.push_back(C);
+          ArrayIndex++;
+        }
+        if ((ArrayIndex - EmbedS->getDataElementCount()) == 0)
+          CommonElementType = C->getType();
+        else if (C->getType() != CommonElementType)
+          CommonElementType = nullptr;
+      } else {
+        if (!Emit(Init, ArrayIndex))
+          return nullptr;
+        ArrayIndex++;
+      }
     }
 
     llvm::ArrayType *Desired =
@@ -1856,6 +1924,12 @@ private:
   ConstantLValue VisitMaterializeTemporaryExpr(
                                          const MaterializeTemporaryExpr *E);
 
+  ConstantLValue emitPointerAuthSignConstant(const CallExpr *E);
+  llvm::Constant *emitPointerAuthPointer(const Expr *E);
+  unsigned emitPointerAuthKey(const Expr *E);
+  std::pair<llvm::Constant *, llvm::ConstantInt *>
+  emitPointerAuthDiscriminator(const Expr *E);
+
   bool hasNonZeroOffset() const {
     return !Value.getLValueOffset().isZero();
   }
@@ -1950,10 +2024,27 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+    auto PtrAuthSign = [&](llvm::Constant *C) {
+      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
-    if (auto VD = dyn_cast<VarDecl>(D)) {
+      if (AuthInfo) {
+        if (hasNonZeroOffset())
+          return ConstantLValue(nullptr);
+
+        C = applyOffset(C);
+        C = CGM.getConstantSignedPointer(
+            C, AuthInfo.getKey(), nullptr,
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
+        return ConstantLValue(C, /*applied offset*/ true);
+      }
+
+      return ConstantLValue(C);
+    };
+
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
+
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
@@ -1966,13 +2057,13 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    if (const auto *GD = dyn_cast<MSGuidDecl>(D))
       return CGM.GetAddrOfMSGuidDecl(GD);
 
-    if (auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
+    if (const auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
       return CGM.GetAddrOfUnnamedGlobalConstantDecl(GCD);
 
-    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
+    if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
       return CGM.GetAddrOfTemplateParamObject(TPO);
 
     return nullptr;
@@ -2048,6 +2139,10 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   if (builtin == Builtin::BI__builtin_function_start)
     return CGM.GetFunctionStart(
         E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
+
+  if (builtin == Builtin::BI__builtin_ptrauth_sign_constant)
+    return emitPointerAuthSignConstant(E);
+
   if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;
@@ -2059,6 +2154,55 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
     // FIXME: need to deal with UCN conversion issues.
     return CGM.GetAddrOfConstantCFString(Literal);
   }
+}
+
+ConstantLValue
+ConstantLValueEmitter::emitPointerAuthSignConstant(const CallExpr *E) {
+  llvm::Constant *UnsignedPointer = emitPointerAuthPointer(E->getArg(0));
+  unsigned Key = emitPointerAuthKey(E->getArg(1));
+  auto [StorageAddress, OtherDiscriminator] =
+      emitPointerAuthDiscriminator(E->getArg(2));
+
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, OtherDiscriminator);
+  return SignedPointer;
+}
+
+llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
+  Expr::EvalResult Result;
+  bool Succeeded = E->EvaluateAsRValue(Result, CGM.getContext());
+  assert(Succeeded);
+  (void)Succeeded;
+
+  // The assertions here are all checked by Sema.
+  assert(Result.Val.isLValue());
+  return ConstantEmitter(CGM, Emitter.CGF)
+      .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
+}
+
+unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
+  return E->EvaluateKnownConstInt(CGM.getContext()).getZExtValue();
+}
+
+std::pair<llvm::Constant *, llvm::ConstantInt *>
+ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
+  E = E->IgnoreParens();
+
+  if (const auto *Call = dyn_cast<CallExpr>(E)) {
+    if (Call->getBuiltinCallee() ==
+        Builtin::BI__builtin_ptrauth_blend_discriminator) {
+      llvm::Constant *Pointer = ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(0), Call->getArg(0)->getType());
+      auto *Extra = cast<llvm::ConstantInt>(ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(1), Call->getArg(1)->getType()));
+      return {Pointer, Extra};
+    }
+  }
+
+  llvm::Constant *Result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
+  if (Result->getType()->isPointerTy())
+    return {Result, nullptr};
+  return {nullptr, cast<llvm::ConstantInt>(Result)};
 }
 
 ConstantLValue
