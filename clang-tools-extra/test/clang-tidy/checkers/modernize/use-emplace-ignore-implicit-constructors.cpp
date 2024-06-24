@@ -4,10 +4,11 @@
 // RUN:                true}}"
 
 namespace std {
-template <typename>
+template <typename E>
 class initializer_list
 {
 public:
+  const E *a, *b;
   initializer_list() noexcept {}
 };
 
