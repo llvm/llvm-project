@@ -270,7 +270,7 @@ class InferShapedTypeOpAdaptor
 /// shape and elemental types.
 /// Requires: Op implements InferShapedTypeOpInterface and InferTypeOpInterface.
 ///   Less strict is possible (e.g., implements inferReturnTypeComponents and
-///   these always populates all element types and shapes or fails, but this\
+///   these always populates all element types and shapes or fails, but this
 ///   trait is currently only used where the interfaces are, so keep it
 ///   restricted for now).
 template <typename ConcreteType>
