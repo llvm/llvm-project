@@ -214,25 +214,25 @@ def HasSMEF8F32     : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF8
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable()">,
+    : Predicate<"Subtarget->hasSVE() || Subtarget->isStreaming()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE, FeatureSME),
                 "sve or sme">;
 def HasSVE2orSME
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2() || Subtarget->hasSME())">,
+    : Predicate<"Subtarget->hasSVE2() || Subtarget->isStreaming()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
                 "sve2 or sme">;
 def HasSVE2orSME2
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2() || Subtarget->hasSME2())">,
+    : Predicate<"Subtarget->hasSVE2() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
                 "sve2 or sme2">;
 def HasSVE2p1_or_HasSME
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p1() || Subtarget->hasSME())">,
+    : Predicate<"Subtarget->hasSVE2p1() || Subtarget->isStreaming()">,
                  AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
 def HasSVE2p1_or_HasSME2
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p1() || Subtarget->hasSME2())">,
+    : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2, FeatureSVE2p1), "sme2 or sve2p1">;
 def HasSVE2p1_or_HasSME2p1
-    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p1() || Subtarget->hasSME2p1())">,
+    : Predicate<"Subtarget->hasSVE2p1() || (Subtarget->isStreaming() && Subtarget->hasSME2p1())">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
 
 def HasSMEF16F16orSMEF8F16

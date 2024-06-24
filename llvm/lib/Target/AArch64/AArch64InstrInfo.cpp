@@ -4511,8 +4511,6 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool DestIsPNR = AArch64::PNRRegClass.contains(DestReg);
   bool SrcIsPNR = AArch64::PNRRegClass.contains(SrcReg);
   if (DestIsPNR || SrcIsPNR) {
-    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-           "Unexpected predicate-as-counter register.");
     auto ToPPR = [](MCRegister R) -> MCRegister {
       return (R - AArch64::PN0) + AArch64::P0;
     };
@@ -4835,14 +4833,12 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::STRBui;
     break;
   case 2: {
-    bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRHui;
-    else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
+    else if (AArch64::PNRRegClass.hasSubClassEq(RC) ||
+             AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
-      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register store without SVE2p1 or SME2");
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -5015,8 +5011,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
-      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-             "Unexpected register load without SVE2p1 or SME2");
       if (IsPNR)
         PNRReg = DestReg;
       Opc = AArch64::LDR_PXI;
