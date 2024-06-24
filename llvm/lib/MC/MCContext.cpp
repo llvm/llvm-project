@@ -383,6 +383,27 @@ MCSymbol *MCContext::getDirectionalLocalSymbol(unsigned LocalLabelVal,
   return getOrCreateDirectionalLocalSymbol(LocalLabelVal, Instance);
 }
 
+template <typename Symbol>
+Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
+  Symbol *R;
+  auto &SymEntry = getSymbolTableEntry(Section);
+  MCSymbol *Sym = SymEntry.second.Symbol;
+  // A section symbol can not redefine regular symbols. There may be multiple
+  // sections with the same name, in which case the first such section wins.
+  if (Sym && Sym->isDefined() &&
+      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
+    reportError(SMLoc(), "invalid symbol redefinition");
+  if (Sym && Sym->isUndefined()) {
+    R = cast<Symbol>(Sym);
+  } else {
+    SymEntry.second.Used = true;
+    R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
+    if (!Sym)
+      SymEntry.second.Symbol = R;
+  }
+  return R;
+}
+
 MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
@@ -489,27 +510,6 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
   R.first->second = Ret;
   allocInitialFragment(*Ret);
   return Ret;
-}
-
-template <typename Symbol>
-Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
-  Symbol *R;
-  auto &SymEntry = getSymbolTableEntry(Section);
-  MCSymbol *Sym = SymEntry.second.Symbol;
-  // A section symbol can not redefine regular symbols. There may be multiple
-  // sections with the same name, in which case the first such section wins.
-  if (Sym && Sym->isDefined() &&
-      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
-    reportError(SMLoc(), "invalid symbol redefinition");
-  if (Sym && Sym->isUndefined()) {
-    R = cast<Symbol>(Sym);
-  } else {
-    SymEntry.second.Used = true;
-    R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
-    if (!Sym)
-      SymEntry.second.Symbol = R;
-  }
-  return R;
 }
 
 MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,

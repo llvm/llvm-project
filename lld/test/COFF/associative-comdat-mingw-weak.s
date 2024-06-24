@@ -28,7 +28,7 @@
 # SYMBOL-NEXT:    StorageClass: WeakExternal (0x69)
 # SYMBOL-NEXT:    AuxSymbolCount: 1
 # SYMBOL-NEXT:    AuxWeakExternal {
-# SYMBOL-NEXT:      Linked: .weak.foo.default.main (17)
+# SYMBOL-NEXT:      Linked: .weak.foo.default.main (19)
 # SYMBOL-NEXT:      Search: Alias (0x3)
 # SYMBOL-NEXT:    }
 # SYMBOL-NEXT:  }

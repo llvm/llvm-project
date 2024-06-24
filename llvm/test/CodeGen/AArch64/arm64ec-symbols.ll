@@ -17,11 +17,11 @@ define void @caller() nounwind {
 ; CHECK-NEXT: .weak_anti_dep  "#func"
 ; CHECK-NEXT: .set "#func", "#func$exit_thunk"{{$}}
 
-; SYM:       [29](sec  4)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #caller
-; SYM:       [30](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 caller
-; SYM-NEXT:  AUX indx 29 srch 4
-; SYM-NEXT:  [32](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #func
-; SYM-NEXT:  AUX indx 34 srch 4
-; SYM:       [34](sec  7)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #func$exit_thunk
+; SYM:       [ 8](sec  4)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #caller
+; SYM:       [21](sec  7)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #func$exit_thunk
+; SYM:       [33](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 caller
+; SYM-NEXT:  AUX indx 8 srch 4
+; SYM-NEXT:  [35](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 #func
+; SYM-NEXT:  AUX indx 21 srch 4
 ; SYM:       [39](sec  0)(fl 0x00)(ty   0)(scl  69) (nx 1) 0x00000000 func
-; SYM-NEXT:  AUX indx 32 srch 4
+; SYM-NEXT:  AUX indx 35 srch 4

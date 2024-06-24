@@ -5535,10 +5535,7 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  HelpTextForVariants<[FlangOption],
-                      "Print the resource directory pathname that contains lib and "
-                      "include directories with the runtime libraries and MODULE files.">,
-  Visibility<[ClangOption, CLOption, FlangOption]>;
+  Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -8597,6 +8594,8 @@ def : Separate<["-"], "Xmicrosoft-windows-sdk-root">,
     Alias<_SLASH_winsdkdir>;
 def : Separate<["-"], "Xmicrosoft-windows-sdk-version">,
     Alias<_SLASH_winsdkversion>;
+def : Separate<["-"], "Xmicrosoft-windows-sys-root">,
+    Alias<_SLASH_winsysroot>;
 
 // Ignored:
 
@@ -8768,3 +8767,11 @@ def spirv : DXCFlag<"spirv">,
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;
+def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Disable the wasm-opt optimizer">,
+  MarshallingInfoFlag<LangOpts<"NoWasmOpt">>;
+def wasm_opt : Flag<["--"], "wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Enable the wasm-opt optimizer (default)">,
+  MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;

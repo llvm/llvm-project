@@ -773,7 +773,7 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
 /// Allocate space for privatized reduction variables.
 template <typename T>
 static void allocByValReductionVars(
-    T loop, llvm::IRBuilderBase &builder,
+    T loop, ArrayRef<BlockArgument> reductionArgs, llvm::IRBuilderBase &builder,
     LLVM::ModuleTranslation &moduleTranslation,
     llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
@@ -782,15 +782,13 @@ static void allocByValReductionVars(
     llvm::ArrayRef<bool> isByRefs) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
-  auto args =
-      loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
 
   for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
     if (isByRefs[i])
       continue;
     llvm::Value *var = builder.CreateAlloca(
         moduleTranslation.convertType(reductionDecls[i].getType()));
-    moduleTranslation.mapValue(args[i], var);
+    moduleTranslation.mapValue(reductionArgs[i], var);
     privateReductionVariables[i] = var;
     reductionVariableMap.try_emplace(loop.getReductionVars()[i], var);
   }
@@ -925,14 +923,17 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
   DenseMap<Value, llvm::Value *> reductionVariableMap;
-  allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
-                          reductionDecls, privateReductionVariables,
+
+  MutableArrayRef<BlockArgument> reductionArgs =
+      wsloopOp.getRegion().getArguments();
+
+  allocByValReductionVars(wsloopOp, reductionArgs, builder, moduleTranslation,
+                          allocaIP, reductionDecls, privateReductionVariables,
                           reductionVariableMap, isByRef);
 
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
   // up with the alloca insertion point.
-  ArrayRef<BlockArgument> reductionArgs = wsloopOp.getRegion().getArguments();
   for (unsigned i = 0; i < wsloopOp.getNumReductionVars(); ++i) {
     SmallVector<llvm::Value *> phis;
 
@@ -1158,16 +1159,18 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
-                            reductionDecls, privateReductionVariables,
+
+    MutableArrayRef<BlockArgument> reductionArgs =
+        opInst.getRegion().getArguments().slice(
+            opInst.getNumAllocateVars() + opInst.getNumAllocatorsVars(),
+            opInst.getNumReductionVars());
+
+    allocByValReductionVars(opInst, reductionArgs, builder, moduleTranslation,
+                            allocaIP, reductionDecls, privateReductionVariables,
                             reductionVariableMap, isByRef);
 
     // Initialize reduction vars
     builder.restoreIP(allocaIP);
-    MutableArrayRef<BlockArgument> reductionArgs =
-        opInst.getRegion().getArguments().take_back(
-            opInst.getNumReductionVars());
-
     llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
     allocaIP =
         InsertPointTy(allocaIP.getBlock(),

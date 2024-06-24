@@ -6,7 +6,7 @@
 # Check __buildid points to 0x14000203c which is after the signature RSDS.
 
 # CHECK:      SYMBOL TABLE:
-# CHECK:      0x0000003c __buildid
+# CHECK-NEXT: 0x0000003c __buildid
 # CHECK:      Contents of section .rdata:
 # CHECK-NEXT:  140002000
 # CHECK-NEXT:  140002010

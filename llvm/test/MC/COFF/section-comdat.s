@@ -4,12 +4,12 @@
 .section assocSec, "dr", discard, "assocSym"
 .global assocSym
 assocSym:
-.long 1
+.long assocSec
 
 .section secName, "dr", discard, "Symbol1"
 .globl Symbol1
 Symbol1:
-.long 1
+.long assocSym
 
 .section secName, "dr", one_only, "Symbol2"
 .globl Symbol2
@@ -68,29 +68,29 @@ Symbol8:
 # CHECK-NEXT: [ 4](sec  3)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .bss
 # CHECK-NEXT: AUX scnlen 0x0 nreloc 0 nlnno 0 checksum 0x0 assoc 3 comdat 0
 # CHECK-NEXT: [ 6](sec  4)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
-# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 2
-# CHECK-NEXT: [ 8](sec  5)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
-# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 5 comdat 2
-# CHECK-NEXT: [10](sec  6)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 4 comdat 2
+# CHECK-NEXT: [ 8](sec  4)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 assocSym
+# CHECK-NEXT: [ 9](sec  5)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 5 comdat 2
+# CHECK-NEXT: [11](sec  5)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol1
+# CHECK-NEXT: [12](sec  6)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 6 comdat 1
-# CHECK-NEXT: [12](sec  7)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: [14](sec  6)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol2
+# CHECK-NEXT: [15](sec  7)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 7 comdat 3
-# CHECK-NEXT: [14](sec  8)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: [17](sec  7)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol3
+# CHECK-NEXT: [18](sec  8)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 8 comdat 4
-# CHECK-NEXT: [16](sec 11)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: [20](sec  8)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol4
+# CHECK-NEXT: [21](sec 11)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 5
-# CHECK-NEXT: [18](sec  9)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: [23](sec  9)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 9 comdat 6
-# CHECK-NEXT: [20](sec 10)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: [25](sec  9)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol6
+# CHECK-NEXT: [26](sec 10)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 10 comdat 7
-# CHECK-NEXT: [22](sec 12)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
+# CHECK-NEXT: [28](sec 10)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol7
+# CHECK-NEXT: [29](sec 12)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
 # CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 5
-# CHECK-NEXT: [24](sec  4)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 assocSym
-# CHECK-NEXT: [25](sec  5)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol1
-# CHECK-NEXT: [26](sec  6)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol2
-# CHECK-NEXT: [27](sec  7)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol3
-# CHECK-NEXT: [28](sec  8)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol4
-# CHECK-NEXT: [29](sec 11)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol5
-# CHECK-NEXT: [30](sec  9)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol6
-# CHECK-NEXT: [31](sec 10)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol7
+# CHECK-NEXT: [31](sec 11)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol5
 # CHECK-NEXT: [32](sec 12)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol8

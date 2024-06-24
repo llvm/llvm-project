@@ -83,7 +83,11 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
 
 void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   changeSectionImpl(Section, Subsection);
+  // Ensure that the first and the second symbols relative to the section are
+  // the section symbol and the COMDAT symbol.
   getAssembler().registerSymbol(*Section->getBeginSymbol());
+  if (auto *Sym = cast<MCSectionCOFF>(Section)->getCOMDATSymbol())
+    getAssembler().registerSymbol(*Sym);
 }
 
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
