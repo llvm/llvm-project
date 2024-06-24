@@ -9,13 +9,15 @@
 #include "src/stdlib/quick_exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
+#include "src/stdlib/exit_handler.h"
 
 // extern "C" void __cxa_finalize(void *);
-
 namespace LIBC_NAMESPACE {
 
+extern ExitCallbackList at_quick_exit_callbacks;
+
 [[noreturn]] LLVM_LIBC_FUNCTION(void, quick_exit, (int status)) {
-  // __cxa_finalize(nullptr);
+  call_exit_callbacks(at_quick_exit_callbacks);
   internal::exit(status);
 }
 

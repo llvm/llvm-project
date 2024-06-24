@@ -882,10 +882,15 @@ static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
     bool forceHlfirBase = false, bool contiguousHint = false) {
   assert(variable.isVariable() && "must be a variable");
-  /// When going towards FIR, use the original base value to avoid
-  /// introducing descriptors at runtime when they are not required.
-  mlir::Value base =
-      forceHlfirBase ? variable.getBase() : variable.getFirBase();
+  // When going towards FIR, use the original base value to avoid
+  // introducing descriptors at runtime when they are not required.
+  // This is not done for assumed-rank since the fir::ExtendedValue cannot
+  // held the related lower bounds in an vector. The lower bounds of the
+  // descriptor must always be used instead.
+
+  mlir::Value base = (forceHlfirBase || variable.isAssumedRank())
+                         ? variable.getBase()
+                         : variable.getFirBase();
   if (variable.isMutableBox())
     return fir::MutableBoxValue(base, getExplicitTypeParams(variable),
                                 fir::MutableProperties{});

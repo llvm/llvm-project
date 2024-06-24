@@ -501,9 +501,9 @@ class IRBuilderPrefixedInserter final : public IRBuilderDefaultInserter {
 public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
 
-  void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
+  void InsertHelper(Instruction *I, const Twine &Name,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name), BB,
+    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name),
                                            InsertPt);
   }
 };
@@ -2178,8 +2178,7 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
     llvm::sort(CandidateTys, RankVectorTypesComp);
-    CandidateTys.erase(std::unique(CandidateTys.begin(), CandidateTys.end(),
-                                   RankVectorTypesEq),
+    CandidateTys.erase(llvm::unique(CandidateTys, RankVectorTypesEq),
                        CandidateTys.end());
   } else {
 // The only way to have the same element type in every vector type is to
@@ -3981,15 +3980,15 @@ private:
     SmallVector<Value *> FalseOps = GetNewOps(False);
 
     IRB.SetInsertPoint(&GEPI);
-    bool IsInBounds = GEPI.isInBounds();
+    GEPNoWrapFlags NW = GEPI.getNoWrapFlags();
 
     Type *Ty = GEPI.getSourceElementType();
     Value *NTrue = IRB.CreateGEP(Ty, TrueOps[0], ArrayRef(TrueOps).drop_front(),
-                                 True->getName() + ".sroa.gep", IsInBounds);
+                                 True->getName() + ".sroa.gep", NW);
 
     Value *NFalse =
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
-                      False->getName() + ".sroa.gep", IsInBounds);
+                      False->getName() + ".sroa.gep", NW);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -4069,7 +4068,6 @@ private:
     PHINode *NewPhi = IRB.CreatePHI(GEPI.getType(), Phi->getNumIncomingValues(),
                                     Phi->getName() + ".sroa.phi");
 
-    bool IsInBounds = GEPI.isInBounds();
     Type *SourceTy = GEPI.getSourceElementType();
     // We only handle arguments, constants, and static allocas here, so we can
     // insert GEPs at the end of the entry block.
@@ -4084,7 +4082,7 @@ private:
         SmallVector<Value *> NewOps = GetNewOps(Op);
         NewGEP =
             IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
-                          Phi->getName() + ".sroa.gep", IsInBounds);
+                          Phi->getName() + ".sroa.gep", GEPI.getNoWrapFlags());
       }
       NewPhi->addIncoming(NewGEP, BB);
     }

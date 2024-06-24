@@ -40,10 +40,6 @@ void run_foo_tml() {
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_Z7foo_ovli.ifunc = weak_odr alias i32 (i32), ptr @_Z7foo_ovli
-// CHECK: @_Z7foo_ovlv.ifunc = weak_odr alias i32 (), ptr @_Z7foo_ovlv
-// CHECK: @_ZN7MyClassIssE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv
-// CHECK: @_ZN7MyClassIisE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv
 // CHECK: @_Z7foo_ovli = weak_odr ifunc i32 (i32), ptr @_Z7foo_ovli.resolver
 // CHECK: @_Z7foo_ovlv = weak_odr ifunc i32 (), ptr @_Z7foo_ovlv.resolver
 // CHECK: @_ZN7MyClassIssE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv.resolver

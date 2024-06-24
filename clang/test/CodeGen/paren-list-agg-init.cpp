@@ -271,14 +271,13 @@ const int* foo10() {
 // CHECK-NEXT: [[ARR_2:%.*]] = alloca [4 x i32], align 16
 // CHECK-NEXT: store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT: store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
-// CHECK-NEXT: [[ARRINIT_BEGIN:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR_2]], i64 0, i64 0
 // CHECK-NEXT: [[TMP_0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARRINIT_BEGIN]], align 4
-// CHECK-NEXT: [[ARRINIT_ELEM:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 1
+// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARR_2]], align 4
+// CHECK-NEXT: [[ARRINIT_ELEM:%.*]] = getelementptr inbounds i32, ptr [[ARR_2]], i64 1
 // CHECK-NEXT: [[TMP_1:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK-NEXT: store i32 [[TMP_1]], ptr [[ARRINIT_ELEM]], align 4
-// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_ELEM]], i64 1
-// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 4
+// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[ARR_2]], i64 2
+// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[ARR_2]], i64 4
 // CHECK-NEXT: br label [[ARRINIT_BODY:%.*]]
 // CHECK: [[ARRINIT_CUR:%.*]] = phi ptr [ [[ARRINIT_START]], %entry ], [ [[ARRINIT_NEXT:%.*]], [[ARRINIT_BODY]] ]
 // CHECK-NEXT: store i32 0, ptr [[ARRINIT_CUR]], align 4
@@ -297,10 +296,9 @@ void foo11(int a, int b) {
 // CHECK-NEXT: [[ARR_3:%.*]] = alloca [2 x i32], align 4
 // CHECK-NEXT: store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT: store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
-// CHECK-NEXT: [[ARRINIT_BEGIN:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARR_3]], i64 0, i64 0
 // CHECK-NEXT: [[TMP_0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARRINIT_BEGIN]], align 4
-// CHECK-NEXT: [[ARRINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 1
+// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARR_3]], align 4
+// CHECK-NEXT: [[ARRINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[ARR_3]], i64 1
 // CHECK-NEXT: [[TMP_1:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK-NEXT: store i32 [[TMP_1]], ptr [[ARRINIT_ELEMENT]], align 4
 // CHECK-NEXT: ret void
@@ -336,8 +334,7 @@ const int* foo15() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[ARR_6:%.*arr6.*]] = alloca ptr, align 8
 // CHECK-NEXT: [[REF_TMP:%.*]] = alloca [1 x i32], align 4
-// CHECK-NEXT: [[ARRINIT_BEGIN:%.*]] = getelementptr inbounds [1 x i32], ptr [[REF_TMP]], i64 0, i64 0
-// CHECK-NEXT: store i32 3, ptr [[ARRINIT_BEGIN]], align 4
+// CHECK-NEXT: store i32 3, ptr [[REF_TMP]], align 4
 // CHECK-NEXT: store ptr [[REF_TMP]], ptr [[ARR_6]], align 8
 // CHECK-NEXT: ret void
 void foo16() {
@@ -348,10 +345,9 @@ void foo16() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[ARR_7:%.*arr7.*]] = alloca ptr, align 8
 // CHECK-NEXT: [[REF_TMP:%.*]] = alloca [2 x i32], align 4
-// CHECK-NEXT: [[ARRINIT_BEGIN:%.*]] = getelementptr inbounds [2 x i32], ptr [[REF_TMP]], i64 0, i64 0
-// CHECK-NEXT: store i32 4, ptr [[ARRINIT_BEGIN]], align 4
-// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 1
-// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 2
+// CHECK-NEXT: store i32 4, ptr [[REF_TMP]], align 4
+// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[REF_TMP]], i64 1
+// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[REF_TMP]], i64 2
 // CHECK-NEXT: br label [[ARRINIT_BODY]]
 // CHECK: [[ARRINIT_CUR:%.*]] = phi ptr [ [[ARRINIT_START]], %entry ], [ [[ARRINIT_NEXT:%.*]], [[ARRINIT_BODY]] ]
 // CHECK-NEXT: store i32 0, ptr [[ARRINIT_CUR]], align 4
@@ -533,14 +529,12 @@ namespace gh68198 {
   // CHECK-NEXT: entry
   // CHECK-NEXT: [[ARR_10:%.*arr9.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[CALL_PTR]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 16)
-  // CHECK-NEXT: [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x i32], ptr [[CALL]], i64 0, i64 0
-  // CHECK-NEXT: store i32 1, ptr [[ARRAYINIT_BEGIN]], align 4
-  // CHECK-NEXT: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[ARRAYINIT_BEGIN]], i64 1
+  // CHECK-NEXT: store i32 1, ptr [[CALL]], align 4
+  // CHECK-NEXT: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 1
   // CHECK-NEXT: store i32 2, ptr [[ARRAYINIT_ELEMENT]], align 4
   // CHECK-NEXT: [[ARRAY_EXP_NEXT:%.*]] = getelementptr inbounds [2 x i32], ptr %call, i64 1
-  // CHECK-NEXT: [[ARRAYINIT_BEGIN1:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARRAY_EXP_NEXT]], i64 0, i64 0
-  // CHECK-NEXT: store i32 3, ptr [[ARRAYINIT_BEGIN1]], align 4
-  // CHECK-NEXT: [[ARRAYINIT_ELEMENT2:%.*]] = getelementptr inbounds i32, ptr [[ARRAYINIT_BEGIN1]], i64 1
+  // CHECK-NEXT: store i32 3, ptr [[ARRAY_EXP_NEXT]], align 4
+  // CHECK-NEXT: [[ARRAYINIT_ELEMENT2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_EXP_NEXT]], i64 1
   // CHECK-NEXT: store i32 4, ptr [[ARRAYINIT_ELEMENT2]], align 4
   // CHECK-NEXT: [[ARRAY_EXP_NEXT3:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARRAY_EXP_NEXT]], i64 1
   // CHECK-NEXT: store ptr [[CALL_PTR]], ptr [[ARR_10]], align 8
@@ -553,14 +547,12 @@ namespace gh68198 {
   // CHECK-NEXT: entry
   // CHECK-NEXT: [[ARR_10:%.*arr10.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[CALL_PTR]] = call noalias noundef nonnull ptr @_Znam(i64 noundef 32)
-  // CHECK-NEXT: [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x i32], ptr [[CALL]], i64 0, i64 0
-  // CHECK-NEXT: store i32 5, ptr [[ARRAYINIT_BEGIN]], align 4
-  // CHECK-NEXT: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[ARRAYINIT_BEGIN]], i64 1
+  // CHECK-NEXT: store i32 5, ptr [[CALL]], align 4
+  // CHECK-NEXT: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds i32, ptr [[CALL]], i64 1
   // CHECK-NEXT: store i32 6, ptr [[ARRAYINIT_ELEMENT]], align 4
   // CHECK-NEXT: [[ARRAY_EXP_NEXT:%.*]] = getelementptr inbounds [2 x i32], ptr %call, i64 1
-  // CHECK-NEXT: [[ARRAYINIT_BEGIN1:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARRAY_EXP_NEXT]], i64 0, i64 0
-  // CHECK-NEXT: store i32 7, ptr [[ARRAYINIT_BEGIN1]], align 4
-  // CHECK-NEXT: [[ARRAYINIT_ELEMENT2:%.*]] = getelementptr inbounds i32, ptr [[ARRAYINIT_BEGIN1]], i64 1
+  // CHECK-NEXT: store i32 7, ptr [[ARRAY_EXP_NEXT]], align 4
+  // CHECK-NEXT: [[ARRAYINIT_ELEMENT2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY_EXP_NEXT]], i64 1
   // CHECK-NEXT: store i32 8, ptr [[ARRAYINIT_ELEMENT2]], align 4
   // CHECK-NEXT: [[ARRAY_EXP_NEXT3:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARRAY_EXP_NEXT]], i64 1
   // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr align 4 [[ARRAY_EXP_NEXT3]], i8 0, i64 16, i1 false)

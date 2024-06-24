@@ -416,6 +416,25 @@ around, such as ``std::string_view``.
    // note: inner buffer of 'std::string' deallocated by call to destructor
  }
 
+.. _cplusplus-Move:
+
+cplusplus.Move (C++)
+""""""""""""""""""""
+Method calls on a moved-from object and copying a moved-from object will be reported.
+
+
+.. code-block:: cpp
+
+  struct A {
+   void foo() {}
+ };
+
+ void f() {
+   A a;
+   A b = std::move(a); // note: 'a' became 'moved-from' here
+   a.foo();            // warn: method call on a 'moved-from' object 'a'
+ }
+
 .. _cplusplus-NewDelete:
 
 cplusplus.NewDelete (C++)
@@ -2452,21 +2471,6 @@ Check for pointer subtractions on two pointers pointing to different memory chun
    int d = &y - &x; // warn
  }
 
-.. _alpha-core-SizeofPtr:
-
-alpha.core.SizeofPtr (C)
-""""""""""""""""""""""""
-Warn about unintended use of ``sizeof()`` on pointer expressions.
-
-.. code-block:: c
-
- struct s {};
-
- int test(struct s *p) {
-   return sizeof(p);
-     // warn: sizeof(ptr) can produce an unexpected result
- }
-
 .. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (C)
@@ -2597,25 +2601,6 @@ Check for use of iterators of different containers where iterators of the same c
                                                    //       used where the same
                                                    //       container is
                                                    //       expected
- }
-
-.. _alpha-cplusplus-MisusedMovedObject:
-
-alpha.cplusplus.MisusedMovedObject (C++)
-""""""""""""""""""""""""""""""""""""""""
-Method calls on a moved-from object and copying a moved-from object will be reported.
-
-
-.. code-block:: cpp
-
-  struct A {
-   void foo() {}
- };
-
- void f() {
-   A a;
-   A b = std::move(a); // note: 'a' became 'moved-from' here
-   a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
 .. _alpha-cplusplus-SmartPtr:
