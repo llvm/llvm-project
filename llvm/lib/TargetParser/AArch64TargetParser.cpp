@@ -179,7 +179,7 @@ AArch64::printEnabledExtensions(std::vector<StringRef> EnabledFeatureNames) {
          << "    " << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
   auto IsEnabled = [&](const ExtensionInfo &Ext) {
-    StringRef FeatureName = Ext.PosTargetFeature.drop_front(); // drop '+' before comparing
+    StringRef FeatureName = Ext.PosTargetFeature.split('+').second; // drop '+' before comparing
     return std::find(EnabledFeatureNames.begin(), EnabledFeatureNames.end(),
                      FeatureName) != EnabledFeatureNames.end();
   };
