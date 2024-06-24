@@ -367,20 +367,6 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   return nullptr;
 }
 
-std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
-  if (!IsValid())
-    return {};
-
-  std::vector<DWARFDIE> result;
-  DWARFDIE parent = GetParentDeclContextDIE();
-  while (parent.IsValid() && parent.GetDIE() != GetDIE()) {
-    result.push_back(std::move(parent));
-    parent = parent.GetParentDeclContextDIE();
-  }
-
-  return result;
-}
-
 static void GetDeclContextImpl(DWARFDIE die,
                                llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                std::vector<CompilerContext> &context) {
@@ -408,14 +394,12 @@ static void GetDeclContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());
@@ -470,14 +454,12 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_namespace:
       push_ctx(CompilerContextKind::Namespace, die.GetName());
       break;
+    case DW_TAG_class_type:
     case DW_TAG_structure_type:
-      push_ctx(CompilerContextKind::Struct, die.GetName());
+      push_ctx(CompilerContextKind::ClassOrStruct, die.GetName());
       break;
     case DW_TAG_union_type:
       push_ctx(CompilerContextKind::Union, die.GetName());
-      break;
-    case DW_TAG_class_type:
-      push_ctx(CompilerContextKind::Class, die.GetName());
       break;
     case DW_TAG_enumeration_type:
       push_ctx(CompilerContextKind::Enum, die.GetName());
@@ -491,6 +473,18 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_base_type:
       push_ctx(CompilerContextKind::Builtin, name);
       break;
+    // If any of the tags below appear in the parent chain, stop the decl
+    // context and return. Prior to these being in here, if a type existed in a
+    // namespace "a" like "a::my_struct", but we also have a function in that
+    // same namespace "a" which contained a type named "my_struct", both would
+    // return "a::my_struct" as the declaration context since the
+    // DW_TAG_subprogram would be skipped and its parent would be found.
+    case DW_TAG_compile_unit:
+    case DW_TAG_type_unit:
+    case DW_TAG_subprogram:
+    case DW_TAG_lexical_block:
+    case DW_TAG_inlined_subroutine:
+      return;
     default:
       break;
     }
@@ -507,12 +501,64 @@ std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext() const {
   return context;
 }
 
+static DWARFDeclContext GetDWARFDeclContextImpl(DWARFDIE die) {
+  DWARFDeclContext dwarf_decl_ctx;
+  while (die) {
+    const dw_tag_t tag = die.Tag();
+    if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+      break;
+    dwarf_decl_ctx.AppendDeclContext(tag, die.GetName());
+    DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
+    if (parent_decl_ctx_die == die)
+      break;
+    die = parent_decl_ctx_die;
+  }
+  return dwarf_decl_ctx;
+}
+
+DWARFDeclContext DWARFDIE::GetDWARFDeclContext() const {
+  return GetDWARFDeclContextImpl(*this);
+}
+
+static DWARFDIE GetParentDeclContextDIEImpl(DWARFDIE die) {
+  DWARFDIE orig_die = die;
+  while (die) {
+    // If this is the original DIE that we are searching for a declaration for,
+    // then don't look in the cache as we don't want our own decl context to be
+    // our decl context...
+    if (die != orig_die) {
+      switch (die.Tag()) {
+      case DW_TAG_compile_unit:
+      case DW_TAG_partial_unit:
+      case DW_TAG_namespace:
+      case DW_TAG_structure_type:
+      case DW_TAG_union_type:
+      case DW_TAG_class_type:
+        return die;
+
+      default:
+        break;
+      }
+    }
+
+    if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification)) {
+      if (DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE())
+        return decl_ctx_die;
+    }
+
+    if (DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin)) {
+      if (DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE())
+        return decl_ctx_die;
+    }
+
+    die = die.GetParent();
+  }
+  return DWARFDIE();
+}
+
 DWARFDIE
 DWARFDIE::GetParentDeclContextDIE() const {
-  if (IsValid())
-    return m_die->GetParentDeclContextDIE(m_cu);
-  else
-    return DWARFDIE();
+  return GetParentDeclContextDIEImpl(*this);
 }
 
 bool DWARFDIE::IsStructUnionOrClass() const {

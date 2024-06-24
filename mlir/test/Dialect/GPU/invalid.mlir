@@ -704,11 +704,9 @@ func.func @alloc() {
 // -----
 
 module attributes {gpu.container_module} {
-  gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must be a dense i32 array}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = 32 : i32} {
-      gpu.return
-    }
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must be a dense i32 array}}
+  func.func @kernel() attributes {gpu.known_block_size = 32 : i32} {
+    func.return
   }
 }
 
@@ -716,10 +714,19 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernel {
-    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must contain exactly 3 elements}}
-    gpu.func @kernel() kernel attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    // expected-error@+1 {{'gpu.func' op attribute 'known_block_size' failed to satisfy constraint: i32 dense array attribute with 3 elements (if present)}}
+    gpu.func @kernel() kernel attributes {known_block_size = array<i32: 2, 1>} {
       gpu.return
     }
+  }
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'func.func' op gpu.known_block_size must contain exactly 3 elements}}
+  func.func @kernel() attributes {gpu.known_block_size = array<i32: 2, 1>} {
+    func.return
   }
 }
 

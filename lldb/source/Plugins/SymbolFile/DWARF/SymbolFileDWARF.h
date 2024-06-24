@@ -296,8 +296,6 @@ public:
 
   static CompilerDeclContext GetContainingDeclContext(const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
-
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
@@ -335,8 +333,12 @@ public:
 
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
-  virtual llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
-  GetForwardDeclCompilerTypeToDIE();
+  typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
+      CompilerTypeToDIE;
+
+  virtual CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() {
+    return m_forward_decl_compiler_type_to_die;
+  }
 
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
@@ -457,8 +459,6 @@ protected:
   FindBlockContainingSpecification(const DWARFDIE &die,
                                    dw_offset_t spec_block_die_offset);
 
-  bool DIEDeclContextsMatch(const DWARFDIE &die1, const DWARFDIE &die2);
-
   bool ClassContainsSelector(const DWARFDIE &class_die, ConstString selector);
 
   /// Parse call site entries (DW_TAG_call_site), including any nested call site
@@ -529,14 +529,9 @@ protected:
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
-  // A map from DIE to lldb_private::Type. For record type, the key might be
-  // either declaration DIE or definition DIE.
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
-  // A map from CompilerType to the struct/class/union/enum DIE (might be a
-  // declaration or a definition) that is used to construct it.
-  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
-      m_forward_decl_compiler_type_to_die;
+  CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;

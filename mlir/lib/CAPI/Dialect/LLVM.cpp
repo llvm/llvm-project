@@ -195,6 +195,18 @@ MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
       addressSpace, cast<DINodeAttr>(unwrap(extraData))));
 }
 
+MlirAttribute mlirLLVMDIStringTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
+    uint32_t alignInBits, MlirAttribute stringLength,
+    MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
+    MlirLLVMTypeEncoding encoding) {
+  return wrap(DIStringTypeAttr::get(
+      unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, alignInBits,
+      cast<DIVariableAttr>(unwrap(stringLength)),
+      cast<DIExpressionAttr>(unwrap(stringLengthExp)),
+      cast<DIExpressionAttr>(unwrap(stringLocationExp)), encoding));
+}
+
 MlirAttribute
 mlirLLVMDIDerivedTypeAttrGetBaseType(MlirAttribute diDerivedType) {
   return wrap(cast<DIDerivedTypeAttr>(unwrap(diDerivedType)).getBaseType());

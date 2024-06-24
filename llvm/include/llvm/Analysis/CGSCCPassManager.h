@@ -306,6 +306,10 @@ struct CGSCCUpdateResult {
   SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
       &InlinedInternalEdges;
 
+  /// Functions that a pass has considered to be dead to be removed at the end
+  /// of the call graph walk in batch.
+  SmallVector<Function *, 4> &DeadFunctions;
+
   /// Weak VHs to keep track of indirect calls for the purposes of detecting
   /// devirtualization.
   ///

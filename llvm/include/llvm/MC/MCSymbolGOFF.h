@@ -14,12 +14,13 @@
 #define LLVM_MC_MCSYMBOLGOFF_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 
 class MCSymbolGOFF : public MCSymbol {
 public:
-  MCSymbolGOFF(const StringMapEntry<bool> *Name, bool IsTemporary)
+  MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
       : MCSymbol(SymbolKindGOFF, Name, IsTemporary) {}
   static bool classof(const MCSymbol *S) { return S->isGOFF(); }
 };
