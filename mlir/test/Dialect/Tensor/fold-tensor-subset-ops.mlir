@@ -282,6 +282,25 @@ func.func @insert_slice_of_insert_slice(%t: tensor<f32>, %r0: tensor<1x1xf32>, %
 
 // -----
 
+//   CHECK-DAG: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 2)>
+// CHECK-LABEL: func @insert_slice_of_insert_slice(
+//  CHECK-SAME:     %[[t:[0-9a-z]*]]: tensor<f32>
+//  CHECK-SAME:     %[[r1:[0-9a-z]*]]: tensor<1x14xf32>
+//  CHECK-SAME:     %[[pos:[0-9a-z]*]]: index
+//       CHECK:   %[[composed_pos:.+]] = affine.apply #[[$map]]()[%[[pos]]]
+//       CHECK:   tensor.insert_slice %[[t]] into %[[r1]][3, %[[composed_pos]]] [1, 1] [1, 1] : tensor<f32> into tensor<1x14xf32>
+func.func @insert_slice_of_insert_slice(%t: tensor<f32>, %r0: tensor<1xf32>, %r1: tensor<1x14xf32>, %pos: index)
+    -> tensor<1x14xf32> 
+{
+  %0 = tensor.insert_slice %t into %r0[2] [1] [1] 
+    : tensor<f32> into tensor<1xf32>
+  %1 = tensor.insert_slice %0 into %r1[3, %pos] [1, 1] [1, 1] 
+    : tensor<1xf32> into tensor<1x14xf32>
+  return %1 : tensor<1x14xf32>
+}
+
+// -----
+
 // This test fails to fold because the size `4` and `%pos` do not match: 
 // this requires a copy
 // CHECK-LABEL: func @fail_insert_slice_of_insert_slice(
