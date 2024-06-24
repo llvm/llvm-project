@@ -96,6 +96,19 @@ func.func @unshard_static_axis(
   return %1 : tensor<10x14xf32>
 }
 
+// CHECK-LABEL: func @unshard_static_last_axis
+func.func @unshard_static_last_axis(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>
+  %arg0: tensor<10x14xf32>
+) -> tensor<10x14xf32> {
+  // CHECK: %[[SOURCE_SHARD:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : tensor<10x14xf32> to tensor<10x7xf32>
+  // CHECK: %[[ALL_GATHER:.*]] = mesh.all_gather %[[SOURCE_SHARD]] on @mesh_1d mesh_axes = [0] gather_axis = 1 : tensor<10x7xf32> -> tensor<10x14xf32>
+  %0 = mesh.shard %arg0 to <@mesh_1d, [[], [0]]> : tensor<10x14xf32>
+  %1 = mesh.shard %0 to <@mesh_1d, [[], []]> annotate_for_users : tensor<10x14xf32>
+  // CHECK: return %[[ALL_GATHER]] : tensor<10x14xf32>
+  return %1 : tensor<10x14xf32>
+}
+
 // CHECK-LABEL: func @unshard_dynamic_axis
 func.func @unshard_dynamic_axis(
   // CHECK-SAME: %[[ARG:.*]]: tensor<?x14xf32>

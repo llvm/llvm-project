@@ -226,7 +226,7 @@ namespace {
     // This is calculated only when trying to verify convergence control tokens.
     // Similar to the LLVM IR verifier, we calculate this locally instead of
     // relying on the pass manager.
-    MachineDomTree DT;
+    MachineDominatorTree DT;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
@@ -3177,7 +3177,7 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
 }
 
 static void
-verifyConvergenceControl(const MachineFunction &MF, MachineDomTree &DT,
+verifyConvergenceControl(const MachineFunction &MF, MachineDominatorTree &DT,
                          std::function<void(const Twine &Message)> FailureCB) {
   MachineConvergenceVerifier CV;
   CV.initialize(&errs(), FailureCB, MF);
