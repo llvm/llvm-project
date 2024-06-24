@@ -631,3 +631,35 @@ define float @vreduce_fmax_v4f32_false_mask(float %start, <4 x float> %val, i32 
   %s = call float @llvm.vp.reduce.fmax.v4f32(float %start, <4 x float> %val, <4 x i1> zeroinitializer, i32 %evl)
   ret float %s
 }
+
+define float @vreduce_fminimum_v4f32_zero_evl(float %start, <4 x float> %val, <4 x i1> %m) {
+; CHECK-LABEL: vreduce_fminimum_v4f32_zero_evl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 0)
+  ret float %s
+}
+
+define float @vreduce_fminimum_v4f32_false_mask(float %start, <4 x float> %val, i32 %evl) {
+; CHECK-LABEL: vreduce_fminimum_v4f32_false_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %val, <4 x i1> zeroinitializer, i32 %evl)
+  ret float %s
+}
+
+define float @vreduce_fmaximum_v4f32_zero_evl(float %start, <4 x float> %val, <4 x i1> %m) {
+; CHECK-LABEL: vreduce_fmaximum_v4f32_zero_evl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 0)
+  ret float %s
+}
+
+define float @vreduce_fmaximum_v4f32_false_mask(float %start, <4 x float> %val, i32 %evl) {
+; CHECK-LABEL: vreduce_fmaximum_v4f32_false_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %val, <4 x i1> zeroinitializer, i32 %evl)
+  ret float %s
+}

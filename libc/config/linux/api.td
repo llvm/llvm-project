@@ -181,6 +181,7 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "pthread_mutexattr_t",
       "pthread_once_t",
       "pthread_rwlockattr_t",
+      "pthread_rwlock_t",
       "pthread_t",
   ];
 }
@@ -203,6 +204,15 @@ def WCharAPI : PublicAPI<"wchar.h"> {
     "wchar_t",
     "wint_t",
     "size_t",
+  ];
+}
+
+def UCharAPI : PublicAPI<"uchar.h"> {
+  let Types = [
+    "mbstate_t",
+    "char8_t",
+    "char16_t",
+    "char32_t",
   ];
 }
 
@@ -261,6 +271,7 @@ def SysTypesAPI : PublicAPI<"sys/types.h"> {
     "pthread_mutexattr_t",
     "pthread_once_t",
     "pthread_rwlockattr_t",
+    "pthread_rwlock_t",
     "pthread_t",
     "size_t",
     "ssize_t",

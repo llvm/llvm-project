@@ -25,23 +25,20 @@ define <16 x i8> @combine_vpshufb_as_movzx(<16 x i8> %a0) {
 define <4 x i32> @combine_blend_of_permutes_v4i32(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: combine_blend_of_permutes_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_blend_of_permutes_v4i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_blend_of_permutes_v4i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_blend_of_permutes_v4i32:

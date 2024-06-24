@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-process-unprofitable=false \
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=false \
 ; RUN:                -polly-detect-profitability-min-per-loop-insts=40 \
-; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PROFITABLE
+; RUN: '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PROFITABLE
 
-; RUN: opt %loadPolly -polly-process-unprofitable=true \
-; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PROFITABLE
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=true \
+; RUN: '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PROFITABLE
 
-; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN: -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=UNPROFITABLE
+; RUN: opt %loadNPMPolly -polly-process-unprofitable=false \
+; RUN: '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=UNPROFITABLE
 
 ; UNPROFITABLE-NOT: Valid Region for Scop:
 ; PROFITABLE: Valid Region for Scop:

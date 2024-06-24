@@ -266,8 +266,11 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not known to be contiguous"_warn_en_US;
+    if (context_.ShouldWarn(
+            common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      msg =
+          "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
@@ -330,8 +333,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
 
       } else if (!isBoundsRemapping_ &&
           !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{evaluate::GetRank(lhsType_->shape())};
-        int rhsRank{evaluate::GetRank(rhsType->shape())};
+        int lhsRank{lhsType_->Rank()};
+        int rhsRank{rhsType->Rank()};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,

@@ -92,7 +92,7 @@ ENTRY("" /*FIXME*/,          S_ATTR_LOC_RELOC)
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
                                unsigned TAA, unsigned reserved2, SectionKind K,
                                MCSymbol *Begin)
-    : MCSection(SV_MachO, Section, K, Begin), TypeAndAttributes(TAA),
+    : MCSection(SV_MachO, Section, K.isText(), Begin), TypeAndAttributes(TAA),
       Reserved2(reserved2) {
   assert(Segment.size() <= 16 && Section.size() <= 16 &&
          "Segment or section string too long");
@@ -106,7 +106,7 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
 
 void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
-                                          const MCExpr *Subsection) const {
+                                          uint32_t Subsection) const {
   OS << "\t.section\t" << getSegmentName() << ',' << getName();
 
   // Get the section type and attributes.
@@ -291,3 +291,15 @@ Error MCSectionMachO::ParseSectionSpecifier(StringRef Spec,       // In.
 
   return Error::success();
 }
+
+void MCSectionMachO::allocAtoms() {
+  auto *L = curFragList();
+  if (L->Tail)
+    Atoms.resize(L->Tail->getLayoutOrder() + 1);
+}
+
+const MCSymbol *MCSectionMachO::getAtom(size_t I) const {
+  return I < Atoms.size() ? Atoms[I] : nullptr;
+}
+
+void MCSectionMachO::setAtom(size_t I, const MCSymbol *Sym) { Atoms[I] = Sym; }

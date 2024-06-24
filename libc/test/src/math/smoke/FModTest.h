@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/errno/libc_errno.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/math_macros.h"
+#include "hdr/fenv_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
   EXPECT_FP_EQ(expected, f(x, y));                                             \
@@ -210,7 +210,8 @@ public:
   }
 
   void testRegularExtreme(FModFunc f) {
-
+    if constexpr (sizeof(T) < sizeof(float))
+      return;
     TEST_REGULAR(0x1p127L, 0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, -0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, 0x3p-148L, 0x1p-147L);
@@ -224,20 +225,20 @@ public:
     TEST_REGULAR(-0x1p127L, 0x3p-126L, -0x1p-125L);
     TEST_REGULAR(-0x1p127L, -0x3p-126L, -0x1p-125L);
 
-    if constexpr (sizeof(T) >= sizeof(double)) {
-      TEST_REGULAR(0x1p1023L, 0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1022L, -0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1022L, -0x1p-1021L);
-    }
+    if constexpr (sizeof(T) < sizeof(double))
+      return;
+    TEST_REGULAR(0x1p1023L, 0x3p-1074L, 0x1p-1073L);
+    TEST_REGULAR(0x1p1023L, -0x3p-1074L, 0x1p-1073L);
+    TEST_REGULAR(0x1p1023L, 0x3p-1073L, 0x1p-1073L);
+    TEST_REGULAR(0x1p1023L, -0x3p-1073L, 0x1p-1073L);
+    TEST_REGULAR(0x1p1023L, 0x3p-1022L, 0x1p-1021L);
+    TEST_REGULAR(0x1p1023L, -0x3p-1022L, 0x1p-1021L);
+    TEST_REGULAR(-0x1p1023L, 0x3p-1074L, -0x1p-1073L);
+    TEST_REGULAR(-0x1p1023L, -0x3p-1074L, -0x1p-1073L);
+    TEST_REGULAR(-0x1p1023L, 0x3p-1073L, -0x1p-1073L);
+    TEST_REGULAR(-0x1p1023L, -0x3p-1073L, -0x1p-1073L);
+    TEST_REGULAR(-0x1p1023L, 0x3p-1022L, -0x1p-1021L);
+    TEST_REGULAR(-0x1p1023L, -0x3p-1022L, -0x1p-1021L);
   }
 };
 

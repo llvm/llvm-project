@@ -212,6 +212,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("reassoc", MIToken::kw_reassoc)
       .Case("nuw", MIToken::kw_nuw)
       .Case("nsw", MIToken::kw_nsw)
+      .Case("nusw", MIToken::kw_nusw)
       .Case("exact", MIToken::kw_exact)
       .Case("nneg", MIToken::kw_nneg)
       .Case("disjoint", MIToken::kw_disjoint)

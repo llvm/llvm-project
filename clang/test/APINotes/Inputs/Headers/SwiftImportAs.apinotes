@@ -7,3 +7,7 @@ Tags:
   SwiftImportAs: reference
   SwiftReleaseOp: RCRelease
   SwiftRetainOp: RCRetain
+- Name: NonCopyableType
+  SwiftCopyable: false
+- Name: CopyableType
+  SwiftCopyable: true

@@ -5,20 +5,20 @@
       program ppc_vec_unit
       implicit none
 
-      ! CHECK-LLVM-DAG: %[[VI1:.*]] = alloca <4 x i32>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VI2:.*]] = alloca <4 x i32>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VI1:.*]] = alloca <4 x i32>, i64 1, align 16
       vector(integer(4)) :: vi1, vi2
 
-      ! CHECK-LLVM-DAG: %[[VR1:.*]] = alloca <2 x double>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VR2:.*]] = alloca <2 x double>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VR1:.*]] = alloca <2 x double>, i64 1, align 16
       vector(real(8)) :: vr1, vr2
 
-      ! CHECK-LLVM-DAG: %[[VU1:.*]] = alloca <8 x i16>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VU2:.*]] = alloca <8 x i16>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VU1:.*]] = alloca <8 x i16>, i64 1, align 16
       vector(unsigned(2)) :: vu1, vu2
 
-      ! CHECK-LLVM-DAG: %[[VP1:.*]] = alloca <256 x i1>, i64 1, align 32
       ! CHECK-LLVM-DAG: %[[VP2:.*]] = alloca <256 x i1>, i64 1, align 32
+      ! CHECK-LLVM-DAG: %[[VP1:.*]] = alloca <256 x i1>, i64 1, align 32
       __vector_pair :: vp1, vp2
 
       __vector_quad :: vq1, vq2

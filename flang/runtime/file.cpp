@@ -131,17 +131,17 @@ void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
   }
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
-  if (position == Position::Append && !RawSeekToEnd()) {
+  if (fd_ >= 0 && position == Position::Append && !RawSeekToEnd()) {
     handler.SignalError(IostatOpenBadAppend);
   }
-  isTerminal_ = IsATerminal(fd_) == 1;
+  isTerminal_ = fd_ >= 0 && IsATerminal(fd_) == 1;
   mayRead_ = *action != Action::Write;
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
     knownSize_.reset();
 #ifndef _WIN32
     struct stat buf;
-    if (::fstat(fd_, &buf) == 0) {
+    if (fd_ >= 0 && ::fstat(fd_, &buf) == 0) {
       mayPosition_ = S_ISREG(buf.st_mode);
       knownSize_ = buf.st_size;
     }
@@ -457,22 +457,22 @@ std::int64_t SizeInBytes(const char *path) {
   return -1;
 }
 #else // defined(RT_DEVICE_COMPILATION)
-bool IsATerminal(int fd) {
+RT_API_ATTRS bool IsATerminal(int fd) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool IsExtant(const char *path) {
+RT_API_ATTRS bool IsExtant(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayRead(const char *path) {
+RT_API_ATTRS bool MayRead(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayWrite(const char *path) {
+RT_API_ATTRS bool MayWrite(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayReadAndWrite(const char *path) {
+RT_API_ATTRS bool MayReadAndWrite(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-std::int64_t SizeInBytes(const char *path) {
+RT_API_ATTRS std::int64_t SizeInBytes(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 #endif // defined(RT_DEVICE_COMPILATION)

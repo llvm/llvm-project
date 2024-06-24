@@ -208,7 +208,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
     PHINode *PN = cast<PHINode>(I);
     // Remove all but one incoming entries from the cluster
     APInt Range = Leaf.High->getValue() - Leaf.Low->getValue();
-    for (APInt j(Range.getBitWidth(), 0, true); j.slt(Range); ++j) {
+    for (APInt j(Range.getBitWidth(), 0, false); j.ult(Range); ++j) {
       PN->removeIncomingValue(OrigBlock);
     }
 

@@ -67,6 +67,7 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::desc("data layout string to use"),
                                          cl::value_desc("layout-string"),
                                          cl::init(""), cl::cat(AsCat));
+extern cl::opt<bool> UseNewDbgInfoFormat;
 extern bool WriteNewDbgInfoFormatToBitcode;
 
 static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
@@ -142,11 +143,10 @@ int main(int argc, char **argv) {
   }
 
   // Convert to new debug format if requested.
-  assert(!M->IsNewDbgInfoFormat && "Unexpectedly in new debug mode");
-  if (UseNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode) {
-    M->convertToNewDbgValues();
+  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat &&
+                           WriteNewDbgInfoFormatToBitcode);
+  if (M->IsNewDbgInfoFormat)
     M->removeDebugIntrinsicDeclarations();
-  }
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 

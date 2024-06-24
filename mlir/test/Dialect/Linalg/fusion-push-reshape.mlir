@@ -4,15 +4,19 @@
 // CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1) -> (d1)>
 
 // CHECK-LABEL: func @reshape
-// CHECK-SAME: (%[[A:.*]]: tensor<?x16xf32>, %[[B:.*]]: tensor<16xf32>, %[[INIT:.*]]: tensor<?x112x16xf32>)
+// CHECK-SAME: (%[[A:.*]]: tensor<?x16xf32>, %[[B:.*]]: tensor<16xf32>, %[[INIT:.*]]: tensor<?x112x16xf32>, %[[SZ0:.*]]: index)
+//      CHECK: %[[C112:.*]] = arith.constant 112 : index
+//      CHECK: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[RI:.*]] = tensor.collapse_shape %[[INIT]] {{\[}}[0, 1], [2]] : tensor<?x112x16xf32> into tensor<?x16xf32>
 //      CHECK: %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP3]], #[[$MAP2]]],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<?x16xf32>)
-//      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<?x16xf32> into tensor<?x112x16xf32>
+//      CHECK: %[[DIM:.*]] = tensor.dim %[[R]], %[[C0]] : tensor<?x16xf32>
+//      CHECK: %[[VAL_1:.*]] = arith.divui %[[DIM]], %[[C112]] : index
+//      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[\[}}0, 1], [2]] output_shape [%[[VAL_1]], 112, 16] : tensor<?x16xf32> into tensor<?x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<?x112x16xf32>
-func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>) -> tensor<?x112x16xf32> {
-  %0 = tensor.expand_shape %A [[0, 1], [2]]
+func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112x16xf32>, %sz0: index) -> tensor<?x112x16xf32> {
+  %0 = tensor.expand_shape %A [[0, 1], [2]] output_shape [%sz0, 112, 16]
       : tensor<?x16xf32> into tensor<?x112x16xf32>
   %2 = linalg.generic {indexing_maps = [
     affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d2)>,
@@ -39,13 +43,13 @@ func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112
 //      CHECK: %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP2]], #[[$MAP3]], #[[$MAP2]]],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 // CHECK-SAME: ins(%[[A]], %[[B]], %[[C]] : tensor<12544x16xf32>, tensor<12544x16xf32>, tensor<16xf32>) outs(%[[RI]] : tensor<12544x16xf32>)
-//      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] : tensor<12544x16xf32> into tensor<112x112x16xf32>
+//      CHECK: %[[RR:.*]] = tensor.expand_shape %[[R]] {{\[}}[0, 1], [2]] output_shape [112, 112, 16] : tensor<12544x16xf32> into tensor<112x112x16xf32>
 //      CHECK: return %[[RR]] : tensor<112x112x16xf32>
 func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
   %C: tensor<16xf32>) -> tensor<112x112x16xf32> {
-  %0 = tensor.expand_shape %A [[0, 1], [2]]
+  %0 = tensor.expand_shape %A [[0, 1], [2]] output_shape [112, 112, 16]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
-  %1 = tensor.expand_shape %B [[0, 1], [2]]
+  %1 = tensor.expand_shape %B [[0, 1], [2]] output_shape [112, 112, 16]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
   %2 = tensor.empty() : tensor<112x112x16xf32>
   %3 = linalg.generic {indexing_maps = [
@@ -69,11 +73,11 @@ func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
 // Negative test, since the second source is broadcasted from d1 we cannot merge
 // d0 and d1 dimensions
 // CHECK-LABEL: func @reshape_negative
-// CHECK: tensor.expand_shape {{.*}} : tensor<12544x16xf32> into tensor<112x112x16xf32>
+// CHECK: tensor.expand_shape {{.*}} {{\[\[}}0, 1], [2]] output_shape [112, 112, 16] : tensor<12544x16xf32> into tensor<112x112x16xf32>
 // CHECK: linalg.generic
 // CHECK: } -> tensor<112x112x16xf32>
 func.func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
-  %20 = tensor.expand_shape %A [[0, 1], [2]]
+  %20 = tensor.expand_shape %A [[0, 1], [2]] output_shape [112, 112, 16]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
   %21 = tensor.empty() : tensor<112x112x16xf32>
   %22 = linalg.generic {indexing_maps = [
@@ -96,7 +100,7 @@ func.func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
   %cst_6 = arith.constant 1.000000e+00 : f32
   %cst_7 = arith.constant 7.000000e+00 : f32
   %cst_8 = arith.constant 1.1920929E-7 : f32
-  %25 = tensor.expand_shape %arg0 [[0, 1], [2]]
+  %25 = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 3, 5]
       : tensor<6x5xi32> into tensor<2x3x5xi32>
   %26 = tensor.empty() : tensor<2x3x5xf32>
   %28 = linalg.generic {

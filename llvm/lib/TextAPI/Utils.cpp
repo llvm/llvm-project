@@ -184,7 +184,7 @@ llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
       break;
     }
     default:
-      if (RegexMetachars.find(C) != StringRef::npos)
+      if (RegexMetachars.contains(C))
         RegexString.push_back('\\');
       RegexString.push_back(C);
     }
@@ -215,7 +215,7 @@ llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
     if (L.starts_with("#"))
       continue;
     StringRef Symbol, Remain, Alias;
-    // Base symbol is seperated by whitespace.
+    // Base symbol is separated by whitespace.
     std::tie(Symbol, Remain) = getToken(L);
     // The Alias symbol ends before a comment or EOL.
     std::tie(Alias, Remain) = getToken(Remain, "#");
@@ -231,4 +231,14 @@ llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
   }
 
   return Aliases;
+}
+
+PathSeq llvm::MachO::getPathsForPlatform(const PathToPlatformSeq &Paths,
+                                         PlatformType Platform) {
+  PathSeq Result;
+  for (const auto &[Path, CurrP] : Paths) {
+    if (!CurrP.has_value() || CurrP.value() == Platform)
+      Result.push_back(Path);
+  }
+  return Result;
 }

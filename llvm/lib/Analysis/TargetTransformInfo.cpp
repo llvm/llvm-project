@@ -427,6 +427,10 @@ bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
   return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
 }
 
+bool TargetTransformInfo::shouldDropLSRSolutionIfLessProfitable() const {
+  return TTIImpl->shouldDropLSRSolutionIfLessProfitable();
+}
+
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {
   return TTIImpl->isProfitableLSRChainElement(I);
 }
@@ -513,6 +517,11 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
+                                                       Type *DataType) const {
+  return TTIImpl->isLegalMaskedVectorHistogram(AddrType, DataType);
+}
+
 bool TargetTransformInfo::enableOrderedReductions() const {
   return TTIImpl->enableOrderedReductions();
 }
@@ -531,7 +540,7 @@ bool TargetTransformInfo::prefersVectorizedAddressing() const {
 }
 
 InstructionCost TargetTransformInfo::getScalingFactorCost(
-    Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
+    Type *Ty, GlobalValue *BaseGV, StackOffset BaseOffset, bool HasBaseReg,
     int64_t Scale, unsigned AddrSpace) const {
   InstructionCost Cost = TTIImpl->getScalingFactorCost(
       Ty, BaseGV, BaseOffset, HasBaseReg, Scale, AddrSpace);
@@ -1032,7 +1041,7 @@ TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
 
 InstructionCost TargetTransformInfo::getReplicationShuffleCost(
     Type *EltTy, int ReplicationFactor, int VF, const APInt &DemandedDstElts,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTIImpl->getReplicationShuffleCost(
       EltTy, ReplicationFactor, VF, DemandedDstElts, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

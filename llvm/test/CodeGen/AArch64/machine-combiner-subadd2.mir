@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-combiner -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-combiner -verify-machineinstrs -o - %s | FileCheck %s
 
 # The test cases in this file check following transformation if the right form
 # can reduce latency.
@@ -241,8 +241,8 @@ body:              |
 # Drop nowrap flags in SUB
 
 # CHECK-LABEL: name: test8
-# CHECK:       %7:gpr64 = SUBXrr %1, %0
-# CHECK-NEXT:  %4:gpr64common = SUBXrr killed %7, killed %2
+# CHECK:       [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr %1, %0
+# CHECK-NEXT:  %4:gpr64common = SUBXrr killed [[SUBXrr]], killed %2
 
 name:            test8
 registers:
