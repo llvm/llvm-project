@@ -126,7 +126,7 @@ Improvements to clang-tidy
   to exclude headers from analysis via a RegEx.
 
 - Added argument `--allow-no-checks` to suppress "no checks enabled" error
-  when disabling all of the checks.
+  when disabling all of the checks by `--checks='-*'`.
 
 New checks
 ^^^^^^^^^^
