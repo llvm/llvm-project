@@ -13,6 +13,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+      - name: Checkout vul-parser-benchmark
+        uses: actions/checkout@v4
+        with:
+          repository: 'thebesttv/vul-parser-benchmark'
+          path: 'graph-generation/vul-parser-benchmark'
       - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Setup Python
