@@ -511,6 +511,11 @@ Attribute Changes in Clang
      };
 
 
+- Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
+  ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
+  The attributes declare constraints about a function's behavior pertaining to blocking and
+  heap memory allocation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
