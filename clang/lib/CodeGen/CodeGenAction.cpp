@@ -326,6 +326,10 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
       CodeGenOpts.DiagnosticsMisExpectTolerance);
   }
 
+  if (CodeGenOpts.MissingAnnotations) {
+    Ctx.setAnnotationDiagsRequested(true);
+  }
+
   // Link each LinkModule into our module.
   if (!CodeGenOpts.LinkBitcodePostopt && LinkInModules(getModule()))
     return;
