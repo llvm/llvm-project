@@ -329,6 +329,12 @@ public:
     return Ret;
   }
 
+  // Return true if the type is an aggregate type.
+  bool isAggregateType(SPIRVType *Type) const {
+    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct &&
+                    Type->getOpcode() == SPIRV::OpTypeArray);
+  }
+
   // Whether the given VReg has an OpTypeXXX instruction mapped to it with the
   // given opcode (e.g. OpTypeFloat).
   bool isScalarOfType(Register VReg, unsigned TypeOpcode) const;
