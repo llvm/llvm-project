@@ -212,6 +212,8 @@ public:
   void setMisExpectWarningRequested(bool Requested);
   void setDiagnosticsMisExpectTolerance(std::optional<uint32_t> Tolerance);
   uint32_t getDiagnosticsMisExpectTolerance() const;
+  bool getAnnotationDiagsRequested() const;
+  void setAnnotationDiagsRequested(bool Requested);
 
   /// Return the minimum hotness value a diagnostic would need in order
   /// to be included in optimization diagnostics.

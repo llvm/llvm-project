@@ -1495,6 +1495,10 @@ public:
   std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
   bool MisExpectWarningRequested = false;
 
+  /// Enables Diagnostics for Missing llvm.expect annotations on extremely hot
+  /// branches
+  bool AnnotationsDiagsRequested = false;
+
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
   std::unique_ptr<LLVMRemarkStreamer> LLVMRS;
 
