@@ -248,6 +248,35 @@ func.func @transfer_write_f32_scalable_8x8_masked(%dest: memref<?x?xf32>, %dim0:
 
 // -----
 
+// Tensor semantics are not supported for the store loop lowering.
+
+// CHECK-LABEL: @negative_transfer_write_f32_scalable_8x8_tensor
+// CHECK-NOT: scf.for
+func.func @negative_transfer_write_f32_scalable_8x8_tensor(%dest: tensor<?x?xf32>, %vec: vector<[8]x[8]xf32>)
+{
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %dest[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, tensor<?x?xf32>
+  return
+}
+
+// -----
+
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// Transposes are not supported for the store loop lowering.
+
+// CHECK-LABEL: @negative_transfer_write_f32_scalable_8x8_tensor
+// CHECK-NOT: scf.for
+func.func @negative_transfer_write_f32_scalable_8x8_tensor(%dest: tensor<?x?xf32>, %dim0: index, %dim1: index, %vec: vector<[8]x[8]xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = [true, true]} : vector<[8]x[8]xf32>, tensor<?x?xf32>
+  return
+}
+
+// -----
+
 #transpose = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: @transpose_f32_scalable_4x16_via_read(
