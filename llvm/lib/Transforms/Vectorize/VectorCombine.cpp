@@ -1713,7 +1713,7 @@ static bool isFreeConcat(ArrayRef<InstLane> Item,
 
   // Check that the concat is free, usually meaning that the type will be split
   // during legalization.
-  SmallVector<int, 16> ConcatMask(Ty->getNumElements() * 2);
+  SmallVector<int, 16> ConcatMask(NumElts * 2);
   std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
   if (TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, ConcatMask,
                          TTI::TCK_RecipThroughput) != 0)
