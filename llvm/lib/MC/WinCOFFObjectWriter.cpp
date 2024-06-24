@@ -144,6 +144,7 @@ class WinCOFFWriter {
   // Maps used during object file creation.
   section_map SectionMap;
   symbol_map SymbolMap;
+  DenseSet<StringRef> ComdatSymSet;
 
   symbol_list WeakDefaults;
 
@@ -322,26 +323,15 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
                                   const MCAsmLayout &Layout) {
   COFFSection *Section = createSection(MCSec.getName());
-  COFFSymbol *Symbol = createSymbol(MCSec.getName());
-  Section->Symbol = Symbol;
-  Symbol->Section = Section;
-  Symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
-
-  // Create a COMDAT symbol if needed.
+  // Check whether the COMDAT symbol has been reused.
   if (MCSec.getSelection() != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
     if (const MCSymbol *S = MCSec.getCOMDATSymbol()) {
-      COFFSymbol *COMDATSymbol = GetOrCreateCOFFSymbol(S);
-      if (COMDATSymbol->Section)
-        report_fatal_error("two sections have the same comdat");
-      COMDATSymbol->Section = Section;
+      if (!ComdatSymSet.insert(S->getName()).second)
+        Layout.getAssembler().getContext().reportError(
+            SMLoc(),
+            Twine("COMDAT symbol '" + S->getName() + "' used by two sections"));
     }
   }
-
-  // In this case the auxiliary symbol is a Section Definition.
-  Symbol->Aux.resize(1);
-  Symbol->Aux[0] = {};
-  Symbol->Aux[0].AuxType = ATSectionDefinition;
-  Symbol->Aux[0].Aux.SectionDefinition.Selection = MCSec.getSelection();
 
   // Set section alignment.
   Section->Header.Characteristics = MCSec.getCharacteristics();
@@ -401,10 +391,25 @@ void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
   COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
+  MCSectionCOFF *MCSec = nullptr;
   if (Base && Base->getFragment()) {
-    Sec = SectionMap[Base->getFragment()->getParent()];
-    if (Sym->Section && Sym->Section != Sec)
-      report_fatal_error("conflicting sections for symbol");
+    MCSec = cast<MCSectionCOFF>(Base->getFragment()->getParent());
+    Sec = SectionMap[MCSec];
+  }
+
+  if (MCSec) {
+    if ((Mode == NonDwoOnly && isDwoSection(*MCSec)) ||
+        (Mode == DwoOnly && !isDwoSection(*MCSec)))
+      return;
+    // If this is a section symbol, create an auxiliary symbol (Section
+    // Definition).
+    if (MCSec->getBeginSymbol() == &MCSym) {
+      Sec->Symbol = Sym;
+
+      AuxSymbol &AuxSym = Sym->Aux.emplace_back();
+      AuxSym.AuxType = ATSectionDefinition;
+      AuxSym.Aux.SectionDefinition.Selection = MCSec->getSelection();
+    }
   }
 
   COFFSymbol *Local = nullptr;
@@ -842,12 +847,21 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm,
     defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
   }
 
-  if (Mode != DwoOnly)
-    for (const MCSymbol &Symbol : Asm.symbols())
-      // Define non-temporary or temporary static (private-linkage) symbols
-      if (!Symbol.isTemporary() ||
-          cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
-        DefineSymbol(Symbol, Asm, Layout);
+  auto isSectionSymbol = [](const MCSymbol &Sym) {
+    return Sym.isInSection() && Sym.getSection().getBeginSymbol() == &Sym;
+  };
+
+  for (const MCSymbol &Sym : Asm.symbols())
+    if (isSectionSymbol(Sym))
+      DefineSymbol(Sym, Asm, Layout);
+  if (Mode == DwoOnly)
+    return;
+  for (const MCSymbol &Sym : Asm.symbols())
+    // Define non-temporary or temporary static (private-linkage) symbols
+    if (!isSectionSymbol(Sym) &&
+        (!Sym.isTemporary() ||
+         cast<MCSymbolCOFF>(Sym).getClass() == COFF::IMAGE_SYM_CLASS_STATIC))
+      DefineSymbol(Sym, Asm, Layout);
 }
 
 void WinCOFFWriter::recordRelocation(MCAssembler &Asm,

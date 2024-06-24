@@ -81,6 +81,11 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
+void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  changeSectionImpl(Section, Subsection);
+  getAssembler().registerSymbol(*Section->getBeginSymbol());
+}
+
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
