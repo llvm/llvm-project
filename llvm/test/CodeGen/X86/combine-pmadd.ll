@@ -63,6 +63,31 @@ define <8 x i32> @combine_pmaddwd_concat(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>
   ret <8 x i32> %3
 }
 
+define <4 x i32> @combine_pmaddwd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: combine_pmaddwd_demandedelts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmaddwd %xmm1, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddwd_demandedelts:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddwd_demandedelts:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  %2 = shufflevector <8 x i16> %a1, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 7, i32 7, i32 7>
+  %3 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %1, <8 x i16> %2)
+  %4 = shufflevector <4 x i32> %3, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %4
+}
+
 define i32 @combine_pmaddwd_constant() {
 ; CHECK-LABEL: combine_pmaddwd_constant:
 ; CHECK:       # %bb.0:
@@ -128,6 +153,38 @@ define <16 x i16> @combine_pmaddubsw_concat(<16 x i8> %a0, <16 x i8> %a1, <16 x 
   %2 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a2, <16 x i8> %a3)
   %3 = shufflevector <8 x i16> %1, <8 x i16> %2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i16> %3
+}
+
+; TODO: Missing SimplifyDemandedVectorElts support
+define <8 x i16> @combine_pmaddubsw_demandedelts(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: combine_pmaddubsw_demandedelts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
+; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
+; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pmaddubsw_demandedelts:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
+; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pmaddubsw_demandedelts:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = shufflevector <16 x i8> %a0, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %2 = shufflevector <16 x i8> %a1, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %3 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %1, <16 x i8> %2)
+  %4 = shufflevector <8 x i16> %3, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  ret <8 x i16> %4
 }
 
 define i32 @combine_pmaddubsw_constant() {
