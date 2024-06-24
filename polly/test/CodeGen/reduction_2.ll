@@ -1,4 +1,6 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s --allow-empty
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-invariant-load-hoisting=true \
+; RUN: -polly-region-expansion-profitability-check=0 '-passes=print<polly-ast>' \
+; RUN: -disable-output < %s | FileCheck %s --allow-empty
 
 ;#include <string.h>
 ;#include <stdio.h>

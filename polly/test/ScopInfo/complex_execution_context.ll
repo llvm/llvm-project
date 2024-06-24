@@ -1,6 +1,6 @@
 ; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: -polly-region-expansion-profitability-check=0 -polly-invariant-load-hoisting=true \
+; RUN: -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Low complexity assumption:
 ;

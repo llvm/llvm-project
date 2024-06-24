@@ -228,6 +228,11 @@ static cl::opt<bool> PollyAllowErrorBlocks(
     cl::desc("Allow to speculate on the execution of 'error blocks'."),
     cl::Hidden, cl::init(true), cl::cat(PollyCategory));
 
+static cl::opt<bool> RegionExpansionProfitabilityCheck(
+    "polly-region-expansion-profitability-check",
+    cl::desc("Add profitability checks to expanded region"), cl::init(true),
+    cl::Hidden, cl::cat(PollyCategory));
+
 /// The minimal trip count under which loops are considered unprofitable.
 static const unsigned MIN_LOOP_TRIP_COUNT = 8;
 
@@ -1621,6 +1626,12 @@ void ScopDetection::findScops(Region &R) {
     if (!ExpandedR)
       continue;
 
+    if (!isRegionExpansionProfitable(*ExpandedR, LI)) {
+      removeCachedResults(*ExpandedR);
+      delete ExpandedR;
+      continue;
+    }
+
     R.addSubRegion(ExpandedR, true);
     ValidRegions.insert(ExpandedR);
     removeCachedResults(*CurrentRegion);
@@ -1747,6 +1758,56 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
     return true;
 
   return invalid<ReportUnprofitable>(Context, /*Assert=*/true, &CurRegion);
+}
+
+bool ScopDetection::isRegionExpansionProfitable(const Region &ExpandedRegion,
+                                                LoopInfo &LI) const {
+  if (!RegionExpansionProfitabilityCheck)
+    return true;
+
+  POLLY_DEBUG(dbgs() << "\nChecking expanded region: "
+                     << ExpandedRegion.getNameStr() << "\n");
+
+  // Collect outermost loops from expanded region.
+  SmallPtrSet<const Loop *, 2> Loops;
+  for (auto BB : ExpandedRegion.blocks()) {
+    Loop *L = ExpandedRegion.outermostLoopInRegion(&LI, BB);
+    if (L)
+      Loops.insert(L);
+  }
+
+  if (Loops.size() == 0) {
+    POLLY_DEBUG(dbgs() << "Unprofitable expanded region: no loops found.\n");
+    return false;
+  }
+
+  // Return region expansion as unprofitable, if it contains basic blocks with
+  // memory accesses not used in outermost loops of the expanded region.
+  for (auto BB : ExpandedRegion.blocks()) {
+    if (&BB->front() == BB->getTerminator())
+      continue;
+    if (BB == ExpandedRegion.getEntry())
+      continue;
+
+    // Skip loop preheader block that may contain loop invariant loads.
+    if (llvm::any_of(Loops, [&](const Loop *L) {
+          return L->contains(BB) || (BB == L->getLoopPreheader());
+        }))
+      continue;
+
+    if (llvm::any_of(*BB, [](const Instruction &I) {
+          return isa<LoadInst>(&I) || isa<StoreInst>(&I);
+        })) {
+      POLLY_DEBUG(dbgs() << "Unprofitable expanded region:\n";
+                  dbgs() << "\tBasicBlock: " << BB->getName() << "\n";
+                  dbgs() << "\tcontains memory accesses, but not belong to "
+                            "outermost loops of expanded region.\n\n");
+      return false;
+    }
+  }
+
+  POLLY_DEBUG(dbgs() << "Expanded region seems profitable.\n\n");
+  return true;
 }
 
 bool ScopDetection::isValidRegion(DetectionContext &Context) {

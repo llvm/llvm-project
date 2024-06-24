@@ -1,4 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output \
+; RUN: -polly-region-expansion-profitability-check=0 < %s 2>&1 | FileCheck %s
 ;
 ; void consequences(int *A, int bool_cond, int lhs, int rhs) {
 ;
