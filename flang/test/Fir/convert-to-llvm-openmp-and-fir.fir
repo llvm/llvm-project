@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cfg-conversion --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cg-rewrite --cfg-conversion --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
 
 func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
   %c1_i64 = arith.constant 1 : i64
@@ -1006,3 +1006,84 @@ func.func @omp_map_info_nested_derived_type_explicit_member_conversion(%arg0 : !
 }
 
 // -----
+
+// CHECK-LABEL:  llvm.func @omp_map_common_block_using_common_block_symbol
+
+// CHECK: %[[ADDR_OF:.*]] = llvm.mlir.addressof @var_common_ : !llvm.ptr
+// CHECK: %[[CB_MAP:.*]] = omp.map.info var_ptr(%[[ADDR_OF]] : !llvm.ptr, !llvm.array<8 x i8>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var_common"}
+// CHECK:    omp.target map_entries(%[[CB_MAP]] -> %[[ARG0:.*]] : !llvm.ptr) {
+// CHECK:    ^bb0(%[[ARG0]]: !llvm.ptr):
+// CHECK:      %[[VAR_2_OFFSET:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK:      %[[VAR_1_OFFSET:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:      %{{.*}} = llvm.getelementptr %[[ARG0]][%[[VAR_1_OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:      %{{.*}} = llvm.getelementptr %[[ARG0]][%[[VAR_2_OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+
+func.func @omp_map_common_block_using_common_block_symbol() {
+    %0 = fir.address_of(@var_common_) : !fir.ref<!fir.array<8xi8>>
+    %1 = omp.map.info var_ptr(%0 : !fir.ref<!fir.array<8xi8>>, !fir.array<8xi8>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.array<8xi8>> {name = "var_common"}
+    omp.target map_entries(%1 -> %arg0 : !fir.ref<!fir.array<8xi8>>) {
+    ^bb0(%arg0: !fir.ref<!fir.array<8xi8>>):
+      %c4_0 = arith.constant 4 : index
+      %c0_1 = arith.constant 0 : index
+      %c20_i32 = arith.constant 20 : i32
+      %2 = fir.convert %arg0 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+      %3 = fir.coordinate_of %2, %c0_1 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+      %4 = fir.convert %3 : (!fir.ref<i8>) -> !fir.ref<i32>
+      %5 = fir.declare %4 {uniq_name = "_QFEvar1"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      %6 = fir.convert %arg0 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+      %7 = fir.coordinate_of %6, %c4_0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+      %8 = fir.convert %7 : (!fir.ref<i8>) -> !fir.ref<i32>
+      %9 = fir.declare %8 {uniq_name = "_QFEvar2"} : (!fir.ref<i32>) -> !fir.ref<i32>
+      %10 = fir.load %5 : !fir.ref<i32>
+      %11 = fir.load %9 : !fir.ref<i32>
+      %12 = arith.addi %10, %c20_i32 : i32
+      fir.store %12 to %9 : !fir.ref<i32>
+      omp.terminator
+    }
+    return
+  }
+
+fir.global common @var_common_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
+
+// -----
+
+// CHECK-LABEL:  llvm.func @omp_map_common_block_using_common_block_members
+
+// CHECK:    %[[VAR_2_OFFSET:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK:    %[[VAR_1_OFFSET:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:    %[[ADDR_OF:.*]] = llvm.mlir.addressof @var_common_ : !llvm.ptr
+// CHECK:    %[[VAR_1_CB_GEP:.*]] = llvm.getelementptr %[[ADDR_OF]][%[[VAR_1_OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:    %[[VAR_2_CB_GEP:.*]] = llvm.getelementptr %[[ADDR_OF]][%[[VAR_2_OFFSET]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+// CHECK:    %[[MAP_CB_VAR_1:.*]] = omp.map.info var_ptr(%[[VAR_1_CB_GEP]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var1"}
+// CHECK:    %[[MAP_CB_VAR_2:.*]] = omp.map.info var_ptr(%[[VAR_2_CB_GEP]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var2"}
+// CHECK:    omp.target map_entries(%[[MAP_CB_VAR_1]] -> %[[ARG0:.*]], %[[MAP_CB_VAR_2]] -> %[[ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
+// CHECK:     ^bb0(%[[ARG0]]: !llvm.ptr, %[[ARG1]]: !llvm.ptr):
+
+func.func @omp_map_common_block_using_common_block_members() {
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.address_of(@var_common_) : !fir.ref<!fir.array<8xi8>>
+  %1 = fir.convert %0 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ref<i32>
+  %4 = fir.declare %3 {uniq_name = "_QFmodify_2Evar1"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.convert %0 : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %6 = fir.coordinate_of %5, %c4 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<i32>
+  %8 = fir.declare %7 {uniq_name = "_QFmodify_2Evar2"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %9 = omp.map.info var_ptr(%4 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "var1"}
+  %10 = omp.map.info var_ptr(%8 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "var2"}
+  omp.target map_entries(%9 -> %arg0, %10 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
+  ^bb0(%arg0: !fir.ref<i32>, %arg1: !fir.ref<i32>):
+    %c10_i32 = arith.constant 10 : i32
+    %11 = fir.declare %arg0 {uniq_name = "_QFmodify_2Evar1"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %12 = fir.declare %arg1 {uniq_name = "_QFmodify_2Evar2"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %13 = fir.load %11 : !fir.ref<i32>
+    %14 = arith.muli %13, %c10_i32 : i32
+    fir.store %14 to %12 : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+
+fir.global common @var_common_(dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
