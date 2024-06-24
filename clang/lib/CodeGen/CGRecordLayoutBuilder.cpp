@@ -635,7 +635,9 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           // non-reusable tail padding.
           CharUnits LimitOffset;
           for (auto Probe = Field; Probe != FieldEnd; ++Probe)
-            if (!isEmptyField(Context, *Probe, false, true)) {
+            if (!Probe->isZeroLengthBitField(Context) &&
+                !(isEmptyField(Context, *Probe, false, true) &&
+                  !Probe->isBitField())) {
               // A member with storage sets the limit.
               assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
                      "Next storage is not byte-aligned");
@@ -1163,7 +1165,8 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
     const FieldDecl *FD = *it;
 
     // Ignore zero-sized fields.
-    if (isEmptyField(Context, FD, false, true))
+    if (FD->isZeroLengthBitField(Context) ||
+        (isEmptyField(Context, FD, false, true) && !FD->isBitField()))
       continue;
 
     // For non-bit-fields, just check that the LLVM struct offset matches the
