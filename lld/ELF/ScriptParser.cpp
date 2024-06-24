@@ -158,7 +158,8 @@ static void moveAbsRight(ExprValue &a, ExprValue &b) {
   if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
     std::swap(a, b);
   if (!b.isAbsolute())
-    error(a.loc + ": at least one side of the expression must be absolute");
+    script->recordError(
+        a.loc + ": at least one side of the expression must be absolute");
 }
 
 static ExprValue add(ExprValue a, ExprValue b) {
@@ -1384,7 +1385,7 @@ StringRef ScriptParser::readParenLiteral() {
 
 static void checkIfExists(const OutputSection &osec, StringRef location) {
   if (osec.location.empty() && script->errorOnMissingSection)
-    error(location + ": undefined section " + osec.name);
+    script->recordError(location + ": undefined section " + osec.name);
 }
 
 static bool isValidSymbolName(StringRef s) {

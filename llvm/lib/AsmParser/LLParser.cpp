@@ -3568,7 +3568,7 @@ LLParser::PerFunctionState::~PerFunctionState() {
     if (isa<BasicBlock>(P.second.first))
       continue;
     P.second.first->replaceAllUsesWith(
-        UndefValue::get(P.second.first->getType()));
+        PoisonValue::get(P.second.first->getType()));
     P.second.first->deleteValue();
   }
 
@@ -3576,7 +3576,7 @@ LLParser::PerFunctionState::~PerFunctionState() {
     if (isa<BasicBlock>(P.second.first))
       continue;
     P.second.first->replaceAllUsesWith(
-        UndefValue::get(P.second.first->getType()));
+        PoisonValue::get(P.second.first->getType()));
     P.second.first->deleteValue();
   }
 }

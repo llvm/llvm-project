@@ -153,6 +153,7 @@ public:
   bool CheckConformance();
   bool CheckAssignmentConformance();
   bool CheckForNullPointer(const char *where = "as an operand here");
+  bool CheckForAssumedRank(const char *where = "as an operand here");
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
@@ -3200,6 +3201,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (!procRef) {
         analyzer.CheckForNullPointer(
             "in a non-pointer intrinsic assignment statement");
+        analyzer.CheckForAssumedRank("in an assignment statement");
         const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
         if (auto dyType{lhs.GetType()};
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
@@ -3394,6 +3396,7 @@ static MaybeExpr NumericUnaryHelper(ExpressionAnalyzer &context,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       if (opr == NumericOperator::Add) {
         return analyzer.MoveExpr(0);
       } else {
@@ -3428,6 +3431,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::NOT &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return AsGenericExpr(
           LogicalNegation(std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u)));
     } else {
@@ -3476,6 +3480,7 @@ MaybeExpr NumericBinaryHelper(ExpressionAnalyzer &context, NumericOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicNumeric(opr)) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       analyzer.CheckConformance();
       return NumericOperation<OPR>(context.GetContextualMessages(),
           analyzer.MoveExpr(0), analyzer.MoveExpr(1),
@@ -3525,6 +3530,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicConcat()) {
       analyzer.CheckForNullPointer();
+      analyzer.CheckForAssumedRank();
       return common::visit(
           [&](auto &&x, auto &&y) -> MaybeExpr {
             using T = ResultType<decltype(x)>;
@@ -3572,6 +3578,7 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
     if (leftType && rightType &&
         analyzer.IsIntrinsicRelational(opr, *leftType, *rightType)) {
       analyzer.CheckForNullPointer("as a relational operand");
+      analyzer.CheckForAssumedRank("as a relational operand");
       return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
           analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
     } else {
@@ -3617,6 +3624,7 @@ MaybeExpr LogicalBinaryHelper(ExpressionAnalyzer &context, LogicalOperator opr,
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicLogical()) {
       analyzer.CheckForNullPointer("as a logical operand");
+      analyzer.CheckForAssumedRank("as a logical operand");
       return AsGenericExpr(BinaryLogicalOperation(opr,
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(0).u),
           std::get<Expr<SomeLogical>>(analyzer.MoveExpr(1).u)));
@@ -4330,6 +4338,18 @@ bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   return true;
 }
 
+bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
+  for (const std::optional<ActualArgument> &arg : actuals_) {
+    if (arg && IsAssumedRank(arg->UnwrapExpr())) {
+      context_.Say(source_,
+          "An assumed-rank dummy argument is not allowed %s"_err_en_US, where);
+      fatalErrors_ = true;
+      return false;
+    }
+  }
+  return true;
+}
+
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     const char *opr, parser::MessageFixedText error, bool isUserOp) {
   if (AnyUntypedOrMissingOperand()) {
@@ -4404,7 +4424,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     context_.Say(
         "Operands of %s are not conformable; have rank %d and rank %d"_err_en_US,
         ToUpperCase(opr), actuals_[0]->Rank(), actuals_[1]->Rank());
-  } else if (CheckForNullPointer()) {
+  } else if (CheckForNullPointer() && CheckForAssumedRank()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
   }
   return result;

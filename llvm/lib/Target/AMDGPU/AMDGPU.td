@@ -1611,7 +1611,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
-   FeatureMaxHardClauseLength32]>;
+   FeatureMaxHardClauseLength32,
+   Feature1_5xVGPRs]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
