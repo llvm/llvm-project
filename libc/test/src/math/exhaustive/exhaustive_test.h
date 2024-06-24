@@ -69,22 +69,22 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-template <typename T> using BinaryOp = T(T, T);
+template <typename OutType, typename InType = OutType>
+using BinaryOp = OutType(InType, InType);
 
-template <typename T, mpfr::Operation Op, BinaryOp<T> Func>
+template <typename OutType, typename InType, mpfr::Operation Op,
+          BinaryOp<OutType, InType> Func>
 struct BinaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
-  using FloatType = T;
+  using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
-
-  static constexpr BinaryOp<FloatType> *FUNC = Func;
 
   // Check in a range, return the number of failures.
   uint64_t check(StorageType x_start, StorageType x_stop, StorageType y_start,
                  StorageType y_stop, mpfr::RoundingMode rounding) {
     mpfr::ForceRoundingMode r(rounding);
     if (!r.success)
-      return (x_stop > x_start || y_stop > y_start);
+      return x_stop > x_start || y_stop > y_start;
     StorageType xbits = x_start;
     uint64_t failed = 0;
     do {
@@ -93,12 +93,12 @@ struct BinaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       do {
         FloatType y = FPBits(ybits).get_val();
         mpfr::BinaryInput<FloatType> input{x, y};
-        bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, input, FUNC(x, y),
+        bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, input, Func(x, y),
                                                          0.5, rounding);
         failed += (!correct);
         // Uncomment to print out failed values.
         // if (!correct) {
-        //   TEST_MPFR_MATCH(Op::Operation, x, Op::func(x, y), 0.5, rounding);
+        //   EXPECT_MPFR_MATCH_ROUNDING(Op, input, Func(x, y), 0.5, rounding);
         // }
       } while (ybits++ < y_stop);
     } while (xbits++ < x_stop);
@@ -108,7 +108,7 @@ struct BinaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
 
 // Checker class needs inherit from LIBC_NAMESPACE::testing::Test and provide
 //   StorageType and check method.
-template <typename Checker>
+template <typename Checker, size_t Increment = 1 << 20>
 struct LlvmLibcExhaustiveMathTest
     : public virtual LIBC_NAMESPACE::testing::Test,
       public Checker {
@@ -116,12 +116,37 @@ struct LlvmLibcExhaustiveMathTest
   using FPBits = typename Checker::FPBits;
   using StorageType = typename Checker::StorageType;
 
-  static constexpr StorageType INCREMENT = (1 << 20);
+  static constexpr StorageType INCREMENT = Increment;
+
+  void explain_failed_range(std::stringstream &msg, StorageType x_begin,
+                            StorageType x_end) {
+#ifdef LIBC_TYPES_HAS_FLOAT16
+    using T = LIBC_NAMESPACE::cpp::conditional_t<
+        LIBC_NAMESPACE::cpp::is_same_v<FloatType, float16>, float, FloatType>;
+#else
+    using T = FloatType;
+#endif
+
+    msg << x_begin << " to " << x_end << " [0x" << std::hex << x_begin << ", 0x"
+        << x_end << "), [" << std::hexfloat
+        << static_cast<T>(FPBits(x_begin).get_val()) << ", "
+        << static_cast<T>(FPBits(x_end).get_val()) << ")";
+  }
+
+  void explain_failed_range(std::stringstream &msg, StorageType x_begin,
+                            StorageType x_end, StorageType y_begin,
+                            StorageType y_end) {
+    msg << "x ";
+    explain_failed_range(msg, x_begin, x_end);
+    msg << ", y ";
+    explain_failed_range(msg, y_begin, y_end);
+  }
 
   // Break [start, stop) into `nthreads` subintervals and apply *check to each
   // subinterval in parallel.
-  void test_full_range(StorageType start, StorageType stop,
-                       mpfr::RoundingMode rounding) {
+  template <typename... T>
+  void test_full_range(mpfr::RoundingMode rounding, StorageType start,
+                       StorageType stop, T... extra_range_bounds) {
     int n_threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
@@ -158,15 +183,14 @@ struct LlvmLibcExhaustiveMathTest
             std::cout << msg.str() << std::flush;
           }
 
-          uint64_t failed_in_range =
-              Checker::check(range_begin, range_end, rounding);
+          uint64_t failed_in_range = Checker::check(
+              range_begin, range_end, extra_range_bounds..., rounding);
           if (failed_in_range > 0) {
             std::stringstream msg;
             msg << "Test failed for " << std::dec << failed_in_range
-                << " inputs in range: " << range_begin << " to " << range_end
-                << " [0x" << std::hex << range_begin << ", 0x" << range_end
-                << "), [" << std::hexfloat << FPBits(range_begin).get_val()
-                << ", " << FPBits(range_end).get_val() << ")\n";
+                << " inputs in range: ";
+            explain_failed_range(msg, start, stop, extra_range_bounds...);
+            msg << "\n";
             std::cerr << msg.str() << std::flush;
 
             failed.fetch_add(failed_in_range);
@@ -189,127 +213,46 @@ struct LlvmLibcExhaustiveMathTest
   void test_full_range_all_roundings(StorageType start, StorageType stop) {
     std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(start, stop, mpfr::RoundingMode::Nearest);
+    test_full_range(mpfr::RoundingMode::Nearest, start, stop);
 
     std::cout << "-- Testing for FE_UPWARD in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(start, stop, mpfr::RoundingMode::Upward);
+    test_full_range(mpfr::RoundingMode::Upward, start, stop);
 
     std::cout << "-- Testing for FE_DOWNWARD in range [0x" << std::hex << start
               << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(start, stop, mpfr::RoundingMode::Downward);
+    test_full_range(mpfr::RoundingMode::Downward, start, stop);
 
     std::cout << "-- Testing for FE_TOWARDZERO in range [0x" << std::hex
               << start << ", 0x" << stop << ") --" << std::dec << std::endl;
-    test_full_range(start, stop, mpfr::RoundingMode::TowardZero);
+    test_full_range(mpfr::RoundingMode::TowardZero, start, stop);
   };
-};
-
-template <typename Checker>
-struct LlvmLibcBinaryInputExhaustiveMathTest
-    : public virtual LIBC_NAMESPACE::testing::Test,
-      public Checker {
-  using FloatType = typename Checker::FloatType;
-  using FPBits = typename Checker::FPBits;
-  using StorageType = typename Checker::StorageType;
-
-  static constexpr StorageType Increment = (1 << 2);
-
-  // Break [start, stop) into `nthreads` subintervals and apply *check to each
-  // subinterval in parallel.
-  void test_full_range(StorageType x_start, StorageType x_stop,
-                       StorageType y_start, StorageType y_stop,
-                       mpfr::RoundingMode rounding) {
-    int n_threads = std::thread::hardware_concurrency();
-    std::vector<std::thread> thread_list;
-    std::mutex mx_cur_val;
-    int current_percent = -1;
-    StorageType current_value = x_start;
-    std::atomic<uint64_t> failed(0);
-
-    for (int i = 0; i < n_threads; ++i) {
-      thread_list.emplace_back([&, this]() {
-        while (true) {
-          StorageType range_begin, range_end;
-          int new_percent = -1;
-          {
-            std::lock_guard<std::mutex> lock(mx_cur_val);
-            if (current_value == x_stop)
-              return;
-
-            range_begin = current_value;
-            if (x_stop >= Increment && x_stop - Increment >= current_value) {
-              range_end = current_value + Increment;
-            } else {
-              range_end = x_stop;
-            }
-            current_value = range_end;
-            int pc = 100.0 * (range_end - x_start) / (x_stop - x_start);
-            if (current_percent != pc) {
-              new_percent = pc;
-              current_percent = pc;
-            }
-          }
-          if (new_percent >= 0) {
-            std::stringstream msg;
-            msg << new_percent << "% is in process     \r";
-            std::cout << msg.str() << std::flush;
-          }
-
-          uint64_t failed_in_range =
-              Checker::check(range_begin, range_end, y_start, y_stop, rounding);
-          if (failed_in_range > 0) {
-            using T = LIBC_NAMESPACE::cpp::conditional_t<
-                LIBC_NAMESPACE::cpp::is_same_v<FloatType, float16>, float,
-                FloatType>;
-            std::stringstream msg;
-            msg << "Test failed for " << std::dec << failed_in_range
-                << " inputs in range: " << range_begin << " to " << range_end
-                << " [0x" << std::hex << range_begin << ", 0x" << range_end
-                << "), [" << std::hexfloat
-                << static_cast<T>(FPBits(range_begin).get_val()) << ", "
-                << static_cast<T>(FPBits(range_end).get_val()) << ")\n";
-            std::cerr << msg.str() << std::flush;
-
-            failed.fetch_add(failed_in_range);
-          }
-        }
-      });
-    }
-
-    for (auto &thread : thread_list) {
-      if (thread.joinable()) {
-        thread.join();
-      }
-    }
-
-    std::cout << std::endl;
-    std::cout << "Test " << ((failed > 0) ? "FAILED" : "PASSED") << std::endl;
-    ASSERT_EQ(failed.load(), uint64_t(0));
-  }
 
   void test_full_range_all_roundings(StorageType x_start, StorageType x_stop,
                                      StorageType y_start, StorageType y_stop) {
-    test_full_range(x_start, x_stop, y_start, y_stop,
-                    mpfr::RoundingMode::Nearest);
+    std::cout << "-- Testing for FE_TONEAREST in x range [0x" << std::hex
+              << x_start << ", 0x" << x_stop << "), y range [0x" << y_start
+              << ", 0x" << y_stop << ") --" << std::dec << std::endl;
+    test_full_range(mpfr::RoundingMode::Nearest, x_start, x_stop, y_start,
+                    y_stop);
 
     std::cout << "-- Testing for FE_UPWARD in x range [0x" << std::hex
-              << x_start << ", 0x" << x_stop << ") y range [0x" << std::hex
-              << y_start << ", 0x" << y_stop << ") --" << std::dec << std::endl;
-    test_full_range(x_start, x_stop, y_start, y_stop,
-                    mpfr::RoundingMode::Upward);
+              << x_start << ", 0x" << x_stop << "), y range [0x" << y_start
+              << ", 0x" << y_stop << ") --" << std::dec << std::endl;
+    test_full_range(mpfr::RoundingMode::Upward, x_start, x_stop, y_start,
+                    y_stop);
 
     std::cout << "-- Testing for FE_DOWNWARD in x range [0x" << std::hex
-              << x_start << ", 0x" << x_stop << ") y range [0x" << std::hex
-              << y_start << ", 0x" << y_stop << ") --" << std::dec << std::endl;
-    test_full_range(x_start, x_stop, y_start, y_stop,
-                    mpfr::RoundingMode::Downward);
+              << x_start << ", 0x" << x_stop << "), y range [0x" << y_start
+              << ", 0x" << y_stop << ") --" << std::dec << std::endl;
+    test_full_range(mpfr::RoundingMode::Downward, x_start, x_stop, y_start,
+                    y_stop);
 
     std::cout << "-- Testing for FE_TOWARDZERO in x range [0x" << std::hex
-              << x_start << ", 0x" << x_stop << ") y range [0x" << std::hex
-              << y_start << ", 0x" << y_stop << ") --" << std::dec << std::endl;
-    test_full_range(x_start, x_stop, y_start, y_stop,
-                    mpfr::RoundingMode::TowardZero);
+              << x_start << ", 0x" << x_stop << "), y range [0x" << y_start
+              << ", 0x" << y_stop << ") --" << std::dec << std::endl;
+    test_full_range(mpfr::RoundingMode::TowardZero, x_start, x_stop, y_start,
+                    y_stop);
   };
 };
 
@@ -324,4 +267,5 @@ using LlvmLibcUnaryNarrowingOpExhaustiveMathTest =
 
 template <typename FloatType, mpfr::Operation Op, BinaryOp<FloatType> Func>
 using LlvmLibcBinaryOpExhaustiveMathTest =
-    LlvmLibcBinaryInputExhaustiveMathTest<BinaryOpChecker<FloatType, Op, Func>>;
+    LlvmLibcExhaustiveMathTest<BinaryOpChecker<FloatType, FloatType, Op, Func>,
+                               1 << 2>;
