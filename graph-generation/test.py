@@ -75,6 +75,10 @@ def run_case(root, dir, input_path, output_path, tool_path):
     if original_output != new_output:
         os.remove(output_path)
         logging.error(f"  Output mismatch: {dir}")
+        logging.info("======== Original ========")
+        print(original_output)
+        logging.info("======== New ========")
+        print(new_output)
         raise Exception(f"Output mismatch: {dir}")
 
 if __name__ == '__main__':
