@@ -624,11 +624,14 @@ void generatePathFromOneEntry(int sourceIndex, const ordered_json &result,
 
         int nextFid = -1;
         {
-            // 获取下一条语句对应的 fid
+            // 获取下一条 可定位 语句对应的 fid
             auto nextIt = std::next(it);
-            if (nextIt != locations.cend()) {
+            while (nextIt != locations.cend()) {
+                // 一直往下找，知道找到 fid 正确的语句
                 Location nextJsonLoc(*nextIt);
                 nextFid = locator.getFid(nextJsonLoc);
+                if (nextFid != -1)
+                    break;
             }
         }
 
