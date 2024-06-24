@@ -184,7 +184,6 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
-* Ztso is no longer experimental.
 * ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
 
 Changes to the WebAssembly Backend

@@ -554,52 +554,50 @@ TEST(ParseArchString, RejectsDuplicateExtensionNames) {
 TEST(ParseArchString,
      RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64izfbfmin", false).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64iztso", false).takeError()),
       "requires '-menable-experimental-extensions' for experimental extension "
-      "'zfbfmin'");
+      "'ztso'");
 }
 
 TEST(ParseArchString,
      AcceptsExperimentalExtensionsIfEnableExperimentalExtension) {
-  // Note: If zalasr becomes none-experimental, this test will need
+  // Note: If ztso becomes none-experimental, this test will need
   // updating (and unfortunately, it will still pass). The failure of
   // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
   // hopefully serve as a reminder to update.
-  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64izalasr", true, false);
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64iztso", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p1", true);
+  EXPECT_EQ(Exts.count("ztso"), 1U);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64iztso0p1", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
-  EXPECT_EQ(Exts2.count("zalasr"), 1U);
+  EXPECT_EQ(Exts2.count("ztso"), 1U);
 }
 
 TEST(ParseArchString,
      RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64izalasr", true).takeError()),
-      "experimental extension requires explicit version number `zalasr`");
+      toString(RISCVISAInfo::parseArchString("rv64iztso", true).takeError()),
+      "experimental extension requires explicit version number `ztso`");
 }
 
 TEST(ParseArchString,
      AcceptsUnrecognizedVersionIfNotExperimentalExtensionVersionCheck) {
   auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64izalasr9p9", true, false);
+      RISCVISAInfo::parseArchString("rv64iztso9p9", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_TRUE(Exts.at("zalasr") == (RISCVISAUtils::ExtensionVersion{9, 9}));
+  EXPECT_TRUE(Exts.at("ztso") == (RISCVISAUtils::ExtensionVersion{9, 9}));
 }
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
-      "unsupported version number 9.9 for experimental extension 'zalasr' "
+      toString(RISCVISAInfo::parseArchString("rv64iztso9p9", true).takeError()),
+      "unsupported version number 9.9 for experimental extension 'ztso' "
       "(this compiler supports 0.1)");
 }
 
@@ -741,16 +739,16 @@ TEST(ParseArchString,
 
 TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   auto MaybeISAInfo1 =
-      RISCVISAInfo::parseArchString("rv64im_zalasr", true, false);
+      RISCVISAInfo::parseArchString("rv64im_ztso", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+m", "+zmmul", "+experimental-zalasr"));
+              ElementsAre("+m", "+zmmul", "+experimental-ztso"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_ztso_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+experimental-zalasr", "+xventanacondops"));
+              ElementsAre("+e", "+experimental-ztso", "+xventanacondops"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -895,8 +893,10 @@ TEST(isSupportedExtensionWithVersion, AcceptsSingleExtensionWithVersion) {
 
 TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
   EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zbb"), "zbb");
-  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("ztso1p0"), "ztso");
-  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("ztso"), "ztso");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("ztso0p1"),
+            "experimental-ztso");
+  EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("ztso"),
+            "experimental-ztso");
   EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zihintntl1234p4321"),
             "");
   EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zfoo"), "");
@@ -975,7 +975,6 @@ R"(All available -march extensions for RISC-V
     zksed                1.0
     zksh                 1.0
     zkt                  1.0
-    ztso                 1.0
     zvbb                 1.0
     zvbc                 1.0
     zve32f               1.0
@@ -1075,6 +1074,7 @@ Experimental extensions
     zicfiss              0.4
     zalasr               0.1
     zfbfmin              1.0
+    ztso                 0.1
     zvfbfmin             1.0
     zvfbfwma             1.0
     smmpm                0.8
