@@ -32,6 +32,24 @@ entry:
   ret half %c
 }
 
+define double @fptrunc_f128_f64(fp128 %a) {
+; CHECK-SD-LABEL: fptrunc_f128_f64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl __trunctfdf2
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fptrunc_f128_f64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    b __trunctfdf2
+entry:
+  %c = fptrunc fp128 %a to double
+  ret double %c
+}
+
 define <2 x float> @fptrunc_v2f64_v2f32(<2 x double> %a) {
 ; CHECK-LABEL: fptrunc_v2f64_v2f32:
 ; CHECK:       // %bb.0: // %entry

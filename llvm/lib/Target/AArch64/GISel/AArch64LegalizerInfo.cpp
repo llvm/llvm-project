@@ -646,6 +646,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC)
+      .libcallIf(typeIs(1, s128))
       .legalFor(
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
       .clampNumElements(0, v4s16, v4s16)
