@@ -322,21 +322,20 @@ raw_ostream &operator<<(raw_ostream &OS, const PrintLaneMaskShort &P);
 } // end namespace rdf
 } // end namespace llvm
 
-namespace std {
 
-template <> struct hash<llvm::rdf::RegisterRef> {
+template <> struct std::hash<llvm::rdf::RegisterRef> {
   size_t operator()(llvm::rdf::RegisterRef A) const { //
     return A.hash();
   }
 };
 
-template <> struct hash<llvm::rdf::RegisterAggr> {
+template <> struct std::hash<llvm::rdf::RegisterAggr> {
   size_t operator()(const llvm::rdf::RegisterAggr &A) const { //
     return A.hash();
   }
 };
 
-template <> struct equal_to<llvm::rdf::RegisterRef> {
+template <> struct std::equal_to<llvm::rdf::RegisterRef> {
   constexpr equal_to(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(&pri) {}
 
   bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
@@ -348,14 +347,14 @@ private:
   const llvm::rdf::PhysicalRegisterInfo *PRI;
 };
 
-template <> struct equal_to<llvm::rdf::RegisterAggr> {
+template <> struct std::equal_to<llvm::rdf::RegisterAggr> {
   bool operator()(const llvm::rdf::RegisterAggr &A,
                   const llvm::rdf::RegisterAggr &B) const {
     return A == B;
   }
 };
 
-template <> struct less<llvm::rdf::RegisterRef> {
+template <> struct std::less<llvm::rdf::RegisterRef> {
   constexpr less(const llvm::rdf::PhysicalRegisterInfo &pri) : PRI(&pri) {}
 
   bool operator()(llvm::rdf::RegisterRef A, llvm::rdf::RegisterRef B) const {
@@ -368,7 +367,6 @@ private:
   const llvm::rdf::PhysicalRegisterInfo *PRI;
 };
 
-} // namespace std
 
 namespace llvm::rdf {
 using RegisterSet = std::set<RegisterRef, std::less<RegisterRef>>;

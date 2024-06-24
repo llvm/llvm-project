@@ -39,16 +39,14 @@ using NodeRef = std::pair<NodeId, LaneBitmask>;
 } // namespace rdf
 } // namespace llvm
 
-namespace std {
 
-template <> struct hash<llvm::rdf::detail::NodeRef> {
+template <> struct std::hash<llvm::rdf::detail::NodeRef> {
   std::size_t operator()(llvm::rdf::detail::NodeRef R) const {
     return std::hash<llvm::rdf::NodeId>{}(R.first) ^
            std::hash<llvm::LaneBitmask::Type>{}(R.second.getAsInteger());
   }
 };
 
-} // namespace std
 
 namespace llvm::rdf {
 

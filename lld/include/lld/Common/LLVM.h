@@ -98,13 +98,10 @@ using llvm::wasm::WasmTableType;
 using llvm::wasm::WasmTag;
 } // end namespace lld.
 
-namespace std {
-template <> struct hash<llvm::StringRef> {
-public:
+template <> struct std::hash<llvm::StringRef> {
   size_t operator()(const llvm::StringRef &s) const {
     return llvm::hash_value(s);
   }
 };
-} // namespace std
 
 #endif
