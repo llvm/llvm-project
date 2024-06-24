@@ -292,6 +292,8 @@ public:
     return Res->second;
   }
 
+  // Return a pointee's type, or nullptr otherwise.
+  SPIRVType *getPointeeType(SPIRVType *PtrType);
   // Return a pointee's type op code, or 0 otherwise.
   unsigned getPointeeTypeOp(Register PtrReg);
 
@@ -514,7 +516,11 @@ public:
 
   SPIRVType *getOrCreateOpTypeSampledImage(SPIRVType *ImageType,
                                            MachineIRBuilder &MIRBuilder);
-
+  SPIRVType *getOrCreateOpTypeCoopMatr(MachineIRBuilder &MIRBuilder,
+                                       const TargetExtType *ExtensionType,
+                                       const SPIRVType *ElemType,
+                                       uint32_t Scope, uint32_t Rows,
+                                       uint32_t Columns, uint32_t Use);
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
