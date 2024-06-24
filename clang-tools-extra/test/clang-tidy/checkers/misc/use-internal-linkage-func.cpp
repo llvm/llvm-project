@@ -11,9 +11,11 @@ void func() {}
 template<class T>
 void func_template() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_template'
+// CHECK-FIXES: static void func_template() {}
 
 void func_cpp_inc();
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func_cpp_inc'
+// CHECK-FIXES: static void func_cpp_inc();
 
 #include "func_cpp.inc"
 

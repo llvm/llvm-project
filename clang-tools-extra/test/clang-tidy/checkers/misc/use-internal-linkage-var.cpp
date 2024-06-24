@@ -11,6 +11,7 @@ int global;
 template<class T>
 T global_template;
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: variable 'global_template'
+// CHECK-FIXES: static T global_template;
 
 int gloabl_header;
 
