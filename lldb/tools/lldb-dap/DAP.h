@@ -157,7 +157,7 @@ struct DAP {
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
-  llvm::once_flag initExceptionBreakpoints;
+  llvm::once_flag init_exception_breakpoints_flag;
   std::vector<std::string> init_commands;
   std::vector<std::string> pre_run_commands;
   std::vector<std::string> post_run_commands;
