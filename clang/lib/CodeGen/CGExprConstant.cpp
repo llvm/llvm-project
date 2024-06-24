@@ -2496,7 +2496,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (isEmptyRecord(CGM.getContext(), I.getType(), false, true) ||
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
           CGM.getContext()
               .getASTRecordLayout(base)
               .getNonVirtualSize()
@@ -2535,7 +2535,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (isEmptyRecord(CGM.getContext(), I.getType(), false, true))
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()))
         continue;
 
       unsigned fieldIndex = layout.getVirtualBaseIndex(base);

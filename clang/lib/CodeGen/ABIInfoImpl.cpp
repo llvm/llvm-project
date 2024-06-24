@@ -289,6 +289,16 @@ bool CodeGen::isEmptyField(const ASTContext &Context, const FieldDecl *FD,
   return isEmptyRecord(Context, FT, AllowArrays, AsIfNoUniqueAddr);
 }
 
+bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context, const FieldDecl *FD) {
+  if (FD->isZeroLengthBitField(Context))
+    return true;
+  
+  if (FD->isUnnamedBitField())
+    return false;
+
+  return isEmptyField(Context, FD, /*AllowArrays=*/false, /*AsIfNoUniqueAddr=*/true);
+}
+
 bool CodeGen::isEmptyRecord(const ASTContext &Context, QualType T,
                             bool AllowArrays, bool AsIfNoUniqueAddr) {
   const RecordType *RT = T->getAs<RecordType>();
@@ -308,6 +318,10 @@ bool CodeGen::isEmptyRecord(const ASTContext &Context, QualType T,
     if (!isEmptyField(Context, I, AllowArrays, AsIfNoUniqueAddr))
       return false;
   return true;
+}
+
+bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
+  return isEmptyRecord(Context, T, /*AllowArrays=*/false, /*AsIfNoUniqueAddr=*/true);
 }
 
 const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
