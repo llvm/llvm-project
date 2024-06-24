@@ -23,7 +23,7 @@
 
 auto *PIC = PB.getPassInstrumentationCallbacks();
 if (PIC) {
-  PIC->registerClassToPassNameCallback([PIC]() {
+  PIC->registerClassToPassNameCallback([&]() {
 #define ADD_CLASS_PASS_TO_PASS_NAME(NAME, CREATE_PASS)                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define ADD_CLASS_PASS_TO_PASS_NAME_WITH_PARAMS(NAME, CLASS)                   \
