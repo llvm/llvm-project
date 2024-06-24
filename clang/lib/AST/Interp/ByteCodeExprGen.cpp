@@ -3574,8 +3574,14 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
       Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
       Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
       Builtin == Builtin::BI__builtin_function_start) {
-    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E))
-      return this->emitGetPtrGlobal(*GlobalOffset, E);
+    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
+      if (!this->emitGetPtrGlobal(*GlobalOffset, E))
+        return false;
+
+      if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT))
+        return this->emitDecayPtr(PT_Ptr, PT, E);
+      return true;
+    }
     return false;
   }
 
