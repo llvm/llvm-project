@@ -45,15 +45,43 @@ program omp_copyprivate
   ! Parallel can make a variable shared.
   !$omp parallel
     !$omp single
+      i = 456
     !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
     !$omp end single copyprivate(i)
     call sub(j, a1)
+  !$omp end parallel
+
+  !$omp parallel shared(i)
+    !$omp single
+      i = 456
+    !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
+    !$omp end single copyprivate(i)
+  !$omp end parallel
+
+  !FIXME: an error should be emitted in this case.
+  !       copyprivate(i) should be considered as a reference to i and a new
+  !       symbol should be created in `parallel` scope, for this case to be
+  !       handled properly.
+  !$omp parallel
+    !$omp single
+    !$omp end single copyprivate(i)
   !$omp end parallel
 
   ! Named constants are shared.
   !$omp single
   !ERROR: COPYPRIVATE variable 'pi' is not PRIVATE or THREADPRIVATE in outer context
   !$omp end single copyprivate(pi)
+
+  !$omp parallel do
+  do i = 1, 10
+    !$omp parallel
+    !$omp single
+      j = i
+    !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
+    !$omp end single copyprivate(i)
+    !$omp end parallel
+  end do
+  !$omp end parallel do
 
 contains
   subroutine sub(s1, a)
