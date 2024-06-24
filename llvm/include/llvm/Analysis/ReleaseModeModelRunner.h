@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
 #define LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -86,10 +87,7 @@ public:
       if (!InputIsPresent)
         Ctx.emitError("A model selector was specified but the underlying model "
                       "does not expose a _model_selector input");
-      const auto Hash = MD5::hash(
-          {reinterpret_cast<const uint8_t *>(Options.ModelSelector.data()),
-           Options.ModelSelector.size()});
-
+      const auto Hash = MD5::hash(arrayRefFromStringRef(Options.ModelSelector));
       High = Hash.high();
       Low = Hash.low();
     }
@@ -97,7 +95,9 @@ public:
     getTensor<uint64_t>(InputSpec.size())[1] = Low;
     // At this point, the model selector is set up. If the user didn't provide
     // one, but the model has a _model_selector, it'll be set to (0, 0) which
-    // the composite model should treat as error as part of its implementation.
+    // the composite model should treat as error as part of its implementation
+    // (but that should only matter if there is a custom handler that doesn't
+    // exit on error)
     for (size_t I = 0; I < InputSpec.size(); ++I)
       populateTensor(I, InputSpec[I], Options.FeedPrefix, InputIsPresent);
 
