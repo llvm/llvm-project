@@ -1325,6 +1325,13 @@ private:
   bool CheckSameAttrs(const Symbol &, const Symbol &, ATTRS, ATTRS);
   bool ShapesAreCompatible(const DummyDataObject &, const DummyDataObject &);
   evaluate::Shape FoldShape(const evaluate::Shape &);
+  std::optional<evaluate::Shape> FoldShape(
+      const std::optional<evaluate::Shape> &shape) {
+    if (shape) {
+      return FoldShape(*shape);
+    }
+    return std::nullopt;
+  }
   std::string AsFortran(DummyDataObject::Attr attr) {
     return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
   }
