@@ -3572,6 +3572,7 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   if (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
       Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+      Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
       Builtin == Builtin::BI__builtin_function_start) {
     if (std::optional<unsigned> GlobalOffset = P.createGlobal(E))
       return this->emitGetPtrGlobal(*GlobalOffset, E);
