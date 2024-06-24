@@ -419,7 +419,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
-        int symRank{GetRank(symTS->shape())};
+        int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
             return ArrayConstantBoundChanger{
@@ -442,7 +442,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                     context, GetRawLowerBounds(context, NamedEntity{symbol}))}
                 .Expand(std::move(folded));
           } else if (auto resultShape{GetShape(context, folded)}) {
-            if (CheckConformance(context.messages(), symTS->shape(),
+            CHECK(symTS->shape()); // Assumed-ranks cannot be initialized.
+            if (CheckConformance(context.messages(), *symTS->shape(),
                     *resultShape, CheckConformanceFlags::None,
                     "initialized object", "initialization expression")
                     .value_or(false /*fail if not known now to conform*/)) {
@@ -649,7 +650,8 @@ public:
               return std::holds_alternative<characteristics::DummyProcedure>(
                   dummy.u);
             })};
-        if (iter != procChars->dummyArguments.end()) {
+        if (iter != procChars->dummyArguments.end() &&
+            ultimate.name().ToString() != "__builtin_c_funloc") {
           return "reference to function '"s + ultimate.name().ToString() +
               "' with dummy procedure argument '" + iter->name + '\'';
         }

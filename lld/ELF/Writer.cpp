@@ -2035,11 +2035,11 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   // not. We retain the output section so that the section indexes will be
   // correct.
   auto define = [=](StringRef start, StringRef end, OutputSection *os,
-                    bool exidx = false) {
+                    bool retainSec = true) {
     if (os) {
       addOptionalRegular(start, os, 0);
       addOptionalRegular(end, os, -1);
-      if (!exidx)
+      if (retainSec)
         os->usedInExpression = true;
     } else {
       addOptionalRegular(start, Out::elfHeader, 0);
@@ -2054,7 +2054,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   // As a special case, don't unnecessarily retain .ARM.exidx, which would
   // create an empty PT_ARM_EXIDX.
   if (OutputSection *sec = findSection(".ARM.exidx"))
-    define("__exidx_start", "__exidx_end", sec, true);
+    define("__exidx_start", "__exidx_end", sec, /*retainSec=*/false);
 }
 
 // If a section name is valid as a C identifier (which is rare because of
@@ -2067,11 +2067,11 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection &osec) {
   StringRef s = osec.name;
   if (!isValidCIdentifier(s))
     return;
-  bool defined = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
-                                    config->zStartStopVisibility);
-  defined |= addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
-                                config->zStartStopVisibility) != nullptr;
-  if (defined)
+  Defined *startSym = addOptionalRegular(saver().save("__start_" + s), &osec, 0,
+                                         config->zStartStopVisibility);
+  Defined *stopSym = addOptionalRegular(saver().save("__stop_" + s), &osec, -1,
+                                        config->zStartStopVisibility);
+  if (startSym || stopSym)
     osec.usedInExpression = true;
 }
 
