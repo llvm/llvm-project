@@ -231,6 +231,19 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_wmemchr(_Tp
                     __libcpp_is_trivially_equality_comparable<_Tp, _Tp>::value,
                 "Calling wmemchr on non-trivially equality comparable types is unsafe.");
 
+  if (__builtin_constant_p(__count) && __builtin_constant_p(__value)) {
+    for (; __count; --__count) {
+      if (!__builtin_constant_p(*__str))
+        break;
+      if (*__str == __value)
+        return __str;
+      ++__str;
+    }
+  }
+
+  if (__builtin_constant_p(__count) && __count == 0)
+    return nullptr;
+
 #if __has_builtin(__builtin_wmemchr)
   if (!__libcpp_is_constant_evaluated()) {
     wchar_t __value_buffer = 0;
