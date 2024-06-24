@@ -9192,7 +9192,10 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
     EnterExpressionEvaluationContext Context(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
 
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(FD->getLexicalParent());
+    CXXRecordDecl *RD =
+        cast<CXXRecordDecl>(FD->getFriendObjectKind() == Decl::FOK_None
+                                ? FD->getDeclContext()
+                                : FD->getLexicalDeclContext());
     SourceLocation BodyLoc =
         FD->getEndLoc().isValid() ? FD->getEndLoc() : FD->getLocation();
     StmtResult Body =
