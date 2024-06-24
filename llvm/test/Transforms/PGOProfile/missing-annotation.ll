@@ -3,7 +3,7 @@
 
 ; RUN: llvm-profdata merge %S/Inputs/misexpect-branch-correct.proftext -o %t.profdata
 
-; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -pgo-missing-annotations -pass-remarks=missing-annotation -S 2>&1 | FileCheck %s --check-prefix=MISSING_ANNOTATION
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -pgo-missing-annotations -pass-remarks=missing-annotations -S 2>&1 | FileCheck %s --check-prefix=MISSING_ANNOTATION
 
 ; MISSING_ANNOTATION: remark: misexpect-branch.c:22:0:  Extremely hot condition. Consider adding llvm.expect intrinsic
 

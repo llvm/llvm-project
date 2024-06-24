@@ -302,8 +302,7 @@ void checkMissingAnnotations(Instruction &I,
     return;
 
   if (IsFrontendInstr) {
-    // TODO: Frontend checking will have to be thought through, since we need
-    // to do the check on branches that don't have expect intrinsics
+    verifyMissingAnnotations(I, ExistingWeights);
   } else {
     SmallVector<uint32_t> ExpectedWeights;
     if (extractBranchWeights(I, ExpectedWeights))
