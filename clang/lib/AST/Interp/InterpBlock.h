@@ -51,11 +51,15 @@ public:
   /// Creates a new block.
   Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
-      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
+      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {
+        assert(Desc);
+      }
 
   Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
       : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
-        Desc(Desc) {}
+        Desc(Desc) {
+          assert(Desc);
+        }
 
   /// Returns the block's descriptor.
   const Descriptor *getDescriptor() const { return Desc; }
@@ -121,13 +125,15 @@ public:
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 
-protected:
+private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
 
   Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
+      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {
+    assert(Desc);
+  }
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();

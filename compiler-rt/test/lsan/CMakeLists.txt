@@ -48,4 +48,3 @@ append_list_if(COMPILER_RT_HAS_HWASAN hwasan LSAN_TEST_DEPS)
 add_lit_testsuite(check-lsan "Running the LeakSanitizer tests"
   ${LSAN_TESTSUITES}
   DEPENDS ${LSAN_TEST_DEPS})
-set_target_properties(check-lsan PROPERTIES FOLDER "Compiler-RT Misc")

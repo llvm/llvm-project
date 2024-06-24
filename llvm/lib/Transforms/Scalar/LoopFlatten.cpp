@@ -808,8 +808,10 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       // we need to insert the new GEP where the old GEP was.
       if (!DT->dominates(Base, &*Builder.GetInsertPoint()))
         Builder.SetInsertPoint(cast<Instruction>(V));
-      OuterValue = Builder.CreateGEP(GEP->getSourceElementType(), Base,
-                                     OuterValue, "flatten." + V->getName());
+      OuterValue =
+          Builder.CreateGEP(GEP->getSourceElementType(), Base, OuterValue,
+                            "flatten." + V->getName(),
+                            GEP->isInBounds() && InnerGEP->isInBounds());
     }
 
     LLVM_DEBUG(dbgs() << "Replacing: "; V->dump(); dbgs() << "with:      ";
@@ -1005,7 +1007,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

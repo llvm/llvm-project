@@ -7,17 +7,17 @@
 define i32 @atomic_xor(ptr addrspace(1) %ptr, i32 %val) {
 ; CHECK-LABEL: define i32 @atomic_xor(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VAL:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VAL]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.no.remote.memory.access [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VAL]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %res = atomicrmw xor ptr addrspace(1) %ptr, i32 %val monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xor ptr addrspace(1) %ptr, i32 %val monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i32 %res
 }
 
 define i32 @caller(ptr addrspace(1) %ptr, i32 %val) {
 ; CHECK-LABEL: define i32 @caller(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VAL:%.*]]) {
-; CHECK-NEXT:    [[RES_I:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VAL]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; CHECK-NEXT:    [[RES_I:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VAL]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES_I]]
 ;
   %res = call i32 @atomic_xor(ptr addrspace(1) %ptr, i32 %val)

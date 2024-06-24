@@ -45,7 +45,7 @@ CXXPredicateCode::CXXPredicateCode(std::string Code, unsigned ID)
     : Code(Code), ID(ID), BaseEnumName("GICombiner" + std::to_string(ID)) {}
 
 CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXMatchCode;
-CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXApplyCode;
+CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXCustomActionCode;
 
 } // namespace gi
 } // namespace llvm

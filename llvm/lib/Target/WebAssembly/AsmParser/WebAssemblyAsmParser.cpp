@@ -178,14 +178,15 @@ static wasm::WasmLimits DefaultLimits() {
 }
 
 static MCSymbolWasm *GetOrCreateFunctionTableSymbol(MCContext &Ctx,
-                                                    const StringRef &Name) {
+                                                    const StringRef &Name,
+                                                    bool is64) {
   MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
     Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
-    Sym->setFunctionTable();
+    Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
   }
@@ -258,7 +259,7 @@ public:
     MCAsmParserExtension::Initialize(Parser);
 
     DefaultFunctionTable = GetOrCreateFunctionTableSymbol(
-        getContext(), "__indirect_function_table");
+        getContext(), "__indirect_function_table", is64);
     if (!STI->checkFeatures("+reference-types"))
       DefaultFunctionTable->setOmitFromLinkingSection();
   }
@@ -508,7 +509,7 @@ public:
       auto &Tok = Lexer.getTok();
       if (Tok.is(AsmToken::Identifier)) {
         auto *Sym =
-            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString());
+            GetOrCreateFunctionTableSymbol(getContext(), Tok.getString(), is64);
         const auto *Val = MCSymbolRefExpr::create(Sym, getContext());
         *Op = std::make_unique<WebAssemblyOperand>(
             WebAssemblyOperand::Symbol, Tok.getLoc(), Tok.getEndLoc(),
@@ -756,7 +757,7 @@ public:
   bool CheckDataSection() {
     if (CurrentState != DataSection) {
       auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-      if (WS && WS->getKind().isText())
+      if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
     }
@@ -836,6 +837,9 @@ public:
       // symbol
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
+      if (is64) {
+        Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
+      }
       wasm::WasmTableType Type = {*ElemType, Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);
@@ -1070,7 +1074,7 @@ public:
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
     auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-    if (!CWS || !CWS->getKind().isText())
+    if (!CWS || !CWS->isText())
       return;
 
     auto WasmSym = cast<MCSymbolWasm>(Symbol);

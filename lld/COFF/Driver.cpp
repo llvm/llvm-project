@@ -44,6 +44,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2603,6 +2604,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /print-symbol-order.
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
+
+  ctx.symtab.initializeEntryThunks();
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

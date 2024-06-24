@@ -577,7 +577,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
   // First, 'this'.
   if (block->capturesCXXThis()) {
-    assert(CGF && CGF->CurFuncDecl && isa<CXXMethodDecl>(CGF->CurFuncDecl) &&
+    assert(CGF && isa_and_nonnull<CXXMethodDecl>(CGF->CurFuncDecl) &&
            "Can't capture 'this' outside a method");
     QualType thisType = cast<CXXMethodDecl>(CGF->CurFuncDecl)->getThisType();
 
@@ -927,7 +927,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                           /*RefersToEnclosingVariableOrCapture*/ CI.isNested(),
                           type.getNonReferenceType(), VK_LValue,
                           SourceLocation());
-      src = EmitDeclRefLValue(&declRef).getAddress(*this);
+      src = EmitDeclRefLValue(&declRef).getAddress();
     };
 
     // For byrefs, we just write the pointer to the byref struct into

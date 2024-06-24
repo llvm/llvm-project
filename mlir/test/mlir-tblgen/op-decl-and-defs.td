@@ -58,7 +58,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: namespace detail {
 // CHECK: class AOpGenericAdaptorBase {
 // CHECK: public:
-// CHECK:   AOpGenericAdaptorBase(AOp{{[[:space:]]}}
+// CHECK:   AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions)
+// CHECK:   AOpGenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
@@ -128,14 +129,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 
 // DEFS-LABEL: NS::AOp definitions
 
-// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, const ::mlir::EmptyProperties &properties, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
-
 // Check that `getAttrDictionary()` is used when not using properties.
-
-// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(AOp op)
-// DEFS-SAME: op->getAttrDictionary()
-// DEFS-SAME: p.getProperties()
-// DEFS-SAME: op->getRegions()
 
 // DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
 // DECLS-NEXT: return odsRegions.drop_front(1);
@@ -344,12 +338,11 @@ def NS_NOp : NS_Op<"op_with_properties", []> {
   let arguments = (ins Property<"unsigned">:$value);
 }
 
-// Check that `getDiscardableAttrDictionary()` is used with properties.
-
-// DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) : NOpGenericAdaptorBase(
-// DEFS-SAME: op->getDiscardableAttrDictionary()
-// DEFS-SAME: op.getProperties()
-// DEFS-SAME: op->getRegions()
+// DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) :
+// DEFS-SAME: odsAttrs(op->getRawDictionaryAttrs())
+// DEFS-SAME: odsOpName(op->getName())
+// DEFS-SAME: properties(op.getProperties())
+// DEFS-SAME: odsRegions(op->getRegions())
 
 // Test that type defs have the proper namespaces when used as a constraint.
 // ---

@@ -535,9 +535,9 @@ bool InterleavedAccessImpl::runOnFunction(Function &F) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
       // At present, we only have intrinsics to represent (de)interleaving
       // with a factor of 2.
-      if (II->getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2)
+      if (II->getIntrinsicID() == Intrinsic::vector_deinterleave2)
         Changed |= lowerDeinterleaveIntrinsic(II, DeadInsts);
-      if (II->getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+      if (II->getIntrinsicID() == Intrinsic::vector_interleave2)
         Changed |= lowerInterleaveIntrinsic(II, DeadInsts);
     }
   }

@@ -70,9 +70,7 @@ void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
 
                return (A.second < B.second);
              });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "// Feature bitsets.\n"
      << "enum {\n"
      << "  GIFBS_Invalid,\n";
@@ -236,11 +234,10 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
         ", const MatcherState &State) "
         "const override;\n"
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
-     << "  void runCustomAction(unsigned FnID, const MatcherState &State, "
+     << "  bool runCustomAction(unsigned FnID, const MatcherState &State, "
         "NewMIVector &OutMIs) "
-        "const override;\n";
-  emitAdditionalTemporariesDecl(OS, "  ");
-  OS << "#endif // ifdef " << IfDefName << "\n\n";
+        "const override;\n"
+     << "#endif // ifdef " << IfDefName << "\n\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitTemporariesInit(

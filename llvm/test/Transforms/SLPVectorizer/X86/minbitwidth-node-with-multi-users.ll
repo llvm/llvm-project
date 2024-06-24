@@ -16,8 +16,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i8> [[TMP8]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> zeroinitializer, [[TMP15]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i1> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i1> [[TMP15]], <4 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP16]] to <4 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i1> [[TMP15]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP13]])

@@ -1323,7 +1323,7 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              IsKnownBaseMapTy &KnownBases) {
   StatepointLiveSetTy PotentiallyDerivedPointers = result.LiveSet;
   // We assume that all pointers passed to deopt are base pointers; as an
-  // optimization, we can use this to avoid seperately materializing the base
+  // optimization, we can use this to avoid separately materializing the base
   // pointer graph.  This is only relevant since we're very conservative about
   // generating new conflict nodes during base pointer insertion.  If we were
   // smarter there, this would be irrelevant.
@@ -1685,10 +1685,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   // Pass through the requested lowering if any.  The default is live-through.
   StringRef DeoptLowering = getDeoptLowering(Call);
-  if (DeoptLowering.equals("live-in"))
+  if (DeoptLowering == "live-in")
     Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
   else {
-    assert(DeoptLowering.equals("live-through") && "Unsupported value!");
+    assert(DeoptLowering == "live-through" && "Unsupported value!");
   }
 
   FunctionCallee CallTarget(Call->getFunctionType(), Call->getCalledOperand());
@@ -2148,7 +2148,7 @@ static void relocationViaAlloca(
     }
 
     llvm::sort(Uses);
-    auto Last = std::unique(Uses.begin(), Uses.end());
+    auto Last = llvm::unique(Uses);
     Uses.erase(Last, Uses.end());
 
     for (Instruction *Use : Uses) {
@@ -3046,8 +3046,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo &&
-          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
+      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
         assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
                "Don't expect any other calls here!");
         return false;

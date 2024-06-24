@@ -368,6 +368,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   YamlMFI.HasVAStart = MFI.hasVAStart();
   YamlMFI.HasMustTailInVarArgFunc = MFI.hasMustTailInVarArgFunc();
   YamlMFI.HasTailCall = MFI.hasTailCall();
+  YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
   if (MFI.getSavePoint()) {
     raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
@@ -812,6 +813,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nneg ";
   if (MI.getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (MI.getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

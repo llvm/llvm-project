@@ -291,8 +291,27 @@ Right now, the following primitive constraints are supported:
     equal to `N`
 *   `IntMaxValue<N>`: Specifying an integer attribute to be less than or equal
     to `N`
+*   `IntNEQValue<N>`: Specifying an integer attribute to be not equal
+    to `N`
+*   `IntPositive`: Specifying an integer attribute whose value is positive
+*   `IntNonNegative`: Specifying an integer attribute whose value is
+    non-negative
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
+*   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
+    elements
+*   `ArrayCount<N>`: Specifying an array attribute to have exactly `N`
+    elements
+*   `DenseArrayCount<N>`: Specifying a dense array attribute to have
+    exactly `N` elements
+*   `DenseArrayStrictlyPositive<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all positive elements
+*   `DenseArrayStrictlyNonNegative<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have all non-negative elements
+*   `DenseArraySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in non-decreasing order
+*   `DenseArrayStrictlySorted<arrayType>`: Specifying a dense array attribute
+    of type `arrayType` to have elements in increasing order
 *   `IntArrayNthElemEq<I, N>`: Specifying an integer array attribute's `I`-th
     element to be equal to `N`
 *   `IntArrayNthElemMinValue<I, N>`: Specifying an integer array attribute's
@@ -301,8 +320,35 @@ Right now, the following primitive constraints are supported:
     `I`-th element to be less than or equal to `N`
 *   `IntArrayNthElemInRange<I, M, N>`: Specifying an integer array attribute's
     `I`-th element to be greater than or equal to `M` and less than or equal to `N`
+*   `IsNullAttr`: Specifying an optional attribute which must be empty
 
 TODO: Design and implement more primitive constraints
+
+#### Combining constraints
+
+`AllAttrOf` is provided to allow combination of multiple constraints which
+must all hold.
+
+For example:
+```tablegen
+def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def OpAllAttrConstraint2 : TEST_Op<"all_attr_constraint_of2"> {
+  let arguments = (ins I64ArrayAttr:$attr);
+  let results = (outs I32);
+}
+def Constraint0 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[0]).getInt() == 0">,
+    "[0] == 0">;
+def Constraint1 : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<ArrayAttr>($_self)[1]).getInt() == 1">,
+    "[1] == 1">;
+def : Pat<(OpAllAttrConstraint1
+            AllAttrOf<[Constraint0, Constraint1]>:$attr),
+          (OpAllAttrConstraint2 $attr)>;
+```
 
 ### Operation regions
 
@@ -640,10 +686,11 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation. Any inherent 
-    -   attributes that are not used elsewhere in the format are printed as
-    -   part of the attribute dictionary unless a `prop-dict` is present.
-    -   Discardable attributes are always part of the `attr-dict`.  
+    -   Represents the attribute dictionary of the operation.
+    -   Any inherent attributes that are not used elsewhere in the format are
+        printed as part of the attribute dictionary unless a `prop-dict` is
+        present.
+    -   Discardable attributes are always part of the `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -654,23 +701,23 @@ The available directives are as follows:
 
     -   Represents the properties of the operation converted to a dictionary.
     -   Any property or inherent attribute that are not used elsewhere in the
-    -   format are parsed and printed as part of this dictionary.
+        format are parsed and printed as part of this dictionary.
     -   If present, the `attr-dict` will not contain any inherent attributes.
 
-*   `custom` < UserDirective > ( Params )
+*   `custom < UserDirective > ( Params )`
 
     -   Represents a custom directive implemented by the user in C++.
     -   See the [Custom Directives](#custom-directives) section below for more
         details.
 
-*   `functional-type` ( inputs , outputs )
+*   `functional-type ( inputs , outputs )`
 
     -   Formats the `inputs` and `outputs` arguments as a
         [function type](../Dialects/Builtin.md/#functiontype).
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
-*   `oilist` ( \`keyword\` elements | \`otherKeyword\` elements ...)
+*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)``
 
     -   Represents an optional order-independent list of clauses. Each clause
         has a keyword and corresponding assembly format.
@@ -682,7 +729,7 @@ The available directives are as follows:
 
     -   Represents all of the operands of an operation.
 
-*   `ref` ( input )
+*   `ref ( input )`
 
     -   Represents a reference to the a variable or directive, that must have
         already been resolved, that may be used as a parameter to a `custom`
@@ -703,13 +750,13 @@ The available directives are as follows:
 
     -   Represents all of the successors of an operation.
 
-*   `type` ( input )
+*   `type ( input )`
 
     -   Represents the type of the given input.
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
-*   `qualified` ( type_or_attribute )
+*   `qualified ( type_or_attribute )`
 
     -   Wraps a `type` directive or an attribute parameter.
     -   Used to force printing the type or attribute prefixed with its dialect
@@ -1397,6 +1444,8 @@ optionality, default values, etc.:
 *   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
 *   `ConfinedAttr`: adapts an attribute with
     [further constraints](#confining-attributes).
+*   `AllAttrOf`: adapts an attribute with
+    [multiple constraints](#combining-constraints).
 
 ### Enum attributes
 
@@ -1700,11 +1749,11 @@ To allow more convenient syntax, helper classes exist for TableGen classes
 which are commonly used as anonymous definitions. These currently include:
 
 * `DeprecatedOpBuilder`: Can be used in place of `OpBuilder` with the same
-  arguments except taking the reason as first argument, e.g. 
+  arguments except taking the reason as first argument, e.g.
   `DeprecatedOpBuilder<"use 'build' with foo instead", (ins "int":$bar)>`
 
-Note: Support for the `CppDeprecated` mechanism has to be implemented by 
-every code generator separately. 
+Note: Support for the `CppDeprecated` mechanism has to be implemented by
+every code generator separately.
 
 ### Requirements and existing mechanisms analysis
 

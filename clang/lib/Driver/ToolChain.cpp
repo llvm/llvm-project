@@ -104,7 +104,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-ToolChain::executeToolChainProgram(StringRef Executable) const {
+ToolChain::executeToolChainProgram(StringRef Executable,
+                                   unsigned SecondsToWait) const {
   llvm::SmallString<64> OutputFile;
   llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile);
   llvm::FileRemover OutputRemover(OutputFile.c_str());
@@ -115,9 +116,8 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
   };
 
   std::string ErrorMessage;
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects,
-                                /* SecondsToWait */ 0,
-                                /*MemoryLimit*/ 0, &ErrorMessage))
+  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
+                                /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),
                                    Executable + ": " + ErrorMessage);
 
@@ -1316,14 +1316,19 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
   // (to keep the linker options consistent with gcc and clang itself).
   if (Default && !isOptimizationLevelFast(Args)) {
     // Check if -ffast-math or -funsafe-math.
-    Arg *A =
-      Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
-                      options::OPT_funsafe_math_optimizations,
-                      options::OPT_fno_unsafe_math_optimizations);
+    Arg *A = Args.getLastArg(
+        options::OPT_ffast_math, options::OPT_fno_fast_math,
+        options::OPT_funsafe_math_optimizations,
+        options::OPT_fno_unsafe_math_optimizations, options::OPT_ffp_model_EQ);
 
     if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
         A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
       Default = false;
+    if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
+      StringRef Model = A->getValue();
+      if (Model != "fast")
+        Default = false;
+    }
   }
 
   // Whatever decision came as a result of the above implicit settings, either

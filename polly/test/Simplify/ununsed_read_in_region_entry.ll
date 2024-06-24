@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-simplify -disable-output< %s | FileCheck %s -match-full-lines
-; RUN: opt %loadPolly -polly-simplify -polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly '-passes=print<polly-simplify>' -disable-output< %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-simplify,polly-codegen' -S < %s | FileCheck %s -check-prefix=CODEGEN
 ;
 ; for (int i = 0; i < n; i+=1) {
 ;    (void)A[0];

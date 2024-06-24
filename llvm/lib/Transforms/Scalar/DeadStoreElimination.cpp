@@ -2109,10 +2109,12 @@ struct DSEState {
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
             // MemSetInst must have a write location.
-            MemoryLocation UpperLoc = *getLocForWrite(UpperInst);
+            auto UpperLoc = getLocForWrite(UpperInst);
+            if (!UpperLoc)
+              return false;
             int64_t InstWriteOffset = 0;
             int64_t DepWriteOffset = 0;
-            auto OR = isOverwrite(UpperInst, DefInst, UpperLoc, *MaybeDefLoc,
+            auto OR = isOverwrite(UpperInst, DefInst, *UpperLoc, *MaybeDefLoc,
                                   InstWriteOffset, DepWriteOffset);
             Value *StoredByte = isBytewiseValue(SI->getValueOperand(), DL);
             return StoredByte && StoredByte == MemSetI->getOperand(1) &&

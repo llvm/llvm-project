@@ -75,7 +75,7 @@ struct CGRecordLowering {
   // sentinel member type that ensures correct rounding.
   struct MemberInfo {
     CharUnits Offset;
-    enum InfoKind { VFPtr, VBPtr, Field, Base, VBase, Scissor } Kind;
+    enum InfoKind { VFPtr, VBPtr, Field, Base, VBase } Kind;
     llvm::Type *Data;
     union {
       const FieldDecl *FD;
@@ -197,7 +197,7 @@ struct CGRecordLowering {
                      const CXXRecordDecl *Query) const;
   void calculateZeroInit();
   CharUnits calculateTailClippingOffset(bool isNonVirtualBaseType) const;
-  void checkBitfieldClipping() const;
+  void checkBitfieldClipping(bool isNonVirtualBaseType) const;
   /// Determines if we need a packed llvm struct.
   void determinePacked(bool NVBaseType);
   /// Inserts padding everywhere it's needed.
@@ -299,8 +299,8 @@ void CGRecordLowering::lower(bool NVBaseType) {
       accumulateVBases();
   }
   llvm::stable_sort(Members);
+  checkBitfieldClipping(NVBaseType);
   Members.push_back(StorageInfo(Size, getIntNType(8)));
-  checkBitfieldClipping();
   determinePacked(NVBaseType);
   insertPadding();
   Members.pop_back();
@@ -894,8 +894,6 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
 }
 
 void CGRecordLowering::accumulateVBases() {
-  Members.push_back(MemberInfo(calculateTailClippingOffset(false),
-                               MemberInfo::Scissor, nullptr, RD));
   for (const auto &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     if (BaseDecl->isEmpty())
@@ -950,18 +948,19 @@ void CGRecordLowering::calculateZeroInit() {
 }
 
 // Verify accumulateBitfields computed the correct storage representations.
-void CGRecordLowering::checkBitfieldClipping() const {
+void CGRecordLowering::checkBitfieldClipping(bool IsNonVirtualBaseType) const {
 #ifndef NDEBUG
+  auto ScissorOffset = calculateTailClippingOffset(IsNonVirtualBaseType);
   auto Tail = CharUnits::Zero();
   for (const auto &M : Members) {
-    // Only members with data and the scissor can cut into tail padding.
-    if (!M.Data && M.Kind != MemberInfo::Scissor)
+    // Only members with data could possibly overlap.
+    if (!M.Data)
       continue;
 
     assert(M.Offset >= Tail && "Bitfield access unit is not clipped");
-    Tail = M.Offset;
-    if (M.Data)
-      Tail += getSize(M.Data);
+    Tail = M.Offset + getSize(M.Data);
+    assert((Tail <= ScissorOffset || M.Offset >= ScissorOffset) &&
+           "Bitfield straddles scissor offset");
   }
 #endif
 }

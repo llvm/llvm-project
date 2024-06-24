@@ -12,6 +12,7 @@
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
 # RUN: llvm-bolt %t.exe --relocs=1 --hot-text --reorder-functions=hfsort \
+# RUN:    --split-functions --split-strategy=all \
 # RUN:    --data %t.fdata -o %t.out | FileCheck %s
 
 # RUN: %t.out 1
@@ -30,12 +31,12 @@
 # CHECK-OUTPUT:       __hot_start
 # CHECK-OUTPUT-NEXT:  main
 # CHECK-OUTPUT-NEXT:  __hot_end
+# CHECK-OUTPUT-NOT:   __hot_start.cold
 
   .text
   .globl  main
   .type main, %function
   .globl  __hot_start
-  .type __hot_start, %object
   .p2align  4
 main:
 __hot_start:

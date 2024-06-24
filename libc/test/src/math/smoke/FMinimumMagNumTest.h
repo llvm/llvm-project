@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMMAG_NUMTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -68,10 +69,11 @@ public:
   }
 
   void testRange(FMinimumMagNumFunc func) {
-    constexpr StorageType COUNT = 100'001;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0, w = STORAGE_MAX;
+    for (int i = 0; i <= COUNT; ++i, v += STEP, w -= STEP) {
       FPBits xbits(v), ybits(w);
       if (xbits.is_inf_or_nan())
         continue;
@@ -82,11 +84,10 @@ public:
       if ((x == 0) && (y == 0))
         continue;
 
-      if (LIBC_NAMESPACE::fputil::abs(x) > LIBC_NAMESPACE::fputil::abs(y)) {
+      if (LIBC_NAMESPACE::fputil::abs(x) > LIBC_NAMESPACE::fputil::abs(y))
         EXPECT_FP_EQ(y, func(x, y));
-      } else {
+      else
         EXPECT_FP_EQ(x, func(x, y));
-      }
     }
   }
 };

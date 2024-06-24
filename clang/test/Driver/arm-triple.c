@@ -7,7 +7,7 @@
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabihf -march=armv4t -mfloat-abi=softfp \
 // RUN:   | FileCheck %s --check-prefix=CHECK-DEFAULT
-// CHECK-DEFAULT: armv4t-none-unknown-eabi
+// CHECK-DEFAULT: armv4t-unknown-none-eabi
 
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=armeb-none-eabi \
@@ -15,7 +15,7 @@
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabi -mbig-endian \
 // RUN:   | FileCheck %s --check-prefix=CHECK-EB
-// CHECK-EB: armebv4t-none-unknown-eabi
+// CHECK-EB: armebv4t-unknown-none-eabi
 
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabihf -march=armv4t \
@@ -23,7 +23,7 @@
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabi -mfloat-abi=hard \
 // RUN:   | FileCheck %s --check-prefix=CHECK-HF
-// CHECK-HF: armv4t-none-unknown-eabihf
+// CHECK-HF: armv4t-unknown-none-eabihf
 
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=armeb-none-eabihf -march=armv4t \
@@ -37,7 +37,7 @@
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabi -mbig-endian -mfloat-abi=hard \
 // RUN:   | FileCheck %s --check-prefix=CHECK-EB-HF
-// CHECK-EB-HF: armebv4t-none-unknown-eabihf
+// CHECK-EB-HF: armebv4t-unknown-none-eabihf
 
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabi -march=armv8m.main -mbig-endian -mfloat-abi=hard \
@@ -45,4 +45,4 @@
 // RUN: %clang -print-effective-triple \
 // RUN:   --target=arm-none-eabi -mcpu=cortex-m33 -mbig-endian -mfloat-abi=hard \
 // RUN:   | FileCheck %s --check-prefix=CHECK-V8M-EB-HF
-// CHECK-V8M-EB-HF: thumbebv8m.main-none-unknown-eabihf
+// CHECK-V8M-EB-HF: thumbebv8m.main-unknown-none-eabihf

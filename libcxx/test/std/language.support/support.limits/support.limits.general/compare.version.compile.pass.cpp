@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <compare>
 
 /*  Constant                          Value
-    __cpp_lib_three_way_comparison    201907L [C++20]
+    __cpp_lib_three_way_comparison    201711L [C++20]
 */
 
 #include <compare>
@@ -42,47 +42,29 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++20"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++20"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++20"
 # endif
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++23"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++23"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++23"
 # endif
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++26"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++26"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

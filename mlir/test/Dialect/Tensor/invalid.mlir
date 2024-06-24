@@ -273,21 +273,10 @@ func.func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8
 
 // -----
 
-func.func @illegal_expanding_reshape_dynamic_tensor
-  (%arg0: tensor<?x?x?xf32>) -> tensor<?x?x?x4x?xf32> {
-  // expected-error @+1 {{invalid to have a single dimension (2) expanded into multiple dynamic dims (2,4)}}
-  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
-      : tensor<?x?x?xf32> into tensor<?x?x?x4x?xf32>
-  return %0 : tensor<?x?x?x4x?xf32>
-}
-
-// -----
-
-
 func.func @illegal_expanding_reshape_static_tensor
     (%arg0: tensor<2x3x20xf32>) -> tensor<2x3x2x4x5xf32> {
   // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
-  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]]
+  %0 = tensor.expand_shape %arg0 [[0], [1], [2, 3, 4]] output_shape [2, 3, 2, 4, 5]
       : tensor<2x3x20xf32> into tensor<2x3x2x4x5xf32>
   return %0 : tensor<2x3x2x4x5xf32>
 }
@@ -304,23 +293,32 @@ func.func @illegal_collapsing_reshape_static_tensor
 
 // -----
 
-func.func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>)
+func.func @illegal_expanding_reshape_mixed_tensor(%arg0 : tensor<?x?xf32>, %sz0: index)
     -> tensor<?x4x5xf32> {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
-  %0 = tensor.expand_shape %arg0 [[0, 1], [2]]
+  %0 = tensor.expand_shape %arg0 [[0, 1], [2]] output_shape [%sz0, 4, 5]
       : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
 
 // -----
 
-func.func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>)
+func.func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>, %sz0: index)
     -> tensor<?x4x5xf32> {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
-  %0 = tensor.expand_shape %arg0 [[0], [1, 2]]
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%sz0, 4, 5]
       : tensor<?x?xf32> into tensor<?x4x5xf32>
   return %0 : tensor<?x4x5xf32>
 }
+
+// -----
+
+func.func @expand_shape_illegal_output_shape(%arg0: tensor<2xf32>) {
+  // expected-error @+1 {{expected number of static shape dims to be equal to the output rank (3) but found 2 inputs instead}}
+  %0 = tensor.expand_shape %arg0 [[0, 1, 2]] output_shape [1, 2] : tensor<2xf32> into tensor<1x1x2xf32>
+  return
+}
+
 
 // -----
 
