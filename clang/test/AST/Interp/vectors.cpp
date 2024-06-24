@@ -81,3 +81,13 @@ namespace VectorElementExpr {
   static_assert(twoElts.x == 22, ""); // ref-error {{not an integral constant expression}}
   static_assert(twoElts.y == 33, ""); // ref-error {{not an integral constant expression}}
 }
+
+namespace Temporaries {
+  typedef __attribute__((vector_size(16))) int vi4a;
+  typedef __attribute__((ext_vector_type(4))) int vi4b;
+  struct S {
+    vi4a v;
+    vi4b w;
+  };
+  int &&s = S().w[1];
+}

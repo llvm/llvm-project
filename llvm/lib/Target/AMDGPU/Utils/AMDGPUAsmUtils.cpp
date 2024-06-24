@@ -119,6 +119,11 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
   {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
                                                             isGFX12_10},
+  {{"MSG_RTN_GET_SEMA1"},       ID_RTN_GET_SEMA1,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA2"},       ID_RTN_GET_SEMA2,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA3"},       ID_RTN_GET_SEMA3,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA4"},       ID_RTN_GET_SEMA4,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA5"},       ID_RTN_GET_SEMA5,           isGFX13Plus},
 };
 
 static constexpr CustomOperand SysMsgOperands[] = {
@@ -203,6 +208,19 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_SHADER_CYCLES_HI"}, ID_SHADER_CYCLES_HI, isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_LO"},   ID_DVGPR_ALLOC_LO,   isGFX12Plus},
   {{"HW_REG_DVGPR_ALLOC_HI"},   ID_DVGPR_ALLOC_HI,   isGFX12Plus},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{"HW_REG_WAVE_SEMA1_STATE"}, ID_WAVE_SEMA1_STATE, isGFX13Plus},
+  {{"HW_REG_WAVE_SEMA2_STATE"}, ID_WAVE_SEMA2_STATE, isGFX13Plus},
+  {{"HW_REG_WAVE_SEMA3_STATE"}, ID_WAVE_SEMA3_STATE, isGFX13Plus},
+  {{"HW_REG_WAVE_SEMA4_STATE"}, ID_WAVE_SEMA4_STATE, isGFX13Plus},
+  {{"HW_REG_WAVE_SEMA5_STATE"}, ID_WAVE_SEMA5_STATE, isGFX13Plus},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{"HW_REG_WAVE_GPR_MSB_IDX0"}, ID_WAVE_GPR_MSB_IDX0, isGFX13Plus},
+  {{"HW_REG_WAVE_GPR_IDX123"},   ID_WAVE_GPR_IDX123,   isGFX13Plus},
 
   // Register numbers reused in GFX11
   {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO_gfx11, isGFX11},

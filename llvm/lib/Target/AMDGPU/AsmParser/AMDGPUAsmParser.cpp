@@ -1578,6 +1578,10 @@ public:
     return AMDGPU::isGFX12_10(getSTI());
   }
 
+  bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
+
+  bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
+
   bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
 
   bool isGFX10_BEncoding() const {
@@ -5111,7 +5115,9 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts])
+  // TODO: Workaround for now. FeatureGFX12_10Insts is added to GFX13, but GFX13 is not required
+  // VGPRAlignment.
+  if ((!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX12_10Insts]) || isGFX13())
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
@@ -6185,26 +6191,41 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   unsigned SGPRBlocks;
   if (calculateGPRBlocks(getFeatureBits(), ReserveVCC, ReserveFlatScr,
                          getTargetStreamer().getTargetID()->isXnackOnOrAny(),
-                         EnableWavefrontSize32, NextFreeVGPR,
-                         VGPRRange, NextFreeSGPR, SGPRRange, VGPRBlocks,
-                         SGPRBlocks))
+                         EnableWavefrontSize32, NextFreeVGPR, VGPRRange,
+                         NextFreeSGPR, SGPRRange, VGPRBlocks, SGPRBlocks))
     return true;
 
-  if (!isUInt<COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
-          VGPRBlocks))
-    return OutOfRangeError(VGPRRange);
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT, getContext());
+  if (isGFX13Plus()) {
+    if (!isUInt<
+            COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
+            VGPRBlocks))
+      return OutOfRangeError(VGPRRange);
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
+        COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC1_GFX13_PLUS_GRANULATED_WORKITEM_VGPR_COUNT,
+        getContext());
+  } else {
+    if (!isUInt<
+            COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT_WIDTH>(
+            VGPRBlocks))
+      return OutOfRangeError(VGPRRange);
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, MCConstantExpr::create(VGPRBlocks, getContext()),
+        COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WORKITEM_VGPR_COUNT,
+        getContext());
 
-  if (!isUInt<COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_WIDTH>(
-          SGPRBlocks))
-    return OutOfRangeError(SGPRRange);
-  AMDGPU::MCKernelDescriptor::bits_set(
-      KD.compute_pgm_rsrc1, MCConstantExpr::create(SGPRBlocks, getContext()),
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT,
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT, getContext());
+    if (!isUInt<
+            COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT_WIDTH>(
+            SGPRBlocks))
+      return OutOfRangeError(SGPRRange);
+    AMDGPU::MCKernelDescriptor::bits_set(
+        KD.compute_pgm_rsrc1, MCConstantExpr::create(SGPRBlocks, getContext()),
+        COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT,
+        COMPUTE_PGM_RSRC1_GFX6_GFX12_GRANULATED_WAVEFRONT_SGPR_COUNT,
+        getContext());
+  }
 
   if (ExplicitUserSGPRCount && ImpliedUserSGPRCount > *ExplicitUserSGPRCount)
     return TokError("amdgpu_user_sgpr_count smaller than than implied by "

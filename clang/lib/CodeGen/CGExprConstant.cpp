@@ -1924,6 +1924,12 @@ private:
   ConstantLValue VisitMaterializeTemporaryExpr(
                                          const MaterializeTemporaryExpr *E);
 
+  ConstantLValue emitPointerAuthSignConstant(const CallExpr *E);
+  llvm::Constant *emitPointerAuthPointer(const Expr *E);
+  unsigned emitPointerAuthKey(const Expr *E);
+  std::pair<llvm::Constant *, llvm::ConstantInt *>
+  emitPointerAuthDiscriminator(const Expr *E);
+
   bool hasNonZeroOffset() const {
     return !Value.getLValueOffset().isZero();
   }
@@ -2018,8 +2024,25 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
+    auto PtrAuthSign = [&](llvm::Constant *C) {
+      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
+
+      if (AuthInfo) {
+        if (hasNonZeroOffset())
+          return ConstantLValue(nullptr);
+
+        C = applyOffset(C);
+        C = CGM.getConstantSignedPointer(
+            C, AuthInfo.getKey(), nullptr,
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
+        return ConstantLValue(C, /*applied offset*/ true);
+      }
+
+      return ConstantLValue(C);
+    };
+
     if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
 
     if (auto VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
@@ -2116,6 +2139,10 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
   if (builtin == Builtin::BI__builtin_function_start)
     return CGM.GetFunctionStart(
         E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext()));
+
+  if (builtin == Builtin::BI__builtin_ptrauth_sign_constant)
+    return emitPointerAuthSignConstant(E);
+
   if (builtin != Builtin::BI__builtin___CFStringMakeConstantString &&
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;
@@ -2127,6 +2154,55 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
     // FIXME: need to deal with UCN conversion issues.
     return CGM.GetAddrOfConstantCFString(Literal);
   }
+}
+
+ConstantLValue
+ConstantLValueEmitter::emitPointerAuthSignConstant(const CallExpr *E) {
+  llvm::Constant *UnsignedPointer = emitPointerAuthPointer(E->getArg(0));
+  unsigned Key = emitPointerAuthKey(E->getArg(1));
+  auto [StorageAddress, OtherDiscriminator] =
+      emitPointerAuthDiscriminator(E->getArg(2));
+
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, OtherDiscriminator);
+  return SignedPointer;
+}
+
+llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
+  Expr::EvalResult Result;
+  bool Succeeded = E->EvaluateAsRValue(Result, CGM.getContext());
+  assert(Succeeded);
+  (void)Succeeded;
+
+  // The assertions here are all checked by Sema.
+  assert(Result.Val.isLValue());
+  return ConstantEmitter(CGM, Emitter.CGF)
+      .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
+}
+
+unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
+  return E->EvaluateKnownConstInt(CGM.getContext()).getZExtValue();
+}
+
+std::pair<llvm::Constant *, llvm::ConstantInt *>
+ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
+  E = E->IgnoreParens();
+
+  if (const auto *Call = dyn_cast<CallExpr>(E)) {
+    if (Call->getBuiltinCallee() ==
+        Builtin::BI__builtin_ptrauth_blend_discriminator) {
+      llvm::Constant *Pointer = ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(0), Call->getArg(0)->getType());
+      auto *Extra = cast<llvm::ConstantInt>(ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(1), Call->getArg(1)->getType()));
+      return {Pointer, Extra};
+    }
+  }
+
+  llvm::Constant *Result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
+  if (Result->getType()->isPointerTy())
+    return {Result, nullptr};
+  return {nullptr, cast<llvm::ConstantInt>(Result)};
 }
 
 ConstantLValue

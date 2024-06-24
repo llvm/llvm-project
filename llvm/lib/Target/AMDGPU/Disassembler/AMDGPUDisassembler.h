@@ -291,6 +291,7 @@ public:
   bool isGFX12Plus() const;
   bool isGFX12_10() const;
   bool isGFX13() const;
+  bool isGFX13Plus() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

@@ -479,6 +479,12 @@ enum Id { // Message ID, width(4) [3:0].
 
   ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1210
 
+  ID_RTN_GET_SEMA1 = 140, // added in GFX13
+  ID_RTN_GET_SEMA2 = 141, // added in GFX13
+  ID_RTN_GET_SEMA3 = 142, // added in GFX13
+  ID_RTN_GET_SEMA4 = 143, // added in GFX13
+  ID_RTN_GET_SEMA5 = 144, // added in GFX13
+
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
 };
@@ -545,6 +551,13 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_SHADER_CYCLES_HI = 30,
   ID_DVGPR_ALLOC_LO = 31,
   ID_DVGPR_ALLOC_HI = 32,
+  ID_WAVE_SEMA1_STATE = 36,
+  ID_WAVE_SEMA2_STATE = 37,
+  ID_WAVE_SEMA3_STATE = 38,
+  ID_WAVE_SEMA4_STATE = 39,
+  ID_WAVE_SEMA5_STATE = 40,
+  ID_WAVE_GPR_MSB_IDX0 = 44,
+  ID_WAVE_GPR_IDX123 = 45,
 
   // Register numbers reused in GFX11
   ID_PERF_SNAPSHOT_PC_LO_gfx11 = 18,
