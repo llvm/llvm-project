@@ -128,6 +128,9 @@ void XCOFFDumper::printLoaderSectionHeader() {
   }
   uintptr_t LoaderSectionAddr = LoaderSectionAddrOrError.get();
 
+  if (LoaderSectionAddr == 0)
+    return;
+
   auto PrintLoadSecHeaderCommon = [&](const auto *LDHeader) {
     printNumber("Version:", LDHeader->Version);
     printNumber("NumberOfSymbolEntries:", LDHeader->NumberOfSymTabEnt);
