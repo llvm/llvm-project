@@ -255,7 +255,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);
   MachineInstr *ConstInstr =
-      MI->getOpcode() == SPIRV::G_TRUNC
+      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
           ? MRI->getVRegDef(MI->getOperand(1).getReg())
           : MI;
   if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
