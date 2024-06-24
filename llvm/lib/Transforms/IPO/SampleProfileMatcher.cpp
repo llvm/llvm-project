@@ -144,7 +144,7 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
 }
 
 Function *
-SampleProfileMatcher::findIfFunctionIsNew(const FunctionId &IRFuncName) {
+SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName) {
   auto R = NewIRFunctions.find(IRFuncName);
   if (R == NewIRFunctions.end())
     return nullptr;
@@ -166,7 +166,7 @@ bool SampleProfileMatcher::functionMatchesProfile(
 
   // If IR function doesn't have profile and the profile is unused, try
   // matching them.
-  Function *IRFunc = findIfFunctionIsNew(IRFuncName);
+  Function *IRFunc = functionHasProfile(IRFuncName);
   if (!IRFunc || !isProfileUnused(ProfileFuncName))
     return false;
 
@@ -720,7 +720,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 }
 
-void SampleProfileMatcher::findNewIRFunctions() {
+void SampleProfileMatcher::findFunctionsWithoutProfile() {
   // TODO: Support MD5 profile.
   if (FunctionSamples::UseMD5)
     return;
@@ -849,7 +849,7 @@ void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
   if (SalvageUnusedProfile)
-    findNewIRFunctions();
+    findFunctionsWithoutProfile();
 
   // Process the matching in top-down order so that the caller matching result
   // can be used to the callee matching.

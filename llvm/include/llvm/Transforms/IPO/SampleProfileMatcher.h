@@ -224,7 +224,8 @@ private:
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap,
                                bool RunCFGMatching, bool RunCGMatching);
-  Function *findIfFunctionIsNew(const FunctionId &IRFuncName);
+  // Return the function if it doesn't have profile, otherwise return nullptr.
+  Function *functionHasProfile(const FunctionId &IRFuncName);
   bool isProfileUnused(const FunctionId &ProfileFuncName);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
@@ -235,14 +236,14 @@ private:
                               const FunctionId &ProfileFuncName,
                               bool FindMatchedProfileOnly);
   // Determine if the function matches profile by computing a similarity ratio
-  // between two callsite anchors extracted from function and profile. If it's
-  // above the threshold, the function matches the profile.
+  // between two sequences of callsite anchors extracted from function and
+  // profile. If it's above the threshold, the function matches the profile.
   bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc,
                               bool FindMatchedProfileOnly);
   // Find functions that don't show in the profile or profile symbol list,
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
-  void findNewIRFunctions();
+  void findFunctionsWithoutProfile();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm
