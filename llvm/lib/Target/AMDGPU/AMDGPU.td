@@ -1547,7 +1547,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
-   FeatureVcmpxPermlaneHazard]>;
+   FeatureVcmpxPermlaneHazard,
+   FeatureMemoryAtomicFaddF32DenormalSupport]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -1640,7 +1641,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
-   FeatureMemoryAtomicFaddF32DenormalSupport]>;
+   FeatureMemoryAtomicFaddF32DenormalSupport
    ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
