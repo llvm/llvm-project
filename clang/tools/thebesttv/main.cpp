@@ -480,7 +480,8 @@ void saveAsJson(int fromLine, int toLine,
         ordered_json jPath, locations;
         jPath["type"] = type;
         jPath["sourceIndex"] = sourceIndex; // input.json 中 results 对应的下标
-        jPath["nodes"] = path;
+        if (!Global.noNodes)
+            jPath["nodes"] = path;
         for (int x : path) {
             dumpICFGNode(x, locations);
         }
@@ -772,6 +773,8 @@ int main(int argc, const char **argv) {
     args::Flag argNoNpeGoodSource(argParser, "no-npe-good-source",
                                   "Do not generate npe-good-source",
                                   {"no-npe-good-source"});
+    args::Flag argNoNodes(argParser, "no-nodes", "Do not dump ICFG nodes",
+                          {"no-nodes"});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -800,6 +803,7 @@ int main(int argc, const char **argv) {
     Global.keepAST = getArgValue(argKeepAST, "Keep AST");
     Global.noNpeGoodSource =
         getArgValue(argNoNpeGoodSource, "No npe-good-source");
+    Global.noNodes = getArgValue(argNoNodes, "No nodes");
 
     setClangPath(argv[0]);
 
