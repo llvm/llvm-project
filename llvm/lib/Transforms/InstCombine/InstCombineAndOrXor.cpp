@@ -4153,7 +4153,7 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           // users are freely-invertible, so that 'not' *will* get folded away.
           BuilderTy::InsertPointGuard Guard(Builder);
           // Set insertion point to right after the Y.
-          Builder.SetInsertPoint(++(Y->getIterator()));
+          Builder.SetInsertPoint(Y->getParent(), ++(Y->getIterator()));
           Value *NotY = Builder.CreateNot(Y, Y->getName() + ".not");
           // Replace all uses of Y (excluding the one in NotY!) with NotY.
           Worklist.pushUsersToWorkList(*Y);

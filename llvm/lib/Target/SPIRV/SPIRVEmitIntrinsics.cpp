@@ -1402,7 +1402,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
       AggrStores.insert(&I);
   }
 
-  B.SetInsertPoint(Func.getEntryBlock().begin());
+  B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 

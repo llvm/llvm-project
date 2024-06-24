@@ -40,7 +40,7 @@ static CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
   FunctionCallee FCache =
       M->getOrInsertFunction(NewFn, FunctionType::get(RetTy, ParamTys, false));
 
-  IRBuilder<> Builder(CI->getIterator());
+  IRBuilder<> Builder(CI->getParent(), CI->getIterator());
   SmallVector<Value *, 8> Args(ArgBegin, ArgEnd);
   CallInst *NewCI = Builder.CreateCall(FCache, Args);
   NewCI->setName(CI->getName());

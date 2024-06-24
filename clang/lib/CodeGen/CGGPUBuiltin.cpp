@@ -202,13 +202,13 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
     Args.push_back(Arg);
   }
 
-  llvm::IRBuilder<> IRB(Builder.GetInsertPoint());
+  llvm::IRBuilder<> IRB(Builder.GetInsertBlock(), Builder.GetInsertPoint());
   IRB.SetCurrentDebugLocation(Builder.getCurrentDebugLocation());
 
   bool isBuffered = (CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal ==
                      clang::TargetOptions::AMDGPUPrintfKind::Buffered);
   auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
-  Builder.SetInsertPoint(IRB.GetInsertPoint());
+  Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);
 }
 

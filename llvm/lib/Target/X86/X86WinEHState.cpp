@@ -274,7 +274,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
   // Struct type of RegNode. Used for GEPing.
   Type *RegNodeTy;
 
-  IRBuilder<> Builder(F->getEntryBlock().begin());
+  IRBuilder<> Builder(&F->getEntryBlock(), F->getEntryBlock().begin());
   Type *Int8PtrType = Builder.getPtrTy();
   Type *Int32Ty = Builder.getInt32Ty();
   Type *VoidTy = Builder.getVoidTy();

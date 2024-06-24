@@ -487,6 +487,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
   BranchInst *PBI = cast<BranchInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
+  BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();
   Builder.SetInsertPoint(PBI);
   if (InvertCond2) {
@@ -494,7 +495,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   }
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, PBI->getCondition());
   PBI->replaceUsesOfWith(PBI->getCondition(), NC);
-  Builder.SetInsertPoint(SaveInsertPt);
+  Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
 
   // Remove IfTrue1
   if (IfTrue1 != FirstEntryBlock) {
