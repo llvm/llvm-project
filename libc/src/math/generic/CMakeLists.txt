@@ -1488,6 +1488,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ldexpf16
+  SRCS
+    ldexpf16.cpp
+  HDRS
+    ../ldexpf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   ldexpf128
   SRCS
     ldexpf128.cpp
@@ -3502,6 +3515,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scalblnf16
+  SRCS
+    scalblnf16.cpp
+  HDRS
+    ../scalblnf16.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   scalbn
   SRCS
     scalbn.cpp
@@ -3535,6 +3562,20 @@ add_entrypoint_object(
     ../scalbnl.h
   DEPENDS
     libc.hdr.float_macros
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  scalbnf16
+  SRCS
+    scalbnf16.cpp
+  HDRS
+    ../scalbnf16.h
+  DEPENDS
+    libc.hdr.float_macros
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3

@@ -1280,7 +1280,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1451,7 +1450,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_ordered_add:
@@ -8699,19 +8697,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::DS_ORDERED_COUNT, DL,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
-  }
-  case Intrinsic::amdgcn_ds_fadd: {
-    MemSDNode *M = cast<MemSDNode>(Op);
-    unsigned Opc;
-    switch (IntrID) {
-    case Intrinsic::amdgcn_ds_fadd:
-      Opc = ISD::ATOMIC_LOAD_FADD;
-      break;
-    }
-
-    return DAG.getAtomic(Opc, SDLoc(Op), M->getMemoryVT(),
-                         M->getOperand(0), M->getOperand(2), M->getOperand(3),
-                         M->getMemOperand());
   }
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
@@ -16023,10 +16008,16 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // FIXME: Needs to account for no fine-grained memory
       if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isBFloat2(Ty))
         return AtomicExpansionKind::None;
-    }
+    } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      // gfx90a, gfx940, gfx12
+      // FIXME: Needs to account for no fine-grained memory
+      if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        return AtomicExpansionKind::None;
 
-    // TODO: Handle buffer case. gfx90a and gfx940 supports <2 x half>. gfx12
-    // supports <2 x half> and <2 x bfloat>.
+      // TODO: Handle <2 x bfloat> case. While gfx90a/gfx940 supports it for
+      // global/flat, it does not for buffer. gfx12 does have the buffer
+      // version.
+    }
 
     if (unsafeFPAtomicsDisabled(RMW->getFunction()))
       return AtomicExpansionKind::CmpXChg;
@@ -16075,6 +16066,36 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     // LDS float and double fmin/fmax were always supported.
     if (AS == AMDGPUAS::LOCAL_ADDRESS && (Ty->isFloatTy() || Ty->isDoubleTy()))
       return AtomicExpansionKind::None;
+
+    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
+      return AtomicExpansionKind::CmpXChg;
+
+    // Always expand system scope fp atomics.
+    if (HasSystemScope)
+      return AtomicExpansionKind::CmpXChg;
+
+    // For flat and global cases:
+    // float, double in gfx7. Manual claims denormal support.
+    // Removed in gfx8.
+    // float, double restored in gfx10.
+    // double removed again in gfx11, so only f32 for gfx11/gfx12.
+    //
+    // For gfx9, gfx90a and gfx940 support f64 for global (same as fadd), but no
+    // f32.
+    //
+    // FIXME: Check scope and fine grained memory
+    if (AS == AMDGPUAS::FLAT_ADDRESS) {
+      if (Subtarget->hasAtomicFMinFMaxF32FlatInsts() && Ty->isFloatTy())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      if (Subtarget->hasAtomicFMinFMaxF64FlatInsts() && Ty->isDoubleTy())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    } else if (AMDGPU::isExtendedGlobalAddrSpace(AS) ||
+               AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      if (Subtarget->hasAtomicFMinFMaxF32GlobalInsts() && Ty->isFloatTy())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      if (Subtarget->hasAtomicFMinFMaxF64GlobalInsts() && Ty->isDoubleTy())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    }
 
     return AtomicExpansionKind::CmpXChg;
   }

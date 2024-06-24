@@ -3562,6 +3562,17 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
+  // For these, we're expected to ultimately return an APValue pointing
+  // to the CallExpr. This is needed to get the correct codegen.
+  unsigned Builtin = E->getBuiltinCallee();
+  if (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
+      Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+      Builtin == Builtin::BI__builtin_function_start) {
+    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E))
+      return this->emitGetPtrGlobal(*GlobalOffset, E);
+    return false;
+  }
+
   QualType ReturnType = E->getType();
   std::optional<PrimType> ReturnT = classify(E);
 
@@ -4250,7 +4261,7 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (E->getType()->isVoidType())
       return true;
     // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+    if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT)) {
       if (!this->emitDecayPtr(PT_Ptr, PT, E))
         return false;
     }

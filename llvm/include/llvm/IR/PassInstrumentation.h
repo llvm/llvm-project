@@ -52,7 +52,7 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
 #include <type_traits>
 #include <vector>
@@ -149,6 +149,11 @@ public:
     AnalysesClearedCallbacks.emplace_back(std::move(C));
   }
 
+  template <typename CallableT>
+  void registerClassToPassNameCallback(CallableT C) {
+    ClassToPassNameCallbacks.emplace_back(std::move(C));
+  }
+
   /// Add a class name to pass name mapping for use by pass instrumentation.
   void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
@@ -185,7 +190,8 @@ private:
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
 
-  StringMap<std::string> ClassToPassName;
+  SmallVector<llvm::unique_function<void ()>, 4> ClassToPassNameCallbacks;
+  DenseMap<StringRef, std::string> ClassToPassName;
 };
 
 /// This class provides instrumentation entry points for the Pass Manager,
