@@ -614,6 +614,15 @@ public:
       appendPredecessor(Pred);
   }
 
+  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
+  /// This VPBlockBase must have no successors. This VPBlockBase is not added
+  /// as predecessor of any VPBasicBlock in \p NewSuccs.
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block successors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
+  }
+
   /// Remove all the predecessor of this block.
   void clearPredecessors() { Predecessors.clear(); }
 
@@ -3665,6 +3674,10 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->isVectorToScalar();
   return false;
 }
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
+
 } // end namespace vputils
 
 } // end namespace llvm

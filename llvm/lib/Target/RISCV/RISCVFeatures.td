@@ -171,22 +171,20 @@ def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
 // Multiply Extensions
 
-def FeatureStdExtM
-    : RISCVExtension<"m", 2, 0,
-                     "'M' (Integer Multiplication and Division)">;
-def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
-                 AssemblerPredicate<(all_of FeatureStdExtM),
-                     "'M' (Integer Multiplication and Division)">;
-
 def FeatureStdExtZmmul
     : RISCVExtension<"zmmul", 1, 0,
                      "'Zmmul' (Integer Multiplication)">;
+def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZmmul),
+                     "'Zmmul' (Integer Multiplication)">;
 
-def HasStdExtMOrZmmul
-    : Predicate<"Subtarget->hasStdExtM() || Subtarget->hasStdExtZmmul()">,
-      AssemblerPredicate<(any_of FeatureStdExtM, FeatureStdExtZmmul),
-                         "'M' (Integer Multiplication and Division) or "
-                         "'Zmmul' (Integer Multiplication)">;
+def FeatureStdExtM
+    : RISCVExtension<"m", 2, 0,
+                     "'M' (Integer Multiplication and Division)",
+                     [FeatureStdExtZmmul]>;
+def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
+                 AssemblerPredicate<(all_of FeatureStdExtM),
+                     "'M' (Integer Multiplication and Division)">;
 
 // Atomic Extensions
 
@@ -198,8 +196,8 @@ def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                                     "'A' (Atomic Instructions)">;
 
 def FeatureStdExtZtso
-    : RISCVExperimentalExtension<"ztso", 0, 1,
-                                 "'Ztso' (Memory Model - Total Store Order)">;
+    : RISCVExtension<"ztso", 1, 0,
+                     "'Ztso' (Memory Model - Total Store Order)">;
 def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                     AssemblerPredicate<(all_of FeatureStdExtZtso),
                         "'Ztso' (Memory Model - Total Store Order)">;

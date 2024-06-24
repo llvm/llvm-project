@@ -17,6 +17,7 @@
 #define LLVM_CLANG_AST_DECLID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
 
 #include <climits>
@@ -115,12 +116,8 @@ protected:
   DeclIDBase() : ID(PREDEF_DECL_NULL_ID) {}
   explicit DeclIDBase(DeclID ID) : ID(ID) {}
 
-  explicit DeclIDBase(unsigned LocalID, unsigned ModuleFileIndex) {
-    ID = (DeclID)LocalID | ((DeclID)ModuleFileIndex << 32);
-  }
-
 public:
-  DeclID get() const { return ID; }
+  DeclID getRawValue() const { return ID; }
 
   explicit operator DeclID() const { return ID; }
 
@@ -134,12 +131,33 @@ public:
 
   unsigned getLocalDeclIndex() const;
 
+  // The DeclID may be compared with predefined decl ID.
+  friend bool operator==(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID == RHS;
+  }
+  friend bool operator!=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return !operator==(LHS, RHS);
+  }
+  friend bool operator<(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID < RHS;
+  }
+  friend bool operator<=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID <= RHS;
+  }
+  friend bool operator>(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID > RHS;
+  }
+  friend bool operator>=(const DeclIDBase &LHS, const DeclID &RHS) {
+    return LHS.ID >= RHS;
+  }
+
   friend bool operator==(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID == RHS.ID;
   }
   friend bool operator!=(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID != RHS.ID;
   }
+
   // We may sort the decl ID.
   friend bool operator<(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID < RHS.ID;
@@ -158,16 +176,29 @@ protected:
   DeclID ID;
 };
 
+class ASTWriter;
+class ASTReader;
+namespace serialization {
+class ModuleFile;
+} // namespace serialization
+
 class LocalDeclID : public DeclIDBase {
   using Base = DeclIDBase;
 
-public:
-  LocalDeclID() : Base() {}
   LocalDeclID(PredefinedDeclIDs ID) : Base(ID) {}
   explicit LocalDeclID(DeclID ID) : Base(ID) {}
 
-  explicit LocalDeclID(unsigned LocalID, unsigned ModuleFileIndex)
-      : Base(LocalID, ModuleFileIndex) {}
+  // Every Decl ID is a local decl ID to the module being writing in ASTWriter.
+  friend class ASTWriter;
+  friend class GlobalDeclID;
+
+public:
+  LocalDeclID() : Base() {}
+
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         DeclID ID);
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         unsigned ModuleFileIndex, unsigned LocalDeclID);
 
   LocalDeclID &operator++() {
     ++ID;
@@ -188,8 +219,8 @@ public:
   GlobalDeclID() : Base() {}
   explicit GlobalDeclID(DeclID ID) : Base(ID) {}
 
-  explicit GlobalDeclID(unsigned LocalID, unsigned ModuleFileIndex)
-      : Base(LocalID, ModuleFileIndex) {}
+  explicit GlobalDeclID(unsigned ModuleFileIndex, unsigned LocalID)
+      : Base((DeclID)ModuleFileIndex << 32 | (DeclID)LocalID) {}
 
   // For DeclIDIterator<GlobalDeclID> to be able to convert a GlobalDeclID
   // to a LocalDeclID.
@@ -230,7 +261,7 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {

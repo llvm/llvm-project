@@ -419,6 +419,10 @@ public:
   typedef _Tp element_type;
 #endif
 
+  // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
+  // any bookkeeping, so it's always trivially relocatable.
+  using __trivially_relocatable = shared_ptr;
+
 private:
   element_type* __ptr_;
   __shared_weak_count* __cntrl_;
@@ -1300,6 +1304,10 @@ public:
 #else
   typedef _Tp element_type;
 #endif
+
+  // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
+  // any bookkeeping, so it's always trivially relocatable.
+  using __trivially_relocatable = weak_ptr;
 
 private:
   element_type* __ptr_;

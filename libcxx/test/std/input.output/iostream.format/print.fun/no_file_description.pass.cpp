@@ -80,6 +80,7 @@ static void test_println_blank_line() {
 }
 
 static void test_vprint_unicode() {
+#ifdef TEST_HAS_NO_UNICODE
   std::array<char, 100> buffer{0};
 
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
@@ -92,6 +93,7 @@ static void test_vprint_unicode() {
 
   assert(pos > 0);
   assert(std::string_view(buffer.data(), pos) == "hello world!");
+#endif // TEST_HAS_NO_UNICODE
 }
 
 static void test_vprint_nonunicode() {
