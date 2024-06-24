@@ -223,7 +223,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
       nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
       &pcm_type_sp->GetDeclaration(), type, Type::ResolveState::Forward,
       TypePayloadClang(GetOwningClangModule(die)));
-  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   clang::TagDecl *tag_decl = TypeSystemClang::GetAsTagDecl(type);
   if (tag_decl) {
     LinkDeclContextToDIE(tag_decl, die);
@@ -458,90 +457,78 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         DW_TAG_value_to_name(die.Tag()), die.Tag(), die.GetName());
   }
 
-  Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
-  if (type_ptr == DIE_IS_BEING_PARSED)
-    return nullptr;
-  if (type_ptr)
-    return type_ptr->shared_from_this();
   // Set a bit that lets us know that we are currently parsing this
-  dwarf->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
+  if (auto [it, inserted] =
+          dwarf->GetDIEToType().try_emplace(die.GetDIE(), DIE_IS_BEING_PARSED);
+      !inserted) {
+    if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
+      return nullptr;
+    return it->getSecond()->shared_from_this();
+  }
 
   ParsedDWARFTypeAttributes attrs(die);
 
+  TypeSP type_sp;
   if (DWARFDIE signature_die = attrs.signature.Reference()) {
-    if (TypeSP type_sp =
-            ParseTypeFromDWARF(sc, signature_die, type_is_new_ptr)) {
-      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
+    type_sp = ParseTypeFromDWARF(sc, signature_die, type_is_new_ptr);
+    if (type_sp) {
       if (clang::DeclContext *decl_ctx =
               GetCachedClangDeclContextForDIE(signature_die))
         LinkDeclContextToDIE(decl_ctx, die);
-      return type_sp;
     }
-    return nullptr;
-  }
+  } else {
+    if (type_is_new_ptr)
+      *type_is_new_ptr = true;
 
-  if (type_is_new_ptr)
-    *type_is_new_ptr = true;
+    const dw_tag_t tag = die.Tag();
 
-  const dw_tag_t tag = die.Tag();
-
-  TypeSP type_sp;
-
-  switch (tag) {
-  case DW_TAG_typedef:
-  case DW_TAG_base_type:
-  case DW_TAG_pointer_type:
-  case DW_TAG_reference_type:
-  case DW_TAG_rvalue_reference_type:
-  case DW_TAG_const_type:
-  case DW_TAG_restrict_type:
-  case DW_TAG_volatile_type:
-  case DW_TAG_LLVM_ptrauth_type:
-  case DW_TAG_atomic_type:
-  case DW_TAG_unspecified_type: {
-    type_sp = ParseTypeModifier(sc, die, attrs);
-    break;
+    switch (tag) {
+    case DW_TAG_typedef:
+    case DW_TAG_base_type:
+    case DW_TAG_pointer_type:
+    case DW_TAG_reference_type:
+    case DW_TAG_rvalue_reference_type:
+    case DW_TAG_const_type:
+    case DW_TAG_restrict_type:
+    case DW_TAG_volatile_type:
+    case DW_TAG_LLVM_ptrauth_type:
+    case DW_TAG_atomic_type:
+    case DW_TAG_unspecified_type:
+      type_sp = ParseTypeModifier(sc, die, attrs);
+      break;
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+    case DW_TAG_class_type:
+      type_sp = ParseStructureLikeDIE(sc, die, attrs);
+      break;
+    case DW_TAG_enumeration_type:
+      type_sp = ParseEnum(sc, die, attrs);
+      break;
+    case DW_TAG_inlined_subroutine:
+    case DW_TAG_subprogram:
+    case DW_TAG_subroutine_type:
+      type_sp = ParseSubroutine(die, attrs);
+      break;
+    case DW_TAG_array_type:
+      type_sp = ParseArrayType(die, attrs);
+      break;
+    case DW_TAG_ptr_to_member_type:
+      type_sp = ParsePointerToMemberType(die, attrs);
+      break;
+    default:
+      dwarf->GetObjectFile()->GetModule()->ReportError(
+          "[{0:x16}]: unhandled type tag {1:x4} ({2}), "
+          "please file a bug and "
+          "attach the file at the start of this error message",
+          die.GetOffset(), tag, DW_TAG_value_to_name(tag));
+      break;
+    }
+    UpdateSymbolContextScopeForType(sc, die, type_sp);
   }
-
-  case DW_TAG_structure_type:
-  case DW_TAG_union_type:
-  case DW_TAG_class_type: {
-    type_sp = ParseStructureLikeDIE(sc, die, attrs);
-    break;
+  if (type_sp) {
+    dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   }
-
-  case DW_TAG_enumeration_type: {
-    type_sp = ParseEnum(sc, die, attrs);
-    break;
-  }
-
-  case DW_TAG_inlined_subroutine:
-  case DW_TAG_subprogram:
-  case DW_TAG_subroutine_type: {
-    type_sp = ParseSubroutine(die, attrs);
-    break;
-  }
-  case DW_TAG_array_type: {
-    type_sp = ParseArrayType(die, attrs);
-    break;
-  }
-  case DW_TAG_ptr_to_member_type: {
-    type_sp = ParsePointerToMemberType(die, attrs);
-    break;
-  }
-  default:
-    dwarf->GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: unhandled type tag {1:x4} ({2}), "
-        "please file a bug and "
-        "attach the file at the start of this error message",
-        die.GetOffset(), tag, DW_TAG_value_to_name(tag));
-    break;
-  }
-
-  // TODO: We should consider making the switch above exhaustive to simplify
-  // control flow in ParseTypeFromDWARF. Then, we could simply replace this
-  // return statement with a call to llvm_unreachable.
-  return UpdateSymbolContextScopeForType(sc, die, type_sp);
+  return type_sp;
 }
 
 static std::optional<uint32_t>
@@ -830,12 +817,9 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     }
   }
 
-  type_sp = dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
-                            attrs.type.Reference().GetID(), encoding_data_type,
-                            &attrs.decl, clang_type, resolve_state, payload);
-
-  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-  return type_sp;
+  return dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
+                         attrs.type.Reference().GetID(), encoding_data_type,
+                         &attrs.decl, clang_type, resolve_state, payload);
 }
 
 std::string
@@ -885,13 +869,10 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
             type_sp->GetID());
       }
 
-      // We found a real definition for this type elsewhere so lets use
-      // it and cache the fact that we found a complete type for this
-      // die
-      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-      clang::DeclContext *defn_decl_ctx =
-          GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID()));
-      if (defn_decl_ctx)
+      // We found a real definition for this type elsewhere so must link its
+      // DeclContext to this die.
+      if (clang::DeclContext *defn_decl_ctx =
+              GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID())))
         LinkDeclContextToDIE(defn_decl_ctx, die);
       return type_sp;
     }
@@ -1052,7 +1033,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
       // Unfortunately classes don't like having stuff added
       // to them after their definitions are complete...
 
-      Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
+      Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
       if (type_ptr && type_ptr != DIE_IS_BEING_PARSED)
         return {true, type_ptr->shared_from_this()};
     }
@@ -1164,7 +1145,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   // we need to modify the dwarf->GetDIEToType() so it
   // doesn't think we are trying to parse this DIE
   // anymore...
-  dwarf->GetDIEToType()[die.GetDIE()] = NULL;
+  dwarf->GetDIEToType().erase(die.GetDIE());
 
   // Now we get the full type to force our class type to
   // complete itself using the clang::ExternalASTSource
@@ -1174,7 +1155,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
 
   // The type for this DIE should have been filled in the
   // function call above.
-  Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
+  Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
   if (type_ptr && type_ptr != DIE_IS_BEING_PARSED)
     return {true, type_ptr->shared_from_this()};
 
@@ -1576,7 +1557,6 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
   if (!type_sp)
     return type_sp;
 
-  SymbolFileDWARF *dwarf = die.GetDWARF();
   DWARFDIE sc_parent_die = SymbolFileDWARF::GetParentSymbolContextDIE(die);
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
@@ -1595,8 +1575,6 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
 
   if (symbol_context_scope != nullptr)
     type_sp->SetSymbolContextScope(symbol_context_scope);
-
-  dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   return type_sp;
 }
 
@@ -1691,7 +1669,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             *unique_ast_entry_up)) {
       type_sp = unique_ast_entry_up->m_type_sp;
       if (type_sp) {
-        dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
         LinkDeclContextToDIE(
             GetCachedClangDeclContextForDIE(unique_ast_entry_up->m_die), die);
         return type_sp;
@@ -1763,11 +1740,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
               DW_TAG_value_to_name(tag), tag, attrs.name.GetCString(),
               type_sp->GetID());
         }
-
-        // We found a real definition for this type elsewhere so lets use
-        // it and cache the fact that we found a complete type for this
-        // die
-        dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
         return type_sp;
       }
     }
@@ -1823,12 +1795,10 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             type_sp->GetID());
       }
 
-      // We found a real definition for this type elsewhere so lets use
-      // it and cache the fact that we found a complete type for this die
-      dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
-      clang::DeclContext *defn_decl_ctx =
-          GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID()));
-      if (defn_decl_ctx)
+      // We found a real definition for this type elsewhere so must link its
+      // DeclContext to this die.
+      if (clang::DeclContext *defn_decl_ctx =
+              GetCachedClangDeclContextForDIE(dwarf->GetDIE(type_sp->GetID())))
         LinkDeclContextToDIE(defn_decl_ctx, die);
       return type_sp;
     }
@@ -3809,7 +3779,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     if (dst_decl_ctx)
       src_dwarf_ast_parser->LinkDeclContextToDIE(dst_decl_ctx, src);
 
-    if (Type *src_child_type = die_to_type[src.GetDIE()])
+    if (Type *src_child_type = die_to_type.lookup(src.GetDIE()))
       die_to_type[dst.GetDIE()] = src_child_type;
   };
 

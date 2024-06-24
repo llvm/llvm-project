@@ -136,6 +136,9 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
+  /// For MCFragment instances.
+  BumpPtrAllocator FragmentAllocator;
+
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
@@ -432,7 +435,8 @@ public:
   MCInst *createMCInst();
 
   template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new F(std::forward<Args>(args)...);
+    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
+        F(std::forward<Args>(args)...);
   }
 
   /// \name Symbol Management
@@ -596,7 +600,7 @@ public:
                                                    unsigned EntrySize);
 
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, const MCExpr *SubsectionId);
+                                MCSection *Parent, uint32_t Subsection = 0);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,

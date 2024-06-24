@@ -141,3 +141,8 @@ clang/test/AST/Interp/ @tbaederr
 
 # ExtractAPI
 /clang/**/ExtractAPI @daniel-grumberg
+
+# DWARFLinker, dwarfutil, dsymutil
+/llvm/**/DWARFLinker/ @JDevlieghere
+/llvm/**/dsymutil/ @JDevlieghere
+/llvm/**/llvm-dwarfutil/ @JDevlieghere

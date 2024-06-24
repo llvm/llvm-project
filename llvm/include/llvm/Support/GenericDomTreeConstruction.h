@@ -595,9 +595,7 @@ struct SemiNCAInfo {
     // Attach the first unreachable block to AttachTo.
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
     // Loop over all of the discovered blocks in the function...
-    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
-      NodePtr W = NumToNode[i];
-
+    for (NodePtr W : llvm::drop_begin(NumToNode)) {
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
 
@@ -614,8 +612,7 @@ struct SemiNCAInfo {
 
   void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
-    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
-      const NodePtr N = NumToNode[i];
+    for (const NodePtr N : llvm::drop_begin(NumToNode)) {
       const TreeNodePtr TN = DT.getNode(N);
       assert(TN);
       const TreeNodePtr NewIDom = DT.getNode(NodeToInfo[N].IDom);
