@@ -935,9 +935,8 @@ LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF, DeclID Value) {
   return ID;
 }
 
-static LocalDeclID getLocalDeclID(ASTReader &Reader, ModuleFile &MF,
-                                  unsigned ModuleFileIndex,
-                                  unsigned LocalDeclID) {
+LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF,
+                             unsigned ModuleFileIndex, unsigned LocalDeclID) {
   DeclID Value = (DeclID)ModuleFileIndex << 32 | (DeclID)LocalDeclID;
   return LocalDeclID::get(Reader, MF, Value);
 }
@@ -7884,7 +7883,7 @@ LocalDeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
   if (!OrignalModuleFileIndex)
     return LocalDeclID();
 
-  return getLocalDeclID(*this, M, OrignalModuleFileIndex, ID);
+  return LocalDeclID::get(*this, M, OrignalModuleFileIndex, ID);
 }
 
 GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
