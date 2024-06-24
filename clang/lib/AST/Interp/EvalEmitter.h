@@ -38,6 +38,9 @@ public:
                                  bool ConvertResultToRValue = false);
   EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
 
+  /// Clean up all resources.
+  void cleanup();
+
   InterpState &getState() { return S; }
 
 protected:
@@ -52,13 +55,17 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E) = 0;
-  virtual bool visitDecl(const VarDecl *VD) = 0;
+  virtual bool visitDecl(const VarDecl *VD, bool ConstantContext) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
+
+  /// Since expressions can only jump forward, predicated execution is
+  /// used to deal with if-else statements.
+  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
@@ -113,10 +120,6 @@ private:
   LabelTy CurrentLabel = 0;
   /// Active block which should be executed.
   LabelTy ActiveLabel = 0;
-
-  /// Since expressions can only jump forward, predicated execution is
-  /// used to deal with if-else statements.
-  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
 protected:
 #define GET_EVAL_PROTO

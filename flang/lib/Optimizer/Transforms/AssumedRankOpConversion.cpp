@@ -84,7 +84,9 @@ public:
     auto oldBoxType = mlir::cast<fir::BaseBoxType>(
         fir::unwrapRefType(rebox.getBox().getType()));
     auto newDerivedType = mlir::dyn_cast<fir::RecordType>(newEleType);
-    if (newDerivedType && (newEleType != oldBoxType.unwrapInnerType()) &&
+    if (newDerivedType && !fir::isPolymorphicType(newBoxType) &&
+        (fir::isPolymorphicType(oldBoxType) ||
+         (newEleType != oldBoxType.unwrapInnerType())) &&
         !fir::isPolymorphicType(newBoxType)) {
       newDtype = builder.create<fir::TypeDescOp>(
           loc, mlir::TypeAttr::get(newDerivedType));
@@ -112,6 +114,31 @@ private:
   fir::KindMapping kindMap;
 };
 
+class IsAssumedSizeConv : public mlir::OpRewritePattern<fir::IsAssumedSizeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  IsAssumedSizeConv(mlir::MLIRContext *context, mlir::SymbolTable *symbolTable,
+                    fir::KindMapping kindMap)
+      : mlir::OpRewritePattern<fir::IsAssumedSizeOp>(context),
+        symbolTable{symbolTable}, kindMap{kindMap} {};
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsAssumedSizeOp isAssumedSizeOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, kindMap, symbolTable};
+    mlir::Location loc = isAssumedSizeOp.getLoc();
+    mlir::Value result =
+        fir::runtime::genIsAssumedSize(builder, loc, isAssumedSizeOp.getVal());
+    rewriter.replaceOp(isAssumedSizeOp, result);
+    return mlir::success();
+  }
+
+private:
+  mlir::SymbolTable *symbolTable = nullptr;
+  fir::KindMapping kindMap;
+};
+
 /// Convert FIR structured control flow ops to CFG ops.
 class AssumedRankOpConversion
     : public fir::impl::AssumedRankOpConversionBase<AssumedRankOpConversion> {
@@ -123,8 +150,10 @@ public:
     fir::KindMapping kindMap = fir::getKindMapping(mod);
     mlir::RewritePatternSet patterns(context);
     patterns.insert<ReboxAssumedRankConv>(context, &symbolTable, kindMap);
+    patterns.insert<IsAssumedSizeConv>(context, &symbolTable, kindMap);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
     (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
   }
 };

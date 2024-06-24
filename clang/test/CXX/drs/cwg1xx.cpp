@@ -883,23 +883,21 @@ namespace cwg161 { // cwg161: 3.1
   };
 }
 
-namespace cwg162 { // cwg162: no
+namespace cwg162 { // cwg162: 19
   struct A {
     char &f(char);
     static int &f(int);
 
     void g() {
       int &a = (&A::f)(0);
-      // FIXME: expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
       char &b = (&A::f)('0');
-      // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+      // expected-error@-1 {{non-const lvalue reference to type 'char' cannot bind to a value of unrelated type 'int'}}
     }
   };
 
   int &c = (&A::f)(0);
-  // FIXME: expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
   char &d = (&A::f)('0');
-  // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  // expected-error@-1 {{non-const lvalue reference to type 'char' cannot bind to a value of unrelated type 'int'}}
 }
 
 // cwg163: na

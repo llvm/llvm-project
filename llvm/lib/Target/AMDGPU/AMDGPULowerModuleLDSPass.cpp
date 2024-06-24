@@ -1017,7 +1017,7 @@ public:
       //
       // TODO: We could filter out subgraphs that do not access LDS globals.
       for (Function *F : KernelsThatAllocateTableLDS)
-        removeFnAttrFromReachable(CG, F, "amdgpu-no-lds-kernel-id");
+        removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
     }
 
     DenseMap<Function *, GlobalVariable *> KernelToCreatedDynamicLDS =

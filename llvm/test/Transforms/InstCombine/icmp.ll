@@ -5255,6 +5255,16 @@ define i1 @test_icmp_shl_nuw(i64 %x) {
   ret i1 %cmp
 }
 
+define i1 @test_icmp_shl_nuw_i31(i31 %x) {
+; CHECK-LABEL: @test_icmp_shl_nuw_i31(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i31 [[X:%.*]], 250
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nuw i31 %x, 23
+  %cmp = icmp ugt i31 %shl, -50331648
+  ret i1 %cmp
+}
+
 define i1 @test_icmp_shl_nsw(i64 %x) {
 ; CHECK-LABEL: @test_icmp_shl_nsw(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X:%.*]], 3
@@ -5262,6 +5272,17 @@ define i1 @test_icmp_shl_nsw(i64 %x) {
 ;
   %shl = shl nsw i64 %x, 32
   %cmp = icmp ult i64 %shl, 8589934593
+  ret i1 %cmp
+}
+
+define i1 @test_icmp_shl_nsw_i31(i31 %x) {
+; CHECK-LABEL: @test_icmp_shl_nsw_i31(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i31 [[X:%.*]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[TMP1]], -6
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i31 %x, 23
+  %cmp = icmp ugt i31 %shl, -50331648
   ret i1 %cmp
 }
 
@@ -5293,5 +5314,15 @@ define i1 @test_icmp_shl_sgt(i64 %x) {
 ;
   %shl = shl i64 %x, 32
   %cmp = icmp sgt i64 %shl, 8589934591
+  ret i1 %cmp
+}
+
+define i1 @pr94897(i32 range(i32 -2147483648, 0) %x) {
+; CHECK-LABEL: @pr94897(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -3
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl nsw i32 %x, 24
+  %cmp = icmp ugt i32 %shl, -50331648
   ret i1 %cmp
 }

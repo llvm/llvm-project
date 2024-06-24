@@ -57,8 +57,7 @@ void MCTargetStreamer::finish() {}
 void MCTargetStreamer::emitConstantPools() {}
 
 void MCTargetStreamer::changeSection(const MCSection *CurSection,
-                                     MCSection *Section,
-                                     const MCExpr *Subsection,
+                                     MCSection *Section, uint32_t Subsection,
                                      raw_ostream &OS) {
   Section->printSwitchToSection(*Streamer.getContext().getAsmInfo(),
                                 Streamer.getContext().getTargetTriple(), OS,
@@ -841,10 +840,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(
-          SectionName,
-          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(SectionName,
+                                    MainCFISecCOFF->getCharacteristics() |
+                                        COFF::IMAGE_SCN_LNK_COMDAT,
+                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 
@@ -1218,7 +1217,7 @@ void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *, const MCExpr *) {}
+void MCStreamer::changeSection(MCSection *, uint32_t) {}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1242,7 +1241,22 @@ void MCStreamer::emitBundleLock(bool AlignToEnd) {}
 void MCStreamer::finishImpl() {}
 void MCStreamer::emitBundleUnlock() {}
 
-void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
+bool MCStreamer::popSection() {
+  if (SectionStack.size() <= 1)
+    return false;
+  auto I = SectionStack.end();
+  --I;
+  MCSectionSubPair OldSec = I->first;
+  --I;
+  MCSectionSubPair NewSec = I->first;
+
+  if (NewSec.first && OldSec != NewSec)
+    changeSection(NewSec.first, NewSec.second);
+  SectionStack.pop_back();
+  return true;
+}
+
+void MCStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   MCSectionSubPair curSection = SectionStack.back().first;
   SectionStack.back().second = curSection;
@@ -1254,6 +1268,25 @@ void MCStreamer::switchSection(MCSection *Section, const MCExpr *Subsection) {
     if (Sym && !Sym->isInSection())
       emitLabel(Sym);
   }
+}
+
+bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
+  int64_t Subsec = 0;
+  if (SubsecExpr) {
+    if (!SubsecExpr->evaluateAsAbsolute(Subsec, getAssemblerPtr())) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "cannot evaluate subsection number");
+      return true;
+    }
+    if (!isUInt<31>(Subsec)) {
+      getContext().reportError(SubsecExpr->getLoc(),
+                               "subsection number " + Twine(Subsec) +
+                                   " is not within [0,2147483647]");
+      return true;
+    }
+  }
+  switchSection(Section, Subsec);
+  return false;
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

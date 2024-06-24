@@ -710,13 +710,15 @@ public:
   SymbolMapper(Scope &scope, SymbolAndTypeMappings &map)
       : Base{*this}, scope_{scope}, map_{map} {}
   using Base::operator();
-  bool operator()(const SymbolRef &ref) const {
+  bool operator()(const SymbolRef &ref) {
     if (const Symbol *mapped{MapSymbol(*ref)}) {
       const_cast<SymbolRef &>(ref) = *mapped;
+    } else if (ref->has<UseDetails>()) {
+      CopySymbol(&*ref);
     }
     return false;
   }
-  bool operator()(const Symbol &x) const {
+  bool operator()(const Symbol &x) {
     if (MapSymbol(x)) {
       DIE("SymbolMapper hit symbol outside SymbolRef");
     }
@@ -726,9 +728,9 @@ public:
   Symbol *CopySymbol(const Symbol *);
 
 private:
-  void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
-  void MapBound(Bound &bound) const { (*this)(bound.GetExplicit()); }
-  void MapShapeSpec(ShapeSpec &spec) const {
+  void MapParamValue(ParamValue &param) { (*this)(param.GetExplicit()); }
+  void MapBound(Bound &bound) { (*this)(bound.GetExplicit()); }
+  void MapShapeSpec(ShapeSpec &spec) {
     MapBound(spec.lbound());
     MapBound(spec.ubound());
   }

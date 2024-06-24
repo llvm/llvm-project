@@ -19,8 +19,6 @@ int baz() { return OtherName::foo(); }
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_ZN4Name3fooEv.ifunc = weak_odr alias i32 (), ptr @_ZN4Name3fooEv
-// CHECK: @_ZN9OtherName3fooEv.ifunc = weak_odr alias i32 (), ptr @_ZN9OtherName3fooEv
 // CHECK: @_ZN4Name3fooEv = weak_odr ifunc i32 (), ptr @_ZN4Name3fooEv.resolver
 // CHECK: @_ZN9OtherName3fooEv = weak_odr ifunc i32 (), ptr @_ZN9OtherName3fooEv.resolver
 //.

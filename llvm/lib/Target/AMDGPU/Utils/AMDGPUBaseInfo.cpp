@@ -373,10 +373,18 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
+struct SingleUseExceptionInfo {
+  uint16_t Opcode;
+  bool IsInvalidSingleUseConsumer;
+  bool IsInvalidSingleUseProducer;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
+#define GET_SingleUseExceptionTable_DECL
+#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -582,9 +590,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
@@ -606,6 +612,16 @@ bool isGenericAtomic(unsigned Opc) {
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
+}
+
+bool isInvalidSingleUseConsumerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseConsumer;
+}
+
+bool isInvalidSingleUseProducerInst(unsigned Opc) {
+  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
+  return Info && Info->IsInvalidSingleUseProducer;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {

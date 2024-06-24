@@ -143,7 +143,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
         writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
-        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
+        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_Text);
         if (EC)
           reportOpenError(Path, EC.message());
         Index.exportToDot(OSDot, GUIDPreservedSymbols);

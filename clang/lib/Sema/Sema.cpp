@@ -43,6 +43,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaAVR.h"
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -51,15 +52,19 @@
 #include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLoongArch.h"
+#include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
+#include "clang/Sema/SemaMSP430.h"
 #include "clang/Sema/SemaNVPTX.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -218,6 +223,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr),
       AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
+      AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),
@@ -225,15 +231,19 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       HexagonPtr(std::make_unique<SemaHexagon>(*this)),
       LoongArchPtr(std::make_unique<SemaLoongArch>(*this)),
+      M68kPtr(std::make_unique<SemaM68k>(*this)),
       MIPSPtr(std::make_unique<SemaMIPS>(*this)),
+      MSP430Ptr(std::make_unique<SemaMSP430>(*this)),
       NVPTXPtr(std::make_unique<SemaNVPTX>(*this)),
       ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
+      OpenCLPtr(std::make_unique<SemaOpenCL>(*this)),
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
       PPCPtr(std::make_unique<SemaPPC>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
       RISCVPtr(std::make_unique<SemaRISCV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
+      SwiftPtr(std::make_unique<SemaSwift>(*this)),
       SystemZPtr(std::make_unique<SemaSystemZ>(*this)),
       WasmPtr(std::make_unique<SemaWasm>(*this)),
       X86Ptr(std::make_unique<SemaX86>(*this)),
@@ -487,6 +497,14 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
+  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->getTriple().isAMDGPU())) {
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/AMDGPUTypes.def"
+  }
+
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {
     DeclarationName MSVaList = &Context.Idents.get("__builtin_ms_va_list");
     if (IdResolver.begin(MSVaList) == IdResolver.end())
@@ -620,6 +638,19 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
 }
 
+// Generate diagnostics when adding or removing effects in a type conversion.
+void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                            SourceLocation Loc) {
+  const auto SrcFX = FunctionEffectsRef::get(SrcType);
+  const auto DstFX = FunctionEffectsRef::get(DstType);
+  if (SrcFX != DstFX) {
+    for (const auto &Diff : FunctionEffectDifferences(SrcFX, DstFX)) {
+      if (Diff.shouldDiagnoseConversion(SrcType, SrcFX, DstType, DstFX))
+        Diag(Loc, diag::warn_invalid_add_func_effects) << Diff.effectName();
+    }
+  }
+}
+
 void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
   // nullptr only exists from C++11 on, so don't warn on its absence earlier.
   if (!getLangOpts().CPlusPlus11)
@@ -697,6 +728,9 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
+  if (!isCast(CCK) && Kind != CK_NullToPointer &&
+      Kind != CK_NullToMemberPointer)
+    diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
 
   QualType ExprTy = Context.getCanonicalType(E->getType());
   QualType TypeTy = Context.getCanonicalType(Ty);
@@ -2083,16 +2117,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
+    if (Ty->isSVESizelessBuiltinType() && FD) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
         if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
-          Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+          Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
         else if (!IsArmStreamingFunction(FD,
                                          /*IncludeLocallyStreaming=*/true)) {
-          Diag(D->getLocation(), diag::err_sve_vector_in_non_streaming_function)
-              << Ty;
+          Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
         }
       }
     }
@@ -2778,4 +2811,154 @@ bool Sema::isDeclaratorFunctionLike(Declarator &D) {
     return false;
   });
   return Result;
+}
+
+FunctionEffectDifferences::FunctionEffectDifferences(
+    const FunctionEffectsRef &Old, const FunctionEffectsRef &New) {
+
+  FunctionEffectsRef::iterator POld = Old.begin();
+  FunctionEffectsRef::iterator OldEnd = Old.end();
+  FunctionEffectsRef::iterator PNew = New.begin();
+  FunctionEffectsRef::iterator NewEnd = New.end();
+
+  while (true) {
+    int cmp = 0;
+    if (POld == OldEnd) {
+      if (PNew == NewEnd)
+        break;
+      cmp = 1;
+    } else if (PNew == NewEnd)
+      cmp = -1;
+    else {
+      FunctionEffectWithCondition Old = *POld;
+      FunctionEffectWithCondition New = *PNew;
+      if (Old.Effect.kind() < New.Effect.kind())
+        cmp = -1;
+      else if (New.Effect.kind() < Old.Effect.kind())
+        cmp = 1;
+      else {
+        cmp = 0;
+        if (Old.Cond.getCondition() != New.Cond.getCondition()) {
+          // FIXME: Cases where the expressions are equivalent but
+          // don't have the same identity.
+          push_back(FunctionEffectDiff{
+              Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,
+              Old, New});
+        }
+      }
+    }
+
+    if (cmp < 0) {
+      // removal
+      FunctionEffectWithCondition Old = *POld;
+      push_back(FunctionEffectDiff{
+          Old.Effect.kind(), FunctionEffectDiff::Kind::Removed, Old, {}});
+      ++POld;
+    } else if (cmp > 0) {
+      // addition
+      FunctionEffectWithCondition New = *PNew;
+      push_back(FunctionEffectDiff{
+          New.Effect.kind(), FunctionEffectDiff::Kind::Added, {}, New});
+      ++PNew;
+    } else {
+      ++POld;
+      ++PNew;
+    }
+  }
+}
+
+bool FunctionEffectDiff::shouldDiagnoseConversion(
+    QualType SrcType, const FunctionEffectsRef &SrcFX, QualType DstType,
+    const FunctionEffectsRef &DstFX) const {
+
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+    // nonallocating can't be added (spoofed) during a conversion, unless we
+    // have nonblocking.
+    if (DiffKind == Kind::Added) {
+      for (const auto &CFE : SrcFX) {
+        if (CFE.Effect.kind() == FunctionEffect::Kind::NonBlocking)
+          return false;
+      }
+    }
+    [[fallthrough]];
+  case FunctionEffect::Kind::NonBlocking:
+    // nonblocking can't be added (spoofed) during a conversion.
+    switch (DiffKind) {
+    case Kind::Added:
+      return true;
+    case Kind::Removed:
+      return false;
+    case Kind::ConditionMismatch:
+      // FIXME: Condition mismatches are too coarse right now -- expressions
+      // which are equivalent but don't have the same identity are detected as
+      // mismatches. We're going to diagnose those anyhow until expression
+      // matching is better.
+      return true;
+    }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
+    const FunctionDecl &OldFunction, const FunctionEffectsRef &OldFX,
+    const FunctionDecl &NewFunction, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
+    // nonblocking/nonallocating can't be removed in a redeclaration.
+    switch (DiffKind) {
+    case Kind::Added:
+      return false; // No diagnostic.
+    case Kind::Removed:
+      return true; // Issue diagnostic.
+    case Kind::ConditionMismatch:
+      // All these forms of mismatches are diagnosed.
+      return true;
+    }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
+FunctionEffectDiff::OverrideResult
+FunctionEffectDiff::shouldDiagnoseMethodOverride(
+    const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+    const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
+    switch (DiffKind) {
+
+    // If added on an override, that's fine and not diagnosed.
+    case Kind::Added:
+      return OverrideResult::NoAction;
+
+    // If missing from an override (removed), propagate from base to derived.
+    case Kind::Removed:
+      return OverrideResult::Merge;
+
+    // If there's a mismatch involving the effect's polarity or condition,
+    // issue a warning.
+    case Kind::ConditionMismatch:
+      return OverrideResult::Warn;
+    }
+
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return OverrideResult::NoAction;
+
+  case FunctionEffect::Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
 }

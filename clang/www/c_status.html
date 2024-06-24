@@ -44,7 +44,15 @@
 <tr>
  <td><a href="#c99">C99</a></td>
  <td><tt>-std=c99</tt></td>
- <td class="unknown" align="center">Almost certainly</td>
+ <td class="full" align="center">Clang 17</td>
+ <!-- We claim full conformance to C99 despite there being a few entries marked
+      "partial". The partial entries do not impact whether we conform to the
+      letter of the standard, but they are for circumstances where the missing
+      support is thought to only be in edge cases or where we believe we could
+      make further efforts to significantly improve the support. While we list
+      Clang 17 as the version of Clang which fully supports C99, support for
+      the language mode was largely complete in earlier versions of Clang going
+      back to 3.0. -->
 </tr>
 <tr>
  <td><a href="#c11">C11</a></td>
@@ -63,9 +71,9 @@
 </tr>
 </table>
 
-<p>The implementation status for C99, C11, C17, and C23 are currently under
-investigation. Any proposal whose status in Clang is currently unknown
-will be marked in <span class="unknown">magenta</span>.</p>
+<p>The implementation status for C11 and C23 are currently under investigation.
+Any proposal whose status in Clang is currently unknown will be marked in
+<span class="unknown">magenta</span>.</p>
 
 <p>The Clang community is continually striving to improve C standards
 compliance between releases by submitting and tracking
@@ -83,7 +91,7 @@ conformance.</p>
 
 <h2 id="c99">C99 implementation status</h2>
 
-<p>Clang implements a significant portion of the ISO 9899:1999 (C99) standard, but the status of individual proposals is still under investigation.</p>
+<p>Clang implements all of the ISO 9899:1999 (C99) standard.</p>
 <p>Note, the list of C99 features comes from the C99 committee draft. Not all C99 documents are publicly available, so the documents referenced in this section may be inaccurate, unknown, or not linked.</p>
 <!-- https://www.open-std.org/jtc1/sc22/wg14/www/docs/n874.htm contains the
      final editor's report of what's been added to C99, but it includes more
@@ -110,12 +118,21 @@ conformance.</p>
     <tr>
       <td>more precise aliasing rules via effective type</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>restricted pointers</td>
       <td>N448</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang's support for <code>restrict</code> is fully conforming but
+          considered only partially implemented. Clang implements all of the
+          constraints required for <code>restrict</code> support, but LLVM only
+          supports <code>restrict</code> optimization semantics for restricted
+          pointers used as function parameters; it does not fully support the
+          semantics for restrict on local variables or data members.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>variable length arrays</td>
@@ -268,7 +285,25 @@ conformance.</p>
     <tr>
       <td>IEC 60559 support</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports much of the language requirements for Annex F, but
+          full conformance is only possible to determine when considering the
+          compiler's language support, the C runtime library's math library
+          support, and the target system's floating-point environment support.
+          Clang does not currently raise an "invalid" floating-point exception
+          on certain conversions, does not raise floating-point exceptions for
+          arithmetic constant expressions, and other corner cases. Note, Clang
+          does not define <code>__STDC_IEC_559__</code> because the compiler
+          does not fully conform. However, some C standard library
+          implementations
+          (<a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=include/stdc-predef.h">
+          glibc</a>, <a href="https://git.musl-libc.org/cgit/musl/tree/include/stdc-predef.h">
+          musl</a> will define the macro regardless of compiler support unless
+          the compiler defines <code>__GCC_IEC_559</code>, which Clang does not
+          currently define.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>trailing comma allowed in enum declaration</td>
@@ -423,11 +458,6 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
-      <td>Analyzability (#1, #4 - conditionally normative)</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1350.htm">N1350</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
       <td>FLT_EVAL_METHOD issues (first change only)</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1353.pdf">N1353</a></td>
       <td class="unknown" align="center">Unknown</td>
@@ -440,7 +470,8 @@ conformance.</p>
     <tr>
       <td>Technical corrigendum for C1X</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1359.htm">N1359</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
+      <!-- The DRs listed in the paper are individually tested in clang/test/C/drs/dr3xx.c and others -->
     </tr>
     <tr>
       <td>Benign typedef redefinition</td>
@@ -471,11 +502,6 @@ conformance.</p>
       <td>Floating-point to int/_Bool conversions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1391.htm">N1391</a></td>
       <td class="full" align="center">Yes</td>
-    </tr>
-    <tr>
-      <td>Analyzability (along the lines)</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1394.htm">N1394</a></td>
-      <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
       <td>Wide function returns (alternate proposal)</td>
@@ -1213,7 +1239,7 @@ conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
     <tr>
       <td>#embed</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm">N3017</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 19</td>
     </tr>
 </table>
 </details>

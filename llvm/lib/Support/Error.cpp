@@ -82,6 +82,14 @@ std::string toString(Error E) {
   return join(Errors.begin(), Errors.end(), "\n");
 }
 
+std::string toStringWithoutConsuming(const Error &E) {
+  SmallVector<std::string, 2> Errors;
+  visitErrors(E, [&Errors](const ErrorInfoBase &EI) {
+    Errors.push_back(EI.message());
+  });
+  return join(Errors.begin(), Errors.end(), "\n");
+}
+
 std::error_code ErrorList::convertToErrorCode() const {
   return std::error_code(static_cast<int>(ErrorErrorCode::MultipleErrors),
                          getErrorErrorCat());

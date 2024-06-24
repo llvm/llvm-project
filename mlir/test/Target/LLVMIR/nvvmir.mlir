@@ -574,3 +574,10 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
+
+// -----
+
+// expected-error @below{{kernel function cannot have results}}
+llvm.func @kernel_with_result(%i: i32) -> i32 attributes {nvvm.kernel}  {
+  llvm.return %i : i32
+}

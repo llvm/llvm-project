@@ -80,10 +80,11 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
       }
       CachedMCSymbol = Ctx.getOrCreateSymbol(MF->getName() + Suffix);
     } else {
-      const StringRef Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
-      CachedMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB" +
-                                             Twine(MF->getFunctionNumber()) +
-                                             "_" + Twine(getNumber()));
+      // If the block occurs as label in inline assembly, parsing the assembly
+      // needs an actual label name => set AlwaysEmit in these cases.
+      CachedMCSymbol = Ctx.createBlockSymbol(
+          "BB" + Twine(MF->getFunctionNumber()) + "_" + Twine(getNumber()),
+          /*AlwaysEmit=*/hasLabelMustBeEmitted());
     }
   }
   return CachedMCSymbol;
@@ -104,10 +105,9 @@ MCSymbol *MachineBasicBlock::getEndSymbol() const {
   if (!CachedEndMCSymbol) {
     const MachineFunction *MF = getParent();
     MCContext &Ctx = MF->getContext();
-    auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
-    CachedEndMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB_END" +
-                                              Twine(MF->getFunctionNumber()) +
-                                              "_" + Twine(getNumber()));
+    CachedEndMCSymbol = Ctx.createBlockSymbol(
+        "BB_END" + Twine(MF->getFunctionNumber()) + "_" + Twine(getNumber()),
+        /*AlwaysEmit=*/false);
   }
   return CachedEndMCSymbol;
 }
@@ -1330,9 +1330,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (MachineDominatorTree *MDT =
-          P.getAnalysisIfAvailable<MachineDominatorTree>())
-    MDT->recordSplitCriticalEdge(this, Succ, NMBB);
+  if (auto *MDTWrapper =
+          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
 
   if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {

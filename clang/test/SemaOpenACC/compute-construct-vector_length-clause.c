@@ -31,8 +31,7 @@ void Test() {
 #pragma acc kernels vector_length(SomeE)
   while(1);
 
-  // expected-error@+2{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented}}
+  // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'loop' directive}}
 #pragma acc loop vector_length(1)
   for(;;);
 }
