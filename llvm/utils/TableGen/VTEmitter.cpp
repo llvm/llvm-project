@@ -109,7 +109,7 @@ void VTEmitter::run(raw_ostream &OS) {
     }
   };
 
-  OS << "#ifdef GET_VT_ATTR // (Ty, n, sz, Any, Int, FP, Vec, Sc)\n";
+  OS << "#ifdef GET_VT_ATTR // (Ty, n, sz, Any, Int, FP, Vec, Sc, Tup)\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT)
       continue;
@@ -119,20 +119,23 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsFP = VT->getValueAsBit("isFP");
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
+    bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
     bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
     StringRef EltName = IsVector ? VT->getValueAsDef("ElementType")->getName()
                                  : "INVALID_SIMPLE_VALUE_TYPE";
 
     UpdateVTRange("INTEGER_FIXEDLEN_VECTOR_VALUETYPE", Name,
-                  IsInteger && IsVector && !IsScalable);
+                  IsInteger && IsVector && !IsScalable && !IsRISCVVecTuple);
     UpdateVTRange("INTEGER_SCALABLE_VECTOR_VALUETYPE", Name,
                   IsInteger && IsScalable);
     UpdateVTRange("FP_FIXEDLEN_VECTOR_VALUETYPE", Name,
-                  IsFP && IsVector && !IsScalable);
+                  IsFP && IsVector && !IsScalable && !IsRISCVVecTuple);
     UpdateVTRange("FP_SCALABLE_VECTOR_VALUETYPE", Name, IsFP && IsScalable);
-    UpdateVTRange("FIXEDLEN_VECTOR_VALUETYPE", Name, IsVector && !IsScalable);
+    UpdateVTRange("FIXEDLEN_VECTOR_VALUETYPE", Name,
+                  IsVector && !IsScalable && !IsRISCVVecTuple);
     UpdateVTRange("SCALABLE_VECTOR_VALUETYPE", Name, IsScalable);
+    UpdateVTRange("RISCV_VECTOR_TUPLE_VALUETYPE", Name, IsRISCVVecTuple);
     UpdateVTRange("VECTOR_VALUETYPE", Name, IsVector);
     UpdateVTRange("INTEGER_VALUETYPE", Name, IsInteger && !IsVector);
     UpdateVTRange("FP_VALUETYPE", Name, IsFP && !IsVector);
@@ -148,6 +151,7 @@ void VTEmitter::run(raw_ostream &OS) {
        << (IsFP ? Name[0] == 'f' ? 3 : 1 : 0) << ", "
        << IsVector << ", "
        << IsScalable << ", "
+       << IsRISCVVecTuple << ", "
        << NElem << ", "
        << EltName << ")\n";
     // clang-format on
@@ -162,7 +166,7 @@ void VTEmitter::run(raw_ostream &OS) {
   }
   OS << "#endif\n\n";
 
-  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, nElem, ElTy)\n";
+  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, Tup, nElem, ElTy)\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT || !VT->getValueAsBit("isVector"))
       continue;
@@ -172,6 +176,7 @@ void VTEmitter::run(raw_ostream &OS) {
     OS << "  GET_VT_VECATTR("
        << VT->getValueAsString("LLVMName") << ", "
        << VT->getValueAsBit("isScalable") << ", "
+       << VT->getValueAsBit("isRISCVVecTuple") << ", "
        << VT->getValueAsInt("nElem") << ", "
        << ElTy->getName() << ")\n";
     // clang-format on

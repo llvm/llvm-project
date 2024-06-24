@@ -87,6 +87,14 @@ namespace llvm {
       return getExtendedVectorVT(Context, VT, EC);
     }
 
+    /// Returns the EVT that represents a vector tuple type.
+    static EVT getRISCVVectorTupleVT(int Log2LMUL, unsigned NFields) {
+      // Sz = NF * LMUL * BitsPerBlock
+      unsigned Sz =
+          NFields * (Log2LMUL < 0 ? (64 >> -Log2LMUL) : (64 << Log2LMUL));
+      return MVT::getRISCVVectorTupleVT(Sz, NFields);
+    }
+
     /// Return a vector with the same number of elements as this vector, but
     /// with the element type converted to an integer type with the same
     /// bitwidth.
@@ -173,6 +181,9 @@ namespace llvm {
     bool isScalableVector() const {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
     }
+
+    /// Return true if this is a vector value type.
+    bool isRISCVVectorTuple() const { return V.isRISCVVectorTuple(); }
 
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()

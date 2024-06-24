@@ -1665,6 +1665,10 @@ public:
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
 
+    if (auto *VTy = dyn_cast<RISCVVectorTupleType>(Ty))
+      return EVT::getRISCVVectorTupleVT(VTy->getLog2LMUL(),
+                                        VTy->getNumFields());
+
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
       // Lower vectors of pointers to native pointer types.
@@ -1684,6 +1688,10 @@ public:
     // Lower scalar pointers to native pointer types.
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerMemTy(DL, PTy->getAddressSpace());
+
+    if (auto *VTy = dyn_cast<RISCVVectorTupleType>(Ty))
+      return EVT::getRISCVVectorTupleVT(VTy->getLog2LMUL(),
+                                        VTy->getNumFields());
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
