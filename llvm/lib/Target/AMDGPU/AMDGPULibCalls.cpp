@@ -1129,15 +1129,11 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = CreateCallEx(B,ExpExpr, nval, "__exp2");
 
   if (needcopysign) {
-    Value *opr_n;
-    Type* rTy = opr0->getType();
     Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
-    Type *nTy = nTyS;
-    if (const auto *vTy = dyn_cast<FixedVectorType>(rTy))
-      nTy = FixedVectorType::get(nTyS, vTy);
+    Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     unsigned size = nTy->getScalarSizeInBits();
-    opr_n = FPOp->getOperand(1);
-    if (opr_n->getType()->isIntegerTy())
+    Value *opr_n = FPOp->getOperand(1);
+    if (opr_n->getType()->getScalarType()->isIntegerTy())
       opr_n = B.CreateZExtOrTrunc(opr_n, nTy, "__ytou");
     else
       opr_n = B.CreateFPToSI(opr1, nTy, "__ytou");

@@ -50,12 +50,16 @@ end program
 
 ! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! CHECK-NEXT: 'fir.global' Pipeline
+! CHECK-NEXT:   StackReclaim
 ! CHECK-NEXT:   CFGConversion
 ! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   StackReclaim
 ! CHECK-NEXT:   CFGConversion
 ! CHECK-NEXT: 'omp.declare_reduction' Pipeline
+! CHECK-NEXT:   StackReclaim
 ! CHECK-NEXT:   CFGConversion
 ! CHECK-NEXT: 'omp.private' Pipeline
+! CHECK-NEXT:   StackReclaim
 ! CHECK-NEXT:   CFGConversion
 
 ! CHECK-NEXT: SCFToControlFlow

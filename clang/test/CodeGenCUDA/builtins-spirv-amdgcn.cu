@@ -112,7 +112,7 @@ __global__
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr [[X]] to ptr addrspace(4)
 // CHECK-NEXT:    store float [[SRC:%.*]], ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(4) [[SRC_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call contract addrspace(4) float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]], i32 0, i32 0, i1 false)
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspace(3) @_ZZ12test_ds_faddfE6shared, float [[TMP0]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP1]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    ret void
 //

@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <deque>
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -568,13 +569,13 @@ private:
   /// unioning their recorded alloc types.
   uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
                                   const DenseSet<uint32_t> &Node2Ids);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
                               const DenseSet<uint32_t> &Node2Ids);
@@ -2202,7 +2203,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   // Make a copy of the computed context ids that we can sort for stability.
   auto ContextIds = getContextIds();
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  std::sort(SortedIds.begin(), SortedIds.end());
+  llvm::sort(SortedIds);
   for (auto Id : SortedIds)
     OS << " " << Id;
   OS << "\n";
@@ -2237,7 +2238,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextEdge::print(
      << " AllocTypes: " << getAllocTypeString(AllocTypes);
   OS << " ContextIds:";
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  std::sort(SortedIds.begin(), SortedIds.end());
+  llvm::sort(SortedIds);
   for (auto Id : SortedIds)
     OS << " " << Id;
 }
@@ -2379,7 +2380,7 @@ private:
     std::string IdString = "ContextIds:";
     if (ContextIds.size() < 100) {
       std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-      std::sort(SortedIds.begin(), SortedIds.end());
+      llvm::sort(SortedIds);
       for (auto Id : SortedIds)
         IdString += (" " + Twine(Id)).str();
     } else {
@@ -2574,8 +2575,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (auto &Edge : CallerEdges) {
     // Skip any that have been removed by an earlier recursive call.
     if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
-      assert(!std::count(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                         Edge));
+      assert(!is_contained(Node->CallerEdges, Edge));
       continue;
     }
     recursivelyRemoveNoneTypeCalleeEdges(Edge->Caller, Visited);

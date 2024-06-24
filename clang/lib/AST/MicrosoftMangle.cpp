@@ -372,6 +372,11 @@ public:
   void mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                    const CXXMethodDecl *MD,
                                    StringRef Prefix = "$");
+  void mangleFunctionPointer(const FunctionDecl *FD,
+                             const NonTypeTemplateParmDecl *PD,
+                             QualType TemplateArgType);
+  void mangleVarDecl(const VarDecl *VD, const NonTypeTemplateParmDecl *PD,
+                     QualType TemplateArgType);
   void mangleMemberFunctionPointerInClassNTTP(const CXXRecordDecl *RD,
                                               const CXXMethodDecl *MD);
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
@@ -799,6 +804,50 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
     mangleNumber(VBTableOffset);
 }
 
+void MicrosoftCXXNameMangler::mangleFunctionPointer(
+    const FunctionDecl *FD, const NonTypeTemplateParmDecl *PD,
+    QualType TemplateArgType) {
+  // <func-ptr> ::= $1? <mangled-name>
+  // <func-ptr> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 1? <mangled-name>
+  Out << '$';
+
+  if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << "1?";
+  mangleName(FD);
+  mangleFunctionEncoding(FD, /*ShouldMangle=*/true);
+}
+
+void MicrosoftCXXNameMangler::mangleVarDecl(const VarDecl *VD,
+                                            const NonTypeTemplateParmDecl *PD,
+                                            QualType TemplateArgType) {
+  // <var-ptr> ::= $1? <mangled-name>
+  // <var-ptr> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 1? <mangled-name>
+  Out << '$';
+
+  if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << "1?";
+  mangleName(VD);
+  mangleVariableEncoding(VD);
+}
+
 void MicrosoftCXXNameMangler::mangleMemberFunctionPointerInClassNTTP(
     const CXXRecordDecl *RD, const CXXMethodDecl *MD) {
   // <nttp-class-member-function-pointer> ::= <member-function-pointer>
@@ -899,6 +948,9 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E4M3FNUZ:
   case APFloat::S_Float8E4M3B11FNUZ:
   case APFloat::S_FloatTF32:
+  case APFloat::S_Float6E3M2FN:
+  case APFloat::S_Float6E2M3FN:
+  case APFloat::S_Float4E2M1FN:
     llvm_unreachable("Tried to mangle unexpected APFloat semantics");
   }
 
@@ -1552,6 +1604,9 @@ void MicrosoftCXXNameMangler::mangleIntegerLiteral(
     const llvm::APSInt &Value, const NonTypeTemplateParmDecl *PD,
     QualType TemplateArgType) {
   // <integer-literal> ::= $0 <number>
+  // <integer-literal> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 0 <number>
   Out << "$";
 
   // Since MSVC 2019, add 'M[<type>]' after '$' for auto template parameter when
@@ -1629,7 +1684,10 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   //                ::= <member-data-pointer>
   //                ::= <member-function-pointer>
   //                ::= $ <constant-value>
+  //                ::= $ <auto-nttp-constant-value>
   //                ::= <template-args>
+  //
+  // <auto-nttp-constant-value> ::= M <type> <constant-value>
   //
   // <constant-value> ::= 0 <number>                   # integer
   //                  ::= 1 <mangled-name>             # address of D
@@ -1678,15 +1736,17 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
         mangleMemberFunctionPointer(
             MD->getParent()->getMostRecentNonInjectedDecl(), MD);
       } else {
-        Out << "$1?";
-        mangleName(FD);
-        mangleFunctionEncoding(FD, /*ShouldMangle=*/true);
+        mangleFunctionPointer(FD, cast<NonTypeTemplateParmDecl>(Parm),
+                              TA.getParamTypeForDecl());
       }
     } else if (TA.getParamTypeForDecl()->isRecordType()) {
       Out << "$";
       auto *TPO = cast<TemplateParamObjectDecl>(ND);
       mangleTemplateArgValue(TPO->getType().getUnqualifiedType(),
                              TPO->getValue(), TplArgKind::ClassNTTP);
+    } else if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+      mangleVarDecl(VD, cast<NonTypeTemplateParmDecl>(Parm),
+                    TA.getParamTypeForDecl());
     } else {
       mangle(ND, "$1?");
     }
@@ -2609,6 +2669,8 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -2748,7 +2810,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       return;
     }
     Out << '@';
-  } else if (IsInLambda && D && isa<CXXConversionDecl>(D)) {
+  } else if (IsInLambda && isa_and_nonnull<CXXConversionDecl>(D)) {
     // The only lambda conversion operators are to function pointers, which
     // can differ by their calling convention and are typically deduced.  So
     // we make sure that this type gets mangled properly.
