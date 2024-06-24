@@ -2233,7 +2233,7 @@ public:
   VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R->getRecurrenceDescriptor(),
-            R->getUnderlyingInstr(),
+            cast_or_null<Instruction>(R->getUnderlyingValue()),
             ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}), CondOp,
             R->isOrdered()) {}
 
