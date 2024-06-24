@@ -637,7 +637,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
         Intrinsic::getDeclaration(M, Intrinsic::arm_smlad) :
         Intrinsic::getDeclaration(M, Intrinsic::arm_smlald);
 
-    IRBuilder<NoFolder> Builder((BasicBlock::iterator(InsertAfter)));
+    IRBuilder<NoFolder> Builder(InsertAfter->getIterator());
     Instruction *Call = Builder.CreateCall(SMLAD, Args);
     NumSMLAD++;
     return Call;

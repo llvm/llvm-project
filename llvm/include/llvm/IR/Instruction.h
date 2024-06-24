@@ -46,7 +46,8 @@ getDbgRecordRange(DbgMarker *);
 
 /// Class used to generate an insert position (ultimately always a
 /// BasicBlock::iterator, which it will implicitly convert to) from either:
-/// - An Instruction, inserting immediately prior.
+/// - An Instruction, inserting immediately prior. This will soon be marked as
+///   deprecated.
 /// - A BasicBlock, inserting at the end.
 /// - An iterator, inserting at its position.
 /// - Any nullptr value, giving a blank iterator (not valid for insertion).
