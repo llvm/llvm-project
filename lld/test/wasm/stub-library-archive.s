@@ -14,6 +14,7 @@
 # depeds on baz which is also defined in libstub.so.
 
 .functype foo () -> ()
+.import_name foo, foo_import
 
 .globl _start
 _start:

@@ -420,6 +420,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Interfaces.h",
         "include/mlir-c/Pass.h",
         "include/mlir-c/RegisterEverything.h",
+        "include/mlir-c/Rewrite.h",
         "include/mlir-c/Support.h",
         "include/mlir/CAPI/AffineExpr.h",
         "include/mlir/CAPI/AffineMap.h",
@@ -438,6 +439,7 @@ mlir_c_api_cc_library(
         ":IR",
         ":Pass",
         ":Support",
+        ":config",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -866,7 +868,10 @@ mlir_c_api_cc_library(
 
 mlir_c_api_cc_library(
     name = "CAPITransforms",
-    srcs = ["lib/CAPI/Transforms/Passes.cpp"],
+    srcs = [
+        "lib/CAPI/Transforms/Passes.cpp",
+        "lib/CAPI/Transforms/Rewrite.cpp",
+    ],
     hdrs = ["include/mlir-c/Transforms.h"],
     capi_deps = [
         ":CAPIIR",
@@ -876,7 +881,10 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":IR",
         ":Pass",
+        ":Rewrite",
+        ":TransformUtils",
         ":Transforms",
     ],
 )
@@ -939,6 +947,7 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIRHeaders",
+        ":CAPITransformsHeaders",
         "@local_config_python//:python_headers",
         "@pybind11",
     ],
@@ -957,6 +966,7 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIR",
+        ":CAPITransforms",
         "@local_config_python//:python_headers",
         "@pybind11",
     ],
@@ -981,6 +991,7 @@ MLIR_PYTHON_BINDINGS_SOURCES = [
     "lib/Bindings/Python/IRModule.cpp",
     "lib/Bindings/Python/IRTypes.cpp",
     "lib/Bindings/Python/Pass.cpp",
+    "lib/Bindings/Python/Rewrite.cpp",
 ]
 
 cc_library(
@@ -999,6 +1010,7 @@ cc_library(
         ":CAPIInterfaces",
         ":MLIRBindingsPythonHeadersAndDeps",
         ":Support",
+        ":config",
         "//llvm:Support",
         "@local_config_python//:python_headers",
         "@pybind11",
@@ -1039,6 +1051,7 @@ cc_library(
         ":CAPIDebugObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
+        ":CAPITransformsObjects",
     ],
 )
 
@@ -5408,9 +5421,9 @@ td_library(
         "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
         "include/mlir/Dialect/GPU/IR/CompilationAttrs.td",
         "include/mlir/Dialect/GPU/IR/GPUBase.td",
+        "include/mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td",
         "include/mlir/Dialect/GPU/IR/GPUOps.td",
         "include/mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td",
-        "include/mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td",
     ],
     includes = ["include"],
     deps = [
@@ -5438,7 +5451,7 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td",
+    td_file = "include/mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td",
     deps = [
         ":GPUOpsTdFiles",
         ":OpBaseTdFiles",
@@ -11534,6 +11547,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSVEDialect",
         ":ConversionPassIncGen",
         ":IR",
         ":MemRefDialect",
@@ -13770,12 +13784,39 @@ gentbl_cc_library(
     deps = [":OpBaseTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "DLTIAttrsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-attrdef-decls",
+                "-dialect=dlti",
+            ],
+            "include/mlir/Dialect/DLTI/DLTIAttrs.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-dialect=dlti",
+            ],
+            "include/mlir/Dialect/DLTI/DLTIAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIAttrs.td",
+    deps = [
+        ":AttrTdFiles",
+        ":DLTIDialectTdFiles",
+    ],
+)
+
 cc_library(
     name = "DLTIDialect",
     srcs = glob(["lib/Dialect/DLTI/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/DLTI/*.h"]),
     includes = ["include"],
     deps = [
+        ":DLTIAttrsIncGen",
         ":DLTIBaseIncGen",
         ":DataLayoutInterfaces",
         ":IR",

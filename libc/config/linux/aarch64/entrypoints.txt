@@ -201,6 +201,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
+    libc.src.stdio.fdopen
     #libc.src.stdio.sscanf
     #libc.src.stdio.scanf
     #libc.src.stdio.fscanf
@@ -503,6 +504,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.f16fmaf
+    libc.src.math.f16sqrtf
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16
@@ -519,7 +522,9 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.frexpf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
+    libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
+    libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -541,6 +546,12 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
+    libc.src.math.setpayloadf16
+    libc.src.math.setpayloadsigf16
+    libc.src.math.totalorderf16
+    libc.src.math.totalordermagf16
     libc.src.math.truncf16
     libc.src.math.ufromfpf16
     libc.src.math.ufromfpxf16
@@ -641,6 +652,21 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_init
+    libc.src.pthread.pthread_rwlock_tryrdlock
+    libc.src.pthread.pthread_rwlock_rdlock
+    libc.src.pthread.pthread_rwlock_timedrdlock
+    libc.src.pthread.pthread_rwlock_trywrlock
+    libc.src.pthread.pthread_rwlock_wrlock
+    libc.src.pthread.pthread_rwlock_timedwrlock
+    libc.src.pthread.pthread_rwlock_unlock
+    libc.src.pthread.pthread_rwlock_destroy
+    libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getkind_np
+    libc.src.pthread.pthread_rwlockattr_getpshared
+    libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setkind_np
+    libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
@@ -751,6 +777,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd._exit
     libc.src.unistd.environ
     libc.src.unistd.execv
+    libc.src.unistd.fork
     libc.src.unistd.getopt
     libc.src.unistd.optarg
     libc.src.unistd.optind

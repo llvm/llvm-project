@@ -160,7 +160,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
 INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
@@ -213,8 +213,8 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
   AU.addPreserved<MachineLoopInfo>();
   AU.addRequired<VirtRegMap>();
@@ -2308,7 +2308,7 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
 
     // This may be a skipped class
     if (!VRM->hasPhys(Reg)) {
-      assert(!ShouldAllocateClass(*TRI, *MRI->getRegClass(Reg)) &&
+      assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
     }
@@ -2698,7 +2698,7 @@ bool RAGreedy::hasVirtRegAlloc() {
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
     if (!RC)
       continue;
-    if (ShouldAllocateClass(*TRI, *RC))
+    if (shouldAllocateRegister(Reg))
       return true;
   }
 
@@ -2729,7 +2729,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  DomTree = &getAnalysis<MachineDominatorTree>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   Loops = &getAnalysis<MachineLoopInfo>();
   Bundles = &getAnalysis<EdgeBundles>();

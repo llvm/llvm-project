@@ -26,6 +26,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -80,8 +84,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.remove
+    libc.src.stdio.printf
+    libc.src.stdio.putchar
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
+    libc.src.stdio.vprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
 
@@ -160,16 +167,21 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdlib.h entrypoints
     libc.src.stdlib.abort
     libc.src.stdlib.abs
+    libc.src.stdlib.aligned_alloc
     libc.src.stdlib.atoi
     libc.src.stdlib.atof
     libc.src.stdlib.atol
     libc.src.stdlib.atoll
     libc.src.stdlib.bsearch
+    libc.src.stdlib.calloc
     libc.src.stdlib.div
+    libc.src.stdlib.free
+    libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.malloc
     libc.src.stdlib.qsort
     libc.src.stdlib.rand
     libc.src.stdlib.srand

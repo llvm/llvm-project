@@ -25,7 +25,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -193,11 +193,12 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
     return;
 
   MCSection *SXData = getContext().getObjectFileInfo()->getSXDataSection();
-  getAssembler().registerSection(*SXData);
+  changeSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  new MCSymbolIdFragment(Symbol, SXData);
-
+  auto *F = getContext().allocFragment<MCSymbolIdFragment>(Symbol);
+  F->setParent(SXData);
+  SXData->addFragment(*F);
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 
@@ -209,11 +210,9 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   MCSection *Sec = getCurrentSectionOnly();
-  getAssembler().registerSection(*Sec);
   Sec->ensureMinAlignment(Align(4));
 
-  new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
-
+  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
   getAssembler().registerSymbol(*Symbol);
 }
 
@@ -353,15 +352,21 @@ void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
     cast<MCSymbolCOFF>(S)->setExternal(true);
 }
 
-void MCWinCOFFStreamer::finalizeCGProfile() {
-  for (MCAssembler::CGProfileEntry &E : getAssembler().CGProfile) {
-    finalizeCGProfileEntry(E.From);
-    finalizeCGProfileEntry(E.To);
-  }
-}
-
 void MCWinCOFFStreamer::finishImpl() {
-  finalizeCGProfile();
+  MCAssembler &Asm = getAssembler();
+  if (Asm.getWriter().getEmitAddrsigSection()) {
+    // Register the section.
+    switchSection(Asm.getContext().getCOFFSection(".llvm_addrsig",
+                                                  COFF::IMAGE_SCN_LNK_REMOVE));
+  }
+  if (!Asm.CGProfile.empty()) {
+    for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
+      finalizeCGProfileEntry(E.From);
+      finalizeCGProfileEntry(E.To);
+    }
+    switchSection(Asm.getContext().getCOFFSection(".llvm.call-graph-profile",
+                                                  COFF::IMAGE_SCN_LNK_REMOVE));
+  }
 
   MCObjectStreamer::finishImpl();
 }

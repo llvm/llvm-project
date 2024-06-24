@@ -56,6 +56,10 @@ public:
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;
 
+  /// List of filenames passed in using the -mlink-builtin-bitcode. These
+  /// are bc libraries that should be linked in and internalized;
+  std::vector<std::string> BuiltinBCLibs;
+
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
 
