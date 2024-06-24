@@ -574,8 +574,6 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
     Defined *definedSym = cast<Defined>(sym);
     sym = tryFindDefinedOnIsec(definedSym->isec(),
                                definedSym->value + reloc->addend);
-
-    auto *defSym = dyn_cast<Defined>(sym);
   }
 
   return sym;
