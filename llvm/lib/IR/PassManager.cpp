@@ -13,7 +13,6 @@
 using namespace llvm;
 
 namespace llvm {
-
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
 template class AllAnalysesOn<Module>;
