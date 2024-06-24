@@ -4,6 +4,10 @@ add_header_library(
   exhaustive_test
   HDRS
     exhaustive_test.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
