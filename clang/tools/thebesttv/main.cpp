@@ -207,11 +207,26 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
         if (!succFirstResult.isValid() || !predFirstResult.isValid())
             continue;
 
-        // succ 优先匹配到了 CallExpr，说明语句形如 p = foo() 或 foo()
+        // 如果函数调用比较复杂，会横跨多个 CFGBlock，其中 CallExpr 在几个 block
+        // 的中间。从而导致 succ 优先无法匹配到 CallExpr。
+        // 因此搜索所有匹配的语句，看有没有 CallExpr。
+        // 复杂函数调用样例：zval *zv = xxx(... ? CG(...) : EG(...), lcname);
+        const CallExpr *callExpr = nullptr;
+        for (auto it = fi->stmtBlockPairs.cbegin();
+             it != fi->stmtBlockPairs.cend(); it++) {
+            const auto &[stmt, block] = *it;
+            auto result = locate(stmt, block);
+            if (result && dyn_cast<CallExpr>(stmt)) {
+                callExpr = dyn_cast<CallExpr>(stmt);
+                break;
+            }
+        }
+
+        // 匹配到了 CallExpr，说明语句形如 p = foo() 或 foo()
         // 此时如果能确定这条语句是 foo() 返回后指向的，就对应处理
         // 1. 对于 p = foo()，应该匹配 succ 的 p = foo()
         // 2. 对于 foo()，在 succ 中不会再有语句，应该返回空值，跳过这条
-        if (const CallExpr *callExpr = dyn_cast<CallExpr>(predFirstStmt)) {
+        if (callExpr) {
             std::string calleeSignature =
                 getFullSignature(callExpr->getDirectCallee());
             int calleeFid = Global.getIdOfFunction(calleeSignature);
