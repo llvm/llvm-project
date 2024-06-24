@@ -55921,6 +55921,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PSHUFB:
     case X86ISD::PSADBW:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useBWIRegs()))) {
         MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
