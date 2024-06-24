@@ -111,7 +111,7 @@ body:             |
   ; CHECK-NEXT:   CONSTPOOL_ENTRY 7, %const.1, 8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7 (align 2):
-  ; CHECK-NEXT:   liveins: $r0, $cpsr, $d0, $s0, $s1, $d1, $s2, $s3, $d2, $s4, $s5
+  ; CHECK-NEXT:   liveins: $r0, $cpsr, $d0, $d1, $d2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   t2IT 0, 4, implicit-def $itstate
   ; CHECK-NEXT:   $sp = tMOVr $r0, 0 /* CC::eq */, $cpsr, implicit $itstate
