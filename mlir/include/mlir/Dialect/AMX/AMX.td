@@ -142,7 +142,7 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
-                   Variadic<Index>:$indices, TileRegisterIndexAttr:$srcRegIndex);
+                   Variadic<Index>:$indices, TileRegisterIndexAttr:$dstRegIndex);
   let results = (outs
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
@@ -153,7 +153,7 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
       return ::llvm::cast<VectorType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` attr-dict (`into` `[` $srcRegIndex^ `]`)? `:` "
+  let assemblyFormat = "$base `[` $indices `]` attr-dict (`into` `[` $dstRegIndex^ `]`)? `:` "
                        "type($base) `into` type($res)";
   let hasVerifier = 1;
 }
@@ -175,7 +175,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
   let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
                    Variadic<Index>:$indices,
                    VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$val,
-                   TileRegisterIndexAttr:$dstRegIndex);
+                   TileRegisterIndexAttr:$srcRegIndex);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -184,7 +184,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
       return ::llvm::cast<VectorType>(getVal().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $val (`[` $dstRegIndex^ `]`)? attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` `,` $val (`[` $srcRegIndex^ `]`)? attr-dict `:` "
                        "type($base) `,` type($val)";
   let hasVerifier = 1;
 }
