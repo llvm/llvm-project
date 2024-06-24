@@ -61,7 +61,7 @@ def run_case(root, dir, input_path, output_path, tool_path):
     extra_options = []
     if dir.startswith(REAL_WORLD_DIR):
         logging.info("  Real-world testcase! Do not generate NPE good source")
-        extra_options += ['--no-npe-good-source']
+        extra_options += ['--no-npe-good-source', '--no-nodes']
 
     original_output = read_output(output_path)
     os.remove(output_path)
