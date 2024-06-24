@@ -13,9 +13,7 @@
 #include <cstddef>
 
 namespace lldb {
-class SBAddressRangeList;
 class SBBlock;
-class SBProcess;
 }
 
 namespace lldb_private {
@@ -41,9 +39,7 @@ public:
   lldb_private::AddressRange GetAddressRangeAtIndex(size_t index);
 
 private:
-  friend class lldb::SBAddressRangeList;
   friend class lldb::SBBlock;
-  friend class lldb::SBProcess;
 
   AddressRanges &ref();
 
