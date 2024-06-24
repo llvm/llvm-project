@@ -252,8 +252,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {
       WarnIfNotInModuleFile(symbol.name(),
-          "%s has length %d, which is greater than the maximum name length "
-          "%d"_port_en_US,
+          "%s has length %d, which is greater than the maximum name length %d"_port_en_US,
           symbol.name(), symbol.name().size(), common::maxNameLen);
     }
   }
@@ -466,11 +465,16 @@ void CheckHelper::Check(const Symbol &symbol) {
           symbol.name());
     }
   }
-  if (IsProcedure(symbol) && !symbol.HasExplicitInterface() &&
-      symbol.Rank() > 0) {
-    messages_.Say(
-        "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
-        symbol.name());
+  if (IsProcedure(symbol)) {
+    if (IsAllocatable(symbol)) {
+      messages_.Say(
+          "Procedure '%s' may not be ALLOCATABLE"_err_en_US, symbol.name());
+    }
+    if (!symbol.HasExplicitInterface() && symbol.Rank() > 0) {
+      messages_.Say(
+          "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
+          symbol.name());
+    }
   }
 }
 
