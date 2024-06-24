@@ -1746,7 +1746,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
 
   if (file_index) {
       // We have a SymbolFileDWARFDebugMap, so let it find the right file
-\    if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
+    if (SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile())
       return debug_map->GetSymbolFileByOSOIndex(*file_index);
     
     // Handle the .dwp file case correctly
