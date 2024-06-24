@@ -143,7 +143,7 @@ struct LessExtName {
 static RISCVExtensionBitmaskTable::RISCVExtensionBitmask
 getExtensionBitmask(StringRef ExtName) {
   ArrayRef<RISCVExtensionBitmaskTable::RISCVExtensionBitmask> ExtBitmasks =
-      ArrayRef(RISCVExtensionBitmaskTable::ExtensionBitmask);
+      RISCVExtensionBitmaskTable::ExtensionBitmask;
   auto *I = llvm::lower_bound(ExtBitmasks, ExtName, LessExtName());
 
   if (I != ExtBitmasks.end())
