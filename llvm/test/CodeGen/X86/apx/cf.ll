@@ -53,6 +53,9 @@ entry:
   ret i64 %2
 }
 
+;; No need to optimize the generated assembly for cond_false/cond_true b/c it
+;; should never be emitted by middle end. Add IR here just to check it's
+;; legal to feed constant mask to backend.
 define i16 @cond_false(ptr %b) {
 ; CHECK-LABEL: cond_false:
 ; CHECK:       # %bb.0: # %entry
