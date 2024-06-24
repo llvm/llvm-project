@@ -522,6 +522,7 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
 
   allocateHSAUserSGPRs(CCInfo, B, MF, *TRI, *Info);
+  TLI.allocatePreloadImplicitKernArgSGPRs(CCInfo, MF, *TRI, *Info);
 
   unsigned i = 0;
   const Align KernArgBaseAlign(16);

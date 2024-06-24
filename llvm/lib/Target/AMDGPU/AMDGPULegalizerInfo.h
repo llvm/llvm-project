@@ -190,6 +190,9 @@ public:
   bool legalizeLDSKernelId(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
 
+  bool legalizePreloadImplicitarg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) const;
+
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
