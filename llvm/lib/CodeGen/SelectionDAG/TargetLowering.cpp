@@ -9266,7 +9266,6 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   }
 
   // For scalars, see if we can efficiently extend/truncate to use add+shift.
-  // We can always use SRL as we will be truncating away the extended sign bits.
   if (VT.isScalarInteger()) {
     unsigned BW = VT.getScalarSizeInBits();
     EVT ExtVT = VT.getIntegerVT(*DAG.getContext(), 2 * BW);
@@ -9277,6 +9276,7 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
       if (!IsFloor)
         Avg = DAG.getNode(ISD::ADD, dl, ExtVT, Avg,
                           DAG.getConstant(1, dl, ExtVT));
+      // Just use SRL as we will be truncating away the extended sign bits.
       Avg = DAG.getNode(ISD::SRL, dl, ExtVT, Avg,
                         DAG.getShiftAmountConstant(1, ExtVT, dl));
       return DAG.getNode(ISD::TRUNCATE, dl, VT, Avg);
