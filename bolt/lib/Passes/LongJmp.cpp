@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
+#include "bolt/Utils/CommandLineOpts.h"
 
 #define DEBUG_TYPE "longjmp"
 
@@ -324,7 +325,6 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
 uint64_t LongJmpPass::tentativeLayoutRelocMode(
     const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
     uint64_t DotAddress) {
-
   // Compute hot cold frontier
   uint32_t LastHotIndex = -1u;
   uint32_t CurrentIndex = 0;
@@ -354,9 +354,12 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
-      continue;
+      // Don't perform any tentative address estimation of a function's cold
+      // layout if it won't be emitted, unless we are ignoring a large number of
+      // functions (ie, on lite mode) and we haven't done such estimation yet.
+      if (opts::processAllFunctions() || ColdLayoutDone)
+        continue;
     }
-
     if (!ColdLayoutDone && CurrentIndex >= LastHotIndex) {
       DotAddress =
           tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);

@@ -8,7 +8,7 @@ REQUIRES: system-linux
 
 RUN: %clang %cflags %p/../Inputs/asm_main.c -Wl,-q -o %t
 
-RUN: not --crash llvm-bolt %t -o %t.bolt -lite=1 -split-functions -split-all-cold \
-RUN: --skip-funcs="main,foo" 2>&1 | FileCheck %s
+RUN: llvm-bolt %t -o %t.bolt -lite=1 -split-functions -split-all-cold \
+RUN: --skip-funcs="_init,_start,call_weak_fn/1,deregister_tm_clones/1,register_tm_clones/1,__do_global_dtors_aux/1,frame_dummy/1,main,foo,_fini" 2>&1 | FileCheck %s
 
-CHECK: Did not perform tentative code layout for cold blocks.
+CHECK-NOT: Did not perform tentative code layout for cold blocks.
