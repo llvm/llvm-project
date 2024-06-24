@@ -98,6 +98,7 @@ add_object_library(
     libc.config.linux.app_h
     libc.include.sys_mman
     libc.include.sys_syscall
+    libc.include.llvm-libc-macros.link_macros
     libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
