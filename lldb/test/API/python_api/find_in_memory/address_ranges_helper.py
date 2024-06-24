@@ -35,6 +35,7 @@ def GetRangeFromAddrValue(test_base, addr):
     )
 
     test_base.assertTrue(region.IsReadable())
+    test_base.assertFalse(region.IsExecutable())
 
     address_start = lldb.SBAddress(region.GetRegionBase(), test_base.target)
     stack_size = region.GetRegionEnd() - region.GetRegionBase()
