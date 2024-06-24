@@ -869,7 +869,7 @@ cc_library(
     ],
 )
 
-genrule(
+apple_genrule(
     name = "mach_gen",
     srcs = ["tools/debugserver/source/MacOSX/dbgnub-mig.defs"],
     outs = [
