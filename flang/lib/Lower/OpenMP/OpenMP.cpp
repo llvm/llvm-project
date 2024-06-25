@@ -1068,13 +1068,15 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
 }
 
-static void genSectionsClauses(lower::AbstractConverter &converter,
-                               semantics::SemanticsContext &semaCtx,
-                               const List<Clause> &clauses, mlir::Location loc,
-                               mlir::omp::SectionsClauseOps &clauseOps) {
+static void genSectionsClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    const List<Clause> &clauses, mlir::Location loc,
+    mlir::omp::SectionsClauseOps &clauseOps,
+    llvm::SmallVectorImpl<mlir::Type> &reductionTypes,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processSectionsReduction(loc, clauseOps);
+  cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processNowait(clauseOps);
   // TODO Support delayed privatization.
 }
@@ -1481,27 +1483,20 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return genOpWithBody<mlir::omp::ParallelOp>(genInfo, queue, item, clauseOps);
 }
 
-static mlir::omp::SectionOp
-genSectionOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-             mlir::Location loc, const ConstructQueue &queue,
-             ConstructQueue::iterator item) {
-  // Currently only private/firstprivate clause is handled, and
-  // all privatization is done within `omp.section` operations.
-  return genOpWithBody<mlir::omp::SectionOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                        llvm::omp::Directive::OMPD_section)
-          .setClauses(&item->clauses),
-      queue, item);
-}
-
+/// This breaks the normal prototype of the gen*Op functions: adding the
+/// sectionBlocks argument so that the enclosed section constructs can be
+/// lowered here with correct reduction symbol remapping.
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
               lower::pft::Evaluation &eval, mlir::Location loc,
-              const ConstructQueue &queue, ConstructQueue::iterator item) {
+              const ConstructQueue &queue, ConstructQueue::iterator item,
+              const parser::OmpSectionBlocks &sectionBlocks) {
+  llvm::SmallVector<mlir::Type> reductionTypes;
+  llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   mlir::omp::SectionsClauseOps clauseOps;
-  genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+  genSectionsClauses(converter, semaCtx, item->clauses, loc, clauseOps,
+                     reductionTypes, reductionSyms);
 
   auto &builder = converter.getFirOpBuilder();
 
@@ -1530,11 +1525,52 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   }
 
   // SECTIONS construct.
-  mlir::omp::SectionsOp sectionsOp = genOpWithBody<mlir::omp::SectionsOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                        llvm::omp::Directive::OMPD_sections)
-          .setClauses(&nonDsaClauses),
-      queue, item, clauseOps);
+  auto sectionsOp = builder.create<mlir::omp::SectionsOp>(loc, clauseOps);
+
+  auto reductionCallback = [&](mlir::Operation *op) {
+    genReductionVars(op, converter, loc, reductionSyms, reductionTypes);
+    return reductionSyms;
+  };
+
+  reductionCallback(sectionsOp);
+  // genReductionVars adds a hlfir.declare for the reduction block argument
+  // but only terminators and sectionOps are allowed inside of a SectionsOp
+  llvm::SmallVector<mlir::Operation *> toErase;
+  toErase.reserve(reductionSyms.size());
+  for (auto decl : sectionsOp.getOps<hlfir::DeclareOp>())
+    toErase.push_back(decl);
+  for (mlir::Operation *op : toErase)
+    op->erase();
+
+  mlir::Operation *terminator =
+      lower::genOpenMPTerminator(builder, sectionsOp, loc);
+
+  // Generate nested SECTION constructs.
+  // This is done here rather than in genOMP([...], OpenMPSectionConstruct )
+  // because we need to run genReductionVars on each omp.section so that the
+  // reduction variable gets mapped to the private version
+  for (auto [construct, nestedEval] :
+       llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
+    const auto *sectionConstruct =
+        std::get_if<parser::OpenMPSectionConstruct>(&construct.u);
+    if (!sectionConstruct) {
+      assert(false &&
+             "unexpected construct nested inside of SECTIONS construct");
+      continue;
+    }
+
+    ConstructQueue sectionQueue{buildConstructQueue(
+        converter.getFirOpBuilder().getModule(), semaCtx, nestedEval,
+        sectionConstruct->source, llvm::omp::Directive::OMPD_section, {})};
+
+    builder.setInsertionPoint(terminator);
+    genOpWithBody<mlir::omp::SectionOp>(
+        OpWithBodyGenInfo(converter, symTable, semaCtx, loc, nestedEval,
+                          llvm::omp::Directive::OMPD_section)
+            .setClauses(&sectionQueue.begin()->clauses)
+            .setGenRegionEntryCb(reductionCallback),
+        sectionQueue, sectionQueue.begin());
+  }
 
   if (!lastprivates.empty()) {
     mlir::Region &sectionsBody = sectionsOp.getRegion();
@@ -2049,10 +2085,11 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     genParallelOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
-    genSectionOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    // Lowered in the enclosing genSectionsOp.
     break;
   case llvm::omp::Directive::OMPD_sections:
-    genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    // Called directly from genOMP([...], OpenMPSectionsConstruct) because it
+    // has a different prototype.
     break;
   case llvm::omp::Directive::OMPD_simd:
     genSimdOp(converter, symTable, semaCtx, eval, loc, queue, item, *loopDsp);
@@ -2464,11 +2501,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPSectionConstruct &sectionConstruct) {
-  mlir::Location loc = converter.getCurrentLocation();
-  ConstructQueue queue{buildConstructQueue(
-      converter.getFirOpBuilder().getModule(), semaCtx, eval,
-      sectionConstruct.source, llvm::omp::Directive::OMPD_section, {})};
-  genOMPDispatch(converter, symTable, semaCtx, eval, loc, queue, queue.begin());
+  // Do nothing here. SECTION is lowered inside of the lowering for Sections
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -2481,6 +2514,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<parser::OmpClauseList>(beginSectionsDirective.t), semaCtx);
   const auto &endSectionsDirective =
       std::get<parser::OmpEndSectionsDirective>(sectionsConstruct.t);
+  const auto &sectionBlocks =
+      std::get<parser::OmpSectionBlocks>(sectionsConstruct.t);
   clauses.append(makeClauses(
       std::get<parser::OmpClauseList>(endSectionsDirective.t), semaCtx));
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -2492,8 +2527,22 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
-  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
-                 queue.begin());
+  ConstructQueue::iterator next = queue.begin();
+  // Generate constructs that come first e.g. Parallel
+  while (next != queue.end() &&
+         next->id != llvm::omp::Directive::OMPD_sections) {
+    genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                   next);
+    next = std::next(next);
+  }
+
+  // call genSectionsOp directly (not via genOMPDispatch) so that we can add the
+  // sectionBlocks argument
+  assert(next != queue.end());
+  assert(next->id == llvm::omp::Directive::OMPD_sections);
+  genSectionsOp(converter, symTable, semaCtx, eval, currentLocation, queue,
+                next, sectionBlocks);
+  assert(std::next(next) == queue.end());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

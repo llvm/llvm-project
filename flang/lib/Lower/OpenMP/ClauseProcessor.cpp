@@ -1044,14 +1044,6 @@ bool ClauseProcessor::processReduction(
       });
 }
 
-bool ClauseProcessor::processSectionsReduction(
-    mlir::Location currentLocation, mlir::omp::ReductionClauseOps &) const {
-  return findRepeatableClause<omp::clause::Reduction>(
-      [&](const omp::clause::Reduction &, const parser::CharBlock &) {
-        TODO(currentLocation, "OMPC_Reduction");
-      });
-}
-
 bool ClauseProcessor::processTo(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
   return findRepeatableClause<omp::clause::To>(
