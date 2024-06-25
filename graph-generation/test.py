@@ -13,7 +13,7 @@ def config_logger():
 
 config_logger()
 
-REAL_WORLD_DIR = 'vul-parser-benchmark/tests'
+REAL_WORLD_DIR = 'docker'
 
 def update_paths(root):
     src = '/home/thebesttv/vul/llvm-project/graph-generation'
@@ -31,7 +31,7 @@ def get_test_cases(root):
     # get all directories under root
     directories = get_directories(root)
     # 额外处理真实项目测试集：https://github.com/thebesttv/vul-parser-benchmark
-    if 'vul-parser-benchmark' in directories:
+    if REAL_WORLD_DIR in directories:
         directories += [os.path.join(REAL_WORLD_DIR, d)
                         for d in get_directories(os.path.join(root, REAL_WORLD_DIR))]
     logging.info(f'Found {len(directories)} directories')
@@ -58,15 +58,25 @@ def read_output(path):
 def run_case(root, dir, input_path, output_path, tool_path):
     logging.info(f"Running test case: {dir}")
 
-    extra_options = []
     if dir.startswith(REAL_WORLD_DIR):
-        logging.info("  Real-world testcase! Do not generate NPE good source")
-        extra_options += ['--no-npe-good-source', '--no-nodes']
+        logging.info("  Real-world testcase!")
+        image = f"thebesttv/arch:{dir.split('/')[-1].split('-')[0]}"
+        logging.info(f"  Docker image: {image}")
+        docker_root = '/home/thebesttv/vul/llvm-project'
+        cmd = f'''\
+docker run -t --rm \
+    -v {root}/..:{docker_root} \
+    {image} \
+    {docker_root}/build-release/bin/thebesttv \
+        --no-npe-good-source --no-nodes \
+        {docker_root}/graph-generation/{dir}/input.json \
+'''
+    else:
+        cmd = f'{tool_path} {input_path}'
+    logging.info(f"  Running command: {cmd}")
 
     original_output = read_output(output_path)
     os.remove(output_path)
-
-    cmd = f'{tool_path} {" ".join(extra_options)} {input_path}'
     subprocess.run(cmd, shell=True, \
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, \
                    check=True)
