@@ -434,6 +434,8 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
       return rewriter.notifyMatchFailure(writeOp,
                                          kMatchFailureNotSMETileTypeMultiple);
 
+    // Note: We also disallow masks where any dimension is larger than 16 as
+    // that won't be possible to arm_sve.psel.
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask) || (mask && (vectorType.getDimSize(0) > 16 ||
                                               vectorType.getDimSize(1) > 16)))
@@ -462,9 +464,9 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
         rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
     rewriter.setInsertionPointToStart(storeLoop.getBody());
 
-    // For each tile sub-tile of the multi-tile `vectorType`.
+    // For each sub-tile of the multi-tile `vectorType`.
     auto inputSMETiles = adaptor.getVector();
-    auto inductionVar = storeLoop.getInductionVar();
+    auto tileSliceIndex = storeLoop.getInductionVar();
     for (auto [index, smeTile] : llvm::enumerate(
              decomposeToSMETiles(rewriter, vectorType, smeTileType))) {
       // The coordinates of the tile within `vectorType`.
@@ -473,7 +475,7 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
 
       // The current slice of `vectorType` we are processing.
       auto sliceIndex =
-          rewriter.create<arith::AddIOp>(loc, tileRow, inductionVar);
+          rewriter.create<arith::AddIOp>(loc, tileRow, tileSliceIndex);
 
       // Where in the destination memref the current slice will be stored.
       auto storeRow = rewriter.create<arith::AddIOp>(loc, sliceIndex,
@@ -491,9 +493,10 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
               loc, sliceMaskType, sliceMask, smeTile.col);
       }
 
-      // Extract and store the current slice slice.
+      // Extract and store the current slice.
       Value tile = inputSMETiles[index];
-      auto slice = rewriter.create<vector::ExtractOp>(loc, tile, inductionVar);
+      auto slice =
+          rewriter.create<vector::ExtractOp>(loc, tile, tileSliceIndex);
       rewriter.create<vector::TransferWriteOp>(
           loc, slice, writeOp.getSource(), ValueRange{storeRow, storeCol},
           AffineMapAttr::get(writeOp.getPermutationMap().dropResult(0)),

@@ -182,8 +182,8 @@ func.func @transfer_write_f16_scalable_16x8(%dest: memref<?x?xf16>, %vec: vector
   // CHECK-NEXT:   %[[TOP_SLICE:.*]] = vector.extract %[[TOP]][%[[I]]] : vector<[8]xf16> from vector<[8]x[8]xf16>
   // CHECK-NEXT:   vector.transfer_write %[[TOP_SLICE]], %[[DEST]][%[[I]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf16>, memref<?x?xf16>
   // CHECK-NEXT:   %[[BOTTOM_I:.*]] = arith.addi %[[C8_VSCALE]], %[[I]] : index
-  // CHECK-NEXT:   %[[BOTOM_SLICE:.*]] = vector.extract %[[BOTTOM]][%[[I]]] : vector<[8]xf16> from vector<[8]x[8]xf16>
-  // CHECK-NEXT:   vector.transfer_write %[[BOTOM_SLICE]], %[[DEST]][%[[BOTTOM_I]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf16>, memref<?x?xf16>
+  // CHECK-NEXT:   %[[BOTTOM_SLICE:.*]] = vector.extract %[[BOTTOM]][%[[I]]] : vector<[8]xf16> from vector<[8]x[8]xf16>
+  // CHECK-NEXT:   vector.transfer_write %[[BOTTOM_SLICE]], %[[DEST]][%[[BOTTOM_I]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf16>, memref<?x?xf16>
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   %c0 = arith.constant 0 : index
@@ -272,6 +272,20 @@ func.func @negative_transfer_write_f32_scalable_8x8_tensor(%dest: tensor<?x?xf32
   %c0 = arith.constant 0 : index
   %mask = vector.create_mask %dim0, %dim1 : vector<[8]x[8]xi1>
   vector.transfer_write %vec, %dest[%c0, %c0], %mask {permutation_map = #transpose, in_bounds = [true, true]} : vector<[8]x[8]xf32>, tensor<?x?xf32>
+  return
+}
+
+// -----
+
+// Masked writes where any dimension of the mask is > 16 are not supported for the store loop lowering.
+
+// CHECK-LABEL: @negative_transfer_write_f32_scalable_32x32
+// CHECK-NOT: scf.for
+func.func @negative_transfer_write_f32_scalable_32x32(%dest: memref<?x?xf32>, %dim0: index, %dim1: index, %vec: vector<[32]x[32]xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %mask = vector.create_mask %dim0, %dim1 : vector<[32]x[32]xi1>
+  vector.transfer_write %vec, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[32]x[32]xf32>, memref<?x?xf32>
   return
 }
 
