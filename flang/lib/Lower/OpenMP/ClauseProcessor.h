@@ -180,9 +180,7 @@ private:
 template <typename T>
 bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                                            mlir::omp::MapClauseOps &result) {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<omp::Object, OmpMapMemberIndicesData> parentMemberIndices;
   llvm::SmallVector<const semantics::Symbol *> mapSymbols;
 
   bool clauseFound = findRepeatableClause<T>(
@@ -203,10 +201,11 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
         for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+          std::optional<omp::Object> parentObj;
 
-          lower::AddrAndBoundsInfo info =
-              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                    mlir::omp::MapBoundsType>(
+          Fortran::lower::AddrAndBoundsInfo info =
+              Fortran::lower::gatherDataOperandAddrAndBounds<
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
                   converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
@@ -216,11 +215,30 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
 
+          if (object.sym()->owner().IsDerivedType()) {
+            omp::ObjectList objectList = gatherObjects(object, semaCtx);
+            parentObj = objectList[0];
+            parentMemberIndices.insert({parentObj.value(), {}});
+            if (Fortran::semantics::IsAllocatableOrObjectPointer(
+                    object.sym()) ||
+                memberHasAllocatableParent(object, semaCtx)) {
+              llvm::SmallVector<int> indices =
+                  generateMemberPlacementIndices(object, semaCtx);
+              symAddr = createParentSymAndGenIntermediateMaps(
+                  clauseLocation, converter, objectList, indices,
+                  parentMemberIndices[parentObj.value()], asFortran.str(),
+                  mapTypeBits);
+            }
+          }
+
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
+          auto location = mlir::NameLoc::get(
+              mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
+              symAddr.getLoc());
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr,
+              firOpBuilder, location, symAddr,
               /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
               /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
@@ -228,9 +246,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          if (object.sym()->owner().IsDerivedType()) {
-            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
-                                        semaCtx);
+          if (parentObj.has_value()) {
+            addChildIndexAndMapToParent(
+                object, parentMemberIndices[parentObj.value()], mapOp, semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
             mapSymbols.push_back(object.sym());
@@ -238,9 +256,9 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
         }
       });
 
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               mapSymbols,
-                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  insertChildMapInfoIntoParent(
+      converter, semaCtx, parentMemberIndices, result.mapVars,
+      /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr, &mapSymbols);
   return clauseFound;
 }
 
