@@ -2766,10 +2766,10 @@ LogicalResult WinogradInputTransformOp::verify() {
   int64_t inputW = inputShape[2];
   auto outputType = cast<ShapedType>(getOutput().getType());
   ArrayRef<int64_t> outputShape = outputType.getShape();
-  int64_t outputTileH = outputShape[0];
-  int64_t outputTileW = outputShape[1];
-  int64_t outputH = outputShape[2];
-  int64_t outputW = outputShape[3];
+  int64_t outputH = outputShape[0];
+  int64_t outputW = outputShape[1];
+  int64_t outputTileH = outputShape[2];
+  int64_t outputTileW = outputShape[3];
   int m = getM();
   int r = getR();
   bool leftTransform = inputH != 1;
@@ -2808,10 +2808,10 @@ LogicalResult WinogradInputTransformOp::verify() {
 LogicalResult WinogradOutputTransformOp::verify() {
   auto valueType = cast<ShapedType>(getValue().getType());
   ArrayRef<int64_t> valueShape = valueType.getShape();
-  int64_t valueTileH = valueShape[0];
-  int64_t valueTileW = valueShape[1];
-  int64_t valueH = valueShape[2];
-  int64_t valueW = valueShape[3];
+  int64_t valueH = valueShape[0];
+  int64_t valueW = valueShape[1];
+  int64_t valueTileH = valueShape[2];
+  int64_t valueTileW = valueShape[3];
   auto outputType = cast<ShapedType>(getOutput().getType());
   ArrayRef<int64_t> outputShape = outputType.getShape();
   int64_t outputH = outputShape[1];

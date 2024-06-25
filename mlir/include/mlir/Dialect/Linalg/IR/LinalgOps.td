@@ -176,12 +176,12 @@ def Linalg_WinogradFilterTransformOp :
   }];
 
   let arguments = (ins TensorRankOf<[AnyType], [4]>:$filter,
-                       TensorRankOf<[AnyType], [6]>:$output,
+                       TensorRankOf<[AnyType], [4]>:$output,
                        I64Attr:$m,
                        I64Attr:$r
   );
 
-  let results = (outs TensorRankOf<[AnyType], [6]>:$result);
+  let results = (outs TensorRankOf<[AnyType], [4]>:$result);
   let assemblyFormat = [{
     attr-dict
     `m` `(` $m `)`

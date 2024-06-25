@@ -37,23 +37,6 @@ constexpr TransformMapKeyTy F_2_3{2, 3};
 constexpr TransformMapKeyTy F_4_3{4, 3};
 constexpr TransformMapKeyTy F_2_5{2, 5};
 
-/// Utility function to linearize data. The input shape is
-/// [tileH, tileW, H, W, N, C] or [tileH, tileW, H, W, C, F]. The function will
-/// convert the shape to [tileH x tileW x H x W, N, C] or
-/// [tileH x tileW x H x W, C, F].
-static Value collapseData(RewriterBase &rewriter, Location loc, Value data) {
-  auto type = cast<ShapedType>(data.getType());
-  assert(type.hasStaticShape() && "only support static shapes.");
-  Type elementType = type.getElementType();
-  ArrayRef<int64_t> shape = type.getShape();
-  auto collapseType = RankedTensorType::get(
-      {shape[0] * shape[1] * shape[2] * shape[3], shape[4], shape[5]},
-      elementType);
-  SmallVector<ReassociationIndices> reassociation = {{0, 1, 2, 3}, {4}, {5}};
-  return rewriter.create<tensor::CollapseShapeOp>(loc, collapseType, data,
-                                                  reassociation);
-}
-
 /// This function generates linalg.batch_matmul to multiply input with filter.
 /// linalg.batch_matmul only supports 3-dimensional inputs. We can treat
 /// tileH x tileW x H x W data as the 1-dimensional data array. That is to
@@ -73,58 +56,78 @@ static Value collapseData(RewriterBase &rewriter, Location loc, Value data) {
 /// After this function, we get return value with data layout
 /// (tileH, tileW, H, W, N, F).
 static Value matrixMultiply(RewriterBase &rewriter, Location loc,
-                            Value transformedFilter, Value transformedInput) {
-  Value collapseFilter = collapseData(rewriter, loc, transformedFilter);
-  Value collapseInput = collapseData(rewriter, loc, transformedInput);
+                            Value transformedFilter, Value transformedInput,
+                            Type outputElementType) {
+  // Convert (alphaH, alphaW, C, F) to (alphaH x alphaW, C, F) for filter.
+  auto filterType = cast<ShapedType>(transformedFilter.getType());
+  assert(filterType.hasStaticShape() && "only support static shapes.");
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  Type filterElementType = filterType.getElementType();
+  auto filterReassocType = RankedTensorType::get(
+      {filterShape[0] * filterShape[1], filterShape[2], filterShape[3]},
+      filterElementType);
+  SmallVector<ReassociationIndices> filterReassoc = {{0, 1}, {2}, {3}};
+  Value collapseFilter = rewriter.create<tensor::CollapseShapeOp>(
+      loc, filterReassocType, transformedFilter, filterReassoc);
+
+  // Convert (alphaH, alphaW, tileH, tileW, N, C) to
+  // (alphaH x alphaW, tileH x tileW x N, C) for input.
+  auto inputType = cast<ShapedType>(transformedInput.getType());
+  assert(inputType.hasStaticShape() && "only support static shapes.");
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  Type inputElementType = inputType.getElementType();
+  auto inputReassocType = RankedTensorType::get(
+      {inputShape[0] * inputShape[1],
+       inputShape[2] * inputShape[3] * inputShape[4], inputShape[5]},
+      inputElementType);
+  SmallVector<ReassociationIndices> inputReassoc = {{0, 1}, {2, 3, 4}, {5}};
+  Value collapseInput = rewriter.create<tensor::CollapseShapeOp>(
+      loc, inputReassocType, transformedInput, inputReassoc);
 
   // Batched matrix multiply.
-  auto filterType = cast<ShapedType>(transformedFilter.getType());
-  ArrayRef<int64_t> filterShape = filterType.getShape();
-  auto inputType = cast<ShapedType>(transformedInput.getType());
-  Type inputElemType = inputType.getElementType();
-  ArrayRef<int64_t> inputShape = inputType.getShape();
-
   auto matmulType = RankedTensorType::get(
-      {inputShape[0] * inputShape[1] * inputShape[2] * inputShape[3],
-       inputShape[4], filterShape[5]},
-      inputElemType);
+      {inputShape[0] * inputShape[1],
+       inputShape[2] * inputShape[3] * inputShape[4], filterShape[3]},
+      outputElementType);
   Value init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                inputElemType);
+                                                outputElementType);
 
   auto matmulOp = rewriter.create<linalg::BatchMatmulOp>(
       loc, matmulType, ValueRange({collapseInput, collapseFilter}),
       ValueRange{init});
 
-  // Expand matmul result.
-  SmallVector<ReassociationIndices> reassociation = {{0, 1, 2, 3}, {4}, {5}};
-  auto expandType =
+  // The result shape of batch matmul is (alphaH x alphaW, tileH x tileW x N, F)
+  // Expand matmul result to (alphaH, alphaW, tileH, tileW, N, F).
+  SmallVector<ReassociationIndices> outputReassoc = {{0, 1}, {2, 3, 4}, {5}};
+  auto outputReassocType =
       RankedTensorType::get({inputShape[0], inputShape[1], inputShape[2],
-                             inputShape[3], inputShape[4], filterShape[5]},
-                            inputElemType);
+                             inputShape[3], inputShape[4], filterShape[3]},
+                            outputElementType);
   auto expandOutput = rewriter.create<tensor::ExpandShapeOp>(
-      loc, expandType, matmulOp.getResult(0), reassociation);
+      loc, outputReassocType, matmulOp.getResult(0), outputReassoc);
   return expandOutput;
 }
 
 /// Create an empty tensor with alignedType and insert the value into the
 /// created empty tensor with aligned size.
 static Value insertToAlignedTensor(RewriterBase &rewriter, Location loc,
-                                   Value value, RankedTensorType alignedType) {
-  Value alignedInput = rewriter.create<tensor::EmptyOp>(
-      loc, alignedType.getShape(), alignedType.getElementType());
-
+                                   Value value,
+                                   ArrayRef<int64_t> alignedShape) {
   OpFoldResult zeroIndex = rewriter.getIndexAttr(0);
-  OpFoldResult oneIndex = rewriter.getIndexAttr(1);
-  SmallVector<OpFoldResult, 4> offsets(4, zeroIndex);
-  SmallVector<OpFoldResult, 4> strides(4, oneIndex);
-
   auto valueType = cast<ShapedType>(value.getType());
+  Type elementType = valueType.getElementType();
   ArrayRef<int64_t> valueShape = valueType.getShape();
-  SmallVector<OpFoldResult> sizes =
-      getAsOpFoldResult(rewriter.getI64ArrayAttr(valueShape));
-
-  return rewriter.create<tensor::InsertSliceOp>(loc, value, alignedInput,
-                                                offsets, sizes, strides);
+  SmallVector<OpFoldResult, 6> lowIndices(alignedShape.size(), zeroIndex);
+  SmallVector<OpFoldResult, 6> highIndices;
+  for (unsigned i = 0; i < alignedShape.size(); ++i) {
+    highIndices.emplace_back(
+        rewriter.getIndexAttr(alignedShape[i] - valueShape[i]));
+  }
+  auto alignedType = RankedTensorType::get(alignedShape, elementType);
+  Value pad_value = rewriter.create<arith::ConstantOp>(
+      loc, elementType, rewriter.getZeroAttr(elementType));
+  return rewriter.create<tensor::PadOp>(loc, alignedType, value, lowIndices,
+                                        highIndices, pad_value);
 }
 
 /// Extract sub-tensor with extractedType from value.
@@ -230,15 +233,15 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t widthR = rightTransform ? r : 1;
 
   // --- Create operation for filter transform ---
-  Type elementType = filterType.getElementType();
+  Type filterElementType = filterType.getElementType();
   int64_t alphaH = heightM + heightR - 1;
   int64_t alphaW = widthM + widthR - 1;
   int64_t tileH = llvm::divideCeilSigned(outputH, heightM);
   int64_t tileW = llvm::divideCeilSigned(outputW, widthM);
-  auto retType = RankedTensorType::get(
-      {tileH, tileW, alphaH, alphaW, filterC, filterF}, elementType);
-  Value retValue =
-      rewriter.create<tensor::EmptyOp>(loc, retType.getShape(), elementType);
+  auto retType = RankedTensorType::get({alphaH, alphaW, filterC, filterF},
+                                       filterElementType);
+  Value retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
+                                                    filterElementType);
   auto transformedFilter = rewriter.create<linalg::WinogradFilterTransformOp>(
       loc, retType, filter, retValue, m, r);
 
@@ -246,23 +249,24 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
 
   // When input size - (r - 1) is not aligned with output tile size, we need to
   // pad the input data to create the full tiles as tiling.
+  Type inputElementType = inputType.getElementType();
   int64_t alignedInputH = tileH * heightM + (heightR - 1);
   int64_t alignedInputW = tileW * widthM + (widthR - 1);
   if (alignedInputH != inputH || alignedInputW != inputW) {
-    auto alignedInputType = RankedTensorType::get(
-        {inputN, alignedInputH, alignedInputW, inputC}, elementType);
-    input = insertToAlignedTensor(rewriter, loc, input, alignedInputType);
+    input = insertToAlignedTensor(
+        rewriter, loc, input, {inputN, alignedInputH, alignedInputW, inputC});
   }
 
   retType = RankedTensorType::get(
-      {tileH, tileW, alphaH, alphaW, inputN, inputC}, elementType);
-  retValue =
-      rewriter.create<tensor::EmptyOp>(loc, retType.getShape(), elementType);
+      {alphaH, alphaW, tileH, tileW, inputN, inputC}, inputElementType);
+  retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
+                                              inputElementType);
   auto transformedInput = rewriter.create<linalg::WinogradInputTransformOp>(
       loc, retType, input, retValue, m, r);
 
-  Value matmulRet =
-      matrixMultiply(rewriter, loc, transformedFilter, transformedInput);
+  Type outputElementType = outputType.getElementType();
+  Value matmulRet = matrixMultiply(rewriter, loc, transformedFilter,
+                                   transformedInput, outputElementType);
 
   // --- Create operation for output transform ---
 
@@ -274,8 +278,9 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
       ((alignedOutputH != outputH) || (alignedOutputW != outputW));
   if (isOutputUnaligned) {
     auto alignedOutputType = RankedTensorType::get(
-        {outputN, alignedOutputH, alignedOutputW, outputF}, elementType);
-    output = insertToAlignedTensor(rewriter, loc, output, alignedOutputType);
+        {outputN, alignedOutputH, alignedOutputW, outputF}, outputElementType);
+    output = insertToAlignedTensor(rewriter, loc, output,
+                                   alignedOutputType.getShape());
     outputType = alignedOutputType;
   }
 
@@ -288,7 +293,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
     transformedOutput = extractFromAlignedTensor(
         rewriter, loc, transformedOutput,
         RankedTensorType::get({outputN, outputH, outputW, outputF},
-                              elementType));
+                              outputElementType));
   }
 
   rewriter.replaceOp(convOp, transformedOutput);
