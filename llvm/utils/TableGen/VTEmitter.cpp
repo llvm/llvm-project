@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <array>
 #include <cassert>
+#include <cstring>
 #include <map>
+#include <string>
 using namespace llvm;
 
 namespace {
@@ -28,6 +31,54 @@ public:
 };
 
 } // End anonymous namespace.
+
+std::string VTtoGetLLVMTyString(const Record *VT) {
+  bool IsVector = VT->getValueAsBit("isVector");
+  std::string GetLLVMTyString;
+  if (IsVector)
+    GetLLVMTyString +=
+        (Twine(VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed") +
+         "VectorType::get(")
+            .str();
+
+  auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
+  int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
+
+  if (OutputVT->getValueAsBit("isFP")) {
+    StringRef FloatTy = "";
+    auto OutputVTName = OutputVT->getValueAsString("LLVMName");
+    switch (OutputVTSize) {
+    default:
+      llvm_unreachable("Unhandled case");
+    case 16:
+      FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy";
+      break;
+    case 32:
+      FloatTy = "FloatTy";
+      break;
+    case 64:
+      FloatTy = "DoubleTy";
+      break;
+    case 80:
+      FloatTy = "X86_FP80Ty";
+      break;
+    case 128:
+      FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty";
+      break;
+    }
+    GetLLVMTyString += (Twine("Type::get") + FloatTy + "(Context)").str();
+  } else if (OutputVT->getValueAsBit("isInteger"))
+    GetLLVMTyString +=
+        (Twine("Type::getIntNTy(Context, ") + Twine(OutputVTSize) + ")").str();
+  else
+    llvm_unreachable("Unhandled case");
+
+  if (IsVector)
+    GetLLVMTyString +=
+        (Twine(", ") + std::to_string(VT->getValueAsInt("nElem")) + ")").str();
+
+  return GetLLVMTyString;
+}
 
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
@@ -139,50 +190,11 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsFP = VT->getValueAsBit("isFP");
 
-    if (!(IsInteger || IsVector || IsFP))
+    if (!IsInteger && !IsVector && !IsFP)
       continue;
 
-    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
-
-    if (IsVector)
-      OS << (VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed")
-         << "VectorType::get(";
-
-    auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
-    int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
-
-    if (OutputVT->getValueAsBit("isFP")) {
-      StringRef FloatTy = "";
-      auto OutputVTName = OutputVT->getValueAsString("LLVMName");
-      switch (OutputVTSize) {
-      default:
-        llvm_unreachable("unhandled case");
-      case 16:
-        FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy";
-        break;
-      case 32:
-        FloatTy = "FloatTy";
-        break;
-      case 64:
-        FloatTy = "DoubleTy";
-        break;
-      case 80:
-        FloatTy = "X86_FP80Ty";
-        break;
-      case 128:
-        FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty";
-        break;
-      }
-      OS << "Type::get" << FloatTy << "(Context)";
-    } else if (OutputVT->getValueAsBit("isInteger"))
-      OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
-    else
-      llvm_unreachable("unhandled case");
-
-    if (IsVector)
-      OS << ", " << VT->getValueAsInt("nElem") << ")";
-
-    OS << ")\n";
+    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", "
+       << VTtoGetLLVMTyString(VT) << ")\n";
   }
   OS << "#endif\n\n";
 }
