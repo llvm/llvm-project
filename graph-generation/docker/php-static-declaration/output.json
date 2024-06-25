@@ -1,0 +1,203 @@
+{
+    "project": "php",
+    "type": "docker",
+    "root": "/home/thebesttv/php",
+    "compile_commands": "/home/thebesttv/php/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/docker/php-static-declaration/input.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "sourceIndex": 0,
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1194,
+                    "beginColumn": 39,
+                    "endLine": 1194,
+                    "endColumn": 51,
+                    "content": "compile_time",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1194,
+                    "beginColumn": 54,
+                    "endLine": 1194,
+                    "endColumn": 72,
+                    "content": "CG(function_table)",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1194,
+                    "beginColumn": 39,
+                    "endLine": 1194,
+                    "endColumn": 93,
+                    "content": "compile_time ? CG(function_table) : EG(function_table)",
+                    "stmtKind": "ConditionalOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1194,
+                    "beginColumn": 13,
+                    "endLine": 1194,
+                    "endColumn": 102,
+                    "content": "zend_hash_find_known_hash(compile_time ? CG(function_table) : EG(function_table) ...",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2677,
+                    "beginColumn": 1,
+                    "endLine": 2685,
+                    "endColumn": 2,
+                    "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_find_known_hash(const HashTable *ht, cons ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2679,
+                    "beginColumn": 2,
+                    "endLine": 2679,
+                    "endColumn": 12,
+                    "content": "Bucket *p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2683,
+                    "beginColumn": 6,
+                    "endLine": 2683,
+                    "endColumn": 36,
+                    "content": "zend_hash_find_bucket(ht, key)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2683,
+                    "beginColumn": 2,
+                    "endLine": 2683,
+                    "endColumn": 36,
+                    "content": "p = zend_hash_find_bucket(ht, key)",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2684,
+                    "beginColumn": 9,
+                    "endLine": 2684,
+                    "endColumn": 10,
+                    "content": "p",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2684,
+                    "beginColumn": 13,
+                    "endLine": 2684,
+                    "endColumn": 20,
+                    "content": "&p->val",
+                    "stmtKind": "UnaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2684,
+                    "beginColumn": 2,
+                    "endLine": 2684,
+                    "endColumn": 27,
+                    "content": "return p ? &p->val : NULL",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2677,
+                    "beginColumn": 1,
+                    "endLine": 2685,
+                    "endColumn": 2,
+                    "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_find_known_hash(const HashTable *ht, cons ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1194,
+                    "beginColumn": 2,
+                    "endLine": 1194,
+                    "endColumn": 103,
+                    "content": "zval *zv = zend_hash_find_known_hash(compile_time ? CG(function_table) : EG(func ...",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1195,
+                    "beginColumn": 20,
+                    "endLine": 1195,
+                    "endColumn": 32,
+                    "content": "compile_time",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1195,
+                    "beginColumn": 35,
+                    "endLine": 1195,
+                    "endColumn": 50,
+                    "content": "E_COMPILE_ERROR",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1195,
+                    "beginColumn": 2,
+                    "endLine": 1195,
+                    "endColumn": 61,
+                    "content": "int error_level = compile_time ? E_COMPILE_ERROR : E_ERROR;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1196,
+                    "beginColumn": 2,
+                    "endLine": 1196,
+                    "endColumn": 30,
+                    "content": "zend_function *old_function;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1198,
+                    "beginColumn": 2,
+                    "endLine": 1198,
+                    "endColumn": 25,
+                    "content": "ZEND_ASSERT(zv != NULL)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "beginLine": 1199,
+                    "beginColumn": 2,
+                    "endLine": 1199,
+                    "endColumn": 44,
+                    "content": "old_function = (zend_function*)Z_PTR_P(zv)",
+                    "stmtKind": "BinaryOperator"
+                }
+            ]
+        }
+    ]
+}

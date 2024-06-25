@@ -1,0 +1,66 @@
+{
+    "project": "php",
+    "type": "docker",
+    "root": "/home/thebesttv/php",
+    "compile_commands": "/home/thebesttv/php/compile_commands.json",
+    "results": [
+        {
+            "type": "npe",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "line": 1194,
+                    "column": 8,
+                    "var": "zv"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "line": 2677,
+                    "column": 1
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "line": 2683,
+                    "column": 2
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "line": 2684,
+                    "column": 2
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "line": 2685,
+                    "column": 1
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "line": 1195,
+                    "column": 2
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "line": 1198,
+                    "column": 2
+                },
+                {
+                    "type": "sink",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_compile.c",
+                    "line": 1199,
+                    "column": 33,
+                    "var": "zv"
+                }
+            ],
+            "analyzer": [
+                "infer"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,191 @@
+{
+    "project": "php",
+    "type": "docker",
+    "root": "/home/thebesttv/php",
+    "compile_commands": "/home/thebesttv/php/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/docker/php-source-function/input.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "sourceIndex": 0,
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_list.c",
+                    "beginLine": 69,
+                    "beginColumn": 7,
+                    "endLine": 69,
+                    "endColumn": 58,
+                    "content": "zend_hash_index_find_ptr(&list_destructors, r.type)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 910,
+                    "beginColumn": 1,
+                    "endLine": 921,
+                    "endColumn": 2,
+                    "content": "static zend_always_inline void *zend_hash_index_find_ptr(const HashTable *ht, ze ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 912,
+                    "beginColumn": 2,
+                    "endLine": 912,
+                    "endColumn": 11,
+                    "content": "zval *zv;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 914,
+                    "beginColumn": 7,
+                    "endLine": 914,
+                    "endColumn": 34,
+                    "content": "zend_hash_index_find(ht, h)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2699,
+                    "beginColumn": 1,
+                    "endLine": 2718,
+                    "endColumn": 2,
+                    "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_index_find(const HashTable *ht, zend_ulon ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2701,
+                    "beginColumn": 2,
+                    "endLine": 2701,
+                    "endColumn": 12,
+                    "content": "Bucket *p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2705,
+                    "beginColumn": 6,
+                    "endLine": 2705,
+                    "endColumn": 22,
+                    "content": "HT_IS_PACKED(ht)",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2706,
+                    "beginColumn": 7,
+                    "endLine": 2706,
+                    "endColumn": 23,
+                    "content": "h < ht->nNumUsed",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2713,
+                    "beginColumn": 3,
+                    "endLine": 2713,
+                    "endColumn": 14,
+                    "content": "return NULL",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.c",
+                    "beginLine": 2699,
+                    "beginColumn": 1,
+                    "endLine": 2718,
+                    "endColumn": 2,
+                    "content": "ZEND_API zval* ZEND_FASTCALL zend_hash_index_find(const HashTable *ht, zend_ulon ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 914,
+                    "beginColumn": 2,
+                    "endLine": 914,
+                    "endColumn": 34,
+                    "content": "zv = zend_hash_index_find(ht, h)",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 915,
+                    "beginColumn": 6,
+                    "endLine": 915,
+                    "endColumn": 8,
+                    "content": "zv",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 919,
+                    "beginColumn": 10,
+                    "endLine": 919,
+                    "endColumn": 14,
+                    "content": "NULL",
+                    "stmtKind": "CStyleCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 919,
+                    "beginColumn": 3,
+                    "endLine": 919,
+                    "endColumn": 14,
+                    "content": "return NULL",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_hash.h",
+                    "beginLine": 910,
+                    "beginColumn": 1,
+                    "endLine": 921,
+                    "endColumn": 2,
+                    "content": "static zend_always_inline void *zend_hash_index_find_ptr(const HashTable *ht, ze ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_list.c",
+                    "beginLine": 69,
+                    "beginColumn": 2,
+                    "endLine": 69,
+                    "endColumn": 58,
+                    "content": "ld = zend_hash_index_find_ptr(&list_destructors, r.type)",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_list.c",
+                    "beginLine": 70,
+                    "beginColumn": 2,
+                    "endLine": 70,
+                    "endColumn": 46,
+                    "content": "ZEND_ASSERT(ld && \"Unknown list entry type\")",
+                    "stmtKind": "ImplicitCastExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/php/src/php-8.3.3/Zend/zend_list.c",
+                    "beginLine": 72,
+                    "beginColumn": 6,
+                    "endLine": 72,
+                    "endColumn": 22,
+                    "content": "ld->list_dtor_ex",
+                    "stmtKind": "ImplicitCastExpr"
+                }
+            ]
+        }
+    ]
+}
