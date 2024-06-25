@@ -72,12 +72,12 @@ public:
                          APInt(64, Upper, /*isSigned=*/true)));
   }
 
-  /// Return the range list that results from the union of this range
-  /// with another range list.
+  /// Return the range list that results from the union of this
+  /// ConstantRangeList with another ConstantRangeList, "CRL".
   ConstantRangeList unionWith(const ConstantRangeList &CRL) const;
 
-  /// Return the range list that results from the intersection of this range
-  /// with another range list.
+  /// Return the range list that results from the intersection of this
+  /// ConstantRangeList with another ConstantRangeList, "CRL".
   ConstantRangeList intersectWith(const ConstantRangeList &CRL) const;
 
   /// Return true if this range list is equal to another range list.

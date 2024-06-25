@@ -93,10 +93,8 @@ ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
 
   ConstantRangeList Result;
   size_t i = 0, j = 0;
-  // "PreviousRange" tracks the unioned range (its lower is fixed
-  // and the upper may be updated over iterations).
-  // If "PreviousRange" cannot contain a new unioned range, push it
-  // to the result and assign "PreviousRange" with the new range.
+  // "PreviousRange" tracks the lowest unioned range that is being processed.
+  // Its lower is fixed and the upper may be updated over iterations.
   ConstantRange PreviousRange(getBitWidth(), false);
   if (Ranges[i].getLower().slt(CRL.Ranges[j].getLower())) {
     PreviousRange = Ranges[i++];
@@ -104,10 +102,10 @@ ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
     PreviousRange = CRL.Ranges[j++];
   }
 
-  // Union "PreviousRange" and "CR". If they are disjoint, push "PreviousRange"
-  // to the result and assign it to "CR", a new union range. Otherwise, update
-  // the upper of "PreviousRange" to cover "CR". Note that, the lower of
-  // "PreviousRange" is always less or equal the lower of "CR".
+  // Try to union "PreviousRange" and "CR". If they are disjoint, push
+  // "PreviousRange" to the result and assign it to "CR", a new union range.
+  // Otherwise, update the upper of "PreviousRange" to cover "CR". Note that,
+  // the lower of "PreviousRange" is always less or equal the lower of "CR".
   auto UnionAndUpdateRange = [&PreviousRange,
                               &Result](const ConstantRange &CR) {
     if (PreviousRange.getUpper().slt(CR.getLower())) {
@@ -151,8 +149,8 @@ ConstantRangeList::intersectWith(const ConstantRangeList &CRL) const {
     auto &OtherRange = CRL.Ranges[j];
 
     // The intersection of two Ranges is (max(lowers), min(uppers)), and it's
-    // possible that max(lowers) > min(uppers). Add the intersection to result
-    // only if it's a non-upper-wrapped range.
+    // possible that max(lowers) > min(uppers) if they don't have intersection.
+    // Add the intersection to result only if it's non-empty.
     // To keep simple, we don't call ConstantRange::intersectWith() as it
     // considers the complex upper wrapped case and may result two ranges,
     // like (2, 8) && (6, 4) = {(2, 4), (6, 8)}.
