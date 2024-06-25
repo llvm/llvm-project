@@ -1786,6 +1786,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   IsStrictFPEnabled = true;
   setMaxAtomicSizeInBitsSupported(128);
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget->isTargetWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
+  // LegalizeDAG currently can't expand fp16 LDEXP/FREXP on targets where i16
+  // isn't legal.
+  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+    if (isOperationExpand(Op, MVT::f16))
+      setOperationAction(Op, MVT::f16, Promote);
+
   if (Subtarget->isWindowsArm64EC()) {
     // FIXME: are there intrinsics we need to exclude from this?
     for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
