@@ -1052,7 +1052,7 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il) {
 }
 
 template <class _Tp, class _Alloc>
-inline list<_Tp, _Alloc>::list(list&& __c) _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
+inline list<_Tp, _Alloc>::list(list&& __c) noexcept(is_nothrow_move_constructible<__node_allocator>::value)
     : base(std::move(__c.__node_alloc())) {
   splice(end(), __c);
 }
@@ -1068,9 +1068,9 @@ inline list<_Tp, _Alloc>::list(list&& __c, const __type_identity_t<allocator_typ
 }
 
 template <class _Tp, class _Alloc>
-inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c)
-    _NOEXCEPT_(__node_alloc_traits::propagate_on_container_move_assignment::value&&
-                   is_nothrow_move_assignable<__node_allocator>::value) {
+inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
+    __node_alloc_traits::propagate_on_container_move_assignment::value &&
+    is_nothrow_move_assignable<__node_allocator>::value) {
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1085,8 +1085,8 @@ void list<_Tp, _Alloc>::__move_assign(list& __c, false_type) {
 }
 
 template <class _Tp, class _Alloc>
-void list<_Tp, _Alloc>::__move_assign(list& __c, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+void list<_Tp, _Alloc>::__move_assign(list& __c,
+                                      true_type) noexcept(is_nothrow_move_assignable<__node_allocator>::value) {
   clear();
   base::__move_assign_alloc(__c);
   splice(end(), __c);

@@ -1080,12 +1080,14 @@ bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   return IntType && IntType->getOperand(2).getImm() != 0;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getPointeeType(SPIRVType *PtrType) {
+  return PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+             ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+             : nullptr;
+}
+
 unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
-  SPIRVType *PtrType = getSPIRVTypeForVReg(PtrReg);
-  SPIRVType *ElemType =
-      PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
-          ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
-          : nullptr;
+  SPIRVType *ElemType = getPointeeType(getSPIRVTypeForVReg(PtrReg));
   return ElemType ? ElemType->getOpcode() : 0;
 }
 
@@ -1187,6 +1189,26 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
   return MIRBuilder.buildInstr(SPIRV::OpTypeSampledImage)
       .addDef(ResVReg)
       .addUse(getSPIRVTypeID(ImageType));
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeCoopMatr(
+    MachineIRBuilder &MIRBuilder, const TargetExtType *ExtensionType,
+    const SPIRVType *ElemType, uint32_t Scope, uint32_t Rows, uint32_t Columns,
+    uint32_t Use) {
+  Register ResVReg = DT.find(ExtensionType, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+  SPIRVType *SpirvTy =
+      MIRBuilder.buildInstr(SPIRV::OpTypeCooperativeMatrixKHR)
+          .addDef(ResVReg)
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(buildConstantInt(Scope, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Rows, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Columns, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Use, MIRBuilder, nullptr, true));
+  DT.add(ExtensionType, &MIRBuilder.getMF(), ResVReg);
+  return SpirvTy;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(

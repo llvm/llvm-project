@@ -143,8 +143,8 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
         bool canAssociate{CanAssociateWithStorageSequence(dummy)};
         if (dummy.type.Rank() > 0 && canAssociate) {
           // Character storage sequence association (F'2023 15.5.2.12p4)
-          if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-                  evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+          if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
+                  foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
             if (actualType.Rank() == 0) {
               evaluate::DesignatorFolder folder{
@@ -183,8 +183,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
               }
             } else { // actual.type.Rank() > 0
               if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
-                      foldingContext,
-                      evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+                      foldingContext, evaluate::GetSize(actualType.shape())))};
                   actualSize &&
                   *actualSize * *actualLength < *dummySize * *dummyLength &&
                   (extentErrors ||
@@ -251,7 +250,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
   if (dummyType.type().category() == TypeCategory::Integer &&
       actualType.type().category() == TypeCategory::Integer &&
       dummyType.type().kind() != actualType.type().kind() &&
-      GetRank(dummyType.shape()) == 0 && GetRank(actualType.shape()) == 0 &&
+      dummyType.Rank() == 0 && actualType.Rank() == 0 &&
       !evaluate::IsVariable(actual)) {
     auto converted{
         evaluate::ConvertToType(dummyType.type(), std::move(actual))};
@@ -387,10 +386,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // if the actual argument is an array or array element designator,
       // and the dummy is an array, but not assumed-shape or an INTENT(IN)
       // pointer that's standing in for an assumed-shape dummy.
-    } else {
+    } else if (dummy.type.shape() && actualType.shape()) {
       // Let CheckConformance accept actual scalars; storage association
       // cases are checked here below.
-      CheckConformance(messages, dummy.type.shape(), actualType.shape(),
+      CheckConformance(messages, *dummy.type.shape(), *actualType.shape(),
           dummyIsAllocatableOrPointer
               ? evaluate::CheckConformanceFlags::None
               : evaluate::CheckConformanceFlags::RightScalarExpandable,
@@ -579,8 +578,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         CanAssociateWithStorageSequence(dummy) &&
         !dummy.attrs.test(
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
-      if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-              evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+      if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
+              foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
         if (actualRank == 0 && !actualIsAssumedRank) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
@@ -622,8 +621,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             }
           }
         } else { // actualRank > 0 || actualIsAssumedRank
-          if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-                  evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+          if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
+                  foldingContext, evaluate::GetSize(actualType.shape())))};
               actualSize && *actualSize < *dummySize &&
               (extentErrors ||
                   context.ShouldWarn(common::UsageWarning::ShortArrayActual))) {

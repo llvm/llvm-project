@@ -963,7 +963,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasCF)
     Builder.defineMacro("__CF__");
   // Condition here is aligned with the feature set of mapxf in Options.td
-  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF)
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF && HasCF)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");

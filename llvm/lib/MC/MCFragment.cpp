@@ -155,112 +155,60 @@ uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
   return getSectionAddressSize(Sec);
 }
 
-uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
-                                    const MCEncodedFragment *F,
-                                    uint64_t FOffset, uint64_t FSize) {
-  uint64_t BundleSize = Assembler.getBundleAlignSize();
-  assert(BundleSize > 0 &&
-         "computeBundlePadding should only be called if bundling is enabled");
-  uint64_t BundleMask = BundleSize - 1;
-  uint64_t OffsetInBundle = FOffset & BundleMask;
-  uint64_t EndOfFragment = OffsetInBundle + FSize;
-
-  // There are two kinds of bundling restrictions:
-  //
-  // 1) For alignToBundleEnd(), add padding to ensure that the fragment will
-  //    *end* on a bundle boundary.
-  // 2) Otherwise, check if the fragment would cross a bundle boundary. If it
-  //    would, add padding until the end of the bundle so that the fragment
-  //    will start in a new one.
-  if (F->alignToBundleEnd()) {
-    // Three possibilities here:
-    //
-    // A) The fragment just happens to end at a bundle boundary, so we're good.
-    // B) The fragment ends before the current bundle boundary: pad it just
-    //    enough to reach the boundary.
-    // C) The fragment ends after the current bundle boundary: pad it until it
-    //    reaches the end of the next bundle boundary.
-    //
-    // Note: this code could be made shorter with some modulo trickery, but it's
-    // intentionally kept in its more explicit form for simplicity.
-    if (EndOfFragment == BundleSize)
-      return 0;
-    else if (EndOfFragment < BundleSize)
-      return BundleSize - EndOfFragment;
-    else { // EndOfFragment > BundleSize
-      return 2 * BundleSize - EndOfFragment;
-    }
-  } else if (OffsetInBundle > 0 && EndOfFragment > BundleSize)
-    return BundleSize - OffsetInBundle;
-  else
-    return 0;
-}
-
 /* *** */
 
-MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
-                       MCSection *Parent)
-    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions),
-      LinkerRelaxable(false) {
-  if (Parent && !isa<MCDummyFragment>(*this))
-    Parent->addFragment(*this);
-}
+MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
+    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
 
 void MCFragment::destroy() {
-  // First check if we are the sentinel.
-  if (Kind == FragmentType(~0)) {
-    delete this;
-    return;
-  }
-
   switch (Kind) {
     case FT_Align:
-      delete cast<MCAlignFragment>(this);
+      cast<MCAlignFragment>(this)->~MCAlignFragment();
       return;
     case FT_Data:
-      delete cast<MCDataFragment>(this);
+      cast<MCDataFragment>(this)->~MCDataFragment();
       return;
     case FT_CompactEncodedInst:
-      delete cast<MCCompactEncodedInstFragment>(this);
+      cast<MCCompactEncodedInstFragment>(this)->~MCCompactEncodedInstFragment();
       return;
     case FT_Fill:
-      delete cast<MCFillFragment>(this);
+      cast<MCFillFragment>(this)->~MCFillFragment();
       return;
     case FT_Nops:
-      delete cast<MCNopsFragment>(this);
+      cast<MCNopsFragment>(this)->~MCNopsFragment();
       return;
     case FT_Relaxable:
-      delete cast<MCRelaxableFragment>(this);
+      cast<MCRelaxableFragment>(this)->~MCRelaxableFragment();
       return;
     case FT_Org:
-      delete cast<MCOrgFragment>(this);
+      cast<MCOrgFragment>(this)->~MCOrgFragment();
       return;
     case FT_Dwarf:
-      delete cast<MCDwarfLineAddrFragment>(this);
+      cast<MCDwarfLineAddrFragment>(this)->~MCDwarfLineAddrFragment();
       return;
     case FT_DwarfFrame:
-      delete cast<MCDwarfCallFrameFragment>(this);
+      cast<MCDwarfCallFrameFragment>(this)->~MCDwarfCallFrameFragment();
       return;
     case FT_LEB:
-      delete cast<MCLEBFragment>(this);
+      cast<MCLEBFragment>(this)->~MCLEBFragment();
       return;
     case FT_BoundaryAlign:
-      delete cast<MCBoundaryAlignFragment>(this);
+      cast<MCBoundaryAlignFragment>(this)->~MCBoundaryAlignFragment();
       return;
     case FT_SymbolId:
-      delete cast<MCSymbolIdFragment>(this);
+      cast<MCSymbolIdFragment>(this)->~MCSymbolIdFragment();
       return;
     case FT_CVInlineLines:
-      delete cast<MCCVInlineLineTableFragment>(this);
+      cast<MCCVInlineLineTableFragment>(this)->~MCCVInlineLineTableFragment();
       return;
     case FT_CVDefRange:
-      delete cast<MCCVDefRangeFragment>(this);
+      cast<MCCVDefRangeFragment>(this)->~MCCVDefRangeFragment();
       return;
     case FT_PseudoProbe:
-      delete cast<MCPseudoProbeAddrFragment>(this);
+      cast<MCPseudoProbeAddrFragment>(this)->~MCPseudoProbeAddrFragment();
       return;
     case FT_Dummy:
-      delete cast<MCDummyFragment>(this);
+      cast<MCDummyFragment>(this)->~MCDummyFragment();
       return;
   }
 }

@@ -23,8 +23,9 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
                      MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      HasLayout(false), IsRegistered(false), IsText(IsText),
-      DummyFragment(this), Name(Name), Variant(V) {
+      HasLayout(false), IsRegistered(false), IsText(IsText), Name(Name),
+      Variant(V) {
+  DummyFragment.setParent(this);
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
@@ -77,36 +78,6 @@ void MCSection::switchSubsection(unsigned Subsection) {
 }
 
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
-
-void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
-  PendingLabels.push_back(PendingLabel(label, Subsection));
-}
-
-void MCSection::flushPendingLabels(MCFragment *F, unsigned Subsection) {
-  // Set the fragment and fragment offset for all pending symbols in the
-  // specified Subsection, and remove those symbols from the pending list.
-  for (auto It = PendingLabels.begin(); It != PendingLabels.end(); ++It) {
-    PendingLabel& Label = *It;
-    if (Label.Subsection == Subsection) {
-      Label.Sym->setFragment(F);
-      assert(Label.Sym->getOffset() == 0);
-      PendingLabels.erase(It--);
-    }
-  }
-}
-
-void MCSection::flushPendingLabels() {
-  // Make sure all remaining pending labels point to data fragments, by
-  // creating new empty data fragments for each Subsection with labels pending.
-  while (!PendingLabels.empty()) {
-    PendingLabel& Label = PendingLabels[0];
-    switchSubsection(Label.Subsection);
-    MCFragment *F = new MCDataFragment();
-    addFragment(*F);
-    F->setParent(this);
-    flushPendingLabels(F, Label.Subsection);
-  }
-}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump() const {
