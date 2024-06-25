@@ -126,7 +126,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                            PreHeader);
       } else {
         // Succ is LatchExit.
-        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
+        NewPN->addIncoming(PoisonValue::get(PN.getType()), PreHeader);
       }
 
       Value *V = PN.getIncomingValueForBlock(Latch);
@@ -253,7 +253,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
     SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
@@ -272,7 +272,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [undef, PreHeader]
+    //   PN = PHI [I, Latch], [poison, PreHeader]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]

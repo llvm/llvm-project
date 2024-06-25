@@ -1234,7 +1234,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     const Record *R = getRecord(E->getType());
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
-      return this->visitInitializer(Inits[0]);
+      return this->delegate(Inits[0]);
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
@@ -1329,22 +1329,8 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
-    // Prepare composite return value.
-    if (!Initializing) {
-      if (GlobalDecl) {
-        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
-        if (!GlobalIndex)
-          return false;
-        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-          return false;
-      } else {
-        std::optional<unsigned> LocalIndex = allocateLocal(E);
-        if (!LocalIndex)
-          return false;
-        if (!this->emitGetPtrLocal(*LocalIndex, E))
-          return false;
-      }
-    }
+    if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
+      return this->delegate(Inits[0]);
 
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
@@ -2150,7 +2136,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(SubExpr);
+    return this->delegate(SubExpr);
   }
   // If we don't end up using the materialized temporary anyway, don't
   // bother creating it.
