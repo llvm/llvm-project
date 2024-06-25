@@ -2383,7 +2383,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Diag(Tok, diag::err_omp_unexpected_directive)
           << 1 << getOpenMPDirectiveName(DKind);
       break;
-    default:
+    case Category::Declarative:
+    case Category::Informational:
       break;
     }
   }
