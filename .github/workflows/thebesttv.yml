@@ -48,9 +48,10 @@ jobs:
       - name: Pull Docker images
         run: |
           docker pull thebesttv/arch:php
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 1440
       - name: Run test
         run: |
           ./graph-generation/test.py
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ failure() }}
+        timeout-minutes: 1440
