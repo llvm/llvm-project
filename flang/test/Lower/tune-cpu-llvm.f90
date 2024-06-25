@@ -1,3 +1,4 @@
+! REQUIRES: x86-registered-target
 ! RUN: %flang -mtune=pentium4 -S -emit-llvm %s -o - | FileCheck %s
 
 !CHECK: attributes #{{[0-9]+}} = {
