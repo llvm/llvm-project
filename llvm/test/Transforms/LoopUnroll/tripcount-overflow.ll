@@ -57,7 +57,7 @@ define i32 @foo(i32 %N) {
 ; PROLOG:       while.body.prol:
 ; PROLOG-NEXT:    br label [[WHILE_BODY_PROL_LOOPEXIT]]
 ; PROLOG:       while.body.prol.loopexit:
-; PROLOG-NEXT:    [[I_LCSSA_UNR:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ 0, [[WHILE_BODY_PROL]] ]
+; PROLOG-NEXT:    [[I_LCSSA_UNR:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ 0, [[WHILE_BODY_PROL]] ]
 ; PROLOG-NEXT:    [[I_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[WHILE_BODY_PROL]] ]
 ; PROLOG-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[N]], 1
 ; PROLOG-NEXT:    br i1 [[TMP1]], label [[WHILE_END:%.*]], label [[ENTRY_NEW:%.*]]
