@@ -2727,8 +2727,7 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr,
-                                     nullptr);
+  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr, 0);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2736,7 +2735,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
   auto *Symbol = TM.getSymbol(GO);
   if (Kind.isBSS())
     return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
-                                       nullptr, nullptr);
+                                       nullptr, 0);
 
   return getContext().getObjectFileInfo()->getTextSection();
 }

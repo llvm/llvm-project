@@ -106,8 +106,7 @@ static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
     Section->ensureMinAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
-void MCELFStreamer::changeSection(MCSection *Section,
-                                  const MCExpr *Subsection) {
+void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCSection *CurSection = getCurrentSectionOnly();
   if (CurSection && isBundleLocked())
     report_fatal_error("Unterminated .bundle_lock when changing a section");
