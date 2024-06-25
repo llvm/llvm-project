@@ -797,7 +797,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // The calculations related to SGPR/VGPR blocks are
   // duplicated in part in AMDGPUAsmParser::calculateGPRBlocks, and could be
   // unified.
-  const MCExpr *ExtraSGPRs = AMDGPUVariadicMCExpr::createExtraSGPRs(
+  const MCExpr *ExtraSGPRs = AMDGPUMCExpr::createExtraSGPRs(
       ProgInfo.VCCUsed, ProgInfo.FlatUsed,
       getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Ctx);
 
@@ -890,27 +890,27 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         }
       }
     }
-    ProgInfo.NumSGPR = AMDGPUVariadicMCExpr::createMax(
+    ProgInfo.NumSGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumSGPR, CreateExpr(WaveDispatchNumSGPR)}, Ctx);
 
-    ProgInfo.NumArchVGPR = AMDGPUVariadicMCExpr::createMax(
+    ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
 
-    ProgInfo.NumVGPR = AMDGPUVariadicMCExpr::createTotalNumVGPR(
+    ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   unsigned MaxWaves = MFI->getMaxWavesPerEU();
-  ProgInfo.NumSGPRsForWavesPerEU = AMDGPUVariadicMCExpr::createMax(
-      {ProgInfo.NumSGPR, CreateExpr(1ul),
-       CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
-      Ctx);
-  ProgInfo.NumVGPRsForWavesPerEU = AMDGPUVariadicMCExpr::createMax(
-      {ProgInfo.NumVGPR, CreateExpr(1ul),
-       CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
-      Ctx);
+  ProgInfo.NumSGPRsForWavesPerEU =
+      AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
+                               CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
+                              Ctx);
+  ProgInfo.NumVGPRsForWavesPerEU =
+      AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
+                               CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
+                              Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {
@@ -959,10 +959,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                              unsigned Granule) {
     const MCExpr *OneConst = CreateExpr(1ul);
     const MCExpr *GranuleConst = CreateExpr(Granule);
-    const MCExpr *MaxNumGPR =
-        AMDGPUVariadicMCExpr::createMax({NumGPR, OneConst}, Ctx);
+    const MCExpr *MaxNumGPR = AMDGPUMCExpr::createMax({NumGPR, OneConst}, Ctx);
     const MCExpr *AlignToGPR =
-        AMDGPUVariadicMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
+        AMDGPUMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
     const MCExpr *DivGPR =
         MCBinaryExpr::createDiv(AlignToGPR, GranuleConst, Ctx);
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
@@ -1004,7 +1003,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
     const MCExpr *Ceil =
-        AMDGPUVariadicMCExpr::createAlignTo(Numerator, Denominator, Ctx);
+        AMDGPUMCExpr::createAlignTo(Numerator, Denominator, Ctx);
     return MCBinaryExpr::createDiv(Ceil, Denominator, Ctx);
   };
 
@@ -1077,7 +1076,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
 
-  ProgInfo.Occupancy = AMDGPUVariadicMCExpr::createOccupancy(
+  ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize), ProgInfo.NumSGPRsForWavesPerEU,
       ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
 
@@ -1269,8 +1268,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   // ScratchSize is in bytes, 16 aligned.
   MD->setScratchSize(
       CC,
-      AMDGPUVariadicMCExpr::createAlignTo(CurrentProgramInfo.ScratchSize,
-                                          MCConstantExpr::create(16, Ctx), Ctx),
+      AMDGPUMCExpr::createAlignTo(CurrentProgramInfo.ScratchSize,
+                                  MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
