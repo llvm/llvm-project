@@ -9,10 +9,12 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
 
+#include <functional>
 #include <iterator>
 #include <ranges>
 #include <type_traits>
 
+#include "__concepts/constructible.h"
 #include "__iterator/concepts.h"
 #include "__ranges/common_view.h"
 #include "test_iterators.h"
@@ -21,7 +23,7 @@
 // Concepts
 
 template <typename Iter>
-concept IterDifferable = requires(Iter& t) { t - t; };
+concept IterDifferable = std::invocable<std::minus<>,Iter, Iter>;
 
 // Iterators
 
@@ -33,14 +35,25 @@ struct InputIterBase {
   using value_type        = typename std::iterator_traits<Iter>::value_type;
   using difference_type   = typename std::iterator_traits<Iter>::difference_type;
 
+  int copy_counter = 0;
+  int move_counter = 0;
+
   Iter value_{};
 
-  constexpr InputIterBase()                                      = default;
-  constexpr InputIterBase(const InputIterBase&)                  = default;
-  constexpr InputIterBase(InputIterBase&&)                       = default;
-  constexpr InputIterBase& operator=(const InputIterBase& other) = default;
-  constexpr InputIterBase& operator=(InputIterBase&& other)      = default;
+  constexpr InputIterBase()                     = default;
   constexpr explicit InputIterBase(Iter value) : value_(value) {}
+
+  constexpr InputIterBase(const InputIterBase& other) noexcept {
+    copy_counter++;
+    value_ = other.value_;
+  }
+
+  constexpr InputIterBase(InputIterBase&& other) noexcept {
+    move_counter++;
+    value_ = std::move(other.value_);
+  }
+  constexpr InputIterBase& operator=(const InputIterBase& other) = default;
+  constexpr InputIterBase& operator=(InputIterBase&& other) = default;
 
   constexpr value_type operator*() const { return *value_; }
   constexpr Derived& operator++() {
@@ -60,7 +73,7 @@ struct InputIterBase {
   }
 };
 
-struct UnsizedInputIterator : InputIterBase<UnsizedInputIterator> {};
+struct UnsizedInputIterator : InputIterBase<UnsizedInputIterator /*, Iter = int *, IsSized = false */> {};
 static_assert(std::input_iterator<UnsizedInputIterator>);
 static_assert(!std::sized_sentinel_for<UnsizedInputIterator, UnsizedInputIterator>);
 
@@ -249,6 +262,7 @@ using UnSimpleNoConstCommonView = MaybeConstCommonSimpleView<false, false, true>
 using UnsimpleConstView         = MaybeConstCommonSimpleView<false, true, true>;
 using UnsimpleUnCommonConstView = MaybeConstCommonSimpleView<false, true, false>;
 using SimpleUnCommonConstView   = MaybeConstCommonSimpleView<true, true, false>;
+using SimpleCommonConstView     = MaybeConstCommonSimpleView<true, true, true>;
 
 // Ranges
 
