@@ -1739,6 +1739,7 @@ private:
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
+  bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
@@ -4006,6 +4007,52 @@ bool AMDGPUAsmParser::validateMIMGGatherDMask(const MCInst &Inst) {
   return DMask == 0x1 || DMask == 0x2 || DMask == 0x4 || DMask == 0x8;
 }
 
+bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & MIMGFlags) == 0)
+    return true;
+
+  if (!isGFX10Plus())
+    return true;
+
+  switch (Opc) {
+  case IMAGE_BVH64_INTERSECT_RAY_a16_gfx12:
+  case IMAGE_BVH64_INTERSECT_RAY_a16_nsa_gfx10:
+  case IMAGE_BVH64_INTERSECT_RAY_a16_nsa_gfx11:
+  case IMAGE_BVH64_INTERSECT_RAY_a16_sa_gfx10:
+  case IMAGE_BVH64_INTERSECT_RAY_a16_sa_gfx11:
+  case IMAGE_BVH64_INTERSECT_RAY_gfx12:
+  case IMAGE_BVH64_INTERSECT_RAY_nsa_gfx10:
+  case IMAGE_BVH64_INTERSECT_RAY_nsa_gfx11:
+  case IMAGE_BVH64_INTERSECT_RAY_sa_gfx10:
+  case IMAGE_BVH64_INTERSECT_RAY_sa_gfx11:
+
+  case IMAGE_BVH_INTERSECT_RAY_a16_gfx12:
+  case IMAGE_BVH_INTERSECT_RAY_a16_nsa_gfx10:
+  case IMAGE_BVH_INTERSECT_RAY_a16_nsa_gfx11:
+  case IMAGE_BVH_INTERSECT_RAY_a16_sa_gfx10:
+  case IMAGE_BVH_INTERSECT_RAY_a16_sa_gfx11:
+  case IMAGE_BVH_INTERSECT_RAY_gfx12:
+  case IMAGE_BVH_INTERSECT_RAY_nsa_gfx10:
+  case IMAGE_BVH_INTERSECT_RAY_nsa_gfx11:
+  case IMAGE_BVH_INTERSECT_RAY_sa_gfx10:
+  case IMAGE_BVH_INTERSECT_RAY_sa_gfx11:
+    return true;
+  default:
+    break;
+  }
+
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Op.isDim())
+      return true;
+  }
+  return false;
+}
+
 bool AMDGPUAsmParser::validateMIMGMSAA(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
@@ -5092,6 +5139,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
+    return false;
+  }
+  if (!validateMIMGDim(Inst, Operands)) {
+    Error(IDLoc, "missing dim operand");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {

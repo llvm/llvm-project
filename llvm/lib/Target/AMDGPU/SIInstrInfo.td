@@ -1089,7 +1089,7 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 def FORMAT : CustomOperand<i8>;
 
 def DMask : NamedIntOperand<i16, "dmask">;
-def Dim : CustomOperand<i8>;
+def Dim : CustomOperand<i8, 1>;
 
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
 def src0_sel : SDWAOperand<"src0_sel", "SDWASrc0Sel">;
