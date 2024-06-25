@@ -159,12 +159,6 @@ namespace llvm {
 
 namespace AMDGPU {
 
-/// \returns true if the target supports signed immediate offset for SMRD
-/// instructions.
-bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
-  return isGFX9Plus(ST);
-}
-
 /// \returns True if \p STI is AMDHSA.
 bool isHsaAbi(const MCSubtargetInfo &STI) {
   return STI.getTargetTriple().getOS() == Triple::AMDHSA;
@@ -2825,6 +2819,10 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10Plus(ST);
 }
 
+static bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
+  return isGFX9Plus(ST);
+}
+
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset) {
   if (isGFX12Plus(ST))
@@ -2859,14 +2857,7 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
 }
 
 std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                            int64_t ByteOffset, bool IsBuffer,
-                                            bool HasSOffset) {
-  // For unbuffered smem loads, it is illegal for the Immediate Offset to be
-  // negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
-  // Handle case where SOffset is not present.
-  if (!IsBuffer && hasSMRDSignedImmOffset(ST) && !HasSOffset && ByteOffset < 0)
-    return std::nullopt;
-
+                                            int64_t ByteOffset, bool IsBuffer) {
   if (isGFX12Plus(ST)) // 24 bit signed offsets
     return isInt<24>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
                                  : std::nullopt;
