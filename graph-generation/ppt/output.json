@@ -1,0 +1,101 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/ppt",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/input.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "sourceIndex": 0,
+            "nodes": [
+                14,
+                11,
+                9,
+                8,
+                7,
+                5,
+                4
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 12,
+                    "beginColumn": 5,
+                    "endLine": 12,
+                    "endColumn": 19,
+                    "content": "int *p = NULL;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 13,
+                    "beginColumn": 9,
+                    "endLine": 13,
+                    "endColumn": 14,
+                    "content": "n > 2",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 16,
+                    "beginColumn": 16,
+                    "endLine": 16,
+                    "endColumn": 21,
+                    "content": "n < 2",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 19,
+                    "beginColumn": 5,
+                    "endLine": 19,
+                    "endColumn": 41,
+                    "content": "printf(\"In function f, n = %d\\n\", n)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 20,
+                    "beginColumn": 5,
+                    "endLine": 20,
+                    "endColumn": 8,
+                    "content": "g()",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 21,
+                    "beginColumn": 5,
+                    "endLine": 21,
+                    "endColumn": 9,
+                    "content": "h(p)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 8,
+                    "beginColumn": 1,
+                    "endLine": 10,
+                    "endColumn": 2,
+                    "content": "void h(int *p) {\n    printf(\"In function h, p = %d\\n\", *p);\n}"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/ppt/main.c",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 42,
+                    "content": "printf(\"In function h, p = %d\\n\", *p)",
+                    "stmtKind": "CallExpr"
+                }
+            ]
+        }
+    ]
+}
