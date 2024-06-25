@@ -1456,27 +1456,27 @@ public:
     // iteration in scalar form.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
       LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
-                        << " requires scalar epilogue: multiple exists\n");
+                        << " requires scalar epilogue: multiple exits\n");
       return true;
     }
     if (VF.isVector()) {
       if (InterleaveInfo.requiresScalarEpilogue()) {
         // Make sure interleaved groups that require scalar epilogue will be
         // widened.
-        for (auto *G : InterleaveInfo.getInterleaveGroups()) {
-          if (!G->requiresScalarEpilogue())
-            continue;
+        if (any_of(InterleaveInfo.getInterleaveGroups(), [&](auto *Group) {
+              if (!Group->requiresScalarEpilogue())
+                return false;
 
-          Instruction *I = G->getMember(0);
-          InstWidening Decision = getWideningDecision(I, VF);
-          if (Decision == CM_Interleave ||
-              (Decision == CM_Unknown &&
-               interleavedAccessCanBeWidened(G->getMember(0), VF))) {
-            LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
-                              << " requires scalar epilogue: interleaved group "
-                                 "requires scalar epilogue\n");
-            return true;
-          }
+              Instruction *I = Group->getMember(0);
+              InstWidening Decision = getWideningDecision(I, VF);
+              return Decision == CM_Interleave ||
+                     (Decision == CM_Unknown &&
+                      interleavedAccessCanBeWidened(I, VF));
+            })) {
+          LLVM_DEBUG(dbgs() << "LV: Loop with VF = " << VF
+                            << " requires scalar epilogue: interleaved group "
+                               "requires scalar epilogue\n");
+          return true;
         }
       }
     }
