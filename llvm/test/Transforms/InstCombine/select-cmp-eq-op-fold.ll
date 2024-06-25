@@ -6,8 +6,7 @@ declare void @use.i8(i8)
 define i8 @replace_with_y_noundef(i8 %x, i8 noundef %y, i8 %z) {
 ; CHECK-LABEL: @replace_with_y_noundef(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[AND]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp eq i8 %x, %y
@@ -20,8 +19,7 @@ define i8 @replace_with_x_noundef(i8 noundef %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @replace_with_x_noundef(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
-; CHECK-NEXT:    [[AND:%.*]] = or i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[Z:%.*]], i8 [[AND]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[Z:%.*]], i8 [[X]]
 ; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp ne i8 %x, %y
