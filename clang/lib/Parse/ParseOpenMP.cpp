@@ -2635,14 +2635,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   bool IsExecutable = [&]() {
     if (DKind == OMPD_error) // OMPD_error is handled as executable
       return true;
-    switch (getDirectiveCategory(DKind)) {
-    case Category::Executable:
-    case Category::Subsidiary:
-      return true;
-    default:
-      break;
-    }
-    return false;
+    auto Res = getDirectiveCategory(DKind);
+    return Res == Category::Executable || Res == Category::Subsidiary;
   }();
 
   if (IsExecutable) {
