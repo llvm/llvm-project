@@ -606,5 +606,5 @@ NVVMTargetAttrImpl::createObject(Attribute attribute,
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
       builder.getStringAttr(StringRef(object.data(), object.size())),
-      objectProps);
+      objectProps, nullptr);
 }

@@ -441,3 +441,9 @@ gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">
 
 gpu.module @module_with_offload_handler <#gpu.select_object<0>> [#nvvm.target] {
 }
+
+
+gpu.binary @binary [#gpu.object<#rocdl.target<chip = "gfx900">, kernels = #gpu.kernel_table<{
+    kernel0 = #gpu.kernel<"kernel0", (i32, f32) -> (), metadata = {sgpr_count = 255}>,
+    kernel1 = #gpu.kernel<"kernel1", (i32) -> (), arg_attrs = [{llvm.read_only}]>
+  }>, bin = "BLOB">]

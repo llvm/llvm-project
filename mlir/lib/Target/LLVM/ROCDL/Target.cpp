@@ -482,5 +482,6 @@ ROCDLTargetAttrImpl::createObject(Attribute attribute,
       attribute,
       format > gpu::CompilationTarget::Binary ? gpu::CompilationTarget::Binary
                                               : format,
-      builder.getStringAttr(StringRef(object.data(), object.size())), nullptr);
+      builder.getStringAttr(StringRef(object.data(), object.size())), nullptr,
+      nullptr);
 }
