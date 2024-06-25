@@ -14,6 +14,7 @@
 class ValueType<int size, int value> {
   string Namespace = "MVT";
   string LLVMName = NAME;
+  string LLVMTyForEVT = "";
   int Size = size;
   int Value = value;
   int nElem = 1;
@@ -34,16 +35,22 @@ class VTAny<int value> : ValueType<0, value> {
 
 class VTInt<int size, int value>
     : ValueType<size, value> {
+  let LLVMTyForEVT = !strconcat("Type::getIntNTy(Context, ",
+                                !cast<string>(size), ")");
   let isInteger = true;
 }
 
-class VTFP<int size, int value>
+class VTFP<int size, string LLVMTy, int value>
     : ValueType<size, value> {
+  let LLVMTyForEVT = !strconcat("Type::get", LLVMTy, "(Context)");
   let isFP = true;
 }
 
 class VTVec<int nelem, ValueType elt, int value>
     : ValueType<!mul(nelem, elt.Size), value> {
+  let LLVMTyForEVT = !strconcat("FixedVectorType::get(",
+                                elt.LLVMTyForEVT, ", ",
+                                !cast<string>(nelem), ")");
   let nElem = nelem;
   let ElementType = elt;
   let isInteger = elt.isInteger;
@@ -53,6 +60,9 @@ class VTVec<int nelem, ValueType elt, int value>
 
 class VTScalableVec<int nelem, ValueType elt, int value>
     : VTVec<nelem, elt, value> {
+  let LLVMTyForEVT = !strconcat("ScalableVectorType::get(",
+                                elt.LLVMTyForEVT, ", ",
+                                !cast<string>(nelem), ")");
   let isScalable = true;
 }
 
@@ -71,13 +81,13 @@ def i32     : VTInt<32,  7>;  // 32-bit integer value
 def i64     : VTInt<64,  8>;  // 64-bit integer value
 def i128    : VTInt<128, 9>;  // 128-bit integer value
 
-def bf16    : VTFP<16,  10>;  // 16-bit brain floating point value
-def f16     : VTFP<16,  11>;  // 16-bit floating point value
-def f32     : VTFP<32,  12>;  // 32-bit floating point value
-def f64     : VTFP<64,  13>;  // 64-bit floating point value
-def f80     : VTFP<80,  14>;  // 80-bit floating point value
-def f128    : VTFP<128, 15>;  // 128-bit floating point value
-def ppcf128 : VTFP<128, 16>;  // PPC 128-bit floating point value
+def bf16    : VTFP<16,  "BFloatTy",    10>;  // 16-bit brain floating point value
+def f16     : VTFP<16,  "HalfTy",      11>;  // 16-bit floating point value
+def f32     : VTFP<32,  "FloatTy",     12>;  // 32-bit floating point value
+def f64     : VTFP<64,  "DoubleTy",    13>;  // 64-bit floating point value
+def f80     : VTFP<80,  "X86_FP80Ty",  14>;  // 80-bit floating point value
+def f128    : VTFP<128, "FP128Ty",     15>;  // 128-bit floating point value
+def ppcf128 : VTFP<128, "PPC_FP128Ty", 16>;  // PPC 128-bit floating point value
 
 def v1i1    : VTVec<1,    i1, 17>;  //    1 x i1 vector value
 def v2i1    : VTVec<2,    i1, 18>;  //    2 x i1 vector value

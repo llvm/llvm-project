@@ -130,6 +130,20 @@ void VTEmitter::run(raw_ostream &OS) {
     // clang-format on
   }
   OS << "#endif\n\n";
+
+  OS << "#ifdef GET_VT_EVT\n";
+  for (const auto *VT : VTsByNumber) {
+    if (!VT)
+      continue;
+    auto LLVMTyForEVT = VT->getValueAsString("LLVMTyForEVT");
+    if (LLVMTyForEVT.empty())
+      continue;
+
+    OS << "  GET_VT_EVT("
+       << VT->getValueAsString("LLVMName") << ", "
+       << LLVMTyForEVT << ")\n";
+  }
+  OS << "#endif\n\n";
 }
 
 static TableGen::Emitter::OptClass<VTEmitter> X("gen-vt", "Generate ValueType");
