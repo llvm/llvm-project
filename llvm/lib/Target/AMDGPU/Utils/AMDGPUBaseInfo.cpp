@@ -2354,7 +2354,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX12_10Only(STI))
+  if (isGFX12_10Plus(STI))
     return 32;
   return 16;
 }

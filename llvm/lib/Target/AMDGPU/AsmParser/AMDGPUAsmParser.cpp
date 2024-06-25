@@ -6234,7 +6234,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   unsigned UserSGPRCount =
       ExplicitUserSGPRCount ? *ExplicitUserSGPRCount : ImpliedUserSGPRCount;
 
-  if (isGFX12_10Only()) {
+  if (isGFX12_10Plus()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
   AMDGPU::MCKernelDescriptor::bits_set(
