@@ -2,7 +2,7 @@
 ;RUN: opt -S -passes=instcombine < %s | FileCheck %s
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @test_st1(ptr %a, <vscale x 16 x i8> %b)  #0 {
+define void @test_st1(ptr %a, <vscale x 16 x i8> %b)   {
 ; CHECK-LABEL: define void @test_st1(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -13,7 +13,7 @@ entry:
   ret void
 }
 
-define void @test_st1_scatter(<vscale x 2 x i16> %data_trunc, ptr %base, <vscale x 2 x i64> %b) #0 {
+define void @test_st1_scatter(<vscale x 2 x i16> %data_trunc, ptr %base, <vscale x 2 x i64> %b)  {
 ; CHECK-LABEL: define void @test_st1_scatter(
 ; CHECK-SAME: <vscale x 2 x i16> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -27,7 +27,7 @@ entry:
   ret void
 }
 
-define void @test_st1_scatter_index(<vscale x 2 x i32> %data_trunc, ptr %base, <vscale x 2 x i64> %offsets) #0 {
+define void @test_st1_scatter_index(<vscale x 2 x i32> %data_trunc, ptr %base, <vscale x 2 x i64> %offsets)  {
 ; CHECK-LABEL: define void @test_st1_scatter_index(
 ; CHECK-SAME: <vscale x 2 x i32> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -42,7 +42,7 @@ entry:
   ret void
 }
 
-define void @test_st1_scatter_scalar_offset(<vscale x 4 x i8> %data_trunc, <vscale x 4 x i32> %base)  #0 {
+define void @test_st1_scatter_scalar_offset(<vscale x 4 x i8> %data_trunc, <vscale x 4 x i32> %base)   {
 ; CHECK-LABEL: define void @test_st1_scatter_scalar_offset(
 ; CHECK-SAME: <vscale x 4 x i8> [[DATA_TRUNC:%.*]], <vscale x 4 x i32> [[BASE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -56,7 +56,7 @@ entry:
   ret void
 }
 
-define void @test_st1_scatter_sxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)  #0 {
+define void @test_st1_scatter_sxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)   {
 ; CHECK-LABEL: define void @test_st1_scatter_sxtw(
 ; CHECK-SAME: <vscale x 4 x i8> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:    ret void
@@ -68,7 +68,7 @@ define void @test_st1_scatter_sxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vs
   ret void
 }
 
-define void @test_st1_scatter_sxtw_index(<vscale x 4 x i16> %data_trunc, ptr %base, <vscale x 4 x i32> %indices)  #0 {
+define void @test_st1_scatter_sxtw_index(<vscale x 4 x i16> %data_trunc, ptr %base, <vscale x 4 x i32> %indices)   {
 ; CHECK-LABEL: define void @test_st1_scatter_sxtw_index(
 ; CHECK-SAME: <vscale x 4 x i16> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]]) {
 ; CHECK-NEXT:    ret void
@@ -80,7 +80,7 @@ define void @test_st1_scatter_sxtw_index(<vscale x 4 x i16> %data_trunc, ptr %ba
   ret void
 }
 
-define void @test_st1_scatter_uxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)  #0 {
+define void @test_st1_scatter_uxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)   {
 ; CHECK-LABEL: define void @test_st1_scatter_uxtw(
 ; CHECK-SAME: <vscale x 4 x i8> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:    ret void
@@ -92,7 +92,7 @@ define void @test_st1_scatter_uxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vs
   ret void
 }
 
-define void @test_st1_scatter_uxtw_index(<vscale x 4 x i16> %data_trunc, ptr %base, <vscale x 4 x i32> %indices)  #0 {
+define void @test_st1_scatter_uxtw_index(<vscale x 4 x i16> %data_trunc, ptr %base, <vscale x 4 x i32> %indices)   {
 ; CHECK-LABEL: define void @test_st1_scatter_uxtw_index(
 ; CHECK-SAME: <vscale x 4 x i16> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[INDICES:%.*]]) {
 ; CHECK-NEXT:    ret void
@@ -104,7 +104,7 @@ define void @test_st1_scatter_uxtw_index(<vscale x 4 x i16> %data_trunc, ptr %ba
   ret void
 }
 
-define void @test_st1dq(<vscale x 2 x i64> %zt, ptr %gep1)  #0 {
+define void @test_st1dq(<vscale x 2 x i64> %zt, ptr %gep1)   {
 ; CHECK-LABEL: define void @test_st1dq(
 ; CHECK-SAME: <vscale x 2 x i64> [[ZT:%.*]], ptr [[GEP1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -115,7 +115,7 @@ entry:
   ret void
 }
 
-define void @test_st1q_scatter_index(<vscale x 8 x i16> %data, <vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %idx) #0 {
+define void @test_st1q_scatter_index(<vscale x 8 x i16> %data, <vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %idx)  {
 ; CHECK-LABEL: define void @test_st1q_scatter_index(
 ; CHECK-SAME: <vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[PG:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -126,7 +126,7 @@ entry:
   ret void
 }
 
-define void @test_st1q_scatter_scalar_offset(<vscale x 2 x i64> %data, <vscale x 2 x i64> %base)  #0 {
+define void @test_st1q_scatter_scalar_offset(<vscale x 2 x i64> %data, <vscale x 2 x i64> %base)   {
 ; CHECK-LABEL: define void @test_st1q_scatter_scalar_offset(
 ; CHECK-SAME: <vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i64> [[BASE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -137,7 +137,7 @@ entry:
   ret void
 }
 
-define void @test_st1q_scatter_vector_offset(<vscale x 8 x i16> %data, ptr %base, <vscale x 2 x i64> %off)  #0 {
+define void @test_st1q_scatter_vector_offset(<vscale x 8 x i16> %data, ptr %base, <vscale x 2 x i64> %off)   {
 ; CHECK-LABEL: define void @test_st1q_scatter_vector_offset(
 ; CHECK-SAME: <vscale x 8 x i16> [[DATA:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[OFF:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -148,7 +148,7 @@ entry:
   ret void
 }
 
-define void @test_st1wq(ptr %a, <vscale x 4 x i32> %b)  #0 {
+define void @test_st1wq(ptr %a, <vscale x 4 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st1wq(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -160,7 +160,7 @@ entry:
 }
 
 
-define void @test_st2(ptr %a, <vscale x 8 x i32> %b)  #0 {
+define void @test_st2(ptr %a, <vscale x 8 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st2(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 8 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -173,7 +173,7 @@ entry:
   ret void
 }
 
-define void @test_st2q(ptr %a, <vscale x 8 x i32> %b)  #0 {
+define void @test_st2q(ptr %a, <vscale x 8 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st2q(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 8 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -186,7 +186,7 @@ entry:
   ret void
 }
 
-define void @test_st3(ptr %a, <vscale x 12 x i32> %b)  #0 {
+define void @test_st3(ptr %a, <vscale x 12 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st3(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 12 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -200,7 +200,7 @@ entry:
   ret void
 }
 
-define void @test_st3q(ptr %a, <vscale x 12 x i32> %b)  #0 {
+define void @test_st3q(ptr %a, <vscale x 12 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st3q(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 12 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -214,7 +214,7 @@ entry:
   ret void
 }
 
-define void @test_st4(ptr %a, <vscale x 16 x i32> %b)  #0 {
+define void @test_st4(ptr %a, <vscale x 16 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st4(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 16 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -229,7 +229,7 @@ entry:
   ret void
 }
 
-define void @test_st4q(ptr %a, <vscale x 16 x i32> %b)  #0 {
+define void @test_st4q(ptr %a, <vscale x 16 x i32> %b)   {
 ; CHECK-LABEL: define void @test_st4q(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 16 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -244,7 +244,7 @@ entry:
   ret void
 }
 
-define void @test_stnt1(ptr %a, <vscale x 16 x i8> %b)  #0 {
+define void @test_stnt1(ptr %a, <vscale x 16 x i8> %b)   {
 ; CHECK-LABEL: define void @test_stnt1(
 ; CHECK-SAME: ptr [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -255,7 +255,7 @@ entry:
   ret void
 }
 
-define void @test_stnt1_scatter(<vscale x 2 x i16> %data_trunc, ptr %base, <vscale x 2 x i64> %b) #0 {
+define void @test_stnt1_scatter(<vscale x 2 x i16> %data_trunc, ptr %base, <vscale x 2 x i64> %b)  {
 ; CHECK-LABEL: define void @test_stnt1_scatter(
 ; CHECK-SAME: <vscale x 2 x i16> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -269,7 +269,7 @@ entry:
   ret void
 }
 
-define void @test_stnt1_scatter_index(<vscale x 2 x i32> %data_trunc, ptr %base, <vscale x 2 x i64> %offsets) #0 {
+define void @test_stnt1_scatter_index(<vscale x 2 x i32> %data_trunc, ptr %base, <vscale x 2 x i64> %offsets)  {
 ; CHECK-LABEL: define void @test_stnt1_scatter_index(
 ; CHECK-SAME: <vscale x 2 x i32> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 2 x i64> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -283,7 +283,7 @@ entry:
   ret void
 }
 
-define void @test_stnt1_scatter_scalar_offset(<vscale x 4 x i8> %data_trunc, <vscale x 4 x i32> %base)  #0 {
+define void @test_stnt1_scatter_scalar_offset(<vscale x 4 x i8> %data_trunc, <vscale x 4 x i32> %base)   {
 ; CHECK-LABEL: define void @test_stnt1_scatter_scalar_offset(
 ; CHECK-SAME: <vscale x 4 x i8> [[DATA_TRUNC:%.*]], <vscale x 4 x i32> [[BASE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -297,7 +297,7 @@ entry:
   ret void
 }
 
-define void @test_stnt1_scatter_uxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)  #0 {
+define void @test_stnt1_scatter_uxtw(<vscale x 4 x i8> %data_trunc, ptr %base, <vscale x 4 x i32> %offsets)   {
 ; CHECK-LABEL: define void @test_stnt1_scatter_uxtw(
 ; CHECK-SAME: <vscale x 4 x i8> [[DATA_TRUNC:%.*]], ptr [[BASE:%.*]], <vscale x 4 x i32> [[OFFSETS:%.*]]) {
 ; CHECK-NEXT:    ret void
