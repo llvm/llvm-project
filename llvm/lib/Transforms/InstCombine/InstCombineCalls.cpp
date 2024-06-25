@@ -1283,6 +1283,64 @@ reassociateMinMaxWithConstantInOperand(IntrinsicInst *II,
   return CallInst::Create(MinMax, {NewInner, C});
 }
 
+/// Reduce a sequence of min/max intrinsics using distributivity
+static Instruction *
+factorizeMinMaxDistributivity(IntrinsicInst *II,
+                              InstCombiner::BuilderTy &Builder) {
+  auto *LHS = dyn_cast<IntrinsicInst>(II->getArgOperand(0));
+  auto *RHS = dyn_cast<IntrinsicInst>(II->getArgOperand(1));
+
+  if (!LHS || !RHS || LHS->getIntrinsicID() != RHS->getIntrinsicID() ||
+      LHS->getCalledFunction()->arg_size() != 2)
+    return nullptr;
+
+  Value *A = LHS->getArgOperand(0);
+  Value *B = LHS->getArgOperand(1);
+  Value *C = RHS->getArgOperand(0);
+  Value *D = RHS->getArgOperand(1);
+  Value *Outer, *InnerLHS, *InnerRHS;
+
+  if (A != C && A != D && B != C && B != D)
+    return nullptr;
+
+  if (A == C) {
+    Outer = A;
+    InnerLHS = B;
+    InnerRHS = D;
+  } else if (A == D) {
+    Outer = A;
+    InnerLHS = B;
+    InnerRHS = C;
+  } else if (B == C) {
+    Outer = B;
+    InnerLHS = A;
+    InnerRHS = D;
+  } else if (B == D) {
+    Outer = B;
+    InnerLHS = A;
+    InnerRHS = C;
+  }
+
+  Intrinsic::ID OuterID = II->getIntrinsicID();
+  Intrinsic::ID LHSID = LHS->getIntrinsicID();
+
+  // umax(umin(a, c), umin(b, c)) --> umin(umax(a, b), c)
+  // umin(umax(a, c), umax(b, c)) --> umax(umin(a, b), c)
+  // smax(smin(a, c), smin(b, c)) --> smin(smax(a, b), c)
+  // smin(smax(a, c), smax(b, c)) --> smax(smin(a, b), c)
+  if (LHSID == Intrinsic::umin && OuterID == Intrinsic::umax ||
+      LHSID == Intrinsic::umax && OuterID == Intrinsic::umin ||
+      LHSID == Intrinsic::smin && OuterID == Intrinsic::smax ||
+      LHSID == Intrinsic::smax && OuterID == Intrinsic::smin) {
+    Module *Mod = II->getModule();
+    Function *OuterFn = Intrinsic::getDeclaration(Mod, LHSID, II->getType());
+    return CallInst::Create(OuterFn, {Outer, Builder.CreateBinaryIntrinsic(
+                                                 OuterID, InnerLHS, InnerRHS)});
+  }
+
+  return nullptr;
+}
+
 /// Reduce a sequence of min/max intrinsics with a common operand.
 static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
   // Match 3 of the same min/max ops. Example: umin(umin(), umin()).
@@ -1842,6 +1900,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *NewMinMax = factorizeMinMaxTree(II))
        return NewMinMax;
+
+    if (Instruction *I = factorizeMinMaxDistributivity(II, Builder))
+      return I;
 
     // Try to fold minmax with constant RHS based on range information
     if (match(I1, m_APIntAllowPoison(RHSC))) {
