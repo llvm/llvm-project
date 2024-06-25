@@ -107,14 +107,14 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseBranchModifiers(OperandVector &Operands);
 
-  ParseStatus parseExpression(OperandVector &Operands, int64_t &Val);
+  ParseStatus parseExpression(int64_t &Val);
 
   // Helper function for dealing with %lo / %hi in PIC mode.
   const SparcMCExpr *adjustPICRelocation(SparcMCExpr::VariantKind VK,
                                          const MCExpr *subExpr);
 
   // Helper function to see if current token can start an expression.
-  bool isPossibleExpression(AsmToken &Token);
+  bool isPossibleExpression(const AsmToken &Token);
 
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
@@ -1093,7 +1093,7 @@ ParseStatus SparcAsmParser::parseASITag(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Hash) {
     // If the ASI tag provided is not a named tag, then it
     // must be a constant expression.
-    ParseStatus ParseExprStatus = parseExpression(Operands, ASIVal);
+    ParseStatus ParseExprStatus = parseExpression(ASIVal);
     if (!ParseExprStatus.isSuccess())
       return ParseExprStatus;
 
@@ -1128,34 +1128,31 @@ ParseStatus SparcAsmParser::parsePrefetchTag(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getEndLoc();
   int64_t PrefetchVal = 0;
 
-  switch (getLexer().getKind()) {
-  case AsmToken::LParen:
-  case AsmToken::Integer:
-  case AsmToken::Identifier:
-  case AsmToken::Plus:
-  case AsmToken::Minus:
-  case AsmToken::Tilde:
-    if (getParser().parseAbsoluteExpression(PrefetchVal) ||
-        !isUInt<5>(PrefetchVal))
+  if (getLexer().getKind() != AsmToken::Hash) {
+    // If the prefetch tag provided is not a named tag, then it
+    // must be a constant expression.
+    ParseStatus ParseExprStatus = parseExpression(PrefetchVal);
+    if (!ParseExprStatus.isSuccess())
+      return ParseExprStatus;
+
+    if (!isUInt<8>(PrefetchVal))
       return Error(S, "invalid prefetch number, must be between 0 and 31");
-    break;
-  case AsmToken::Hash: {
-    SMLoc TagStart = getLexer().peekTok(false).getLoc();
-    Parser.Lex(); // Eat the '#'.
-    const StringRef PrefetchName = Parser.getTok().getString();
-    const SparcPrefetchTag::PrefetchTag *PrefetchTag =
-        SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
-    Parser.Lex(); // Eat the identifier token.
 
-    if (!PrefetchTag)
-      return Error(TagStart, "unknown prefetch tag");
+    Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
+    return ParseStatus::Success;
+  }
 
-    PrefetchVal = PrefetchTag->Encoding;
-    break;
-  }
-  default:
-    return ParseStatus::NoMatch;
-  }
+  SMLoc TagStart = getLexer().peekTok(false).getLoc();
+  Parser.Lex(); // Eat the '#'.
+  const StringRef PrefetchName = Parser.getTok().getString();
+  const SparcPrefetchTag::PrefetchTag *PrefetchTag =
+      SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
+  Parser.Lex(); // Eat the identifier token.
+
+  if (!PrefetchTag)
+    return Error(TagStart, "unknown prefetch tag");
+
+  PrefetchVal = PrefetchTag->Encoding;
 
   Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
   return ParseStatus::Success;
@@ -1372,8 +1369,7 @@ ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus SparcAsmParser::parseExpression(OperandVector &Operands,
-                                            int64_t &Val) {
+ParseStatus SparcAsmParser::parseExpression(int64_t &Val) {
   AsmToken Tok = getLexer().getTok();
 
   if (!isPossibleExpression(Tok))
@@ -1612,7 +1608,7 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   return true;
 }
 
-bool SparcAsmParser::isPossibleExpression(AsmToken &Token) {
+bool SparcAsmParser::isPossibleExpression(const AsmToken &Token) {
   switch (Token.getKind()) {
   case AsmToken::LParen:
   case AsmToken::Integer:
