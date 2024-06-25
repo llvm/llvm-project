@@ -149,17 +149,17 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
   }
 }
 
-Function *
-SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName) {
+bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
+                                              Function *&FuncWithoutProfile) {
+  FuncWithoutProfile = nullptr;
   auto R = FunctionsWithoutProfile.find(IRFuncName);
-  if (R == FunctionsWithoutProfile.end())
-    return nullptr;
-  return R->second;
+  if (R != FunctionsWithoutProfile.end())
+    FuncWithoutProfile = R->second;
+  return !FuncWithoutProfile;
 }
 
 bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
-  auto F = SymbolMap->find(ProfileFuncName);
-  return F == SymbolMap->end();
+  return SymbolMap->find(ProfileFuncName) == SymbolMap->end();
 }
 
 bool SampleProfileMatcher::functionMatchesProfile(
@@ -172,8 +172,9 @@ bool SampleProfileMatcher::functionMatchesProfile(
 
   // If IR function doesn't have profile and the profile is unused, try
   // matching them.
-  Function *IRFunc = functionHasProfile(IRFuncName);
-  if (!IRFunc || !isProfileUnused(ProfileFuncName))
+  Function *IRFunc = nullptr;
+  if (functionHasProfile(IRFuncName, IRFunc) ||
+      !isProfileUnused(ProfileFuncName))
     return false;
 
   assert(FunctionId(IRFunc->getName()) != ProfileFuncName &&

@@ -225,8 +225,9 @@ private:
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap,
                                bool RunCFGMatching, bool RunCGMatching);
-  // Return the function if it doesn't have profile, otherwise return nullptr.
-  Function *functionHasProfile(const FunctionId &IRFuncName);
+  // If the function doesn't have profile, return the pointer to the function.
+  bool functionHasProfile(const FunctionId &IRFuncName,
+                          Function *&FuncWithoutProfile);
   bool isProfileUnused(const FunctionId &ProfileFuncName);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
