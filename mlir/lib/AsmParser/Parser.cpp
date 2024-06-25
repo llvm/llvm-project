@@ -1416,9 +1416,10 @@ Operation *OperationParser::parseGenericOperation() {
       if (!getContext()->allowsUnregisteredDialects()) {
         // Emit an error if the dialect couldn't be loaded (i.e., it was not
         // registered) and unregistered dialects aren't allowed.
-        emitError("operation being parsed with an unregistered dialect. If "
-                  "this is intended, please use -allow-unregistered-dialect "
-                  "with the MLIR tool used");
+	emitError("operation being parsed with an unregistered dialect '")
+	           << dialectName
+	           << "'. If this is intended, please use -allow-unregistered-dialect "
+	              "with the MLIR tool used";
         return nullptr;
       }
     } else {
