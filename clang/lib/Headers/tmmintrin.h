@@ -17,11 +17,10 @@
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("ssse3,no-evex512"), __min_vector_width__(64)))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("ssse3,no-evex512"), __min_vector_width__(128)))
 
 #define __trunc64(x) (__m64)__builtin_shufflevector((__v2di)(x), __extension__ (__v2di){}, 0)
 #define __anyext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, -1, -1)
-#define __extract2_32(a) (__m64)__builtin_shufflevector((__v4si)(a), __extension__ (__v4si){}, 0, 2);
 
 /// Computes the absolute value of each of the packed 8-bit signed
 ///    integers in the source operand and stores the 8-bit unsigned integer
@@ -246,8 +245,8 @@ _mm_hadd_epi32(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hadd_pi16(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phaddw128((__v8hi)__anyext128(__a),
-                                                  (__v8hi)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phaddw128(
+        (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
 }
 
 /// Horizontally adds the adjacent pairs of values contained in 2 packed
@@ -270,8 +269,8 @@ _mm_hadd_pi16(__m64 __a, __m64 __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hadd_pi32(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phaddd128((__v4si)__anyext128(__a),
-                                                  (__v4si)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phaddd128(
+        (__v4si)__builtin_shufflevector(__a, __b, 0, 1), (__v4si){}));
 }
 
 /// Horizontally adds, with saturation, the adjacent pairs of values contained
@@ -323,8 +322,8 @@ _mm_hadds_epi16(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hadds_pi16(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phaddsw128((__v8hi)__anyext128(__a),
-                                                   (__v8hi)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phaddsw128(
+        (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
 }
 
 /// Horizontally subtracts the adjacent pairs of values contained in 2
@@ -393,8 +392,8 @@ _mm_hsub_epi32(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hsub_pi16(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phsubw128((__v8hi)__anyext128(__a),
-                                                  (__v8hi)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phsubw128(
+        (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
 }
 
 /// Horizontally subtracts the adjacent pairs of values contained in 2
@@ -417,8 +416,8 @@ _mm_hsub_pi16(__m64 __a, __m64 __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hsub_pi32(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phsubd128((__v4si)__anyext128(__a),
-                                                  (__v4si)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phsubd128(
+        (__v4si)__builtin_shufflevector(__a, __b, 0, 1), (__v4si){}));
 }
 
 /// Horizontally subtracts, with saturation, the adjacent pairs of values
@@ -470,8 +469,8 @@ _mm_hsubs_epi16(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_hsubs_pi16(__m64 __a, __m64 __b)
 {
-    return __extract2_32(__builtin_ia32_phsubsw128((__v8hi)__anyext128(__a),
-                                                   (__v8hi)__anyext128(__b)));
+    return __trunc64(__builtin_ia32_phsubsw128(
+        (__v8hi)__builtin_shufflevector(__a, __b, 0, 1), (__v8hi){}));
 }
 
 /// Multiplies corresponding pairs of packed 8-bit unsigned integer
@@ -793,7 +792,6 @@ _mm_sign_pi32(__m64 __a, __m64 __b)
                                               (__v4si)__anyext128(__b)));
 }
 
-#undef __extract2_32
 #undef __anyext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS

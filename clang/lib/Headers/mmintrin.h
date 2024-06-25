@@ -39,11 +39,10 @@ typedef short __v8hi __attribute__((__vector_size__(16)));
 typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS_SSE2 __attribute__((__always_inline__, __nodebug__, __target__("sse2,no-evex512"), __min_vector_width__(64)))
+#define __DEFAULT_FN_ATTRS_SSE2 __attribute__((__always_inline__, __nodebug__, __target__("sse2,no-evex512"), __min_vector_width__(128)))
 
 #define __trunc64(x) (__m64)__builtin_shufflevector((__v2di)(x), __extension__ (__v2di){}, 0)
 #define __anyext128(x) (__m128i)__builtin_shufflevector((__v2si)(x), __extension__ (__v2si){}, 0, 1, -1, -1)
-#define __extract2_32(a) (__m64)__builtin_shufflevector((__v4si)(a), __extension__ (__v4si){}, 0, 2);
 
 /// Clears the MMX state by setting the state of the x87 stack registers
 ///    to empty.
@@ -146,8 +145,8 @@ _mm_cvtm64_si64(__m64 __m)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_packs_pi16(__m64 __m1, __m64 __m2)
 {
-    return __extract2_32(__builtin_ia32_packsswb128((__v8hi)__anyext128(__m1),
-                                                    (__v8hi)__anyext128(__m2)));
+    return __trunc64(__builtin_ia32_packsswb128(
+        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Converts, with saturation, 32-bit signed integers from both 64-bit integer
@@ -172,8 +171,8 @@ _mm_packs_pi16(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_packs_pi32(__m64 __m1, __m64 __m2)
 {
-    return __extract2_32(__builtin_ia32_packssdw128((__v4si)__anyext128(__m1),
-                                                    (__v4si)__anyext128(__m2)));
+    return __trunc64(__builtin_ia32_packssdw128(
+        (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
 }
 
 /// Converts, with saturation, 16-bit signed integers from both 64-bit integer
@@ -198,8 +197,8 @@ _mm_packs_pi32(__m64 __m1, __m64 __m2)
 static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_packs_pu16(__m64 __m1, __m64 __m2)
 {
-    return __extract2_32(__builtin_ia32_packuswb128((__v8hi)__anyext128(__m1),
-                                                    (__v8hi)__anyext128(__m2)));
+    return __trunc64(__builtin_ia32_packuswb128(
+        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of [8 x i8]
@@ -847,7 +846,7 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_sll_si64(__m64 __m, __m64 __count)
 {
     return __trunc64(__builtin_ia32_psllq128((__v2di)__anyext128(__m),
-                                             __anyext128(__count)));
+                                             (__v2di)__anyext128(__count)));
 }
 
 /// Left-shifts the first parameter, which is a 64-bit integer, by the
@@ -1081,7 +1080,7 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
 _mm_srl_si64(__m64 __m, __m64 __count)
 {
     return __trunc64(__builtin_ia32_psrlq128((__v2di)__anyext128(__m),
-                                             __anyext128(__count)));
+                                             (__v2di)__anyext128(__count)));
 }
 
 /// Right-shifts the first parameter, which is a 64-bit integer, by the
@@ -1537,7 +1536,6 @@ _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
     return _mm_set_pi8(__b7, __b6, __b5, __b4, __b3, __b2, __b1, __b0);
 }
 
-#undef __extract2_32
 #undef __anyext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS_SSE2
