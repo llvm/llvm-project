@@ -336,6 +336,9 @@ C23 Feature Support
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
 
+- Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
+  freestanding implementation of ``<float.h>`` that ships with Clang.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

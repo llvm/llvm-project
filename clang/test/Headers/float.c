@@ -1,17 +1,21 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding %s
 // expected-no-diagnostics
 
 /* Basic floating point conformance checks against:
+    - C23 Final Std.
     - N1570 draft of C11 Std.
     - N1256 draft of C99 Std.
     - http://port70.net/~nsz/c/c89/c89-draft.html draft of C89/C90 Std.
 */
 /*
+    C23,    5.2.5.3.3p21,   pp. 25
     C11,    5.2.4.2.2p11,   pp. 30
     C99,    5.2.4.2.2p9,    pp. 25
     C89,    2.2.4.2
@@ -207,6 +211,23 @@
     #error "Mandatory macros {FLT,DBL,LDBL}_MAX_10_EXP are invalid."
 #endif
 
+#if __STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)
+#ifndef FLT_NORM_MAX
+  #error "Mandatory macro FLT_NORM_MAX is missing."
+#else
+  _Static_assert(FLT_NORM_MAX >= 1.0E+37F, "Mandatory macro FLT_NORM_MAX is invalid.");
+#endif
+#ifndef DBL_NORM_MAX
+  #error "Mandatory macro DBL_NORM_MAX is missing."
+#else
+  _Static_assert(DBL_NORM_MAX >= 1.0E+37F, "Mandatory macro DBL_NORM_MAX is invalid.");
+#endif
+#ifndef LDBL_NORM_MAX
+  #error "Mandatory macro LDBL_NORM_MAX is missing."
+#else
+  _Static_assert(LDBL_NORM_MAX >= 1.0E+37F, "Mandatory macro LDBL_NORM_MAX is invalid.");
+#endif
+#endif
 
 /* Internal consistency checks */
 _Static_assert(FLT_RADIX == __FLT_RADIX__, "");
@@ -244,3 +265,9 @@ _Static_assert(LDBL_MAX_EXP == __LDBL_MAX_EXP__, "");
 _Static_assert(FLT_MAX_10_EXP == __FLT_MAX_10_EXP__, "");
 _Static_assert(DBL_MAX_10_EXP == __DBL_MAX_10_EXP__, "");
 _Static_assert(LDBL_MAX_10_EXP == __LDBL_MAX_10_EXP__, "");
+
+#if __STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)
+_Static_assert(FLT_NORM_MAX == __FLT_NORM_MAX__, "");
+_Static_assert(DBL_NORM_MAX == __DBL_NORM_MAX__, "");
+_Static_assert(LDBL_NORM_MAX == __LDBL_NORM_MAX__, "");
+#endif
