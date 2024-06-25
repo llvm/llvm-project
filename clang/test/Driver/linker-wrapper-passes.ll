@@ -79,7 +79,7 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @test() {
+define void @test() {
 entry:
   call void @f()
   ret void
