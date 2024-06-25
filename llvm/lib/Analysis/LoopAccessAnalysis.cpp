@@ -203,13 +203,13 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 ///
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
-static std::pair<const SCEV *, const SCEV *>
+static std::pair<SCEVUse, SCEVUse>
 getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
                         PredicatedScalarEvolution &PSE) {
   ScalarEvolution *SE = PSE.getSE();
 
-  const SCEV *ScStart;
-  const SCEV *ScEnd;
+  SCEVUse ScStart;
+  SCEVUse ScEnd;
 
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
@@ -219,6 +219,8 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
     ScStart = AR->getStart();
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
     const SCEV *Step = AR->getStepRecurrence(*SE);
+    if (auto *Comm = dyn_cast<SCEVCommutativeExpr>(ScEnd))
+      ScEnd = SCEVUse(ScEnd, 2);
 
     // For expressions with negative step, the upper bound is ScStart and the
     // lower bound is ScEnd.
@@ -242,7 +244,10 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
   Type *IdxTy = DL.getIndexType(PtrExpr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
-  ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
+  // TODO: this computes one-past-the-end. ScEnd + EltSizeSCEV - 1 is the last
+  // accessed byte. Not entirely sure if one-past-the-end must also not wrap? If
+  // it does, could compute and use last accessed byte instead.
+  ScEnd = SCEVUse(SE->getAddExpr(ScEnd, EltSizeSCEV), 2);
 
   return {ScStart, ScEnd};
 }
@@ -377,6 +382,11 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
       if (needsChecking(CGI, CGJ)) {
         CanUseDiffCheck = CanUseDiffCheck && tryToCreateDiffCheck(CGI, CGJ);
         Checks.push_back(std::make_pair(&CGI, &CGJ));
+        if (SE->isKnownPredicate(CmpInst::ICMP_UGT, CGI.High, CGJ.Low) &&
+            SE->isKnownPredicate(CmpInst::ICMP_ULE, CGI.Low, CGJ.High)) {
+          AlwaysFalse = true;
+          return {};
+        }
       }
     }
   }
@@ -631,8 +641,7 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
     const auto &CG = CheckingGroups[I];
 
     OS.indent(Depth + 2) << "Group " << &CG << ":\n";
-    OS.indent(Depth + 4) << "(Low: " << *CG.Low << " High: " << *CG.High
-                         << ")\n";
+    OS.indent(Depth + 4) << "(Low: " << CG.Low << " High: " << CG.High << ")\n";
     for (unsigned J = 0; J < CG.Members.size(); ++J) {
       OS.indent(Depth + 6) << "Member: " << *Pointers[CG.Members[J]].Expr
                            << "\n";
@@ -1268,6 +1277,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   // If we can do run-time checks, but there are no checks, no runtime checks
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
+  CanDoRT &= !RtCheck.AlwaysFalse;
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
 
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;

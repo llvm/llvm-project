@@ -112,13 +112,13 @@ define i32 @store_with_pointer_phi_runtime_checks(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %B High: (256000 + %B))
+; CHECK-NEXT:          (Low: %B High: (256000 + %B)(u nuw))
 ; CHECK-NEXT:            Member: {%B,+,8}<nw><%loop.header>
 ; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: %C High: (256000 + %C))
+; CHECK-NEXT:          (Low: %C High: (256000 + %C)(u nuw))
 ; CHECK-NEXT:            Member: {%C,+,8}<nw><%loop.header>
 ; CHECK-NEXT:        Group [[GRP3]]:
-; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+; CHECK-NEXT:          (Low: %A High: (256000 + %A)(u nuw))
 ; CHECK-NEXT:            Member: {%A,+,8}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -278,13 +278,13 @@ define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0,
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP4]]:
-; CHECK-NEXT:          (Low: %C High: (8 + %C))
+; CHECK-NEXT:          (Low: %C High: (8 + %C)(u nuw))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group [[GRP5]]:
-; CHECK-NEXT:          (Low: %B High: (8 + %B))
+; CHECK-NEXT:          (Low: %B High: (8 + %B)(u nuw))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:        Group [[GRP6]]:
-; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+; CHECK-NEXT:          (Low: %A High: (256000 + %A)(u nuw))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
@@ -361,13 +361,13 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP7]]:
-; CHECK-NEXT:          (Low: %C High: (8 + %C))
+; CHECK-NEXT:          (Low: %C High: (8 + %C)(u nuw))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %B High: (8 + %B))
+; CHECK-NEXT:          (Low: %B High: (8 + %B)(u nuw))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:        Group [[GRP9]]:
-; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+; CHECK-NEXT:          (Low: %A High: (256000 + %A)(u nuw))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
@@ -533,15 +533,15 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP10]]:
-; CHECK-NEXT:          (Low: %A High: (2 + %A))
+; CHECK-NEXT:          (Low: %A High: (2 + %A)(u nuw))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:        Group [[GRP11]]:
-; CHECK-NEXT:          (Low: %C High: (2 + %C))
+; CHECK-NEXT:          (Low: %C High: (2 + %C)(u nuw))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group [[GRP12]]:
-; CHECK-NEXT:          (Low: %B High: (2 + %B))
+; CHECK-NEXT:          (Low: %B High: (2 + %B)(u nuw))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B
 ; CHECK-EMPTY:

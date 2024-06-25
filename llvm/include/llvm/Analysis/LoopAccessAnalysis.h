@@ -406,10 +406,10 @@ struct RuntimeCheckingPtrGroup {
 
   /// The SCEV expression which represents the upper bound of all the
   /// pointers in this group.
-  const SCEV *High;
+  SCEVUse High;
   /// The SCEV expression which represents the lower bound of all the
   /// pointers in this group.
-  const SCEV *Low;
+  SCEVUse Low;
   /// Indices of all the pointers that constitute this grouping.
   SmallVector<unsigned, 2> Members;
   /// Address space of the involved pointers.
@@ -447,10 +447,10 @@ public:
     TrackingVH<Value> PointerValue;
     /// Holds the smallest byte address accessed by the pointer throughout all
     /// iterations of the loop.
-    const SCEV *Start;
+    SCEVUse Start;
     /// Holds the largest byte address accessed by the pointer throughout all
     /// iterations of the loop, plus 1.
-    const SCEV *End;
+    SCEVUse End;
     /// Holds the information if this pointer is used for writing to memory.
     bool IsWritePtr;
     /// Holds the id of the set of pointers that could be dependent because of a
@@ -463,7 +463,7 @@ public:
     /// True if the pointer expressions needs to be frozen after expansion.
     bool NeedsFreeze;
 
-    PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
+    PointerInfo(Value *PointerValue, SCEVUse Start, SCEVUse End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
                 const SCEV *Expr, bool NeedsFreeze)
         : PointerValue(PointerValue), Start(Start), End(End),
@@ -477,8 +477,10 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    AlwaysFalse = false;
     Pointers.clear();
     Checks.clear();
+    CheckingGroups.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -534,6 +536,8 @@ public:
 
   /// This flag indicates if we need to add the runtime check.
   bool Need = false;
+
+  bool AlwaysFalse = false;
 
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;

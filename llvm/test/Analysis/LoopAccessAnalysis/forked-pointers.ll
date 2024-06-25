@@ -24,14 +24,14 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP2]]:
-; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
 ; CHECK-NEXT:        Group [[GRP3]]:
-; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -58,14 +58,14 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; RECURSE-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP4]]:
-; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-NEXT:        Group [[GRP5]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,4}<nw><%loop>
 ; RECURSE-NEXT:        Group [[GRP6]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,4}<nw><%loop>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -132,16 +132,16 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP7]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP9]]:
-; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP10]]:
-; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -171,16 +171,16 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP11]]:
-; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP12]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP13]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP14]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -232,16 +232,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture 
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP15]]:
-; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP16]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP17]]:
-; CHECK-NEXT:          (Low: %Base2 High: (800 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (800 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP18]]:
-; CHECK-NEXT:          (Low: %Base1 High: (800 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (800 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,8}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -271,16 +271,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture 
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP19]]:
-; RECURSE-NEXT:          (Low: %Dest High: (800 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (800 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP20]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP21]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (800 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (800 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,8}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP22]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (800 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (800 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,8}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -332,16 +332,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture 
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP23]]:
-; CHECK-NEXT:          (Low: %Dest High: (399 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (399 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP24]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP25]]:
-; CHECK-NEXT:          (Low: %Base2 High: (399 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (399 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP26]]:
-; CHECK-NEXT:          (Low: %Base1 High: (399 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (399 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -371,16 +371,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture 
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP27]]:
-; RECURSE-NEXT:          (Low: %Dest High: (399 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (399 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP28]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP29]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (399 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (399 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP30]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (399 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (399 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -432,16 +432,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture r
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP31]]:
-; CHECK-NEXT:          (Low: %Dest High: (100 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (100 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,1}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP32]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP33]]:
-; CHECK-NEXT:          (Low: %Base2 High: (100 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (100 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,1}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP34]]:
-; CHECK-NEXT:          (Low: %Base1 High: (100 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (100 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,1}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -471,16 +471,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture r
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP35]]:
-; RECURSE-NEXT:          (Low: %Dest High: (100 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (100 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,1}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP36]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP37]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (100 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (100 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,1}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP38]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (100 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (100 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,1}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -532,16 +532,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_possible_poison(pt
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP39]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP40]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP41]]:
-; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP42]]:
-; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -571,16 +571,16 @@ define dso_local void @forked_ptrs_different_base_same_offset_possible_poison(pt
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP43]]:
-; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP44]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP45]]:
-; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,4}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP46]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (400 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base1,+,4}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -696,13 +696,13 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP47]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP48]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP49]]:
-; CHECK-NEXT:          (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base))
+; CHECK-NEXT:          (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base)(u nuw))
 ; CHECK-NEXT:            Member: {(4 + (4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
@@ -764,13 +764,13 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP50]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP51]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP52]]:
-; CHECK-NEXT:          (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base))
+; CHECK-NEXT:          (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base)(u nuw))
 ; CHECK-NEXT:            Member: {(4 + (-4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((-4 * %extra_offset) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
@@ -832,13 +832,13 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP53]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)(u nuw))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP54]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP55]]:
-; CHECK-NEXT:          (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base))
+; CHECK-NEXT:          (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base)(u nuw))
 ; CHECK-NEXT:            Member: {(4 + (4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
 ; CHECK-NEXT:            Member: {((4 * %to_add) + (-4 * %to_sub) + %Base),+,4}<%for.body>
 ; CHECK-EMPTY:
@@ -1256,10 +1256,10 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; CHECK-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP56]]:
-; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1)(u nuw))
 ; CHECK-NEXT:            Member: %Base1
 ; CHECK-NEXT:        Group [[GRP57]]:
-; CHECK-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
+; CHECK-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2)(u nuw))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -1283,10 +1283,10 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; RECURSE-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP58]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (8 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (8 + %Base1)(u nuw))
 ; RECURSE-NEXT:            Member: %Base1
 ; RECURSE-NEXT:        Group [[GRP59]]:
-; RECURSE-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
+; RECURSE-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2)(u nuw))
 ; RECURSE-NEXT:            Member: {%Base2,+,8}<%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -1345,16 +1345,16 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; CHECK-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP60]]:
-; CHECK-NEXT:          (Low: %1 High: (63992 + %1))
+; CHECK-NEXT:          (Low: %1 High: (63992 + %1)(u nuw))
 ; CHECK-NEXT:            Member: {%1,+,8}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP63]]:
-; CHECK-NEXT:          (Low: %2 High: (63992 + %2))
+; CHECK-NEXT:          (Low: %2 High: (63992 + %2)(u nuw))
 ; CHECK-NEXT:            Member: {%2,+,8}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP61]]:
-; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds)(u nuw))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP62]]:
-; CHECK-NEXT:          (Low: %0 High: (63992 + %0))
+; CHECK-NEXT:          (Low: %0 High: (63992 + %0)(u nuw))
 ; CHECK-NEXT:            Member: {%0,+,8}<nw><%for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -1389,16 +1389,16 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; RECURSE-NEXT:          %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP64]]:
-; RECURSE-NEXT:          (Low: %1 High: (63992 + %1))
+; RECURSE-NEXT:          (Low: %1 High: (63992 + %1)(u nuw))
 ; RECURSE-NEXT:            Member: {%1,+,8}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP67]]:
-; RECURSE-NEXT:          (Low: %2 High: (63992 + %2))
+; RECURSE-NEXT:          (Low: %2 High: (63992 + %2)(u nuw))
 ; RECURSE-NEXT:            Member: {%2,+,8}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP65]]:
-; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds)(u nuw))
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP66]]:
-; RECURSE-NEXT:          (Low: %0 High: (63992 + %0))
+; RECURSE-NEXT:          (Low: %0 High: (63992 + %0)(u nuw))
 ; RECURSE-NEXT:            Member: {%0,+,8}<nw><%for.body>
 ; RECURSE-EMPTY:
 ; RECURSE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
