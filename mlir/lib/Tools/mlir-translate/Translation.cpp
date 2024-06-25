@@ -17,7 +17,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Tools/ParseUtilities.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 

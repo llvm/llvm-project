@@ -2160,8 +2160,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     Variadic<AnyType>:$initArgs,
     OptionalAttr<UnitAttr>:$unordered,
     OptionalAttr<UnitAttr>:$finalValue,
-    OptionalAttr<ArrayAttr>:$reduceAttrs,
-    OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
+    OptionalAttr<ArrayAttr>:$reduceAttrs
   );
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);

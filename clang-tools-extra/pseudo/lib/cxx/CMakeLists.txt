@@ -9,11 +9,7 @@ add_clang_library(clangPseudoCXX
   cxx_gen
 
   LINK_LIBS
+  clangBasic
   clangPseudo
   clangPseudoGrammar
-  )
-
-clang_target_link_libraries(clangPseudoCXX
-  PRIVATE
-  clangBasic
   )

@@ -124,16 +124,9 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      const Descriptor *Desc = BasePtr.getDeclDesc();
-      if (Desc->asDecl())
-        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-                 diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-      else
-        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
-                 diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-
+      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+               diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
@@ -148,9 +141,7 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
                                              const Pointer &Ptr) const {
   assert(Source);
   assert(empty());
-
-  if (Ptr.isZero())
-    return true;
+  assert(!Ptr.isZero());
 
   SourceLocation InitLoc;
   if (const auto *D = Source.dyn_cast<const Decl *>())

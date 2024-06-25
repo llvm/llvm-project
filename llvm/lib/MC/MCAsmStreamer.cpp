@@ -144,7 +144,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Section, uint32_t Subsection) override;
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
 
   void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
                               bool KeepOriginalSym) override;
@@ -510,7 +510,8 @@ void MCAsmStreamer::emitExplicitComments() {
   ExplicitCommentToEmit.clear();
 }
 
-void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+void MCAsmStreamer::changeSection(MCSection *Section,
+                                  const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);

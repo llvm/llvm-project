@@ -224,7 +224,8 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
-void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void NVPTXTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 

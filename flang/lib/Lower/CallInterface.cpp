@@ -177,10 +177,9 @@ mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
 // explicit.
 static Fortran::evaluate::characteristics::DummyDataObject
 asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
-  std::optional<Fortran::evaluate::Shape> shape =
-      dummy.type.attrs().none()
-          ? dummy.type.shape()
-          : std::make_optional<Fortran::evaluate::Shape>(dummy.type.Rank());
+  Fortran::evaluate::Shape shape =
+      dummy.type.attrs().none() ? dummy.type.shape()
+                                : Fortran::evaluate::Shape(dummy.type.Rank());
   return Fortran::evaluate::characteristics::DummyDataObject(
       Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
                                                        std::move(shape)));
@@ -188,7 +187,7 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
 
 static Fortran::evaluate::characteristics::DummyArgument
 asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
-  return Fortran::common::visit(
+  return std::visit(
       Fortran::common::visitors{
           [&](Fortran::evaluate::characteristics::DummyDataObject &obj) {
             return Fortran::evaluate::characteristics::DummyArgument(
@@ -611,17 +610,6 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     }
   }
 
-  // Set procedure attributes to the func op.
-  if (IsPureProcedure(sym))
-    func->setAttr(fir::getFuncPureAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
-  if (IsElementalProcedure(sym))
-    func->setAttr(fir::getFuncElementalAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
-  if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
-    func->setAttr(fir::getFuncRecursiveAttrName(),
-                  mlir::UnitAttr::get(&mlirContext));
-
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
@@ -844,7 +832,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      Fortran::common::visit(
+      std::visit(
           Fortran::common::visitors{
               [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
@@ -878,7 +866,7 @@ public:
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       const Fortran::evaluate::characteristics::DummyArgument
           &argCharacteristics = std::get<0>(pair);
-      Fortran::common::visit(
+      std::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::characteristics::DummyDataObject
                       &dummy) {
@@ -1309,17 +1297,18 @@ private:
   // with the shape (may contain unknown extents) for arrays.
   std::optional<fir::SequenceType::Shape> getBounds(
       const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape) {
-    if (typeAndShape.shape() && typeAndShape.shape()->empty())
+    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+    if (typeAndShape.shape().empty() &&
+        !typeAndShape.attrs().test(ShapeAttr::AssumedRank))
       return std::nullopt;
     fir::SequenceType::Shape bounds;
-    if (typeAndShape.shape())
-      for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
-           *typeAndShape.shape()) {
-        fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
-        if (std::optional<std::int64_t> i = toInt64(extent))
-          bound = *i;
-        bounds.emplace_back(bound);
-      }
+    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
+         typeAndShape.shape()) {
+      fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
+      if (std::optional<std::int64_t> i = toInt64(extent))
+        bound = *i;
+      bounds.emplace_back(bound);
+    }
     return bounds;
   }
   std::optional<std::int64_t>

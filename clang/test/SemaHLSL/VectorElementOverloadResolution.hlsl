@@ -71,7 +71,7 @@ void Case1(half2 H, float2 F, double2 D) {
   HalfFloatDouble(D);
 }
 
-// Case 2: A function declared with double and float overloads.
+// Case 2: A function declared with double and float overlaods.
 //   (a) When called with half, it will resolve to float because float is lower
 //   ranked than double.
 //   (b) When called with float it will resolve to float because float is an

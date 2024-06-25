@@ -46,7 +46,6 @@ MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
-MCOPT(bool, SaveTempLabels)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
@@ -124,10 +123,6 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "no-type-check", cl::desc("Suppress type errors (Wasm)"));
   MCBINDOPT(NoTypeCheck);
 
-  static cl::opt<bool> SaveTempLabels(
-      "save-temp-labels", cl::desc("Don't discard temporary labels"));
-  MCBINDOPT(SaveTempLabels);
-
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
       cl::desc(
@@ -161,7 +156,6 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoWarn = getNoWarn();
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
-  Options.MCSaveTempLabels = getSaveTempLabels();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();

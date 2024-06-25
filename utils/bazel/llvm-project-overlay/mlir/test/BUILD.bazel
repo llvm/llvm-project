@@ -123,7 +123,6 @@ td_library(
         "//mlir:LinalgStructuredOpsTdFiles",
         "//mlir:MemorySlotInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
-        "//mlir:PolynomialTdFiles",
         "//mlir:SideEffectInterfacesTdFiles",
     ],
 )
@@ -223,17 +222,11 @@ gentbl_cc_library(
     strip_include_prefix = "lib/Dialect/Test",
     tbl_outs = [
         (
-            [
-                "-gen-attrdef-decls",
-                "--attrdefs-dialect=test",
-            ],
+            ["-gen-attrdef-decls"],
             "lib/Dialect/Test/TestAttrDefs.h.inc",
         ),
         (
-            [
-                "-gen-attrdef-defs",
-                "--attrdefs-dialect=test",
-            ],
+            ["-gen-attrdef-defs"],
             "lib/Dialect/Test/TestAttrDefs.cpp.inc",
         ),
     ],
@@ -428,7 +421,6 @@ cc_library(
         "//mlir:LoopLikeInterface",
         "//mlir:MemorySlotInterfaces",
         "//mlir:Pass",
-        "//mlir:PolynomialDialect",
         "//mlir:Reducer",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
@@ -446,7 +438,6 @@ cc_library(
     srcs = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
     deps = [
         ":TestDialect",
-        "//llvm:Core",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",

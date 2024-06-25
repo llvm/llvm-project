@@ -67,14 +67,12 @@ ENUM_CLASS(
 const char *AsFortran(DefinedIo);
 
 // Floating-point rounding modes; these are packed into a byte to save
-// room in the runtime's format processing context structure.  These
-// enumerators are defined with the corresponding values returned from
-// llvm.get.rounding.
+// room in the runtime's format processing context structure.
 enum class RoundingMode : std::uint8_t {
-  ToZero, // ROUND=ZERO, RZ - truncation
   TiesToEven, // ROUND=NEAREST, RN - default IEEE rounding
-  Up, // ROUND=UP, RU
+  ToZero, // ROUND=ZERO, RZ - truncation
   Down, // ROUND=DOWN, RD
+  Up, // ROUND=UP, RU
   TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
 };
 

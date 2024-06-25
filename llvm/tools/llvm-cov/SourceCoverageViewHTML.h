@@ -38,7 +38,6 @@ public:
 
 protected:
   Error emitStyleSheet();
-  Error emitJavaScript();
   void emitReportHeader(raw_ostream &OSRef, const std::string &Title);
 
 private:
@@ -106,7 +105,8 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderTitle(raw_ostream &OS, StringRef Title) override;
 
-  void renderTableHeader(raw_ostream &OS, unsigned IndentLevel) override;
+  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
+                         unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,

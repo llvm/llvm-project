@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <unordered_map>
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
@@ -58,12 +57,12 @@
 #endif
 
 #if defined(__has_include)
-#if __has_include("hsa.h")
-#include "hsa.h"
-#include "hsa_ext_amd.h"
-#elif __has_include("hsa/hsa.h")
+#if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
+#elif __has_include("hsa.h")
+#include "hsa.h"
+#include "hsa_ext_amd.h"
 #endif
 #else
 #include "hsa/hsa.h"
@@ -559,8 +558,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Print more elaborate kernel launch info for AMDGPU
@@ -2804,10 +2802,9 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err =
-            AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
-                                    /*NumBlocks=*/1ul, KernelArgs,
-                                    KernelLaunchParamsTy{}, AsyncInfoWrapper))
+    if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                           /*NumBlocks=*/1ul, KernelArgs,
+                                           /*Args=*/nullptr, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -3268,11 +3265,11 @@ private:
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads, uint64_t NumBlocks,
-                                 KernelArgsTy &KernelArgs,
-                                 KernelLaunchParamsTy LaunchParams,
+                                 KernelArgsTy &KernelArgs, void *Args,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  if (ArgsSize != LaunchParams.Size &&
-      ArgsSize != LaunchParams.Size + getImplicitArgsSize())
+  const uint32_t KernelArgsSize = KernelArgs.NumArgs * sizeof(void *);
+
+  if (ArgsSize < KernelArgsSize)
     return Plugin::error("Mismatch of kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
@@ -3295,21 +3292,20 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
-  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
-    // Initialize implicit arguments.
-    ImplArgs = reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-        advanceVoidPtr(AllArgs, LaunchParams.Size));
+  // Initialize implicit arguments.
+  utils::AMDGPUImplicitArgsTy *ImplArgs =
+      reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
+          advanceVoidPtr(AllArgs, KernelArgsSize));
 
-    // Initialize the implicit arguments to zero.
-    std::memset(ImplArgs, 0, getImplicitArgsSize());
-  }
+  // Initialize the implicit arguments to zero.
+  std::memset(ImplArgs, 0, ImplicitArgsSize);
 
   // Copy the explicit arguments.
   // TODO: We should expose the args memory manager alloc to the common part as
   // 	   alternative to copying them twice.
-  if (LaunchParams.Size)
-    std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
+  if (KernelArgs.NumArgs)
+    std::memcpy(AllArgs, *static_cast<void **>(Args),
+                sizeof(void *) * KernelArgs.NumArgs);
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
@@ -3322,8 +3318,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     Stream->setRPCServer(GenericDevice.getRPCServer());
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
-  if (ImplArgs &&
-      getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
+  if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     ImplArgs->BlockCountX = NumBlocks;
     ImplArgs->BlockCountY = 1;
     ImplArgs->BlockCountZ = 1;

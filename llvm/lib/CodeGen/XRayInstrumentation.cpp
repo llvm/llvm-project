@@ -53,7 +53,7 @@ struct XRayInstrumentation : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<MachineLoopInfo>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -170,9 +170,7 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
 
     if (!IgnoreLoops) {
       // Get MachineDominatorTree or compute it on the fly if it's unavailable
-      auto *MDTWrapper =
-          getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-      auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+      auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
         ComputedMDT.getBase().recalculate(MF);

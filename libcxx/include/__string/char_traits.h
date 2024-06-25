@@ -270,26 +270,26 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t> {
   static inline _LIBCPP_HIDE_FROM_ABI constexpr bool lt(char_type __c1, char_type __c2) noexcept { return __c1 < __c2; }
 
   static _LIBCPP_HIDE_FROM_ABI constexpr int
-  compare(const char_type* __s1, const char_type* __s2, size_t __n) noexcept {
+  compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
     return std::__constexpr_memcmp(__s1, __s2, __element_count(__n));
   }
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t length(const char_type* __str) noexcept {
+  static _LIBCPP_HIDE_FROM_ABI constexpr size_t length(const char_type* __str) _NOEXCEPT {
     return std::__constexpr_strlen(__str);
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const char_type*
-  find(const char_type* __s, size_t __n, const char_type& __a) noexcept {
+  find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
     return std::__constexpr_memchr(__s, __a, __n);
   }
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 char_type*
-  move(char_type* __s1, const char_type* __s2, size_t __n) noexcept {
+  move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
     return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
   }
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 char_type*
-  copy(char_type* __s1, const char_type* __s2, size_t __n) noexcept {
+  copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
     _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(!std::__is_pointer_in_range(__s1, __s1 + __n, __s2),
                                           "char_traits::copy: source and destination ranges overlap");
     std::__constexpr_memmove(__s1, __s2, __element_count(__n));
@@ -297,7 +297,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t> {
   }
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 char_type*
-  assign(char_type* __s, size_t __n, char_type __a) noexcept {
+  assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT {
     std::fill_n(__s, __n, __a);
     return __s;
   }

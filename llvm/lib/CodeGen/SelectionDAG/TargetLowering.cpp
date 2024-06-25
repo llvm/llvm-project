@@ -951,11 +951,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedVectorElts(
 
 // Attempt to form ext(avgfloor(A, B)) from shr(add(ext(A), ext(B)), 1).
 //      or to form ext(avgceil(A, B)) from shr(add(ext(A), ext(B), 1), 1).
-static SDValue combineShiftToAVG(SDValue Op,
-                                 TargetLowering::TargetLoweringOpt &TLO,
+static SDValue combineShiftToAVG(SDValue Op, SelectionDAG &DAG,
                                  const TargetLowering &TLI,
                                  const APInt &DemandedBits,
-                                 const APInt &DemandedElts, unsigned Depth) {
+                                 const APInt &DemandedElts,
+                                 unsigned Depth) {
   assert((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA) &&
          "SRL or SRA node is required here!");
   // Is the right shift using an immediate value of 1?
@@ -1006,7 +1006,6 @@ static SDValue combineShiftToAVG(SDValue Op,
   // If the shift is unsigned (srl):
   //  - Needs >= 1 zero bit for both operands.
   //  - Needs 1 demanded bit zero and >= 2 sign bits.
-  SelectionDAG &DAG = TLO.DAG;
   unsigned ShiftOpc = Op.getOpcode();
   bool IsSigned = false;
   unsigned KnownBits;
@@ -1060,14 +1059,12 @@ static SDValue combineShiftToAVG(SDValue Op,
   unsigned MinWidth =
       std::max<unsigned>(VT.getScalarSizeInBits() - KnownBits, 8);
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_ceil(MinWidth));
-  if (NVT.getScalarSizeInBits() > VT.getScalarSizeInBits())
-    return SDValue();
   if (VT.isVector())
     NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  if (TLO.LegalTypes() && !TLI.isOperationLegal(AVGOpc, NVT)) {
+  if (!TLI.isOperationLegalOrCustom(AVGOpc, NVT)) {
     // If we could not transform, and (both) adds are nuw/nsw, we can use the
     // larger type size to do the transform.
-    if (TLO.LegalOperations() && !TLI.isOperationLegal(AVGOpc, VT))
+    if (!TLI.isOperationLegalOrCustom(AVGOpc, VT))
       return SDValue();
     if (DAG.willNotOverflowAdd(IsSigned, Add.getOperand(0),
                                Add.getOperand(1)) &&
@@ -1077,12 +1074,6 @@ static SDValue combineShiftToAVG(SDValue Op,
     else
       return SDValue();
   }
-
-  // Don't create a AVGFLOOR node with a scalar constant unless its legal as
-  // this is likely to stop other folds (reassociation, value tracking etc.)
-  if (!IsCeil && !TLI.isOperationLegal(AVGOpc, NVT) &&
-      (isa<ConstantSDNode>(ExtOpA) || isa<ConstantSDNode>(ExtOpB)))
-    return SDValue();
 
   SDLoc DL(Op);
   SDValue ResultAVG =
@@ -2011,7 +2002,7 @@ bool TargetLowering::SimplifyDemandedBits(
     }
 
     // Try to match AVG patterns (after shift simplification).
-    if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
@@ -2122,7 +2113,7 @@ bool TargetLowering::SimplifyDemandedBits(
     }
 
     // Try to match AVG patterns (after shift simplification).
-    if (SDValue AVG = combineShiftToAVG(Op, TLO, *this, DemandedBits,
+    if (SDValue AVG = combineShiftToAVG(Op, TLO.DAG, *this, DemandedBits,
                                         DemandedElts, Depth + 1))
       return TLO.CombineTo(Op, AVG);
 
@@ -9234,49 +9225,6 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
                        DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
 }
 
-SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
-  SDLoc dl(N);
-  EVT VT = N->getValueType(0);
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-
-  unsigned Opc = N->getOpcode();
-  bool IsFloor = Opc == ISD::AVGFLOORS || Opc == ISD::AVGFLOORU;
-  bool IsSigned = Opc == ISD::AVGCEILS || Opc == ISD::AVGFLOORS;
-  unsigned ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
-  assert((Opc == ISD::AVGFLOORS || Opc == ISD::AVGCEILS ||
-          Opc == ISD::AVGFLOORU || Opc == ISD::AVGCEILU) &&
-         "Unknown AVG node");
-
-  // If the operands are already extended, we can add+shift.
-  bool IsExt =
-      (IsSigned && DAG.ComputeNumSignBits(LHS) >= 2 &&
-       DAG.ComputeNumSignBits(RHS) >= 2) ||
-      (!IsSigned && DAG.computeKnownBits(LHS).countMinLeadingZeros() >= 1 &&
-       DAG.computeKnownBits(RHS).countMinLeadingZeros() >= 1);
-  if (IsExt) {
-    SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
-    if (!IsFloor)
-      Sum = DAG.getNode(ISD::ADD, dl, VT, Sum, DAG.getConstant(1, dl, VT));
-    return DAG.getNode(ShiftOpc, dl, VT, Sum,
-                       DAG.getShiftAmountConstant(1, VT, dl));
-  }
-
-  // avgceils(lhs, rhs) -> sub(or(lhs,rhs),ashr(xor(lhs,rhs),1))
-  // avgceilu(lhs, rhs) -> sub(or(lhs,rhs),lshr(xor(lhs,rhs),1))
-  // avgfloors(lhs, rhs) -> add(and(lhs,rhs),ashr(xor(lhs,rhs),1))
-  // avgflooru(lhs, rhs) -> add(and(lhs,rhs),lshr(xor(lhs,rhs),1))
-  unsigned SumOpc = IsFloor ? ISD::ADD : ISD::SUB;
-  unsigned SignOpc = IsFloor ? ISD::AND : ISD::OR;
-  LHS = DAG.getFreeze(LHS);
-  RHS = DAG.getFreeze(RHS);
-  SDValue Sign = DAG.getNode(SignOpc, dl, VT, LHS, RHS);
-  SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
-  SDValue Shift =
-      DAG.getNode(ShiftOpc, dl, VT, Xor, DAG.getShiftAmountConstant(1, VT, dl));
-  return DAG.getNode(SumOpc, dl, VT, Sign, Shift);
-}
-
 SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
@@ -10356,27 +10304,6 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
                               DAG.getConstant(BitWidth - 1, dl, VT));
   Result = DAG.getNode(ISD::XOR, dl, VT, Shift, SatMin);
   return DAG.getSelect(dl, VT, Overflow, Result, SumDiff);
-}
-
-SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
-  unsigned Opcode = Node->getOpcode();
-  SDValue LHS = Node->getOperand(0);
-  SDValue RHS = Node->getOperand(1);
-  EVT VT = LHS.getValueType();
-  EVT ResVT = Node->getValueType(0);
-  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDLoc dl(Node);
-
-  auto LTPredicate = (Opcode == ISD::UCMP ? ISD::SETULT : ISD::SETLT);
-  auto GTPredicate = (Opcode == ISD::UCMP ? ISD::SETUGT : ISD::SETGT);
-
-  SDValue IsLT = DAG.getSetCC(dl, BoolVT, LHS, RHS, LTPredicate);
-  SDValue IsGT = DAG.getSetCC(dl, BoolVT, LHS, RHS, GTPredicate);
-  SDValue SelectZeroOrOne =
-      DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
-                    DAG.getConstant(0, dl, ResVT));
-  return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
-                       SelectZeroOrOne);
 }
 
 SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {

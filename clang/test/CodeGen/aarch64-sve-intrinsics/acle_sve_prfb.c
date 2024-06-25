@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL1KEEP);
 }
@@ -47,7 +39,7 @@ void test_svprfb(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_1(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_1(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL1STRM);
 }
@@ -62,7 +54,7 @@ void test_svprfb_1(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 2)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_2(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_2(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL2KEEP);
 }
@@ -77,7 +69,7 @@ void test_svprfb_2(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_3(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_3(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL2STRM);
 }
@@ -92,7 +84,7 @@ void test_svprfb_3(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 4)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_4(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_4(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL3KEEP);
 }
@@ -107,7 +99,7 @@ void test_svprfb_4(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 5)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_5(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_5(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PLDL3STRM);
 }
@@ -122,7 +114,7 @@ void test_svprfb_5(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 8)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_6(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_6(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL1KEEP);
 }
@@ -137,7 +129,7 @@ void test_svprfb_6(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 9)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_7(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_7(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL1STRM);
 }
@@ -152,7 +144,7 @@ void test_svprfb_7(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 10)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_8(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_8(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL2KEEP);
 }
@@ -167,7 +159,7 @@ void test_svprfb_8(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 11)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_9(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_9(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL2STRM);
 }
@@ -182,7 +174,7 @@ void test_svprfb_9(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 12)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_10(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_10(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL3KEEP);
 }
@@ -197,7 +189,7 @@ void test_svprfb_10(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]], i32 13)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_11(svbool_t pg, const void *base) MODE_ATTR
+void test_svprfb_11(svbool_t pg, const void *base)
 {
   return svprfb(pg, base, SV_PSTL3STRM);
 }
@@ -214,12 +206,10 @@ void test_svprfb_11(svbool_t pg, const void *base) MODE_ATTR
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.prf.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], ptr [[TMP0]], i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svprfb_vnum(svbool_t pg, const void *base, int64_t vnum) MODE_ATTR
+void test_svprfb_vnum(svbool_t pg, const void *base, int64_t vnum)
 {
   return svprfb_vnum(pg, base, vnum, SV_PLDL1KEEP);
 }
-
-#ifndef __ARM_FEATURE_SME
 
 // CHECK-LABEL: @test_svprfb_gather_u32base(
 // CHECK-NEXT:  entry:
@@ -357,5 +347,3 @@ void test_svprfb_gather_u64base_offset(svbool_t pg, svuint64_t bases, int64_t of
 {
   return SVE_ACLE_FUNC(svprfb_gather,_u64base,_offset,)(pg, bases, offset, SV_PLDL1KEEP);
 }
-
-#endif

@@ -243,17 +243,8 @@ bool Pointer::isInitialized() const {
     return IM->second->isElementInitialized(getIndex());
   }
 
-  if (asBlockPointer().Base == 0)
-    return true;
-
-  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
-    const GlobalInlineDescriptor &GD =
-        *reinterpret_cast<const GlobalInlineDescriptor *>(block()->rawData());
-    return GD.InitState == GlobalInitState::Initialized;
-  }
-
   // Field has its bit in an inline descriptor.
-  return getInlineDesc()->IsInitialized;
+  return PointeeStorage.BS.Base == 0 || getInlineDesc()->IsInitialized;
 }
 
 void Pointer::initialize() const {
@@ -291,13 +282,6 @@ void Pointer::initialize() const {
     return;
   }
 
-  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
-    GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
-        asBlockPointer().Pointee->rawData());
-    GD.InitState = GlobalInitState::Initialized;
-    return;
-  }
-
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
          "Only composite fields can be initialised");
@@ -308,10 +292,6 @@ void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
          "Only composite fields can be initialised");
-
-  if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor))
-    return;
-
   getInlineDesc()->IsActive = true;
 }
 

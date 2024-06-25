@@ -187,11 +187,6 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
-static cl::opt<bool> ForceStreaming(
-    "force-streaming",
-    cl::desc("Force the use of streaming code for all functions"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> ForceStreamingCompatible(
     "force-streaming-compatible",
     cl::desc("Force the use of streaming-compatible code for all functions"),
@@ -417,11 +412,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
   bool HasMinSize = F.hasMinSize();
 
-  bool IsStreaming = ForceStreaming ||
-                     F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
+  bool IsStreaming = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
                      F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible = ForceStreamingCompatible ||
-                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool IsStreamingCompatible =
+      F.hasFnAttribute("aarch64_pstate_sm_compatible") ||
+      ForceStreamingCompatible;
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -554,7 +549,8 @@ public:
 
 } // end anonymous namespace
 
-void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void AArch64TargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {

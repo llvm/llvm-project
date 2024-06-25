@@ -100,7 +100,7 @@ public:
   bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
-  // signed buffer load instructions.
+  // signed buffer laod instructions.
   bool matchCombineSignExtendInReg(
       MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
   void applyCombineSignExtendInReg(
@@ -465,8 +465,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -494,8 +494,7 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());

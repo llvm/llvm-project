@@ -1478,9 +1478,8 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
     }
   }
 
-  if (!ParseOnly)
-    BC.outs() << "BOLT-INFO: parsed " << EntryID
-              << " alternative instruction entries\n";
+  BC.outs() << "BOLT-INFO: parsed " << EntryID
+            << " alternative instruction entries\n";
 
   return Error::success();
 }

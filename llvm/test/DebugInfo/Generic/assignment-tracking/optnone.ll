@@ -7,10 +7,10 @@
 ;; Check it doesn't get applied to functions marked optnone.
 
 ; CHECK: @_Z3funv
-; CHECK: #dbg_assign
+; CHECK: dbg.assign
 
 ; CHECK: @_Z3funv2
-; CHECK: #dbg_declare
+; CHECK: dbg.declare
 
 define dso_local void @_Z3funv() local_unnamed_addr !dbg !16 {
 entry:

@@ -63,7 +63,7 @@ struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
 }
 
-using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
+using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
 
 /// Target specific streamer interface. This is used so that targets can
 /// implement support for target specific assembly directives.
@@ -116,7 +116,7 @@ public:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(const MCSection *CurSection, MCSection *Section,
-                             uint32_t SubSection, raw_ostream &OS);
+                             const MCExpr *SubSection, raw_ostream &OS);
 
   virtual void emitValue(const MCExpr *Value);
 
@@ -411,7 +411,7 @@ public:
   ///
   /// This is called by popSection and switchSection, if the current
   /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
+  virtual void changeSection(MCSection *, const MCExpr *);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {
@@ -423,23 +423,46 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection();
+  bool popSection() {
+    if (SectionStack.size() <= 1)
+      return false;
+    auto I = SectionStack.end();
+    --I;
+    MCSectionSubPair OldSection = I->first;
+    --I;
+    MCSectionSubPair NewSection = I->first;
+
+    if (NewSection.first && OldSection != NewSection)
+      changeSection(NewSection.first, NewSection.second);
+    SectionStack.pop_back();
+    return true;
+  }
+
+  bool subSection(const MCExpr *Subsection) {
+    if (SectionStack.empty())
+      return false;
+
+    switchSection(SectionStack.back().first.first, Subsection);
+    return true;
+  }
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
   ///
   /// This corresponds to assembler directives like .section, .text, etc.
-  virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
-  bool switchSection(MCSection *Section, const MCExpr *);
+  virtual void switchSection(MCSection *Section,
+                             const MCExpr *Subsection = nullptr);
 
   /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call
   /// changeSection.
-  void switchSectionNoChange(MCSection *Section) {
+  void switchSectionNoChange(MCSection *Section,
+                             const MCExpr *Subsection = nullptr) {
     assert(Section && "Cannot switch to a null section!");
     MCSectionSubPair curSection = SectionStack.back().first;
     SectionStack.back().second = curSection;
-    SectionStack.back().first = MCSectionSubPair(Section, 0);
+    if (MCSectionSubPair(Section, Subsection) != curSection)
+      SectionStack.back().first = MCSectionSubPair(Section, Subsection);
   }
 
   /// Create the default sections and set the initial one.
@@ -863,6 +886,12 @@ public:
   /// emitted.
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
+
+  /// If the end of the fragment following this NeverAlign fragment ever gets
+  /// aligned to \p ByteAlignment, this fragment emits a single nop before the
+  /// following fragment to break this end-alignment.
+  virtual void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                                       const MCSubtargetInfo &STI);
 
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.

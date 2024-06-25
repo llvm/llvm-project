@@ -2695,30 +2695,30 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
   uint32_t NS = Func.getNumValueSites(VK);
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
-    auto VD = Func.getValueArrayForSite(VK, I);
-    uint32_t NV = VD.size();
-    if (NV == 0)
-      continue;
+    uint32_t NV = Func.getNumValueDataForSite(VK, I);
+    std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, I);
     Stats.TotalNumValues += NV;
-    Stats.TotalNumValueSitesWithValueProfile++;
-    if (NV > Stats.ValueSitesHistogram.size())
-      Stats.ValueSitesHistogram.resize(NV, 0);
-    Stats.ValueSitesHistogram[NV - 1]++;
+    if (NV) {
+      Stats.TotalNumValueSitesWithValueProfile++;
+      if (NV > Stats.ValueSitesHistogram.size())
+        Stats.ValueSitesHistogram.resize(NV, 0);
+      Stats.ValueSitesHistogram[NV - 1]++;
+    }
 
     uint64_t SiteSum = 0;
-    for (const auto &V : VD)
-      SiteSum += V.Count;
+    for (uint32_t V = 0; V < NV; V++)
+      SiteSum += VD[V].Count;
     if (SiteSum == 0)
       SiteSum = 1;
 
-    for (const auto &V : VD) {
+    for (uint32_t V = 0; V < NV; V++) {
       OS << "\t[ " << format("%2u", I) << ", ";
       if (Symtab == nullptr)
-        OS << format("%4" PRIu64, V.Value);
+        OS << format("%4" PRIu64, VD[V].Value);
       else
-        OS << Symtab->getFuncOrVarName(V.Value);
-      OS << ", " << format("%10" PRId64, V.Count) << " ] ("
-         << format("%.2f%%", (V.Count * 100.0 / SiteSum)) << ")\n";
+        OS << Symtab->getFuncOrVarName(VD[V].Value);
+      OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
+         << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
     }
   }
 }

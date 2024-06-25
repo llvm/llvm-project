@@ -2333,8 +2333,7 @@ inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
   //
   //        The moment we introduce symbolic casts, this restriction can be
   //        lifted.
-  if (getType()->getCanonicalTypeUnqualified() !=
-      Other.getType()->getCanonicalTypeUnqualified())
+  if (getType() != Other.getType())
     return State;
 
   SymbolSet Members = getClassMembers(State);

@@ -2594,7 +2594,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Emit tilerelease for AMX kernel.
-  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
+  if (X86FI->hasVirtualTileReg())
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 }
 

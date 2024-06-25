@@ -95,6 +95,7 @@ class VectorType;
     FMSTAT,   // ARM fmstat instruction.
 
     CMOV, // ARM conditional move instructions.
+    SUBS, // Flag-setting subtraction.
 
     SSAT, // Signed saturation
     USAT, // Unsigned saturation
@@ -243,7 +244,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-    VMLAVu, //   them and add the results together, returning an i32 of the sum
+    VMLAVu, //   them and add the results together, returning an i32 of their sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
@@ -894,7 +895,7 @@ class VectorType;
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal, bool isCmseNSCall) const;
+                            SDValue ThisVal) const;
 
     bool supportSplitCSR(MachineFunction *MF) const override {
       return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&

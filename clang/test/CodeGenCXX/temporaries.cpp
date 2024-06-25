@@ -477,8 +477,9 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[X]])
     A x;
 
-    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[XS]])
-    // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], ptr [[XS]], i64 1
+    // CHECK-NEXT: [[XS0:%.*]] = getelementptr inbounds [2 x [[A]]], ptr [[XS]], i64 0, i64 0
+    // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[XS0]])
+    // CHECK-NEXT: [[XS1:%.*]] = getelementptr inbounds [[A]], ptr [[XS0]], i64 1
     // CHECK-NEXT: call void @_ZN7Elision1AC1ERKS0_(ptr {{[^,]*}} [[XS1]], ptr noundef {{(nonnull )?}}align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
     A xs[] = { A(), x };
 
@@ -683,7 +684,8 @@ namespace Vector {
   // CHECK: store i32 {{.*}}, ptr @_ZGRN6Vector1sE_
   // CHECK: store ptr @_ZGRN6Vector1sE_, ptr @_ZN6Vector1sE,
   int &&s = S().w[1];
-  int &&ss = S().w.y;
+  // FIXME PR16204: The following code leads to an assertion in Sema.
+  //int &&s = S().w.y;
 }
 
 namespace ImplicitTemporaryCleanup {

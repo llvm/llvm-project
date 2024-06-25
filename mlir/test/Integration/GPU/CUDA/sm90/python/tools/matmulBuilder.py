@@ -182,7 +182,7 @@ def generate_matmul_ws(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = gpu.AsyncTokenType.get()
+    token_ty = ir.Type.parse("!gpu.async.token")
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)
@@ -682,7 +682,7 @@ def generate_matmul_multistage(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = gpu.AsyncTokenType.get()
+    token_ty = ir.Type.parse("!gpu.async.token")
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)

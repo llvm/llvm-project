@@ -16,10 +16,8 @@ namespace {
 // Test fixture.
 template <typename T> class IListBaseTest : public ::testing::Test {};
 
-class Parent;
-
 // Test variants with the same test.
-typedef ::testing::Types<ilist_base<false, void>, ilist_base<true, void>, ilist_base<false, Parent*>, ilist_base<true, Parent*>>
+typedef ::testing::Types<ilist_base<false>, ilist_base<true>>
     IListBaseTestTypes;
 TYPED_TEST_SUITE(IListBaseTest, IListBaseTestTypes, );
 

@@ -2284,7 +2284,7 @@ TEST(Hover, All) {
             namespace std
             {
               template<class _E>
-              class initializer_list { const _E *a, *b; };
+              class initializer_list {};
             }
             void foo() {
               ^[[auto]] i = {1,2};

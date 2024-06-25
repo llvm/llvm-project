@@ -205,7 +205,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<StructEpollEventPtr>,
             ArgSpec<IntType>,
             ArgSpec<IntType>,
-            ArgSpec<ConstSigSetPtrType>
+            ArgSpec<SigSetPtrType>
           ]
         >,
         FunctionSpec<
@@ -216,7 +216,7 @@ def Linux : StandardSpec<"Linux"> {
             ArgSpec<StructEpollEventPtr>,
             ArgSpec<IntType>,
             ArgSpec<ConstStructTimeSpecPtr>,
-            ArgSpec<ConstSigSetPtrType>
+            ArgSpec<SigSetPtrType>
           ]
         >,
       ]  // Functions

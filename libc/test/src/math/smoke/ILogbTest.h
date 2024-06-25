@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ILOGBTEST_H
 
-#include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -76,12 +76,10 @@ public:
   void test_subnormal_range(Func func) {
     constexpr StorageType MIN_SUBNORMAL = FPBits::min_subnormal().uintval();
     constexpr StorageType MAX_SUBNORMAL = FPBits::max_subnormal().uintval();
-    constexpr int COUNT = 10'001;
-    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
-        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
-        StorageType(1));
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL; v <= MAX_SUBNORMAL; v += STEP) {
-      FPBits x_bits(v);
+      FPBits x_bits = FPBits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 
@@ -96,12 +94,10 @@ public:
   void test_normal_range(Func func) {
     constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
     constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
-    constexpr int COUNT = 10'001;
-    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
-        static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
-        StorageType(1));
+    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL; v <= MAX_NORMAL; v += STEP) {
-      FPBits x_bits(v);
+      FPBits x_bits = FPBits(v);
       if (x_bits.is_zero() || x_bits.is_inf_or_nan())
         continue;
 

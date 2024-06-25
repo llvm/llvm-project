@@ -48,26 +48,32 @@ TEST(Type, GetTypeScopeAndBasename) {
 }
 
 TEST(Type, CompilerContextPattern) {
+  std::vector<CompilerContext> mms = {
+      {CompilerContextKind::Module, ConstString("A")},
+      {CompilerContextKind::Module, ConstString("B")},
+      {CompilerContextKind::Struct, ConstString("S")}};
+  EXPECT_TRUE(contextMatches(mms, mms));
   std::vector<CompilerContext> mmc = {
       {CompilerContextKind::Module, ConstString("A")},
       {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  std::vector<CompilerContext> mc = {
+      {CompilerContextKind::Class, ConstString("S")}};
+  EXPECT_FALSE(contextMatches(mms, mmc));
+  std::vector<CompilerContext> ms = {
       {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  std::vector<CompilerContext> mac = {
+      {CompilerContextKind::Struct, ConstString("S")}};
+  std::vector<CompilerContext> mas = {
       {CompilerContextKind::Module, ConstString("A")},
       {CompilerContextKind::AnyModule, ConstString("*")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  EXPECT_TRUE(contextMatches(mmc, mac));
-  EXPECT_TRUE(contextMatches(mc, mac));
-  EXPECT_FALSE(contextMatches(mac, mc));
-  std::vector<CompilerContext> mmmc = {
+      {CompilerContextKind::Struct, ConstString("S")}};
+  EXPECT_TRUE(contextMatches(mms, mas));
+  EXPECT_TRUE(contextMatches(ms, mas));
+  EXPECT_FALSE(contextMatches(mas, ms));
+  std::vector<CompilerContext> mmms = {
       {CompilerContextKind::Module, ConstString("A")},
       {CompilerContextKind::Module, ConstString("B")},
       {CompilerContextKind::Module, ConstString("C")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  EXPECT_TRUE(contextMatches(mmmc, mac));
+      {CompilerContextKind::Struct, ConstString("S")}};
+  EXPECT_TRUE(contextMatches(mmms, mas));
   std::vector<CompilerContext> mme = {
       {CompilerContextKind::Module, ConstString("A")},
       {CompilerContextKind::Module, ConstString("B")},
@@ -77,7 +83,7 @@ TEST(Type, CompilerContextPattern) {
       {CompilerContextKind::Module, ConstString("B")},
       {CompilerContextKind::AnyType, ConstString("S")}};
   EXPECT_TRUE(contextMatches(mme, mma));
-  EXPECT_TRUE(contextMatches(mmc, mma));
+  EXPECT_TRUE(contextMatches(mms, mma));
   std::vector<CompilerContext> mme2 = {
       {CompilerContextKind::Module, ConstString("A")},
       {CompilerContextKind::Module, ConstString("B")},

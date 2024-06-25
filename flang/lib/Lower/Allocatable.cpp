@@ -350,10 +350,10 @@ private:
   void visitAllocateOptions() {
     for (const auto &allocOption :
          std::get<std::list<Fortran::parser::AllocOpt>>(stmt.t))
-      Fortran::common::visit(
+      std::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::StatOrErrmsg &statOrErr) {
-                Fortran::common::visit(
+                std::visit(
                     Fortran::common::visitors{
                         [&](const Fortran::parser::StatVariable &statVar) {
                           statExpr = Fortran::semantics::GetExpr(statVar);
@@ -898,16 +898,15 @@ void Fortran::lower::genDeallocateStmt(
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   for (const Fortran::parser::StatOrErrmsg &statOrErr :
        std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t))
-    Fortran::common::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::StatVariable &statVar) {
-              statExpr = Fortran::semantics::GetExpr(statVar);
-            },
-            [&](const Fortran::parser::MsgVariable &errMsgVar) {
-              errMsgExpr = Fortran::semantics::GetExpr(errMsgVar);
-            },
-        },
-        statOrErr.u);
+    std::visit(Fortran::common::visitors{
+                   [&](const Fortran::parser::StatVariable &statVar) {
+                     statExpr = Fortran::semantics::GetExpr(statVar);
+                   },
+                   [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                     errMsgExpr = Fortran::semantics::GetExpr(errMsgVar);
+                   },
+               },
+               statOrErr.u);
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();

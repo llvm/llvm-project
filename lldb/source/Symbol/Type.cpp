@@ -75,18 +75,20 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
 static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
   if (type_class == eTypeClassAny)
     return CompilerContextKind::AnyType;
-  CompilerContextKind result = {};
-  if (type_class & (lldb::eTypeClassClass | lldb::eTypeClassStruct))
-    result |= CompilerContextKind::ClassOrStruct;
+  uint16_t result = 0;
+  if (type_class & lldb::eTypeClassClass)
+    result |= (uint16_t)CompilerContextKind::Class;
+  if (type_class & lldb::eTypeClassStruct)
+    result |= (uint16_t)CompilerContextKind::Struct;
   if (type_class & lldb::eTypeClassUnion)
-    result |= CompilerContextKind::Union;
+    result |= (uint16_t)CompilerContextKind::Union;
   if (type_class & lldb::eTypeClassEnumeration)
-    result |= CompilerContextKind::Enum;
+    result |= (uint16_t)CompilerContextKind::Enum;
   if (type_class & lldb::eTypeClassFunction)
-    result |= CompilerContextKind::Function;
+    result |= (uint16_t)CompilerContextKind::Function;
   if (type_class & lldb::eTypeClassTypedef)
-    result |= CompilerContextKind::Typedef;
-  return result;
+    result |= (uint16_t)CompilerContextKind::Typedef;
+  return (CompilerContextKind)result;
 }
 
 TypeQuery::TypeQuery(llvm::StringRef name, TypeQueryOptions options)
@@ -205,8 +207,11 @@ void CompilerContext::Dump(Stream &s) const {
   case CompilerContextKind::Namespace:
     s << "Namespace";
     break;
-  case CompilerContextKind::ClassOrStruct:
-    s << "ClassOrStruct";
+  case CompilerContextKind::Class:
+    s << "Class";
+    break;
+  case CompilerContextKind::Struct:
+    s << "Structure";
     break;
   case CompilerContextKind::Union:
     s << "Union";

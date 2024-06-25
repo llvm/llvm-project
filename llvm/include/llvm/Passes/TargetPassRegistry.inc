@@ -21,12 +21,9 @@
 #error "must provide <Target>PassRegistry.def"
 #endif
 
-auto *PIC = PB.getPassInstrumentationCallbacks();
-if (PIC) {
-  PIC->registerClassToPassNameCallback([this, PIC]() {
-    // MSVC requires this to be captured if it's used inside decltype.
-    // Other compilers consider it an unused lambda capture.
-    (void)this;
+if (PopulateClassToPassNames) {
+  auto *PIC = PB.getPassInstrumentationCallbacks();
+
 #define ADD_CLASS_PASS_TO_PASS_NAME(NAME, CREATE_PASS)                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define ADD_CLASS_PASS_TO_PASS_NAME_WITH_PARAMS(NAME, CLASS)                   \
@@ -72,7 +69,6 @@ if (PIC) {
 #undef MACHINE_FUNCTION_PASS_WITH_PARAMS
 #undef ADD_CLASS_PASS_TO_PASS_NAME
 #undef ADD_CLASS_PASS_TO_PASS_NAME_WITH_PARAMS
-  });
 }
 
 #define ADD_PASS(NAME, CREATE_PASS)                                            \

@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincb.n32(i32 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincb_n_s32(int32_t op) MODE_ATTR
+int32_t test_svqincb_n_s32(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincb,_n_s32,,)(op, 1);
 }
@@ -47,7 +39,7 @@ int32_t test_svqincb_n_s32(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincb.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincb_n_s32_1(int32_t op) MODE_ATTR
+int32_t test_svqincb_n_s32_1(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincb,_n_s32,,)(op, 16);
 }
@@ -62,7 +54,7 @@ int32_t test_svqincb_n_s32_1(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqincb.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-int64_t test_svqincb_n_s64(int64_t op) MODE_ATTR
+int64_t test_svqincb_n_s64(int64_t op)
 {
   return SVE_ACLE_FUNC(svqincb,_n_s64,,)(op, 1);
 }
@@ -77,7 +69,7 @@ int64_t test_svqincb_n_s64(int64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqincb.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-uint32_t test_svqincb_n_u32(uint32_t op) MODE_ATTR
+uint32_t test_svqincb_n_u32(uint32_t op)
 {
   return SVE_ACLE_FUNC(svqincb,_n_u32,,)(op, 16);
 }
@@ -92,7 +84,7 @@ uint32_t test_svqincb_n_u32(uint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqincb.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svqincb_n_u64(uint64_t op) MODE_ATTR
+uint64_t test_svqincb_n_u64(uint64_t op)
 {
   return SVE_ACLE_FUNC(svqincb,_n_u64,,)(op, 1);
 }
@@ -107,7 +99,7 @@ uint64_t test_svqincb_n_u64(uint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincb.n32(i32 [[OP:%.*]], i32 5, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincb_pat_n_s32(int32_t op) MODE_ATTR
+int32_t test_svqincb_pat_n_s32(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincb_pat,_n_s32,,)(op, SV_VL5, 16);
 }
@@ -122,7 +114,7 @@ int32_t test_svqincb_pat_n_s32(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqincb.n64(i64 [[OP:%.*]], i32 6, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-int64_t test_svqincb_pat_n_s64(int64_t op) MODE_ATTR
+int64_t test_svqincb_pat_n_s64(int64_t op)
 {
   return SVE_ACLE_FUNC(svqincb_pat,_n_s64,,)(op, SV_VL6, 1);
 }
@@ -137,7 +129,7 @@ int64_t test_svqincb_pat_n_s64(int64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqincb.n32(i32 [[OP:%.*]], i32 7, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-uint32_t test_svqincb_pat_n_u32(uint32_t op) MODE_ATTR
+uint32_t test_svqincb_pat_n_u32(uint32_t op)
 {
   return SVE_ACLE_FUNC(svqincb_pat,_n_u32,,)(op, SV_VL7, 16);
 }
@@ -152,7 +144,7 @@ uint32_t test_svqincb_pat_n_u32(uint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqincb.n64(i64 [[OP:%.*]], i32 8, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svqincb_pat_n_u64(uint64_t op) MODE_ATTR
+uint64_t test_svqincb_pat_n_u64(uint64_t op)
 {
   return SVE_ACLE_FUNC(svqincb_pat,_n_u64,,)(op, SV_VL8, 1);
 }

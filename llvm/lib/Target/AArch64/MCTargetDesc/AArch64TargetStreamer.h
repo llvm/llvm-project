@@ -93,7 +93,6 @@ private:
 
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
-  void finish() override;
 
 public:
   AArch64TargetELFStreamer(MCStreamer &S) : AArch64TargetStreamer(S) {}

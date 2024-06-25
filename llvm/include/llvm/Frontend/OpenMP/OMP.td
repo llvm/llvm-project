@@ -303,7 +303,7 @@ def OMPC_NumThreads : Clause<"num_threads"> {
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
 }
-def OMPC_OMPX_Bare : Clause<"ompx_bare"> {
+def OMPC_OMX_Bare : Clause<"ompx_bare"> {
   let clangClass = "OMPXBareClause";
 }
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
@@ -493,22 +493,18 @@ def OMP_Allocate : Directive<"allocate"> {
     VersionedClause<OMPC_Allocator>,
   ];
   let association = AS_None;
-  let category = CA_Declarative;
 }
 def OMP_Allocators : Directive<"allocators"> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Assumes : Directive<"assumes"> {
   let association = AS_None;
-  let category = CA_Informational;
 }
 def OMP_EndAssumes : Directive<"end assumes"> {
   let association = AS_Delimited;
-  let category = OMP_Assumes.category;
 }
 def OMP_Atomic : Directive<"atomic"> {
   let allowedClauses = [
@@ -529,15 +525,12 @@ def OMP_Atomic : Directive<"atomic"> {
     VersionedClause<OMPC_Weak, 51>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Barrier : Directive<"barrier"> {
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_BeginAssumes : Directive<"begin assumes"> {
   let association = AS_Delimited;
-  let category = CA_Informational;
 }
 def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
   let allowedClauses = [
@@ -547,40 +540,33 @@ def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
     VersionedClause<OMPC_To>,
   ];
   let association = AS_Delimited;
-  let category = CA_Declarative;
 }
 def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {
   let association = AS_Delimited;
-  let category = CA_Declarative;
 }
 def OMP_Cancel : Directive<"cancel"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_CancellationPoint : Directive<"cancellation point"> {
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_Critical : Directive<"critical"> {
   let allowedClauses = [
     VersionedClause<OMPC_Hint>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_DeclareMapper : Directive<"declare mapper"> {
   let allowedClauses = [
     VersionedClause<OMPC_Map>,
   ];
   let association = AS_None;
-  let category = CA_Declarative;
 }
 def OMP_DeclareReduction : Directive<"declare reduction"> {
   let association = AS_None;
-  let category = CA_Declarative;
 }
 def OMP_DeclareSimd : Directive<"declare simd"> {
   let allowedClauses = [
@@ -596,7 +582,6 @@ def OMP_DeclareSimd : Directive<"declare simd"> {
     VersionedClause<OMPC_Notinbranch>,
   ];
   let association = AS_Declaration;
-  let category = CA_Declarative;
 }
 def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
@@ -609,11 +594,9 @@ def OMP_DeclareTarget : Directive<"declare target"> {
     VersionedClause<OMPC_DeviceType, 50>,
   ];
   let association = AS_None;
-  let category = CA_Declarative;
 }
 def OMP_EndDeclareTarget : Directive<"end declare target"> {
   let association = AS_Delimited;
-  let category = OMP_DeclareTarget.category;
 }
 def OMP_DeclareVariant : Directive<"declare variant"> {
   let allowedClauses = [
@@ -624,11 +607,9 @@ def OMP_DeclareVariant : Directive<"declare variant"> {
     VersionedClause<OMPC_AppendArgs, 51>,
   ];
   let association = AS_Declaration;
-  let category = CA_Declarative;
 }
 def OMP_EndDeclareVariant : Directive<"end declare variant"> {
   let association = AS_Delimited;
-  let category = OMP_DeclareVariant.category;
 }
 def OMP_Depobj : Directive<"depobj"> {
   let allowedClauses = [
@@ -640,7 +621,6 @@ def OMP_Depobj : Directive<"depobj"> {
     VersionedClause<OMPC_Update, 50>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_dispatch : Directive<"dispatch"> {
   let allowedClauses = [
@@ -653,7 +633,6 @@ def OMP_dispatch : Directive<"dispatch"> {
     VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Distribute : Directive<"distribute"> {
   let allowedClauses = [
@@ -667,7 +646,6 @@ def OMP_Distribute : Directive<"distribute"> {
     VersionedClause<OMPC_DistSchedule>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_Do : Directive<"do"> {
   let allowedClauses = [
@@ -685,7 +663,6 @@ def OMP_Do : Directive<"do"> {
     VersionedClause<OMPC_Schedule>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_EndDo : Directive<"end do"> {
   let allowedOnceClauses = [
@@ -694,7 +671,6 @@ def OMP_EndDo : Directive<"end do"> {
   // Needed for association computation, since OMP_Do has it "from leafConstructs".
   let leafConstructs = OMP_Do.leafConstructs;
   let association = OMP_Do.association;
-  let category = OMP_Do.category;
 }
 def OMP_Error : Directive<"error"> {
   let allowedClauses = [
@@ -703,7 +679,6 @@ def OMP_Error : Directive<"error"> {
     VersionedClause<OMPC_Severity, 51>,
   ];
   let association = AS_None;
-  let category = CA_Utility;
 }
 def OMP_Flush : Directive<"flush"> {
   let allowedOnceClauses = [
@@ -715,7 +690,6 @@ def OMP_Flush : Directive<"flush"> {
     VersionedClause<OMPC_Release, 50>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_For : Directive<"for"> {
   let allowedClauses = [
@@ -732,7 +706,6 @@ def OMP_For : Directive<"for"> {
     VersionedClause<OMPC_Schedule>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_interop : Directive<"interop"> {
   let allowedClauses = [
@@ -744,7 +717,6 @@ def OMP_interop : Directive<"interop"> {
     VersionedClause<OMPC_Use>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_loop : Directive<"loop"> {
   let allowedClauses = [
@@ -758,18 +730,15 @@ def OMP_loop : Directive<"loop"> {
     VersionedClause<OMPC_Order, 50>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_masked : Directive<"masked"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Filter>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Master : Directive<"master"> {
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [
@@ -779,11 +748,9 @@ def OMP_Metadirective : Directive<"metadirective"> {
     VersionedClause<OMPC_Default>,
   ];
   let association = AS_None;
-  let category = CA_Meta;
 }
 def OMP_Nothing : Directive<"nothing"> {
   let association = AS_None;
-  let category = CA_Utility;
 }
 def OMP_Ordered : Directive<"ordered"> {
   let allowedClauses = [
@@ -796,7 +763,6 @@ def OMP_Ordered : Directive<"ordered"> {
   ];
   let association = AS_None;
   // There is also a block-associated "ordered" directive.
-  let category = CA_Executable;
 }
 def OMP_Parallel : Directive<"parallel"> {
   let allowedClauses = [
@@ -815,7 +781,6 @@ def OMP_Parallel : Directive<"parallel"> {
     VersionedClause<OMPC_ProcBind>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Requires : Directive<"requires"> {
   let allowedOnceClauses = [
@@ -834,7 +799,6 @@ def OMP_Requires : Directive<"requires"> {
     VersionedClause<OMPC_ReverseOffload, 99>,
   ];
   let association = AS_None;
-  let category = CA_Informational;
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
@@ -842,7 +806,6 @@ def OMP_Scan : Directive<"scan"> {
     VersionedClause<OMPC_Inclusive, 50>,
   ];
   let association = AS_Separating;
-  let category = CA_Subsidiary;
 }
 def OMP_scope : Directive<"scope"> {
   let allowedClauses = [
@@ -853,11 +816,9 @@ def OMP_scope : Directive<"scope"> {
     VersionedClause<OMPC_NoWait, 51>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_Section : Directive<"section"> {
   let association = AS_Separating;
-  let category = CA_Subsidiary;
 }
 def OMP_Sections : Directive<"sections"> {
   let allowedClauses = [
@@ -869,7 +830,6 @@ def OMP_Sections : Directive<"sections"> {
     VersionedClause<OMPC_Reduction>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_EndSections : Directive<"end sections"> {
   let allowedOnceClauses = [
@@ -877,7 +837,6 @@ def OMP_EndSections : Directive<"end sections"> {
   ];
   let leafConstructs = OMP_Sections.leafConstructs;
   let association = OMP_Sections.association;
-  let category = OMP_Sections.category;
 }
 def OMP_Simd : Directive<"simd"> {
   let allowedClauses = [
@@ -897,7 +856,6 @@ def OMP_Simd : Directive<"simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_Single : Directive<"single"> {
   let allowedClauses = [
@@ -908,7 +866,6 @@ def OMP_Single : Directive<"single"> {
     VersionedClause<OMPC_Private>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_EndSingle : Directive<"end single"> {
   let allowedClauses = [
@@ -919,7 +876,6 @@ def OMP_EndSingle : Directive<"end single"> {
   ];
   let leafConstructs = OMP_Single.leafConstructs;
   let association = OMP_Single.association;
-  let category = OMP_Single.category;
 }
 def OMP_Target : Directive<"target"> {
   let allowedClauses = [
@@ -943,7 +899,6 @@ def OMP_Target : Directive<"target"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_TargetData : Directive<"target data"> {
   let allowedOnceClauses = [
@@ -956,7 +911,6 @@ def OMP_TargetData : Directive<"target data"> {
     VersionedClause<OMPC_UseDevicePtr>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_TargetEnterData : Directive<"target enter data"> {
   let allowedClauses = [
@@ -971,7 +925,6 @@ def OMP_TargetEnterData : Directive<"target enter data"> {
     VersionedClause<OMPC_Map>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_TargetExitData : Directive<"target exit data"> {
   let allowedClauses = [
@@ -986,7 +939,6 @@ def OMP_TargetExitData : Directive<"target exit data"> {
     VersionedClause<OMPC_Map>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_TargetUpdate : Directive<"target update"> {
   let allowedClauses = [
@@ -1000,7 +952,6 @@ def OMP_TargetUpdate : Directive<"target update"> {
     VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_Task : Directive<"task"> {
   let allowedClauses = [
@@ -1022,7 +973,6 @@ def OMP_Task : Directive<"task"> {
     VersionedClause<OMPC_Priority>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_TaskGroup : Directive<"taskgroup"> {
   let allowedClauses = [
@@ -1030,7 +980,6 @@ def OMP_TaskGroup : Directive<"taskgroup"> {
     VersionedClause<OMPC_TaskReduction, 50>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_TaskLoop : Directive<"taskloop"> {
   let allowedClauses = [
@@ -1057,7 +1006,6 @@ def OMP_TaskLoop : Directive<"taskloop"> {
     VersionedClause<OMPC_NumTasks>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_TaskWait : Directive<"taskwait"> {
   let allowedClauses = [
@@ -1065,11 +1013,9 @@ def OMP_TaskWait : Directive<"taskwait"> {
     VersionedClause<OMPC_NoWait, 51>,
   ];
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_TaskYield : Directive<"taskyield"> {
   let association = AS_None;
-  let category = CA_Executable;
 }
 def OMP_Teams : Directive<"teams"> {
   let allowedClauses = [
@@ -1087,23 +1033,19 @@ def OMP_Teams : Directive<"teams"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_ThreadPrivate : Directive<"threadprivate"> {
   let association = AS_None;
-  let category = CA_Declarative;
 }
 def OMP_Tile : Directive<"tile"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
   let association = AS_None;
-  let category = CA_Utility;
 }
 def OMP_Unroll : Directive<"unroll"> {
   let allowedOnceClauses = [
@@ -1111,14 +1053,12 @@ def OMP_Unroll : Directive<"unroll"> {
     VersionedClause<OMPC_Partial, 51>,
   ];
   let association = AS_Loop;
-  let category = CA_Executable;
 }
 def OMP_Workshare : Directive<"workshare"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_Block;
-  let category = CA_Executable;
 }
 def OMP_EndWorkshare : Directive<"end workshare"> {
   let allowedClauses = [
@@ -1126,7 +1066,6 @@ def OMP_EndWorkshare : Directive<"end workshare"> {
   ];
   let leafConstructs = OMP_Workshare.leafConstructs;
   let association = OMP_Workshare.association;
-  let category = OMP_Workshare.category;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1158,7 +1097,6 @@ def OMP_DistributeParallelDo : Directive<"distribute parallel do"> {
     VersionedClause<OMPC_Schedule>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Parallel, OMP_Do];
-  let category = CA_Executable;
 }
 def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
   let allowedClauses = [
@@ -1184,7 +1122,6 @@ def OMP_DistributeParallelDoSimd : Directive<"distribute parallel do simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_DistributeParallelFor : Directive<"distribute parallel for"> {
   let allowedClauses = [
@@ -1206,7 +1143,6 @@ def OMP_DistributeParallelFor : Directive<"distribute parallel for"> {
     VersionedClause<OMPC_Shared>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Parallel, OMP_For];
-  let category = CA_Executable;
 }
 def OMP_DistributeParallelForSimd : Directive<"distribute parallel for simd"> {
   let allowedClauses = [
@@ -1233,7 +1169,6 @@ def OMP_DistributeParallelForSimd : Directive<"distribute parallel for simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_DistributeSimd : Directive<"distribute simd"> {
   let allowedClauses = [
@@ -1261,7 +1196,6 @@ def OMP_DistributeSimd : Directive<"distribute simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Distribute, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_DoSimd : Directive<"do simd"> {
   let allowedClauses = [
@@ -1283,7 +1217,6 @@ def OMP_DoSimd : Directive<"do simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_EndDoSimd : Directive<"end do simd"> {
   let allowedOnceClauses = [
@@ -1291,7 +1224,6 @@ def OMP_EndDoSimd : Directive<"end do simd"> {
   ];
   let leafConstructs = OMP_DoSimd.leafConstructs;
   let association = OMP_DoSimd.association;
-  let category = OMP_DoSimd.category;
 }
 def OMP_ForSimd : Directive<"for simd"> {
   let allowedClauses = [
@@ -1313,37 +1245,6 @@ def OMP_ForSimd : Directive<"for simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_For, OMP_Simd];
-  let category = CA_Executable;
-}
-def OMP_target_loop : Directive<"target loop"> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Allocate>,
-    VersionedClause<OMPC_Depend>,
-    VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_IsDevicePtr>,
-    VersionedClause<OMPC_HasDeviceAddr, 51>,
-    VersionedClause<OMPC_LastPrivate>,
-    VersionedClause<OMPC_Map>,
-    VersionedClause<OMPC_Private>,
-    VersionedClause<OMPC_Reduction>,
-    VersionedClause<OMPC_UsesAllocators, 50>,
-    VersionedClause<OMPC_OMPX_Attribute>,
-    VersionedClause<OMPC_InReduction, 50>,
-
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Bind, 50>,
-    VersionedClause<OMPC_Collapse>,
-    VersionedClause<OMPC_Order>,
-    VersionedClause<OMPC_ThreadLimit>,
-    VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_Device>,
-    VersionedClause<OMPC_DefaultMap>,
-    VersionedClause<OMPC_NoWait>,
-  ];
-  let leafConstructs = [OMP_Target, OMP_loop];
-  let category = CA_Executable;
 }
 def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
   let allowedClauses = [
@@ -1367,7 +1268,6 @@ def OMP_MaskedTaskloop : Directive<"masked taskloop"> {
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_masked, OMP_TaskLoop];
-  let category = CA_Executable;
 }
 def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
   let allowedClauses = [
@@ -1397,7 +1297,6 @@ def OMP_MaskedTaskloopSimd : Directive<"masked taskloop simd"> {
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_masked, OMP_TaskLoop, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_MasterTaskloop : Directive<"master taskloop"> {
   let allowedClauses = [
@@ -1420,7 +1319,6 @@ def OMP_MasterTaskloop : Directive<"master taskloop"> {
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Master, OMP_TaskLoop];
-  let category = CA_Executable;
 }
 def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
   let allowedClauses = [
@@ -1449,7 +1347,6 @@ def OMP_MasterTaskloopSimd : Directive<"master taskloop simd"> {
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Master, OMP_TaskLoop, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_ParallelDo : Directive<"parallel do"> {
   let allowedClauses = [
@@ -1472,7 +1369,6 @@ def OMP_ParallelDo : Directive<"parallel do"> {
     VersionedClause<OMPC_Schedule>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Do];
-  let category = CA_Executable;
 }
 def OMP_ParallelDoSimd : Directive<"parallel do simd"> {
   let allowedClauses = [
@@ -1500,7 +1396,6 @@ def OMP_ParallelDoSimd : Directive<"parallel do simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_ParallelFor : Directive<"parallel for"> {
   let allowedClauses = [
@@ -1523,7 +1418,6 @@ def OMP_ParallelFor : Directive<"parallel for"> {
     VersionedClause<OMPC_Shared>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_For];
-  let category = CA_Executable;
 }
 def OMP_ParallelForSimd : Directive<"parallel for simd"> {
   let allowedClauses = [
@@ -1550,7 +1444,6 @@ def OMP_ParallelForSimd : Directive<"parallel for simd"> {
     VersionedClause<OMPC_SimdLen>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_For, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_parallel_loop : Directive<"parallel loop"> {
   let allowedClauses = [
@@ -1573,7 +1466,6 @@ def OMP_parallel_loop : Directive<"parallel loop"> {
     VersionedClause<OMPC_ProcBind>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_loop];
-  let category = CA_Executable;
 }
 def OMP_ParallelMasked : Directive<"parallel masked"> {
   let allowedClauses = [
@@ -1591,7 +1483,6 @@ def OMP_ParallelMasked : Directive<"parallel masked"> {
     VersionedClause<OMPC_Shared>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_masked];
-  let category = CA_Executable;
 }
 def OMP_ParallelMaskedTaskloop :
     Directive<"parallel masked taskloop"> {
@@ -1619,7 +1510,6 @@ def OMP_ParallelMaskedTaskloop :
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_masked, OMP_TaskLoop];
-  let category = CA_Executable;
 }
 def OMP_ParallelMaskedTaskloopSimd :
     Directive<"parallel masked taskloop simd"> {
@@ -1653,7 +1543,6 @@ def OMP_ParallelMaskedTaskloopSimd :
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_masked, OMP_TaskLoop, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_ParallelMaster : Directive<"parallel master"> {
   let allowedClauses = [
@@ -1670,7 +1559,6 @@ def OMP_ParallelMaster : Directive<"parallel master"> {
     VersionedClause<OMPC_Shared>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Master];
-  let category = CA_Executable;
 }
 def OMP_ParallelMasterTaskloop :
     Directive<"parallel master taskloop"> {
@@ -1697,7 +1585,6 @@ def OMP_ParallelMasterTaskloop :
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Master, OMP_TaskLoop];
-  let category = CA_Executable;
 }
 def OMP_ParallelMasterTaskloopSimd :
     Directive<"parallel master taskloop simd"> {
@@ -1730,7 +1617,6 @@ def OMP_ParallelMasterTaskloopSimd :
     VersionedClause<OMPC_Untied>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Master, OMP_TaskLoop, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_ParallelSections : Directive<"parallel sections"> {
   let allowedClauses = [
@@ -1750,7 +1636,6 @@ def OMP_ParallelSections : Directive<"parallel sections"> {
     VersionedClause<OMPC_NumThreads>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Sections];
-  let category = CA_Executable;
 }
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
   let allowedClauses = [
@@ -1768,7 +1653,6 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
     VersionedClause<OMPC_ProcBind>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Workshare];
-  let category = CA_Executable;
 }
 def OMP_TargetParallel : Directive<"target parallel"> {
   let allowedClauses = [
@@ -1796,7 +1680,6 @@ def OMP_TargetParallel : Directive<"target parallel"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel];
-  let category = CA_Executable;
 }
 def OMP_TargetParallelDo : Directive<"target parallel do"> {
   let allowedClauses = [
@@ -1828,7 +1711,6 @@ def OMP_TargetParallelDo : Directive<"target parallel do"> {
     VersionedClause<OMPC_Schedule>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_Do];
-  let category = CA_Executable;
 }
 def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
   let allowedClauses = [
@@ -1861,7 +1743,6 @@ def OMP_TargetParallelDoSimd : Directive<"target parallel do simd"> {
     VersionedClause<OMPC_UsesAllocators>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TargetParallelFor : Directive<"target parallel for"> {
   let allowedClauses = [
@@ -1895,7 +1776,6 @@ def OMP_TargetParallelFor : Directive<"target parallel for"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_For];
-  let category = CA_Executable;
 }
 def OMP_TargetParallelForSimd : Directive<"target parallel for simd"> {
   let allowedClauses = [
@@ -1933,7 +1813,6 @@ def OMP_TargetParallelForSimd : Directive<"target parallel for simd"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_For, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_target_parallel_loop : Directive<"target parallel loop"> {
   let allowedClauses = [
@@ -1966,7 +1845,6 @@ def OMP_target_parallel_loop : Directive<"target parallel loop"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let leafConstructs = [OMP_Target, OMP_Parallel, OMP_loop];
-  let category = CA_Executable;
 }
 def OMP_TargetSimd : Directive<"target simd"> {
   let allowedClauses = [
@@ -2002,7 +1880,6 @@ def OMP_TargetSimd : Directive<"target simd"> {
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];
   let leafConstructs = [OMP_Target, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TargetTeams : Directive<"target teams"> {
   let allowedClauses = [
@@ -2026,11 +1903,10 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMPX_Bare>,
+    VersionedClause<OMPC_OMX_Bare>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
   let allowedClauses = [
@@ -2060,7 +1936,6 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistributeParallelDo :
     Directive<"target teams distribute parallel do"> {
@@ -2096,7 +1971,6 @@ def OMP_TargetTeamsDistributeParallelDo :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistributeParallelDoSimd :
     Directive<"target teams distribute parallel do simd"> {
@@ -2136,7 +2010,6 @@ def OMP_TargetTeamsDistributeParallelDoSimd :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistributeParallelFor :
     Directive<"target teams distribute parallel for"> {
@@ -2171,7 +2044,6 @@ def OMP_TargetTeamsDistributeParallelFor :
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistributeParallelForSimd :
     Directive<"target teams distribute parallel for simd"> {
@@ -2211,7 +2083,6 @@ def OMP_TargetTeamsDistributeParallelForSimd :
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TargetTeamsDistributeSimd :
     Directive<"target teams distribute simd"> {
@@ -2247,7 +2118,6 @@ def OMP_TargetTeamsDistributeSimd :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_target_teams_loop : Directive<"target teams loop"> {
   let allowedClauses = [
@@ -2278,7 +2148,6 @@ def OMP_target_teams_loop : Directive<"target teams loop"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_loop];
-  let category = CA_Executable;
 }
 def OMP_TaskLoopSimd : Directive<"taskloop simd"> {
   let allowedClauses = [
@@ -2311,7 +2180,6 @@ def OMP_TaskLoopSimd : Directive<"taskloop simd"> {
     VersionedClause<OMPC_NumTasks>,
   ];
   let leafConstructs = [OMP_TaskLoop, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistribute : Directive<"teams distribute"> {
   let allowedClauses = [
@@ -2332,7 +2200,6 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
     VersionedClause<OMPC_If>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistributeParallelDo :
     Directive<"teams distribute parallel do"> {
@@ -2360,7 +2227,6 @@ def OMP_TeamsDistributeParallelDo :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistributeParallelDoSimd :
     Directive<"teams distribute parallel do simd"> {
@@ -2390,7 +2256,6 @@ def OMP_TeamsDistributeParallelDoSimd :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_Do, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistributeParallelFor :
     Directive<"teams distribute parallel for"> {
@@ -2415,7 +2280,6 @@ def OMP_TeamsDistributeParallelFor :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistributeParallelForSimd :
     Directive<"teams distribute parallel for simd"> {
@@ -2444,7 +2308,6 @@ def OMP_TeamsDistributeParallelForSimd :
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute, OMP_Parallel, OMP_For, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_TeamsDistributeSimd : Directive<"teams distribute simd"> {
   let allowedClauses = [
@@ -2471,7 +2334,6 @@ def OMP_TeamsDistributeSimd : Directive<"teams distribute simd"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute, OMP_Simd];
-  let category = CA_Executable;
 }
 def OMP_teams_loop : Directive<"teams loop"> {
   let allowedClauses = [
@@ -2492,5 +2354,4 @@ def OMP_teams_loop : Directive<"teams loop"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Teams, OMP_loop];
-  let category = CA_Executable;
 }

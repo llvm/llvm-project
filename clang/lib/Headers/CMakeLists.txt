@@ -318,10 +318,8 @@ set(ppc_wrapper_files
 set(openmp_wrapper_files
   openmp_wrappers/math.h
   openmp_wrappers/cmath
-  # Due to a bug in CMake, `complex` must be before `complex.h`
-  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/26058
-  openmp_wrappers/complex
   openmp_wrappers/complex.h
+  openmp_wrappers/complex
   openmp_wrappers/__clang_openmp_device_functions.h
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new

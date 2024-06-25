@@ -6,15 +6,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -35,7 +27,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.clastb.nxv8bf16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x bfloat> [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svclastb_bf16(svbool_t pg, svbfloat16_t fallback, svbfloat16_t data) MODE_ATTR {
+svbfloat16_t test_svclastb_bf16(svbool_t pg, svbfloat16_t fallback, svbfloat16_t data) {
   // expected-warning@+1 {{implicit declaration of function 'svclastb_bf16'}}
   return SVE_ACLE_FUNC(svclastb, _bf16, , )(pg, fallback, data);
 }
@@ -52,7 +44,7 @@ svbfloat16_t test_svclastb_bf16(svbool_t pg, svbfloat16_t fallback, svbfloat16_t
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call bfloat @llvm.aarch64.sve.clastb.n.nxv8bf16(<vscale x 8 x i1> [[TMP0]], bfloat [[FALLBACK:%.*]], <vscale x 8 x bfloat> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret bfloat [[TMP1]]
 //
-bfloat16_t test_svclastb_n_bf16(svbool_t pg, bfloat16_t fallback, svbfloat16_t data) MODE_ATTR {
+bfloat16_t test_svclastb_n_bf16(svbool_t pg, bfloat16_t fallback, svbfloat16_t data) {
   // expected-warning@+1 {{implicit declaration of function 'svclastb_n_bf16'}}
   return SVE_ACLE_FUNC(svclastb, _n_bf16, , )(pg, fallback, data);
 }

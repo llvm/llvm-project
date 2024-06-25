@@ -1480,24 +1480,23 @@ defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero,
 // Relaxed (Negative) Multiply-Add  (madd/nmadd)
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate> reqs> {
+multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS> {
   defm MADD_#vec :
-    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
-           [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
-             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-           vec.prefix#".relaxed_madd\t$dst, $a, $b, $c",
-           vec.prefix#".relaxed_madd", simdopA, reqs>;
+    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+              [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
+                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+              vec.prefix#".relaxed_madd\t$dst, $a, $b, $c",
+              vec.prefix#".relaxed_madd", simdopA>;
   defm NMADD_#vec :
-    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
-           [(set (vec.vt V128:$dst), (int_wasm_relaxed_nmadd
-             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-           vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
-           vec.prefix#".relaxed_nmadd", simdopS, reqs>;
+    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+              [(set (vec.vt V128:$dst), (int_wasm_relaxed_nmadd
+                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+              vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
+              vec.prefix#".relaxed_nmadd", simdopS>;
 }
 
-defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasHalfPrecision]>;
+defm "" : SIMDMADD<F32x4, 0x105, 0x106>;
+defm "" : SIMDMADD<F64x2, 0x107, 0x108>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect

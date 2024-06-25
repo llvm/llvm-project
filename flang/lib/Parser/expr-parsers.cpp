@@ -70,8 +70,7 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(Parser<CharLiteralConstantSubstring>{})),
         construct<Expr>(literalConstant),
-        construct<Expr>(construct<Expr::Parentheses>("(" >>
-            expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
+        construct<Expr>(construct<Expr::Parentheses>(parenthesized(expr))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
         construct<Expr>(designator / !"("_tok / !"%"_tok),
         construct<Expr>(indirect(Parser<SubstringInquiry>{})), // %LEN or %KIND

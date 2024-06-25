@@ -45,7 +45,6 @@
 #include <functional>
 #include <limits>
 #include <numeric>
-#include <stack>
 #include <string>
 
 #define DEBUG_TYPE "bolt"

@@ -66,7 +66,6 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
                      "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
   // *** vprint_unicode ***
-#ifndef TEST_HAS_NO_UNICODE
   {
     stream.str("");
 
@@ -76,7 +75,6 @@ test(std::stringstream& stream, std::string expected, test_format_string<char, A
                  TEST_WRITE_CONCATENATED(
                      "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
-#endif // TEST_HAS_NO_UNICODE
   // *** vprint_nonunicode ***
   {
     stream.str("");

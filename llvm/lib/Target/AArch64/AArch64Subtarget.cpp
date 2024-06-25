@@ -153,11 +153,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA710:
   case CortexA715:
   case CortexA720:
-  case CortexA725:
   case CortexX2:
   case CortexX3:
   case CortexX4:
-  case CortexX925:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -182,7 +180,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA15:
   case AppleA16:
   case AppleA17:
-  case AppleM4:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
@@ -192,7 +189,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     case AppleA15:
     case AppleA16:
     case AppleA17:
-    case AppleM4:
       MaxInterleaveFactor = 4;
       break;
     default:

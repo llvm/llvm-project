@@ -45,7 +45,6 @@ class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
 class PassBuilder;
-class PassInstrumentationCallbacks;
 struct PerFunctionMIParsingState;
 class SMDiagnostic;
 class SMRange;
@@ -369,7 +368,8 @@ public:
 
   /// Allow the target to modify the pass pipeline.
   // TODO: Populate all pass names by using <Target>PassRegistry.def.
-  virtual void registerPassBuilderCallbacks(PassBuilder &) {}
+  virtual void registerPassBuilderCallbacks(PassBuilder &,
+                                            bool PopulateClassToPassNames) {}
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
@@ -431,7 +431,7 @@ public:
   /// and \p M has not been modified.
   virtual bool splitModule(
       Module &M, unsigned NumParts,
-      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
+      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
     return false;
   }
 };

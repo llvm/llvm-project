@@ -151,6 +151,9 @@ class WinCOFFWriter {
   bool UseOffsetLabels = false;
 
 public:
+  MCSectionCOFF *AddrsigSection = nullptr;
+  MCSectionCOFF *CGProfileSection = nullptr;
+
   enum DwoMode {
     AllSections,
     NonDwoOnly,
@@ -351,7 +354,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels && !MCSec.empty()) {
+  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
@@ -1093,10 +1096,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm_addrsig section.
-  if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
+  if (Mode != DwoOnly && OWriter.EmitAddrsigSection) {
+    auto Frag = new MCDataFragment(AddrsigSection);
+    Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
@@ -1115,10 +1117,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
-  if (Mode != DwoOnly && !Asm.CGProfile.empty()) {
-    auto *Sec = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
-    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
+  if (Mode != DwoOnly && CGProfileSection) {
+    auto *Frag = new MCDataFragment(CGProfileSection);
+    Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
@@ -1206,6 +1207,20 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 
 void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                    const MCAsmLayout &Layout) {
+  if (EmitAddrsigSection) {
+    ObjWriter->AddrsigSection = Asm.getContext().getCOFFSection(
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*ObjWriter->AddrsigSection);
+  }
+
+  if (!Asm.CGProfile.empty()) {
+    ObjWriter->CGProfileSection = Asm.getContext().getCOFFSection(
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
+        SectionKind::getMetadata());
+    Asm.registerSection(*ObjWriter->CGProfileSection);
+  }
+
   ObjWriter->executePostLayoutBinding(Asm, Layout);
   if (DwoWriter)
     DwoWriter->executePostLayoutBinding(Asm, Layout);

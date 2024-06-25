@@ -692,7 +692,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
 ///     using-enum-declaration: [C++20, dcl.enum]
 ///       'using' elaborated-enum-specifier ;
 ///       The terminal name of the elaborated-enum-specifier undergoes
-///       type-only lookup
+///       ordinary lookup
 ///
 ///     elaborated-enum-specifier:
 ///       'enum' nested-name-specifier[opt] identifier
@@ -724,7 +724,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
                                        /*ObectHasErrors=*/false,
                                        /*EnteringConttext=*/false,
                                        /*MayBePseudoDestructor=*/nullptr,
-                                       /*IsTypename=*/true,
+                                       /*IsTypename=*/false,
                                        /*IdentifierInfo=*/nullptr,
                                        /*OnlyNamespace=*/false,
                                        /*InUsingDeclaration=*/true)) {
@@ -738,49 +738,16 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       return nullptr;
     }
 
-    Decl *UED = nullptr;
-
-    // FIXME: identifier and annot_template_id handling is very similar to
-    // ParseBaseTypeSpecifier. It should be factored out into a function.
-    if (Tok.is(tok::identifier)) {
-      IdentifierInfo *IdentInfo = Tok.getIdentifierInfo();
-      SourceLocation IdentLoc = ConsumeToken();
-
-      ParsedType Type = Actions.getTypeName(
-          *IdentInfo, IdentLoc, getCurScope(), &SS, /*isClassName=*/true,
-          /*HasTrailingDot=*/false,
-          /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
-          /*WantNontrivialTypeSourceInfo=*/true);
-
-      UED = Actions.ActOnUsingEnumDeclaration(
-          getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, &SS);
-    } else if (Tok.is(tok::annot_template_id)) {
-      TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-
-      if (TemplateId->mightBeType()) {
-        AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
-                                      /*IsClassName=*/true);
-
-        assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
-        TypeResult Type = getTypeAnnotation(Tok);
-        SourceRange Loc = Tok.getAnnotationRange();
-        ConsumeAnnotationToken();
-
-        UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
-                                                UELoc, Loc, *TemplateId->Name,
-                                                Type.get(), &SS);
-      } else {
-        Diag(Tok.getLocation(), diag::err_using_enum_not_enum)
-            << TemplateId->Name->getName()
-            << SourceRange(TemplateId->TemplateNameLoc, TemplateId->RAngleLoc);
-      }
-    } else {
+    if (!Tok.is(tok::identifier)) {
       Diag(Tok.getLocation(), diag::err_using_enum_expect_identifier)
           << Tok.is(tok::kw_enum);
       SkipUntil(tok::semi);
       return nullptr;
     }
-
+    IdentifierInfo *IdentInfo = Tok.getIdentifierInfo();
+    SourceLocation IdentLoc = ConsumeToken();
+    Decl *UED = Actions.ActOnUsingEnumDeclaration(
+        getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, &SS);
     if (!UED) {
       SkipUntil(tok::semi);
       return nullptr;
@@ -1436,8 +1403,6 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   }
 
   // Check whether we have a template-id that names a type.
-  // FIXME: identifier and annot_template_id handling in ParseUsingDeclaration
-  // work very similarly. It should be refactored into a separate function.
   if (Tok.is(tok::annot_template_id)) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->mightBeType()) {
@@ -3197,8 +3162,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
                      DeclSpec::SCS_static &&
                  DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
                      DeclSpec::SCS_typedef &&
-                 !DS.isFriendSpecified() &&
-                 TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate) {
+                 !DS.isFriendSpecified()) {
         // It's a default member initializer.
         if (BitfieldSize.get())
           Diag(Tok, getLangOpts().CPlusPlus20
@@ -3297,7 +3261,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
       } else if (ThisDecl)
         Actions.AddInitializerToDecl(ThisDecl, Init.get(),
                                      EqualLoc.isInvalid());
-    } else if (ThisDecl && DeclaratorInfo.isStaticMember())
+    } else if (ThisDecl && DS.getStorageClassSpec() == DeclSpec::SCS_static)
       // No initializer.
       Actions.ActOnUninitializedDecl(ThisDecl);
 

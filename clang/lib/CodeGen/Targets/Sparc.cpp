@@ -111,8 +111,8 @@ public:
 private:
   ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit) const;
   void computeInfo(CGFunctionInfo &FI) const override;
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
-                   AggValueSlot Slot) const override;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
 
   // Coercion type builder for structs passed in registers. The coercion type
   // serves two purposes:
@@ -278,8 +278,8 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
     return ABIArgInfo::getDirect(CoerceTy);
 }
 
-RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty, AggValueSlot Slot) const {
+Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                  QualType Ty) const {
   ABIArgInfo AI = classifyType(Ty, 16 * 8);
   llvm::Type *ArgTy = CGT.ConvertType(Ty);
   if (AI.canHaveCoerceToType() && !AI.getCoerceToType())
@@ -325,15 +325,14 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     break;
 
   case ABIArgInfo::Ignore:
-    return Slot.asRValue();
+    return Address(llvm::UndefValue::get(ArgPtrTy), ArgTy, TypeInfo.Align);
   }
 
   // Update VAList.
   Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
   Builder.CreateStore(NextPtr.emitRawPointer(CGF), VAListAddr);
 
-  return CGF.EmitLoadOfAnyValue(
-      CGF.MakeAddrLValue(ArgAddr.withElementType(ArgTy), Ty), Slot);
+  return ArgAddr.withElementType(ArgTy);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {

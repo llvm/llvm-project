@@ -1296,13 +1296,10 @@ struct AcImpliedDo {
 };
 
 // R808 language-binding-spec ->
-//        BIND ( C [, NAME = scalar-default-char-constant-expr ]
-//                 [, CDEFINED ] )
+//        BIND ( C [, NAME = scalar-default-char-constant-expr] )
 // R1528 proc-language-binding-spec -> language-binding-spec
-struct LanguageBindingSpec {
-  TUPLE_CLASS_BOILERPLATE(LanguageBindingSpec);
-  std::tuple<std::optional<ScalarDefaultCharConstantExpr>, bool> t;
-};
+WRAPPER_CLASS(
+    LanguageBindingSpec, std::optional<ScalarDefaultCharConstantExpr>);
 
 // R852 named-constant-def -> named-constant = constant-expr
 struct NamedConstantDef {
@@ -3337,7 +3334,6 @@ struct CompilerDirective {
     TUPLE_CLASS_BOILERPLATE(AssumeAligned);
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
-  EMPTY_CLASS(VectorAlways);
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3345,7 +3341,7 @@ struct CompilerDirective {
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unrecognized>
+      std::list<NameValue>, Unrecognized>
       u;
 };
 

@@ -350,11 +350,6 @@ public:
   // Describe memory region usage.
   void printMemoryUsage(raw_ostream &os);
 
-  // Record a pending error during an assignAddresses invocation.
-  // assignAddresses is executed more than once. Therefore, lld::error should be
-  // avoided to not report duplicate errors.
-  void recordError(const Twine &msg);
-
   // Check backward location counter assignment and memory region/LMA overflows.
   void checkFinalScriptConditions() const;
 
@@ -380,7 +375,7 @@ public:
   bool seenDataAlign = false;
   bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
-  SmallVector<SmallString<0>, 0> recordedErrors;
+  std::string backwardDotErr;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

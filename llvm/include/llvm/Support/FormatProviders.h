@@ -76,19 +76,19 @@ protected:
     return Result;
   }
 
-  static std::optional<HexPrintStyle> consumeHexStyle(StringRef &Str) {
+  static bool consumeHexStyle(StringRef &Str, HexPrintStyle &Style) {
     if (!Str.starts_with_insensitive("x"))
-      return std::nullopt;
+      return false;
 
     if (Str.consume_front("x-"))
-      return HexPrintStyle::Lower;
-    if (Str.consume_front("X-"))
-      return HexPrintStyle::Upper;
-    if (Str.consume_front("x+") || Str.consume_front("x"))
-      return HexPrintStyle::PrefixLower;
-    if (!Str.consume_front("X+"))
-      Str.consume_front("X");
-    return HexPrintStyle::PrefixUpper;
+      Style = HexPrintStyle::Lower;
+    else if (Str.consume_front("X-"))
+      Style = HexPrintStyle::Upper;
+    else if (Str.consume_front("x+") || Str.consume_front("x"))
+      Style = HexPrintStyle::PrefixLower;
+    else if (Str.consume_front("X+") || Str.consume_front("X"))
+      Style = HexPrintStyle::PrefixUpper;
+    return true;
   }
 
   static size_t consumeNumHexDigits(StringRef &Str, HexPrintStyle Style,
@@ -132,10 +132,11 @@ struct format_provider<
 private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
+    HexPrintStyle HS;
     size_t Digits = 0;
-    if (std::optional<HexPrintStyle> HS = consumeHexStyle(Style)) {
-      Digits = consumeNumHexDigits(Style, *HS, 0);
-      write_hex(Stream, V, *HS, Digits);
+    if (consumeHexStyle(Style, HS)) {
+      Digits = consumeNumHexDigits(Style, HS, 0);
+      write_hex(Stream, V, HS, Digits);
       return;
     }
 
@@ -181,8 +182,7 @@ private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     HexPrintStyle HS = HexPrintStyle::PrefixUpper;
-    if (std::optional<HexPrintStyle> consumed = consumeHexStyle(Style))
-      HS = *consumed;
+    consumeHexStyle(Style, HS);
     size_t Digits = consumeNumHexDigits(Style, HS, sizeof(void *) * 2);
     write_hex(Stream, reinterpret_cast<std::uintptr_t>(V), HS, Digits);
   }

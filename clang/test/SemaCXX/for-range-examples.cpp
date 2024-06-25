@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11 -fexperimental-new-constant-interpreter
 
 namespace value_range_detail {
   template<typename T>

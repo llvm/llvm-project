@@ -13,7 +13,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/SipHash.h"
 
 namespace clang {
 namespace interp {
@@ -148,12 +147,12 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
       const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "std::is_constant_evaluated" << E->getSourceRange();
+          << "std::is_constant_evaluated";
     } else {
       const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "__builtin_is_constant_evaluated" << E->getSourceRange();
+          << "__builtin_is_constant_evaluated";
     }
   }
 
@@ -609,8 +608,8 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
-  assert(Call->getArg(0)->isLValue());
-  PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+  PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
 
   if (PtrT == PT_FnPtr) {
     const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();
@@ -1101,18 +1100,6 @@ static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
   return true;
 }
 
-static bool interp__builtin_ptrauth_string_discriminator(
-    InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
-    const Function *Func, const CallExpr *Call) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-  assert(Ptr.getFieldDesc()->isPrimitiveArray());
-
-  StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
-  uint64_t Result = getPointerAuthStableSipHash(R);
-  pushInteger(S, Result, Call->getType());
-  return true;
-}
-
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   const InterpFrame *Frame = S.Current;
@@ -1342,6 +1329,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin___CFStringMakeConstantString:
+  case Builtin::BI__builtin___NSStringMakeConstantString:
     if (!noopPointer(S, OpPC, Frame, F, Call))
       return false;
     break;
@@ -1434,11 +1423,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 
   case Builtin::BI__builtin_os_log_format_buffer_size:
     if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
-      return false;
-    break;
-
-  case Builtin::BI__builtin_ptrauth_string_discriminator:
-    if (!interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, F, Call))
       return false;
     break;
 

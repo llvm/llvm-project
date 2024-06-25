@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_s32(svint32_t op1, svint8_t op2, svint8_t op3) MODE_ATTR
+svint32_t test_svdot_s32(svint32_t op1, svint8_t op2, svint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_s32,,)(op1, op2, op3);
 }
@@ -47,7 +39,7 @@ svint32_t test_svdot_s32(svint32_t op1, svint8_t op2, svint8_t op3) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svdot_s64(svint64_t op1, svint16_t op2, svint16_t op3) MODE_ATTR
+svint64_t test_svdot_s64(svint64_t op1, svint16_t op2, svint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_s64,,)(op1, op2, op3);
 }
@@ -62,7 +54,7 @@ svint64_t test_svdot_s64(svint64_t op1, svint16_t op2, svint16_t op3) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svdot_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3) MODE_ATTR
+svuint32_t test_svdot_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_u32,,)(op1, op2, op3);
 }
@@ -77,7 +69,7 @@ svuint32_t test_svdot_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3) MODE_ATT
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.udot.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svdot_u64(svuint64_t op1, svuint16_t op2, svuint16_t op3) MODE_ATTR
+svuint64_t test_svdot_u64(svuint64_t op1, svuint16_t op2, svuint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_u64,,)(op1, op2, op3);
 }
@@ -96,7 +88,7 @@ svuint64_t test_svdot_u64(svuint64_t op1, svuint16_t op2, svuint16_t op3) MODE_A
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_n_s32(svint32_t op1, svint8_t op2, int8_t op3) MODE_ATTR
+svint32_t test_svdot_n_s32(svint32_t op1, svint8_t op2, int8_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_n_s32,,)(op1, op2, op3);
 }
@@ -115,7 +107,7 @@ svint32_t test_svdot_n_s32(svint32_t op1, svint8_t op2, int8_t op3) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svdot_n_s64(svint64_t op1, svint16_t op2, int16_t op3) MODE_ATTR
+svint64_t test_svdot_n_s64(svint64_t op1, svint16_t op2, int16_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_n_s64,,)(op1, op2, op3);
 }
@@ -134,7 +126,7 @@ svint64_t test_svdot_n_s64(svint64_t op1, svint16_t op2, int16_t op3) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svdot_n_u32(svuint32_t op1, svuint8_t op2, uint8_t op3) MODE_ATTR
+svuint32_t test_svdot_n_u32(svuint32_t op1, svuint8_t op2, uint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_n_u32,,)(op1, op2, op3);
 }
@@ -153,7 +145,7 @@ svuint32_t test_svdot_n_u32(svuint32_t op1, svuint8_t op2, uint8_t op3) MODE_ATT
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.udot.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svdot_n_u64(svuint64_t op1, svuint16_t op2, uint16_t op3) MODE_ATTR
+svuint64_t test_svdot_n_u64(svuint64_t op1, svuint16_t op2, uint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot,_n_u64,,)(op1, op2, op3);
 }
@@ -168,7 +160,7 @@ svuint64_t test_svdot_n_u64(svuint64_t op1, svuint16_t op2, uint16_t op3) MODE_A
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.lane.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_lane_s32(svint32_t op1, svint8_t op2, svint8_t op3) MODE_ATTR
+svint32_t test_svdot_lane_s32(svint32_t op1, svint8_t op2, svint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_s32,,)(op1, op2, op3, 0);
 }
@@ -183,7 +175,7 @@ svint32_t test_svdot_lane_s32(svint32_t op1, svint8_t op2, svint8_t op3) MODE_AT
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.lane.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svdot_lane_s32_1(svint32_t op1, svint8_t op2, svint8_t op3) MODE_ATTR
+svint32_t test_svdot_lane_s32_1(svint32_t op1, svint8_t op2, svint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_s32,,)(op1, op2, op3, 3);
 }
@@ -198,7 +190,7 @@ svint32_t test_svdot_lane_s32_1(svint32_t op1, svint8_t op2, svint8_t op3) MODE_
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.lane.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svdot_lane_s64(svint64_t op1, svint16_t op2, svint16_t op3) MODE_ATTR
+svint64_t test_svdot_lane_s64(svint64_t op1, svint16_t op2, svint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_s64,,)(op1, op2, op3, 0);
 }
@@ -213,7 +205,7 @@ svint64_t test_svdot_lane_s64(svint64_t op1, svint16_t op2, svint16_t op3) MODE_
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.lane.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svdot_lane_s64_1(svint64_t op1, svint16_t op2, svint16_t op3) MODE_ATTR
+svint64_t test_svdot_lane_s64_1(svint64_t op1, svint16_t op2, svint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_s64,,)(op1, op2, op3, 1);
 }
@@ -228,7 +220,7 @@ svint64_t test_svdot_lane_s64_1(svint64_t op1, svint16_t op2, svint16_t op3) MOD
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.lane.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 16 x i8> [[OP2:%.*]], <vscale x 16 x i8> [[OP3:%.*]], i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svdot_lane_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3) MODE_ATTR
+svuint32_t test_svdot_lane_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_u32,,)(op1, op2, op3, 3);
 }
@@ -243,7 +235,7 @@ svuint32_t test_svdot_lane_u32(svuint32_t op1, svuint8_t op2, svuint8_t op3) MOD
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.udot.lane.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[OP3:%.*]], i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svdot_lane_u64(svuint64_t op1, svuint16_t op2, svuint16_t op3) MODE_ATTR
+svuint64_t test_svdot_lane_u64(svuint64_t op1, svuint16_t op2, svuint16_t op3)
 {
   return SVE_ACLE_FUNC(svdot_lane,_u64,,)(op1, op2, op3, 1);
 }

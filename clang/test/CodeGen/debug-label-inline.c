@@ -16,7 +16,7 @@ int f2(void) {
   int result;
 
   result = f1(ga, gb);
-  // CHECK: #dbg_label([[LABEL_METADATA:!.*]],  [[LABEL_LOCATION:![0-9]+]]
+  // CHECK: call void @llvm.dbg.label(metadata [[LABEL_METADATA:!.*]]), !dbg [[LABEL_LOCATION:!.*]]
 
   return result;
 }

@@ -779,7 +779,6 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      RI->getOperand(0));
           AccRecInstrNew->insertBefore(RI);
-          AccRecInstrNew->dropLocation();
           RI->setOperand(0, AccRecInstrNew);
         }
       }
@@ -808,7 +807,6 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      SI->getFalseValue());
           AccRecInstrNew->insertBefore(SI);
-          AccRecInstrNew->dropLocation();
           SI->setFalseValue(AccRecInstrNew);
         }
       }

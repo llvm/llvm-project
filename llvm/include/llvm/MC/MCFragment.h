@@ -23,19 +23,17 @@
 
 namespace llvm {
 
-class MCAssembler;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
-class MCFragment {
+class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
   friend class MCAsmLayout;
-  friend class MCAssembler;
-  friend class MCSection;
 
 public:
   enum FragmentType : uint8_t {
     FT_Align,
+    FT_NeverAlign,
     FT_Data,
     FT_CompactEncodedInst,
     FT_Fill,
@@ -54,25 +52,34 @@ public:
   };
 
 private:
-  // The next fragment within the section.
-  MCFragment *Next = nullptr;
-
   /// The data for the section this fragment is in.
-  MCSection *Parent = nullptr;
+  MCSection *Parent;
 
-  /// The offset of this fragment in its section.
-  uint64_t Offset = 0;
+  /// The atom this fragment is in, as represented by its defining symbol.
+  const MCSymbol *Atom;
+
+  /// The offset of this fragment in its section. This is ~0 until
+  /// initialized.
+  uint64_t Offset;
 
   /// The layout order of this fragment.
-  unsigned LayoutOrder = 0;
+  unsigned LayoutOrder;
+
+  /// The subsection this fragment belongs to. This is 0 if the fragment is not
+  // in any subsection.
+  unsigned SubsectionNumber = 0;
 
   FragmentType Kind;
 
-protected:
-  bool HasInstructions : 1;
-  bool LinkerRelaxable : 1;
+  /// Whether fragment is being laid out.
+  bool IsBeingLaidOut;
 
-  MCFragment(FragmentType Kind, bool HasInstructions);
+protected:
+  bool HasInstructions;
+  bool LinkerRelaxable = false;
+
+  MCFragment(FragmentType Kind, bool HasInstructions,
+             MCSection *Parent = nullptr);
 
 public:
   MCFragment() = delete;
@@ -85,14 +92,13 @@ public:
   /// This method will dispatch to the appropriate subclass.
   void destroy();
 
-  MCFragment *getNext() const { return Next; }
-
   FragmentType getKind() const { return Kind; }
 
   MCSection *getParent() const { return Parent; }
   void setParent(MCSection *Value) { Parent = Value; }
 
-  const MCSymbol *getAtom() const;
+  const MCSymbol *getAtom() const { return Atom; }
+  void setAtom(const MCSymbol *Value) { Atom = Value; }
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
@@ -102,11 +108,14 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
+
+  void setSubsectionNumber(unsigned Value) { SubsectionNumber = Value; }
+  unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
 class MCDummyFragment : public MCFragment {
 public:
-  explicit MCDummyFragment() : MCFragment(FT_Dummy, false) {}
+  explicit MCDummyFragment(MCSection *Sec) : MCFragment(FT_Dummy, false, Sec) {}
 
   static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
@@ -121,8 +130,9 @@ class MCEncodedFragment : public MCFragment {
   uint8_t BundlePadding = 0;
 
 protected:
-  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
-      : MCFragment(FType, HasInstructions) {}
+  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions,
+                    MCSection *Sec)
+      : MCFragment(FType, HasInstructions, Sec) {}
 
   /// The MCSubtargetInfo in effect when the instruction was encoded.
   /// It must be non-null for instructions.
@@ -180,8 +190,9 @@ class MCEncodedFragmentWithContents : public MCEncodedFragment {
 
 protected:
   MCEncodedFragmentWithContents(MCFragment::FragmentType FType,
-                                bool HasInstructions)
-      : MCEncodedFragment(FType, HasInstructions) {}
+                                bool HasInstructions,
+                                MCSection *Sec)
+      : MCEncodedFragment(FType, HasInstructions, Sec) {}
 
 public:
   SmallVectorImpl<char> &getContents() { return Contents; }
@@ -200,8 +211,10 @@ class MCEncodedFragmentWithFixups :
 
 protected:
   MCEncodedFragmentWithFixups(MCFragment::FragmentType FType,
-                              bool HasInstructions)
-      : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions) {}
+                              bool HasInstructions,
+                              MCSection *Sec)
+      : MCEncodedFragmentWithContents<ContentsSize>(FType, HasInstructions,
+                                                    Sec) {}
 
 public:
 
@@ -229,7 +242,8 @@ public:
 ///
 class MCDataFragment : public MCEncodedFragmentWithFixups<32, 4> {
 public:
-  MCDataFragment() : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false) {}
+  MCDataFragment(MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false, Sec) {}
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
@@ -246,8 +260,9 @@ public:
 ///
 class MCCompactEncodedInstFragment : public MCEncodedFragmentWithContents<4> {
 public:
-  MCCompactEncodedInstFragment()
-      : MCEncodedFragmentWithContents(FT_CompactEncodedInst, true) {}
+  MCCompactEncodedInstFragment(MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithContents(FT_CompactEncodedInst, true, Sec) {
+  }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_CompactEncodedInst;
@@ -265,10 +280,10 @@ class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
   bool AllowAutoPadding = false;
 
 public:
-  MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI)
-      : MCEncodedFragmentWithFixups(FT_Relaxable, true), Inst(Inst) {
-    this->STI = &STI;
-  }
+  MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI,
+                      MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups(FT_Relaxable, true, Sec),
+        Inst(Inst) { this->STI = &STI; }
 
   const MCInst &getInst() const { return Inst; }
   void setInst(const MCInst &Value) { Inst = Value; }
@@ -305,8 +320,8 @@ class MCAlignFragment : public MCFragment {
 
 public:
   MCAlignFragment(Align Alignment, int64_t Value, unsigned ValueSize,
-                  unsigned MaxBytesToEmit)
-      : MCFragment(FT_Align, false), Alignment(Alignment), EmitNops(false),
+                  unsigned MaxBytesToEmit, MCSection *Sec = nullptr)
+      : MCFragment(FT_Align, false, Sec), Alignment(Alignment), EmitNops(false),
         Value(Value), ValueSize(ValueSize), MaxBytesToEmit(MaxBytesToEmit) {}
 
   Align getAlignment() const { return Alignment; }
@@ -330,6 +345,27 @@ public:
   }
 };
 
+class MCNeverAlignFragment : public MCFragment {
+  /// The alignment the end of the next fragment should avoid.
+  unsigned Alignment;
+
+  /// When emitting Nops some subtargets have specific nop encodings.
+  const MCSubtargetInfo &STI;
+
+public:
+  MCNeverAlignFragment(unsigned Alignment, const MCSubtargetInfo &STI,
+                       MCSection *Sec = nullptr)
+      : MCFragment(FT_NeverAlign, false, Sec), Alignment(Alignment), STI(STI) {}
+
+  unsigned getAlignment() const { return Alignment; }
+
+  const MCSubtargetInfo &getSubtargetInfo() const { return STI; }
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_NeverAlign;
+  }
+};
+
 class MCFillFragment : public MCFragment {
   uint8_t ValueSize;
   /// Value to use for filling bytes.
@@ -342,8 +378,8 @@ class MCFillFragment : public MCFragment {
 
 public:
   MCFillFragment(uint64_t Value, uint8_t VSize, const MCExpr &NumValues,
-                 SMLoc Loc)
-      : MCFragment(FT_Fill, false), ValueSize(VSize), Value(Value),
+                 SMLoc Loc, MCSection *Sec = nullptr)
+      : MCFragment(FT_Fill, false, Sec), ValueSize(VSize), Value(Value),
         NumValues(NumValues), Loc(Loc) {}
 
   uint64_t getValue() const { return Value; }
@@ -371,8 +407,8 @@ class MCNopsFragment : public MCFragment {
 
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
-                 const MCSubtargetInfo &STI)
-      : MCFragment(FT_Nops, false), Size(NumBytes),
+                 const MCSubtargetInfo &STI, MCSection *Sec = nullptr)
+      : MCFragment(FT_Nops, false, Sec), Size(NumBytes),
         ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
 
   int64_t getNumBytes() const { return Size; }
@@ -398,8 +434,10 @@ class MCOrgFragment : public MCFragment {
   SMLoc Loc;
 
 public:
-  MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
-      : MCFragment(FT_Org, false), Value(Value), Offset(&Offset), Loc(Loc) {}
+  MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc,
+                MCSection *Sec = nullptr)
+      : MCFragment(FT_Org, false, Sec), Value(Value), Offset(&Offset),
+        Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
 
@@ -420,9 +458,9 @@ class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
   const MCExpr *Value;
 
 public:
-  MCLEBFragment(const MCExpr &Value, bool IsSigned)
-      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false), IsSigned(IsSigned),
-        Value(&Value) {
+  MCLEBFragment(const MCExpr &Value, bool IsSigned, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false, Sec),
+        IsSigned(IsSigned), Value(&Value) {
     getContents().push_back(0);
   }
 
@@ -448,8 +486,9 @@ class MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
   const MCExpr *AddrDelta;
 
 public:
-  MCDwarfLineAddrFragment(int64_t LineDelta, const MCExpr &AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_Dwarf, false),
+  MCDwarfLineAddrFragment(int64_t LineDelta, const MCExpr &AddrDelta,
+                          MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 1>(FT_Dwarf, false, Sec),
         LineDelta(LineDelta), AddrDelta(&AddrDelta) {}
 
   int64_t getLineDelta() const { return LineDelta; }
@@ -467,8 +506,8 @@ class MCDwarfCallFrameFragment : public MCEncodedFragmentWithFixups<8, 1> {
   const MCExpr *AddrDelta;
 
 public:
-  MCDwarfCallFrameFragment(const MCExpr &AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_DwarfFrame, false),
+  MCDwarfCallFrameFragment(const MCExpr &AddrDelta, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 1>(FT_DwarfFrame, false, Sec),
         AddrDelta(&AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
@@ -484,8 +523,8 @@ class MCSymbolIdFragment : public MCFragment {
   const MCSymbol *Sym;
 
 public:
-  MCSymbolIdFragment(const MCSymbol *Sym)
-      : MCFragment(FT_SymbolId, false), Sym(Sym) {}
+  MCSymbolIdFragment(const MCSymbol *Sym, MCSection *Sec = nullptr)
+      : MCFragment(FT_SymbolId, false, Sec), Sym(Sym) {}
 
   const MCSymbol *getSymbol() { return Sym; }
   const MCSymbol *getSymbol() const { return Sym; }
@@ -512,8 +551,9 @@ class MCCVInlineLineTableFragment : public MCFragment {
 public:
   MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
                               unsigned StartLineNum, const MCSymbol *FnStartSym,
-                              const MCSymbol *FnEndSym)
-      : MCFragment(FT_CVInlineLines, false), SiteFuncId(SiteFuncId),
+                              const MCSymbol *FnEndSym,
+                              MCSection *Sec = nullptr)
+      : MCFragment(FT_CVInlineLines, false, Sec), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym) {}
 
@@ -540,8 +580,8 @@ class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
 public:
   MCCVDefRangeFragment(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
-      StringRef FixedSizePortion)
-      : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false),
+      StringRef FixedSizePortion, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false, Sec),
         Ranges(Ranges.begin(), Ranges.end()),
         FixedSizePortion(FixedSizePortion) {}
 
@@ -572,8 +612,9 @@ class MCBoundaryAlignFragment : public MCFragment {
   const MCSubtargetInfo &STI;
 
 public:
-  MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign, false), AlignBoundary(AlignBoundary),
+  MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI,
+                          MCSection *Sec = nullptr)
+      : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary),
         STI(STI) {}
 
   uint64_t getSize() const { return Size; }
@@ -601,8 +642,8 @@ class MCPseudoProbeAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
   const MCExpr *AddrDelta;
 
 public:
-  MCPseudoProbeAddrFragment(const MCExpr *AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_PseudoProbe, false),
+  MCPseudoProbeAddrFragment(const MCExpr *AddrDelta, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<8, 1>(FT_PseudoProbe, false, Sec),
         AddrDelta(AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }

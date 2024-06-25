@@ -1099,10 +1099,6 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
-  case BuiltinType::Id:                                                        \
-    return Importer.getToContext().SingletonId;
-#include "clang/Basic/AMDGPUTypes.def"
 #define SHARED_SINGLETON_TYPE(Expansion)
 #define BUILTIN_TYPE(Id, SingletonId) \
   case BuiltinType::Id: return Importer.getToContext().SingletonId;
@@ -1509,7 +1505,7 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // The InjectedClassNameType is created in VisitRecordDecl when the
   // T->getDecl() is imported. Here we can return the existing type.
   const Type *Ty = (*ToDeclOrErr)->getTypeForDecl();
-  assert(isa_and_nonnull<InjectedClassNameType>(Ty));
+  assert(Ty && isa<InjectedClassNameType>(Ty));
   return QualType(Ty, 0);
 }
 
@@ -6565,11 +6561,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       return D2;
   }
 
-  // Update InsertPos, because preceding import calls may have invalidated
-  // it by adding new specializations.
-  if (!VarTemplate->findSpecialization(TemplateArgs, InsertPos))
-    VarTemplate->AddSpecialization(D2, InsertPos);
-
   QualType T;
   if (Error Err = importInto(T, D->getType()))
     return std::move(Err);
@@ -6607,6 +6598,8 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
   if (FoundSpecialization)
     D2->setPreviousDecl(FoundSpecialization->getMostRecentDecl());
+
+  VarTemplate->AddSpecialization(D2, InsertPos);
 
   addDeclToContexts(D, D2);
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PUTCHAR_H
 #define LLVM_LIBC_SRC_STDIO_PUTCHAR_H
 
+#include <stdio.h>
+
 namespace LIBC_NAMESPACE {
 
 int putchar(int c);

@@ -1808,7 +1808,8 @@ void lsp::PDLLServer::getInlayHints(const URIForFile &uri, const Range &range,
 
   // Drop any duplicated hints that may have cropped up.
   llvm::sort(inlayHints);
-  inlayHints.erase(llvm::unique(inlayHints), inlayHints.end());
+  inlayHints.erase(std::unique(inlayHints.begin(), inlayHints.end()),
+                   inlayHints.end());
 }
 
 std::optional<lsp::PDLLViewOutputResult>

@@ -68,10 +68,6 @@ void markLive(COFFLinkerContext &ctx) {
     // Mark associative sections if any.
     for (SectionChunk &c : sc->children())
       enqueue(&c);
-
-    // Mark EC entry thunks.
-    if (Defined *entryThunk = sc->getEntryThunk())
-      addSym(entryThunk);
   }
 }
 }

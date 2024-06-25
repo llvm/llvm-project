@@ -256,7 +256,9 @@ public:
     if (isIntegralPointer())
       return false;
 
-    return !isRoot() && getFieldDesc()->asDecl();
+    unsigned Base = asBlockPointer().Base;
+    return Base != 0 && Base != sizeof(InlineDescriptor) &&
+           Base != RootPtrMark && getFieldDesc()->asDecl();
   }
 
   /// Accessor for information about the declaration site.
@@ -460,7 +462,9 @@ public:
   bool isMutable() const {
     if (!isBlockPointer())
       return false;
-    return !isRoot() && getInlineDesc()->IsFieldMutable;
+    return asBlockPointer().Base != 0 &&
+           asBlockPointer().Base != sizeof(InlineDescriptor) &&
+           getInlineDesc()->IsFieldMutable;
   }
 
   bool isWeak() const {
@@ -623,7 +627,6 @@ private:
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
-    assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 

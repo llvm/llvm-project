@@ -156,12 +156,12 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachinePostDominatorTree>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -200,8 +200,8 @@ void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
 void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MDT = &getAnalysis<MachineDominatorTree>();
+  MPDT = &getAnalysis<MachinePostDominatorTree>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   LV = &getAnalysis<LiveVariables>();
   EntryFreq = MBFI->getEntryFreq();
@@ -448,9 +448,6 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
       if (MRI->isSSA())
         addRegToUpdate(RegMBB.first.getReg());
     }
-    // The liveness of old PHI and new PHI have to be updated.
-    addRegToUpdate(PHI->getOperand(0).getReg());
-    addRegToUpdate(AccReg);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
     LLVM_DEBUG(dbgs() << "Converting PHI: ");
     LLVM_DEBUG(PHI->dump());
@@ -2032,8 +2029,8 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(LiveVariables)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)

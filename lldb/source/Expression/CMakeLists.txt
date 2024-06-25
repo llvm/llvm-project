@@ -3,7 +3,6 @@ add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
   DWARFExpression.cpp
   DWARFExpressionList.cpp
   Expression.cpp
-  ExpressionParser.cpp
   ExpressionTypeSystemHelper.cpp
   ExpressionVariable.cpp
   FunctionCaller.cpp

@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 
-#include "CGPointerAuthInfo.h"
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTFwd.h"
@@ -70,10 +69,6 @@ class CGCallee {
     Last = Virtual
   };
 
-  struct OrdinaryInfoStorage {
-    CGCalleeInfo AbstractInfo;
-    CGPointerAuthInfo PointerAuthInfo;
-  };
   struct BuiltinInfoStorage {
     const FunctionDecl *Decl;
     unsigned ID;
@@ -90,7 +85,7 @@ class CGCallee {
 
   SpecialKind KindOrFunctionPointer;
   union {
-    OrdinaryInfoStorage OrdinaryInfo;
+    CGCalleeInfo AbstractInfo;
     BuiltinInfoStorage BuiltinInfo;
     PseudoDestructorInfoStorage PseudoDestructorInfo;
     VirtualInfoStorage VirtualInfo;
@@ -109,13 +104,10 @@ public:
 
   /// Construct a callee.  Call this constructor directly when this
   /// isn't a direct call.
-  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
-           /* FIXME: make parameter pointerAuthInfo mandatory */
-           const CGPointerAuthInfo &pointerAuthInfo = CGPointerAuthInfo())
+  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
       : KindOrFunctionPointer(
             SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
-    OrdinaryInfo.AbstractInfo = abstractInfo;
-    OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
+    AbstractInfo = abstractInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
   }
@@ -181,11 +173,7 @@ public:
     if (isVirtual())
       return VirtualInfo.MD;
     assert(isOrdinary());
-    return OrdinaryInfo.AbstractInfo;
-  }
-  const CGPointerAuthInfo &getPointerAuthInfo() const {
-    assert(isOrdinary());
-    return OrdinaryInfo.PointerAuthInfo;
+    return AbstractInfo;
   }
   llvm::Value *getFunctionPointer() const {
     assert(isOrdinary());
@@ -195,10 +183,6 @@ public:
     assert(isOrdinary());
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
-  }
-  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
-    assert(isOrdinary());
-    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {

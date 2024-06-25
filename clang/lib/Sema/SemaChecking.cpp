@@ -2040,23 +2040,8 @@ bool Sema::checkConstantPointerAuthKey(Expr *Arg, unsigned &Result) {
   return false;
 }
 
-static std::pair<const ValueDecl *, CharUnits>
-findConstantBaseAndOffset(Sema &S, Expr *E) {
-  // Must evaluate as a pointer.
-  Expr::EvalResult Result;
-  if (!E->EvaluateAsRValue(Result, S.Context) || !Result.Val.isLValue())
-    return {nullptr, CharUnits()};
-
-  const auto *BaseDecl =
-      Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
-  if (!BaseDecl)
-    return {nullptr, CharUnits()};
-
-  return {BaseDecl, Result.Val.getLValueOffset()};
-}
-
-static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
-                                  bool RequireConstant = false) {
+static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
+                                  PointerAuthOpKind OpKind) {
   if (Arg->hasPlaceholderType()) {
     ExprResult R = S.CheckPlaceholderExpr(Arg);
     if (R.isInvalid())
@@ -2099,87 +2084,16 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
   if (convertArgumentToType(S, Arg, ExpectedTy))
     return true;
 
-  if (!RequireConstant) {
-    // Warn about null pointers for non-generic sign and auth operations.
-    if ((OpKind == PAO_Sign || OpKind == PAO_Auth) &&
-        Arg->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
-      S.Diag(Arg->getExprLoc(), OpKind == PAO_Sign
-                                    ? diag::warn_ptrauth_sign_null_pointer
-                                    : diag::warn_ptrauth_auth_null_pointer)
-          << Arg->getSourceRange();
-    }
-
-    return false;
+  // Warn about null pointers for non-generic sign and auth operations.
+  if ((OpKind == PAO_Sign || OpKind == PAO_Auth) &&
+      Arg->isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNull)) {
+    S.Diag(Arg->getExprLoc(), OpKind == PAO_Sign
+                                  ? diag::warn_ptrauth_sign_null_pointer
+                                  : diag::warn_ptrauth_auth_null_pointer)
+        << Arg->getSourceRange();
   }
 
-  // Perform special checking on the arguments to ptrauth_sign_constant.
-
-  // The main argument.
-  if (OpKind == PAO_Sign) {
-    // Require the value we're signing to have a special form.
-    auto [BaseDecl, Offset] = findConstantBaseAndOffset(S, Arg);
-    bool Invalid;
-
-    // Must be rooted in a declaration reference.
-    if (!BaseDecl)
-      Invalid = true;
-
-    // If it's a function declaration, we can't have an offset.
-    else if (isa<FunctionDecl>(BaseDecl))
-      Invalid = !Offset.isZero();
-
-    // Otherwise we're fine.
-    else
-      Invalid = false;
-
-    if (Invalid)
-      S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_pointer);
-    return Invalid;
-  }
-
-  // The discriminator argument.
-  assert(OpKind == PAO_Discriminator);
-
-  // Must be a pointer or integer or blend thereof.
-  Expr *Pointer = nullptr;
-  Expr *Integer = nullptr;
-  if (auto *Call = dyn_cast<CallExpr>(Arg->IgnoreParens())) {
-    if (Call->getBuiltinCallee() ==
-        Builtin::BI__builtin_ptrauth_blend_discriminator) {
-      Pointer = Call->getArg(0);
-      Integer = Call->getArg(1);
-    }
-  }
-  if (!Pointer && !Integer) {
-    if (Arg->getType()->isPointerType())
-      Pointer = Arg;
-    else
-      Integer = Arg;
-  }
-
-  // Check the pointer.
-  bool Invalid = false;
-  if (Pointer) {
-    assert(Pointer->getType()->isPointerType());
-
-    // TODO: if we're initializing a global, check that the address is
-    // somehow related to what we're initializing.  This probably will
-    // never really be feasible and we'll have to catch it at link-time.
-    auto [BaseDecl, Offset] = findConstantBaseAndOffset(S, Pointer);
-    if (!BaseDecl || !isa<VarDecl>(BaseDecl))
-      Invalid = true;
-  }
-
-  // Check the integer.
-  if (Integer) {
-    assert(Integer->getType()->isIntegerType());
-    if (!Integer->isEvaluatable(S.Context))
-      Invalid = true;
-  }
-
-  if (Invalid)
-    S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_discriminator);
-  return Invalid;
+  return false;
 }
 
 static ExprResult PointerAuthStrip(Sema &S, CallExpr *Call) {
@@ -2222,16 +2136,14 @@ static ExprResult PointerAuthSignGenericData(Sema &S, CallExpr *Call) {
 }
 
 static ExprResult PointerAuthSignOrAuth(Sema &S, CallExpr *Call,
-                                        PointerAuthOpKind OpKind,
-                                        bool RequireConstant) {
+                                        PointerAuthOpKind OpKind) {
   if (S.checkArgCount(Call, 3))
     return ExprError();
   if (checkPointerAuthEnabled(S, Call))
     return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], OpKind, RequireConstant) ||
+  if (checkPointerAuthValue(S, Call->getArgs()[0], OpKind) ||
       checkPointerAuthKey(S, Call->getArgs()[1]) ||
-      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator,
-                            RequireConstant))
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
@@ -2251,24 +2163,6 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
-  return Call;
-}
-
-static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
-  if (checkPointerAuthEnabled(S, Call))
-    return ExprError();
-
-  // We've already performed normal call type-checking.
-  const Expr *Arg = Call->getArg(0)->IgnoreParenImpCasts();
-
-  // Operand must be an ordinary or UTF-8 string literal.
-  const auto *Literal = dyn_cast<StringLiteral>(Arg);
-  if (!Literal || Literal->getCharByteWidth() != 1) {
-    S.Diag(Arg->getExprLoc(), diag::err_ptrauth_string_not_literal)
-        << (Literal ? 1 : 0) << Arg->getSourceRange();
-    return ExprError();
-  }
-
   return Call;
 }
 
@@ -3031,21 +2925,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthStrip(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_blend_discriminator:
     return PointerAuthBlendDiscriminator(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_sign_constant:
-    return PointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                 /*RequireConstant=*/true);
   case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
-    return PointerAuthSignOrAuth(*this, TheCall, PAO_Sign,
-                                 /*RequireConstant=*/false);
+    return PointerAuthSignOrAuth(*this, TheCall, PAO_Sign);
   case Builtin::BI__builtin_ptrauth_auth:
-    return PointerAuthSignOrAuth(*this, TheCall, PAO_Auth,
-                                 /*RequireConstant=*/false);
+    return PointerAuthSignOrAuth(*this, TheCall, PAO_Auth);
   case Builtin::BI__builtin_ptrauth_sign_generic_data:
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
     return PointerAuthAuthAndResign(*this, TheCall);
-  case Builtin::BI__builtin_ptrauth_string_discriminator:
-    return PointerAuthStringDiscriminator(*this, TheCall);
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
@@ -3160,12 +3047,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only.
-  case Builtin::BI__builtin_elementwise_acos:
-  case Builtin::BI__builtin_elementwise_asin:
-  case Builtin::BI__builtin_elementwise_atan:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
-  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
@@ -3177,10 +3060,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_rint:
   case Builtin::BI__builtin_elementwise_nearbyint:
   case Builtin::BI__builtin_elementwise_sin:
-  case Builtin::BI__builtin_elementwise_sinh:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_tan:
-  case Builtin::BI__builtin_elementwise_tanh:
   case Builtin::BI__builtin_elementwise_trunc:
   case Builtin::BI__builtin_elementwise_canonicalize: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -3641,12 +3522,8 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_elementwise_acos:
-  case Builtin::BI__builtin_elementwise_asin:
-  case Builtin::BI__builtin_elementwise_atan:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
-  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
@@ -3656,10 +3533,8 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_pow:
   case Builtin::BI__builtin_elementwise_roundeven:
   case Builtin::BI__builtin_elementwise_sin:
-  case Builtin::BI__builtin_elementwise_sinh:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_tan:
-  case Builtin::BI__builtin_elementwise_tanh:
   case Builtin::BI__builtin_elementwise_trunc: {
     if (CheckFloatOrHalfRepresentations(this, TheCall))
       return true;
@@ -3964,11 +3839,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
   if (CallType != VariadicDoesNotApply &&
       (!FD || FD->getBuiltinID() != Builtin::BI__noop)) {
     unsigned NumParams = Proto ? Proto->getNumParams()
-                         : isa_and_nonnull<FunctionDecl>(FDecl)
-                             ? cast<FunctionDecl>(FDecl)->getNumParams()
-                         : isa_and_nonnull<ObjCMethodDecl>(FDecl)
-                             ? cast<ObjCMethodDecl>(FDecl)->param_size()
-                             : 0;
+                       : FDecl && isa<FunctionDecl>(FDecl)
+                           ? cast<FunctionDecl>(FDecl)->getNumParams()
+                       : FDecl && isa<ObjCMethodDecl>(FDecl)
+                           ? cast<ObjCMethodDecl>(FDecl)->param_size()
+                       : 0;
 
     for (unsigned ArgIdx = NumParams; ArgIdx < Args.size(); ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.

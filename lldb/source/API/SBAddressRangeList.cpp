@@ -37,40 +37,40 @@ SBAddressRangeList::operator=(const SBAddressRangeList &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
-    ref() = rhs.ref();
+    *m_opaque_up = *rhs.m_opaque_up;
   return *this;
 }
 
 uint32_t SBAddressRangeList::GetSize() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ref().GetSize();
+  return m_opaque_up->GetSize();
 }
 
 SBAddressRange SBAddressRangeList::GetAddressRangeAtIndex(uint64_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   SBAddressRange sb_addr_range;
-  (*sb_addr_range.m_opaque_up) = ref().GetAddressRangeAtIndex(idx);
+  (*sb_addr_range.m_opaque_up) = m_opaque_up->GetAddressRangeAtIndex(idx);
   return sb_addr_range;
 }
 
 void SBAddressRangeList::Clear() {
   LLDB_INSTRUMENT_VA(this);
 
-  ref().Clear();
+  m_opaque_up->Clear();
 }
 
 void SBAddressRangeList::Append(const SBAddressRange &sb_addr_range) {
   LLDB_INSTRUMENT_VA(this, sb_addr_range);
 
-  ref().Append(*sb_addr_range.m_opaque_up);
+  m_opaque_up->Append(*sb_addr_range.m_opaque_up);
 }
 
 void SBAddressRangeList::Append(const SBAddressRangeList &sb_addr_range_list) {
   LLDB_INSTRUMENT_VA(this, sb_addr_range_list);
 
-  ref().Append(*sb_addr_range_list.m_opaque_up);
+  m_opaque_up->Append(*sb_addr_range_list.m_opaque_up);
 }
 
 bool SBAddressRangeList::GetDescription(SBStream &description,
@@ -91,9 +91,4 @@ bool SBAddressRangeList::GetDescription(SBStream &description,
   }
   stream << "]";
   return true;
-}
-
-lldb_private::AddressRangeListImpl &SBAddressRangeList::ref() const {
-  assert(m_opaque_up && "opaque pointer must always be valid");
-  return *m_opaque_up;
 }

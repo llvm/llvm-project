@@ -41,8 +41,8 @@ private:
       Arg.info = classifyArgumentType(Arg.type);
   }
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
-                   AggValueSlot Slot) const override;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
 };
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
@@ -155,15 +155,15 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
   return defaultInfo.classifyReturnType(RetTy);
 }
 
-RValue WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                     QualType Ty, AggValueSlot Slot) const {
+Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                      QualType Ty) const {
   bool IsIndirect = isAggregateTypeForABI(Ty) &&
                     !isEmptyRecord(getContext(), Ty, true) &&
                     !isSingleElementStruct(Ty, getContext());
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(4),
-                          /*AllowHigherAlign=*/true, Slot);
+                          /*AllowHigherAlign=*/true);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

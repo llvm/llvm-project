@@ -3,15 +3,7 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 // CHECK-LABEL: @test_svcnth(
 // CHECK-NEXT:  entry:
@@ -25,7 +17,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svcnth(void) MODE_ATTR
+uint64_t test_svcnth()
 {
   return svcnth();
 }
@@ -40,7 +32,7 @@ uint64_t test_svcnth(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 0)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat(void) MODE_ATTR
+uint64_t test_svcnth_pat()
 {
   return svcnth_pat(SV_POW2);
 }
@@ -53,7 +45,7 @@ uint64_t test_svcnth_pat(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 1
 //
-uint64_t test_svcnth_pat_1(void) MODE_ATTR
+uint64_t test_svcnth_pat_1()
 {
   return svcnth_pat(SV_VL1);
 }
@@ -66,7 +58,7 @@ uint64_t test_svcnth_pat_1(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 2
 //
-uint64_t test_svcnth_pat_2(void) MODE_ATTR
+uint64_t test_svcnth_pat_2()
 {
   return svcnth_pat(SV_VL2);
 }
@@ -79,7 +71,7 @@ uint64_t test_svcnth_pat_2(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 3
 //
-uint64_t test_svcnth_pat_3(void) MODE_ATTR
+uint64_t test_svcnth_pat_3()
 {
   return svcnth_pat(SV_VL3);
 }
@@ -92,7 +84,7 @@ uint64_t test_svcnth_pat_3(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 4
 //
-uint64_t test_svcnth_pat_4(void) MODE_ATTR
+uint64_t test_svcnth_pat_4()
 {
   return svcnth_pat(SV_VL4);
 }
@@ -105,7 +97,7 @@ uint64_t test_svcnth_pat_4(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 5
 //
-uint64_t test_svcnth_pat_5(void) MODE_ATTR
+uint64_t test_svcnth_pat_5()
 {
   return svcnth_pat(SV_VL5);
 }
@@ -118,7 +110,7 @@ uint64_t test_svcnth_pat_5(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 6
 //
-uint64_t test_svcnth_pat_6(void) MODE_ATTR
+uint64_t test_svcnth_pat_6()
 {
   return svcnth_pat(SV_VL6);
 }
@@ -131,7 +123,7 @@ uint64_t test_svcnth_pat_6(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 7
 //
-uint64_t test_svcnth_pat_7(void) MODE_ATTR
+uint64_t test_svcnth_pat_7()
 {
   return svcnth_pat(SV_VL7);
 }
@@ -144,7 +136,7 @@ uint64_t test_svcnth_pat_7(void) MODE_ATTR
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret i64 8
 //
-uint64_t test_svcnth_pat_8(void) MODE_ATTR
+uint64_t test_svcnth_pat_8()
 {
   return svcnth_pat(SV_VL8);
 }
@@ -159,7 +151,7 @@ uint64_t test_svcnth_pat_8(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 9)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_9(void) MODE_ATTR
+uint64_t test_svcnth_pat_9()
 {
   return svcnth_pat(SV_VL16);
 }
@@ -174,7 +166,7 @@ uint64_t test_svcnth_pat_9(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 10)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_10(void) MODE_ATTR
+uint64_t test_svcnth_pat_10()
 {
   return svcnth_pat(SV_VL32);
 }
@@ -189,7 +181,7 @@ uint64_t test_svcnth_pat_10(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 11)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_11(void) MODE_ATTR
+uint64_t test_svcnth_pat_11()
 {
   return svcnth_pat(SV_VL64);
 }
@@ -204,7 +196,7 @@ uint64_t test_svcnth_pat_11(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 12)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_12(void) MODE_ATTR
+uint64_t test_svcnth_pat_12()
 {
   return svcnth_pat(SV_VL128);
 }
@@ -219,7 +211,7 @@ uint64_t test_svcnth_pat_12(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 13)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_13(void) MODE_ATTR
+uint64_t test_svcnth_pat_13()
 {
   return svcnth_pat(SV_VL256);
 }
@@ -234,7 +226,7 @@ uint64_t test_svcnth_pat_13(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 29)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_14(void) MODE_ATTR
+uint64_t test_svcnth_pat_14()
 {
   return svcnth_pat(SV_MUL4);
 }
@@ -249,7 +241,7 @@ uint64_t test_svcnth_pat_14(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.cnth(i32 30)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svcnth_pat_15(void) MODE_ATTR
+uint64_t test_svcnth_pat_15()
 {
   return svcnth_pat(SV_MUL3);
 }
@@ -266,7 +258,7 @@ uint64_t test_svcnth_pat_15(void) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svcnth_pat_16(void) MODE_ATTR
+uint64_t test_svcnth_pat_16()
 {
   return svcnth_pat(SV_ALL);
 }

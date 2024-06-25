@@ -55,8 +55,8 @@ std::optional<bool> DistinguishableOpOrAssign(
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-bool ShapesAreCompatible(const std::optional<Shape> &,
-    const std::optional<Shape> &, bool *possibleWarning = nullptr);
+bool ShapesAreCompatible(
+    const Shape &, const Shape &, bool *possibleWarning = nullptr);
 
 class TypeAndShape {
 public:
@@ -64,17 +64,17 @@ public:
       Attr, AssumedRank, AssumedShape, AssumedSize, DeferredShape, Coarray)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
 
-  explicit TypeAndShape(DynamicType t) : type_{t}, shape_{Shape{}} {
-    AcquireLEN();
-  }
-  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_{Shape(rank)} {
+  explicit TypeAndShape(DynamicType t) : type_{t} { AcquireLEN(); }
+  TypeAndShape(DynamicType t, int rank) : type_{t}, shape_(rank) {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, Shape &&s) : type_{t}, shape_{std::move(s)} {
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, std::optional<Shape> &&s) : type_{t} {
-    shape_ = std::move(s);
+    if (s) {
+      shape_ = std::move(*s);
+    }
     AcquireLEN();
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(TypeAndShape)
@@ -172,12 +172,11 @@ public:
     LEN_ = std::move(len);
     return *this;
   }
-  const std::optional<Shape> &shape() const { return shape_; }
+  const Shape &shape() const { return shape_; }
   const Attrs &attrs() const { return attrs_; }
   int corank() const { return corank_; }
 
-  // Return -1 for assumed-rank as a safety.
-  int Rank() const { return shape_ ? GetRank(*shape_) : -1; }
+  int Rank() const { return GetRank(shape_); }
 
   // Can sequence association apply to this argument?
   bool CanBeSequenceAssociated() const {
@@ -212,7 +211,7 @@ private:
 protected:
   DynamicType type_;
   std::optional<Expr<SubscriptInteger>> LEN_;
-  std::optional<Shape> shape_;
+  Shape shape_;
   Attrs attrs_;
   int corank_{0};
 };

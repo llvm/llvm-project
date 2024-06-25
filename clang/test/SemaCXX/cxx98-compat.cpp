@@ -6,11 +6,11 @@ namespace std {
   struct type_info;
   using size_t = decltype(sizeof(0)); // expected-warning {{decltype}} expected-warning {{alias}}
   template<typename T> struct initializer_list {
-    initializer_list(const T*, size_t);
-    const T *p;
+    initializer_list(T*, size_t);
+    T *p;
     size_t n;
-    const T *begin();
-    const T *end();
+    T *begin();
+    T *end();
   };
 }
 

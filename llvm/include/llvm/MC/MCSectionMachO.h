@@ -32,9 +32,6 @@ class MCSectionMachO final : public MCSection {
   /// for example.
   unsigned Reserved2;
 
-  // The defining non-temporary symbol for each fragment.
-  SmallVector<const MCSymbol *, 0> Atoms;
-
   MCSectionMachO(StringRef Segment, StringRef Section, unsigned TAA,
                  unsigned reserved2, SectionKind K, MCSymbol *Begin);
   friend class MCContext;
@@ -73,13 +70,9 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            uint32_t Subsection) const override;
+                            const MCExpr *Subsection) const override;
   bool useCodeAlign() const override;
   bool isVirtualSection() const override;
-
-  void allocAtoms();
-  const MCSymbol *getAtom(size_t I) const;
-  void setAtom(size_t I, const MCSymbol *Sym);
 
   static bool classof(const MCSection *S) {
     return S->getVariant() == SV_MachO;

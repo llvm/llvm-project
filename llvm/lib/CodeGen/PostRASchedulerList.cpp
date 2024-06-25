@@ -85,8 +85,8 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetPassConfig>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineDominatorTree>();
+      AU.addPreserved<MachineDominatorTree>();
       AU.addRequired<MachineLoopInfo>();
       AU.addPreserved<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);

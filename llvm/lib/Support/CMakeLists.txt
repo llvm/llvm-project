@@ -37,7 +37,7 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
-if( WIN32 )
+if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
@@ -72,7 +72,7 @@ elseif( CMAKE_HOST_UNIX )
     add_compile_definitions(_BSD_SOURCE)
     set(system_libs ${system_libs} bsd network)
   endif()
-endif( WIN32 )
+endif( MSVC OR MINGW )
 
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
@@ -101,10 +101,9 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
   endif()
 
-  if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
+  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
-    set(delayload_flags "${delayload_flags} -INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
@@ -171,7 +170,6 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
-  DynamicAPInt.cpp
   ELFAttributeParser.cpp
   ELFAttributes.cpp
   Error.cpp
@@ -225,8 +223,6 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
-  SipHash.cpp
-  SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp

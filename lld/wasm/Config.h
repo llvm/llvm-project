@@ -72,9 +72,7 @@ struct Configuration {
   bool stripAll;
   bool stripDebug;
   bool stackFirst;
-  // Because dyamanic linking under Wasm is still experimental we default to
-  // static linking
-  bool isStatic = true;
+  bool isStatic = false;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;

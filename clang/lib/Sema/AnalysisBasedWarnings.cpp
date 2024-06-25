@@ -442,7 +442,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
       if (!live[B->getBlockID()]) {
         if (B->pred_begin() == B->pred_end()) {
           const Stmt *Term = B->getTerminatorStmt();
-          if (isa_and_nonnull<CXXTryStmt>(Term))
+          if (Term && isa<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
             // can otherwise seem dead.  Avoid noting them as dead.
             count += reachable_code::ScanReachableFromBlock(B, live);
@@ -1100,7 +1100,7 @@ namespace {
       // issue a warn_fallthrough_attr_unreachable for them.
       for (const auto *B : *Cfg) {
         const Stmt *L = B->getLabel();
-        if (isa_and_nonnull<SwitchCase>(L) && ReachableBlocks.insert(B).second)
+        if (L && isa<SwitchCase>(L) && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
       }
 
@@ -1128,7 +1128,7 @@ namespace {
         if (!P) continue;
 
         const Stmt *Term = P->getTerminatorStmt();
-        if (isa_and_nonnull<SwitchStmt>(Term))
+        if (Term && isa<SwitchStmt>(Term))
           continue; // Switch statement, good.
 
         const SwitchCase *SW = dyn_cast_or_null<SwitchCase>(P->getLabel());
@@ -1327,7 +1327,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
         B = *B->succ_begin();
         Term = B->getTerminatorStmt();
       }
-      if (!(B->empty() && isa_and_nonnull<BreakStmt>(Term))) {
+      if (!(B->empty() && Term && isa<BreakStmt>(Term))) {
         Preprocessor &PP = S.getPreprocessor();
         StringRef AnnotationSpelling = getFallthroughAttrSpelling(PP, L);
         SmallString<64> TextToInsert(AnnotationSpelling);

@@ -36,10 +36,13 @@ class COFFAsmParser : public MCAsmParserExtension {
     getParser().addDirectiveHandler(Directive, Handler);
   }
 
-  bool ParseSectionSwitch(StringRef Section, unsigned Characteristics);
+  bool ParseSectionSwitch(StringRef Section,
+                          unsigned Characteristics,
+                          SectionKind Kind);
 
   bool ParseSectionSwitch(StringRef Section, unsigned Characteristics,
-                          StringRef COMDATSymName, COFF::COMDATType Type);
+                          SectionKind Kind, StringRef COMDATSymName,
+                          COFF::COMDATType Type);
 
   bool ParseSectionName(StringRef &SectionName);
   bool ParseSectionFlags(StringRef SectionName, StringRef FlagsString,
@@ -93,21 +96,26 @@ class COFFAsmParser : public MCAsmParserExtension {
   }
 
   bool ParseSectionDirectiveText(StringRef, SMLoc) {
-    return ParseSectionSwitch(".text", COFF::IMAGE_SCN_CNT_CODE |
-                                           COFF::IMAGE_SCN_MEM_EXECUTE |
-                                           COFF::IMAGE_SCN_MEM_READ);
+    return ParseSectionSwitch(".text",
+                              COFF::IMAGE_SCN_CNT_CODE
+                            | COFF::IMAGE_SCN_MEM_EXECUTE
+                            | COFF::IMAGE_SCN_MEM_READ,
+                              SectionKind::getText());
   }
 
   bool ParseSectionDirectiveData(StringRef, SMLoc) {
     return ParseSectionSwitch(".data", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                            COFF::IMAGE_SCN_MEM_READ |
-                                           COFF::IMAGE_SCN_MEM_WRITE);
+                                           COFF::IMAGE_SCN_MEM_WRITE,
+                              SectionKind::getData());
   }
 
   bool ParseSectionDirectiveBSS(StringRef, SMLoc) {
-    return ParseSectionSwitch(".bss", COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
-                                          COFF::IMAGE_SCN_MEM_READ |
-                                          COFF::IMAGE_SCN_MEM_WRITE);
+    return ParseSectionSwitch(".bss",
+                              COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA
+                            | COFF::IMAGE_SCN_MEM_READ
+                            | COFF::IMAGE_SCN_MEM_WRITE,
+                              SectionKind::getBSS());
   }
 
   bool ParseDirectiveSection(StringRef, SMLoc);
@@ -146,6 +154,15 @@ public:
 };
 
 } // end anonymous namespace.
+
+static SectionKind computeSectionKind(unsigned Flags) {
+  if (Flags & COFF::IMAGE_SCN_MEM_EXECUTE)
+    return SectionKind::getText();
+  if (Flags & COFF::IMAGE_SCN_MEM_READ &&
+      (Flags & COFF::IMAGE_SCN_MEM_WRITE) == 0)
+    return SectionKind::getReadOnly();
+  return SectionKind::getData();
+}
 
 bool COFFAsmParser::ParseSectionFlags(StringRef SectionName,
                                       StringRef FlagsString, unsigned *Flags) {
@@ -304,12 +321,14 @@ bool COFFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {
 }
 
 bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
-                                       unsigned Characteristics) {
-  return ParseSectionSwitch(Section, Characteristics, "", (COFF::COMDATType)0);
+                                       unsigned Characteristics,
+                                       SectionKind Kind) {
+  return ParseSectionSwitch(Section, Characteristics, Kind, "", (COFF::COMDATType)0);
 }
 
 bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
                                        unsigned Characteristics,
+                                       SectionKind Kind,
                                        StringRef COMDATSymName,
                                        COFF::COMDATType Type) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
@@ -317,7 +336,7 @@ bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
   Lex();
 
   getStreamer().switchSection(getContext().getCOFFSection(
-      Section, Characteristics, COMDATSymName, Type));
+      Section, Characteristics, Kind, COMDATSymName, Type));
 
   return false;
 }
@@ -400,12 +419,13 @@ bool COFFAsmParser::parseSectionArguments(StringRef, SMLoc) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
 
-  if (Flags & COFF::IMAGE_SCN_CNT_CODE) {
+  SectionKind Kind = computeSectionKind(Flags);
+  if (Kind.isText()) {
     const Triple &T = getContext().getTargetTriple();
     if (T.getArch() == Triple::arm || T.getArch() == Triple::thumb)
       Flags |= COFF::IMAGE_SCN_MEM_16BIT;
   }
-  ParseSectionSwitch(SectionName, Flags, COMDATSymName, Type);
+  ParseSectionSwitch(SectionName, Flags, Kind, COMDATSymName, Type);
   return false;
 }
 

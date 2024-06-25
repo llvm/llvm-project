@@ -8,9 +8,6 @@
 Overview
 ========
 
-**NOTE:** This is a design document and the feature is not available for users yet.
-Please see :doc:`BoundsSafetyImplPlans` for more details.
-
 ``-fbounds-safety`` is a C extension to enforce bounds safety to prevent
 out-of-bounds (OOB) memory accesses, which remain a major source of security
 vulnerabilities in C. ``-fbounds-safety`` aims to eliminate this class of bugs
@@ -58,7 +55,9 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It has a relatively low adoption cost.
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
-subject to be actively updated with a more detailed specification.
+subject to be actively updated with a more detailed specification. The
+implementation plan can be found in :doc:`BoundsSafetyImplPlans`.
+
 
 Programming Model
 =================

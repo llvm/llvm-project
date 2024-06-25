@@ -29,16 +29,6 @@ enum class GreedyRewriteStrictness {
   ExistingOps
 };
 
-enum class GreedySimplifyRegionLevel {
-  /// Disable region control-flow simplification.
-  Disabled,
-  /// Run the normal simplification (e.g. dead args elimination).
-  Normal,
-  /// Run extra simplificiations (e.g. block merging), these can be
-  /// more costly or have some tradeoffs associated.
-  Aggressive
-};
-
 /// This class allows control over how the GreedyPatternRewriteDriver works.
 class GreedyRewriteConfig {
 public:
@@ -55,8 +45,7 @@ public:
   /// patterns.
   ///
   /// Note: Only applicable when simplifying entire regions.
-  GreedySimplifyRegionLevel enableRegionSimplification =
-      GreedySimplifyRegionLevel::Aggressive;
+  bool enableRegionSimplification = true;
 
   /// This specifies the maximum number of times the rewriter will iterate
   /// between applying patterns and simplifying regions. Use `kNoLimit` to

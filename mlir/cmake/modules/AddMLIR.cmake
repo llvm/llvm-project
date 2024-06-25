@@ -306,22 +306,25 @@ endfunction()
 #   Don't include this library in libMLIR.so.  This option should be used
 #   for test libraries, executable-specific libraries, or rarely used libraries
 #   with large dependencies.
-# OBJECT
-#   The library's object library is referenced using "obj.${name}". For this to
-#   work reliably, this flag ensures that the OBJECT library exists.
 # ENABLE_AGGREGATION
-#   Exports additional metadata,
+#   Forces generation of an OBJECT library, exports additional metadata,
 #   and installs additional object files needed to include this as part of an
 #   aggregate shared library.
 #   TODO: Make this the default for all MLIR libraries once all libraries
 #   are compatible with building an object library.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
   _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
+
+  # Is an object library needed.
+  set(NEEDS_OBJECT_LIB OFF)
+  if(ARG_ENABLE_AGGREGATION)
+    set(NEEDS_OBJECT_LIB ON)
+  endif()
 
   # Determine type of library.
   if(ARG_SHARED)
@@ -334,39 +337,18 @@ function(add_mlir_library name)
     else()
       set(LIBTYPE STATIC)
     endif()
+    # Test libraries and such shouldn't be include in libMLIR.so
+    if(NOT ARG_EXCLUDE_FROM_LIBMLIR)
+      set(NEEDS_OBJECT_LIB ON)
+      set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
+      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
+      set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
+    endif()
   endif()
 
-  # Is an object library needed...?
-  # Note that the XCode generator doesn't handle object libraries correctly and
-  # usability is degraded in the Visual Studio solution generators.
-  # llvm_add_library may also itself decide to create an object library.
-  set(NEEDS_OBJECT_LIB OFF)
-  if(ARG_OBJECT)
-    # Yes, because the target "obj.${name}" is referenced.
-    set(NEEDS_OBJECT_LIB ON)
-  endif ()
-  if(LLVM_BUILD_LLVM_DYLIB AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE)
-    # Yes, because in addition to the shared library, the object files are
-    # needed for linking into libMLIR.so (see mlir/tools/mlir-shlib/CMakeLists.txt).
-    # For XCode, -force_load is used instead.
-    # Windows is not supported (LLVM_BUILD_LLVM_DYLIB=ON will cause an error).
-    set(NEEDS_OBJECT_LIB ON)
-    set_property(GLOBAL APPEND PROPERTY MLIR_STATIC_LIBS ${name})
-    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
-    set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
-  endif ()
-  if(ARG_ENABLE_AGGREGATION AND NOT XCODE)
-    # Yes, because this library is added to an aggergate library such as
-    # libMLIR-C.so which is links together all the object files.
-    # For XCode, -force_load is used instead.
-    set(NEEDS_OBJECT_LIB ON)
-  endif()
-  if (NOT ARG_SHARED AND NOT ARG_EXCLUDE_FROM_LIBMLIR AND NOT XCODE AND NOT MSVC_IDE)
-    # Yes, but only for legacy reasons. Also avoid object libraries for
-    # Visual Studio solutions.
-    set(NEEDS_OBJECT_LIB ON)
-  endif()
-  if(NEEDS_OBJECT_LIB)
+  if(NEEDS_OBJECT_LIB AND NOT XCODE)
+    # The Xcode generator doesn't handle object libraries correctly.
+    # We special case xcode when building aggregates.
     list(APPEND LIBTYPE OBJECT)
   endif()
 
@@ -398,12 +380,9 @@ function(add_mlir_library name)
       # XCode has limited support for object libraries. Instead, add dep flags
       # that force the entire library to be embedded.
       list(APPEND AGGREGATE_DEPS "-force_load" "${name}")
-    elseif(TARGET obj.${name})
-      # FIXME: *.obj can also be added via target_link_libraries since CMake 3.12.
+    else()
       list(APPEND AGGREGATE_OBJECTS "$<TARGET_OBJECTS:obj.${name}>")
       list(APPEND AGGREGATE_OBJECT_LIB "obj.${name}")
-    else()
-      message(SEND_ERROR "Aggregate library not supported on this platform")
     endif()
 
     # For each declared dependency, transform it into a generator expression
@@ -423,7 +402,7 @@ function(add_mlir_library name)
 
     # In order for out-of-tree projects to build aggregates of this library,
     # we need to install the OBJECT library.
-    if(TARGET "obj.${name}" AND MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
+    if(MLIR_INSTALL_AGGREGATE_OBJECTS AND NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(obj.${name})
     endif()
   endif()
@@ -636,7 +615,6 @@ endfunction()
 function(add_mlir_public_c_api_library name)
   add_mlir_library(${name}
     ${ARGN}
-    OBJECT
     EXCLUDE_FROM_LIBMLIR
     ENABLE_AGGREGATION
     ADDITIONAL_HEADER_DIRS

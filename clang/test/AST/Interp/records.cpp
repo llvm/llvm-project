@@ -468,12 +468,19 @@ namespace ConditionalInit {
   static_assert(getS(true).a == 12, "");
   static_assert(getS(false).a == 13, "");
 };
+/// FIXME: The following tests are broken.
+///   They are using CXXDefaultInitExprs which contain a CXXThisExpr. The This pointer
+///   in those refers to the declaration we are currently initializing, *not* the
+///   This pointer of the current stack frame. This is something we haven't
+///   implemented in the new interpreter yet.
 namespace DeclRefs {
-  struct A{ int m; const int &f = m; };
+  struct A{ int m; const int &f = m; }; // expected-note {{implicit use of 'this'}}
 
-  constexpr A a{10};
+  constexpr A a{10}; // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{declared here}}
   static_assert(a.m == 10, "");
-  static_assert(a.f == 10, "");
+  static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
+                                // expected-note {{initializer of 'a' is not a constant expression}}
 
   class Foo {
   public:
@@ -492,8 +499,12 @@ namespace DeclRefs {
     A a = A{100};
   };
   constexpr B b;
-  static_assert(b.a.m == 100, "");
-  static_assert(b.a.f == 100, "");
+  /// FIXME: The following two lines don't work because we don't get the
+  ///   pointers on the LHS correct. They make us run into an assertion
+  ///   in CheckEvaluationResult. However, this may just be caused by the
+  ///   problems in the previous examples.
+  //static_assert(b.a.m == 100, "");
+  //static_assert(b.a.f == 100, "");
 }
 
 namespace PointerArith {
@@ -1467,18 +1478,5 @@ namespace VirtOperator {
     constexpr bool operator==(const B&) const override{ return false; } // both-note {{operator}}
   };
   constexpr bool cmp_base_derived = D() == D(); // both-warning {{ambiguous}}
-}
-
-namespace FloatAPValue {
-  struct ClassTemplateArg {
-    int a;
-    float f;
-  };
-  template<ClassTemplateArg A> struct ClassTemplateArgTemplate {
-    static constexpr const ClassTemplateArg &Arg = A;
-  };
-  ClassTemplateArgTemplate<ClassTemplateArg{1, 2.0f}> ClassTemplateArgObj;
-  template<const ClassTemplateArg&> struct ClassTemplateArgRefTemplate {};
-  ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
 }
 #endif

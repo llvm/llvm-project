@@ -15,6 +15,8 @@
 ; CHECK-NOT: InstCombinePass
 ; CHECK: Running pass: InstCombinePass on f4
 ; CHECK-NOT: InstCombinePass
+; CHECK: Running pass: InstCombinePass on f1
+; CHECK-NOT: InstCombinePass
 
 @a1 = alias void (), ptr @f1
 @a2 = alias void (), ptr @f2

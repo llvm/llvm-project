@@ -312,7 +312,8 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
-void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void HexagonTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
 #define GET_PASS_REGISTRY "HexagonPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 

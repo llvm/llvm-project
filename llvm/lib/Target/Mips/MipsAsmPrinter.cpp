@@ -1014,7 +1014,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   MCSectionELF *M = OutContext.getELFSection(
       ".mips16.call.fp." + std::string(Symbol), ELF::SHT_PROGBITS,
       ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-  OutStreamer->switchSection(M);
+  OutStreamer->switchSection(M, nullptr);
   //
   // .align 2
   //

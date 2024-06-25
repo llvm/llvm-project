@@ -27,7 +27,6 @@
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
-#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -391,8 +390,7 @@ public:
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
   /// Parse RegClassFilterName to get RegClassFilterFunc.
-  std::optional<RegClassFilterFunc>
-  parseRegAllocFilter(StringRef RegClassFilterName);
+  RegClassFilterFunc parseRegAllocFilter(StringRef RegClassFilterName);
 
   /// Print pass names.
   void printPassNames(raw_ostream &OS);

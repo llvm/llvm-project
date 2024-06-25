@@ -339,7 +339,7 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
     ASTContext &Context = getASTContext();
     GlobalDeclID *Specs = CommonBasePtr->LazySpecializations;
     CommonBasePtr->LazySpecializations = nullptr;
-    unsigned SpecSize = (*Specs++).getRawValue();
+    unsigned SpecSize = (*Specs++).get();
     for (unsigned I = 0; I != SpecSize; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }

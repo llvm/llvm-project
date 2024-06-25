@@ -728,7 +728,7 @@ void MaterializeInDestinationOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   if (isa<BaseMemRefType>(getDest().getType()))
-    effects.emplace_back(MemoryEffects::Write::get(), &getDestMutable(),
+    effects.emplace_back(MemoryEffects::Write::get(), getDest(),
                          SideEffects::DefaultResource::get());
 }
 

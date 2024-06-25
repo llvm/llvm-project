@@ -17,8 +17,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/CFG.h"
@@ -73,7 +71,7 @@ public:
   /// terminator will take.
   llvm::Value *createExitVariable(
       BasicBlock *BB,
-      const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
+      const std::unordered_map<BasicBlock *, ConstantInt *> &TargetToValue) {
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
       return nullptr;
@@ -100,12 +98,12 @@ public:
     }
 
     // TODO: add support for switch cases.
-    llvm_unreachable("Unhandled terminator type.");
+    assert(false && "Unhandled terminator type.");
   }
 
   /// Replaces |BB|'s branch targets present in |ToReplace| with |NewTarget|.
   void replaceBranchTargets(BasicBlock *BB,
-                            const SmallPtrSet<BasicBlock *, 4> &ToReplace,
+                            const std::unordered_set<BasicBlock *> ToReplace,
                             BasicBlock *NewTarget) {
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
@@ -135,7 +133,7 @@ public:
   bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
                                        const SPIRV::ConvergenceRegion *CR) {
     // Gather all the exit targets for this region.
-    SmallPtrSet<BasicBlock *, 4> ExitTargets;
+    std::unordered_set<BasicBlock *> ExitTargets;
     for (BasicBlock *Exit : CR->Exits) {
       for (BasicBlock *Target : gatherSuccessors(Exit)) {
         if (CR->Blocks.count(Target) == 0)
@@ -166,10 +164,9 @@ public:
 
     // Creating one constant per distinct exit target. This will be route to the
     // correct target.
-    DenseMap<BasicBlock *, ConstantInt *> TargetToValue;
+    std::unordered_map<BasicBlock *, ConstantInt *> TargetToValue;
     for (BasicBlock *Target : SortedExitTargets)
-      TargetToValue.insert(
-          std::make_pair(Target, Builder.getInt32(TargetToValue.size())));
+      TargetToValue.emplace(Target, Builder.getInt32(TargetToValue.size()));
 
     // Creating one variable per exit node, set to the constant matching the
     // targeted external block.
@@ -187,12 +184,12 @@ public:
     }
 
     // Creating the switch to jump to the correct exit target.
-    llvm::SwitchInst *Sw = Builder.CreateSwitch(node, SortedExitTargets[0],
-                                                SortedExitTargets.size() - 1);
-    for (size_t i = 1; i < SortedExitTargets.size(); i++) {
-      BasicBlock *BB = SortedExitTargets[i];
-      Sw->addCase(TargetToValue[BB], BB);
-    }
+    std::vector<std::pair<BasicBlock *, ConstantInt *>> CasesList(
+        TargetToValue.begin(), TargetToValue.end());
+    llvm::SwitchInst *Sw =
+        Builder.CreateSwitch(node, CasesList[0].first, CasesList.size() - 1);
+    for (size_t i = 1; i < CasesList.size(); i++)
+      Sw->addCase(CasesList[i].second, CasesList[i].first);
 
     // Fix exit branches to redirect to the new exit.
     for (auto Exit : CR->Exits)

@@ -366,8 +366,7 @@ public:
   }
 };
 
-/// Class defining how arrays, including assumed-ranks, are captured inside
-/// internal procedures.
+/// Class defining how arrays are captured inside internal procedures.
 /// Array are captured via a `fir.box<fir.array<T>>` descriptor that belongs to
 /// the host tuple. This allows capturing lower bounds, which can be done by
 /// providing a ShapeShiftOp argument to the EmboxOp.
@@ -431,7 +430,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes() && !Fortran::evaluate::IsAssumedRank(sym)) {
+    if (!ba.lboundIsAllOnes()) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -489,8 +488,7 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLenParameters(sym) &&
-           !Fortran::evaluate::IsAssumedRank(sym);
+           !isDerivedWithLenParameters(sym);
   }
 };
 } // namespace
@@ -516,7 +514,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsAllocatableOrPointer(sym) ||
       sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
-  if (ba.isArray()) // include assumed-ranks.
+  if (ba.isArray())
     return CapturedArrays::visit(visitor, converter, sym, ba);
   if (Fortran::semantics::IsPolymorphic(sym))
     return CapturedPolymorphicScalar::visit(visitor, converter, sym, ba);

@@ -199,9 +199,7 @@ public:
   }
 
   /// Get the string value as a std::string
-  std::string GetString() const {
-    return std::string(AsCString(""), GetLength());
-  }
+  std::string GetString() const { return std::string(m_string, GetLength()); }
 
   /// Get the string value as a C string.
   ///

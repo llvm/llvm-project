@@ -16,7 +16,7 @@
 #ifndef HEADER
 #define HEADER
 
-typedef decltype(sizeof 0) a;
+typedef long unsigned a;
 namespace std {
 template <class> class initializer_list {
   const int *b;

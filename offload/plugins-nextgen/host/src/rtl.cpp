@@ -90,8 +90,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
   /// Launch the kernel using the libffi.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
@@ -106,7 +105,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
     // Call the kernel function through libffi.
     long Return;
-    ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
+    ffi_call(&Cif, Func, &Return, (void **)Args);
 
     return Plugin::success();
   }

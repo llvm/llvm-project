@@ -97,9 +97,8 @@ define i64 @th_addsl_2_extra_sext(i32 %x, i32 %y, i32 %z) {
 define i32 @addmul6(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul6:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a0, 1
-; RV32I-NEXT:    slli a0, a0, 3
-; RV32I-NEXT:    sub a0, a0, a2
+; RV32I-NEXT:    li a2, 6
+; RV32I-NEXT:    mul a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -134,9 +133,8 @@ define i32 @addmul10(i32 %a, i32 %b) {
 define i32 @addmul12(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul12:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a0, 2
-; RV32I-NEXT:    slli a0, a0, 4
-; RV32I-NEXT:    sub a0, a0, a2
+; RV32I-NEXT:    li a2, 12
+; RV32I-NEXT:    mul a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -189,9 +187,8 @@ define i32 @addmul20(i32 %a, i32 %b) {
 define i32 @addmul24(i32 %a, i32 %b) {
 ; RV32I-LABEL: addmul24:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a2, a0, 3
-; RV32I-NEXT:    slli a0, a0, 5
-; RV32I-NEXT:    sub a0, a0, a2
+; RV32I-NEXT:    li a2, 24
+; RV32I-NEXT:    mul a0, a0, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -262,9 +259,8 @@ define i32 @addmul72(i32 %a, i32 %b) {
 define i32 @mul96(i32 %a) {
 ; RV32I-LABEL: mul96:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 5
-; RV32I-NEXT:    slli a0, a0, 7
-; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    li a1, 96
+; RV32I-NEXT:    mul a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32XTHEADBA-LABEL: mul96:

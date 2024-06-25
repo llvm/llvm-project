@@ -377,7 +377,7 @@ namespace cwg322 { // cwg322: 2.8
   int &s = a;
 }
 
-// cwg323: sup 820
+// cwg323: no
 
 namespace cwg324 { // cwg324: 3.6
   struct S { int n : 1; } s; // #cwg324-n
@@ -587,7 +587,7 @@ namespace cwg334 { // cwg334: yes
   template void f<S>();
 }
 
-// cwg335: sup 820
+// cwg335: no
 
 namespace cwg336 { // cwg336: yes
   namespace Pre {

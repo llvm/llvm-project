@@ -64,7 +64,7 @@ TEST(ScudoVectorTest, ReallocateFails) {
                  MAP_ALLOWNOMEM)) {
     MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
     setrlimit(RLIMIT_AS, &Limit);
-    TEST_SKIP("Limiting address space does not prevent mmap.");
+    GTEST_SKIP() << "Limiting address space does not prevent mmap.";
   }
 
   V.resize(capacity);

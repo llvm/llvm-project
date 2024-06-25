@@ -748,8 +748,7 @@ bool HexagonAsmParser::ParseDirectiveSubsection(SMLoc L) {
     Subsection = HexagonMCExpr::create(
         MCConstantExpr::create(8192 + Res, getContext()), getContext());
 
-  getStreamer().switchSection(getStreamer().getCurrentSectionOnly(),
-                              Subsection);
+  getStreamer().subSection(Subsection);
   return false;
 }
 

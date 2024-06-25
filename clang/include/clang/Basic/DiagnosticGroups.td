@@ -506,7 +506,7 @@ def MaxUnsignedZero : DiagGroup<"max-unsigned-zero">;
 def MissingBraces : DiagGroup<"missing-braces">;
 def MissingDeclarations: DiagGroup<"missing-declarations">;
 def : DiagGroup<"missing-format-attribute">;
-def MissingIncludeDirs : DiagGroup<"missing-include-dirs">;
+def : DiagGroup<"missing-include-dirs">;
 def MissingNoreturn : DiagGroup<"missing-noreturn">;
 def MultiChar : DiagGroup<"multichar">;
 def : DiagGroup<"nested-externs">;
@@ -1526,10 +1526,6 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 // Warnings and fixes to support the "safe buffers" programming model.
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer]>;
-
-// Warnings and notes related to the function effects system underlying
-// the nonblocking and nonallocating attributes.
-def FunctionEffects : DiagGroup<"function-effects">;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;

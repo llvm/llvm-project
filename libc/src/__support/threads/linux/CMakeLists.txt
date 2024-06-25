@@ -22,11 +22,11 @@ add_header_library(
     libc.src.__support.time.linux.abs_timeout
 )
 
-set(monotonicity_flags)
+set(raw_mutex_additional_flags)
 if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
 else()
-  set(monotonicity_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
+  set(raw_mutex_additional_flags -DLIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
 endif()
 
 add_header_library(
@@ -42,22 +42,8 @@ add_header_library(
     libc.hdr.types.pid_t
   COMPILE_OPTIONS
     -DLIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT=${LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT}
-    ${monotonicity_flags}
-)
-
-add_header_library(
-  rwlock
-  HDRS
-    rwlock.h
-  DEPENDS
-    .futex_utils
-    .raw_mutex
-    libc.src.__support.common
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.limits
-  COMPILE_OPTIONS
-    -DLIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}
-    ${monotonicity_flags}
+    ${raw_mutex_additional_flags}
+  
 )
 
 add_header_library(
@@ -78,7 +64,6 @@ add_object_library(
     .futex_utils
     libc.config.linux.app_h
     libc.include.sys_syscall
-    libc.include.fcntl
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream

@@ -261,15 +261,13 @@ lowerToLoopsUsingSCFForOp(RewriterBase &rewriter, TilingInterface op);
 /// Transformation information returned after reduction tiling.
 struct SCFReductionTilingResult {
   /// The partial reduction tiled op generated.
-  SmallVector<Operation *> parallelTiledOps;
+  Operation *parallelTiledOp;
   /// The final reduction operation merging all the partial reductions.
-  SmallVector<Operation *> mergeOps;
+  Operation *mergeOp;
   /// Initial values used for reduction.
   SmallVector<Value> initialValues;
   /// The loop operations that iterate over the tiles.
   SmallVector<LoopLikeOpInterface> loops;
-  /// The replacements to use for the results of the tiled operation.
-  SmallVector<Value> replacements;
 };
 
 /// Method to tile a reduction and generate a parallel op within a serial loop.

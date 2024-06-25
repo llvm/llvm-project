@@ -72,7 +72,7 @@ struct SemiNCAInfo {
 
   // Number to node mapping is 1-based. Initialize the mapping to start with
   // a dummy element.
-  SmallVector<NodePtr, 64> NumToNode = {nullptr};
+  std::vector<NodePtr> NumToNode = {nullptr};
   DenseMap<NodePtr, InfoRec> NodeToInfo;
 
   using UpdateT = typename DomTreeT::UpdateType;
@@ -595,7 +595,9 @@ struct SemiNCAInfo {
     // Attach the first unreachable block to AttachTo.
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
     // Loop over all of the discovered blocks in the function...
-    for (NodePtr W : llvm::drop_begin(NumToNode)) {
+    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
+      NodePtr W = NumToNode[i];
+
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
 
@@ -612,7 +614,8 @@ struct SemiNCAInfo {
 
   void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
     NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
-    for (const NodePtr N : llvm::drop_begin(NumToNode)) {
+    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
+      const NodePtr N = NumToNode[i];
       const TreeNodePtr TN = DT.getNode(N);
       assert(TN);
       const TreeNodePtr NewIDom = DT.getNode(NodeToInfo[N].IDom);

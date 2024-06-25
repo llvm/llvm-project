@@ -144,11 +144,13 @@ QueryRef QueryParser::endQuery(QueryRef Q) {
   StringRef Extra = Line;
   StringRef ExtraTrimmed = Extra.ltrim(" \t\v\f\r");
 
-  if (ExtraTrimmed.starts_with('\n') || ExtraTrimmed.starts_with("\r\n"))
+  if ((!ExtraTrimmed.empty() && ExtraTrimmed[0] == '\n') ||
+      (ExtraTrimmed.size() >= 2 && ExtraTrimmed[0] == '\r' &&
+       ExtraTrimmed[1] == '\n'))
     Q->RemainingContent = Extra;
   else {
     StringRef TrailingWord = lexWord();
-    if (TrailingWord.starts_with('#')) {
+    if (!TrailingWord.empty() && TrailingWord.front() == '#') {
       Line = Line.drop_until([](char c) { return c == '\n'; });
       Line = Line.drop_while([](char c) { return c == '\n'; });
       return endQuery(Q);

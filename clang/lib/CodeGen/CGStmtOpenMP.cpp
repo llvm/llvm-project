@@ -72,7 +72,7 @@ class OMPLexicalScope : public CodeGenFunction::LexicalScope {
   static bool isCapturedVar(CodeGenFunction &CGF, const VarDecl *VD) {
     return CGF.LambdaCaptureFields.lookup(VD) ||
            (CGF.CapturedStmtInfo && CGF.CapturedStmtInfo->lookup(VD)) ||
-           (isa_and_nonnull<BlockDecl>(CGF.CurCodeDecl) &&
+           (CGF.CurCodeDecl && isa<BlockDecl>(CGF.CurCodeDecl) &&
             cast<BlockDecl>(CGF.CurCodeDecl)->capturesVariable(VD));
   }
 
@@ -227,7 +227,7 @@ class OMPSimdLexicalScope : public CodeGenFunction::LexicalScope {
   static bool isCapturedVar(CodeGenFunction &CGF, const VarDecl *VD) {
     return CGF.LambdaCaptureFields.lookup(VD) ||
            (CGF.CapturedStmtInfo && CGF.CapturedStmtInfo->lookup(VD)) ||
-           (isa_and_nonnull<BlockDecl>(CGF.CurCodeDecl) &&
+           (CGF.CurCodeDecl && isa<BlockDecl>(CGF.CurCodeDecl) &&
             cast<BlockDecl>(CGF.CurCodeDecl)->capturesVariable(VD));
   }
 
@@ -315,7 +315,7 @@ LValue CodeGenFunction::EmitOMPSharedLValue(const Expr *E) {
       bool IsCaptured =
           LambdaCaptureFields.lookup(OrigVD) ||
           (CapturedStmtInfo && CapturedStmtInfo->lookup(OrigVD)) ||
-          (isa_and_nonnull<BlockDecl>(CurCodeDecl));
+          (CurCodeDecl && isa<BlockDecl>(CurCodeDecl));
       DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD), IsCaptured,
                       OrigDRE->getType(), VK_LValue, OrigDRE->getExprLoc());
       return EmitLValue(&DRE);

@@ -1365,10 +1365,7 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       }
     }
   }
-  if (MI.getFlags() & X86::IP_USE_REX)
-    Prefix.setLowerBound(REX);
-  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix ||
-      MI.getFlags() & X86::IP_USE_REX2)
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix)
     Prefix.setLowerBound(REX2);
   switch (TSFlags & X86II::FormMask) {
   default:

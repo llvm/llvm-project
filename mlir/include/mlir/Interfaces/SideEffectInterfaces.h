@@ -145,19 +145,12 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(stage),
         effectOnFullRegion(effectOnFullRegion) {}
-  template <typename T,
-            std::enable_if_t<
-                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
-                bool> = true>
-  EffectInstance(EffectT *effect, T value,
+  EffectInstance(EffectT *effect, Value value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(0),
         effectOnFullRegion(false) {}
-  template <typename T,
-            std::enable_if_t<
-                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
-                bool> = true>
-  EffectInstance(EffectT *effect, T value, int stage, bool effectOnFullRegion,
+  EffectInstance(EffectT *effect, Value value, int stage,
+                 bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(stage),
         effectOnFullRegion(effectOnFullRegion) {}
@@ -179,19 +172,11 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), parameters(parameters),
         stage(stage), effectOnFullRegion(effectOnFullRegion) {}
-  template <typename T,
-            std::enable_if_t<
-                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
-                bool> = true>
-  EffectInstance(EffectT *effect, T value, Attribute parameters,
+  EffectInstance(EffectT *effect, Value value, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
         parameters(parameters), stage(0), effectOnFullRegion(false) {}
-  template <typename T,
-            std::enable_if_t<
-                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
-                bool> = true>
-  EffectInstance(EffectT *effect, T value, Attribute parameters, int stage,
+  EffectInstance(EffectT *effect, Value value, Attribute parameters, int stage,
                  bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
@@ -214,26 +199,7 @@ public:
   /// Return the value the effect is applied on, or nullptr if there isn't a
   /// known value being affected.
   Value getValue() const {
-    if (!value || llvm::isa_and_present<SymbolRefAttr>(value)) {
-      return Value();
-    }
-    if (OpOperand *operand = llvm::dyn_cast_if_present<OpOperand *>(value)) {
-      return operand->get();
-    }
-    if (OpResult result = llvm::dyn_cast_if_present<OpResult>(value)) {
-      return result;
-    }
-    return cast_if_present<BlockArgument>(value);
-  }
-
-  /// Returns the OpOperand effect is applied on, or nullptr if there isn't a
-  /// known value being effected.
-  template <typename T,
-            std::enable_if_t<
-                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
-                bool> = true>
-  T getEffectValue() const {
-    return value ? dyn_cast_if_present<T>(value) : nullptr;
+    return value ? llvm::dyn_cast_if_present<Value>(value) : Value();
   }
 
   /// Return the symbol reference the effect is applied on, or nullptr if there
@@ -262,9 +228,8 @@ private:
   /// The resource that the given value resides in.
   Resource *resource;
 
-  /// The Symbol, OpOperand, OpResult or BlockArgument that the effect applies
-  /// to. This is optionally null.
-  PointerUnion<SymbolRefAttr, OpOperand *, OpResult, BlockArgument> value;
+  /// The Symbol or Value that the effect applies to. This is optionally null.
+  PointerUnion<SymbolRefAttr, Value> value;
 
   /// Additional parameters of the effect instance. An attribute is used for
   /// type-safe structured storage and context-based uniquing. Concrete effects
@@ -383,32 +348,17 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if `op` has only an effect of type `EffectTy`.
-template <typename EffectTy>
-bool hasSingleEffect(Operation *op);
-
 /// Returns true if `op` has only an effect of type `EffectTy` (and of no other
-/// type) on `value`.
+/// type) on `value`. If no value is provided, simply check if effects of that
+/// type and only of that type are present.
 template <typename EffectTy>
-bool hasSingleEffect(Operation *op, Value value);
+bool hasSingleEffect(Operation *op, Value value = nullptr);
 
-/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
-/// type) on `value` of type `ValueTy`.
-template <typename ValueTy, typename EffectTy>
-bool hasSingleEffect(Operation *op, ValueTy value);
-
-/// Returns true if `op` has an effect of type `EffectTy`.
+/// Returns true if `op` has an effect of type `EffectTy` on `value`. If no
+/// `value` is provided, simply check if effects of the given type(s) are
+/// present.
 template <typename... EffectTys>
-bool hasEffect(Operation *op);
-
-/// Returns true if `op` has an effect of type `EffectTy` on `value`.
-template <typename... EffectTys>
-bool hasEffect(Operation *op, Value value);
-
-/// Returns true if `op` has an effect of type `EffectTy` on `value` of type
-/// `ValueTy`.
-template <typename ValueTy, typename... EffectTys>
-bool hasEffect(Operation *op, ValueTy value);
+bool hasEffect(Operation *op, Value value = nullptr);
 
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.

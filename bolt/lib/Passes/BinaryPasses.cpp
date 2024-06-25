@@ -636,9 +636,7 @@ Error LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 Error CleanMCState::runOnFunctions(BinaryContext &BC) {
   MCContext &Ctx = *BC.Ctx;
   for (const auto &SymMapEntry : Ctx.getSymbols()) {
-    const MCSymbol *S = SymMapEntry.getValue().Symbol;
-    if (!S)
-      continue;
+    const MCSymbol *S = SymMapEntry.second;
     if (S->isDefined()) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Symbol \"" << S->getName()
                         << "\" is already defined\n");

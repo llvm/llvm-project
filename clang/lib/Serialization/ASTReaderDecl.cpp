@@ -274,7 +274,7 @@ namespace clang {
       auto *&LazySpecializations = D->getCommonPtr()->LazySpecializations;
 
       if (auto &Old = LazySpecializations) {
-        IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0].getRawValue());
+        IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0].get());
         llvm::sort(IDs);
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
       }
@@ -2017,7 +2017,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
     if (Data.NumVBases)
       Data.VBases = ReadGlobalOffset();
 
-    Data.FirstFriend = readDeclID().getRawValue();
+    Data.FirstFriend = readDeclID().get();
   } else {
     using Capture = LambdaCapture;
 
@@ -2277,11 +2277,11 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   // compute it.
   if (WasDefinition) {
     GlobalDeclID KeyFn = readDeclID();
-    if (KeyFn.isValid() && D->isCompleteDefinition())
+    if (KeyFn.get() && D->isCompleteDefinition())
       // FIXME: This is wrong for the ARM ABI, where some other module may have
       // made this function no longer be a key function. We need an update
       // record or similar for that case.
-      C.KeyFunctions[D] = KeyFn.getRawValue();
+      C.KeyFunctions[D] = KeyFn.get();
   }
 
   return Redecl;
@@ -2370,7 +2370,7 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   for (unsigned i = 0; i != D->NumTPLists; ++i)
     D->getTrailingObjects<TemplateParameterList *>()[i] =
         Record.readTemplateParameterList();
-  D->NextFriend = readDeclID().getRawValue();
+  D->NextFriend = readDeclID().get();
   D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
 }
@@ -3079,14 +3079,14 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Expr *Init = Record.readExpr();
   auto IK = static_cast<OMPDeclareReductionInitKind>(Record.readInt());
   D->setInitializer(Init, IK);
-  D->PrevDeclInScope = readDeclID().getRawValue();
+  D->PrevDeclInScope = readDeclID().get();
 }
 
 void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   Record.readOMPChildren(D->Data);
   VisitValueDecl(D);
   D->VarName = Record.readDeclarationName();
-  D->PrevDeclInScope = readDeclID().getRawValue();
+  D->PrevDeclInScope = readDeclID().get();
 }
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
@@ -3140,7 +3140,9 @@ public:
 
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
-  template <typename T> T *readDeclAs() { return Reader.readDeclAs<T>(); }
+  template <typename T> T *GetLocalDeclAs(LocalDeclID LocalID) {
+    return Reader.GetLocalDeclAs<T>(LocalID);
+  }
 };
 }
 
@@ -3723,23 +3725,6 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
 #include "clang/AST/DeclNodes.inc"
   }
 
-  // [basic.link]/p10:
-  //    If two declarations of an entity are attached to different modules,
-  //    the program is ill-formed;
-  //
-  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
-  // abstract for decls of an entity. e.g., the namespace decl and using decl
-  // doesn't introduce an entity.
-  if (Module *M = Previous->getOwningModule();
-      M && M->isNamedModule() &&
-      isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous) &&
-      !Reader.getContext().isInSameModule(M, D->getOwningModule())) {
-    Reader.Diag(Previous->getLocation(),
-                diag::err_multiple_decl_in_different_modules)
-        << cast<NamedDecl>(Previous) << M->Name;
-    Reader.Diag(D->getLocation(), diag::note_also_found);
-  }
-
   // If the declaration was visible in one module, a redeclaration of it in
   // another module remains visible even if it wouldn't be visible by itself.
   //
@@ -4234,13 +4219,6 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
-
-  for (GlobalDeclID ID : VTablesToEmit) {
-    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
-    assert(!RD->shouldEmitInExternalSource());
-    PassVTableToConsumer(RD);
-  }
-  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
@@ -4372,8 +4350,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   // we should instead generate one loop per kind and dispatch up-front?
   Decl *MostRecent = FirstLocal;
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
-    unsigned Idx = N - I - 1;
-    auto *D = ReadDecl(*M, Record, Idx);
+    auto *D = GetLocalDecl(*M, LocalDeclID(Record[N - I - 1]));
     ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
     MostRecent = D;
   }
@@ -4470,7 +4447,7 @@ namespace {
                            M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap,
                            Compare);
       if (Result == M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap ||
-          LocalID != Result->getDefinitionID()) {
+          Result->getDefinitionID() != LocalID) {
         // We didn't find anything. If the class definition is in this module
         // file, then the module files it depends on cannot have any categories,
         // so suppress further lookup.
@@ -4482,7 +4459,8 @@ namespace {
       unsigned N = M.ObjCCategories[Offset];
       M.ObjCCategories[Offset++] = 0; // Don't try to deserialize again
       for (unsigned I = 0; I != N; ++I)
-        add(Reader.ReadDeclAs<ObjCCategoryDecl>(M, M.ObjCCategories, Offset));
+        add(cast_or_null<ObjCCategoryDecl>(
+            Reader.GetLocalDecl(M, LocalDeclID(M.ObjCCategories[Offset++]))));
       return true;
     }
   };

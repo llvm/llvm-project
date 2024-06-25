@@ -866,6 +866,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
                                   ArrayRef<Constant *> Ops,
                                   const DataLayout &DL,
                                   const TargetLibraryInfo *TLI) {
+  bool InBounds = GEP->isInBounds();
+
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized() || isa<ScalableVectorType>(SrcElemTy))
@@ -896,10 +898,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     InRange = InRange->sextOrTrunc(BitWidth);
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
-  GEPNoWrapFlags NW = GEP->getNoWrapFlags();
-  bool Overflow = false;
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-    NW &= GEP->getNoWrapFlags();
+    InBounds &= GEP->isInBounds();
 
     SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
 
@@ -923,15 +923,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
-    Offset = Offset.sadd_ov(
-        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps)),
-        Overflow);
+    Offset += APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps));
   }
-
-  // Preserving nusw (without inbounds) also requires that the offset
-  // additions did not overflow.
-  if (NW.hasNoUnsignedSignedWrap() && !NW.isInBounds() && Overflow)
-    NW = NW.withoutNoUnsignedSignedWrap();
 
   // If the base value for this address is a literal integer value, fold the
   // getelementptr to the resulting integer value casted to the pointer type.
@@ -951,19 +944,17 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   }
 
   // Try to infer inbounds for GEPs of globals.
-  // TODO(gep_nowrap): Also infer nuw flag.
-  if (!NW.isInBounds() && Offset.isNonNegative()) {
+  if (!InBounds && Offset.isNonNegative()) {
     bool CanBeNull, CanBeFreed;
     uint64_t DerefBytes =
         Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-    if (DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes))
-      NW |= GEPNoWrapFlags::inBounds();
+    InBounds = DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes);
   }
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
   return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Ptr,
-                                        ConstantInt::get(Ctx, Offset), NW,
+                                        ConstantInt::get(Ctx, Offset), InBounds,
                                         InRange);
 }
 
@@ -1678,9 +1669,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
            Name == "floor" || Name == "floorf" ||
            Name == "fmod" || Name == "fmodf";
   case 'l':
-    return Name == "log" || Name == "logf" || Name == "log2" ||
-           Name == "log2f" || Name == "log10" || Name == "log10f" ||
-           Name == "logl";
+    return Name == "log" || Name == "logf" ||
+           Name == "log2" || Name == "log2f" ||
+           Name == "log10" || Name == "log10f";
   case 'n':
     return Name == "nearbyint" || Name == "nearbyintf";
   case 'p':
@@ -1743,14 +1734,6 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   llvm_unreachable("Can only constant fold half/float/double");
 }
 
-#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
-Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
-  if (Ty->isFP128Ty())
-    return ConstantFP::get(Ty, V);
-  llvm_unreachable("Can only constant fold fp128");
-}
-#endif
-
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
 #if defined(HAVE_FENV_H) && HAVE_DECL_FE_ALL_EXCEPT
@@ -1782,20 +1765,6 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
 
   return GetConstantFoldFPValue(Result, Ty);
 }
-
-#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
-Constant *ConstantFoldFP128(long double (*NativeFP)(long double),
-                            const APFloat &V, Type *Ty) {
-  llvm_fenv_clearexcept();
-  float128 Result = NativeFP(V.convertToQuad());
-  if (llvm_fenv_testexcept()) {
-    llvm_fenv_clearexcept();
-    return nullptr;
-  }
-
-  return GetConstantFoldFPValue128(Result, Ty);
-}
-#endif
 
 Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
                                const APFloat &V, const APFloat &W, Type *Ty) {
@@ -2118,15 +2087,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
-      if (IntrinsicID == Intrinsic::log) {
-        float128 Result = logf128(Op->getValueAPF().convertToQuad());
-        return GetConstantFoldFPValue128(Result, Ty);
+      switch (IntrinsicID) {
+      default:
+        return nullptr;
+      case Intrinsic::log:
+        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
       }
-
-      LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
-          Fp128Func == LibFunc_logl)
-        return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }
 #endif
 
@@ -2390,8 +2356,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
       break;
-    case LibFunc_logl:
-      return nullptr;
     case LibFunc_nearbyint:
     case LibFunc_nearbyintf:
     case LibFunc_rint:

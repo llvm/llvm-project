@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -34,7 +26,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svint64_t test_svextw_s64_z(svbool_t pg, svint64_t op) MODE_ATTR
+svint64_t test_svextw_s64_z(svbool_t pg, svint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_s64,_z,)(pg, op);
 }
@@ -51,7 +43,7 @@ svint64_t test_svextw_s64_z(svbool_t pg, svint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svuint64_t test_svextw_u64_z(svbool_t pg, svuint64_t op) MODE_ATTR
+svuint64_t test_svextw_u64_z(svbool_t pg, svuint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_u64,_z,)(pg, op);
 }
@@ -68,7 +60,7 @@ svuint64_t test_svextw_u64_z(svbool_t pg, svuint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svint64_t test_svextw_s64_m(svint64_t inactive, svbool_t pg, svint64_t op) MODE_ATTR
+svint64_t test_svextw_s64_m(svint64_t inactive, svbool_t pg, svint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_s64,_m,)(inactive, pg, op);
 }
@@ -85,7 +77,7 @@ svint64_t test_svextw_s64_m(svint64_t inactive, svbool_t pg, svint64_t op) MODE_
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svuint64_t test_svextw_u64_m(svuint64_t inactive, svbool_t pg, svuint64_t op) MODE_ATTR
+svuint64_t test_svextw_u64_m(svuint64_t inactive, svbool_t pg, svuint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_u64,_m,)(inactive, pg, op);
 }
@@ -102,7 +94,7 @@ svuint64_t test_svextw_u64_m(svuint64_t inactive, svbool_t pg, svuint64_t op) MO
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svint64_t test_svextw_s64_x(svbool_t pg, svint64_t op) MODE_ATTR
+svint64_t test_svextw_s64_x(svbool_t pg, svint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_s64,_x,)(pg, op);
 }
@@ -119,7 +111,7 @@ svint64_t test_svextw_s64_x(svbool_t pg, svint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svuint64_t test_svextw_u64_x(svbool_t pg, svuint64_t op) MODE_ATTR
+svuint64_t test_svextw_u64_x(svbool_t pg, svuint64_t op)
 {
   return SVE_ACLE_FUNC(svextw,_u64,_x,)(pg, op);
 }

@@ -12,7 +12,6 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
-#include <stack>
 
 namespace clang::tidy::bugprone {
 

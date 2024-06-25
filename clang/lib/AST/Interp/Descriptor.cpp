@@ -359,14 +359,8 @@ QualType Descriptor::getType() const {
 
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
-  QualType T = getType();
-  if (const auto *AT = T->getAsArrayTypeUnsafe())
-    return AT->getElementType();
-  if (const auto *CT = T->getAs<ComplexType>())
-    return CT->getElementType();
-  if (const auto *CT = T->getAs<VectorType>())
-    return CT->getElementType();
-  llvm_unreachable("Array that's not an array/complex/vector type?");
+  const auto *AT = cast<ArrayType>(getType());
+  return AT->getElementType();
 }
 
 SourceLocation Descriptor::getLocation() const {

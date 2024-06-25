@@ -82,8 +82,7 @@ static std::string stringFromPath(ModuleIdPath Path) {
 /// CurrentModule. Since currently it is expensive to decide whether two module
 /// units come from the same module by comparing the module name.
 static bool
-isImportingModuleUnitFromSameModule(ASTContext &Ctx, Module *Imported,
-                                    Module *CurrentModule,
+isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
                                     Module *&FoundPrimaryModuleInterface) {
   if (!Imported->isNamedModule())
     return false;
@@ -110,7 +109,8 @@ isImportingModuleUnitFromSameModule(ASTContext &Ctx, Module *Imported,
   if (!CurrentModule->isModulePartitionImplementation())
     return false;
 
-  if (Ctx.isInSameModule(Imported, CurrentModule)) {
+  if (Imported->getPrimaryModuleInterfaceName() ==
+      CurrentModule->getPrimaryModuleInterfaceName()) {
     assert(!FoundPrimaryModuleInterface ||
            FoundPrimaryModuleInterface == Imported);
     FoundPrimaryModuleInterface = Imported;
@@ -127,9 +127,8 @@ isImportingModuleUnitFromSameModule(ASTContext &Ctx, Module *Imported,
 ///   the module unit purview of U. These rules can in turn lead to the
 ///   importation of yet more translation units.
 static void
-makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
-                             Module *Imported, Module *CurrentModule,
-                             SourceLocation ImportLoc,
+makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
+                             Module *CurrentModule, SourceLocation ImportLoc,
                              bool IsImportingPrimaryModuleInterface = false) {
   assert(Imported->isNamedModule() &&
          "'makeTransitiveImportsVisible()' is intended for standard C++ named "
@@ -151,7 +150,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
     // use the sourcelocation loaded from the visible modules.
     VisibleModules.setVisible(Importing, ImportLoc);
 
-    if (isImportingModuleUnitFromSameModule(Ctx, Importing, CurrentModule,
+    if (isImportingModuleUnitFromSameModule(Importing, CurrentModule,
                                             FoundPrimaryModuleInterface))
       for (Module *TransImported : Importing->Imports)
         if (!VisibleModules.isVisible(TransImported))
@@ -485,8 +484,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // and return the import decl to be added to the current TU.
   if (Interface) {
 
-    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Interface,
-                                 Mod, ModuleLoc,
+    makeTransitiveImportsVisible(VisibleModules, Interface, Mod, ModuleLoc,
                                  /*IsImportingPrimaryModuleInterface=*/true);
 
     // Make the import decl for the interface in the impl module.
@@ -645,8 +643,8 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Diag(ImportLoc, diag::warn_experimental_header_unit);
 
   if (Mod->isNamedModule())
-    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Mod,
-                                 getCurrentModule(), ImportLoc);
+    makeTransitiveImportsVisible(VisibleModules, Mod, getCurrentModule(),
+                                 ImportLoc);
   else
     VisibleModules.setVisible(Mod, ImportLoc);
 

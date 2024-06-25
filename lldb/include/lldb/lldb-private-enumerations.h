@@ -10,7 +10,6 @@
 #define LLDB_LLDB_PRIVATE_ENUMERATIONS_H
 
 #include "lldb/lldb-enumerations.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
@@ -198,7 +197,8 @@ enum class CompilerContextKind : uint16_t {
   TranslationUnit = 1,
   Module = 1 << 1,
   Namespace = 1 << 2,
-  ClassOrStruct = 1 << 3,
+  Class = 1 << 3,
+  Struct = 1 << 4,
   Union = 1 << 5,
   Function = 1 << 6,
   Variable = 1 << 7,
@@ -210,12 +210,10 @@ enum class CompilerContextKind : uint16_t {
   /// Match 0..n nested modules.
   AnyModule = Any | Module,
   /// Match any type.
-  AnyType = Any | ClassOrStruct | Union | Enum | Typedef | Builtin,
+  AnyType = Any | Class | Struct | Union | Enum | Typedef | Builtin,
   /// Math any declaration context.
-  AnyDeclContext = Any | Namespace | ClassOrStruct | Union | Enum | Function,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/AnyDeclContext),
+  AnyDeclContext = Any | Namespace | Class | Struct | Union | Enum | Function
 };
-LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 // Enumerations that can be used to specify the kind of metric we're looking at
 // when collecting stats.
