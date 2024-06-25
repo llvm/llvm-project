@@ -1032,6 +1032,7 @@ cc_library(
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
+        ":config",
         ":MLIRBindingsPythonHeaders",
         ":Support",
         "//llvm:Support",
