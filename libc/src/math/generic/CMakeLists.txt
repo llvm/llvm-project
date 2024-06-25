@@ -3907,6 +3907,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16sqrtl
+  SRCS
+    f16sqrtl.cpp
+  HDRS
+    ../f16sqrtl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16sqrtf128
   SRCS
     f16sqrtf128.cpp

@@ -813,6 +813,9 @@ template void explain_unary_operation_single_output_error(Operation op, float,
 template void explain_unary_operation_single_output_error(Operation op, double,
                                                           float16, double,
                                                           RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double, float16,
+                                                          double, RoundingMode);
 #endif
 
 template <typename T>
@@ -1020,6 +1023,9 @@ template bool compare_unary_operation_single_output(Operation, float, float16,
                                                     double, RoundingMode);
 template bool compare_unary_operation_single_output(Operation, double, float16,
                                                     double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    float16, double,
+                                                    RoundingMode);
 #endif
 
 template <typename T>
