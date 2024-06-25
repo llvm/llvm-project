@@ -1595,37 +1595,8 @@ llvm::GlobalValue *ConstantEmitter::getCurrentAddrPrivate() {
   return global;
 }
 
-static llvm::Constant *getUnfoldableValue(llvm::Constant *C) {
-  // Look through any constant expressions that might get folded
-  while (auto CE = dyn_cast<llvm::ConstantExpr>(C)) {
-    switch (CE->getOpcode()) {
-    // Simple type changes.
-    case llvm::Instruction::BitCast:
-    case llvm::Instruction::IntToPtr:
-    case llvm::Instruction::PtrToInt:
-      break;
-
-    // GEPs, if all the indices are zero.
-    case llvm::Instruction::GetElementPtr:
-      for (unsigned i = 1, e = CE->getNumOperands(); i != e; ++i)
-        if (!CE->getOperand(i)->isNullValue())
-          return C;
-      break;
-
-    default:
-      return C;
-    }
-    C = CE->getOperand(0);
-  }
-  return C;
-}
-
 void ConstantEmitter::registerCurrentAddrPrivate(llvm::Constant *signal,
                                            llvm::GlobalValue *placeholder) {
-  // Strip anything from the signal value that might get folded into other
-  // constant expressions in the final initializer.
-  signal = getUnfoldableValue(signal);
-
   assert(!PlaceholderAddresses.empty());
   assert(PlaceholderAddresses.back().first == nullptr);
   assert(PlaceholderAddresses.back().second == placeholder);
