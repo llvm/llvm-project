@@ -74,43 +74,44 @@ TEST_F(LlvmLibcCosTest, InDoubleRange) {
       return;
 
     uint64_t fails = 0;
-    uint64_t count = 0;
-    uint64_t cc = 0;
-    double mx, mr = 0.0;
-    double tol = 0.5;
+    uint64_t tested = 0;
+    uint64_t total = 0;
+    double worst_input, worst_output = 0.0;
+    double ulp = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
       if (isnan(x) || isinf(x))
         continue;
-      LIBC_NAMESPACE::libc_errno = 0;
+
       double result = LIBC_NAMESPACE::cos(x);
-      ++cc;
+      ++total;
       if (isnan(result) || isinf(result))
         continue;
 
-      ++count;
+      ++tested;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Cos, x, result,
                                              0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Cos, x,
-                                                  result, tol, rounding_mode)) {
-          mx = x;
-          mr = result;
+                                                  result, ulp, rounding_mode)) {
+          worst_input = x;
+          worst_output = result;
 
-          if (tol > 1000.0)
+          if (ulp > 1000.0)
             break;
 
-          tol *= 2.0;
+          ulp *= 2.0;
         }
       }
     }
     if (fails) {
-      tlog << " Cos failed: " << fails << "/" << count << "/" << cc
+      tlog << " Cos failed: " << fails << "/" << tested << "/" << total
            << " tests.\n";
-      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
-      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, mx, mr, 0.5, rounding_mode);
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(ulp) << ".\n";
+      EXPECT_MPFR_MATCH(mpfr::Operation::Cos, worst_input, worst_output, 0.5,
+                        rounding_mode);
     }
   };
 
