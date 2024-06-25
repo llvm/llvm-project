@@ -2837,6 +2837,11 @@ private:
     if (!AfterRParen->Next)
       return false;
 
+    if (AfterRParen->is(tok::l_brace) &&
+        AfterRParen->getBlockKind() == BK_BracedInit) {
+      return true;
+    }
+
     // If the next token after the parenthesis is a unary operator, assume
     // that this is cast, unless there are unexpected tokens inside the
     // parenthesis.
