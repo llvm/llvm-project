@@ -1,4 +1,4 @@
-; The goal of the test is ot check that collisions between explicit integer constants and
+; The goal of the test is to check that collisions between explicit integer constants and
 ; integer constants added automatically by IR Translator are resolved correctly both for
 ; 32- and 64-bits platforms. The test is successfull if it doesn't crash and generate valid
 ; SPIR-V code for both 32 and 64 bits targets.
