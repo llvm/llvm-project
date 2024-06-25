@@ -28,7 +28,7 @@ namespace LIBC_NAMESPACE {
 // Older 32b systems generally have a SYS_mmap2 that accepts a 32b value which
 // was a 64b value shifted down by 12; this magic constant isn't exposed via
 // UAPI headers, but its in kernel sources for mmap2 implementations.
-#ifdef SYS_mmap2
+#ifndef __LP64__
 
 // TODO: move these helpers to OSUtil?
 #ifdef LIBC_FULL_BUILD
@@ -68,17 +68,14 @@ void *mmap64(void *addr, size_t size, int prot, int flags, int fd,
 
   return reinterpret_cast<void *>(ret);
 }
-#endif // SYS_mmap2
+#endif // __LP64__
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(void *, mmap,
                    (void *addr, size_t size, int prot, int flags, int fd,
                     off_t offset)) {
-#ifdef SYS_mmap2
-  return mmap64(addr, size, prot, flags, fd, static_cast<off64_t>(offset));
-#else
-
+#ifdef __LP64__
   // A lot of POSIX standard prescribed validation of the parameters is not
   // done in this function as modern linux versions do it in the syscall.
   // TODO: Perform argument validation not done by the linux syscall.
@@ -92,7 +89,9 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   }
 
   return reinterpret_cast<void *>(ret);
-#endif // SYS_mmap2
+#else
+  return mmap64(addr, size, prot, flags, fd, static_cast<off64_t>(offset));
+#endif // __LP64__
 }
 
 } // namespace LIBC_NAMESPACE
