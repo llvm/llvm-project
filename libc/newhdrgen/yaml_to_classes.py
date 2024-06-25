@@ -96,7 +96,7 @@ def fill_public_api(header_str, h_def_content):
     Returns:
         The final header content with the public API filled in.
     """
-    return re.sub(r"%%public_api\(\)", header_str, h_def_content)
+    return h_def_content.replace("%%public_api()", header_str, 1)
 
 
 def main(yaml_file, h_def_file, output_dir):
