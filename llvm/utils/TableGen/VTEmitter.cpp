@@ -136,11 +136,11 @@ void VTEmitter::run(raw_ostream &OS) {
   for (const auto *VT : VTsByNumber) {
     if (!VT)
       continue;
-    auto LLVMTy = VT->getValueAsString("LLVMTy");
     bool IsInteger = VT->getValueAsBit("isInteger");
     bool IsVector = VT->getValueAsBit("isVector");
+    bool IsFP = VT->getValueAsBit("isFP");
 
-    if (LLVMTy.empty() && !(IsInteger || IsVector))
+    if (!(IsInteger || IsVector || IsFP))
       continue;
 
     OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
@@ -150,12 +150,23 @@ void VTEmitter::run(raw_ostream &OS) {
          << "VectorType::get(";
 
     auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
-    auto OutputLLVMTy = OutputVT->getValueAsString("LLVMTy");
+    int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
 
-    if (!OutputLLVMTy.empty())
-      OS << "Type::get" << OutputLLVMTy << "(Context)";
-    else if (OutputVT->getValueAsBit("isInteger"))
-      OS << "Type::getIntNTy(Context, " << OutputVT->getValueAsInt("Size")
+    if (OutputVT->getValueAsBit("isFP")) {
+      StringRef FloatTy = "";
+      auto OutputVTName = OutputVT->getValueAsString("LLVMName");
+      switch (OutputVTSize) {
+	default:
+          llvm_unreachable("unhandled case");
+	case 16: FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy"; break;
+	case 32: FloatTy = "FloatTy"; break;
+	case 64: FloatTy = "DoubleTy"; break;
+	case 80: FloatTy = "X86_FP80Ty"; break;
+	case 128: FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty"; break;
+      }
+      OS << "Type::get" << FloatTy << "(Context)";
+    } else if (OutputVT->getValueAsBit("isInteger"))
+      OS << "Type::getIntNTy(Context, " << OutputVTSize
          << ")";
     else
       llvm_unreachable("unhandled case");

@@ -14,7 +14,6 @@
 class ValueType<int size, int value> {
   string Namespace = "MVT";
   string LLVMName = NAME;
-  string LLVMTy = "";
   int Size = size;
   int Value = value;
   int nElem = 1;
@@ -38,9 +37,8 @@ class VTInt<int size, int value>
   let isInteger = true;
 }
 
-class VTFP<int size, string llvmty, int value>
+class VTFP<int size, int value>
     : ValueType<size, value> {
-  let LLVMTy = llvmty;
   let isFP = true;
 }
 
@@ -73,13 +71,13 @@ def i32     : VTInt<32,  7>;  // 32-bit integer value
 def i64     : VTInt<64,  8>;  // 64-bit integer value
 def i128    : VTInt<128, 9>;  // 128-bit integer value
 
-def bf16    : VTFP<16,  "BFloatTy",    10>;  // 16-bit brain floating point value
-def f16     : VTFP<16,  "HalfTy",      11>;  // 16-bit floating point value
-def f32     : VTFP<32,  "FloatTy",     12>;  // 32-bit floating point value
-def f64     : VTFP<64,  "DoubleTy",    13>;  // 64-bit floating point value
-def f80     : VTFP<80,  "X86_FP80Ty",  14>;  // 80-bit floating point value
-def f128    : VTFP<128, "FP128Ty",     15>;  // 128-bit floating point value
-def ppcf128 : VTFP<128, "PPC_FP128Ty", 16>;  // PPC 128-bit floating point value
+def bf16    : VTFP<16,  10>;  // 16-bit brain floating point value
+def f16     : VTFP<16,  11>;  // 16-bit floating point value
+def f32     : VTFP<32,  12>;  // 32-bit floating point value
+def f64     : VTFP<64,  13>;  // 64-bit floating point value
+def f80     : VTFP<80,  14>;  // 80-bit floating point value
+def f128    : VTFP<128, 15>;  // 128-bit floating point value
+def ppcf128 : VTFP<128, 16>;  // PPC 128-bit floating point value
 
 def v1i1    : VTVec<1,    i1, 17>;  //    1 x i1 vector value
 def v2i1    : VTVec<2,    i1, 18>;  //    2 x i1 vector value
