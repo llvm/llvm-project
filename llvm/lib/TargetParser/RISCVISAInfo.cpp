@@ -757,7 +757,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                 Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
           return std::move(E);
-        // Multi-letter extension must be seperate following extension with
+        // Multi-letter extension must be separate following extension with
         // underscore
         break;
       } else {

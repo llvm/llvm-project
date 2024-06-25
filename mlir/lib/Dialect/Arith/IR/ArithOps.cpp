@@ -1392,10 +1392,12 @@ LogicalResult arith::ExtSIOp::verify() {
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
   if (auto truncFOp = getOperand().getDefiningOp<TruncFOp>()) {
     if (truncFOp.getOperand().getType() == getType()) {
-      arith::FastMathFlags truncFMF = truncFOp.getFastmath();
+      arith::FastMathFlags truncFMF =
+          truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
       bool isTruncContract =
           bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
-      arith::FastMathFlags extFMF = getFastmath();
+      arith::FastMathFlags extFMF =
+          getFastmath().value_or(arith::FastMathFlags::none);
       bool isExtContract =
           bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
       if (isTruncContract && isExtContract) {

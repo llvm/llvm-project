@@ -8,6 +8,7 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/Type.h"
@@ -19,6 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using namespace lldb_private::dwarf;
 
 TEST(DWARFDIETest, ChildIteration) {
   // Tests DWARFDIE::child_iterator.
@@ -247,7 +249,8 @@ DWARF:
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
   auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   DWARFDIE struct_die = unit->DIE().GetFirstChild().GetFirstChild();
   ASSERT_TRUE(struct_die);
@@ -257,6 +260,9 @@ DWARF:
   EXPECT_THAT(
       struct_die.GetTypeLookupContext(),
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
+  EXPECT_THAT(struct_die.GetDWARFDeclContext(),
+              DWARFDeclContext({{DW_TAG_structure_type, "STRUCT"},
+                                {DW_TAG_namespace, "NAMESPACE"}}));
 }
 
 TEST(DWARFDIETest, GetContextInFunction) {
@@ -351,7 +357,8 @@ DWARF:
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
   auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   // Grab the "a::struct_t" type from the "a" namespace
   DWARFDIE a_struct_die = unit->DIE().GetFirstChild().GetFirstChild();

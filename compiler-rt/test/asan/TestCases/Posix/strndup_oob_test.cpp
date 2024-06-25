@@ -17,9 +17,9 @@ int main(int argc, char **argv) {
   char *copy = strndup(kString, 2);
   int x = copy[2 + argc];  // BOOM
   // CHECK: AddressSanitizer: heap-buffer-overflow
-  // CHECK: #{{[0-9]+}} {{.*}}main {{.*}}strndup_oob_test.cpp:[[@LINE-2]]
+  // CHECK: #0 {{.*}}main {{.*}}strndup_oob_test.cpp:[[@LINE-2]]
   // CHECK-LABEL: allocated by thread T{{.*}} here:
-  // CHECK: #{{[0-9]+}} {{.*}}strndup
+  // CHECK: #{{[01]}} {{.*}}strndup
   // CHECK: #{{.*}}main {{.*}}strndup_oob_test.cpp:[[@LINE-6]]
   // CHECK-LABEL: SUMMARY
   // CHECK: strndup_oob_test.cpp:[[@LINE-7]]

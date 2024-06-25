@@ -523,6 +523,106 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_rwlock_init
+  SRCS
+    pthread_rwlock_init.cpp
+  HDRS
+    pthread_rwlock_init.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+    libc.src.__support.CPP.new
+)
+
+add_entrypoint_object(
+  pthread_rwlock_tryrdlock
+  SRCS
+    pthread_rwlock_tryrdlock.cpp
+  HDRS
+    pthread_rwlock_tryrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_trywrlock
+  SRCS
+    pthread_rwlock_trywrlock.cpp
+  HDRS
+    pthread_rwlock_trywrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_timedrdlock
+  SRCS
+    pthread_rwlock_timedrdlock.cpp
+  HDRS
+    pthread_rwlock_timedrdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_timedwrlock
+  SRCS
+    pthread_rwlock_timedwrlock.cpp
+  HDRS
+    pthread_rwlock_timedwrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_rdlock
+  SRCS
+    pthread_rwlock_rdlock.cpp
+  HDRS
+    pthread_rwlock_rdlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_wrlock
+  SRCS
+    pthread_rwlock_wrlock.cpp
+  HDRS
+    pthread_rwlock_wrlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_unlock
+  SRCS
+    pthread_rwlock_unlock.cpp
+  HDRS
+    pthread_rwlock_unlock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
+  pthread_rwlock_destroy
+  SRCS
+    pthread_rwlock_destroy.cpp
+  HDRS
+    pthread_rwlock_destroy.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.linux.rwlock
+)
+
+add_entrypoint_object(
   pthread_once
   SRCS
     pthread_once.cpp
