@@ -3677,3 +3677,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sin
 )
+
+add_fp_unittest(
+  cos_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    libc.src.math.cos
+)
