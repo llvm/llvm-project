@@ -76,6 +76,8 @@ public:
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum:
     case Intrinsic::smax:
     case Intrinsic::smin:
     case Intrinsic::umax:
