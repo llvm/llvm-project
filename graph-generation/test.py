@@ -64,7 +64,7 @@ def run_case(root, dir, input_path, output_path, tool_path):
         logging.info(f"  Docker image: {image}")
         docker_root = '/home/thebesttv/vul/llvm-project'
         cmd = f'''\
-docker run -t --rm \
+docker run -t \
     -v {root}/..:{docker_root} \
     {image} \
     {docker_root}/build-release/bin/thebesttv \
