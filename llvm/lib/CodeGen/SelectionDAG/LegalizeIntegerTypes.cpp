@@ -4542,8 +4542,10 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
     unsigned IsFast = 0;
     const bool AllowsFastMisalignedMemoryAccesses =
         TLI.allowsMisalignedMemoryAccesses(
-            LoadStoreVT, /*AddrSpace*/ 0, /*Alignment*/ Align(1),
-            /*Flags*/ MachineMemOperand::MONone, &IsFast) &&
+            LoadStoreVT, /*AddrSpace=*/DAG.getDataLayout().getAllocaAddrSpace(),
+            /*Alignment=*/Align(LoadStoreVT.getStoreSize()),
+            /*Flags=*/MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
+            &IsFast) &&
         IsFast;
     if (AllowsFastMisalignedMemoryAccesses && KnownTrailingZeros >= 3)
       return Align(1);
@@ -4552,9 +4554,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   }();
 
   const unsigned ShiftUnitInBits = LoadStoreAlign.value() * 8;
-  const bool IsOneStepShift =
-      DAG.computeKnownBits(ShAmt).countMinTrailingZeros() >=
-      Log2_32(ShiftUnitInBits);
+  const bool IsOneStepShift = KnownTrailingZeros >= Log2_32(ShiftUnitInBits);
 
   // If we can't do it as one step, we'll have two uses of shift amount,
   // and thus must freeze it.
