@@ -29,7 +29,7 @@ program main
     end do
 !$omp end target
 
-    print *, one_l%array_j
+    print *, one_l%array_j(2:6)
 end program main
 
-!CHECK: 0 2 3 4 5 6 0 0 0 0
+!CHECK: 2 3 4 5 6

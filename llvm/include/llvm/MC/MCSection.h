@@ -211,7 +211,7 @@ public:
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    const MCExpr *Subsection) const = 0;
+                                    uint32_t Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill
   /// instead of 0s.
@@ -226,13 +226,6 @@ public:
   /// Add a pending label for the requested subsection. This label will be
   /// associated with a fragment in flushPendingLabels()
   void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
-
-  /// Associate all pending labels in a subsection with a fragment.
-  void flushPendingLabels(MCFragment *F, unsigned Subsection);
-
-  /// Associate all pending labels with empty data fragments. One fragment
-  /// will be created for each subsection as necessary.
-  void flushPendingLabels();
 };
 
 } // end namespace llvm

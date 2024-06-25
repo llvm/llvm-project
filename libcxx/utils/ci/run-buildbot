@@ -514,7 +514,7 @@ generic-optimized-speed)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
-apple-system)
+apple-configuration)
     clean
 
     arch="$(uname -m)"

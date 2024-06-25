@@ -205,7 +205,7 @@ Value *PHINode::hasConstantValue() const {
       ConstantValue = getIncomingValue(i);
     }
   if (ConstantValue == this)
-    return UndefValue::get(getType());
+    return PoisonValue::get(getType());
   return ConstantValue;
 }
 
@@ -1822,7 +1822,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
     Type *VecTy = VectorType::get(Int32Ty, Mask.size(), true);
     if (Mask[0] == 0)
       return Constant::getNullValue(VecTy);
-    return UndefValue::get(VecTy);
+    return PoisonValue::get(VecTy);
   }
   SmallVector<Constant *, 16> MaskConst;
   for (int Elem : Mask) {
@@ -4002,11 +4002,7 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  // FIXME: This check belongs in ProfDataUtils. Its almost equivalent to
-  // getValidBranchWeightMDNode(), but the need to use llvm_unreachable
-  // makes them slightly different.
-  if (ProfileData->getNumOperands() !=
-      SI.getNumSuccessors() + getBranchWeightOffset(ProfileData)) {
+  if (getNumBranchWeights(*ProfileData) != SI.getNumSuccessors()) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }

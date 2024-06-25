@@ -3,7 +3,15 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -o - -emit-llvm %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -o - -emit-llvm %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -19,7 +27,7 @@
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-void test_svst1w_s64(svbool_t pg, int32_t *base, svint64_t data)
+void test_svst1w_s64(svbool_t pg, int32_t *base, svint64_t data) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svst1w,_s64,,)(pg, base, data);
 }
@@ -31,7 +39,7 @@ void test_svst1w_s64(svbool_t pg, int32_t *base, svint64_t data)
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP1]], ptr [[BASE:%.*]], i32 1, <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-void test_svst1w_u64(svbool_t pg, uint32_t *base, svuint64_t data)
+void test_svst1w_u64(svbool_t pg, uint32_t *base, svuint64_t data) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svst1w,_u64,,)(pg, base, data);
 }
@@ -47,7 +55,7 @@ void test_svst1w_u64(svbool_t pg, uint32_t *base, svuint64_t data)
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-void test_svst1w_vnum_s64(svbool_t pg, int32_t *base, int64_t vnum, svint64_t data)
+void test_svst1w_vnum_s64(svbool_t pg, int32_t *base, int64_t vnum, svint64_t data) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svst1w_vnum,_s64,,)(pg, base, vnum, data);
 }
@@ -63,10 +71,12 @@ void test_svst1w_vnum_s64(svbool_t pg, int32_t *base, int64_t vnum, svint64_t da
 // CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP4]], ptr [[TMP3]], i32 1, <vscale x 2 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
-void test_svst1w_vnum_u64(svbool_t pg, uint32_t *base, int64_t vnum, svuint64_t data)
+void test_svst1w_vnum_u64(svbool_t pg, uint32_t *base, int64_t vnum, svuint64_t data) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svst1w_vnum,_u64,,)(pg, base, vnum, data);
 }
+
+#ifndef __ARM_FEATURE_SME 
 
 // CHECK-LABEL: @test_svst1w_scatter_u64base_s64(
 // CHECK-NEXT:  entry:
@@ -237,3 +247,5 @@ void test_svst1w_scatter_u64base_index_u64(svbool_t pg, svuint64_t bases, int64_
 {
   return SVE_ACLE_FUNC(svst1w_scatter,_u64base,_index,_u64)(pg, bases, index, data);
 }
+
+#endif
