@@ -1327,9 +1327,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
-  if (auto tuneCpu = func.getTuneCpu())
-    llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
-
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 
