@@ -4365,9 +4365,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 // elements of the from type to the elements of the to type without resizing the
 // vector.
 static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
-                                 QualType ToType) {
+                                 QualType ToType, QualType *ElTy = nullptr) {
   auto *ToVec = ToType->castAs<VectorType>();
   QualType ElType = ToVec->getElementType();
+  if (ElTy)
+    *ElTy = ElType;
   if (!FromTy->isVectorType())
     return ElType;
   auto *FromVec = FromTy->castAs<VectorType>();
@@ -4531,10 +4533,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Integral_Conversion: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (ToType->isVectorType()) {
-      StepTy = adjustVectorType(Context, FromType, ToType);
-      ElTy = StepTy->castAs<VectorType>()->getElementType();
-    }
+    if (ToType->isVectorType())
+      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
       assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
@@ -4585,10 +4585,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType()) {
-      StepTy = adjustVectorType(Context, FromType, ToType);
-      ElTy = StepTy->castAs<VectorType>()->getElementType();
-    }
+    if (ToType->isVectorType())
+      StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
       From = ImpCastExprToType(From, StepTy, CK_IntegralToFloating, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
