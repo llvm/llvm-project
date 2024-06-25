@@ -1,0 +1,49 @@
+# REQUIRES: arm
+# RUN: rm -rf %t; split-file %s %t
+# RUN: ln -s Versions/A/Framework1.tbd %t/System/Library/Frameworks/Framework1.framework/
+# RUN: ln -s Versions/A/Framework11.tbd %t/System/Library/Frameworks/Framework11.framework/
+# RUN: llvm-mc -filetype obj -triple arm64-apple-macos11.0 %t/test.s -o %t/test.o
+# RUN: %lld -arch arm64 -platform_version macos 11.0 11.0 -o %t/test -syslibroot %t -framework Framework1 %t/test.o
+
+# RUN: llvm-objdump --bind --no-show-raw-insn -d %t/test | FileCheck %s
+# CHECK:     Bind table:
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 Framework1   _func1
+# CHECK-DAG: __DATA __data {{.*}} pointer 0 Framework1   _func11
+
+#--- System/Library/Frameworks/Framework1.framework/Versions/A/Framework1.tbd
+--- !tapi-tbd
+tbd-version: 4
+targets: [ arm64-macos ]
+install-name: '/System/Library/Frameworks/Framework1.framework/Versions/A/Framework1'
+current-version: 1.0.0
+reexported-libraries:
+  - targets: [ arm64-macos ]
+    libraries: [ '/System/Library/Frameworks/Framework11.framework/Versions/A/Framework11' ]
+exports:
+  - targets: [ arm64-macos ]
+    symbols: [ '_func1' ]
+...
+#--- System/Library/Frameworks/Framework11.framework/Versions/A/Framework11.tbd
+--- !tapi-tbd
+tbd-version: 4
+targets: [ arm64-macos ]
+install-name: '/System/Library/Frameworks/Framework11.framework/Versions/A/Framework11'
+current-version: 1.0.0
+allowable-clients:
+  - targets: [ arm64-macos ]
+    clients: [ Framework1 ]
+exports:
+  - targets: [ arm64-macos ]
+    symbols: [ '_func11' ]
+...
+#--- test.s
+.text
+.globl _main
+
+_main:
+  ret
+
+.data
+  .quad _func1
+  .quad _func11
+
