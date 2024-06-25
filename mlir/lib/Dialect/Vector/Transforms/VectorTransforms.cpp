@@ -1552,6 +1552,7 @@ private:
 /// Cores, i.e, `mma.sync.*.f32.f16.f16.f32` and `mma.sync.*.f32.bf16.bf16.f32`.
 /// This pattern folds the arithmetic extensions into the vector contraction and
 /// enables the usage of native mixed precision Tensor Core instructions.
+template <typename ExtOp>
 struct FoldArithExtIntoContractionOp
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -1559,8 +1560,8 @@ struct FoldArithExtIntoContractionOp
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto lhsDefOp = contractOp.getLhs().getDefiningOp<arith::ExtFOp>();
-    auto rhsDefOp = contractOp.getRhs().getDefiningOp<arith::ExtFOp>();
+    auto lhsDefOp = contractOp.getLhs().getDefiningOp<ExtOp>();
+    auto rhsDefOp = contractOp.getRhs().getDefiningOp<ExtOp>();
 
     if (!lhsDefOp || !rhsDefOp) {
       return rewriter.notifyMatchFailure(contractOp,
@@ -1895,7 +1896,9 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
 
 void mlir::vector::populateFoldArithExtensionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldArithExtIntoContractionOp>(patterns.getContext());
+  patterns.add<FoldArithExtIntoContractionOp<arith::ExtFOp>,
+               FoldArithExtIntoContractionOp<arith::ExtSIOp>>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
