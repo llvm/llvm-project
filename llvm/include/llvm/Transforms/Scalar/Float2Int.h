@@ -33,7 +33,8 @@ class OrderedInstruction {
   unsigned int Order;
 
 public:
-  OrderedInstruction(Instruction *Inst, unsigned int Ord) : Ins(Inst), Order(Ord) {}
+  OrderedInstruction(Instruction *Inst, unsigned int Ord)
+      : Ins(Inst), Order(Ord) {}
 
   Instruction *getInstruction() { return Ins; }
   unsigned int getOrder() { return Order; }
@@ -71,7 +72,8 @@ private:
   MapVector<Instruction *, ConstantRange> SeenInsts;
   SmallSetVector<Instruction *, 8> Roots;
   EquivalenceClasses<OrderedInstruction,
-                     OrderedInstructionLess<OrderedInstruction>> ECs;
+                     OrderedInstructionLess<OrderedInstruction>>
+      ECs;
   MapVector<Instruction *, unsigned int> InstructionOrders;
   MapVector<Instruction *, Value *> ConvertedInsts;
   LLVMContext *Ctx;

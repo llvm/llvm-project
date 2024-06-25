@@ -86,7 +86,7 @@ static Instruction::BinaryOps mapBinOpcode(unsigned Opcode) {
 
 // Instruction order - return deterministic order suitable as set
 // order for EquivalenceClasses.
-unsigned int Float2IntPass::insOrder(Instruction* I) {
+unsigned int Float2IntPass::insOrder(Instruction *I) {
   static unsigned int order = 0;
   if (InstructionOrders.find(I) != InstructionOrders.end())
     return InstructionOrders[I];
@@ -201,7 +201,8 @@ void Float2IntPass::walkBackwards() {
     for (Value *O : I->operands()) {
       if (Instruction *OI = dyn_cast<Instruction>(O)) {
         // Unify def-use chains if they interfere.
-        ECs.unionSets(OrderedInstruction(I, insOrder(I)), OrderedInstruction(OI, insOrder(OI)));
+        ECs.unionSets(OrderedInstruction(I, insOrder(I)),
+                      OrderedInstruction(OI, insOrder(OI)));
         if (SeenInsts.find(I)->second != badRange())
           Worklist.push_back(OI);
       } else if (!isa<ConstantFP>(O)) {
@@ -403,7 +404,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       }
     }
 
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end(); MI != ME; ++MI) {
+    for (auto MI = ECs.member_begin(It), ME = ECs.member_end(); MI != ME;
+         ++MI) {
       OrderedInstruction OMI = *MI;
       convert(OMI.getInstruction(), Ty);
     }
@@ -497,7 +499,8 @@ void Float2IntPass::cleanup() {
 bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");
   // Clear out all state.
-  ECs = EquivalenceClasses<OrderedInstruction, OrderedInstructionLess<OrderedInstruction> >();
+  ECs = EquivalenceClasses<OrderedInstruction,
+                           OrderedInstructionLess<OrderedInstruction> >();
   SeenInsts.clear();
   InstructionOrders.clear();
   ConvertedInsts.clear();
