@@ -479,6 +479,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
       matchProfileToFunction(YamlBF, *BF);
 
+  uint64_t MatchedWithCallsAsAnchors = 0;
+  matchWithCallsAsAnchors(BC,  MatchedWithCallsAsAnchors);
+
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
