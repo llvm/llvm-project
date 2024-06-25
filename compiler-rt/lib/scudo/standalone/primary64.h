@@ -1392,7 +1392,7 @@ private:
         continue;
       }
 
-      const uptr PushedBytesDelta = BG->BytesInBGAtLastCheckpoint - BytesInBG;
+      const uptr PushedBytesDelta = BytesInBG - BG->BytesInBGAtLastCheckpoint;
 
       // Given the randomness property, we try to release the pages only if the
       // bytes used by free blocks exceed certain proportion of group size. Note

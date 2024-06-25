@@ -16,7 +16,6 @@
 #include "rounding_mode.h"
 
 #include "hdr/math_macros.h"
-#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
@@ -103,7 +102,7 @@ intlogb(U x) {
     return IntLogbConstants<T>::T_MAX;
   }
 
-  DyadicFloat<cpp::max(FPBits<U>::STORAGE_LEN, 32)> normal(bits.get_val());
+  DyadicFloat<FPBits<U>::STORAGE_LEN> normal(bits.get_val());
   int exponent = normal.get_unbiased_exponent();
   // The C standard does not specify the return value when an exponent is
   // out of int range. However, XSI conformance required that INT_MAX or
@@ -139,12 +138,14 @@ LIBC_INLINE constexpr T logb(T x) {
     return FPBits<T>::inf().get_val();
   }
 
-  DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T ldexp(T x, int exp) {
+template <typename T, typename U>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<T> && cpp::is_integral_v<U>, T>
+ldexp(T x, U exp) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
@@ -157,6 +158,8 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
   // calculating the limit.
   constexpr int EXP_LIMIT =
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  // Make sure that we can safely cast exp to int when not returning early.
+  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
@@ -187,7 +190,7 @@ LIBC_INLINE constexpr T ldexp(T x, int exp) {
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
-  normal.exponent += exp;
+  normal.exponent += static_cast<int>(exp);
   return static_cast<T>(normal);
 }
 

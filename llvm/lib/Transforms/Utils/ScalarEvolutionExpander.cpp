@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
 #else
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X)
@@ -491,6 +491,16 @@ public:
 }
 
 Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
+  // Recognize the canonical representation of an unsimplifed urem.
+  const SCEV *URemLHS = nullptr;
+  const SCEV *URemRHS = nullptr;
+  if (SE.matchURem(S, URemLHS, URemRHS)) {
+    Value *LHS = expand(URemLHS);
+    Value *RHS = expand(URemRHS);
+    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
+                      /*IsSafeToHoist*/ false);
+  }
+
   // Collect all the add operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal, and
   // so that pointer operands are inserted first, which the code below relies on

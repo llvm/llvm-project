@@ -218,7 +218,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  // Skip variables in records. They are handled seperately for C++.
+  // Skip variables in records. They are handled separately for C++.
   if (D->getDeclContext()->isRecord())
     return true;
 
