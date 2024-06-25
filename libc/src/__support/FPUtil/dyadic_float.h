@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
+#include "FEnvImpl.h"
 #include "FPBits.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
@@ -86,11 +87,11 @@ template <size_t Bits> struct DyadicFloat {
 
   // Assume that it is already normalized.
   // Output is rounded correctly with respect to the current rounding mode.
-  template <typename T,
+  template <typename T, bool ShouldSignalExceptions,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
-  LIBC_INLINE explicit constexpr operator T() const {
+  LIBC_INLINE constexpr T as() const {
     if (LIBC_UNLIKELY(mantissa.is_zero()))
       return FPBits<T>::zero(sign).get_val();
 
@@ -107,7 +108,17 @@ template <size_t Bits> struct DyadicFloat {
       T d_hi =
           FPBits<T>::create_value(sign, 2 * FPBits<T>::EXP_BIAS, IMPLICIT_MASK)
               .get_val();
-      return T(2) * d_hi;
+      // volatile prevents constant propagation that would result in infinity
+      // always being returned no matter the current rounding mode.
+      volatile T two(2.0);
+      T r = two * d_hi;
+
+      // TODO: Whether rounding down the absolute value to max_normal should
+      // also raise FE_OVERFLOW and set ERANGE is debatable.
+      if (ShouldSignalExceptions && FPBits<T>(r).is_inf())
+        set_errno_if_required(ERANGE);
+
+      return r;
     }
 
     bool denorm = false;
@@ -179,16 +190,34 @@ template <size_t Bits> struct DyadicFloat {
       output_bits_t clear_exp = static_cast<output_bits_t>(
           output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
+
       if (!(r_bits & FPBits<T>::EXP_MASK)) {
         // Output is denormal after rounding, clear the implicit bit for 80-bit
         // long double.
         r_bits -= IMPLICIT_MASK;
+
+        // TODO: IEEE Std 754-2019 lets implementers choose whether to check for
+        // "tininess" before or after rounding for base-2 formats, as long as
+        // the same choice is made for all operations. Our choice to check after
+        // rounding might not be the same as the hardware's.
+        if (ShouldSignalExceptions && round_and_sticky) {
+          set_errno_if_required(ERANGE);
+          raise_except_if_required(FE_UNDERFLOW);
+        }
       }
 
       return FPBits<T>(r_bits).get_val();
     }
 
     return r;
+  }
+
+  template <typename T,
+            typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
+                                            (FPBits<T>::FRACTION_LEN < Bits),
+                                        void>>
+  LIBC_INLINE explicit constexpr operator T() const {
+    return as<T, /*ShouldSignalExceptions=*/false>();
   }
 
   LIBC_INLINE explicit constexpr operator MantissaType() const {
