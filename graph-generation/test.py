@@ -82,7 +82,6 @@ docker run -t \
 
     new_output = read_output(output_path)
     if original_output != new_output:
-        os.remove(output_path)
         logging.error(f"  Output mismatch: {dir}")
         logging.info("======== Original ========")
         print(original_output)
