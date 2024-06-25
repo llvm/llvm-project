@@ -20,7 +20,7 @@ void die(const char *Message);
 void dieWithErrorCode(const char *Message, int64_t ErrorCode);
 
 // Checks that `Condition` is true, otherwise dies with `Message`.
-GWP_ASAN_ALWAYS_INLINE void Check(bool Condition, const char *Message) {
+GWP_ASAN_ALWAYS_INLINE void check(bool Condition, const char *Message) {
   if (GWP_ASAN_LIKELY(Condition))
     return;
   die(Message);
