@@ -64,20 +64,29 @@ template <typename Unused = void> double GetCpuTime(fallback_implementation) {
 // clock_gettime is implemented in the pthread library for MinGW.
 // Using it here would mean that all programs that link libFortranRuntime are
 // required to also link to pthread. Instead, don't use the function.
-#undef CLOCKID
-#elif defined CLOCK_PROCESS_CPUTIME_ID
-#define CLOCKID CLOCK_PROCESS_CPUTIME_ID
-#elif defined CLOCK_THREAD_CPUTIME_ID
-#define CLOCKID CLOCK_THREAD_CPUTIME_ID
-#elif defined CLOCK_MONOTONIC
-#define CLOCKID CLOCK_MONOTONIC
-#elif defined CLOCK_REALTIME
-#define CLOCKID CLOCK_REALTIME
+#undef CLOCKID_CPU_TIME
+#undef CLOCKID_ELAPSED_TIME
 #else
-#undef CLOCKID
+// Determine what clock to use for CPU time.
+#if defined CLOCK_PROCESS_CPUTIME_ID
+#define CLOCKID_CPU_TIME CLOCK_PROCESS_CPUTIME_ID
+#elif defined CLOCK_THREAD_CPUTIME_ID
+#define CLOCKID_CPU_TIME CLOCK_THREAD_CPUTIME_ID
+#else
+#undef CLOCKID_CPU_TIME
 #endif
 
-#ifdef CLOCKID
+// Determine what clock to use for elapsed time.
+#if defined CLOCK_MONOTONIC
+#define CLOCKID_ELAPSED_TIME CLOCK_MONOTONIC
+#elif defined CLOCK_REALTIME
+#define CLOCKID_ELAPSED_TIME CLOCK_REALTIME
+#else
+#undef CLOCKID_ELAPSED_TIME
+#endif
+#endif
+
+#ifdef CLOCKID_CPU_TIME
 // POSIX implementation using clock_gettime. This is only enabled where
 // clock_gettime is available.
 template <typename T = int, typename U = struct timespec>
@@ -86,13 +95,13 @@ double GetCpuTime(preferred_implementation,
     T ClockId = 0, U *Timespec = nullptr,
     decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
   struct timespec tspec;
-  if (clock_gettime(CLOCKID, &tspec) == 0) {
+  if (clock_gettime(CLOCKID_CPU_TIME, &tspec) == 0) {
     return tspec.tv_nsec * 1.0e-9 + tspec.tv_sec;
   }
   // Return some negative value to represent failure.
   return -1.0;
 }
-#endif
+#endif // CLOCKID_CPU_TIME
 
 using count_t = std::int64_t;
 using unsigned_count_t = std::uint64_t;
@@ -149,15 +158,15 @@ constexpr unsigned_count_t DS_PER_SEC{10u};
 constexpr unsigned_count_t MS_PER_SEC{1'000u};
 constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
-#ifdef CLOCKID
+#ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
-    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+      decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
   struct timespec tspec;
   const unsigned_count_t huge{GetHUGE(kind)};
-  if (clock_gettime(CLOCKID, &tspec) != 0) {
+  if (clock_gettime(CLOCKID_ELAPSED_TIME, &tspec) != 0) {
     return -huge; // failure
   }
   unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
@@ -170,7 +179,7 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
     return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
   }
 }
-#endif
+#endif // CLOCKID_ELAPSED_TIME
 
 template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCountRate(int kind, preferred_implementation,
