@@ -2642,7 +2642,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   if (IsExecutable) {
     Directive = ParseOpenMPExecutableDirective(
         StmtCtx, DKind, Loc, ReadDirectiveWithinMetadirective);
-    assert(!Directive.isUnset());
+    assert(!Directive.isUnset() && "Executable directive remained unprocessed");
     return Directive;
   }
 
