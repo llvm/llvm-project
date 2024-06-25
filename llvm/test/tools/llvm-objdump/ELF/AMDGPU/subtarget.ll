@@ -6,6 +6,11 @@ define amdgpu_kernel void @test_kernel() {
 ;
 ; ----------------------------------GFX12--------------------------------------
 ;
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx12-generic -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn -mllvm --amdhsa-code-object-version=6 --mcpu=gfx12-generic %t.o > %t-specify.txt
+; RUN: llvm-objdump -D -mllvm --amdhsa-code-object-version=6 %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+;
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1201 -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1201 %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D %t.o > %t-detect.txt
@@ -21,6 +26,11 @@ define amdgpu_kernel void @test_kernel() {
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=6 -mcpu=gfx11-generic -filetype=obj -O0 -o %t.o %s
 ; RUN: llvm-objdump -D --arch-name=amdgcn -mllvm --amdhsa-code-object-version=6 --mcpu=gfx11-generic %t.o > %t-specify.txt
 ; RUN: llvm-objdump -D -mllvm --amdhsa-code-object-version=6 %t.o > %t-detect.txt
+; RUN: diff %t-specify.txt %t-detect.txt
+
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1152 -filetype=obj -O0 -o %t.o %s
+; RUN: llvm-objdump -D --arch-name=amdgcn --mcpu=gfx1152 %t.o > %t-specify.txt
+; RUN: llvm-objdump -D %t.o > %t-detect.txt
 ; RUN: diff %t-specify.txt %t-detect.txt
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1151 -filetype=obj -O0 -o %t.o %s

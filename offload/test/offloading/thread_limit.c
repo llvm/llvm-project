@@ -16,13 +16,13 @@ int main() {
   int n = 1 << 20;
   int th = 12;
   int te = n / th;
-// DEFAULT: 12 (MaxFlatWorkGroupSize: 
+// DEFAULT: 12 (MaxFlatWorkGroupSize:
 #pragma omp target
 #pragma omp teams loop num_teams(te), thread_limit(th)
   for (int i = 0; i < n; i++) {
   }
 
-// DEFAULT: 13 (MaxFlatWorkGroupSize: 
+// DEFAULT: 13 (MaxFlatWorkGroupSize:
   #pragma omp target
   #pragma omp teams distribute parallel for simd num_teams(te), thread_limit(th+1) simdlen(64)
   for(int i = 0; i < n; i++) {

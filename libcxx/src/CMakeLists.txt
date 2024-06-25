@@ -322,6 +322,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
+add_dependencies(cxx-test-depends cxx)
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
@@ -339,6 +340,9 @@ if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TI
     include/tzdb/types_private.h
     include/tzdb/tzdb_list_private.h
     include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    chrono_exception.cpp
     time_zone.cpp
     tzdb.cpp
     tzdb_list.cpp
@@ -366,6 +370,7 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
+add_dependencies(cxx-test-depends cxx_experimental)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared

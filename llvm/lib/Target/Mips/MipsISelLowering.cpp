@@ -360,11 +360,15 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   // Lower fmin and fmax operations for MIPS R6.
   // Instructions are defined but never used.
-  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+  if (Subtarget.hasMips32r6()) {
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Expand);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Expand);
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
   }
 
   if (Subtarget.isGP64bit()) {
@@ -3234,8 +3238,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Note: The check on the calling convention below must match
   //       MipsABIInfo::GetCalleeAllocdArgSizeInBytes().
-  bool MemcpyInByVal = ES &&
-                       StringRef(ES->getSymbol()) == StringRef("memcpy") &&
+  bool MemcpyInByVal = ES && StringRef(ES->getSymbol()) == "memcpy" &&
                        CallConv != CallingConv::Fast &&
                        Chain.getOpcode() == ISD::CALLSEQ_START;
 

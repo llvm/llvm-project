@@ -12,7 +12,6 @@ import lldbdap_testcase
 
 class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_set_and_clear(self):
         """Tests setting and clearing function breakpoints.
         This packet is a bit tricky on the debug adaptor side since there
@@ -123,7 +122,6 @@ class TestDAP_setFunctionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""

@@ -225,7 +225,7 @@ namespace clang {
 
       ArrayRef<GlobalDeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].get());
+        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].getRawValue());
 
       // Add a slot to the record for the number of specializations.
       unsigned I = Record.size();
@@ -1537,8 +1537,14 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (D->isThisDeclarationADefinition())
     Record.AddCXXDefinitionData(D);
 
+  if (D->isCompleteDefinition() && D->isInNamedModule())
+    Writer.AddDeclRef(D, Writer.ModularCodegenDecls);
+
   // Store (what we currently believe to be) the key function to avoid
   // deserializing every method so we can compute it.
+  //
+  // FIXME: Avoid adding the key function if the class is defined in
+  // module purview since the key function is meaningless in module purview.
   if (D->isCompleteDefinition())
     Record.AddDeclRef(Context.getCurrentKeyFunction(D));
 
@@ -1733,7 +1739,7 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (Writer.isGeneratingReducedBMI()) {
     auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
-      Writer.GetDeclRef(DG);
+      Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE;
@@ -1765,12 +1771,21 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
 
-  // Explicit info.
-  Record.AddTypeSourceInfo(D->getTypeAsWritten());
-  if (D->getTypeAsWritten()) {
-    Record.AddSourceLocation(D->getExternLoc());
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
@@ -1778,7 +1793,6 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
 void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
   Record.AddTemplateParameterList(D->getTemplateParameters());
-  Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
   VisitClassTemplateSpecializationDecl(D);
 
@@ -1812,12 +1826,21 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     Record.AddTemplateArgumentList(&D->getTemplateInstantiationArgs());
   }
 
-  // Explicit info.
-  Record.AddTypeSourceInfo(D->getTypeAsWritten());
-  if (D->getTypeAsWritten()) {
-    Record.AddSourceLocation(D->getExternLoc());
+  bool ExplicitInstantiation =
+      D->getTemplateSpecializationKind() ==
+          TSK_ExplicitInstantiationDeclaration ||
+      D->getTemplateSpecializationKind() == TSK_ExplicitInstantiationDefinition;
+  Record.push_back(ExplicitInstantiation);
+  if (ExplicitInstantiation) {
+    Record.AddSourceLocation(D->getExternKeywordLoc());
     Record.AddSourceLocation(D->getTemplateKeywordLoc());
   }
+
+  const ASTTemplateArgumentListInfo *ArgsWritten =
+      D->getTemplateArgsAsWritten();
+  Record.push_back(!!ArgsWritten);
+  if (ArgsWritten)
+    Record.AddASTTemplateArgumentListInfo(ArgsWritten);
 
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
@@ -1839,7 +1862,6 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
   Record.AddTemplateParameterList(D->getTemplateParameters());
-  Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
   VisitVarTemplateSpecializationDecl(D);
 
@@ -1883,7 +1905,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
                         !D->defaultArgumentWasInherited();
   Record.push_back(OwnsDefaultArg);
   if (OwnsDefaultArg)
-    Record.AddTypeSourceInfo(D->getDefaultArgumentInfo());
+    Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
   if (!TC && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
@@ -1925,7 +1947,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
                           !D->defaultArgumentWasInherited();
     Record.push_back(OwnsDefaultArg);
     if (OwnsDefaultArg)
-      Record.AddStmt(D->getDefaultArgument());
+      Record.AddTemplateArgumentLoc(D->getDefaultArgument());
     Code = serialization::DECL_NON_TYPE_TEMPLATE_PARM;
   }
 }
@@ -2812,7 +2834,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   SourceLocationEncoding::RawLocEncoding RawLoc =
       getRawSourceLocationEncoding(getAdjustedLocation(Loc));
 
-  unsigned Index = ID.get() - FirstDeclID.get();
+  unsigned Index = ID.getRawValue() - FirstDeclID.getRawValue();
   if (DeclOffsets.size() == Index)
     DeclOffsets.emplace_back(RawLoc, Offset, DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {

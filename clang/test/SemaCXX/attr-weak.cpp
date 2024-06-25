@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -std=c++11 %s -fexperimental-new-constant-interpreter
 
 static int test0 __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 static void test1() __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}

@@ -4,7 +4,7 @@
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: fir.global common @cmn_(dense<0> : vector<4xi8>) : !fir.array<4xi8>
+!CHECK: fir.global common @cmn_(dense<0> : vector<4xi8>) {alignment = 4 : i64} : !fir.array<4xi8>
 module m0
   common /cmn/ k1
   !$omp threadprivate(/cmn/)

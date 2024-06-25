@@ -22,9 +22,9 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCBase.td"
 include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
-include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td"
 include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
 include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.td"
+include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td"
 
 // AccCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenACC/AccCommon.td"

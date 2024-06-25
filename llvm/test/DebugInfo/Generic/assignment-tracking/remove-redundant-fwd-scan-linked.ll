@@ -33,21 +33,21 @@
 ;; Check we don't delete that inserted unlinked dbg.assign.
 
 ; CHECK:      %a = alloca %struct.e, align 8, !DIAssignID ![[ID_0:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign({{.*}}, metadata ![[ID_0]],{{.*}})
+; CHECK-NEXT: #dbg_assign({{.*}}, ![[ID_0]],{{.*}})
 
 ;; This dbg.assign is linked to the memset.
-; CHECK:      call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_1:[0-9]+]], metadata ptr %b, metadata !DIExpression())
+; CHECK:      #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_1:[0-9]+]], ptr %b, !DIExpression(),
 
 ;; Importantly, check this unlinked dbg.assign which is shadowed by the
 ;; dbg.assign above isn't deleted.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_2:[0-9]+]], ptr undef, !DIExpression(),
 
-; CHECK:      call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[ID_1]], metadata ptr %a2, metadata !DIExpression())
+; CHECK:      #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[ID_1]], ptr %a2, !DIExpression(),
 
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID_1]]
 
 ; CHECK:      store ptr @d, ptr %b, align 8,{{.*}}!DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata ptr @d,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_3]], metadata ptr %b, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(ptr @d,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_3]], ptr %b, !DIExpression(),
 
 ; CHECK-DAG: ![[ID_0]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[ID_1]] = distinct !DIAssignID()

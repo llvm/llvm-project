@@ -18,19 +18,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// A simple structure that encodes a range of levels in the sparse tensors that
-/// forms a COO segment.
-struct COOSegment {
-  std::pair<Level, Level> lvlRange; // [low, high)
-  bool isSoA;
-
-  bool isAoS() const { return !isSoA; }
-  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
-  bool inSegment(Level l) const {
-    return l >= lvlRange.first && l < lvlRange.second;
-  }
-};
-
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -72,12 +59,6 @@ public:
   SparseTensorType(ShapedType stp, SparseTensorEncodingAttr enc)
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
-
-  // TODO: remove?
-  SparseTensorType(SparseTensorEncodingAttr enc)
-      : SparseTensorType(RankedTensorType::get(
-            SmallVector<Size>(enc.getDimRank(), ShapedType::kDynamic),
-            Float32Type::get(enc.getContext()), enc)) {}
 
   SparseTensorType &operator=(const SparseTensorType &) = delete;
   SparseTensorType(const SparseTensorType &) = default;
@@ -369,13 +350,15 @@ public:
   /// no such COO region is found, then returns the level-rank.
   ///
   /// DEPRECATED: use getCOOSegment instead;
-  Level getAoSCOOStart() const;
+  Level getAoSCOOStart() const { return getEncoding().getAoSCOOStart(); };
 
   /// Returns [un]ordered COO type for this sparse tensor type.
   RankedTensorType getCOOType(bool ordered) const;
 
   /// Returns a list of COO segments in the sparse tensor types.
-  SmallVector<COOSegment> getCOOSegments() const;
+  SmallVector<COOSegment> getCOOSegments() const {
+    return getEncoding().getCOOSegments();
+  }
 
 private:
   // These two must be const, to ensure coherence of the memoized fields.

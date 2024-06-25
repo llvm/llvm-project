@@ -21,10 +21,10 @@
 ;; dbg.assign intrinsics which have been left in their original blocks.
 
 ; CHECK: if.then:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 1,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID:[0-9]+]], metadata ptr %1, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 1,{{.+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID:[0-9]+]], ptr %1, !DIExpression(),
 
 ; CHECK: if.else:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %1, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 2,{{.+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %1, !DIExpression(),
 
 ; CHECK: if.end:
 ; CHECK: store i32 %.sink, ptr %1, align 4{{.+}}, !DIAssignID ![[ID]]

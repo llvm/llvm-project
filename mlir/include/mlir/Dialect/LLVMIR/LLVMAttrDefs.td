@@ -385,7 +385,11 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements
+    OptionalArrayRefParameter<"DINodeAttr">:$elements,
+    OptionalParameter<"DIExpressionAttr">:$dataLocation,
+    OptionalParameter<"DIExpressionAttr">:$rank,
+    OptionalParameter<"DIExpressionAttr">:$allocated,
+    OptionalParameter<"DIExpressionAttr">:$associated
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
@@ -418,6 +422,7 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"uint64_t">:$offsetInBits,
+    OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
     OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
@@ -620,10 +625,10 @@ def LLVM_DINamespaceAttr : LLVM_Attr<"DINamespace", "di_namespace",
 def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
                                     "DINodeAttr"> {
   let parameters = (ins
-    OptionalParameter<"IntegerAttr">:$count,
-    OptionalParameter<"IntegerAttr">:$lowerBound,
-    OptionalParameter<"IntegerAttr">:$upperBound,
-    OptionalParameter<"IntegerAttr">:$stride
+    OptionalParameter<"::mlir::Attribute">:$count,
+    OptionalParameter<"::mlir::Attribute">:$lowerBound,
+    OptionalParameter<"::mlir::Attribute">:$upperBound,
+    OptionalParameter<"::mlir::Attribute">:$stride
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -668,6 +673,25 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
     }]>
   ];
 
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIStringTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
+                                     /*traits=*/[], "DITypeAttr"> {
+  let parameters = (ins
+    LLVM_DITagParameter:$tag,
+    "StringAttr":$name,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint32_t">:$alignInBits,
+    OptionalParameter<"DIVariableAttr">:$stringLength,
+    OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
+    OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
+    LLVM_DIEncodingParameter:$encoding
+  );
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1031,5 +1055,26 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::UndefOp.
+def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
+
+//===----------------------------------------------------------------------===//
+// PoisonAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::PoisonOp.
+def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
+
+//===----------------------------------------------------------------------===//
+// ZeroAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::ZeroOp.
+def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 
 #endif // LLVMIR_ATTRDEFS

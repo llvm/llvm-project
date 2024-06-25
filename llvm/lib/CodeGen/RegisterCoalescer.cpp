@@ -1339,14 +1339,13 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
-  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
+  const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
-                                              DefMI->getOperand(0).getSubReg());
+      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
       if (NewDstIdx)
         NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
 
@@ -4249,8 +4248,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // Removing sub-register operands may allow GR32_ABCD -> GR32 and DPR_VFP2 ->
   // DPR inflation.
   array_pod_sort(InflateRegs.begin(), InflateRegs.end());
-  InflateRegs.erase(std::unique(InflateRegs.begin(), InflateRegs.end()),
-                    InflateRegs.end());
+  InflateRegs.erase(llvm::unique(InflateRegs), InflateRegs.end());
   LLVM_DEBUG(dbgs() << "Trying to inflate " << InflateRegs.size()
                     << " regs.\n");
   for (Register Reg : InflateRegs) {

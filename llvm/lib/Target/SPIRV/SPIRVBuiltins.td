@@ -58,6 +58,10 @@ def LoadStore : BuiltinGroup;
 def IntelSubgroups : BuiltinGroup;
 def AtomicFloating : BuiltinGroup;
 def GroupUniform : BuiltinGroup;
+def KernelClock : BuiltinGroup;
+def CastToPtr : BuiltinGroup;
+def Construct : BuiltinGroup;
+def CoopMatr : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -111,6 +115,9 @@ def : DemangledBuiltin<"__spirv_ImageSampleExplicitLod", OpenCL_std, SampleImage
 
 // Select builtin record:
 def : DemangledBuiltin<"__spirv_Select", OpenCL_std, Select, 3, 3>;
+
+// Composite Construct builtin record:
+def : DemangledBuiltin<"__spirv_CompositeConstruct", OpenCL_std, Construct, 1, 0>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an extended builtin record used for lowering into an
@@ -531,6 +538,7 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicAnd", OpenCL_std, Atomic, 4, 4, OpA
 defm : DemangledNativeBuiltin<"atomic_exchange", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"atomic_exchange_explicit", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"AtomicEx__spirv_change", OpenCL_std, Atomic, 2, 4, OpAtomicExchange>;
+defm : DemangledNativeBuiltin<"__spirv_AtomicExchange", OpenCL_std, Atomic, 4, 4, OpAtomicExchange>;
 defm : DemangledNativeBuiltin<"atomic_work_item_fence", OpenCL_std, Atomic, 1, 3, OpMemoryBarrier>;
 defm : DemangledNativeBuiltin<"__spirv_MemoryBarrier", OpenCL_std, Atomic, 2, 2, OpMemoryBarrier>;
 defm : DemangledNativeBuiltin<"atomic_fetch_add", OpenCL_std, Atomic, 2, 4, OpAtomicIAdd>;
@@ -585,6 +593,7 @@ defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecC
 
 // Async Copy and Prefetch builtin records:
 defm : DemangledNativeBuiltin<"async_work_group_copy", OpenCL_std, AsyncCopy, 4, 4, OpGroupAsyncCopy>;
+defm : DemangledNativeBuiltin<"async_work_group_strided_copy", OpenCL_std, AsyncCopy, 5, 5, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"__spirv_GroupAsyncCopy", OpenCL_std, AsyncCopy, 6, 6, OpGroupAsyncCopy>;
 defm : DemangledNativeBuiltin<"wait_group_events", OpenCL_std, AsyncCopy, 2, 2, OpGroupWaitEvents>;
 defm : DemangledNativeBuiltin<"__spirv_GroupWaitEvents", OpenCL_std, AsyncCopy, 3, 3, OpGroupWaitEvents>;
@@ -592,6 +601,23 @@ defm : DemangledNativeBuiltin<"__spirv_GroupWaitEvents", OpenCL_std, AsyncCopy, 
 // Load and store builtin records:
 defm : DemangledNativeBuiltin<"__spirv_Load", OpenCL_std, LoadStore, 1, 3, OpLoad>;
 defm : DemangledNativeBuiltin<"__spirv_Store", OpenCL_std, LoadStore, 2, 4, OpStore>;
+
+// Address Space Qualifier Functions/Pointers Conversion Instructions:
+defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+
+// Cooperative Matrix builtin records:
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 0, OpCooperativeMatrixLoadKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixStoreKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixMulAddKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLengthKHR", OpenCL_std, CoopMatr, 1, 1, OpCooperativeMatrixLengthKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -680,9 +706,17 @@ multiclass DemangledGroupBuiltin<string name, int level /* OnlyWork/OnlySub/... 
   }
 }
 
+multiclass DemangledGroupBuiltinWrapper<string name, bits<8> minNumArgs, bits<8> maxNumArgs, Op operation> {
+    def : DemangledBuiltin<name, OpenCL_std, Group, minNumArgs, maxNumArgs>;
+    def : GroupBuiltin<name, operation>;
+}
+
 defm : DemangledGroupBuiltin<"group_all", WorkOrSub, OpGroupAll>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupAll", 2, 2, OpGroupAll>;
 defm : DemangledGroupBuiltin<"group_any", WorkOrSub, OpGroupAny>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupAny", 2, 2, OpGroupAny>;
 defm : DemangledGroupBuiltin<"group_broadcast", WorkOrSub, OpGroupBroadcast>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupBroadcast", 3, 3, OpGroupBroadcast>;
 defm : DemangledGroupBuiltin<"group_non_uniform_broadcast", OnlySub, OpGroupNonUniformBroadcast>;
 defm : DemangledGroupBuiltin<"group_broadcast_first", OnlySub, OpGroupNonUniformBroadcastFirst>;
 
@@ -717,41 +751,49 @@ defm : DemangledGroupBuiltin<"group_scan_inclusive_adds", WorkOrSub, OpGroupIAdd
 defm : DemangledGroupBuiltin<"group_reduce_addu", WorkOrSub, OpGroupIAdd>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_addu", WorkOrSub, OpGroupIAdd>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_addu", WorkOrSub, OpGroupIAdd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupIAdd", 3, 3, OpGroupIAdd>;
 
 defm : DemangledGroupBuiltin<"group_fadd", WorkOrSub, OpGroupFAdd>;
 defm : DemangledGroupBuiltin<"group_reduce_addf", WorkOrSub, OpGroupFAdd>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_addf", WorkOrSub, OpGroupFAdd>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_addf", WorkOrSub, OpGroupFAdd>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupFAdd", 3, 3, OpGroupFAdd>;
 
 defm : DemangledGroupBuiltin<"group_fmin", WorkOrSub, OpGroupFMin>;
 defm : DemangledGroupBuiltin<"group_reduce_minf", WorkOrSub, OpGroupFMin>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_minf", WorkOrSub, OpGroupFMin>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_minf", WorkOrSub, OpGroupFMin>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupFMin", 3, 3, OpGroupFMin>;
 
 defm : DemangledGroupBuiltin<"group_umin", WorkOrSub, OpGroupUMin>;
 defm : DemangledGroupBuiltin<"group_reduce_minu", WorkOrSub, OpGroupUMin>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_minu", WorkOrSub, OpGroupUMin>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_minu", WorkOrSub, OpGroupUMin>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupUMin", 3, 3, OpGroupUMin>;
 
 defm : DemangledGroupBuiltin<"group_smin", WorkOrSub, OpGroupSMin>;
 defm : DemangledGroupBuiltin<"group_reduce_mins", WorkOrSub, OpGroupSMin>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_mins", WorkOrSub, OpGroupSMin>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_mins", WorkOrSub, OpGroupSMin>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupSMin", 3, 3, OpGroupSMin>;
 
 defm : DemangledGroupBuiltin<"group_fmax", WorkOrSub, OpGroupFMax>;
 defm : DemangledGroupBuiltin<"group_reduce_maxf", WorkOrSub, OpGroupFMax>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_maxf", WorkOrSub, OpGroupFMax>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_maxf", WorkOrSub, OpGroupFMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupFMax", 3, 3, OpGroupFMax>;
 
 defm : DemangledGroupBuiltin<"group_umax", WorkOrSub, OpGroupUMax>;
 defm : DemangledGroupBuiltin<"group_reduce_maxu", WorkOrSub, OpGroupUMax>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_maxu", WorkOrSub, OpGroupUMax>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_maxu", WorkOrSub, OpGroupUMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupUMax", 3, 3, OpGroupUMax>;
 
 defm : DemangledGroupBuiltin<"group_smax", WorkOrSub, OpGroupSMax>;
 defm : DemangledGroupBuiltin<"group_reduce_maxs", WorkOrSub, OpGroupSMax>;
 defm : DemangledGroupBuiltin<"group_scan_exclusive_maxs", WorkOrSub, OpGroupSMax>;
 defm : DemangledGroupBuiltin<"group_scan_inclusive_maxs", WorkOrSub, OpGroupSMax>;
+defm : DemangledGroupBuiltinWrapper<"__spirv_GroupSMax", 3, 3, OpGroupSMax>;
 
 // cl_khr_subgroup_non_uniform_arithmetic
 defm : DemangledGroupBuiltin<"group_non_uniform_iadd", WorkOrSub, OpGroupNonUniformIAdd>;
@@ -952,6 +994,14 @@ defm : DemangledGroupBuiltin<"group_scan_exclusive_logical_xor", OnlyWork, OpGro
 defm : DemangledGroupBuiltin<"group_scan_inclusive_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 defm : DemangledGroupBuiltin<"group_reduce_logical_xor", OnlyWork, OpGroupLogicalXorKHR>;
 
+// cl_khr_kernel_clock / SPV_KHR_shader_clock
+defm : DemangledNativeBuiltin<"clock_read_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -1045,6 +1095,21 @@ foreach i = ["", "2", "4", "8", "16"] in {
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
+
+// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups extension.
+multiclass DemangledIntelSubgroupsBuiltinWrapper<string name, bits<8> numArgs, Op operation> {
+  def : DemangledBuiltin<!strconcat("__spirv_", name), OpenCL_std, IntelSubgroups, numArgs, numArgs>;
+  def : IntelSubgroupsBuiltin<!strconcat("__spirv_", name), operation>;
+}
+
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleINTEL", 2, OpSubgroupShuffleINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleDownINTEL", 3, OpSubgroupShuffleDownINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleUpINTEL", 3, OpSubgroupShuffleUpINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupShuffleXorINTEL", 2, OpSubgroupShuffleXorINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockReadINTEL", 1, OpSubgroupBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockWriteINTEL", 2, OpSubgroupBlockWriteINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockReadINTEL", 2, OpSubgroupImageBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockWriteINTEL", 3, OpSubgroupImageBlockWriteINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a builtin for group operations within uniform control flow.
@@ -1382,7 +1447,7 @@ def : BuiltinType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
 def : BuiltinType<"spirv.Image", OpTypeImage>;
 def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
 def : BuiltinType<"spirv.Pipe", OpTypePipe>;
-
+def : BuiltinType<"spirv.CooperativeMatrixKHR", OpTypeCooperativeMatrixKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class matching an OpenCL builtin type name to an equivalent SPIR-V

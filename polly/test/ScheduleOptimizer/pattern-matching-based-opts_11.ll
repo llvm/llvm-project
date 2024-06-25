@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop \
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-opt-isl' \
 ; RUN: -polly-import-jscop-postfix=transformed \
 ; RUN: -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
@@ -8,7 +8,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-opt-isl -debug \
+; RUN: -debug \
 ; RUN: -polly-tc-opt=true -disable-output < %s 2>&1 \
 ; RUN: | FileCheck %s
 ; REQUIRES: asserts

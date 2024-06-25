@@ -17,6 +17,5 @@ add_llvm_library(LLVMBOLTProfile
 target_link_libraries(LLVMBOLTProfile
   PRIVATE
   LLVMBOLTCore
-  LLVMBOLTPasses
   LLVMBOLTUtils
   )

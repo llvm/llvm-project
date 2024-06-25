@@ -1152,11 +1152,13 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
 ; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
-  %ext = zext i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32
+  %cmp = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
+  %ext = zext i1 %cmp to i32
   %shl = shl i32 1, %ext
   %mul = mul i32 %V, %shl
   ret i32 %mul
