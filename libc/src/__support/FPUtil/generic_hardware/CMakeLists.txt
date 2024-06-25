@@ -1,0 +1,10 @@
+add_header_library(
+  fma
+  HDRS
+    fma.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.properties.cpu_features
+  FLAGS
+    FMA_OPT
+)

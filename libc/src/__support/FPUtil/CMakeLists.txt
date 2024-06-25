@@ -227,3 +227,4 @@ add_header_library(
 )
 
 add_subdirectory(generic)
+add_subdirectory(generic_hardware)

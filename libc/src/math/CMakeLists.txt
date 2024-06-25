@@ -101,6 +101,7 @@ add_math_entrypoint_object(expm1f)
 
 add_math_entrypoint_object(f16divf)
 
+add_math_entrypoint_object(f16fma)
 add_math_entrypoint_object(f16fmaf)
 
 add_math_entrypoint_object(f16sqrtf)

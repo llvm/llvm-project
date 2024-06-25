@@ -39,17 +39,17 @@ multiply_add(T x, T y, T z) {
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 
 // FMA instructions are available.
-#include "FMA.h"
+#include "src/__support/FPUtil/generic_hardware/fma.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE float multiply_add(float x, float y, float z) {
-  return fma<float>(x, y, z);
+  return generic_hardware::fma(x, y, z);
 }
 
 LIBC_INLINE double multiply_add(double x, double y, double z) {
-  return fma<double>(x, y, z);
+  return generic_hardware::fma(x, y, z);
 }
 
 } // namespace fputil

@@ -13,6 +13,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
@@ -106,8 +107,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                  sizeof(OutType) <= sizeof(InType),
                              OutType>
 fma(InType x, InType y, InType z) {
-  using OutFPBits = fputil::FPBits<OutType>;
-  using OutStorageType = typename OutFPBits::StorageType;
   using InFPBits = fputil::FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
 
@@ -115,11 +114,7 @@ fma(InType x, InType y, InType z) {
   constexpr size_t PROD_LEN = 2 * IN_EXPLICIT_MANT_LEN;
   constexpr size_t TMP_RESULT_LEN = cpp::bit_ceil(PROD_LEN + 1);
   using TmpResultType = UInt<TMP_RESULT_LEN>;
-
-  constexpr size_t EXTRA_FRACTION_LEN =
-      TMP_RESULT_LEN - 1 - OutFPBits::FRACTION_LEN;
-  constexpr TmpResultType EXTRA_FRACTION_STICKY_MASK =
-      (TmpResultType(1) << (EXTRA_FRACTION_LEN - 1)) - 1;
+  using DyadicFloat = DyadicFloat<TMP_RESULT_LEN>;
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
     return static_cast<OutType>(x * y + z);
@@ -182,7 +177,6 @@ fma(InType x, InType y, InType z) {
   constexpr int RESULT_MIN_LEN = PROD_LEN - InFPBits::FRACTION_LEN;
   z_mant <<= RESULT_MIN_LEN;
   int z_lsb_exp = z_exp - (InFPBits::FRACTION_LEN + RESULT_MIN_LEN);
-  bool round_bit = false;
   bool sticky_bits = false;
   bool z_shifted = false;
 
@@ -221,85 +215,18 @@ fma(InType x, InType y, InType z) {
     }
   }
 
-  OutStorageType result = 0;
-  int r_exp = 0; // Unbiased exponent of the result
-
-  int round_mode = fputil::quick_get_round();
-
-  // Normalize the result.
-  if (prod_mant != 0) {
-    int lead_zeros = cpp::countl_zero(prod_mant);
-    // Move the leading 1 to the most significant bit.
-    prod_mant <<= lead_zeros;
-    prod_lsb_exp -= lead_zeros;
-    r_exp = prod_lsb_exp + (cpp::numeric_limits<TmpResultType>::digits - 1) -
-            InFPBits::EXP_BIAS + OutFPBits::EXP_BIAS;
-
-    if (r_exp > 0) {
-      // The result is normal.  We will shift the mantissa to the right by the
-      // amount of extra bits compared to the length of the explicit mantissa in
-      // the output type.  The rounding bit then becomes the highest bit that is
-      // shifted out, and the following lower bits are merged into sticky bits.
-      round_bit =
-          (prod_mant & (TmpResultType(1) << (EXTRA_FRACTION_LEN - 1))) != 0;
-      sticky_bits |= (prod_mant & EXTRA_FRACTION_STICKY_MASK) != 0;
-      result = static_cast<OutStorageType>(prod_mant >> EXTRA_FRACTION_LEN);
-    } else {
-      if (r_exp < -OutFPBits::FRACTION_LEN) {
-        // The result is smaller than 1/2 of the smallest denormal number.
-        sticky_bits = true; // since the result is non-zero.
-        result = 0;
-      } else {
-        // The result is denormal.
-        TmpResultType mask = TmpResultType(1) << (EXTRA_FRACTION_LEN - r_exp);
-        round_bit = (prod_mant & mask) != 0;
-        sticky_bits |= (prod_mant & (mask - 1)) != 0;
-        if (r_exp > -OutFPBits::FRACTION_LEN)
-          result = static_cast<OutStorageType>(
-              prod_mant >> (EXTRA_FRACTION_LEN + 1 - r_exp));
-        else
-          result = 0;
-      }
-
-      r_exp = 0;
-    }
-  } else {
+  if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
-    if (round_mode == FE_DOWNWARD)
+    if (quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;
   }
 
-  // Finalize the result.
-  if (LIBC_UNLIKELY(r_exp >= OutFPBits::MAX_BIASED_EXPONENT)) {
-    if ((round_mode == FE_TOWARDZERO) ||
-        (round_mode == FE_UPWARD && prod_sign.is_neg()) ||
-        (round_mode == FE_DOWNWARD && prod_sign.is_pos())) {
-      return OutFPBits::max_normal(prod_sign).get_val();
-    }
-    return OutFPBits::inf(prod_sign).get_val();
-  }
-
-  // Remove hidden bit and append the exponent field and sign bit.
-  result = static_cast<OutStorageType>(
-      (result & OutFPBits::FRACTION_MASK) |
-      (static_cast<OutStorageType>(r_exp) << OutFPBits::FRACTION_LEN));
-  if (prod_sign.is_neg())
-    result |= OutFPBits::SIGN_MASK;
-
-  // Rounding.
-  if (round_mode == FE_TONEAREST) {
-    if (round_bit && (sticky_bits || ((result & 1) != 0)))
-      ++result;
-  } else if ((round_mode == FE_UPWARD && prod_sign.is_pos()) ||
-             (round_mode == FE_DOWNWARD && prod_sign.is_neg())) {
-    if (round_bit || sticky_bits)
-      ++result;
-  }
-
-  return cpp::bit_cast<OutType>(result);
+  DyadicFloat result(prod_sign, prod_lsb_exp - InFPBits::EXP_BIAS, prod_mant);
+  result.mantissa |= sticky_bits;
+  return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
 } // namespace generic
