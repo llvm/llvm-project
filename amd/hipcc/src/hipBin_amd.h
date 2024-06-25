@@ -209,7 +209,7 @@ void HipBinAmd::constructCompilerPath() {
     } else {
       compilerPath = getRoccmPath();
       hipClangPath = compilerPath;
-      hipClangPath /= "llvm/bin";
+      hipClangPath /= "lib/llvm/bin";
     }
 
     compilerPath = hipClangPath.string();

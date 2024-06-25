@@ -96,7 +96,7 @@ if ($isWindows and defined $ENV{'CUDA_PATH'}) {
 if ($isWindows or -e "$HIP_PATH/bin/clang") {
     $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$HIP_PATH/bin";
 } else {
-    $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$ROCM_PATH/llvm/bin";
+    $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$ROCM_PATH/lib/llvm/bin";
 }
 # HIP_ROCCLR_HOME is used by Windows builds
 $HIP_ROCCLR_HOME=$ENV{'HIP_ROCCLR_HOME'};
