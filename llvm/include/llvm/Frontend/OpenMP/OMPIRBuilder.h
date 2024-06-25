@@ -2231,6 +2231,8 @@ public:
     /// The total number of pointers passed to the runtime library.
     unsigned NumberOfPtrs = 0u;
 
+    bool EmitDebug = false;
+
     explicit TargetDataInfo() {}
     explicit TargetDataInfo(bool RequiresDevicePointerInfo,
                             bool SeparateBeginEndCalls)
@@ -2349,7 +2351,6 @@ public:
   void emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                     OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
                                     OpenMPIRBuilder::TargetDataInfo &Info,
-                                    bool EmitDebug = false,
                                     bool ForEndCall = false);
 
   /// Emit an array of struct descriptors to be assigned to the offload args.
@@ -2369,7 +2370,7 @@ public:
   /// return nullptr by reference.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-      TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
+      GenMapInfoCallbackTy GenMapInfoCB, TargetDataInfo &Info,
       bool IsNonContiguous = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
@@ -2383,6 +2384,13 @@ public:
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
+
+  void emitOffloadingArraysAndArgs(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+      TargetDataRTArgs &RTArgs, GenMapInfoCallbackTy GenMapInfoCB,
+      bool IsNonContiguous = false, bool ForEndCall = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.

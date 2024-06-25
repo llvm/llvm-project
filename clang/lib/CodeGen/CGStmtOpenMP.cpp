@@ -5264,6 +5264,8 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     }
     BodyGen(CGF);
   };
+  LLVM_DEBUG(llvm::dbgs() << "Inputs to emitTaskOutineFunction\n");
+  LLVM_DEBUG(llvm::dbgs() << "PartID = " << **PartId << "\n");
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(
       S, *I, *PartId, *TaskT, EKind, CodeGen, /*Tied=*/true,
       Data.NumberOfParts);

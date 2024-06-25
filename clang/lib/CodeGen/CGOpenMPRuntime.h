@@ -122,6 +122,45 @@ struct OMPTaskDataTy final {
   bool IsReductionWithTaskMod = false;
   bool IsWorksharingReduction = false;
   bool HasNowaitClause = false;
+  void printTo(llvm::raw_ostream &os, const ASTContext &Ctx) const {
+    auto &&printSVHelper =
+        [&os, &Ctx](const SmallVector<const Expr *, 4> &V) -> void {
+      for (auto &v : V) {
+        v->dump(os, Ctx);
+      }
+    };
+    auto &&printSV =
+        [&os, printSVHelper](std::string s,
+                             const SmallVector<const Expr *, 4> &V) -> void {
+      os << s << ":[\n";
+      printSVHelper(V);
+      os << "]\n";
+    };
+    // SmallVector<const Expr *, 4> PrivateVars;
+    // SmallVector<const Expr *, 4> PrivateCopies;
+    // SmallVector<const Expr *, 4> FirstprivateVars;
+    // SmallVector<const Expr *, 4> FirstprivateCopies;
+    // SmallVector<const Expr *, 4> FirstprivateInits;
+    // SmallVector<const Expr *, 4> LastprivateVars;
+    // SmallVector<const Expr *, 4> LastprivateCopies;
+    // SmallVector<const Expr *, 4> ReductionVars;
+    // SmallVector<const Expr *, 4> ReductionOrigs;
+    // SmallVector<const Expr *, 4> ReductionCopies;
+    // SmallVector<const Expr *, 4> ReductionOps;
+    // SmallVector<CanonicalDeclPtr<const VarDecl>, 4> PrivateLocals;
+
+    printSV("PrivateVars", PrivateVars);
+    printSV("PrivateCopies", PrivateCopies);
+    printSV("FirstprivateVars", FirstprivateVars);
+    printSV("FirstprivateCopies", FirstprivateCopies);
+    printSV("FirstprivateInits", FirstprivateInits);
+    printSV("LastprivateVars", LastprivateVars);
+    printSV("LastprivateCopies", LastprivateCopies);
+    printSV("ReductionVars", ReductionVars);
+    printSV("ReductionOrigs", ReductionOrigs);
+    printSV("ReductionCopies", ReductionCopies);
+    printSV("ReductionOps", ReductionOps);
+  }
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
