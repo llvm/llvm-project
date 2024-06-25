@@ -988,7 +988,7 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
 SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
                                unsigned Opcode1) {
   SmallBitVector OpcodeMask(VL.size(), false);
-  for (unsigned Lane : seq<unsigned>(0, VL.size()))
+  for (unsigned Lane : seq<unsigned>(VL.size()))
     if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
       OpcodeMask.set(Lane);
   return OpcodeMask;
