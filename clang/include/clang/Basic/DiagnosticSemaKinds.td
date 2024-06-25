@@ -8956,6 +8956,8 @@ def err_expected_callable_argument : Error<
   "expected a callable expression as %ordinal0 argument to %1, found %2">;
 def note_building_builtin_dump_struct_call : Note<
   "in call to printing function with arguments '(%0)' while dumping struct">;
+def err_builtin_verbose_trap_arg : Error<
+  "argument to __builtin_verbose_trap must %select{be a pointer to a constant string|not contain $}0">;
 
 def err_atomic_load_store_uses_lib : Error<
   "atomic %select{load|store}0 requires runtime support that is not "
