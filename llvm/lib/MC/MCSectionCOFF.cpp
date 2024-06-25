@@ -36,7 +36,7 @@ void MCSectionCOFF::setSelection(int Selection) const {
 
 void MCSectionCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
-                                         const MCExpr *Subsection) const {
+                                         uint32_t Subsection) const {
   // standard sections don't require the '.section'
   if (shouldOmitSectionDirective(getName(), MAI)) {
     OS << '\t' << getName() << '\n';
