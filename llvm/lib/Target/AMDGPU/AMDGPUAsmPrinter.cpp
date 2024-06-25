@@ -243,7 +243,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
       CurrentProgramInfo.NumVGPRsForWavesPerEU,
       MCBinaryExpr::createSub(
           CurrentProgramInfo.NumSGPRsForWavesPerEU,
-          AMDGPUVariadicMCExpr::createExtraSGPRs(
+          AMDGPUMCExpr::createExtraSGPRs(
               CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
               getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Context),
           Context),

@@ -5380,8 +5380,8 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
         static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
-    const MCExpr *ExtraSGPRs = AMDGPUVariadicMCExpr::createExtraSGPRs(
-        VCCUsed, FlatScrUsed, XNACKUsed, Ctx);
+    const MCExpr *ExtraSGPRs =
+        AMDGPUMCExpr::createExtraSGPRs(VCCUsed, FlatScrUsed, XNACKUsed, Ctx);
     NumSGPRs = MCBinaryExpr::createAdd(NumSGPRs, ExtraSGPRs, Ctx);
 
     if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) &&
@@ -5400,10 +5400,9 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
                                 unsigned Granule) -> const MCExpr * {
     const MCExpr *OneConst = MCConstantExpr::create(1ul, Ctx);
     const MCExpr *GranuleConst = MCConstantExpr::create(Granule, Ctx);
-    const MCExpr *MaxNumGPR =
-        AMDGPUVariadicMCExpr::createMax({NumGPR, OneConst}, Ctx);
+    const MCExpr *MaxNumGPR = AMDGPUMCExpr::createMax({NumGPR, OneConst}, Ctx);
     const MCExpr *AlignToGPR =
-        AMDGPUVariadicMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
+        AMDGPUMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
     const MCExpr *DivGPR =
         MCBinaryExpr::createDiv(AlignToGPR, GranuleConst, Ctx);
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
