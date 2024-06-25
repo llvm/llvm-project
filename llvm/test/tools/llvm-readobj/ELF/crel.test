@@ -178,3 +178,53 @@ Symbols:
   - Name:    g1
     Section: .text
     Binding: STB_GLOBAL
+
+## Test errors. See also relocation-errors.test.
+# RUN: yaml2obj --docnum=4 %s -o %t.err
+# RUN: llvm-readobj -r %t.err 2>&1 | FileCheck %s --check-prefix=ERR-LLVM -DFILE=%t.err
+# RUN: llvm-readelf -r %t.err 2>&1 | FileCheck %s --check-prefix=ERR-GNU -DFILE=%t.err
+
+# ERR-LLVM:      Section ([[#]]) .crel.data {
+# ERR-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+# ERR-LLVM-NEXT: }
+
+# ERR-GNU: warning: '[[FILE]]': unable to get the number of relocations in SHT_CREL section with index 3: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+# ERR-GNU-EMPTY:
+# ERR-GNU-NEXT: Relocation section '.crel.data' at offset 0x40 contains <?> entries:
+# ERR-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# ERR-GNU-NOT:  {{.}}
+
+# RUN: yaml2obj --docnum=4 -DCONTENT=08 %s -o %t.err2
+# RUN: llvm-readobj -r %t.err2 2>&1 | FileCheck %s --check-prefix=ERR2-LLVM -DFILE=%t.err2
+# RUN: llvm-readelf -r %t.err2 2>&1 | FileCheck %s --check-prefix=ERR2-GNU -DFILE=%t.err2
+
+# ERR2-LLVM:      Section ([[#]]) .crel.data {
+# ERR2-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+# ERR2-LLVM-NEXT: }
+
+# ERR2-GNU:      Relocation section '.crel.data' at offset 0x40 contains 1 entries:
+# ERR2-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# ERR2-GNU:      warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+# ERR2-GNU-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+  - Name:    .data
+    Type:    SHT_PROGBITS
+  - Name:    .crel.data
+    Type:    SHT_CREL
+    Flags:   []
+    Link:    .symtab
+    Info:    .data
+    Content: [[CONTENT=""]]
+Symbols:
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text

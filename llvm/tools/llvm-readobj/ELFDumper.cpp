@@ -3939,8 +3939,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     HasRelocSections = true;
 
     std::string EntriesNum = "<?>";
-    Expected<size_t> NumOrErr = GetEntriesNum(Sec);
-    if (NumOrErr)
+    if (Expected<size_t> NumOrErr = GetEntriesNum(Sec))
       EntriesNum = std::to_string(*NumOrErr);
     else
       this->reportUniqueWarning("unable to get the number of relocations in " +
@@ -3957,13 +3956,16 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       printRelr(Sec);
     } else {
       uint64_t CrelHdr = 0;
-      if (Sec.sh_type == ELF::SHT_CREL && NumOrErr) {
+      // For CREL, read the header and call printRelocationsHelper only if
+      // GetEntriesNum(Sec) succeeded.
+      if (Sec.sh_type == ELF::SHT_CREL && EntriesNum != "<?>") {
         CrelHdr = cantFail(this->Obj.getCrelHeader(
             cantFail(this->Obj.getSectionContents(Sec))));
       }
       printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader(),
                                    CrelHdr);
-      this->printRelocationsHelper(Sec);
+      if (Sec.sh_type != ELF::SHT_CREL || EntriesNum != "<?>")
+        this->printRelocationsHelper(Sec);
     }
   }
   if (!HasRelocSections)
