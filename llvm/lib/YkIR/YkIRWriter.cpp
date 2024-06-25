@@ -57,6 +57,7 @@ enum OpCode {
   OpCodeIndirectCall,
   OpCodeSelect,
   OpCodeLoadArg,
+  OpCodeFCmp,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -91,7 +92,7 @@ enum CastKind {
   CastKindFPExt = 4,
 };
 
-// A predicate used in a numeric comparison.
+// A predicate used in an integer comparison.
 enum CmpPredicate {
   PredEqual = 0,
   PredNotEqual,
@@ -103,6 +104,26 @@ enum CmpPredicate {
   PredSignedGreaterEqual,
   PredSignedLess,
   PredSignedLessEqual,
+};
+
+// A predicate used in a floating point comparison.
+enum FCmpPredicate {
+  FCmpFalse = 0,
+  FCmpOrderedEqual,
+  FCmpOrderedGreater,
+  FCmpOrderedGreaterEqual,
+  FCmpOrderedLess,
+  FCmpOrderedLessEqual,
+  FCmpOrderedNotEqual,
+  FCmpOrdered,
+  FCmpUnordered,
+  FCmpUnorderedEqual,
+  FCmpUnorderedGreater,
+  FCmpUnorderedGreaterEqual,
+  FCmpUnorderedLess,
+  FCmpUnorderedLessEqual,
+  FCmpUnorderedNotEqual,
+  FCmpTrue,
 };
 
 // A binary operator.
@@ -897,8 +918,8 @@ private:
     InstIdx++;
   }
 
-  // Serialise an LLVM predicate.
-  void serialisePredicate(llvm::CmpInst::Predicate P) {
+  // Serialise an integer LLVM comparison predicate.
+  void serialiseIntPredicate(llvm::CmpInst::Predicate P) {
     std::optional<CmpPredicate> LP = std::nullopt;
     switch (P) {
     case llvm::CmpInst::ICMP_EQ:
@@ -932,7 +953,7 @@ private:
       LP = PredSignedLessEqual;
       break;
     default:
-      abort(); // TODO: floating point predicates.
+      abort();
     }
     OutStreamer.emitInt8(LP.value());
   }
@@ -952,7 +973,88 @@ private:
     // lhs:
     serialiseOperand(I, FLCtxt, I->getOperand(0));
     // predicate:
-    serialisePredicate(I->getPredicate());
+    serialiseIntPredicate(I->getPredicate());
+    // rhs:
+    serialiseOperand(I, FLCtxt, I->getOperand(1));
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
+  // Serialise a floating point LLVM comparison predicate.
+  void serialiseFloatPredicate(llvm::CmpInst::Predicate P) {
+    std::optional<FCmpPredicate> LP = std::nullopt;
+    switch (P) {
+    case llvm::CmpInst::FCMP_FALSE:
+      LP = FCmpFalse;
+      break;
+    case llvm::CmpInst::FCMP_OEQ:
+      LP = FCmpOrderedEqual;
+      break;
+    case llvm::CmpInst::FCMP_OGT:
+      LP = FCmpOrderedGreater;
+      break;
+    case llvm::CmpInst::FCMP_OGE:
+      LP = FCmpOrderedGreaterEqual;
+      break;
+    case llvm::CmpInst::FCMP_OLT:
+      LP = FCmpOrderedLess;
+      break;
+    case llvm::CmpInst::FCMP_OLE:
+      LP = FCmpOrderedLessEqual;
+      break;
+    case llvm::CmpInst::FCMP_ONE:
+      LP = FCmpOrderedNotEqual;
+      break;
+    case llvm::CmpInst::FCMP_ORD:
+      LP = FCmpOrdered;
+      break;
+    case llvm::CmpInst::FCMP_UNO:
+      LP = FCmpUnordered;
+      break;
+    case llvm::CmpInst::FCMP_UEQ:
+      LP = FCmpUnorderedEqual;
+      break;
+    case llvm::CmpInst::FCMP_UGT:
+      LP = FCmpUnorderedGreater;
+      break;
+    case llvm::CmpInst::FCMP_UGE:
+      LP = FCmpUnorderedGreaterEqual;
+      break;
+    case llvm::CmpInst::FCMP_ULT:
+      LP = FCmpUnorderedLess;
+      break;
+    case llvm::CmpInst::FCMP_ULE:
+      LP = FCmpOrderedLessEqual;
+      break;
+    case llvm::CmpInst::FCMP_UNE:
+      LP = FCmpUnorderedNotEqual;
+      break;
+    case llvm::CmpInst::FCMP_TRUE:
+      LP = FCmpTrue;
+      break;
+    default:
+      abort();
+    }
+    OutStreamer.emitInt8(LP.value());
+  }
+
+  void serialiseFCmpInst(FCmpInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                         unsigned &InstIdx) {
+    // We don't support vector fcmp.
+    if (I->getOperand(0)->getType()->isVectorTy()) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
+    // opcode:
+    serialiseOpcode(OpCodeFCmp);
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // lhs:
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
+    // predicate:
+    serialiseFloatPredicate(I->getPredicate());
     // rhs:
     serialiseOperand(I, FLCtxt, I->getOperand(1));
 
@@ -1158,6 +1260,7 @@ private:
     INST_SERIALISE(I, BinaryOperator, serialiseBinaryOperatorInst);
     INST_SERIALISE(I, BranchInst, serialiseBranchInst);
     INST_SERIALISE(I, CallInst, serialiseCallInst);
+    INST_SERIALISE(I, FCmpInst, serialiseFCmpInst);
     INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtrInst);
     INST_SERIALISE(I, ICmpInst, serialiseICmpInst);
     INST_SERIALISE(I, InsertValueInst, serialiseInsertValueInst);
