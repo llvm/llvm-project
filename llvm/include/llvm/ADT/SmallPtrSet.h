@@ -127,22 +127,11 @@ protected:
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      const void **LastTombstone = nullptr;
       for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
            APtr != E; ++APtr) {
         const void *Value = *APtr;
         if (Value == Ptr)
           return std::make_pair(APtr, false);
-        if (Value == getTombstoneMarker())
-          LastTombstone = APtr;
-      }
-
-      // Did we find any tombstone marker?
-      if (LastTombstone != nullptr) {
-        *LastTombstone = Ptr;
-        --NumTombstones;
-        incrementEpoch();
-        return std::make_pair(LastTombstone, true);
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
@@ -161,14 +150,27 @@ protected:
   /// that the derived class can check that the right type of pointer is passed
   /// in.
   bool erase_imp(const void * Ptr) {
-    const void *const *P = find_imp(Ptr);
-    if (P == EndPointer())
+    if (isSmall()) {
+      for (const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+           APtr != E; ++APtr) {
+        if (*APtr == Ptr) {
+          *APtr = SmallArray[--NumNonEmpty];
+          incrementEpoch();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    auto *Bucket = FindBucketFor(Ptr);
+    if (*Bucket != Ptr)
       return false;
 
-    const void **Loc = const_cast<const void **>(P);
-    assert(*Loc == Ptr && "broken find!");
-    *Loc = getTombstoneMarker();
+    *const_cast<const void **>(Bucket) = getTombstoneMarker();
     NumTombstones++;
+    // Treat this consistently from an API perspective, even if we don't
+    // actually invalidate iterators here.
+    incrementEpoch();
     return true;
   }
 
@@ -192,9 +194,9 @@ protected:
     return EndPointer();
   }
 
-private:
   bool isSmall() const { return CurArray == SmallArray; }
 
+private:
   std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
   const void * const *FindBucketFor(const void *Ptr) const;
@@ -352,7 +354,7 @@ public:
   }
 
   /// erase - If the set contains the specified pointer, remove it and return
-  /// true, otherwise return false.
+  /// true, otherwise return false. Invalidates iterators if it returns true.
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
@@ -362,6 +364,22 @@ public:
   template <typename UnaryPredicate>
   bool remove_if(UnaryPredicate P) {
     bool Removed = false;
+    if (isSmall()) {
+      const void **APtr = SmallArray, **E = SmallArray + NumNonEmpty;
+      while (APtr != E) {
+        PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(*APtr));
+        if (P(Ptr)) {
+          *APtr = *--E;
+          --NumNonEmpty;
+          incrementEpoch();
+          Removed = true;
+        } else {
+          ++APtr;
+        }
+      }
+      return Removed;
+    }
+
     for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
       const void *Value = *APtr;
       if (Value == getTombstoneMarker() || Value == getEmptyMarker())
@@ -370,6 +388,7 @@ public:
       if (P(Ptr)) {
         *APtr = getTombstoneMarker();
         ++NumTombstones;
+        incrementEpoch();
         Removed = true;
       }
     }
