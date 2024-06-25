@@ -22,7 +22,7 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

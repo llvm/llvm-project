@@ -13,7 +13,6 @@
 #ifndef LLVM_CODEGEN_MACHINEINSTRBUNDLEITERATOR_H
 #define LLVM_CODEGEN_MACHINEINSTRBUNDLEITERATOR_H
 
-#include "llvm/ADT/ilist.h"
 #include "llvm/ADT/simple_ilist.h"
 #include <cassert>
 #include <iterator>

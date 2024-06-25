@@ -14,7 +14,7 @@
 #ifndef LLVM_SUPPORT_RECYCLER_H
 #define LLVM_SUPPORT_RECYCLER_H
 
-#include "llvm/ADT/ilist.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>

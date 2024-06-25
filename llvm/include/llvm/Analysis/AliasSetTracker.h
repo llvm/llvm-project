@@ -20,8 +20,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
