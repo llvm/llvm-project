@@ -203,11 +203,11 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
 void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::setProfileVersion(uint32_t Version) {
-  ProfileVersion = std::make_optional(Version);
+  ProfileVersion = Version;
 }
 
 void InstrProfWriter::setMinCompatibleReaderProfileVersion(uint32_t Version) {
-  MinCompatibleReaderProfileVersion = std::make_optional(Version);
+  MinCompatibleReaderProfileVersion = Version;
 }
 
 void InstrProfWriter::setAppendAdditionalHeaderFields() {

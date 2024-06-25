@@ -88,13 +88,13 @@ private:
   // The following fields are used by unit tests only.
   // If not std::nullopt, this field overwrites the lowest 32 bits of
   // Header::Version in the generated profile.
-  std::optional<uint32_t> ProfileVersion = std::nullopt;
+  std::optional<uint32_t> ProfileVersion;
   // If true, profile writer will append one 64-bit dummy value as an unknown
   // new header field.
   bool AppendAdditionalHeaderFields = false;
   // If not std::nullopt, this field overwrites
   // Header::MinCompatibleReaderVersion in the generated profile.
-  std::optional<int> MinCompatibleReaderProfileVersion = std::nullopt;
+  std::optional<int> MinCompatibleReaderProfileVersion;
 
 public:
   InstrProfWriter(

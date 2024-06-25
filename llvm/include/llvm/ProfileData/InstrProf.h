@@ -1203,10 +1203,10 @@ struct Header {
   uint64_t BinaryIdOffset = 0;
   uint64_t TemporalProfTracesOffset = 0;
   uint64_t VTableNamesOffset = 0;
-  // Records the on-disk byte size of the header.
+  // The on-disk byte size of the header.
   uint64_t HeaderByteSize = 0;
-  // Indexed profile writer should record the minimum profile reader version
-  // required to parse this profile. If a profile reader's newest known version
+  // The minimum profile version that the profile requires the reader to be able
+  // to parse. If a profile reader's newest known version
   // is smaller than what's recorded in this field, the profile reader will stop
   // parsing profiles and throw error.
   //
