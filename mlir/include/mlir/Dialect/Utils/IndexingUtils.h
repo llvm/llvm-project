@@ -260,6 +260,10 @@ computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<OpFoldResult> strides,
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
                    ArrayRef<Value> indices);
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+computeInclusiveLinearIndex(OpFoldResult sourceOffset,
+                            ArrayRef<OpFoldResult> strides,
+                            ArrayRef<OpFoldResult> indices);
 
 //===----------------------------------------------------------------------===//
 // Utilities for decomposing larger shapes

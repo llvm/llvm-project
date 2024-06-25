@@ -26,6 +26,11 @@ func.func @reinterpret_cast_fully_dynamic(%memref: memref<?xf32>, %offset: index
     return
 }
 
+func.func @reinterpret_cast_upper_bound(%arg0: memref<768xf32>) -> (memref<12x64xf32>) {
+  %reinterpret_result = memref.reinterpret_cast %arg0 to offset: [0], sizes: [12, 64], strides: [64, 1] : memref<768xf32> to memref<12x64xf32>
+  return %reinterpret_result : memref<12x64xf32>
+}
+
 func.func @main() {
   %0 = arith.constant 0 : index
   %1 = arith.constant 1 : index
@@ -34,6 +39,7 @@ func.func @main() {
   %5 = arith.constant 5 : index
 
   %alloca_1 = memref.alloca() : memref<1xf32>
+  %alloca_5 = memref.alloca() : memref<768xf32>
   %alloca_4 = memref.alloca() : memref<4xf32>
   %alloca_4_dyn = memref.cast %alloca_4 : memref<4xf32> to memref<?xf32>
 
@@ -70,6 +76,10 @@ func.func @main() {
 
   //  CHECK-NOT: ERROR: Runtime op verification failed
   func.call @reinterpret_cast_fully_dynamic(%alloca_4_dyn, %0, %4, %1) : (memref<?xf32>, index, index, index) -> ()
+
+  // upper bound valid
+  //    CHECK-NOT: ERROR: Runtime op verification failed
+  //func.call @reinterpret_cast_upper_bound(%alloca_5) : (memref<768xf32>) -> (memref<12x64xf32>)
 
   return
 }
