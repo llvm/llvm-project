@@ -9,8 +9,7 @@ define i16 @i8(i8 %x) nounwind {
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %t0 = icmp ugt i8 %x, 2
-  %if = select i1 %t0, i8 1, i8 0
-  %zext = zext i8 %if to i16
+  %zext = zext i1 %t0 to i16
   ret i16 %zext
 }
 

@@ -125,10 +125,11 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
         MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
-      } else
+      } else {
         // Initialize a register with 0. This must go before the eflags def
         BuildMI(MBB, FlagsDefMI, MI.getDebugLoc(), TII->get(X86::MOV32r0),
                 ZeroReg);
+      }
 
       BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
               TII->get(X86::INSERT_SUBREG), ZExt->getOperand(0).getReg())
