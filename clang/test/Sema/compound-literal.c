@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 struct Incomplete; // expected-note{{forward declaration of 'struct Incomplete'}}
 struct Incomplete* I1 = &(struct Incomplete){1, 2, 3}; // expected-error {{variable has incomplete type}}
 void IncompleteFunc(unsigned x) {
-  struct Incomplete* I2 = (struct foo[x]){1, 2, 3}; // expected-error {{variable-sized object may not be initialized}}
+  struct Incomplete* I2 = (struct foo[x]){1, 2, 3}; // expected-error {{compound literal cannot be of variable-length array type}}
   (void){1,2,3}; // expected-error {{variable has incomplete type}}
   (void(void)) { 0 }; // expected-error{{illegal initializer type 'void (void)'}}
 }
@@ -42,3 +42,14 @@ int (^block)(int) = ^(int i) {
   int *array = (int[]) {i, i + 2, i + 4};
   return array[i];
 };
+
+// C99 6.5.2.5 Compound literals constraint 1: The type name shall specify an object type or an array of unknown size, but not a variable length array type.
+// So check that VLA type compound literals are rejected (see https://github.com/llvm/llvm-project/issues/89835).
+void vla(int n) {
+  int size = 5;
+  (void)(int[size]){}; // expected-warning {{use of an empty initializer is a C23 extension}}
+                       // expected-error@-1 {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1}; // expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1,2,3}; // expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1,2,3,4,5}; // expected-error {{compound literal cannot be of variable-length array type}}
+}

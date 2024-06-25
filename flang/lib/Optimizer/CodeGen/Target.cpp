@@ -41,9 +41,9 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
-  if (auto ty = type.dyn_cast<fir::RealType>())
+  if (auto ty = mlir::dyn_cast<fir::RealType>(type))
     return kindMap.getFloatSemantics(ty.getFKind());
-  return type.cast<mlir::FloatType>().getFloatSemantics();
+  return mlir::cast<mlir::FloatType>(type).getFloatSemantics();
 }
 
 static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,

@@ -25,9 +25,9 @@ define <4 x float> @shuf_fdiv_v4f32_yy(<4 x float> %x, <4 x float> %y, <4 x floa
 define <4 x i32> @shuf_add_v4i32_xx(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: define <4 x i32> @shuf_add_v4i32_xx(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 0>
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[Z]], <4 x i32> <i32 poison, i32 poison, i32 6, i32 0>
-; CHECK-NEXT:    [[R2:%.*]] = add <4 x i32> [[TMP1]], [[R1]]
+; CHECK-NEXT:    [[B0:%.*]] = add <4 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[B1:%.*]] = add <4 x i32> [[X]], [[Z]]
+; CHECK-NEXT:    [[R2:%.*]] = shufflevector <4 x i32> [[B0]], <4 x i32> [[B1]], <4 x i32> <i32 poison, i32 poison, i32 6, i32 0>
 ; CHECK-NEXT:    ret <4 x i32> [[R2]]
 ;
   %b0 = add <4 x i32> %x, %y
@@ -36,15 +36,22 @@ define <4 x i32> @shuf_add_v4i32_xx(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
   ret <4 x i32> %r
 }
 
-; For commutative instructions, common operand may be swapped.
+; For commutative instructions, common operand may be swapped (SSE - expensive fmul vs AVX - cheap fmul)
 
 define <4 x float> @shuf_fmul_v4f32_xx_swap(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; CHECK-LABEL: define <4 x float> @shuf_fmul_v4f32_xx_swap(
-; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 0, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <4 x float> [[R]]
+; SSE-LABEL: define <4 x float> @shuf_fmul_v4f32_xx_swap(
+; SSE-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <4 x i32> <i32 0, i32 3, i32 0, i32 3>
+; SSE-NEXT:    [[R:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x float> [[R]]
+;
+; AVX-LABEL: define <4 x float> @shuf_fmul_v4f32_xx_swap(
+; AVX-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[B0:%.*]] = fmul <4 x float> [[X]], [[Y]]
+; AVX-NEXT:    [[B1:%.*]] = fmul <4 x float> [[Z]], [[X]]
+; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[B0]], <4 x float> [[B1]], <4 x i32> <i32 0, i32 3, i32 4, i32 7>
+; AVX-NEXT:    ret <4 x float> [[R]]
 ;
   %b0 = fmul <4 x float> %x, %y
   %b1 = fmul <4 x float> %z, %x
@@ -57,9 +64,9 @@ define <4 x float> @shuf_fmul_v4f32_xx_swap(<4 x float> %x, <4 x float> %y, <4 x
 define <2 x i64> @shuf_and_v2i64_yy_swap(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: define <2 x i64> @shuf_and_v2i64_yy_swap(
 ; CHECK-SAME: <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[Y]], <2 x i64> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[X]], <2 x i64> [[Z]], <2 x i32> <i32 3, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[B0:%.*]] = and <2 x i64> [[X]], [[Y]]
+; CHECK-NEXT:    [[B1:%.*]] = and <2 x i64> [[Y]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i64> [[B0]], <2 x i64> [[B1]], <2 x i32> <i32 3, i32 0>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %b0 = and <2 x i64> %x, %y
@@ -84,15 +91,22 @@ define <4 x i32> @shuf_shl_v4i32_xx(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
   ret <4 x i32> %r
 }
 
-; negative test - common operand, but not commutable
+; common operand, but not commutable (SSE - expensive vector shift vs AVX2 - cheap vector shift)
 
 define <4 x i32> @shuf_shl_v4i32_xx_swap(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
-; CHECK-LABEL: define <4 x i32> @shuf_shl_v4i32_xx_swap(
-; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = shl <4 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[B1:%.*]] = shl <4 x i32> [[Z]], [[X]]
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x i32> [[B0]], <4 x i32> [[B1]], <4 x i32> <i32 3, i32 2, i32 2, i32 5>
-; CHECK-NEXT:    ret <4 x i32> [[R1]]
+; SSE-LABEL: define <4 x i32> @shuf_shl_v4i32_xx_swap(
+; SSE-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> [[Z]], <4 x i32> <i32 3, i32 2, i32 2, i32 5>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[X]], <4 x i32> <i32 3, i32 2, i32 2, i32 5>
+; SSE-NEXT:    [[R:%.*]] = shl <4 x i32> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX-LABEL: define <4 x i32> @shuf_shl_v4i32_xx_swap(
+; AVX-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[B0:%.*]] = shl <4 x i32> [[X]], [[Y]]
+; AVX-NEXT:    [[B1:%.*]] = shl <4 x i32> [[Z]], [[X]]
+; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[B0]], <4 x i32> [[B1]], <4 x i32> <i32 3, i32 2, i32 2, i32 5>
+; AVX-NEXT:    ret <4 x i32> [[R]]
 ;
   %b0 = shl <4 x i32> %x, %y
   %b1 = shl <4 x i32> %z, %x
@@ -116,7 +130,7 @@ define <2 x i64> @shuf_sub_add_v2i64_yy(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z
   ret <2 x i64> %r
 }
 
-; negative test - type change via shuffle
+; type change via shuffle
 
 define <8 x float> @shuf_fmul_v4f32_xx_type(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; CHECK-LABEL: define <8 x float> @shuf_fmul_v4f32_xx_type(
@@ -168,18 +182,18 @@ define <4 x i32> @shuf_mul_v4i32_yy_use2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %
   ret <4 x i32> %r
 }
 
-; negative test - must have matching operand
+; non-matching operands (not commutable)
 
-define <4 x float> @shuf_fadd_v4f32_no_common_op(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) {
-; CHECK-LABEL: define <4 x float> @shuf_fadd_v4f32_no_common_op(
+define <4 x float> @shuf_fdiv_v4f32_no_common_op(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) {
+; CHECK-LABEL: define <4 x float> @shuf_fdiv_v4f32_no_common_op(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]], <4 x float> [[W:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = fadd <4 x float> [[X]], [[Y]]
-; CHECK-NEXT:    [[B1:%.*]] = fadd <4 x float> [[Z]], [[W]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[B0]], <4 x float> [[B1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Z]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[W]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %b0 = fadd <4 x float> %x, %y
-  %b1 = fadd <4 x float> %z, %w
+  %b0 = fdiv <4 x float> %x, %y
+  %b1 = fdiv <4 x float> %z, %w
   %r = shufflevector <4 x float> %b0, <4 x float> %b1, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   ret <4 x float> %r
 }
@@ -199,6 +213,20 @@ define <16 x i16> @shuf_and_v16i16_yy_expensive_shuf(<16 x i16> %x, <16 x i16> %
   %r = shufflevector <16 x i16> %b0, <16 x i16> %b1, <16 x i32> <i32 15, i32 22, i32 25, i32 13, i32 28, i32 0, i32 poison, i32 3, i32 0, i32 30, i32 3, i32 7, i32 9, i32 19, i32 2, i32 22>
   ret <16 x i16> %r
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; SSE: {{.*}}
+
+; negative test - don't fold shuffle(divrem(x,y),divrem(z,w)) if mask contains poison (PR89390)
+
+define <4 x i32> @shuf_srem_v4i32_poison(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: define <4 x i32> @shuf_srem_v4i32_poison(
+; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SREM0:%.*]] = srem <4 x i32> [[A1]], [[A0]]
+; CHECK-NEXT:    [[SREM1:%.*]] = srem <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[A0]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[SREM0]], <4 x i32> [[SREM1]], <4 x i32> <i32 0, i32 poison, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %srem0 = srem <4 x i32> %a1, %a0
+  %srem1 = srem <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %a0
+  %r = shufflevector <4 x i32> %srem0, <4 x i32> %srem1, <4 x i32> <i32 0, i32 poison, i32 6, i32 3>
+  ret <4 x i32> %r
+}
+

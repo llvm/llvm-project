@@ -676,12 +676,13 @@ define i32 @rotr_known_nonzero(i32 %xx, i32 %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    orl $256, %edi # imm = 0x100
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    rorl %cl, %edi
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB22_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB22_1:
 ; X64-NEXT:    movl $32, %eax
@@ -713,12 +714,13 @@ define i32 @rotr_maybe_zero(i32 %x, i32 %y) {
 ; X64-LABEL: rotr_maybe_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    rorl %cl, %edi
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB23_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB23_1:
 ; X64-NEXT:    movl $32, %eax
@@ -773,12 +775,13 @@ define i32 @rotr_with_fshr_maybe_zero(i32 %x, i32 %y) {
 ; X64-LABEL: rotr_with_fshr_maybe_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    rorl %cl, %edi
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB25_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB25_1:
 ; X64-NEXT:    movl $32, %eax
@@ -808,12 +811,13 @@ define i32 @rotl_known_nonzero(i32 %xx, i32 %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    orl $256, %edi # imm = 0x100
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    roll %cl, %edi
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB26_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB26_1:
 ; X64-NEXT:    movl $32, %eax
@@ -845,12 +849,13 @@ define i32 @rotl_maybe_zero(i32 %x, i32 %y) {
 ; X64-LABEL: rotl_maybe_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    roll %cl, %edi
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB27_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB27_1:
 ; X64-NEXT:    movl $32, %eax
@@ -905,12 +910,13 @@ define i32 @rotl_with_fshl_maybe_zero(i32 %x, i32 %y) {
 ; X64-LABEL: rotl_with_fshl_maybe_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    roll %cl, %edi
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    je .LBB29_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB29_1:
 ; X64-NEXT:    movl $32, %eax
@@ -1460,7 +1466,7 @@ define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cvttps2dq %xmm0, %xmm0
 ; X86-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [256,256,u,u,u,u,u,u]
 ; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    bsfl %eax, %ecx
 ; X86-NEXT:    movl $32, %eax
@@ -1474,7 +1480,7 @@ define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [256,256,u,u,u,u,u,u]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    bsfl %eax, %ecx
 ; X64-NEXT:    movl $32, %eax
@@ -1606,7 +1612,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    cwtl
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -1616,7 +1622,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    cwtl
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx

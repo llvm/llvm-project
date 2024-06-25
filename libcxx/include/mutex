@@ -427,10 +427,10 @@ class _LIBCPP_TEMPLATE_VIS scoped_lock;
 template <>
 class _LIBCPP_TEMPLATE_VIS scoped_lock<> {
 public:
-  explicit scoped_lock() {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock() {}
   ~scoped_lock() = default;
 
-  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t) {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t) {}
 
   scoped_lock(scoped_lock const&)            = delete;
   scoped_lock& operator=(scoped_lock const&) = delete;
@@ -445,13 +445,15 @@ private:
   mutex_type& __m_;
 
 public:
-  explicit scoped_lock(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m)) : __m_(__m) {
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+      : __m_(__m) {
     __m_.lock();
   }
 
   ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) { __m_.unlock(); }
 
-  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m)
       _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
       : __m_(__m) {}
 
@@ -465,9 +467,11 @@ class _LIBCPP_TEMPLATE_VIS scoped_lock {
   typedef tuple<_MArgs&...> _MutexTuple;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(_MArgs&... __margs) : __t_(__margs...) { std::lock(__margs...); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(_MArgs&... __margs) : __t_(__margs...) {
+    std::lock(__margs...);
+  }
 
-  _LIBCPP_HIDE_FROM_ABI scoped_lock(adopt_lock_t, _MArgs&... __margs) : __t_(__margs...) {}
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI scoped_lock(adopt_lock_t, _MArgs&... __margs) : __t_(__margs...) {}
 
   _LIBCPP_HIDE_FROM_ABI ~scoped_lock() {
     typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;

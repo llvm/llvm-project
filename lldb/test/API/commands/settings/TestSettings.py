@@ -953,7 +953,7 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueFileSpec
         self.verify_setting_value_json(
-            "platform.module-cache-directory", self.get_process_working_directory()
+            "platform.module-cache-directory", self.getBuildDir()
         )
 
         # Test OptionValueArray

@@ -68,7 +68,32 @@
 // RUN: %clang -### -c -g %s -target x86_64-apple-driverkit19.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF4 %s
-// RUN: %clang -### -c -fsave-optimization-record %s \
+// RUN: %clang -### -c -g %s -target x86_64-apple-macosx15 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-ios17.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-ios18.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64_32-apple-watchos11 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-tvos18.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target x86_64-apple-driverkit24.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-xros1 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target arm64-apple-xros2 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF5 %s
+//
+// RUN: %clang -### -c -fsave-optimization-record %s    \
 // RUN:        -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
 // RUN: %clang -### -c -g -fsave-optimization-record %s \
@@ -242,6 +267,12 @@
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 // RUN: %clang -### -c -fdebug-ranges-base-address -fno-debug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
 //
+// RUN: %clang -### -c -gomit-unreferenced-methods -fno-standalone-debug %s 2>&1 | FileCheck -check-prefix=INCTYPES %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=NOINCTYPES %s
+// RUN: %clang -### -c -gomit-unreferenced-methods -fstandalone-debug %s 2>&1 | FileCheck -check-prefix=NOINCTYPES %s
+//
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
@@ -381,6 +412,9 @@
 // RNGBSE: -fdebug-ranges-base-address
 // NORNGBSE-NOT: -fdebug-ranges-base-address
 //
+// INCTYPES: -gomit-unreferenced-methods
+// NOINCTYPES-NOT: -gomit-unreferenced-methods
+//
 // GARANGE-DAG: -generate-arange-section
 //
 // FDTS: "-mllvm" "-generate-type-units"
@@ -456,9 +490,9 @@
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
 
-//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARFv5).
+//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARF version >= 4).
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
-// RUN: %clang -### -target x86_64 -c -gdwarf-4 -gsce %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-3 -gsce %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS

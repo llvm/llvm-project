@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fcntl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fcntl
+)
+
+add_entrypoint_object(
   open
   ALIAS
   DEPENDS

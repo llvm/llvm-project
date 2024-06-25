@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -349,8 +350,6 @@ protected:
   LLVM_PREFERRED_TYPE(Linkage)
   mutable unsigned CacheValidAndLinkage : 3;
 
-  using DeclID = uint32_t;
-
   /// Allocate memory for a deserialized declaration.
   ///
   /// This routine must be used to allocate memory for any declaration that is
@@ -360,7 +359,7 @@ protected:
   /// \param Ctx The context in which we will allocate memory.
   /// \param ID The global ID of the deserialized declaration.
   /// \param Extra The amount of extra space to allocate after the object.
-  void *operator new(std::size_t Size, const ASTContext &Ctx, DeclID ID,
+  void *operator new(std::size_t Size, const ASTContext &Ctx, GlobalDeclID ID,
                      std::size_t Extra = 0);
 
   /// Allocate memory for a non-deserialized declaration.
@@ -671,6 +670,16 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
+  /// Whether this declaration comes from a named module;
+  bool isInNamedModule() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
@@ -702,10 +711,7 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID) {
-    assert(isFromASTFile() && "Only works on a deserialized declaration");
-    *((unsigned*)this - 2) = ID;
-  }
+  void setOwningModuleID(unsigned ID);
 
 public:
   /// Determine the availability of the given declaration.
@@ -778,19 +784,11 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  unsigned getGlobalID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 1);
-    return 0;
-  }
+  GlobalDeclID getGlobalID() const;
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 2);
-    return 0;
-  }
+  unsigned getOwningModuleID() const;
 
 private:
   Module *getOwningModuleSlow() const;
@@ -2147,6 +2145,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }

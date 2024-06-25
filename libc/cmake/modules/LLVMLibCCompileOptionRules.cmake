@@ -101,7 +101,6 @@ function(_get_common_compile_options output_var flags)
 
     if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND compile_options "-Wno-unknown-cuda-version")
-      list(APPEND compile_options "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false")
       list(APPEND compile_options "--cuda-feature=+ptx63")
       if(LIBC_CUDA_ROOT)
         list(APPEND compile_options "--cuda-path=${LIBC_CUDA_ROOT}")

@@ -8,11 +8,15 @@
 
 #include "FPExceptMatcher.h"
 
+#include "test/UnitTest/Test.h"
+
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <memory>
 #include <setjmp.h>
 #include <signal.h>
+
+#if LIBC_TEST_HAS_MATCHERS()
 
 namespace LIBC_NAMESPACE {
 namespace testing {
@@ -49,3 +53,5 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE
+
+#endif // LIBC_TEST_HAS_MATCHERS()

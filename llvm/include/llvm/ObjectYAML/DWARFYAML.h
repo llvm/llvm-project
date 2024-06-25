@@ -522,7 +522,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LoclistEntries> {
   }
 };
 
-#define HANDLE_DW_OP(id, name, version, vendor)                                \
+#define HANDLE_DW_OP(id, name, operands, arity, version, vendor)               \
   io.enumCase(value, "DW_OP_" #name, dwarf::DW_OP_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::LocationAtom> {

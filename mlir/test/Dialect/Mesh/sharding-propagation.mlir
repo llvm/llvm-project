@@ -1,5 +1,6 @@
-// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(sharding-propagation))" %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(sharding-propagation,cse))" %s | FileCheck %s
 
+mesh.mesh @mesh_2(shape = 2)
 mesh.mesh @mesh_1d(shape = ?)
 mesh.mesh @mesh_2d(shape = 2x4)
 mesh.mesh @mesh_3d(shape = ?x?x?)
@@ -73,12 +74,11 @@ func.func @arrow_structure(%arg0: tensor<8x16xf32>) -> (tensor<8x16xf32>, tensor
   // CHECK-NEXT:  %[[V5:.*]] = tosa.abs %[[V4]]
   // CHECK-NEXT:  %[[V6:.*]] = mesh.shard %[[V5]] to <@mesh_2d, {{\[\[}}0], [1]]> : tensor<8x16xf32>
   %1 = tosa.abs %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
-  // CHECK-NEXT:  %[[V7:.*]] = mesh.shard %[[V3]] to <@mesh_2d, {{\[\[}}0], [1]]> annotate_for_users : tensor<8x16xf32>
-  // CHECK-NEXT:  %[[V8:.*]] = tosa.negate %[[V7]]
-  // CHECK-NEXT:  %[[V9:.*]] = mesh.shard %[[V8]] to <@mesh_2d, {{\[\[}}0], [1]]> : tensor<8x16xf32>
+  // CHECK-NEXT:  %[[V7:.*]] = tosa.negate %[[V4]]
+  // CHECK-NEXT:  %[[V8:.*]] = mesh.shard %[[V7]] to <@mesh_2d, {{\[\[}}0], [1]]> : tensor<8x16xf32>
   %2 = tosa.negate %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
   %3 = mesh.shard %2 to <@mesh_2d, [[0], [1]]> : tensor<8x16xf32>
-  // CHECK-NEXT: return %[[V6]], %[[V9]]
+  // CHECK-NEXT: return %[[V6]], %[[V8]]
   return %1, %3 : tensor<8x16xf32>, tensor<8x16xf32>
 }
 
@@ -133,6 +133,34 @@ func.func @matmul_on_use_shard_m_and_duplicted_k(%arg0: tensor<2x16x8xf32>, %arg
   // CHECK-NEXT:  %[[V3:.*]] = mesh.shard %[[V2]] to <@mesh_2d, {{\[\[}}], [1]], partial = sum[0]> : tensor<2x16x32xf32>
   // CHECK-NEXT:  return %[[V3]]
   return %2 : tensor<2x16x32xf32>
+}
+
+// CHECK-LABEL: func.func @resolve_conflicting_annotations
+func.func @resolve_conflicting_annotations(
+  // CHECK-SAME: %[[IN1:.*]]: tensor<2x3xf32>,
+  %arg0: tensor<2x3xf32>,
+  // CHECK-SAME: %[[IN2:.*]]: tensor<3x2xf32>,
+  %arg1: tensor<3x2xf32>,
+  // CHECK-SAME: %[[OUT_DPS:.*]]: tensor<2x2xf32>
+  %out_dps: tensor<2x2xf32>
+// CHECK-SAME: ) -> tensor<2x2xf32> {
+) -> tensor<2x2xf32> {
+  // CHECK: %[[IN1_SHARDED1:.*]] = mesh.shard %[[IN1]] to <@mesh_2, {{\[\[}}0]]> : tensor<2x3xf32>
+  // CHECK: %[[IN1_SHARDED2:.*]] = mesh.shard %[[IN1_SHARDED1]] to <@mesh_2, {{\[}}]> annotate_for_users : tensor<2x3xf32>
+  // CHECK: %[[IN2_SHARDED:.*]] = mesh.shard %[[IN2]] to <@mesh_2, []> annotate_for_users : tensor<3x2xf32>
+  // CHECK: %[[OUT_DPS_SHARDED:.*]] = mesh.shard %[[OUT_DPS]] to <@mesh_2, {{\[}}]> annotate_for_users : tensor<2x2xf32>
+  %arg0_sharded = mesh.shard %arg0 to <@mesh_2, [[0]]> : tensor<2x3xf32>
+
+  // CHECK: %[[MATMUL:.*]] = linalg.matmul ins(%[[IN1_SHARDED2]], %[[IN2_SHARDED]] : tensor<2x3xf32>, tensor<3x2xf32>)
+  // CHECK-SAME: outs(%[[OUT_DPS_SHARDED]] : tensor<2x2xf32>) -> tensor<2x2xf32>
+  %res = linalg.matmul ins(%arg0_sharded, %arg1 : tensor<2x3xf32>, tensor<3x2xf32>)
+    outs(%out_dps : tensor<2x2xf32>) -> tensor<2x2xf32>
+
+  // CHECK: %[[MATMUL_SHARDED1:.*]] = mesh.shard %[[MATMUL]] to <@mesh_2, {{\[\[}}]]> : tensor<2x2xf32>
+  %res_sharded = mesh.shard %res to <@mesh_2, [[]]> : tensor<2x2xf32>
+
+  // CHECK: return %[[MATMUL_SHARDED1]] : tensor<2x2xf32>
+  return %res_sharded : tensor<2x2xf32>
 }
 
 // https://arxiv.org/abs/2211.05102 Figure 2(a)

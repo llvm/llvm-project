@@ -11,7 +11,7 @@
 #define SUPPORT_TEST_MACROS_HPP
 
 #ifdef __has_include
-#  if __has_include("<version>")
+#  if __has_include(<version>)
 #    include <version>
 #  else
 #    include <ciso646>
@@ -417,8 +417,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
-#if defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
-#  define TEST_HAS_NO_INCOMPLETE_TZDB
+#if defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#  define TEST_HAS_NO_EXPERIMENTAL_TZDB
 #endif
 
 #if defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE)

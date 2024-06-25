@@ -473,6 +473,10 @@ namespace AddressOf {
 
   constexpr _Complex float F = {3, 4};
   static_assert(__builtin_addressof(F) == &F, "");
+
+  void testAddressof(int x) {
+    static_assert(&x == __builtin_addressof(x), "");
+  }
 }
 
 namespace std {
@@ -600,4 +604,32 @@ namespace FromIntegral {
                                            // expected-note {{evaluates to a null function pointer}} \
                                            // both-warning {{variable length arrays}}
 #endif
+}
+
+namespace {
+  template <typename T> using id = T;
+  template <typename T>
+  constexpr void g() {
+    constexpr id<void (T)> f;
+  }
+
+  static_assert((g<int>(), true), "");
+}
+
+namespace {
+  /// The InitListExpr here is of void type.
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+                                                      // both-note {{subexpression not valid in a constant expression}}
+}
+
+namespace FuncPtrParam {
+  void foo(int(&a)()) {
+    *a; // both-warning {{expression result unused}}
+  }
+}
+
+namespace {
+  void f() noexcept;
+  void (&r)() = f;
+  void (&cond3)() = r;
 }

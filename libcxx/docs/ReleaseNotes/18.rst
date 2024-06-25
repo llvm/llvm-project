@@ -40,7 +40,7 @@ and C++26 features.
 
 New hardened modes for the library have been added, replacing the legacy debug mode that was
 removed in the LLVM 17 release. Unlike the legacy debug mode, some of these hardening modes are
-also intended to be used in production. See :ref:`hardening-modes` for more details.
+also intended to be used in production. See :ref:`hardening` for more details.
 
 Work on the ranges support has progressed. See
 :ref:`ranges-status` for the current status.

@@ -45,12 +45,12 @@ protected:
 
   void pickNodeFromQueue(SchedBoundary &Zone, const CandPolicy &ZonePolicy,
                          const RegPressureTracker &RPTracker,
-                         SchedCandidate &Cand);
+                         SchedCandidate &Cand, bool IsBottomUp);
 
-  void initCandidate(SchedCandidate &Cand, SUnit *SU,
-                     bool AtTop, const RegPressureTracker &RPTracker,
-                     const SIRegisterInfo *SRI,
-                     unsigned SGPRPressure, unsigned VGPRPressure);
+  void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
+                     const RegPressureTracker &RPTracker,
+                     const SIRegisterInfo *SRI, unsigned SGPRPressure,
+                     unsigned VGPRPressure, bool IsBottomUp);
 
   std::vector<unsigned> Pressure;
 

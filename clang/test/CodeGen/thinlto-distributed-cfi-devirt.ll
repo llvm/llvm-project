@@ -38,12 +38,12 @@
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi"))))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
 ; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=CHECK-IR --check-prefixes=REMARKS
 
 ; Check that the devirtualization is suppressed via -wholeprogramdevirt-skip
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu -mllvm -wholeprogramdevirt-skip=_ZN1A1nEi \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
 ; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=SKIP-IR --check-prefixes=SKIP-REMARKS
 
 ; REMARKS: single-impl: devirtualized a call to _ZN1A1nEi

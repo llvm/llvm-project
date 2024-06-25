@@ -82,7 +82,7 @@ public:
     forEach([&](T &Item) { SortedItems.push_back(Item); });
 
     if (SortedItems.size()) {
-      std::sort(SortedItems.begin(), SortedItems.end(), Comparator);
+      llvm::sort(SortedItems, Comparator);
 
       size_t SortedItemIdx = 0;
       forEach([&](T &Item) { Item = SortedItems[SortedItemIdx++]; });

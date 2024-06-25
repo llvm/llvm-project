@@ -1,4 +1,4 @@
-# Check that conditional tail call is not treated as a regular tail call by SCTC.
+## Check that conditional tail call is not treated as a regular tail call by SCTC.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug2.s -o %t
 RUN: llvm-bolt %t -o %t.null --funcs=main --print-after-lowering \

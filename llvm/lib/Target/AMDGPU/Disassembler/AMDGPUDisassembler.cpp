@@ -21,6 +21,7 @@
 #include "SIDefines.h"
 #include "SIRegisterInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "Utils/AMDGPUAsmUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -52,6 +53,13 @@ AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
+
+  for (auto [Symbol, Code] : AMDGPU::UCVersion::getGFXVersions())
+    createConstantSymbolExpr(Symbol, Code);
+
+  UCVersionW64Expr = createConstantSymbolExpr("UC_VERSION_W64_BIT", 0x2000);
+  UCVersionW32Expr = createConstantSymbolExpr("UC_VERSION_W32_BIT", 0x4000);
+  UCVersionMDPExpr = createConstantSymbolExpr("UC_VERSION_MDP_BIT", 0x8000);
 }
 
 void AMDGPUDisassembler::setABIVersion(unsigned Version) {
@@ -420,6 +428,13 @@ DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
+
+static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
+                                     uint64_t /* Addr */,
+                                     const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeVersionImm(Imm));
+}
 
 #include "AMDGPUGenDisassemblerTables.inc"
 
@@ -869,10 +884,6 @@ void AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
   if (VDstInIdx != -1)
     insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::vdst_in);
 
-  if (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12)
-    insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src2);
-
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
@@ -902,10 +913,6 @@ void AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
   if (VDstInIdx != -1)
     insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::vdst_in);
 
-  if (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12)
-    insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src2);
-
   unsigned Opc = MI.getOpcode();
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
   if (MI.getNumOperands() < DescNumOps &&
@@ -929,8 +936,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                                             AMDGPU::OpName::vdata);
   int VAddr0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
-  int RsrcOpName = TSFlags & SIInstrFlags::MIMG ? AMDGPU::OpName::srsrc
-                                                : AMDGPU::OpName::rsrc;
+  int RsrcOpName = (TSFlags & SIInstrFlags::MIMG) ? AMDGPU::OpName::srsrc
+                                                  : AMDGPU::OpName::rsrc;
   int RsrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), RsrcOpName);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
@@ -1735,6 +1742,41 @@ MCOperand AMDGPUDisassembler::decodeDpp8FI(unsigned Val) const {
   return MCOperand::createImm(Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeVersionImm(unsigned Imm) const {
+  using VersionField = AMDGPU::EncodingField<7, 0>;
+  using W64Bit = AMDGPU::EncodingBit<13>;
+  using W32Bit = AMDGPU::EncodingBit<14>;
+  using MDPBit = AMDGPU::EncodingBit<15>;
+  using Encoding = AMDGPU::EncodingFields<VersionField, W64Bit, W32Bit, MDPBit>;
+
+  auto [Version, W64, W32, MDP] = Encoding::decode(Imm);
+
+  // Decode into a plain immediate if any unused bits are raised.
+  if (Encoding::encode(Version, W64, W32, MDP) != Imm)
+    return MCOperand::createImm(Imm);
+
+  const auto &Versions = AMDGPU::UCVersion::getGFXVersions();
+  auto I = find_if(Versions,
+                   [Version = Version](const AMDGPU::UCVersion::GFXVersion &V) {
+                     return V.Code == Version;
+                   });
+  MCContext &Ctx = getContext();
+  const MCExpr *E;
+  if (I == Versions.end())
+    E = MCConstantExpr::create(Version, Ctx);
+  else
+    E = MCSymbolRefExpr::create(Ctx.getOrCreateSymbol(I->Symbol), Ctx);
+
+  if (W64)
+    E = MCBinaryExpr::createOr(E, UCVersionW64Expr, Ctx);
+  if (W32)
+    E = MCBinaryExpr::createOr(E, UCVersionW32Expr, Ctx);
+  if (MDP)
+    E = MCBinaryExpr::createOr(E, UCVersionMDPExpr, Ctx);
+
+  return MCOperand::createExpr(E);
+}
+
 bool AMDGPUDisassembler::isVI() const {
   return STI.hasFeature(AMDGPU::FeatureVolcanicIslands);
 }
@@ -2318,6 +2360,15 @@ Expected<bool> AMDGPUDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
   }
 
   return false;
+}
+
+const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
+                                                           int64_t Val) {
+  MCContext &Ctx = getContext();
+  MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
+  assert(!Sym->isVariable());
+  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  return MCSymbolRefExpr::create(Sym, Ctx);
 }
 
 //===----------------------------------------------------------------------===//

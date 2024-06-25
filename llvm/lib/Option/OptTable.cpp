@@ -197,7 +197,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
-      if (Val.starts_with(Arg) && Arg.compare(Val))
+      if (Val.starts_with(Arg) && Arg != Val)
         Result.push_back(std::string(Val));
     return Result;
   }

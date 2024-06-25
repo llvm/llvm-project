@@ -44,7 +44,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             return False
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         if not self.isTestSupported():
@@ -92,7 +91,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("bar", env)
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
@@ -107,12 +105,11 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "Could not create a target for a program 'INVALIDPROGRAM': unable to find executable",
+            "Could not create a target for a program 'INVALIDPROGRAM': 'INVALIDPROGRAM' does not exist",
             response["message"],
         )
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         if not self.isTestSupported():
@@ -128,7 +125,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
         if not self.isTestSupported():
@@ -156,7 +152,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("No such file or directory", stderr)
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         if not self.isTestSupported():
@@ -184,7 +179,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("foo", stdout)
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
         if not self.isTestSupported():
@@ -206,7 +200,6 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("FOO=BAR", stdout)
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         if not self.isTestSupported():

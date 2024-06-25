@@ -18,6 +18,14 @@
     table)
   "Syntax table used while in LLVM mode.")
 
+(defconst llvm-mode-primitive-type-regexp
+  (concat
+   "\\(i[0-9]+\\|"
+   (regexp-opt
+    '("void" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128"
+      "x86_mmx" "x86_amx" "ptr" "type" "label" "opaque" "token") t)
+   "\\)"))
+
 (defvar llvm-font-lock-keywords
   (list
    ;; Attributes
@@ -34,10 +42,23 @@
    '("[-a-zA-Z$._0-9]+:" . font-lock-variable-name-face)
    ;; Unnamed variable slots
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
-   ;; Types
-   `(,(regexp-opt
-       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx" "ptr"
-         "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
+   ;; Function names
+   '("@[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-function-name-face)
+   ;; Fixed vector types
+   `(,(concat "<[ \t]*\\([0-9]+\\)[ \t]*x[ \t]+"
+	      llvm-mode-primitive-type-regexp
+	      "[ \t]*>")
+     (1 'font-lock-type-face)
+     (2 'font-lock-type-face))
+   ;; Scalable vector types
+   `(,(concat "<[ \t]*\\(vscale[ \t]\\)+x[ \t]+\\([0-9]+\\)[ \t]*x[ \t]+"
+	      llvm-mode-primitive-type-regexp
+	      "[ \t]*>")
+     (1 'font-lock-keyword-face)
+     (2 'font-lock-type-face)
+     (3 'font-lock-type-face))
+   ;; Primitive types
+   `(,(concat "\\<" llvm-mode-primitive-type-regexp "\\>") . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
    ;; Floating point constants
@@ -87,6 +108,8 @@
    `(,(regexp-opt '("extractvalue" "insertvalue") 'symbols) . font-lock-keyword-face)
    ;; Metadata types
    `(,(regexp-opt '("distinct") 'symbols) . font-lock-keyword-face)
+   ;; Debug records
+   `(,(concat "#" (regexp-opt '("dbg_assign" "dbg_declare" "dbg_label" "dbg_value") 'symbols)) . font-lock-keyword-face)
    ;; Atomic memory ordering constraints
    `(,(regexp-opt '("unordered" "monotonic" "acquire" "release" "acq_rel" "seq_cst") 'symbols) . font-lock-keyword-face)
    ;; Fast-math flags

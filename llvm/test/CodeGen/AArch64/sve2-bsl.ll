@@ -41,3 +41,55 @@ define <vscale x 4 x i32> @no_bsl_fold(<vscale x 4 x i32> %a, <vscale x 4 x i32>
   %c = or <vscale x 4 x i32> %1, %2
   ret <vscale x 4 x i32> %c
 }
+
+define <vscale x 16 x i8> @nbsl_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: nbsl_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.b, #127 // =0x7f
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = and <vscale x 16 x i8> %a, splat(i8 127)
+  %2 = and <vscale x 16 x i8> %b, splat(i8 -128)
+  %3 = or <vscale x 16 x i8> %1, %2
+  %4 = xor <vscale x 16 x i8> %3, splat(i8 -1)
+  ret <vscale x 16 x i8> %4
+}
+
+define <vscale x 8 x i16> @nbsl_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: nbsl_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = and <vscale x 8 x i16> %a, splat(i16 32767)
+  %2 = and <vscale x 8 x i16> %b, splat(i16 -32768)
+  %3 = or <vscale x 8 x i16> %1, %2
+  %4 = xor <vscale x 8 x i16> %3, splat(i16 -1)
+  ret <vscale x 8 x i16> %4
+}
+
+define <vscale x 4 x i32> @nbsl_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: nbsl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = and <vscale x 4 x i32> %a, splat(i32 2147483647)
+  %2 = and <vscale x 4 x i32> %b, splat(i32 -2147483648)
+  %3 = or <vscale x 4 x i32> %1, %2
+  %4 = xor <vscale x 4 x i32> %3, splat(i32 -1)
+  ret <vscale x 4 x i32> %4
+}
+
+define <vscale x 2 x i64> @nbsl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: nbsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.d, #0x7fffffffffffffff
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = and <vscale x 2 x i64> %a, splat(i64 9223372036854775807)
+  %2 = and <vscale x 2 x i64> %b, splat(i64 -9223372036854775808)
+  %3 = or <vscale x 2 x i64> %1, %2
+  %4 = xor <vscale x 2 x i64> %3, splat(i64 -1)
+  ret <vscale x 2 x i64> %4
+}

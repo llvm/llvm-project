@@ -51,18 +51,8 @@ private:
   SmallVector<TemporalProfTraceTy> TemporalProfTraces;
   std::mt19937 RNG;
 
-  // A map to hold memprof data per function. The lower 64 bits obtained from
-  // the md5 hash of the function name is used to index into the map.
-  llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
-      MemProfRecordData;
-  // A map to hold frame id to frame mappings. The mappings are used to
-  // convert IndexedMemProfRecord to MemProfRecords with frame information
-  // inline.
-  llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
-
-  // A map to hold call stack id to call stacks.
-  llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
-      MemProfCallStackData;
+  // The MemProf data.
+  memprof::IndexedMemProfData MemProfData;
 
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
@@ -85,11 +75,15 @@ private:
   // The MemProf version we should write.
   memprof::IndexedVersion MemProfVersionRequested;
 
+  // Whether to serialize the full schema.
+  bool MemProfFullSchema;
+
 public:
   InstrProfWriter(
       bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
       uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0);
+      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
+      bool MemProfFullSchema = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -203,6 +197,7 @@ public:
   void setMemProfVersionRequested(memprof::IndexedVersion Version) {
     MemProfVersionRequested = Version;
   }
+  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
@@ -217,6 +212,15 @@ private:
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   Error writeImpl(ProfOStream &OS);
+
+  // Writes known header fields and reserves space for fields whose value are
+  // known only after payloads are written. Returns the start byte offset for
+  // back patching.
+  uint64_t writeHeader(const IndexedInstrProf::Header &header,
+                       const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes compressed vtable names to profiles.
+  Error writeVTableNames(ProfOStream &OS);
 };
 
 } // end namespace llvm

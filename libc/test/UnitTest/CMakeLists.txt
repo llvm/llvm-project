@@ -41,7 +41,7 @@ function(add_unittest_framework_library name)
   target_compile_options(${name}.hermetic PRIVATE ${compile_options})
 
   if(TEST_LIB_DEPENDS)
-    foreach(dep IN LISTS ${TEST_LIB_DEPENDS})
+    foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
       if(TARGET ${dep}.unit)
         add_dependencies(${name}.unit ${dep}.unit)
       else()
@@ -111,8 +111,10 @@ add_header_library(
 add_unittest_framework_library(
   LibcFPTestHelpers
   SRCS
+    FEnvSafeTest.cpp
     RoundingModeUtils.cpp
   HDRS
+    FEnvSafeTest.h
     FPMatcher.h
     RoundingModeUtils.h
   DEPENDS

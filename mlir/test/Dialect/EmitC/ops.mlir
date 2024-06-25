@@ -41,6 +41,9 @@ func.func @cast(%arg0: i32) {
 
 func.func @c() {
   %1 = "emitc.constant"(){value = 42 : i32} : () -> i32
+  %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
+  %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
+  %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
   return
 }
 
@@ -231,3 +234,17 @@ emitc.verbatim "#endif  // __cplusplus"
 
 emitc.verbatim "typedef int32_t i32;"
 emitc.verbatim "typedef float f32;"
+
+
+emitc.global @uninit : i32
+emitc.global @myglobal_int : i32 = 4
+emitc.global extern @external_linkage : i32
+emitc.global static @internal_linkage : i32
+emitc.global @myglobal : !emitc.array<2xf32> = dense<4.000000e+00>
+emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
+
+func.func @use_global(%i: index) -> f32 {
+  %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
+  return %1 : f32
+}

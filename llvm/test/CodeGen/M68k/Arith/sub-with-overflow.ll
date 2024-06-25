@@ -18,16 +18,16 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_1: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #1, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -55,16 +55,16 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:  ; %bb.2: ; %carry
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_1: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf@PLT
-; CHECK-NEXT:    move.b #1, %d0
+; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    moveq #1, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -85,7 +85,7 @@ carry:
 define i1 @func3(i32 %x) nounwind {
 ; CHECK-LABEL: func3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l #-1, %d0
+; CHECK-NEXT:    moveq #-1, %d0
 ; CHECK-NEXT:    add.l (4,%sp), %d0
 ; CHECK-NEXT:    svs %d0
 ; CHECK-NEXT:    rts

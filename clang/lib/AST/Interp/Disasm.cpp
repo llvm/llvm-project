@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Context.h"
+#include "EvaluationResult.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
 #include "InterpFrame.h"
+#include "MemberPointer.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -120,6 +123,8 @@ static const char *primTypeToString(PrimType T) {
     return "Ptr";
   case PT_FnPtr:
     return "FnPtr";
+  case PT_MemberPtr:
+    return "MemberPtr";
   }
   llvm_unreachable("Unhandled PrimType");
 }
@@ -150,7 +155,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
     OS << "\n";
-    if (Desc->isPrimitive() && !Desc->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -200,12 +205,31 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " primitive";
 
   if (isZeroSizeArray())
-    OS << " zero-size-arrary";
+    OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 
   if (isDummy())
     OS << " dummy";
+}
+
+LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << "InlineDescriptor " << (const void *)this << "\n";
+  }
+  OS << "Offset: " << Offset << "\n";
+  OS << "IsConst: " << IsConst << "\n";
+  OS << "IsInitialized: " << IsInitialized << "\n";
+  OS << "IsBase: " << IsBase << "\n";
+  OS << "IsActive: " << IsActive << "\n";
+  OS << "IsFieldMutable: " << IsFieldMutable << "\n";
+  OS << "Desc: ";
+  if (Desc)
+    Desc->dump(OS);
+  else
+    OS << "nullptr";
+  OS << "\n";
 }
 
 LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
@@ -251,8 +275,6 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
     ++I;
   }
 
-  // FIXME: Virtual bases.
-
   I = 0;
   for (const Record::Field &F : fields()) {
     OS.indent(Indent) << "- Field " << I << ": ";
@@ -261,6 +283,14 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
       OS << F.Decl->getName();
     }
     OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
+
+  I = 0;
+  for (const Record::Base &B : virtual_bases()) {
+    OS.indent(Indent) << "- Virtual Base " << I << ". Offset "
+                      << (Offset + B.Offset) << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
     ++I;
   }
 }
@@ -279,4 +309,44 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Static: " << IsStatic << "\n";
   OS << "  Extern: " << IsExtern << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
+}
+
+LLVM_DUMP_METHOD void EvaluationResult::dump() const {
+  assert(Ctx);
+  auto &OS = llvm::errs();
+  const ASTContext &ASTCtx = Ctx->getASTContext();
+
+  switch (Kind) {
+  case Empty:
+    OS << "Empty\n";
+    break;
+  case RValue:
+    OS << "RValue: ";
+    std::get<APValue>(Value).dump(OS, ASTCtx);
+    break;
+  case LValue: {
+    assert(Source);
+    QualType SourceType;
+    if (const auto *D = Source.dyn_cast<const Decl *>()) {
+      if (const auto *VD = dyn_cast<ValueDecl>(D))
+        SourceType = VD->getType();
+    } else if (const auto *E = Source.dyn_cast<const Expr *>()) {
+      SourceType = E->getType();
+    }
+
+    OS << "LValue: ";
+    if (const auto *P = std::get_if<Pointer>(&Value))
+      P->toAPValue().printPretty(OS, ASTCtx, SourceType);
+    else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
+      FP->toAPValue().printPretty(OS, ASTCtx, SourceType);
+    OS << "\n";
+    break;
+  }
+  case Invalid:
+    OS << "Invalid\n";
+    break;
+  case Valid:
+    OS << "Valid\n";
+    break;
+  }
 }
