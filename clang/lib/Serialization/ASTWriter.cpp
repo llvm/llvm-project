@@ -1813,7 +1813,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
-    auto ContentHash = hash_code(-1);
+    uint64_t ContentHash = 0;
     if (PP->getHeaderSearchInfo()
             .getHeaderSearchOpts()
             .ValidateASTInputFilesContent) {
@@ -1824,12 +1824,8 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
         PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
             << Entry.File.getName();
     }
-    auto CH = llvm::APInt(64, ContentHash);
-    Entry.ContentHash[0] =
-        static_cast<uint32_t>(CH.getLoBits(32).getZExtValue());
-    Entry.ContentHash[1] =
-        static_cast<uint32_t>(CH.getHiBits(32).getZExtValue());
-
+    Entry.ContentHash[0] = uint32_t(ContentHash);
+    Entry.ContentHash[1] = uint32_t(ContentHash >> 32);
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
     else
