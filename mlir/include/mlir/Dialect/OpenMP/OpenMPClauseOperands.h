@@ -147,6 +147,7 @@ struct NumThreadsClauseOps {
 
 struct OrderClauseOps {
   ClauseOrderKindAttr orderAttr;
+  OrderModifierAttr orderModAttr;
 };
 
 struct OrderedClauseOps {

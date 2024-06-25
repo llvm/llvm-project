@@ -124,9 +124,16 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-               diag::note_constexpr_uninitialized_base)
-          << B.Desc->getType();
+      const Descriptor *Desc = BasePtr.getDeclDesc();
+      if (Desc->asDecl())
+        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+      else
+        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);
@@ -142,20 +149,23 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   assert(Source);
   assert(empty());
 
-  // Our Source must be a VarDecl.
-  const Decl *SourceDecl = Source.dyn_cast<const Decl *>();
-  assert(SourceDecl);
-  const auto *VD = cast<VarDecl>(SourceDecl);
-  assert(VD->getType()->isRecordType() || VD->getType()->isArrayType());
-  SourceLocation InitLoc = VD->getAnyInitializer()->getExprLoc();
+  if (Ptr.isZero())
+    return true;
 
-  assert(!Ptr.isZero());
+  SourceLocation InitLoc;
+  if (const auto *D = Source.dyn_cast<const Decl *>())
+    InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
+  else if (const auto *E = Source.dyn_cast<const Expr *>())
+    InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())
     return CheckFieldsInitialized(S, InitLoc, Ptr, R);
-  const auto *CAT =
-      cast<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe());
-  return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
+          Ptr.getType()->getAsArrayTypeUnsafe()))
+    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+
+  return true;
 }
 
 } // namespace interp

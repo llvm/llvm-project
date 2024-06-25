@@ -744,7 +744,7 @@ public:
     if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
       result.set_significand(number);
-      result.set_biased_exponent(ep + 1);
+      result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
       result.set_significand(number >> -ep);
     }

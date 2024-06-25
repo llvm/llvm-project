@@ -888,6 +888,14 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                 DW_OP_value_to_name(op));
     }
 
+    if (std::optional<unsigned> arity =
+            llvm::dwarf::OperationArity(static_cast<LocationAtom>(op))) {
+      if (stack.size() < *arity)
+        return llvm::createStringError(
+            "%s needs at least %d stack entries (stack has %d entries)",
+            DW_OP_value_to_name(op), *arity, stack.size());
+    }
+
     switch (op) {
     // The DW_OP_addr operation has a single operand that encodes a machine
     // address and whose size is the size of an address on the target machine.
@@ -1253,11 +1261,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Duplicates the entry currently second in the stack at
     // the top of the stack.
     case DW_OP_over:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_over");
-      } else
-        stack.push_back(stack[stack.size() - 2]);
+      stack.push_back(stack[stack.size() - 2]);
       break;
 
     // OPCODE: DW_OP_pick
@@ -1280,14 +1284,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the stack becomes the second stack entry, and the second entry
     // becomes the top of the stack
     case DW_OP_swap:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_swap");
-      } else {
-        tmp = stack.back();
-        stack.back() = stack[stack.size() - 2];
-        stack[stack.size() - 2] = tmp;
-      }
+      tmp = stack.back();
+      stack.back() = stack[stack.size() - 2];
+      stack[stack.size() - 2] = tmp;
       break;
 
     // OPCODE: DW_OP_rot
@@ -1296,18 +1295,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the top of the stack becomes the third stack entry, the second entry
     // becomes the top of the stack, and the third entry becomes the second
     // entry.
-    case DW_OP_rot:
-      if (stack.size() < 3) {
-        return llvm::createStringError(
-            "expression stack needs at least 3 items for DW_OP_rot");
-      } else {
-        size_t last_idx = stack.size() - 1;
-        Value old_top = stack[last_idx];
-        stack[last_idx] = stack[last_idx - 1];
-        stack[last_idx - 1] = stack[last_idx - 2];
-        stack[last_idx - 2] = old_top;
-      }
-      break;
+    case DW_OP_rot: {
+      size_t last_idx = stack.size() - 1;
+      Value old_top = stack[last_idx];
+      stack[last_idx] = stack[last_idx - 1];
+      stack[last_idx - 1] = stack[last_idx - 2];
+      stack[last_idx - 2] = old_top;
+    } break;
 
     // OPCODE: DW_OP_abs
     // OPERANDS: none
@@ -1315,10 +1309,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // value and pushes its absolute value. If the absolute value can not be
     // represented, the result is undefined.
     case DW_OP_abs:
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_abs");
-      } else if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
+      if (!stack.back().ResolveValue(exe_ctx).AbsoluteValue()) {
         return llvm::createStringError(
             "failed to take the absolute value of the first stack item");
       }
@@ -1329,15 +1320,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack values, performs a bitwise and
     // operation on the two, and pushes the result.
     case DW_OP_and:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_and");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) & tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) & tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_div
@@ -1345,42 +1331,32 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack values, divides the former second
     // entry by the former top of the stack using signed division, and pushes
     // the result.
-    case DW_OP_div:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_div");
-      } else {
-        tmp = stack.back();
-        if (tmp.ResolveValue(exe_ctx).IsZero())
-          return llvm::createStringError("divide by zero");
+    case DW_OP_div: {
+      tmp = stack.back();
+      if (tmp.ResolveValue(exe_ctx).IsZero())
+        return llvm::createStringError("divide by zero");
 
-        stack.pop_back();
-        Scalar divisor, dividend;
-        divisor = tmp.ResolveValue(exe_ctx);
-        dividend = stack.back().ResolveValue(exe_ctx);
-        divisor.MakeSigned();
-        dividend.MakeSigned();
-        stack.back() = dividend / divisor;
+      stack.pop_back();
+      Scalar divisor, dividend;
+      divisor = tmp.ResolveValue(exe_ctx);
+      dividend = stack.back().ResolveValue(exe_ctx);
+      divisor.MakeSigned();
+      dividend.MakeSigned();
+      stack.back() = dividend / divisor;
 
-        if (!stack.back().ResolveValue(exe_ctx).IsValid())
-          return llvm::createStringError("divide failed");
-      }
-      break;
+      if (!stack.back().ResolveValue(exe_ctx).IsValid())
+        return llvm::createStringError("divide failed");
+    } break;
 
     // OPCODE: DW_OP_minus
     // OPERANDS: none
     // DESCRIPTION: pops the top two stack values, subtracts the former top
     // of the stack from the former second entry, and pushes the result.
     case DW_OP_minus:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_minus");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) - tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) - tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_mod
@@ -1389,15 +1365,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the calculation: former second stack entry modulo the former top of the
     // stack.
     case DW_OP_mod:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_mod");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) % tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) % tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_mul
@@ -1405,28 +1376,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, multiplies them
     // together, and pushes the result.
     case DW_OP_mul:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_mul");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) * tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) * tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_neg
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, and pushes its negation.
     case DW_OP_neg:
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_neg");
-      } else {
-        if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
-          return llvm::createStringError("unary negate failed");
-      }
+      if (!stack.back().ResolveValue(exe_ctx).UnaryNegate())
+        return llvm::createStringError("unary negate failed");
       break;
 
     // OPCODE: DW_OP_not
@@ -1434,14 +1395,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top stack entry, and pushes its bitwise
     // complement
     case DW_OP_not:
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_not");
-      } else {
-        if (!stack.back().ResolveValue(exe_ctx).OnesComplement()) {
-          return llvm::createStringError("logical NOT failed");
-        }
-      }
+      if (!stack.back().ResolveValue(exe_ctx).OnesComplement())
+        return llvm::createStringError("logical NOT failed");
       break;
 
     // OPCODE: DW_OP_or
@@ -1449,15 +1404,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, performs a bitwise or
     // operation on the two, and pushes the result.
     case DW_OP_or:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_or");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) | tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) | tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_plus
@@ -1465,32 +1415,22 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, adds them together, and
     // pushes the result.
     case DW_OP_plus:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_plus");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().GetScalar() += tmp.GetScalar();
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().GetScalar() += tmp.GetScalar();
       break;
 
     // OPCODE: DW_OP_plus_uconst
     // OPERANDS: none
     // DESCRIPTION: pops the top stack entry, adds it to the unsigned LEB128
     // constant operand and pushes the result.
-    case DW_OP_plus_uconst:
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_plus_uconst");
-      } else {
-        const uint64_t uconst_value = opcodes.GetULEB128(&offset);
-        // Implicit conversion from a UINT to a Scalar...
-        stack.back().GetScalar() += uconst_value;
-        if (!stack.back().GetScalar().IsValid())
-          return llvm::createStringError("DW_OP_plus_uconst failed");
-      }
-      break;
+    case DW_OP_plus_uconst: {
+      const uint64_t uconst_value = opcodes.GetULEB128(&offset);
+      // Implicit conversion from a UINT to a Scalar...
+      stack.back().GetScalar() += uconst_value;
+      if (!stack.back().GetScalar().IsValid())
+        return llvm::createStringError("DW_OP_plus_uconst failed");
+    } break;
 
     // OPCODE: DW_OP_shl
     // OPERANDS: none
@@ -1498,14 +1438,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // second entry left by the number of bits specified by the former top of
     // the stack, and pushes the result.
     case DW_OP_shl:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_shl");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) <<= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) <<= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_shr
@@ -1514,17 +1449,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // entry right logically (filling with zero bits) by the number of bits
     // specified by the former top of the stack, and pushes the result.
     case DW_OP_shr:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_shr");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
-                tmp.ResolveValue(exe_ctx))) {
-          return llvm::createStringError("DW_OP_shr failed");
-        }
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      if (!stack.back().ResolveValue(exe_ctx).ShiftRightLogical(
+              tmp.ResolveValue(exe_ctx)))
+        return llvm::createStringError("DW_OP_shr failed");
       break;
 
     // OPCODE: DW_OP_shra
@@ -1534,14 +1463,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // sign for the result) by the number of bits specified by the former top
     // of the stack, and pushes the result.
     case DW_OP_shra:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_shra");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) >>= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) >>= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_xor
@@ -1549,15 +1473,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: pops the top two stack entries, performs the bitwise
     // exclusive-or operation on the two, and pushes the result.
     case DW_OP_xor:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_xor");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) ^ tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) ^ tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_skip
@@ -1588,30 +1507,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // value popped is not the constant 0, the 2-byte constant operand is the
     // number of bytes of the DWARF expression to skip forward or backward from
     // the current operation, beginning after the 2-byte constant.
-    case DW_OP_bra:
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_bra");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
-        Scalar zero(0);
-        if (tmp.ResolveValue(exe_ctx) != zero) {
-          lldb::offset_t new_offset = offset + bra_offset;
-          // New offset can point at the end of the data, in this case we should
-          // terminate the DWARF expression evaluation (will happen in the loop
-          // condition).
-          if (new_offset <= opcodes.GetByteSize())
-            offset = new_offset;
-          else {
-            return llvm::createStringError(llvm::formatv(
-                "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
-                bra_offset, opcodes.GetByteSize()));
-          }
+    case DW_OP_bra: {
+      tmp = stack.back();
+      stack.pop_back();
+      int16_t bra_offset = (int16_t)opcodes.GetU16(&offset);
+      Scalar zero(0);
+      if (tmp.ResolveValue(exe_ctx) != zero) {
+        lldb::offset_t new_offset = offset + bra_offset;
+        // New offset can point at the end of the data, in this case we should
+        // terminate the DWARF expression evaluation (will happen in the loop
+        // condition).
+        if (new_offset <= opcodes.GetByteSize())
+          offset = new_offset;
+        else {
+          return llvm::createStringError(llvm::formatv(
+              "Invalid opcode offset in DW_OP_bra: {0}+({1}) > {2}", offset,
+              bra_offset, opcodes.GetByteSize()));
         }
       }
-      break;
+    } break;
 
     // OPCODE: DW_OP_eq
     // OPERANDS: none
@@ -1621,15 +1535,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_eq:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_eq");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) == tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) == tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_ge
@@ -1640,15 +1549,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_ge:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_ge");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) >= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) >= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_gt
@@ -1659,15 +1563,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_gt:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_gt");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) > tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) > tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_le
@@ -1678,15 +1577,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_le:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_le");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) <= tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) <= tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_lt
@@ -1697,15 +1591,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_lt:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_lt");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) < tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) < tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_ne
@@ -1716,15 +1605,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // of the operation is true or the constant value 0 if the result of the
     // operation is false.
     case DW_OP_ne:
-      if (stack.size() < 2) {
-        return llvm::createStringError(
-            "expression stack needs at least 2 items for DW_OP_ne");
-      } else {
-        tmp = stack.back();
-        stack.pop_back();
-        stack.back().ResolveValue(exe_ctx) =
-            stack.back().ResolveValue(exe_ctx) != tmp.ResolveValue(exe_ctx);
-      }
+      tmp = stack.back();
+      stack.pop_back();
+      stack.back().ResolveValue(exe_ctx) =
+          stack.back().ResolveValue(exe_ctx) != tmp.ResolveValue(exe_ctx);
       break;
 
     // OPCODE: DW_OP_litn
@@ -2189,9 +2073,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // value to be used.  This is the actual object value and not the location.
     case DW_OP_stack_value:
       dwarf4_location_description_kind = Implicit;
-      if (stack.empty())
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_stack_value");
       stack.back().SetValueType(Value::ValueType::Scalar);
       break;
 
@@ -2203,10 +2084,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
     case DW_OP_convert: {
-      if (stack.size() < 1) {
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_convert");
-      }
       const uint64_t die_offset = opcodes.GetULEB128(&offset);
       uint64_t bit_size;
       bool sign;

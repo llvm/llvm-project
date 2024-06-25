@@ -39,7 +39,7 @@ public:
                                           const AttributeCommonInfo &AL, int X,
                                           int Y, int Z);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                  HLSLShaderAttr::ShaderType ShaderType);
+                                  llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
   mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
                          HLSLParamModifierAttr::Spelling Spelling);
@@ -48,8 +48,8 @@ public:
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
+      const Attr *A, llvm::Triple::EnvironmentType Stage,
+      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);

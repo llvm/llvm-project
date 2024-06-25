@@ -657,6 +657,12 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
  T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
  T __builtin_elementwise_tan(T x)            return the tangent of x interpreted as an angle in radians       floating point types
+ T __builtin_elementwise_asin(T x)           return the arcsine of x interpreted as an angle in radians       floating point types
+ T __builtin_elementwise_acos(T x)           return the arccosine of x interpreted as an angle in radians     floating point types
+ T __builtin_elementwise_atan(T x)           return the arctangent of x interpreted as an angle in radians    floating point types
+ T __builtin_elementwise_sinh(T x)           return the hyperbolic sine of angle x in radians                 floating point types
+ T __builtin_elementwise_cosh(T x)           return the hyperbolic cosine of angle x in radians               floating point types
+ T __builtin_elementwise_tanh(T x)           return the hyperbolic tangent of angle x in radians              floating point types
  T __builtin_elementwise_floor(T x)          return the largest integral value less than or equal to x        floating point types
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
@@ -1502,6 +1508,7 @@ Attributes on Structured Bindings            __cpp_structured_bindings        C+
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
 Attributes (N2335)                                                            C23           C89
+``#embed`` (N3017)                                                            C23           C89, C++
 ============================================ ================================ ============= =============
 
 Type Trait Primitives
@@ -2063,7 +2070,7 @@ Objective-C @available
 ----------------------
 
 It is possible to use the newest SDK but still build a program that can run on
-older versions of macOS and iOS by passing ``-mmacosx-version-min=`` /
+older versions of macOS and iOS by passing ``-mmacos-version-min=`` /
 ``-miphoneos-version-min=``.
 
 Before LLVM 5.0, when calling a function that exists only in the OS that's
@@ -2084,7 +2091,7 @@ When a method that's introduced in the OS newer than the target OS is called, a
 
   void my_fun(NSSomeClass* var) {
     // If fancyNewMethod was added in e.g. macOS 10.12, but the code is
-    // built with -mmacosx-version-min=10.11, then this unconditional call
+    // built with -mmacos-version-min=10.11, then this unconditional call
     // will emit a -Wunguarded-availability warning:
     [var fancyNewMethod];
   }
@@ -3475,6 +3482,60 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 **Description**
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
+
+``__builtin_verbose_trap``
+--------------------------
+
+``__builtin_verbose_trap`` causes the program to stop its execution abnormally
+and shows a human-readable description of the reason for the termination when a
+debugger is attached or in a symbolicated crash log.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_verbose_trap(const char *category, const char *reason)
+
+**Description**
+
+``__builtin_verbose_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
+Additionally, clang emits debugging information that represents an artificial
+inline frame whose name encodes the category and reason strings passed to the builtin,
+prefixed by a "magic" prefix.
+
+For example, consider the following code:
+
+.. code-block:: c++
+
+    void foo(int* p) {
+      if (p == nullptr)
+        __builtin_verbose_trap("check null", "Argument must not be null!");
+    }
+
+The debugging information would look as if it were produced for the following code:
+
+.. code-block:: c++
+
+    __attribute__((always_inline))
+    inline void "__clang_trap_msg$check null$Argument must not be null!"() {
+      __builtin_trap();
+    }
+
+    void foo(int* p) {
+      if (p == nullptr)
+        "__clang_trap_msg$check null$Argument must not be null!"();
+    }
+
+However, the generated code would not actually contain a call to the artificial
+function — it only exists in the debugging information.
+
+Query for this feature with ``__has_builtin(__builtin_verbose_trap)``. Note that
+users need to enable debug information to enable this feature. A call to this
+builtin is equivalent to a call to ``__builtin_trap`` if debug information isn't
+enabled.
+
+The optimizer can merge calls to trap with different messages, which degrades
+the debugging experience.
 
 ``__builtin_allow_runtime_check``
 ---------------------------------
@@ -5338,7 +5399,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 
 * The pragma clang section is enabled automatically, without need of any flags.
 
-* This feature is only defined to work sensibly for ELF targets.
+* This feature is only defined to work sensibly for ELF and Mach-O targets.
 
 * If section name is specified through _attribute_((section("myname"))), then
   the attribute name gains precedence.
@@ -5664,3 +5725,26 @@ Compiling different TUs depending on these flags (including use of
 ``std::hardware_destructive_interference``)  with different compilers, macro
 definitions, or architecture flags will lead to ODR violations and should be
 avoided.
+
+``#embed`` Parameters
+=====================
+
+``clang::offset``
+-----------------
+The ``clang::offset`` embed parameter may appear zero or one time in the
+embed parameter sequence. Its preprocessor argument clause shall be present and
+have the form:
+
+..code-block: text
+
+  ( constant-expression )
+
+and shall be an integer constant expression. The integer constant expression
+shall not evaluate to a value less than 0. The token ``defined`` shall not
+appear within the constant expression.
+
+The offset will be used when reading the contents of the embedded resource to
+specify the starting offset to begin embedding from. The resources is treated
+as being empty if the specified offset is larger than the number of bytes in
+the resource. The offset will be applied *before* any ``limit`` parameters are
+applied.

@@ -72,6 +72,7 @@
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/ConvergenceVerifier.h"
 #include "llvm/IR/DataLayout.h"
@@ -104,6 +105,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -2058,6 +2060,14 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
   }
 
+  if (Attrs.hasAttribute(Attribute::Initializes)) {
+    auto Inits = Attrs.getAttribute(Attribute::Initializes).getInitializes();
+    Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
+          V);
+    Check(ConstantRangeList::isOrderedRanges(Inits),
+          "Attribute 'initializes' does not support unordered ranges", V);
+  }
+
   if (Attrs.hasAttribute(Attribute::NoFPClass)) {
     uint64_t Val = Attrs.getAttribute(Attribute::NoFPClass).getValueAsInt();
     Check(Val != 0, "Attribute 'nofpclass' must have at least one test bit set",
@@ -2322,7 +2332,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (Attrs.hasFnAttr("frame-pointer")) {
     StringRef FP = Attrs.getFnAttr("frame-pointer").getValueAsString();
-    if (FP != "all" && FP != "non-leaf" && FP != "none")
+    if (FP != "all" && FP != "non-leaf" && FP != "none" && FP != "reserved")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
@@ -4808,8 +4818,9 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
 
   // Check consistency of !prof branch_weights metadata.
   if (ProfName == "branch_weights") {
+    unsigned NumBranchWeights = getNumBranchWeights(*MD);
     if (isa<InvokeInst>(&I)) {
-      Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
+      Check(NumBranchWeights == 1 || NumBranchWeights == 2,
             "Wrong number of InvokeInst branch_weights operands", MD);
     } else {
       unsigned ExpectedNumOperands = 0;
@@ -4829,10 +4840,11 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 
-      Check(MD->getNumOperands() == 1 + ExpectedNumOperands,
-            "Wrong number of operands", MD);
+      Check(NumBranchWeights == ExpectedNumOperands, "Wrong number of operands",
+            MD);
     }
-    for (unsigned i = 1; i < MD->getNumOperands(); ++i) {
+    for (unsigned i = getBranchWeightOffset(MD); i < MD->getNumOperands();
+         ++i) {
       auto &MDO = MD->getOperand(i);
       Check(MDO, "second operand should not be null", MD);
       Check(mdconst::dyn_extract<ConstantInt>(MDO),

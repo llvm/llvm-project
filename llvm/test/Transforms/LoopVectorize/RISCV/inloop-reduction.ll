@@ -39,8 +39,8 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; OUTLOOP-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; OUTLOOP-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OUTLOOP:       middle.block:
-; OUTLOOP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP10]])
 ; OUTLOOP-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; OUTLOOP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP10]])
 ; OUTLOOP-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; OUTLOOP:       scalar.ph:
 ; OUTLOOP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -126,9 +126,7 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], 4
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 4
-; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], 1
+; IF-EVL-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], 1
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], [[TMP4]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP1]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]

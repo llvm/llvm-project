@@ -300,7 +300,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
-  if (!Subtarget.hasStdExtM() && !Subtarget.hasStdExtZmmul()) {
+  if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
       setOperationAction(ISD::MUL, MVT::i32, Promote);
@@ -661,6 +661,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
   setBooleanContents(ZeroOrOneBooleanContent);
+
+  if (getTargetMachine().getTargetTriple().isOSLinux()) {
+    // Custom lowering of llvm.clear_cache.
+    setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
+  }
 
   if (Subtarget.hasVInstructions()) {
     setBooleanVectorContents(ZeroOrOneBooleanContent);
@@ -1102,6 +1107,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        if (Subtarget.hasStdExtZfbfmin())
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+                           Custom);
+        setOperationAction(ISD::SELECT_CC, VT, Expand);
         // TODO: Promote to fp32.
       }
     }
@@ -1331,6 +1341,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::EXTRACT_SUBVECTOR},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+          if (Subtarget.hasStdExtZfbfmin())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          setOperationAction(
+              {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
+              Custom);
           // TODO: Promote to fp32.
           continue;
         }
@@ -1433,6 +1448,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasVendorXCVmem()) {
+    setIndexedLoadAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedLoadAction(ISD::POST_INC, MVT::i32, Legal);
+
+    setIndexedStoreAction(ISD::POST_INC, MVT::i8, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i16, Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i32, Legal);
+  }
+
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtCOrZca() ? 2 : 4);
   setMinFunctionAlignment(FunctionAlignment);
@@ -1452,7 +1477,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
 
-  if (Subtarget.hasStdExtZbs() && Subtarget.is64Bit())
+  if ((Subtarget.hasStdExtZbs() && Subtarget.is64Bit()) ||
+      Subtarget.hasStdExtV())
     setTargetDAGCombine(ISD::TRUNCATE);
 
   if (Subtarget.hasStdExtZbkb())
@@ -6704,10 +6730,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG, Subtarget);
   case ISD::SPLAT_VECTOR:
-    if (Op.getValueType().getScalarType() == MVT::f16 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16())) {
-      if (Op.getValueType() == MVT::nxv32f16)
+    if ((Op.getValueType().getScalarType() == MVT::f16 &&
+         (Subtarget.hasVInstructionsF16Minimal() &&
+          Subtarget.hasStdExtZfhminOrZhinxmin() &&
+          !Subtarget.hasVInstructionsF16())) ||
+        (Op.getValueType().getScalarType() == MVT::bf16 &&
+         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin()))) {
+      if (Op.getValueType() == MVT::nxv32f16 ||
+          Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
       SDLoc DL(Op);
       SDValue NewScalar =
@@ -7117,7 +7147,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return lowerVPReverseExperimental(Op, DAG);
+  case ISD::CLEAR_CACHE: {
+    assert(getTargetMachine().getTargetTriple().isOSLinux() &&
+           "llvm.clear_cache only needs custom lower on Linux targets");
+    SDLoc DL(Op);
+    SDValue Flags = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+    return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
+                           Op.getOperand(2), Flags, DL);
   }
+  }
+}
+
+SDValue RISCVTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
+                                             SDValue Start, SDValue End,
+                                             SDValue Flags, SDLoc DL) const {
+  MakeLibCallOptions CallOptions;
+  std::pair<SDValue, SDValue> CallResult =
+      makeLibCall(DAG, RTLIB::RISCV_FLUSH_ICACHE, MVT::isVoid,
+                  {Start, End, Flags}, CallOptions, DL, InChain);
+
+  // This function returns void so only the out chain matters.
+  return CallResult.second;
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
@@ -13370,6 +13420,76 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
+// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) to
+// (vXi8 (trunc (smin (smax X, 0), 255))). This represents saturating a signed
+// value to an unsigned value. This will be lowered to vmax and series of
+// vnclipu instructions later. This can be extended to other truncated types
+// other than i8 by replacing 256 and 255 with the equivalent constants for the
+// type.
+static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  EVT SrcVT = N0.getValueType();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!VT.isVector() || !TLI.isTypeLegal(VT) || !TLI.isTypeLegal(SrcVT))
+    return SDValue();
+
+  if (N0.getOpcode() != ISD::VSELECT || !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Cond = N0.getOperand(0);
+  SDValue True = N0.getOperand(1);
+  SDValue False = N0.getOperand(2);
+
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // FIXME: Support the version of this pattern with the select operands
+  // swapped.
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  if (CCVal != ISD::SETULT)
+    return SDValue();
+
+  SDValue CondLHS = Cond.getOperand(0);
+  SDValue CondRHS = Cond.getOperand(1);
+
+  if (CondLHS != True)
+    return SDValue();
+
+  unsigned ScalarBits = VT.getScalarSizeInBits();
+
+  // FIXME: Support other constants.
+  ConstantSDNode *CondRHSC = isConstOrConstSplat(CondRHS);
+  if (!CondRHSC || CondRHSC->getAPIntValue() != (1ULL << ScalarBits))
+    return SDValue();
+
+  if (False.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+
+  False = False.getOperand(0);
+
+  if (False.getOpcode() != ISD::SETCC || False.getOperand(0) != True)
+    return SDValue();
+
+  ConstantSDNode *FalseRHSC = isConstOrConstSplat(False.getOperand(1));
+  if (!FalseRHSC || !FalseRHSC->isZero())
+    return SDValue();
+
+  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(False.getOperand(2))->get();
+  if (CCVal2 != ISD::SETGT)
+    return SDValue();
+
+  // Emit the signed to unsigned saturation pattern.
+  SDLoc DL(N);
+  SDValue Max =
+      DAG.getNode(ISD::SMAX, DL, SrcVT, True, DAG.getConstant(0, DL, SrcVT));
+  SDValue Min =
+      DAG.getNode(ISD::SMIN, DL, SrcVT, Max,
+                  DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
+}
+
 static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -13390,7 +13510,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Srl);
   }
 
-  return SDValue();
+  return combineTruncSelectToSMaxUSat(N, DAG);
 }
 
 // Combines two comparison operation and logic operation to one selection
@@ -13586,8 +13706,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXTHeadBa())
-    return SDValue();
+  const bool HasShlAdd =
+      Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
@@ -13600,105 +13720,121 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // other target properly freezes X in these cases either.
   SDValue X = N->getOperand(0);
 
-  for (uint64_t Divisor : {3, 5, 9}) {
-    if (MulAmt % Divisor != 0)
-      continue;
-    uint64_t MulAmt2 = MulAmt / Divisor;
-    // 3/5/9 * 2^N ->  shl (shXadd X, X), N
-    if (isPowerOf2_64(MulAmt2)) {
-      SDLoc DL(N);
-      SDValue X = N->getOperand(0);
-      // Put the shift first if we can fold a zext into the
-      // shift forming a slli.uw.
-      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-        SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
-                                  DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                           DAG.getConstant(Log2_64(Divisor - 1), DL, VT), Shl);
+  if (HasShlAdd) {
+    for (uint64_t Divisor : {3, 5, 9}) {
+      if (MulAmt % Divisor != 0)
+        continue;
+      uint64_t MulAmt2 = MulAmt / Divisor;
+      // 3/5/9 * 2^N ->  shl (shXadd X, X), N
+      if (isPowerOf2_64(MulAmt2)) {
+        SDLoc DL(N);
+        SDValue X = N->getOperand(0);
+        // Put the shift first if we can fold a zext into the
+        // shift forming a slli.uw.
+        if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
+            X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
+          SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
+                                    DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+          return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                             DAG.getConstant(Log2_64(Divisor - 1), DL, VT),
+                             Shl);
+        }
+        // Otherwise, put rhe shl second so that it can fold with following
+        // instructions (e.g. sext or add).
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(ISD::SHL, DL, VT, Mul359,
+                           DAG.getConstant(Log2_64(MulAmt2), DL, VT));
       }
-      // Otherwise, put rhe shl second so that it can fold with following
-      // instructions (e.g. sext or add).
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                         DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+
+      // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
+      if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
+        SDLoc DL(N);
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                           DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
+                           Mul359);
+      }
     }
 
-    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-    if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
-      SDLoc DL(N);
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
-                         Mul359);
+    // If this is a power 2 + 2/4/8, we can use a shift followed by a single
+    // shXadd. First check if this a sum of two power of 2s because that's
+    // easy. Then count how many zeros are up to the first bit.
+    if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+      unsigned ScaleShift = llvm::countr_zero(MulAmt);
+      if (ScaleShift >= 1 && ScaleShift < 4) {
+        unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                           DAG.getConstant(ScaleShift, DL, VT), Shift1);
+      }
+    }
+
+    // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
+    // This is the two instruction form, there are also three instruction
+    // variants we could implement.  e.g.
+    //   (2^(1,2,3) * 3,5,9 + 1) << C2
+    //   2^(C1>3) * 3,5,9 +/- 1
+    for (uint64_t Divisor : {3, 5, 9}) {
+      uint64_t C = MulAmt - 1;
+      if (C <= Divisor)
+        continue;
+      unsigned TZ = llvm::countr_zero(C);
+      if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
+        SDLoc DL(N);
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                           DAG.getConstant(TZ, DL, VT), X);
+      }
+    }
+
+    // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
+    if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
+      unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
+      if (ScaleShift >= 1 && ScaleShift < 4) {
+        unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+        return DAG.getNode(ISD::ADD, DL, VT, Shift1,
+                           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                       DAG.getConstant(ScaleShift, DL, VT), X));
+      }
+    }
+
+    // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
+    for (uint64_t Offset : {3, 5, 9}) {
+      if (isPowerOf2_64(MulAmt + Offset)) {
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X,
+                        DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
+        return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
+      }
     }
   }
 
-  // If this is a power 2 + 2/4/8, we can use a shift followed by a single
-  // shXadd. First check if this a sum of two power of 2s because that's
-  // easy. Then count how many zeros are up to the first bit.
-  if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
-    unsigned ScaleShift = llvm::countr_zero(MulAmt);
-    if (ScaleShift >= 1 && ScaleShift < 4) {
-      unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                         DAG.getConstant(ScaleShift, DL, VT), Shift1);
-    }
-  }
-
-  // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-  // This is the two instruction form, there are also three instruction
-  // variants we could implement.  e.g.
-  //   (2^(1,2,3) * 3,5,9 + 1) << C2
-  //   2^(C1>3) * 3,5,9 +/- 1
-  for (uint64_t Divisor : {3, 5, 9}) {
-    uint64_t C = MulAmt - 1;
-    if (C <= Divisor)
-      continue;
-    unsigned TZ = llvm::countr_zero(C);
-    if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
-      SDLoc DL(N);
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(TZ, DL, VT), X);
-    }
-  }
-
-  // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
-  if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
-    unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
-    if (ScaleShift >= 1 && ScaleShift < 4) {
-      unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
-                         DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                     DAG.getConstant(ScaleShift, DL, VT), X));
-    }
-  }
-
-  // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
-  for (uint64_t Offset : {3, 5, 9}) {
-    if (isPowerOf2_64(MulAmt + Offset)) {
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X,
-                      DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getConstant(Log2_64(Offset - 1), DL, VT),
-                                   X);
-      return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
-    }
+  // 2^N - 2^M -> (sub (shl X, C1), (shl X, C2))
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
+    uint64_t ShiftAmt1 = MulAmt + MulAmtLowBit;
+    SDLoc DL(N);
+    SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                 DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+    SDValue Shift2 =
+        DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                    DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
+    return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
   }
 
   return SDValue();
@@ -20909,6 +21045,26 @@ bool RISCVTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                      SDValue &Offset,
                                                      ISD::MemIndexedMode &AM,
                                                      SelectionDAG &DAG) const {
+  if (Subtarget.hasVendorXCVmem()) {
+    if (Op->getOpcode() != ISD::ADD)
+      return false;
+
+    if (LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(N))
+      Base = LS->getBasePtr();
+    else
+      return false;
+
+    if (Base == Op->getOperand(0))
+      Offset = Op->getOperand(1);
+    else if (Base == Op->getOperand(1))
+      Offset = Op->getOperand(0);
+    else
+      return false;
+
+    AM = ISD::POST_INC;
+    return true;
+  }
+
   EVT VT;
   SDValue Ptr;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
@@ -20988,14 +21144,13 @@ bool RISCVTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned)
 bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                  SDValue C) const {
   // Check integral scalar types.
-  const bool HasExtMOrZmmul =
-      Subtarget.hasStdExtM() || Subtarget.hasStdExtZmmul();
+  const bool HasZmmul = Subtarget.hasStdExtZmmul();
   if (!VT.isScalarInteger())
     return false;
 
   // Omit the optimization if the sub target has the M extension and the data
   // size exceeds XLen.
-  if (HasExtMOrZmmul && VT.getSizeInBits() > Subtarget.getXLen())
+  if (HasZmmul && VT.getSizeInBits() > Subtarget.getXLen())
     return false;
 
   if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
@@ -21630,7 +21785,7 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       Op == Instruction::And || Op == Instruction::Or ||
       Op == Instruction::Xor || Op == Instruction::InsertElement ||
       Op == Instruction::ShuffleVector || Op == Instruction::Load ||
-      Op == Instruction::Freeze)
+      Op == Instruction::Freeze || Op == Instruction::Store)
     return false;
 
   if (Inst.getType()->isScalableTy())

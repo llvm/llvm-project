@@ -6198,18 +6198,17 @@ public:
     // unless the assume-no-nested-parallelism flag has been specified.
     // OpenMP API runtime library calls do not inhibit parallel loop
     // translation, regardless of the assume-no-nested-parallelism.
-    if (C) {
-      bool IsOpenMPAPI = false;
-      auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
-      if (FD) {
-        std::string Name = FD->getNameInfo().getAsString();
-        IsOpenMPAPI = Name.find("omp_") == 0;
-      }
-      TeamsLoopCanBeParallelFor =
-          IsOpenMPAPI || SemaRef.getLangOpts().OpenMPNoNestedParallelism;
-      if (!TeamsLoopCanBeParallelFor)
-        return;
+    bool IsOpenMPAPI = false;
+    auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
+    if (FD) {
+      std::string Name = FD->getNameInfo().getAsString();
+      IsOpenMPAPI = Name.find("omp_") == 0;
     }
+    TeamsLoopCanBeParallelFor =
+        IsOpenMPAPI || SemaRef.getLangOpts().OpenMPNoNestedParallelism;
+    if (!TeamsLoopCanBeParallelFor)
+      return;
+
     for (const Stmt *Child : C->children())
       if (Child)
         Visit(Child);
@@ -13434,10 +13433,14 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
       auto I = CS->body_begin();
       while (I != CS->body_end()) {
         const auto *OED = dyn_cast<OMPExecutableDirective>(*I);
-        if (!OED || !isOpenMPTeamsDirective(OED->getDirectiveKind()) ||
-            OMPTeamsFound) {
-
+        bool IsTeams = OED && isOpenMPTeamsDirective(OED->getDirectiveKind());
+        if (!IsTeams || I != CS->body_begin()) {
           OMPTeamsFound = false;
+          if (IsTeams && I != CS->body_begin()) {
+            // This is the two teams case. Since the InnerTeamsRegionLoc will
+            // point to this second one reset the iterator to the other teams.
+            --I;
+          }
           break;
         }
         ++I;
@@ -24331,7 +24334,7 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
     Expr *Allocator, ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-    SourceLocation ColonLoc, SourceLocation LParenLoc, SourceLocation EndLoc) {
+    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc) {
   if (Allocator) {
     // OpenMP [2.11.4 allocate Clause, Description]
     // allocator is an expression of omp_allocator_handle_t type.

@@ -41,6 +41,7 @@ add_clang_library(clangTidyMiscModule
   UnusedParametersCheck.cpp
   UnusedUsingDeclsCheck.cpp
   UseAnonymousNamespaceCheck.cpp
+  UseInternalLinkageCheck.cpp
 
   LINK_LIBS
   clangTidy

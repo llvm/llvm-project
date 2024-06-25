@@ -7,7 +7,7 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx906"{{.*}}"-fcuda-is-device"{{.*}}
+// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fcuda-is-device"{{.*}}"-target-cpu" "gfx906"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
 // CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
@@ -63,6 +63,7 @@
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
+// CHECK-TARGET-ID: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-target-cpu" "gfx90a" "-target-feature" "-sramecc" "-target-feature" "+xnack"
 // CHECK-TARGET-ID: clang-offload-packager{{.*}}arch=gfx90a:sramecc-:xnack+,kind=openmp,feature=-sramecc,feature=+xnack
 
 // RUN: not %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a,gfx90a:xnack+ \

@@ -138,6 +138,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -324,9 +325,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0, OnlyFirstLaneUsed);
-
     Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
@@ -444,20 +442,20 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       return nullptr;
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination for exiting blocks now and
     // to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+
+    if (!getParent()->isExiting())
+      return CondBr;
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
   case VPInstruction::BranchOnCount: {
@@ -579,7 +577,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       // When loop is unrolled without vectorizing, retrieve UF - Offset.
       Res = State.get(getOperand(0), State.UF - Offset);
     }
-    Res->setName(Name);
+    if (isa<ExtractElementInst>(Res))
+      Res->setName(Name);
     return Res;
   }
   case VPInstruction::LogicalAnd: {
@@ -628,6 +627,7 @@ void VPInstruction::execute(VPTransformState &State) {
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
+  bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
@@ -636,6 +636,13 @@ void VPInstruction::execute(VPTransformState &State) {
         assert(GeneratedValue && "generatePerLane must produce a value");
         State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
+      continue;
+    }
+
+    if (Part != 0 && OnlyFirstPartUsed && hasResult()) {
+      Value *Part0 = State.get(this, 0, /*IsScalar*/ GeneratesPerFirstLaneOnly);
+      State.set(this, Part0, Part,
+                /*IsScalar*/ GeneratesPerFirstLaneOnly);
       continue;
     }
 
@@ -669,6 +676,25 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+    return true;
+  };
+  llvm_unreachable("switch should return");
+}
+
+bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+  case Instruction::Select:
+    return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
   llvm_unreachable("switch should return");

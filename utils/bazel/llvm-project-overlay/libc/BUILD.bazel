@@ -3399,7 +3399,7 @@ libc_function(
 
 libc_function(
     name = "printf",
-    srcs = ["src/stdio/printf.cpp"],
+    srcs = ["src/stdio/generic/printf.cpp"],
     hdrs = ["src/stdio/printf.h"],
     deps = [
         ":__support_arg_list",
@@ -3448,7 +3448,7 @@ libc_function(
 
 libc_function(
     name = "vprintf",
-    srcs = ["src/stdio/vprintf.cpp"],
+    srcs = ["src/stdio/generic/vprintf.cpp"],
     hdrs = ["src/stdio/vprintf.h"],
     deps = [
         ":__support_arg_list",

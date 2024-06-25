@@ -21,7 +21,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -378,20 +377,20 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-std::optional<Value> ForOp::getSingleInductionVar() {
-  return getInductionVar();
+std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
+  return SmallVector<Value>{getInductionVar()};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleLowerBound() {
-  return OpFoldResult(getLowerBound());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getLowerBound())};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleStep() {
-  return OpFoldResult(getStep());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getStep())};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleUpperBound() {
-  return OpFoldResult(getUpperBound());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
@@ -554,6 +553,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   scf::ForOp newLoop = rewriter.create<scf::ForOp>(
       getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {});
+  newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -1428,28 +1428,26 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
-std::optional<Value> ForallOp::getSingleInductionVar() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getInductionVar(0);
+std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleLowerBound() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedLowerBound()[0];
+// Get lower bounds as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopLowerBounds() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleUpperBound() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedUpperBound()[0];
+// Get upper bounds as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopUpperBounds() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleStep() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedStep()[0];
+// Get steps as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopSteps() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticStep(), getDynamicStep(), b);
 }
 
 ForallOp mlir::scf::getForallOpThreadIndexOwner(Value val) {
@@ -3008,28 +3006,20 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
-std::optional<Value> ParallelOp::getSingleInductionVar() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getBody()->getArgument(0);
+std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments()};
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleLowerBound() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getLowerBound()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopLowerBounds() {
+  return getLowerBound();
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleUpperBound() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getUpperBound()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopUpperBounds() {
+  return getUpperBound();
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleStep() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getStep()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopSteps() {
+  return getStep();
 }
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {

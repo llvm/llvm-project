@@ -509,8 +509,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   if (OutputXML || DryRun) {
     if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    else
-      outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
+    outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);

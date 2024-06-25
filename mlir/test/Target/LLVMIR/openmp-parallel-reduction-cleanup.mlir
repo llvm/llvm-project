@@ -55,11 +55,11 @@
 
 // Private reduction variable and its initialization.
 // CHECK: %tid.addr.local = alloca i32
-// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: %[[PRIV_PTR_I:.+]] = alloca ptr
+// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
+// CHECK: %[[MALLOC_I:.+]] = call ptr @malloc(i64 4)
 // CHECK: store ptr %[[MALLOC_I]], ptr %[[PRIV_PTR_I]]
 // CHECK: %[[MALLOC_J:.+]] = call ptr @malloc(i64 4)
-// CHECK: %[[PRIV_PTR_J:.+]] = alloca ptr
 // CHECK: store ptr %[[MALLOC_J]], ptr %[[PRIV_PTR_J]]
 
 // Call to the reduction function.

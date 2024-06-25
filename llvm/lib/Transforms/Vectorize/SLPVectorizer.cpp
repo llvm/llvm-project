@@ -983,6 +983,17 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
   }
 }
 
+/// \returns a bitset for selecting opcodes. false for Opcode0 and true for
+/// Opcode1.
+SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
+                               unsigned Opcode1) {
+  SmallBitVector OpcodeMask(VL.size(), false);
+  for (unsigned Lane : seq<unsigned>(VL.size()))
+    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
+      OpcodeMask.set(Lane);
+  return OpcodeMask;
+}
+
 namespace llvm {
 
 static void inversePermutation(ArrayRef<unsigned> Indices,
@@ -999,7 +1010,7 @@ static void reorderScalars(SmallVectorImpl<Value *> &Scalars,
                            ArrayRef<int> Mask) {
   assert(!Mask.empty() && "Expected non-empty mask.");
   SmallVector<Value *> Prev(Scalars.size(),
-                            UndefValue::get(Scalars.front()->getType()));
+                            PoisonValue::get(Scalars.front()->getType()));
   Prev.swap(Scalars);
   for (unsigned I = 0, E = Prev.size(); I < E; ++I)
     if (Mask[I] != PoisonMaskElem)
@@ -5093,11 +5104,7 @@ void BoUpSLP::reorderTopToBottom() {
           FixedVectorType::get(TE->Scalars[0]->getType(), TE->Scalars.size());
       unsigned Opcode0 = TE->getOpcode();
       unsigned Opcode1 = TE->getAltOpcode();
-      // The opcode mask selects between the two opcodes.
-      SmallBitVector OpcodeMask(TE->Scalars.size(), false);
-      for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size()))
-        if (cast<Instruction>(TE->Scalars[Lane])->getOpcode() == Opcode1)
-          OpcodeMask.set(Lane);
+      SmallBitVector OpcodeMask(getAltInstrMask(TE->Scalars, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
         VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
@@ -6009,11 +6016,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                                        ArrayRef<Value *> VL) const {
   unsigned Opcode0 = S.getOpcode();
   unsigned Opcode1 = S.getAltOpcode();
-  // The opcode mask selects between the two opcodes.
-  SmallBitVector OpcodeMask(VL.size(), false);
-  for (unsigned Lane : seq<unsigned>(0, VL.size()))
-    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
-      OpcodeMask.set(Lane);
+  SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
   // If this pattern is supported by the target then consider it profitable.
   if (TTI->isLegalAltInstr(FixedVectorType::get(S.MainOp->getType(), VL.size()),
                            Opcode0, Opcode1, OpcodeMask))
@@ -9060,17 +9063,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   if (!isValidElementType(ScalarTy))
     return InstructionCost::getInvalid();
-  auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
   auto It = MinBWs.find(E);
   Type *OrigScalarTy = ScalarTy;
-  if (It != MinBWs.end()) {
+  if (It != MinBWs.end())
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
-    VecTy = FixedVectorType::get(ScalarTy, VL.size());
-  }
+  auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = FixedVectorType::get(ScalarTy, EntryVF);
 
@@ -9746,11 +9747,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // order.
       unsigned Opcode0 = E->getOpcode();
       unsigned Opcode1 = E->getAltOpcode();
-      // The opcode mask selects between the two opcodes.
-      SmallBitVector OpcodeMask(E->Scalars.size(), false);
-      for (unsigned Lane : seq<unsigned>(0, E->Scalars.size()))
-        if (cast<Instruction>(E->Scalars[Lane])->getOpcode() == Opcode1)
-          OpcodeMask.set(Lane);
+      SmallBitVector OpcodeMask(getAltInstrMask(E->Scalars, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the
       // order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
@@ -17445,7 +17442,6 @@ public:
       // Iterate through all not-vectorized reduction values/extra arguments.
       bool InitStep = true;
       while (ExtraReductions.size() > 1) {
-        VectorizedTree = ExtraReductions.front().second;
         SmallVector<std::pair<Instruction *, Value *>> NewReds =
             FinalGen(ExtraReductions, InitStep);
         ExtraReductions.swap(NewReds);

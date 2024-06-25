@@ -90,12 +90,12 @@ llvm.func @caller() -> (i32) {
 
 // -----
 
-llvm.func @foo() -> (i32) attributes { passthrough = ["noinline"] } {
+llvm.func @foo() -> (i32) attributes { no_inline } {
   %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }
 
-llvm.func @bar() -> (i32) attributes { passthrough = ["noinline"] } {
+llvm.func @bar() -> (i32) attributes { no_inline } {
   %0 = llvm.mlir.constant(1 : i32) : i32
   llvm.return %0 : i32
 }
@@ -161,11 +161,7 @@ llvm.func @caller() {
 
 // -----
 
-llvm.func @callee_noinline() attributes { passthrough = ["noinline"] } {
-  llvm.return
-}
-
-llvm.func @callee_optnone() attributes { passthrough = ["optnone"] } {
+llvm.func @callee_noinline() attributes { no_inline } {
   llvm.return
 }
 
@@ -187,7 +183,6 @@ llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
 
 // CHECK-LABEL: llvm.func @caller
 // CHECK-NEXT: llvm.call @callee_noinline
-// CHECK-NEXT: llvm.call @callee_optnone
 // CHECK-NEXT: llvm.call @callee_noduplicate
 // CHECK-NEXT: llvm.call @callee_presplitcoroutine
 // CHECK-NEXT: llvm.call @callee_returns_twice
@@ -195,7 +190,6 @@ llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
 // CHECK-NEXT: llvm.return
 llvm.func @caller() {
   llvm.call @callee_noinline() : () -> ()
-  llvm.call @callee_optnone() : () -> ()
   llvm.call @callee_noduplicate() : () -> ()
   llvm.call @callee_presplitcoroutine() : () -> ()
   llvm.call @callee_returns_twice() : () -> ()

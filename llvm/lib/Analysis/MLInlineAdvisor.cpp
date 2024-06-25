@@ -14,6 +14,7 @@
 #include "llvm/Analysis/MLInlineAdvisor.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
@@ -23,6 +24,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -46,6 +48,17 @@ static cl::opt<bool>
     InteractiveIncludeDefault("inliner-interactive-include-default", cl::Hidden,
                               cl::desc(InclDefaultMsg));
 
+enum class SkipMLPolicyCriteria { Never, IfCallerIsNotCold };
+
+static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
+    "ml-inliner-skip-policy", cl::Hidden, cl::init(SkipMLPolicyCriteria::Never),
+    cl::values(clEnumValN(SkipMLPolicyCriteria::Never, "never", "never"),
+               clEnumValN(SkipMLPolicyCriteria::IfCallerIsNotCold,
+                          "if-caller-not-cold", "if the caller is not cold")));
+
+static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
+                                          cl::Hidden, cl::init(""));
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -63,7 +76,8 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   std::unique_ptr<MLModelRunner> AOTRunner;
   if (InteractiveChannelBaseName.empty())
     AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName);
+        M.getContext(), FeatureMap, DecisionName,
+        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   else {
     auto Features = FeatureMap;
     if (InteractiveIncludeDefault)
@@ -129,7 +143,8 @@ MLInlineAdvisor::MLInlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
       ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
-      InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
+      InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize),
+      PSI(MAM.getResult<ProfileSummaryAnalysis>(M)) {
   assert(ModelRunner);
   ModelRunner->switchContext("");
   // Extract the 'call site height' feature - the position of a call site
@@ -176,8 +191,8 @@ unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
   return CG.lookup(F) ? FunctionLevels.at(CG.lookup(F)) : 0;
 }
 
-void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
-  if (!LastSCC || ForceStop)
+void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
+  if (!CurSCC || ForceStop)
     return;
   FPICache.clear();
   // Function passes executed between InlinerPass runs may have changed the
@@ -224,15 +239,15 @@ void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *LastSCC) {
   // (Re)use NodesInLastSCC to remember the nodes in the SCC right now,
   // in case the SCC is split before onPassExit and some nodes are split out
   assert(NodesInLastSCC.empty());
-  for (const auto &N : *LastSCC)
+  for (const auto &N : *CurSCC)
     NodesInLastSCC.insert(&N);
 }
 
-void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
+void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *CurSCC) {
   // No need to keep this around - function passes will invalidate it.
   if (!KeepFPICache)
     FPICache.clear();
-  if (!LastSCC || ForceStop)
+  if (!CurSCC || ForceStop)
     return;
   // Keep track of the nodes and edges we last saw. Then, in onPassEntry,
   // we update the node count and edge count from the subset of these nodes that
@@ -248,7 +263,7 @@ void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
   }
 
   // Check on nodes that may have got added to SCC
-  for (const auto &N : *LastSCC) {
+  for (const auto &N : *CurSCC) {
     assert(!N.isDead());
     auto I = NodesInLastSCC.insert(&N);
     if (I.second)
@@ -334,6 +349,11 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &TIR = FAM.getResult<TargetIRAnalysis>(Callee);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
+  if (SkipPolicy == SkipMLPolicyCriteria::IfCallerIsNotCold) {
+    if (!PSI.isFunctionEntryCold(&Caller))
+      return std::make_unique<InlineAdvice>(this, CB, ORE,
+                                            GetDefaultAdvice(CB));
+  }
   auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal
   // state we need to track, so we can just return the base InlineAdvice, which
@@ -407,6 +427,10 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
       CalleeBefore.Uses;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_callee_avail_external) =
+      Callee.hasAvailableExternallyLinkage();
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
+      Caller.hasAvailableExternallyLinkage();
 
   // Add the cost features
   for (size_t I = 0;

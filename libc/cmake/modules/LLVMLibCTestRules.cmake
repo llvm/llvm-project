@@ -686,6 +686,15 @@ function(add_libc_hermetic_test test_name)
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
+  # TODO: currently the dependency chain is broken such that getauxval cannot properly
+  # propagate to hermetic tests. This is a temporary workaround.
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+    target_link_libraries(
+      ${fq_build_target_name}
+      PRIVATE
+        libc.src.sys.auxv.getauxval
+    )
+  endif()
 
   # Tests on the GPU require an external loader utility to launch the kernel.
   if(TARGET libc.utils.gpu.loader)

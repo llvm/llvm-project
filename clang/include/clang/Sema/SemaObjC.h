@@ -383,7 +383,7 @@ public:
   void AddAnyMethodToGlobalPool(Decl *D);
 
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
-  bool isObjCMethodDecl(Decl *D) { return D && isa<ObjCMethodDecl>(D); }
+  bool isObjCMethodDecl(Decl *D) { return isa_and_nonnull<ObjCMethodDecl>(D); }
 
   /// CheckImplementationIvars - This routine checks if the instance variables
   /// listed in the implelementation match those listed in the interface.
