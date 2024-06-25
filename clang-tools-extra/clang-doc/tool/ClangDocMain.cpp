@@ -167,7 +167,7 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
 
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-  llvm::sys::path::append(AssetsPath, "..", "share", "clang");
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
   llvm::SmallString<128> DefaultStylesheet;
   llvm::sys::path::native(AssetsPath, DefaultStylesheet);
   llvm::sys::path::append(DefaultStylesheet,
