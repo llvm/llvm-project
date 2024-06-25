@@ -1,6 +1,10 @@
+// Tests that AArch64 is able to instrument static binaries in relocation mode.
+
 REQUIRES: system-linux
 
 RUN: %clang %p/../Inputs/main.c -o %t -Wl,-q -static
-RUN: not llvm-bolt -instrument -instrumentation-sleep-time=1 %t -o %t.instr 2>&1 | FileCheck %s
+RUN: llvm-bolt -instrument -instrumentation-sleep-time=1 %t -o %t.instr 2>&1 | FileCheck %s
+RUN: llvm-nm -n %t.instr | FileCheck %s -check-prefix=CHECK-SYM
 
-CHECK: not implemented
+CHECK: BOLT-INFO: output linked against instrumentation runtime library
+CHECK-SYM: __bolt_fini_trampoline
