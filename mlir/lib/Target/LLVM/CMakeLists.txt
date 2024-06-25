@@ -32,6 +32,8 @@ endif()
 add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
+  OBJECT
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
@@ -108,6 +110,8 @@ endif()
 
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
+
+  OBJECT
 
   LINK_COMPONENTS
   MCParser

@@ -2519,12 +2519,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
-  case AMDGPU::ENTER_PSEUDO_WM:
-  case AMDGPU::EXIT_PSEUDO_WM: {
-    // These do nothing.
-    MI.eraseFromParent();
-    break;
-  }
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -3978,7 +3972,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .add(*Src1)
-                  .addImm(Imm);
+                  .addImm(Imm)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -3997,7 +3992,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4018,7 +4014,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src1)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4054,7 +4051,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .addImm(Src2Mods ? Src2Mods->getImm() : 0)
             .add(*Src2)
             .addImm(Clamp ? Clamp->getImm() : 0)
-            .addImm(Omod ? Omod->getImm() : 0);
+            .addImm(Omod ? Omod->getImm() : 0)
+            .setMIFlags(MI.getFlags());
   if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
     MIB.addImm(OpSel ? OpSel->getImm() : 0);
   updateLiveVariables(LV, MI, *MIB);
@@ -4486,45 +4484,45 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
                                            unsigned Op32) const {
   MachineBasicBlock *MBB = MI.getParent();
+
+  const MCInstrDesc &Op32Desc = get(Op32);
   MachineInstrBuilder Inst32 =
-    BuildMI(*MBB, MI, MI.getDebugLoc(), get(Op32))
+    BuildMI(*MBB, MI, MI.getDebugLoc(), Op32Desc)
     .setMIFlags(MI.getFlags());
 
   // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
   // For VOPC instructions, this is replaced by an implicit def of vcc.
-  if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::vdst)) {
-    // dst
-    Inst32.add(MI.getOperand(0));
-  } else if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::sdst)) {
-    // VOPCX instructions won't be writing to an explicit dst, so this should
-    // not fail for these instructions.
-    assert(((MI.getOperand(0).getReg() == AMDGPU::VCC) ||
-            (MI.getOperand(0).getReg() == AMDGPU::VCC_LO)) &&
-           "Unexpected case");
-  }
 
-  Inst32.add(*getNamedOperand(MI, AMDGPU::OpName::src0));
-
-  const MachineOperand *Src1 = getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Src1)
-    Inst32.add(*Src1);
+  // We assume the defs of the shrunk opcode are in the same order, and the
+  // shrunk opcode loses the last def (SGPR def, in the VOP3->VOPC case).
+  for (int I = 0, E = Op32Desc.getNumDefs(); I != E; ++I)
+    Inst32.add(MI.getOperand(I));
 
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
 
-  if (Src2) {
-    int Op32Src2Idx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2);
-    if (Op32Src2Idx != -1) {
-      Inst32.add(*Src2);
-    } else {
-      // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
-      // replaced with an implicit read of vcc or vcc_lo. The implicit read
-      // of vcc was already added during the initial BuildMI, but we
-      // 1) may need to change vcc to vcc_lo to preserve the original register
-      // 2) have to preserve the original flags.
-      fixImplicitOperands(*Inst32);
-      copyFlagsToImplicitVCC(*Inst32, *Src2);
+  int Idx = MI.getNumExplicitDefs();
+  for (const MachineOperand &Use : MI.explicit_uses()) {
+    int OpTy = MI.getDesc().operands()[Idx++].OperandType;
+    if (OpTy == AMDGPU::OPERAND_INPUT_MODS || OpTy == MCOI::OPERAND_IMMEDIATE)
+      continue;
+
+    if (&Use == Src2) {
+      if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::src2) == -1) {
+        // In the case of V_CNDMASK_B32_e32, the explicit operand src2 is
+        // replaced with an implicit read of vcc or vcc_lo. The implicit read
+        // of vcc was already added during the initial BuildMI, but we
+        // 1) may need to change vcc to vcc_lo to preserve the original register
+        // 2) have to preserve the original flags.
+        fixImplicitOperands(*Inst32);
+        copyFlagsToImplicitVCC(*Inst32, *Src2);
+        continue;
+      }
     }
+
+    Inst32.add(Use);
   }
+
+  // FIXME: Losing implicit operands
 
   return Inst32;
 }
@@ -5657,24 +5655,9 @@ unsigned SIInstrInfo::buildExtractSubReg(
   DebugLoc DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
-  if (SuperReg.getSubReg() == AMDGPU::NoSubRegister) {
-    BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-      .addReg(SuperReg.getReg(), 0, SubIdx);
-    return SubReg;
-  }
-
-  // Just in case the super register is itself a sub-register, copy it to a new
-  // value so we don't need to worry about merging its subreg index with the
-  // SubIdx passed to this function. The register coalescer should be able to
-  // eliminate this extra copy.
-  Register NewSuperReg = MRI.createVirtualRegister(SuperRC);
-
-  BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), NewSuperReg)
-    .addReg(SuperReg.getReg(), 0, SuperReg.getSubReg());
-
+  unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
   BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-    .addReg(NewSuperReg, 0, SubIdx);
-
+      .addReg(SuperReg.getReg(), 0, NewSubIdx);
   return SubReg;
 }
 
@@ -6437,8 +6420,13 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
 
   // Save SCC. Waterfall Loop may overwrite SCC.
   Register SaveSCCReg;
-  bool SCCNotDead = (MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI, 30) !=
-                     MachineBasicBlock::LQR_Dead);
+
+  // FIXME: We should maintain SCC liveness while doing the FixSGPRCopies walk
+  // rather than unlimited scan everywhere
+  bool SCCNotDead =
+      MBB.computeRegisterLiveness(TRI, AMDGPU::SCC, MI,
+                                  std::numeric_limits<unsigned>::max()) !=
+      MachineBasicBlock::LQR_Dead;
   if (SCCNotDead) {
     SaveSCCReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(MBB, Begin, DL, TII.get(AMDGPU::S_CSELECT_B32), SaveSCCReg)

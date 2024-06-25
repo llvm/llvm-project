@@ -194,8 +194,6 @@ public:
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
-  void createMemtagRelocs(MCAssembler &Asm);
-
   void writeSectionHeader(const MCAsmLayout &Layout,
                           const SectionIndexMapTy &SectionIndexMap,
                           const SectionOffsetsTy &SectionOffsets);
@@ -617,23 +615,6 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
   return true;
 }
 
-void ELFWriter::createMemtagRelocs(MCAssembler &Asm) {
-  MCSectionELF *MemtagRelocs = nullptr;
-  for (const MCSymbol &Sym : Asm.symbols()) {
-    const auto &SymE = cast<MCSymbolELF>(Sym);
-    if (!SymE.isMemtag())
-      continue;
-    if (MemtagRelocs == nullptr) {
-      MemtagRelocs = OWriter.TargetObjectWriter->getMemtagRelocsSection(Asm.getContext());
-      if (MemtagRelocs == nullptr)
-        report_fatal_error("Tagged globals are not available on this architecture.");
-      Asm.registerSection(*MemtagRelocs);
-    }
-    ELFRelocationEntry Rec(0, &SymE, ELF::R_AARCH64_NONE, 0, nullptr, 0);
-    OWriter.Relocations[MemtagRelocs].push_back(Rec);
-  }
-}
-
 void ELFWriter::computeSymbolTable(
     MCAssembler &Asm, const MCAsmLayout &Layout,
     const SectionIndexMapTy &SectionIndexMap, const RevGroupMapTy &RevGroupMap,
@@ -946,7 +927,7 @@ void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
 template <class uint>
 static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
   uint OffsetMask = 8, Offset = 0, Addend = 0;
-  uint32_t Symidx = 0, Type = 0;
+  uint32_t SymIdx = 0, Type = 0;
   // hdr & 4 indicates 3 flag bits in delta offset and flags members.
   for (const ELFRelocationEntry &Entry : Relocs)
     OffsetMask |= Entry.Offset;
@@ -958,8 +939,8 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
     // encode the remaining delta offset bits.
     auto DeltaOffset = static_cast<uint>((Entry.Offset - Offset) >> Shift);
     Offset = Entry.Offset;
-    uint32_t CurSymidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
-    uint8_t B = (DeltaOffset << 3) + (Symidx != CurSymidx) +
+    uint32_t CurSymIdx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+    uint8_t B = (DeltaOffset << 3) + (SymIdx != CurSymIdx) +
                 (Type != Entry.Type ? 2 : 0) + (Addend != Entry.Addend ? 4 : 0);
     if (DeltaOffset < 0x10) {
       OS << char(B);
@@ -969,8 +950,8 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &OS) {
     }
     // Delta symidx/type/addend members (SLEB128).
     if (B & 1) {
-      encodeSLEB128(static_cast<int32_t>(CurSymidx - Symidx), OS);
-      Symidx = CurSymidx;
+      encodeSLEB128(static_cast<int32_t>(CurSymIdx - SymIdx), OS);
+      SymIdx = CurSymIdx;
     }
     if (B & 2) {
       encodeSLEB128(static_cast<int32_t>(Entry.Type - Type), OS);
@@ -994,10 +975,10 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
 
   if (OWriter.TargetObjectWriter->getEMachine() == ELF::EM_MIPS) {
     for (const ELFRelocationEntry &Entry : Relocs) {
-      uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+      uint32_t SymIdx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
       if (is64Bit()) {
         write(Entry.Offset);
-        write(uint32_t(Symidx));
+        write(uint32_t(SymIdx));
         write(OWriter.TargetObjectWriter->getRSsym(Entry.Type));
         write(OWriter.TargetObjectWriter->getRType3(Entry.Type));
         write(OWriter.TargetObjectWriter->getRType2(Entry.Type));
@@ -1007,7 +988,7 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
       } else {
         write(uint32_t(Entry.Offset));
         ELF::Elf32_Rela ERE32;
-        ERE32.setSymbolAndType(Symidx, Entry.Type);
+        ERE32.setSymbolAndType(SymIdx, Entry.Type);
         write(ERE32.r_info);
         if (Rela)
           write(uint32_t(Entry.Addend));
@@ -1149,8 +1130,6 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
   MCSectionELF *StrtabSection =
       Ctx.getELFSection(".strtab", ELF::SHT_STRTAB, 0);
   StringTableIndex = addToSectionTable(StrtabSection);
-
-  createMemtagRelocs(Asm);
 
   RevGroupMapTy RevGroupMap;
   SectionIndexMapTy SectionIndexMap;

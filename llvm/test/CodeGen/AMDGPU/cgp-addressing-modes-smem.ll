@@ -297,9 +297,11 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:  .LBB5_1: ; %loop
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s3, s[0:1], -0x190
 ; GFX9-NEXT:    s_add_i32 s2, s2, -1
+; GFX9-NEXT:    s_add_u32 s4, s0, 0xfffffe70
+; GFX9-NEXT:    s_addc_u32 s5, s1, -1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_load_dword s3, s[4:5], 0x0
 ; GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-NEXT:    s_cbranch_scc1 .LBB5_1
 ; GFX9-NEXT:  ; %bb.2: ; %end
@@ -307,10 +309,14 @@ define amdgpu_cs void @test_sink_smem_offset_neg400(ptr addrspace(4) inreg %ptr,
 ;
 ; GFX12-LABEL: test_sink_smem_offset_neg400:
 ; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_movk_i32 s4, 0xfe70
+; GFX12-NEXT:    s_mov_b32 s5, -1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
 ; GFX12-NEXT:  .LBB5_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_load_b32 s3, s[0:1], -0x190
+; GFX12-NEXT:    s_load_b32 s3, s[0:1], 0x0
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0

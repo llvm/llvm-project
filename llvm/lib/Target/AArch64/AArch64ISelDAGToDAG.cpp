@@ -44,13 +44,11 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   const AArch64Subtarget *Subtarget;
 
 public:
-  static char ID;
-
   AArch64DAGToDAGISel() = delete;
 
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -507,11 +505,20 @@ private:
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
 };
+
+class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit AArch64DAGToDAGISelLegacy(AArch64TargetMachine &tm,
+                                     CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<AArch64DAGToDAGISel>(tm, OptLevel)) {}
+};
 } // end anonymous namespace
 
-char AArch64DAGToDAGISel::ID = 0;
+char AArch64DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -5717,6 +5724,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::aarch64_sve_ucvtf_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::UCVTF_4Z4Z_StoS);
       return;
+    case Intrinsic::aarch64_sve_fcvt_widen_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, false, AArch64::FCVT_2ZZ_H_S);
+      return;
+    case Intrinsic::aarch64_sve_fcvtl_widen_x2:
+      SelectUnaryMultiIntrinsic(Node, 2, false, AArch64::FCVTL_2ZZ_H_S);
+      return;
     case Intrinsic::aarch64_sve_sclamp_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
@@ -5738,6 +5751,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FCLAMP_VG2_2Z2Z_D}))
         SelectClamp(Node, 2, Op);
       return;
+    case Intrinsic::aarch64_sve_bfclamp_single_x2:
+      SelectClamp(Node, 2, AArch64::BFCLAMP_VG2_2ZZZ_H);
+      return;
     case Intrinsic::aarch64_sve_sclamp_single_x4:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
@@ -5758,6 +5774,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {0, AArch64::FCLAMP_VG4_4Z4Z_H, AArch64::FCLAMP_VG4_4Z4Z_S,
                AArch64::FCLAMP_VG4_4Z4Z_D}))
         SelectClamp(Node, 4, Op);
+      return;
+    case Intrinsic::aarch64_sve_bfclamp_single_x4:
+      SelectClamp(Node, 4, AArch64::BFCLAMP_VG4_4ZZZ_H);
       return;
     case Intrinsic::aarch64_sve_add_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
@@ -6855,7 +6874,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 /// AArch64-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
                                          CodeGenOptLevel OptLevel) {
-  return new AArch64DAGToDAGISel(TM, OptLevel);
+  return new AArch64DAGToDAGISelLegacy(TM, OptLevel);
 }
 
 /// When \p PredVT is a scalable vector predicate in the form

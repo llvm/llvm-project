@@ -92,7 +92,6 @@ class DebuggerAPITestCase(TestBase):
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
     @expectedFailureAll(
-        hostoslist=["windows"],
         remote=True,
         bugnumber="github.com/llvm/llvm-project/issues/92419",
     )

@@ -47,7 +47,8 @@ define i1 @ule_constexpr_null(ptr %x) {
 
 define i1 @slt_constexpr_null(ptr %x) {
 ; CHECK-LABEL: @slt_constexpr_null(
-; CHECK-NEXT:    ret i1 icmp slt (ptr @ugt_null_constexpr, ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr @ugt_null_constexpr, null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp slt ptr @ugt_null_constexpr, null
   ret i1 %cmp
@@ -57,7 +58,8 @@ define i1 @slt_constexpr_null(ptr %x) {
 
 define i1 @ult_constexpr_constexpr_one(ptr %x) {
 ; CHECK-LABEL: @ult_constexpr_constexpr_one(
-; CHECK-NEXT:    ret i1 icmp ugt (ptr inttoptr (i32 1 to ptr), ptr @ugt_null_constexpr)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr @ugt_null_constexpr, inttoptr (i32 1 to ptr)
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp ult ptr @ugt_null_constexpr, inttoptr (i32 1 to ptr)
   ret i1 %cmp
@@ -86,7 +88,8 @@ define i1 @global_ugt_null() {
 
 define i1 @global_sgt_null() {
 ; CHECK-LABEL: @global_sgt_null(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr @g, ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr @g, null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp sgt ptr @g, null
   ret i1 %cmp
@@ -95,7 +98,8 @@ define i1 @global_sgt_null() {
 ; Should not fold to true, as the gep computes a null value.
 define i1 @global_out_of_bounds_gep_ne_null() {
 ; CHECK-LABEL: @global_out_of_bounds_gep_ne_null(
-; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr (i8, ptr @g3, i64 sub (i64 0, i64 ptrtoint (ptr @g3 to i64))), ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr getelementptr (i8, ptr @g3, i64 sub (i64 0, i64 ptrtoint (ptr @g3 to i64))), null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp ne ptr getelementptr (i8, ptr @g3, i64 sub (i64 0, i64 ptrtoint (ptr @g3 to i64))), null
   ret i1 %cmp
@@ -121,7 +125,8 @@ define i1 @global_gep_ugt_null() {
 
 define i1 @global_gep_sgt_null() {
 ; CHECK-LABEL: @global_gep_sgt_null(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr getelementptr inbounds (i8, ptr @g, i64 8), ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 8), null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds [2 x i32], ptr @g, i64 1
   %cmp = icmp sgt ptr %gep, null
@@ -132,7 +137,8 @@ define i1 @global_gep_sgt_null() {
 ; are equal.
 define i1 @null_gep_ne_null() {
 ; CHECK-LABEL: @null_gep_ne_null(
-; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)
   %cmp = icmp ne ptr %gep, null
@@ -141,7 +147,8 @@ define i1 @null_gep_ne_null() {
 
 define i1 @null_gep_ugt_null() {
 ; CHECK-LABEL: @null_gep_ugt_null(
-; CHECK-NEXT:    ret i1 icmp ugt (ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)
   %cmp = icmp ugt ptr %gep, null
@@ -150,7 +157,8 @@ define i1 @null_gep_ugt_null() {
 
 define i1 @null_gep_sgt_null() {
 ; CHECK-LABEL: @null_gep_sgt_null(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), ptr null)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)), null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr i8, ptr null, i64 ptrtoint (ptr @g2_weak to i64)
   %cmp = icmp sgt ptr %gep, null
@@ -177,7 +185,8 @@ define i1 @null_gep_ugt_null_constant_int() {
 
 define i1 @null_gep_ne_global() {
 ; CHECK-LABEL: @null_gep_ne_global(
-; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g3 to i64)), ptr @g3)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g3 to i64)), @g3
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr i8, ptr null, i64 ptrtoint (ptr @g3 to i64)
   %cmp = icmp ne ptr %gep, @g3
@@ -186,7 +195,8 @@ define i1 @null_gep_ne_global() {
 
 define i1 @null_gep_ult_global() {
 ; CHECK-LABEL: @null_gep_ult_global(
-; CHECK-NEXT:    ret i1 icmp ult (ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g3 to i64)), ptr @g3)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr getelementptr (i8, ptr null, i64 ptrtoint (ptr @g3 to i64)), @g3
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr i8, ptr null, i64 ptrtoint (ptr @g3 to i64)
   %cmp = icmp ult ptr %gep, @g3
@@ -195,7 +205,8 @@ define i1 @null_gep_ult_global() {
 
 define i1 @null_gep_slt_global() {
 ; CHECK-LABEL: @null_gep_slt_global(
-; CHECK-NEXT:    ret i1 icmp slt (ptr getelementptr ([2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)), ptr @g)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr getelementptr ([2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)), @g
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr [2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)
   %cmp = icmp slt ptr %gep, @g
@@ -222,7 +233,8 @@ define i1 @global_gep_ugt_global() {
 
 define i1 @global_gep_sgt_global() {
 ; CHECK-LABEL: @global_gep_sgt_global(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr getelementptr inbounds (i8, ptr @g, i64 8), ptr @g)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 8), @g
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr inbounds [2 x i32], ptr @g, i64 1
   %cmp = icmp sgt ptr %gep, @g
@@ -232,7 +244,8 @@ define i1 @global_gep_sgt_global() {
 ; This should not fold to true, as the offset is negative.
 define i1 @global_gep_ugt_global_neg_offset() {
 ; CHECK-LABEL: @global_gep_ugt_global_neg_offset(
-; CHECK-NEXT:    ret i1 icmp ugt (ptr getelementptr (i8, ptr @g, i64 -8), ptr @g)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr getelementptr (i8, ptr @g, i64 -8), @g
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr [2 x i32], ptr @g, i64 -1
   %cmp = icmp ugt ptr %gep, @g
@@ -241,7 +254,8 @@ define i1 @global_gep_ugt_global_neg_offset() {
 
 define i1 @global_gep_sgt_global_neg_offset() {
 ; CHECK-LABEL: @global_gep_sgt_global_neg_offset(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr getelementptr (i8, ptr @g, i64 -8), ptr @g)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr (i8, ptr @g, i64 -8), @g
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr [2 x i32], ptr @g, i64 -1
   %cmp = icmp sgt ptr %gep, @g
@@ -260,7 +274,8 @@ define i1 @global_gep_ugt_global_gep() {
 ; Should not fold due to signed comparison.
 define i1 @global_gep_sgt_global_gep() {
 ; CHECK-LABEL: @global_gep_sgt_global_gep(
-; CHECK-NEXT:    ret i1 icmp sgt (ptr getelementptr inbounds (i8, ptr @g, i64 4), ptr @g)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt ptr getelementptr inbounds (i8, ptr @g, i64 4), @g
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep2 = getelementptr inbounds [2 x i32], ptr @g, i64 0, i64 1
   %cmp = icmp sgt ptr %gep2, @g
@@ -280,7 +295,8 @@ declare void @func()
 
 define i1 @global_no_cfi() {
 ; CHECK-LABEL: @global_no_cfi(
-; CHECK-NEXT:    ret i1 icmp eq (ptr @func, ptr no_cfi @func)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr @func, no_cfi @func
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr @func, no_cfi @func
   ret i1 %cmp
@@ -290,7 +306,8 @@ define i1 @blockaddr_no_cfi() {
 ; CHECK-LABEL: @blockaddr_no_cfi(
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    ret i1 icmp eq (ptr blockaddress(@blockaddr_no_cfi, [[BB]]), ptr no_cfi @func)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr blockaddress(@blockaddr_no_cfi, [[BB]]), no_cfi @func
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   br label %bb
 
@@ -301,7 +318,8 @@ bb:
 
 define i1 @global_no_cfi_dso_local_equivalent() {
 ; CHECK-LABEL: @global_no_cfi_dso_local_equivalent(
-; CHECK-NEXT:    ret i1 icmp eq (ptr dso_local_equivalent @func, ptr no_cfi @func)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr dso_local_equivalent @func, no_cfi @func
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp eq ptr dso_local_equivalent @func, no_cfi @func
   ret i1 %cmp

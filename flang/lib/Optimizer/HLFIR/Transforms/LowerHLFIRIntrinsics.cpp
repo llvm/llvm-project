@@ -486,7 +486,8 @@ public:
     // Pattern rewriting only requires that the resulting IR is still valid
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             module, std::move(patterns), config))) {

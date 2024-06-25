@@ -284,16 +284,6 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
-/// Extract the value profile data from \p Inst which is annotated with
-/// value profile meta data. Return false if there is no value data annotated,
-/// otherwise return true.
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue = false);
-
 /// Extract the value profile data from \p Inst and returns them if \p Inst is
 /// annotated with value profile data. Returns nullptr otherwise. It's similar
 /// to `getValueProfDataFromInst` above except that an array is allocated only
@@ -303,6 +293,13 @@ std::unique_ptr<InstrProfValueData[]>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
                          uint64_t &TotalC, bool GetNoICPValue = false);
+
+/// Extract the value profile data from \p Inst and returns them if \p Inst is
+/// annotated with value profile data. Returns an empty vector otherwise.
+SmallVector<InstrProfValueData, 4>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint64_t &TotalC,
+                         bool GetNoICPValue = false);
 
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
@@ -696,8 +693,7 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(MD5NameMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
-  AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
-                     AddrToMD5Map.end());
+  AddrToMD5Map.erase(llvm::unique(AddrToMD5Map), AddrToMD5Map.end());
   Sorted = true;
 }
 
@@ -729,23 +725,20 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
 }
 
 GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
-  if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
-    return Iter->second;
-  return nullptr;
+  return MD5VTableMap.lookup(MD5Hash);
 }
 
 // To store the sums of profile count values, or the percentage of
 // the sums of the total count values.
 struct CountSumOrPercent {
-  uint64_t NumEntries;
-  double CountSum;
-  double ValueCounts[IPVK_Last - IPVK_First + 1];
-  CountSumOrPercent() : NumEntries(0), CountSum(0.0f), ValueCounts() {}
+  uint64_t NumEntries = 0;
+  double CountSum = 0.0f;
+  std::array<double, IPVK_Last - IPVK_First + 1> ValueCounts = {};
+  CountSumOrPercent() = default;
   void reset() {
     NumEntries = 0;
     CountSum = 0.0f;
-    for (double &VC : ValueCounts)
-      VC = 0.0f;
+    ValueCounts.fill(0.0f);
   }
 };
 
@@ -761,15 +754,13 @@ struct OverlapStats {
   CountSumOrPercent Mismatch;
   CountSumOrPercent Unique;
   OverlapStatsLevel Level;
-  const std::string *BaseFilename;
-  const std::string *TestFilename;
+  const std::string *BaseFilename = nullptr;
+  const std::string *TestFilename = nullptr;
   StringRef FuncName;
-  uint64_t FuncHash;
-  bool Valid;
+  uint64_t FuncHash = 0;
+  bool Valid = false;
 
-  OverlapStats(OverlapStatsLevel L = ProgramLevel)
-      : Level(L), BaseFilename(nullptr), TestFilename(nullptr), FuncHash(0),
-        Valid(false) {}
+  OverlapStats(OverlapStatsLevel L = ProgramLevel) : Level(L) {}
 
   void dump(raw_fd_ostream &OS) const;
 
@@ -800,19 +791,19 @@ struct OverlapFuncFilters {
 
 struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
-  std::list<InstrProfValueData> ValueData;
+  std::vector<InstrProfValueData> ValueData;
 
-  InstrProfValueSiteRecord() { ValueData.clear(); }
+  InstrProfValueSiteRecord() = default;
   template <class InputIterator>
   InstrProfValueSiteRecord(InputIterator F, InputIterator L)
       : ValueData(F, L) {}
 
   /// Sort ValueData ascending by Value
   void sortByTargetValues() {
-    ValueData.sort(
-        [](const InstrProfValueData &left, const InstrProfValueData &right) {
-          return left.Value < right.Value;
-        });
+    llvm::sort(ValueData,
+               [](const InstrProfValueData &L, const InstrProfValueData &R) {
+                 return L.Value < R.Value;
+               });
   }
   /// Sort ValueData Descending by Count
   inline void sortByCount();
@@ -869,28 +860,15 @@ struct InstrProfRecord {
   /// Return the total number of ValueData for ValueKind.
   inline uint32_t getNumValueData(uint32_t ValueKind) const;
 
-  /// Return the number of value data collected for ValueKind at profiling
-  /// site: Site.
-  inline uint32_t getNumValueDataForSite(uint32_t ValueKind,
-                                         uint32_t Site) const;
-
-  /// Return the array of profiled values at \p Site. If \p TotalC
-  /// is not null, the total count of all target values at this site
-  /// will be stored in \c *TotalC.
-  inline std::unique_ptr<InstrProfValueData[]>
-  getValueForSite(uint32_t ValueKind, uint32_t Site,
-                  uint64_t *TotalC = nullptr) const;
-
-  /// Get the target value/counts of kind \p ValueKind collected at site
-  /// \p Site and store the result in array \p Dest. Return the total
-  /// counts of all target values at this site.
-  inline uint64_t getValueForSite(InstrProfValueData Dest[], uint32_t ValueKind,
-                                  uint32_t Site) const;
+  /// Return the array of profiled values at \p Site.
+  inline ArrayRef<InstrProfValueData> getValueArrayForSite(uint32_t ValueKind,
+                                                           uint32_t Site) const;
 
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
 
-  /// Add ValueData for ValueKind at value Site.
+  /// Add ValueData for ValueKind at value Site.  We do not support adding sites
+  /// out of order.  Site must go up from 0 one by one.
   void addValueData(uint32_t ValueKind, uint32_t Site,
                     InstrProfValueData *VData, uint32_t N,
                     InstrProfSymtab *SymTab);
@@ -957,11 +935,8 @@ struct InstrProfRecord {
   }
 
 private:
-  struct ValueProfData {
-    std::vector<InstrProfValueSiteRecord> IndirectCallSites;
-    std::vector<InstrProfValueSiteRecord> MemOPSizes;
-    std::vector<InstrProfValueSiteRecord> VTableTargets;
-  };
+  using ValueProfData = std::array<std::vector<InstrProfValueSiteRecord>,
+                                   IPVK_Last - IPVK_First + 1>;
   std::unique_ptr<ValueProfData> ValueData;
 
   MutableArrayRef<InstrProfValueSiteRecord>
@@ -978,32 +953,18 @@ private:
   getValueSitesForKind(uint32_t ValueKind) const {
     if (!ValueData)
       return std::nullopt;
-    switch (ValueKind) {
-    case IPVK_IndirectCallTarget:
-      return ValueData->IndirectCallSites;
-    case IPVK_MemOPSize:
-      return ValueData->MemOPSizes;
-    case IPVK_VTableTarget:
-      return ValueData->VTableTargets;
-    default:
-      llvm_unreachable("Unknown value kind!");
-    }
+    assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
+           "Unknown value kind!");
+    return (*ValueData)[ValueKind - IPVK_First];
   }
 
   std::vector<InstrProfValueSiteRecord> &
   getOrCreateValueSitesForKind(uint32_t ValueKind) {
     if (!ValueData)
       ValueData = std::make_unique<ValueProfData>();
-    switch (ValueKind) {
-    case IPVK_IndirectCallTarget:
-      return ValueData->IndirectCallSites;
-    case IPVK_MemOPSize:
-      return ValueData->MemOPSizes;
-    case IPVK_VTableTarget:
-      return ValueData->VTableTargets;
-    default:
-      llvm_unreachable("Unknown value kind!");
-    }
+    assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
+           "Unknown value kind!");
+    return (*ValueData)[ValueKind - IPVK_First];
   }
 
   // Map indirect call target name hash to name string.
@@ -1064,40 +1025,9 @@ uint32_t InstrProfRecord::getNumValueSites(uint32_t ValueKind) const {
   return getValueSitesForKind(ValueKind).size();
 }
 
-uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
-                                                 uint32_t Site) const {
-  return getValueSitesForKind(ValueKind)[Site].ValueData.size();
-}
-
-std::unique_ptr<InstrProfValueData[]>
-InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site,
-                                 uint64_t *TotalC) const {
-  uint64_t Dummy = 0;
-  uint64_t &TotalCount = (TotalC == nullptr ? Dummy : *TotalC);
-  uint32_t N = getNumValueDataForSite(ValueKind, Site);
-  if (N == 0) {
-    TotalCount = 0;
-    return std::unique_ptr<InstrProfValueData[]>(nullptr);
-  }
-
-  auto VD = std::make_unique<InstrProfValueData[]>(N);
-  TotalCount = getValueForSite(VD.get(), ValueKind, Site);
-
-  return VD;
-}
-
-uint64_t InstrProfRecord::getValueForSite(InstrProfValueData Dest[],
-                                          uint32_t ValueKind,
-                                          uint32_t Site) const {
-  uint32_t I = 0;
-  uint64_t TotalCount = 0;
-  for (auto V : getValueSitesForKind(ValueKind)[Site].ValueData) {
-    Dest[I].Value = V.Value;
-    Dest[I].Count = V.Count;
-    TotalCount = SaturatingAdd(TotalCount, V.Count);
-    I++;
-  }
-  return TotalCount;
+ArrayRef<InstrProfValueData>
+InstrProfRecord::getValueArrayForSite(uint32_t ValueKind, uint32_t Site) const {
+  return getValueSitesForKind(ValueKind)[Site].ValueData;
 }
 
 void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
@@ -1111,9 +1041,9 @@ void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
 #include "llvm/ProfileData/InstrProfData.inc"
 
 void InstrProfValueSiteRecord::sortByCount() {
-  ValueData.sort(
-      [](const InstrProfValueData &left, const InstrProfValueData &right) {
-        return left.Count > right.Count;
+  llvm::stable_sort(
+      ValueData, [](const InstrProfValueData &L, const InstrProfValueData &R) {
+        return L.Count > R.Count;
       });
   // Now truncate
   size_t max_s = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
@@ -1170,7 +1100,7 @@ enum ProfVersion {
   Version10 = 10,
   // An additional field is used for bitmap bytes.
   Version11 = 11,
-  // VTable profiling,
+  // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
   // The current version is 12.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
@@ -1211,6 +1141,10 @@ struct Header {
   // Returns the size of the header in bytes for all valid fields based on the
   // version. I.e a older version header will return a smaller size.
   size_t size() const;
+
+  // Return the indexed profile version, i.e., the least significant 32 bits
+  // in Header.Version.
+  uint64_t getIndexedProfileVersion() const;
 };
 
 // Profile summary data recorded in the profile data file in indexed

@@ -5608,7 +5608,7 @@ static void prepareIndirectCall(SelectionDAG &DAG, SDValue &Callee,
                                 const SDLoc &dl) {
   SDValue MTCTROps[] = {Chain, Callee, Glue};
   EVT ReturnTypes[] = {MVT::Other, MVT::Glue};
-  Chain = DAG.getNode(PPCISD::MTCTR, dl, ArrayRef(ReturnTypes, 2),
+  Chain = DAG.getNode(PPCISD::MTCTR, dl, ReturnTypes,
                       ArrayRef(MTCTROps, Glue.getNode() ? 3 : 2));
   // The glue is the second value produced.
   Glue = Chain.getValue(1);
@@ -6855,7 +6855,9 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
       State.getMachineFunction().getSubtarget());
   const bool IsPPC64 = Subtarget.isPPC64();
-  const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
+  const unsigned PtrSize = IsPPC64 ? 8 : 4;
+  const Align PtrAlign(PtrSize);
+  const Align StackAlign(16);
   const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
 
   if (ValVT == MVT::f128)
@@ -6876,12 +6878,16 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                                  PPC::V6,  PPC::V7,  PPC::V8,  PPC::V9,
                                  PPC::V10, PPC::V11, PPC::V12, PPC::V13};
 
+  const ArrayRef<MCPhysReg> GPRs = IsPPC64 ? GPR_64 : GPR_32;
+
   if (ArgFlags.isByVal()) {
-    if (ArgFlags.getNonZeroByValAlign() > PtrAlign)
+    const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
+    if (ByValAlign > StackAlign)
       report_fatal_error("Pass-by-value arguments with alignment greater than "
-                         "register width are not supported.");
+                         "16 are not supported.");
 
     const unsigned ByValSize = ArgFlags.getByValSize();
+    const Align ObjAlign = ByValAlign > PtrAlign ? ByValAlign : PtrAlign;
 
     // An empty aggregate parameter takes up no storage and no registers,
     // but needs a MemLoc for a stack slot for the formal arguments side.
@@ -6891,11 +6897,23 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
     }
 
-    const unsigned StackSize = alignTo(ByValSize, PtrAlign);
-    unsigned Offset = State.AllocateStack(StackSize, PtrAlign);
-    for (const unsigned E = Offset + StackSize; Offset < E;
-         Offset += PtrAlign.value()) {
-      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32))
+    // Shadow allocate any registers that are not properly aligned.
+    unsigned NextReg = State.getFirstUnallocated(GPRs);
+    while (NextReg != GPRs.size() &&
+           !isGPRShadowAligned(GPRs[NextReg], ObjAlign)) {
+      // Shadow allocate next registers since its aligment is not strict enough.
+      unsigned Reg = State.AllocateReg(GPRs);
+      // Allocate the stack space shadowed by said register.
+      State.AllocateStack(PtrSize, PtrAlign);
+      assert(Reg && "Alocating register unexpectedly failed.");
+      (void)Reg;
+      NextReg = State.getFirstUnallocated(GPRs);
+    }
+
+    const unsigned StackSize = alignTo(ByValSize, ObjAlign);
+    unsigned Offset = State.AllocateStack(StackSize, ObjAlign);
+    for (const unsigned E = Offset + StackSize; Offset < E; Offset += PtrSize) {
+      if (unsigned Reg = State.AllocateReg(GPRs))
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
       else {
         State.addLoc(CCValAssign::getMem(ValNo, MVT::INVALID_SIMPLE_VALUE_TYPE,
@@ -6917,12 +6935,12 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     [[fallthrough]];
   case MVT::i1:
   case MVT::i32: {
-    const unsigned Offset = State.AllocateStack(PtrAlign.value(), PtrAlign);
+    const unsigned Offset = State.AllocateStack(PtrSize, PtrAlign);
     // AIX integer arguments are always passed in register width.
     if (ValVT.getFixedSizeInBits() < RegVT.getFixedSizeInBits())
       LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
                                   : CCValAssign::LocInfo::ZExt;
-    if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32))
+    if (unsigned Reg = State.AllocateReg(GPRs))
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
     else
       State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, RegVT, LocInfo));
@@ -6942,8 +6960,8 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, FReg, LocVT, LocInfo));
 
     // Reserve and initialize GPRs or initialize the PSA as required.
-    for (unsigned I = 0; I < StoreSize; I += PtrAlign.value()) {
-      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
+    for (unsigned I = 0; I < StoreSize; I += PtrSize) {
+      if (unsigned Reg = State.AllocateReg(GPRs)) {
         assert(FReg && "An FPR should be available when a GPR is reserved.");
         if (State.isVarArg()) {
           // Successfully reserved GPRs are only initialized for vararg calls.
@@ -6994,9 +7012,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
       return false;
     }
-
-    const unsigned PtrSize = IsPPC64 ? 8 : 4;
-    ArrayRef<MCPhysReg> GPRs = IsPPC64 ? GPR_64 : GPR_32;
 
     unsigned NextRegIndex = State.getFirstUnallocated(GPRs);
     // Burn any underaligned registers and their shadowed stack space until
@@ -7346,9 +7361,6 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
       const MCPhysReg ArgReg = VA.getLocReg();
       const PPCFrameLowering *FL = Subtarget.getFrameLowering();
-
-      if (Flags.getNonZeroByValAlign() > PtrByteSize)
-        report_fatal_error("Over aligned byvals not supported yet.");
 
       const unsigned StackSize = alignTo(Flags.getByValSize(), PtrByteSize);
       const int FI = MF.getFrameInfo().CreateFixedObject(
@@ -9460,7 +9472,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // double. This is to exploit the XXSPLTIDP instruction.
   // If we lose precision, we use XXSPLTI32DX.
   if (BVNIsConstantSplat && (SplatBitSize == 64) &&
-      Subtarget.hasPrefixInstrs()) {
+      Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     // Check the type first to short-circuit so we don't modify APSplatBits if
     // this block isn't executed.
     if ((Op->getValueType(0) == MVT::v2f64) &&
@@ -9605,11 +9617,11 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // with 4-byte splats. We replicate the SplatBits in case of 2-byte splat to
   // make a 4-byte splat element. For example: 2-byte splat of 0xABAB can be
   // turned into a 4-byte splat of 0xABABABAB.
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 2)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 2)
     return getCanonicalConstSplat(SplatBits | (SplatBits << 16), SplatSize * 2,
                                   Op.getValueType(), DAG, dl);
 
-  if (Subtarget.hasPrefixInstrs() && SplatSize == 4)
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector() && SplatSize == 4)
     return getCanonicalConstSplat(SplatBits, SplatSize, Op.getValueType(), DAG,
                                   dl);
 
@@ -10242,7 +10254,7 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
   }
 
-  if (Subtarget.hasPrefixInstrs()) {
+  if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
     SDValue SplatInsertNode;
     if ((SplatInsertNode = lowerToXXSPLTI32DX(SVOp, DAG)))
       return SplatInsertNode;
@@ -10925,10 +10937,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::ppc_mma_disassemble_acc: {
     if (Subtarget.isISAFuture()) {
       EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
-      SDValue WideVec = SDValue(DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl,
-                                                   ArrayRef(ReturnTypes, 2),
-                                                   Op.getOperand(1)),
-                                0);
+      SDValue WideVec =
+          SDValue(DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes,
+                                     Op.getOperand(1)),
+                  0);
       SmallVector<SDValue, 4> RetOps;
       SDValue Value = SDValue(WideVec.getNode(), 0);
       SDValue Value2 = SDValue(WideVec.getNode(), 1);
@@ -11597,7 +11609,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     if (Subtarget.isISAFuture()) {
       EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
       MachineSDNode *ExtNode = DAG.getMachineNode(
-          PPC::DMXXEXTFDMR512, dl, ArrayRef(ReturnTypes, 2), Op.getOperand(1));
+          PPC::DMXXEXTFDMR512, dl, ReturnTypes, Op.getOperand(1));
 
       Value = SDValue(ExtNode, 0);
       Value2 = SDValue(ExtNode, 1);
@@ -17730,7 +17742,7 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   case MVT::f32:
   case MVT::f64: {
-    if (Subtarget.hasPrefixInstrs()) {
+    if (Subtarget.hasPrefixInstrs() && Subtarget.hasP10Vector()) {
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
       return true;
     }
@@ -18314,11 +18326,12 @@ unsigned PPCTargetLowering::computeMOFlags(const SDNode *Parent, SDValue N,
   // Compute subtarget flags.
   if (!Subtarget.hasP9Vector())
     FlagSet |= PPC::MOF_SubtargetBeforeP9;
-  else {
+  else
     FlagSet |= PPC::MOF_SubtargetP9;
-    if (Subtarget.hasPrefixInstrs())
-      FlagSet |= PPC::MOF_SubtargetP10;
-  }
+
+  if (Subtarget.hasPrefixInstrs())
+    FlagSet |= PPC::MOF_SubtargetP10;
+
   if (Subtarget.hasSPE())
     FlagSet |= PPC::MOF_SubtargetSPE;
 

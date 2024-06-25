@@ -229,6 +229,9 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
     UserConfigDir = static_cast<std::string>(P);
   }
 #endif
+
+  // Compute the path to the resource directory.
+  ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -245,24 +248,6 @@ void Driver::setDriverMode(StringRef Value) {
     Mode = *M;
   else
     Diag(diag::err_drv_unsupported_option_argument) << OptName << Value;
-}
-
-void Driver::setResourceDirectory() {
-  // Compute the path to the resource directory, depending on the driver mode.
-  switch (Mode) {
-  case GCCMode:
-  case GXXMode:
-  case CPPMode:
-  case CLMode:
-  case DXCMode:
-    ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
-    break;
-  case FlangMode:
-    SmallString<64> customResourcePathRelativeToDriver{".."};
-    ResourceDir =
-        GetResourcesPath(ClangExecutable, customResourcePathRelativeToDriver);
-    break;
-  }
 }
 
 InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
@@ -1217,7 +1202,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (!DriverMode.empty())
     setDriverMode(DriverMode);
 
-  setResourceDirectory();
   // FIXME: What are we going to do with -V and -b?
 
   // Arguments specified in command line.
@@ -1270,6 +1254,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
     if (VFS->setCurrentWorkingDirectory(WD->getValue()))
       Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
+
+  // Check for missing include directories.
+  if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
+    for (auto IncludeDir : Args.getAllArgValues(options::OPT_I_Group)) {
+      if (!VFS->exists(IncludeDir))
+        Diag(diag::warn_missing_include_dirs) << IncludeDir;
+    }
+  }
 
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
@@ -4587,6 +4579,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     for (const ToolChain *TC : ToolChains)
       for (StringRef Arch : getOffloadArchs(C, Args, Kind, TC))
         TCAndArchs.push_back(std::make_pair(TC, Arch));
+    llvm::sort(TCAndArchs, llvm::less_second());
 
     for (unsigned I = 0, E = TCAndArchs.size(); I != E; ++I)
       DeviceActions.push_back(C.MakeAction<InputAction>(*InputArg, InputType));

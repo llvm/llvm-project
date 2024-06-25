@@ -1158,7 +1158,6 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.makeNonNegative();
       }
 
-      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       break;
     }
 
@@ -2055,8 +2054,6 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
 
   // Check whether we can determine known bits from context such as assumes.
   computeKnownBitsFromContext(V, Known, Depth, Q);
-
-  assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 }
 
 /// Try to detect a recurrence that the value of the induction variable is
@@ -2296,8 +2293,11 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   if (const Instruction *I = dyn_cast<Instruction>(GEP))
     F = I->getFunction();
 
-  if (!GEP->isInBounds() ||
-      NullPointerIsDefined(F, GEP->getPointerAddressSpace()))
+  // If the gep is nuw or inbounds with invalid null pointer, then the GEP
+  // may be null iff the base pointer is null and the offset is zero.
+  if (!GEP->hasNoUnsignedWrap() &&
+      !(GEP->isInBounds() &&
+        !NullPointerIsDefined(F, GEP->getPointerAddressSpace())))
     return false;
 
   // FIXME: Support vector-GEPs.
@@ -3139,6 +3139,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
       }
       return true;
     }
+
+    // Constant ptrauth can be null, iff the base pointer can be.
+    if (auto *CPA = dyn_cast<ConstantPtrAuth>(V))
+      return isKnownNonZero(CPA->getPointer(), DemandedElts, Q, Depth);
 
     // A global variable in address space 0 is non null unless extern weak
     // or an absolute symbol reference. Other address spaces may have null as a
@@ -7292,10 +7296,13 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
-      return (!includesUndef(Kind) ? !C->containsPoisonElement()
-                                   : !C->containsUndefOrPoisonElement()) &&
-             !C->containsConstantExpression();
+    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C)) {
+      if (includesUndef(Kind) && C->containsUndefElement())
+        return false;
+      if (includesPoison(Kind) && C->containsPoisonElement())
+        return false;
+      return !C->containsConstantExpression();
+    }
   }
 
   // Strip cast operations from a pointer value.
@@ -8170,6 +8177,28 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
                         match(Y, m_Sub(m_Specific(B), m_Specific(A))))) ||
          (NeedNSW && (match(X, m_NSWSub(m_Value(A), m_Value(B))) &&
                        match(Y, m_NSWSub(m_Specific(B), m_Specific(A)))));
+}
+
+bool llvm::isKnownInversion(const Value *X, const Value *Y) {
+  // Handle X = icmp pred A, B, Y = icmp pred A, C.
+  Value *A, *B, *C;
+  ICmpInst::Predicate Pred1, Pred2;
+  if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
+      !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
+    return false;
+
+  if (B == C)
+    return Pred1 == ICmpInst::getInversePredicate(Pred2);
+
+  // Try to infer the relationship from constant ranges.
+  const APInt *RHSC1, *RHSC2;
+  if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
+  const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
+
+  return CR1.inverse() == CR2;
 }
 
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
@@ -9364,6 +9393,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
+                                      APInt(Width, 2));
   default:
     break;
   }

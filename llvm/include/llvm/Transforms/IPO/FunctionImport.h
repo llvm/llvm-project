@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -32,8 +33,12 @@ class Module;
 class FunctionImporter {
 public:
   /// The functions to import from a source module and their import type.
+  /// Note we choose unordered_map over (Small)DenseMap. The number of imports
+  /// from a source module could be small but DenseMap size grows to 64 quickly
+  /// and not memory efficient (see
+  /// https://llvm.org/docs/ProgrammersManual.html#llvm-adt-densemap-h)
   using FunctionsToImportTy =
-      DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
+      std::unordered_map<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -212,15 +217,11 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
-///
-/// \p DecSummaries will be popluated with the subset of of summary pointers
-/// that have 'declaration' import type among all summaries the module need.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    GVSummaryPtrSet &DecSummaries);
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(

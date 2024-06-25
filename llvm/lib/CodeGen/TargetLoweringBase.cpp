@@ -141,6 +141,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F128, "exp10f128");
     setLibcallName(RTLIB::SIN_F128, "sinf128");
     setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::TAN_F128, "tanf128");
     setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
     setLibcallName(RTLIB::POW_F128, "powf128");
     setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
@@ -937,6 +938,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}, VT,
                        Expand);
 
+    // [US]CMP default to expand
+    setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
+
     // Halving adds
     setOperationAction(
         {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
@@ -960,7 +964,7 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -1015,9 +1019,11 @@ void TargetLoweringBase::initActions() {
   setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
                       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
                       ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN},
+                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN,
+                      ISD::FTAN},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
+  setOperationAction(ISD::FTAN, MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 
@@ -1035,6 +1041,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPMODE, VT, Expand);
   }
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
+
+  // This one by default will call __clear_cache unless the target
+  // wants something different.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1430,9 +1440,6 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 /// this allows us to compute derived properties we expose.
 void TargetLoweringBase::computeRegisterProperties(
     const TargetRegisterInfo *TRI) {
-  static_assert(MVT::VALUETYPE_SIZE <= MVT::MAX_ALLOWED_VALUETYPE,
-                "Too many value types for ValueTypeActions to hold!");
-
   // Everything defaults to needing one register.
   for (unsigned i = 0; i != MVT::VALUETYPE_SIZE; ++i) {
     NumRegistersForVT[i] = 1;

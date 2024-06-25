@@ -104,6 +104,13 @@ class sme2_move_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, Re
   let usesCustomInserter = 1;
 }
 
+class sem2p1_zero_matrix_pseudo<string name, Operand index_ty, SMEMatrixTypeEnum za_flag>
+    : SMEPseudo2Instr<name, 0>,
+      Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, index_ty:$imm), []> {
+  let SMEMatrixType = za_flag;
+  let usesCustomInserter = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -189,6 +196,9 @@ class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand 
     : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
           (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
 
+class SME2_Zero_Matrix_Pat<string name, SDPatternOperator intrinsic, Operand offset_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset))),
+    (!cast<Instruction>(name) $base, $offset)>; 
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -4815,39 +4825,57 @@ class sme2p1_zero_matrix<bits<6> opc, Operand index_ty, string mnemonic,
 }
 
 multiclass sme2p1_zero_matrix<string mnemonic> {
-  def _VG2_Z : sme2p1_zero_matrix<{0b000,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx2"> {
+  def _VG2_Z : sme2p1_zero_matrix<{0b000,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_Z , 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _2Z : sme2p1_zero_matrix<{0b001,?,?,?}, uimm3s2range, mnemonic> {
+  def _2Z : sme2p1_zero_matrix<{0b001,?,?,?}, uimm3s2range, mnemonic>, SMEPseudo2Instr<NAME # _2Z, 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _VG2_2Z : sme2p1_zero_matrix<{0b0100,?,?}, uimm2s2range, mnemonic, "vgx2"> {
+  def _VG2_2Z : sme2p1_zero_matrix<{0b0100,?,?}, uimm2s2range, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_2Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG4_2Z : sme2p1_zero_matrix<{0b0110,?,?}, uimm2s2range, mnemonic, "vgx4"> {
+  def _VG4_2Z : sme2p1_zero_matrix<{0b0110,?,?}, uimm2s2range, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_2Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG4_Z : sme2p1_zero_matrix<{0b100,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx4"> {
+  def _VG4_Z : sme2p1_zero_matrix<{0b100,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_Z, 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _4Z : sme2p1_zero_matrix<{0b1010,?,?}, uimm2s4range, mnemonic> {
+  def _4Z : sme2p1_zero_matrix<{0b1010,?,?}, uimm2s4range, mnemonic>, SMEPseudo2Instr<NAME # _4Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG2_4Z :sme2p1_zero_matrix<{0b11000,?}, uimm1s4range, mnemonic, "vgx2"> {
+  def _VG2_4Z : sme2p1_zero_matrix<{0b11000,?}, uimm1s4range, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_4Z, 1> {
     bits<1> imm;
     let Inst{0}   = imm;
   }
-  def _VG4_4Z :sme2p1_zero_matrix<{0b11100,?}, uimm1s4range, mnemonic, "vgx4"> {
+  def _VG4_4Z : sme2p1_zero_matrix<{0b11100,?}, uimm1s4range, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_4Z, 1> {
     bits<1> imm;
     let Inst{0}   = imm;
   }
-}
+
+  def NAME # _VG2_Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_Z, sme_elm_idx0_7, SMEMatrixArray>;
+  def NAME # _VG4_Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_Z, sme_elm_idx0_7, SMEMatrixArray>;
+  def NAME # _2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _2Z, uimm2s2range, SMEMatrixArray>;
+  def NAME # _VG2_2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_2Z, uimm1s2range, SMEMatrixArray>;
+  def NAME # _VG4_2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_2Z, uimm1s2range, SMEMatrixArray>;
+  def NAME # _4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _4Z, uimm1s4range, SMEMatrixArray>;
+  def NAME # _VG2_4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_4Z, uimm0s4range, SMEMatrixArray>;
+  def NAME # _VG4_4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_4Z, uimm0s4range, SMEMatrixArray>;
+
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_Z_PSEUDO, int_aarch64_sme_zero_za64_vg1x2, sme_elm_idx0_7, tileslice16>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_Z_PSEUDO, int_aarch64_sme_zero_za64_vg1x4, sme_elm_idx0_7, tileslice16>;
+  def : SME2_Zero_Matrix_Pat<NAME # _2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x1, uimm2s2range, tileslicerange2s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x2, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x4, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x1, uimm1s4range, tileslicerange1s4>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x2, uimm0s4range, tileslicerange0s4>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x4, uimm0s4range, tileslicerange0s4>;
+} 
 
 //===----------------------------------------------------------------------===//
 // SME2.1 lookup table expand two non-contiguous registers

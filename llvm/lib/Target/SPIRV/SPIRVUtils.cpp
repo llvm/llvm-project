@@ -280,7 +280,7 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
-  return toTypedPointer(ElementTy, N->getContext());
+  return toTypedPointer(ElementTy);
 }
 
 // The set of names is borrowed from the SPIR-V translator.

@@ -232,6 +232,11 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
+def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
+  let arguments = (ins NestedPolynomialAttr:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -2105,6 +2110,17 @@ def SideEffectOp : TEST_Op<"side_effect_op",
   let results = (outs AnyType:$result);
 }
 
+def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    `(` $operand`)` $region attr-dict `:`  type($operand)  `->` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test CopyOpInterface
 //===----------------------------------------------------------------------===//
@@ -2204,7 +2220,7 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
     Reify a bound for the given index-typed value or dimension size of a shaped
-    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set, 
+    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set,
     `vscale_min` and `vscale_max` must be provided, which allows computing
     a bound in terms of "vector.vscale" for a given range of vscale.
   }];
@@ -2750,7 +2766,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 def InferIntRangeType : AnyTypeOf<[AnyInteger, Index]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2762,7 +2778,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            SingleBlock, NoTerminator]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2774,7 +2790,7 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
 }
 
 def TestIncrementOp : TEST_Op<"increment",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                          NoMemoryEffect, AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value);
   let results = (outs InferIntRangeType:$result);
@@ -2783,7 +2799,8 @@ def TestIncrementOp : TEST_Op<"increment",
 }
 
 def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>, AllTypesMatch<["value", "result"]>]> {
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                          AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value,
                        OptionalAttr<APIntAttr>:$umin,
                        OptionalAttr<APIntAttr>:$umax,

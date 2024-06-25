@@ -396,7 +396,7 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
 template <class ELFT>
 Expected<uint64_t>
 ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
   Error Err = Error::success();
   uint64_t Hdr = 0;
   Hdr = Data.getULEB128(&Hdr, &Err);
@@ -408,7 +408,7 @@ ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
 template <class ELFT>
 Expected<typename ELFFile<ELFT>::RelsOrRelas>
 ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
   DataExtractor::Cursor Cur(0);
   const uint64_t Hdr = Data.getULEB128(Cur);
   const size_t Count = Hdr / 8;
@@ -421,7 +421,7 @@ ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
   else
     Rels.resize(Count);
   typename ELFT::uint Offset = 0, Addend = 0;
-  uint32_t Symidx = 0, Type = 0;
+  uint32_t SymIdx = 0, Type = 0;
   for (size_t I = 0; I != Count; ++I) {
     // The delta offset and flags member may be larger than uint64_t. Special
     // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
@@ -432,18 +432,18 @@ ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
       Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
     // Delta symidx/type/addend members (SLEB128).
     if (B & 1)
-      Symidx += Data.getSLEB128(Cur);
+      SymIdx += Data.getSLEB128(Cur);
     if (B & 2)
       Type += Data.getSLEB128(Cur);
     if (B & 4 & Hdr)
       Addend += Data.getSLEB128(Cur);
     if (Hdr & ELF::CREL_HDR_ADDEND) {
       Relas[I].r_offset = Offset << Shift;
-      Relas[I].setSymbolAndType(Symidx, Type, false);
+      Relas[I].setSymbolAndType(SymIdx, Type, false);
       Relas[I].r_addend = Addend;
     } else {
       Rels[I].r_offset = Offset << Shift;
-      Rels[I].setSymbolAndType(Symidx, Type, false);
+      Rels[I].setSymbolAndType(SymIdx, Type, false);
     }
   }
   if (!Cur)

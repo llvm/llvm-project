@@ -63,12 +63,14 @@ private:
   DICompileUnitAttr translateImpl(llvm::DICompileUnit *node);
   DICompositeTypeAttr translateImpl(llvm::DICompositeType *node);
   DIDerivedTypeAttr translateImpl(llvm::DIDerivedType *node);
+  DIStringTypeAttr translateImpl(llvm::DIStringType *node);
   DIFileAttr translateImpl(llvm::DIFile *node);
   DILabelAttr translateImpl(llvm::DILabel *node);
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
   DIGlobalVariableAttr translateImpl(llvm::DIGlobalVariable *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIVariableAttr translateImpl(llvm::DIVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);

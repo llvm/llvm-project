@@ -1288,7 +1288,7 @@ void ELFState<ELFT>::writeSectionContent(
   const bool IsCrel = Section.Type == llvm::ELF::SHT_CREL;
   const bool IsRela = Section.Type == llvm::ELF::SHT_RELA;
   typename ELFT::uint OffsetMask = 8, Offset = 0, Addend = 0;
-  uint32_t Symidx = 0, Type = 0;
+  uint32_t SymIdx = 0, Type = 0;
   uint64_t CurrentOffset = CBA.getOffset();
   if (IsCrel)
     for (const ELFYAML::Relocation &Rel : *Section.Relocations)
@@ -1299,7 +1299,7 @@ void ELFState<ELFT>::writeSectionContent(
                      Shift);
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
-    uint32_t CurSymidx =
+    uint32_t CurSymIdx =
         Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name, IsDynamic) : 0;
     if (IsCrel) {
       // The delta offset and flags member may be larger than uint64_t. Special
@@ -1309,7 +1309,7 @@ void ELFState<ELFT>::writeSectionContent(
           (static_cast<typename ELFT::uint>(Rel.Offset) - Offset) >> Shift;
       Offset = Rel.Offset;
       uint8_t B =
-          DeltaOffset * 8 + (Symidx != CurSymidx) + (Type != Rel.Type ? 2 : 0) +
+          DeltaOffset * 8 + (SymIdx != CurSymIdx) + (Type != Rel.Type ? 2 : 0) +
           (Addend != static_cast<typename ELFT::uint>(Rel.Addend) ? 4 : 0);
       if (DeltaOffset < 0x10) {
         CBA.write(B);
@@ -1320,8 +1320,8 @@ void ELFState<ELFT>::writeSectionContent(
       // Delta symidx/type/addend members (SLEB128).
       if (B & 1) {
         CBA.writeSLEB128(
-            std::make_signed_t<typename ELFT::uint>(CurSymidx - Symidx));
-        Symidx = CurSymidx;
+            std::make_signed_t<typename ELFT::uint>(CurSymIdx - SymIdx));
+        SymIdx = CurSymIdx;
       }
       if (B & 2) {
         CBA.writeSLEB128(static_cast<int32_t>(Rel.Type - Type));
@@ -1337,13 +1337,13 @@ void ELFState<ELFT>::writeSectionContent(
       zero(REntry);
       REntry.r_offset = Rel.Offset;
       REntry.r_addend = Rel.Addend;
-      REntry.setSymbolAndType(CurSymidx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     } else {
       Elf_Rel REntry;
       zero(REntry);
       REntry.r_offset = Rel.Offset;
-      REntry.setSymbolAndType(CurSymidx, Rel.Type, isMips64EL(Doc));
+      REntry.setSymbolAndType(CurSymIdx, Rel.Type, isMips64EL(Doc));
       CBA.write((const char *)&REntry, sizeof(REntry));
     }
   }

@@ -70,7 +70,7 @@ add_tablegen(llvm-tblgen LLVM
   TableGen.cpp
   VTEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp
-  X86CompressEVEXTablesEmitter.cpp
+  X86InstrMappingEmitter.cpp
   X86DisassemblerTables.cpp
   X86FoldTablesEmitter.cpp
   X86MnemonicTables.cpp

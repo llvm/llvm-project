@@ -416,6 +416,25 @@ around, such as ``std::string_view``.
    // note: inner buffer of 'std::string' deallocated by call to destructor
  }
 
+.. _cplusplus-Move:
+
+cplusplus.Move (C++)
+""""""""""""""""""""
+Method calls on a moved-from object and copying a moved-from object will be reported.
+
+
+.. code-block:: cpp
+
+  struct A {
+   void foo() {}
+ };
+
+ void f() {
+   A a;
+   A b = std::move(a); // note: 'a' became 'moved-from' here
+   a.foo();            // warn: method call on a 'moved-from' object 'a'
+ }
+
 .. _cplusplus-NewDelete:
 
 cplusplus.NewDelete (C++)
@@ -599,7 +618,7 @@ Warns when a nullable pointer is returned from a function that has _Nonnull retu
 optin
 ^^^^^
 
-Checkers for portability, performance or coding style specific rules.
+Checkers for portability, performance, optional security and coding style specific rules.
 
 .. _optin-core-EnumCastOutOfRange:
 
@@ -938,6 +957,53 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
+.. _optin-taint-TaintedAlloc:
+
+optin.taint.TaintedAlloc (C, C++)
+"""""""""""""""""""""""""""""""""
+
+This checker warns for cases when the ``size`` parameter of the ``malloc`` ,
+``calloc``, ``realloc``, ``alloca`` or the size parameter of the
+array new C++ operator is tainted (potentially attacker controlled).
+If an attacker can inject a large value as the size parameter, memory exhaustion
+denial of service attack can be carried out.
+
+The ``alpha.security.taint.TaintPropagation`` checker also needs to be enabled for
+this checker to give warnings.
+
+The analyzer emits warning only if it cannot prove that the size parameter is
+within reasonable bounds (``<= SIZE_MAX/4``). This functionality partially
+covers the SEI Cert coding standard rule `INT04-C
+<https://wiki.sei.cmu.edu/confluence/display/c/INT04-C.+Enforce+limits+on+integer+values+originating+from+tainted+sources>`_.
+
+You can silence this warning either by bound checking the ``size`` parameter, or
+by explicitly marking the ``size`` parameter as sanitized. See the
+:ref:`alpha-security-taint-TaintPropagation` checker for more details.
+
+.. code-block:: c
+
+  void vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *p = malloc(size); // warn: malloc is called with a tainted (potentially attacker controlled) value
+    free(p);
+  }
+
+  void not_vulnerable(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (1024 < size)
+      return;
+    int *p = malloc(size); // No warning expected as the the user input is bound
+    free(p);
+  }
+
+  void vulnerable_cpp(void) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    int *ptr = new int[size];// warn: Memory allocation function is called with a tainted (potentially attacker controlled) value
+    delete[] ptr;
+  }
 
 .. _security-checkers:
 
@@ -1179,6 +1245,41 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+.. _security-putenv-stack-array:
+
+security.PutenvStackArray (C)
+"""""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
+(automatic) array as the argument. Function ``putenv`` does not copy the passed
+string, only a pointer to the data is stored and this data can be read even by
+other threads. Content of a stack-allocated array is likely to be overwritten
+after exiting from the function.
+
+The problem can be solved by using a static array variable or dynamically
+allocated memory. Even better is to avoid using ``putenv`` (it has other
+problems related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char env[] = "NAME=value";
+    return putenv(env); // putenv function should not be called with stack-allocated string
+  }
+
+There is one case where the checker can report a false positive. This is when
+the stack-allocated array is used at `putenv` in a function or code branch that
+does not return (process is terminated on all execution paths).
+
+Another special case is if the `putenv` is called from function `main`. Here
+the stack is deallocated at the end of the program and it should be no problem
+to use the stack-allocated string (a multi-threaded program may require more
+attention). The checker does not warn for cases when stack space of `main` is
+used at the `putenv` call.
+
 security.SetgidSetuidOrder (C)
 """"""""""""""""""""""""""""""
 When dropping user-level and group-level privileges in a program by using
@@ -1234,6 +1335,50 @@ Check calls to various UNIX/Posix functions: ``open, pthread_once, calloc, mallo
 
 .. literalinclude:: checkers/unix_api_example.c
     :language: c
+
+.. _unix-BlockInCriticalSection:
+
+unix.BlockInCriticalSection (C, C++)
+""""""""""""""""""""""""""""""""""""
+Check for calls to blocking functions inside a critical section.
+Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
+Critical section handling functions modeled by this checker:
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+
+.. code-block:: c
+
+ void pthread_lock_example(pthread_mutex_t *m) {
+   pthread_mutex_lock(m); // note: entering critical section here
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+   pthread_mutex_unlock(m);
+ }
+
+.. code-block:: cpp
+
+ void overlapping_critical_sections(mtx_t *m1, std::mutex &m2) {
+   std::lock_guard lg{m2}; // note: entering critical section here
+   mtx_lock(m1); // note: entering critical section here
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+   mtx_unlock(m1);
+   sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+              // still inside of the critical section of the std::lock_guard
+ }
+
+**Limitations**
+
+* The ``trylock`` and ``timedlock`` versions of acquiring locks are currently assumed to always succeed.
+  This can lead to false positives.
+
+.. code-block:: c
+
+ void trylock_example(pthread_mutex_t *m) {
+   if (pthread_mutex_trylock(m) == 0) { // assume trylock always succeeds
+     sleep(10); // warn: Call to blocking function 'sleep' inside of critical section
+     pthread_mutex_unlock(m);
+   } else {
+     sleep(10); // false positive: Incorrect warning about blocking function inside critical section.
+   }
+ }
 
 .. _unix-Errno:
 
@@ -2326,21 +2471,6 @@ Check for pointer subtractions on two pointers pointing to different memory chun
    int d = &y - &x; // warn
  }
 
-.. _alpha-core-SizeofPtr:
-
-alpha.core.SizeofPtr (C)
-""""""""""""""""""""""""
-Warn about unintended use of ``sizeof()`` on pointer expressions.
-
-.. code-block:: c
-
- struct s {};
-
- int test(struct s *p) {
-   return sizeof(p);
-     // warn: sizeof(ptr) can produce an unexpected result
- }
-
 .. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (C)
@@ -2471,25 +2601,6 @@ Check for use of iterators of different containers where iterators of the same c
                                                    //       used where the same
                                                    //       container is
                                                    //       expected
- }
-
-.. _alpha-cplusplus-MisusedMovedObject:
-
-alpha.cplusplus.MisusedMovedObject (C++)
-""""""""""""""""""""""""""""""""""""""""
-Method calls on a moved-from object and copying a moved-from object will be reported.
-
-
-.. code-block:: cpp
-
-  struct A {
-   void foo() {}
- };
-
- void f() {
-   A a;
-   A b = std::move(a); // note: 'a' became 'moved-from' here
-   a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
 .. _alpha-cplusplus-SmartPtr:
@@ -2833,41 +2944,6 @@ Warn on mmap() calls that are both writable and executable.
    //       code
  }
 
-.. _alpha-security-putenv-stack-array:
-
-alpha.security.PutenvStackArray (C)
-"""""""""""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to a stack-allocated
-(automatic) array as the argument. Function ``putenv`` does not copy the passed
-string, only a pointer to the data is stored and this data can be read even by
-other threads. Content of a stack-allocated array is likely to be overwritten
-after returning from the parent function.
-
-The problem can be solved by using a static array variable or dynamically
-allocated memory. Even better is to avoid using ``putenv`` (it has other
-problems related to memory leaks) and use ``setenv`` instead.
-
-The check corresponds to CERT rule
-`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
-<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
-
-.. code-block:: c
-
-  int f() {
-    char env[] = "NAME=value";
-    return putenv(env); // putenv function should not be called with stack-allocated string
-  }
-
-There is one case where the checker can report a false positive. This is when
-the stack-allocated array is used at `putenv` in a function or code branch that
-does not return (calls `fork` or `exec` like function).
-
-Another special case is if the `putenv` is called from function `main`. Here
-the stack is deallocated at the end of the program and it should be no problem
-to use the stack-allocated string (a multi-threaded program may require more
-attention). The checker does not warn for cases when stack space of `main` is
-used at the `putenv` call.
-
 .. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
@@ -3129,24 +3205,6 @@ For a more detailed description of configuration options, please see the
 
 alpha.unix
 ^^^^^^^^^^
-
-.. _alpha-unix-BlockInCriticalSection:
-
-alpha.unix.BlockInCriticalSection (C)
-"""""""""""""""""""""""""""""""""""""
-Check for calls to blocking functions inside a critical section.
-Applies to: ``lock, unlock, sleep, getc, fgets, read, recv, pthread_mutex_lock,``
-`` pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``
-
-.. code-block:: c
-
- void test() {
-   std::mutex m;
-   m.lock();
-   sleep(3); // warn: a blocking function sleep is called inside a critical
-             //       section
-   m.unlock();
- }
 
 .. _alpha-unix-Chroot:
 

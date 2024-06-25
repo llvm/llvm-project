@@ -1008,6 +1008,72 @@ struct OperandTraits<NoCFIValue> : public FixedNumOperandTraits<NoCFIValue, 1> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(NoCFIValue, Value)
 
+/// A signed pointer, in the ptrauth sense.
+class ConstantPtrAuth final : public Constant {
+  friend struct ConstantPtrAuthKeyType;
+  friend class Constant;
+
+  ConstantPtrAuth(Constant *Ptr, ConstantInt *Key, ConstantInt *Disc,
+                  Constant *AddrDisc);
+
+  void *operator new(size_t s) { return User::operator new(s, 4); }
+
+  void destroyConstantImpl();
+  Value *handleOperandChangeImpl(Value *From, Value *To);
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
+
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const { return cast<Constant>(Op<0>().get()); }
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const { return cast<ConstantInt>(Op<1>().get()); }
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const {
+    return cast<ConstantInt>(Op<2>().get());
+  }
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const {
+    return cast<Constant>(Op<3>().get());
+  }
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return !getAddrDiscriminator()->isNullValue();
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *V) {
+    return V->getValueID() == ConstantPtrAuthVal;
+  }
+};
+
+template <>
+struct OperandTraits<ConstantPtrAuth>
+    : public FixedNumOperandTraits<ConstantPtrAuth, 4> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPtrAuth, Constant)
+
 //===----------------------------------------------------------------------===//
 /// A constant value that is initialized with an expression using
 /// other constant values.
@@ -1056,8 +1122,6 @@ public:
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
-  static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
@@ -1092,14 +1156,6 @@ public:
 
   static Constant *getNUWMul(Constant *C1, Constant *C2) {
     return getMul(C1, C2, true, false);
-  }
-
-  static Constant *getNSWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, false, true);
-  }
-
-  static Constant *getNUWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, true, false);
   }
 
   /// If C is a scalar/fixed width vector of known powers of 2, then this
@@ -1168,29 +1224,12 @@ public:
   /// Return true if this is a convert constant expression
   bool isCast() const;
 
-  /// Return true if this is a compare constant expression
-  bool isCompare() const;
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *get(unsigned Opcode, Constant *C1, Constant *C2,
                        unsigned Flags = 0, Type *OnlyIfReducedTy = nullptr);
-
-  /// Return an ICmp or FCmp comparison operator constant expression.
-  ///
-  /// \param OnlyIfReduced see \a getWithOperands() docs.
-  static Constant *getCompare(unsigned short pred, Constant *C1, Constant *C2,
-                              bool OnlyIfReduced = false);
-
-  /// get* - Return some common constants without having to
-  /// specify the full Instruction::OPCODE identifier.
-  ///
-  static Constant *getICmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
-  static Constant *getFCmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
 
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
@@ -1251,10 +1290,6 @@ public:
 
   /// Return the opcode at the root of this constant expression
   unsigned getOpcode() const { return getSubclassDataFromValue(); }
-
-  /// Return the ICMP or FCMP predicate value. Assert if this is not an ICMP or
-  /// FCMP constant expression.
-  unsigned getPredicate() const;
 
   /// Assert that this is a shufflevector and return the mask. See class
   /// ShuffleVectorInst for a description of the mask representation.

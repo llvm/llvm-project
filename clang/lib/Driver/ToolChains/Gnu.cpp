@@ -2486,19 +2486,19 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
   static const char *const X86_64LibDirs[] = {"/lib64", "/lib"};
   static const char *const X86_64Triples[] = {
-      "x86_64-unknown-linux-gnu", "x86_64-pc-linux-gnu",
-      "x86_64-redhat-linux6E",    "x86_64-redhat-linux",
-      "x86_64-suse-linux",        "x86_64-manbo-linux-gnu",
-      "x86_64-slackware-linux",   "x86_64-unknown-linux",
-      "x86_64-amazon-linux"};
+      "x86_64-linux-gnu",       "x86_64-unknown-linux-gnu",
+      "x86_64-pc-linux-gnu",    "x86_64-redhat-linux6E",
+      "x86_64-redhat-linux",    "x86_64-suse-linux",
+      "x86_64-manbo-linux-gnu", "x86_64-slackware-linux",
+      "x86_64-unknown-linux",   "x86_64-amazon-linux"};
   static const char *const X32Triples[] = {"x86_64-linux-gnux32",
                                            "x86_64-pc-linux-gnux32"};
   static const char *const X32LibDirs[] = {"/libx32", "/lib"};
   static const char *const X86LibDirs[] = {"/lib32", "/lib"};
   static const char *const X86Triples[] = {
-      "i686-linux-gnu",        "i686-pc-linux-gnu", "i386-redhat-linux6E",
-      "i686-redhat-linux",     "i386-redhat-linux", "i586-suse-linux",
-      "i686-montavista-linux",
+      "i586-linux-gnu",      "i686-linux-gnu",        "i686-pc-linux-gnu",
+      "i386-redhat-linux6E", "i686-redhat-linux",     "i386-redhat-linux",
+      "i586-suse-linux",     "i686-montavista-linux",
   };
 
   static const char *const LoongArch64LibDirs[] = {"/lib64", "/lib"};

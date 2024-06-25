@@ -1453,6 +1453,7 @@ static Instruction *cloneInstructionInExitBlock(
     }
 
     New = CallInst::Create(CI, OpBundles);
+    New->copyMetadata(*CI);
   } else {
     New = I.clone();
   }
@@ -2751,7 +2752,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   IRBuilder<> Builder(Preheader->getTerminator());
   for (auto *U : Changes) {
     assert(L.isLoopInvariant(U->get()));
-    Instruction *Ins = cast<Instruction>(U->getUser());
+    auto *Ins = cast<BinaryOperator>(U->getUser());
     Value *Mul;
     if (I.getType()->isIntOrIntVectorTy()) {
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
@@ -2759,8 +2760,20 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
       Ins->dropPoisonGeneratingFlags();
     } else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
-    U->set(Mul);
+
+    // Rewrite the reassociable instruction.
+    unsigned OpIdx = U->getOperandNo();
+    auto *LHS = OpIdx == 0 ? Mul : Ins->getOperand(0);
+    auto *RHS = OpIdx == 1 ? Mul : Ins->getOperand(1);
+    auto *NewBO = BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
+                                         Ins->getName() + ".reass", Ins);
+    NewBO->copyIRFlags(Ins);
+    if (VariantOp == Ins)
+      VariantOp = NewBO;
+    Ins->replaceAllUsesWith(NewBO);
+    eraseInstruction(*Ins, SafetyInfo, MSSAU);
   }
+
   I.replaceAllUsesWith(VariantOp);
   eraseInstruction(I, SafetyInfo, MSSAU);
   return true;

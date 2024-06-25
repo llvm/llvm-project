@@ -413,6 +413,7 @@ enum ConstantsCodes {
                                       //                 asmstr,conststr]
   CST_CODE_CE_GEP_WITH_INRANGE = 31,  // [opty, flags, range, n x operands]
   CST_CODE_CE_GEP = 32,               // [opty, flags, n x operands]
+  CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -753,6 +754,8 @@ enum AttributeKindCodes {
   ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE = 90,
   ATTR_KIND_DEAD_ON_UNWIND = 91,
   ATTR_KIND_RANGE = 92,
+  ATTR_KIND_SANITIZE_NUMERICAL_STABILITY = 93,
+  ATTR_KIND_INITIALIZES = 94,
 };
 
 enum ComdatSelectionKindCodes {

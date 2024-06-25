@@ -2143,40 +2143,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 }
 
-static bool isGLValueFromPointerDeref(const Expr *E) {
-  E = E->IgnoreParens();
-
-  if (const auto *CE = dyn_cast<CastExpr>(E)) {
-    if (!CE->getSubExpr()->isGLValue())
-      return false;
-    return isGLValueFromPointerDeref(CE->getSubExpr());
-  }
-
-  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return isGLValueFromPointerDeref(OVE->getSourceExpr());
-
-  if (const auto *BO = dyn_cast<BinaryOperator>(E))
-    if (BO->getOpcode() == BO_Comma)
-      return isGLValueFromPointerDeref(BO->getRHS());
-
-  if (const auto *ACO = dyn_cast<AbstractConditionalOperator>(E))
-    return isGLValueFromPointerDeref(ACO->getTrueExpr()) ||
-           isGLValueFromPointerDeref(ACO->getFalseExpr());
-
-  // C++11 [expr.sub]p1:
-  //   The expression E1[E2] is identical (by definition) to *((E1)+(E2))
-  if (isa<ArraySubscriptExpr>(E))
-    return true;
-
-  if (const auto *UO = dyn_cast<UnaryOperator>(E))
-    if (UO->getOpcode() == UO_Deref)
-      return true;
-
-  return false;
-}
-
 static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
-                                         llvm::Type *StdTypeInfoPtrTy) {
+                                         llvm::Type *StdTypeInfoPtrTy,
+                                         bool HasNullCheck) {
   // Get the vtable pointer.
   Address ThisPtr = CGF.EmitLValue(E).getAddress();
 
@@ -2189,16 +2158,11 @@ static llvm::Value *EmitTypeidFromVTable(CodeGenFunction &CGF, const Expr *E,
   CGF.EmitTypeCheck(CodeGenFunction::TCK_DynamicOperation, E->getExprLoc(),
                     ThisPtr, SrcRecordTy);
 
-  // C++ [expr.typeid]p2:
-  //   If the glvalue expression is obtained by applying the unary * operator to
-  //   a pointer and the pointer is a null pointer value, the typeid expression
-  //   throws the std::bad_typeid exception.
-  //
-  // However, this paragraph's intent is not clear.  We choose a very generous
-  // interpretation which implores us to consider comma operators, conditional
-  // operators, parentheses and other such constructs.
-  if (CGF.CGM.getCXXABI().shouldTypeidBeNullChecked(
-          isGLValueFromPointerDeref(E), SrcRecordTy)) {
+  // Whether we need an explicit null pointer check. For example, with the
+  // Microsoft ABI, if this is a call to __RTtypeid, the null pointer check and
+  // exception throw is inside the __RTtypeid(nullptr) call
+  if (HasNullCheck &&
+      CGF.CGM.getCXXABI().shouldTypeidBeNullChecked(SrcRecordTy)) {
     llvm::BasicBlock *BadTypeidBlock =
         CGF.createBasicBlock("typeid.bad_typeid");
     llvm::BasicBlock *EndBlock = CGF.createBasicBlock("typeid.end");
@@ -2244,7 +2208,8 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   //   type) to which the glvalue refers.
   // If the operand is already most derived object, no need to look up vtable.
   if (E->isPotentiallyEvaluated() && !E->isMostDerived(getContext()))
-    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy);
+    return EmitTypeidFromVTable(*this, E->getExprOperand(), PtrTy,
+                                E->hasNullCheck());
 
   QualType OperandTy = E->getExprOperand()->getType();
   return MaybeASCast(CGM.GetAddrOfRTTIDescriptor(OperandTy));

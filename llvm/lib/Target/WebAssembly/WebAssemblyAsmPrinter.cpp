@@ -125,6 +125,8 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
+  case wasm::ValType::EXNREF:
+    return 'E';
   default:
     llvm_unreachable("Unhandled wasm::ValType enum");
   }
@@ -317,8 +319,8 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (!Sym->isDefined())
+    auto Sym = cast_or_null<MCSymbolWasm>(It.getValue().Symbol);
+    if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
   }
 

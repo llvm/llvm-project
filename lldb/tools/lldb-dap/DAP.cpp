@@ -103,7 +103,9 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   SendJSON(json_str);
 
   if (log) {
-    *log << "<-- " << std::endl
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    *log << llvm::formatv("{0:f9} <-- ", now.count()).str() << std::endl
          << "Content-Length: " << json_str.size() << "\r\n\r\n"
          << llvm::formatv("{0:2}", json).str() << std::endl;
   }
@@ -130,9 +132,12 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(log.get(), length, json_str))
     return json_str;
 
-  if (log)
-    *log << "--> " << std::endl << "Content-Length: " << length << "\r\n\r\n";
-
+  if (log) {
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    *log << llvm::formatv("{0:f9} --> ", now.count()).str() << std::endl
+         << "Content-Length: " << length << "\r\n\r\n";
+  }
   return json_str;
 }
 

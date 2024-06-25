@@ -85,6 +85,7 @@ on support follow.
      Extension         Status
      ================  =================================================================
      ``A``             Supported
+     ``B``             Supported
      ``C``             Supported
      ``D``             Supported
      ``F``             Supported
@@ -98,12 +99,16 @@ on support follow.
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
+     ``Smcdeleg``      Supported
+     ``Smcsrind``      Supported
      ``Smepmp``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
+     ``Ssccfg``        Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscsrind``      Supported
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstc``          Assembly Support
@@ -120,6 +125,7 @@ on support follow.
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zaamo``         Assembly Support
+     ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -261,9 +267,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ssqosid``
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
-
-``experimental-zabha``
-  LLVM implements the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.

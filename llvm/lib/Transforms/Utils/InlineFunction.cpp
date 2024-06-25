@@ -30,11 +30,12 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -1220,7 +1221,6 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       SmallPtrSet<const Value *, 4> ObjSet;
       SmallVector<Metadata *, 4> Scopes, NoAliases;
 
-      SmallSetVector<const Argument *, 4> NAPtrArgs;
       for (const Value *V : PtrArgs) {
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
@@ -1363,8 +1363,6 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
       ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    if (CB.paramHasAttr(I, Attribute::WriteOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
     HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
   }
 
@@ -1450,6 +1448,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
     Valid.addAttribute(Attribute::NonNull);
   if (CB.hasRetAttr(Attribute::Alignment))
     Valid.addAlignmentAttr(CB.getRetAlign());
+  if (std::optional<ConstantRange> Range = CB.getRange())
+    Valid.addRangeAttr(*Range);
   return Valid;
 }
 
@@ -1541,6 +1541,14 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
       ValidPG.removeAttribute(Attribute::Alignment);
     if (ValidPG.hasAttributes()) {
+      Attribute CBRange = ValidPG.getAttribute(Attribute::Range);
+      if (CBRange.isValid()) {
+        Attribute NewRange = AL.getRetAttr(Attribute::Range);
+        if (NewRange.isValid()) {
+          ValidPG.addRangeAttr(
+              CBRange.getRange().intersectWith(NewRange.getRange()));
+        }
+      }
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
       // return attribute will create UB anyways so we can always propagate.
