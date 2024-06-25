@@ -50,7 +50,7 @@ template <class S1Ty, class S2Ty> bool set_union(S1Ty &S1, const S2Ty &S2) {
 template <class S1Ty, class S2Ty> void set_intersect(S1Ty &S1, const S2Ty &S2) {
   if constexpr (detail::HasMemberRemoveIf<S1Ty,
                                           bool (*)(decltype(*S2.begin()))>) {
-    S1.remove_if([S2](const auto &E) { return !S2.count(E); });
+    S1.remove_if([&S2](const auto &E) { return !S2.count(E); });
   } else {
     for (typename S1Ty::iterator I = S1.begin(); I != S1.end();) {
       const auto &E = *I;
