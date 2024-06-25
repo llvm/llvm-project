@@ -5,9 +5,8 @@
 ; REQUIRES: asserts
 
 ; Make sure we do not vectorize a loop with a widened int induction.
-; TODO: There's no need to compute costs for any VF, as no VPlans have been generated.
 define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
-; CHECK: LV: Vector loop of width {{.+}} costs:
+; CHECK-NOT: LV: Vector loop of width {{.+}} costs:
 ;
 ; CHECK: define void @test_wide_integer_induction(
 ; CHECK-NOT: vector.body
