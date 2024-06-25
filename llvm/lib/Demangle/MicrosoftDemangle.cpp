@@ -2305,7 +2305,7 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       TPRN->IsMemberPointer = true;
 
       if (!IsAutoNTTP)
-          MangledName.remove_prefix(1); // Remove leading '$'
+        MangledName.remove_prefix(1); // Remove leading '$'
 
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
