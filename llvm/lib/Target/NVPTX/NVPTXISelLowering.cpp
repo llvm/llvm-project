@@ -5232,6 +5232,7 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   // Since integer multiply-add costs the same as integer multiply
   // but is more costly than integer add, do the fusion only when
   // the mul is only used in the add.
+  // TODO: this may not be true for later architectures, consider relaxing this
   if (!N0.getNode()->hasOneUse())
     return SDValue();
 
