@@ -45,7 +45,7 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     const auto MarchB = B->getValueAsString("MArchName");
     return MarchA.compare(MarchB) < 0; // A lexographically less than B
   };
-  llvm::sort(SortedExtensions, Alphabetical);
+  std::sort(SortedExtensions.begin(), SortedExtensions.end(), Alphabetical);
 
   // The ARMProcFamilyEnum values are initialised by SubtargetFeature defs
   // which set the ARMProcFamily field. We can generate the enum from these defs
