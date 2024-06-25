@@ -13689,7 +13689,7 @@ raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::BlockDisposition BD) {
   }
   return OS;
 }
-}
+} // namespace llvm
 
 void ScalarEvolution::print(raw_ostream &OS) const {
   // ScalarEvolution's implementation of the print method is to print
