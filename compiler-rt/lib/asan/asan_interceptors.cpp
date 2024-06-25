@@ -334,7 +334,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 #    endif
 
 DEFINE_INTERNAL_PTHREAD_FUNCTIONS
-#  endif  // ASAN_INTERCEPT_PTHREAD_CREATE
+#endif  // ASAN_INTERCEPT_PTHREAD_CREATE
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
