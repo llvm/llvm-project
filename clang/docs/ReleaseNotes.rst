@@ -1110,8 +1110,6 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
-- Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
-  and ``KeepEmptyLinesAtTheStartOfBlocks``.
 
 libclang
 --------
