@@ -57,6 +57,7 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
+class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -1533,6 +1534,13 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since this is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
 
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 

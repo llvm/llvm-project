@@ -2500,6 +2500,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget.isOSWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
                        ISD::SCALAR_TO_VECTOR,
@@ -28503,17 +28511,19 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
 
     MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
-    // For vXi8 mul-by-constant, try PMADDUBSW to avoid the need for extension.
+    // For vXi8 mul, try PMADDUBSW to avoid the need for extension.
     // Don't do this if we only need to unpack one half.
-    if (Subtarget.hasSSSE3() &&
-        ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-      bool IsLoLaneAllZeroOrUndef = true;
-      bool IsHiLaneAllZeroOrUndef = true;
-      for (auto [Idx, Val] : enumerate(B->ops())) {
-        if ((Idx % NumEltsPerLane) >= (NumEltsPerLane / 2))
-          IsHiLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
-        else
-          IsLoLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+    if (Subtarget.hasSSSE3()) {
+      bool BIsBuildVector = isa<BuildVectorSDNode>(B);
+      bool IsLoLaneAllZeroOrUndef = BIsBuildVector;
+      bool IsHiLaneAllZeroOrUndef = BIsBuildVector;
+      if (BIsBuildVector) {
+        for (auto [Idx, Val] : enumerate(B->ops())) {
+          if ((Idx % NumEltsPerLane) >= (NumEltsPerLane / 2))
+            IsHiLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+          else
+            IsLoLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+        }
       }
       if (!(IsLoLaneAllZeroOrUndef || IsHiLaneAllZeroOrUndef)) {
         SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(0x00FF, dl, ExVT));
@@ -41764,6 +41774,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     KnownZero = LHSZero | RHSZero;
     break;
   }
+  case X86ISD::VPMADDUBSW:
   case X86ISD::VPMADDWD: {
     APInt LHSUndef, LHSZero;
     APInt RHSUndef, RHSZero;
@@ -55921,6 +55932,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PSHUFB:
     case X86ISD::PSADBW:
+    case X86ISD::VPMADDUBSW:
+    case X86ISD::VPMADDWD:
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useBWIRegs()))) {
         MVT SrcVT = Op0.getOperand(0).getSimpleValueType();

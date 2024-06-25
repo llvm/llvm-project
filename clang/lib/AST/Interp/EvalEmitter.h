@@ -63,6 +63,10 @@ protected:
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
 
+  /// Since expressions can only jump forward, predicated execution is
+  /// used to deal with if-else statements.
+  bool isActive() const { return CurrentLabel == ActiveLabel; }
+
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
 
@@ -116,10 +120,6 @@ private:
   LabelTy CurrentLabel = 0;
   /// Active block which should be executed.
   LabelTy ActiveLabel = 0;
-
-  /// Since expressions can only jump forward, predicated execution is
-  /// used to deal with if-else statements.
-  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
 protected:
 #define GET_EVAL_PROTO
