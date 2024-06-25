@@ -53,21 +53,15 @@ static bool consumeFront(std::string_view &S, std::string_view C) {
   return true;
 }
 
-static bool consumeFrontWithOrWithoutPrefix(std::string_view &S, std::string_view C, bool CheckWithout, size_t N) {
-    std::string_view CWithout = C.substr(N);
-    if (CheckWithout && llvm::itanium_demangle::starts_with(S, CWithout)) {
-        S.remove_prefix(CWithout.size());
-        return true;
-    }
-    if (!llvm::itanium_demangle::starts_with(S, C))
-        return false;
-    S.remove_prefix(C.size());
-    return true;
+static bool consumeFront(std::string_view &S, std::string_view CA,
+                         std::string_view CB, bool A) {
+  const std::string_view &C = A ? CA : CB;
+  return consumeFront(S, C);
 }
 
-static bool startsWithOrWithoutPrefix(std::string_view S, std::string_view C, bool CheckWithout, size_t N) {
-  if (CheckWithout && llvm::itanium_demangle::starts_with(S, C.substr(N)))
-    return true;
+static bool startsWith(std::string_view S, std::string_view CA,
+                       std::string_view CB, bool A) {
+  const std::string_view &C = A ? CA : CB;
   return llvm::itanium_demangle::starts_with(S, C);
 }
 
@@ -2296,10 +2290,10 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
     } else if (consumeFront(MangledName, "$$C")) {
       // Type has qualifiers.
       TP.N = demangleType(MangledName, QualifierMangleMode::Mangle);
-    } else if (startsWithOrWithoutPrefix(MangledName, "$1", IsAutoNTTP, 1) ||
-               startsWithOrWithoutPrefix(MangledName, "$H", IsAutoNTTP, 1) ||
-               startsWithOrWithoutPrefix(MangledName, "$I", IsAutoNTTP, 1) ||
-               startsWithOrWithoutPrefix(MangledName, "$J", IsAutoNTTP, 1)) {
+    } else if (startsWith(MangledName, "$1", "1", !IsAutoNTTP) ||
+               startsWith(MangledName, "$H", "H", !IsAutoNTTP) ||
+               startsWith(MangledName, "$I", "I", !IsAutoNTTP) ||
+               startsWith(MangledName, "$J", "J", !IsAutoNTTP)) {
       // Pointer to member
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
@@ -2374,7 +2368,7 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       }
       TPRN->IsMemberPointer = true;
 
-    } else if (consumeFrontWithOrWithoutPrefix(MangledName, "$0", IsAutoNTTP, 1)) {
+    } else if (consumeFront(MangledName, "$0", "0", !IsAutoNTTP)) {
       // Integral non-type template parameter
       bool IsNegative = false;
       uint64_t Value = 0;
