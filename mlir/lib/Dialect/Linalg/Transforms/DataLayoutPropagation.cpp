@@ -378,7 +378,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
     return failure();
 
   // User controlled propagation function.
-  if (!controlFn(genericOp))
+  if (!controlFn(genericOp, packOp))
     return failure();
 
   // TODO: Enable propagation in the presence of linalg.index and
@@ -488,7 +488,7 @@ public:
       return failure();
 
     // User controlled propagation function.
-    if (!controlFn(padOp))
+    if (!controlFn(padOp, packOp))
       return failure();
 
     if (!padOp.getResult().hasOneUse())
@@ -843,7 +843,7 @@ public:
     }
 
     // User controlled propagation function.
-    if (!controlFn(srcOp))
+    if (!controlFn(srcOp, packOp))
       return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
@@ -970,7 +970,7 @@ public:
 
     Operation *consumerOp = *result.user_begin();
     // User controlled propagation function.
-    if (!controlFn(consumerOp))
+    if (!controlFn(unPackOp, consumerOp))
       return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)
@@ -1037,7 +1037,8 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 ///                       inner_dims_pos = [3] inner_tiles = [32] into %0
 ///
 static FailureOr<std::tuple<GenericOp, Value>>
-pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
+pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                                 ControlPropagationFn controlFn) {
   if (genericOp.getNumResults() != 1)
     return failure();
 
@@ -1054,6 +1055,10 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   tensor::UnPackOp producerUnPackOp =
       unPackedOperand->get().getDefiningOp<tensor::UnPackOp>();
   assert(producerUnPackOp && "expect a valid UnPackOp");
+
+  if (!controlFn(producerUnPackOp, genericOp))
+    return failure();
+
   auto packInfo =
       getPackingInfoFromOperand(unPackedOperand, genericOp, producerUnPackOp);
   if (failed(packInfo))
@@ -1121,10 +1126,8 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!controlFn(genericOp))
-      return failure();
-
-    auto genericAndRepl = pushDownUnPackOpThroughGenericOp(rewriter, genericOp);
+    auto genericAndRepl =
+        pushDownUnPackOpThroughGenericOp(rewriter, genericOp, controlFn);
     if (failed(genericAndRepl))
       return failure();
     rewriter.replaceOp(genericOp, std::get<1>(*genericAndRepl));
@@ -1149,7 +1152,7 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     if (!unpackOp)
       return failure();
 
-    if (!controlFn(padOp))
+    if (!controlFn(unpackOp, padOp))
       return failure();
 
     Location loc = padOp.getLoc();

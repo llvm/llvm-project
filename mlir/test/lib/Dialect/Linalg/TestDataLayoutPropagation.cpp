@@ -33,7 +33,8 @@ struct TestDataLayoutPropagationPass
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     linalg::populateDataLayoutPropagationPatterns(
-        patterns, [](Operation *op) { return true; });
+        patterns,
+        [](Operation *producer, Operation *consumer) { return true; });
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();

@@ -1630,7 +1630,8 @@ void populateElementwiseOpsFusionPatterns(
 
 /// Function type which is used to control propagation of tensor.pack/unpack
 /// ops.
-using ControlPropagationFn = std::function<bool(Operation *op)>;
+using ControlPropagationFn =
+    std::function<bool(Operation *producer, Operation *consumer)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
 void populateDataLayoutPropagationPatterns(
