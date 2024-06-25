@@ -429,9 +429,9 @@ bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
     return true;
   }
 
-  // We can't find a whole scale factor - bail out.
-  if ((NumSrcElts % NumDstElts) != 0 && (NumDstElts % NumSrcElts) != 0)
-    return false;
+  // Ensure we can find a whole scale factor.
+  assert(((NumSrcElts % NumDstElts) == 0 || (NumDstElts % NumSrcElts) == 0) &&
+         "Unexpected scaling factor");
 
   if (NumSrcElts > NumDstElts) {
     int Scale = NumSrcElts / NumDstElts;
