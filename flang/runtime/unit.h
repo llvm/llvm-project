@@ -25,7 +25,7 @@
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
-#include <variant>
+#include <flang/Common/variant.h>
 
 namespace Fortran::runtime::io {
 
@@ -120,7 +120,7 @@ public:
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
       Direction, Fortran::common::optional<bool> isUnformatted,
-      const Terminator &);
+      IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
       const char *path, std::size_t pathLen);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
@@ -134,7 +134,7 @@ public:
   RT_API_ATTRS bool OpenUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, OwningPtr<char> &&path,
       std::size_t pathLength, Convert, IoErrorHandler &);
-  RT_API_ATTRS void OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+  RT_API_ATTRS bool OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
       Fortran::common::optional<Action>, Position, Convert, IoErrorHandler &);
   RT_API_ATTRS void CloseUnit(CloseStatus, IoErrorHandler &);
   RT_API_ATTRS void DestroyClosed();
@@ -152,10 +152,7 @@ public:
 #else
     lock_.Take();
 #endif
-    RT_DIAG_PUSH
-    RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    RT_DIAG_POP
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
     }
@@ -207,6 +204,7 @@ private:
   RT_API_ATTRS void BackspaceVariableFormattedRecord(IoErrorHandler &);
   RT_API_ATTRS bool SetVariableFormattedRecordLength();
   RT_API_ATTRS void DoImpliedEndfile(IoErrorHandler &);
+  template <bool ANY_DIR = true, Direction DIR = Direction::Output>
   RT_API_ATTRS void DoEndfile(IoErrorHandler &);
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);
@@ -265,10 +263,7 @@ public:
 
   template <typename A, typename... X>
   RT_API_ATTRS IoStatementState &BeginIoStatement(X &&...xs) {
-    RT_DIAG_PUSH
-    RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    RT_DIAG_POP
     io_.emplace(state);
     return *io_;
   }

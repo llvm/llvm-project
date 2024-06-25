@@ -53,7 +53,6 @@ public:
       : TargetInfo(Triple) {
     TLSSupported = false;
     VLASupported = false;
-    LongWidth = LongAlign = 64;
     AddrSpaceMap = &DirectXAddrSpaceMap;
     UseAddrSpaceMapMangling = true;
     HasLegalHalfType = true;

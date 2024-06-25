@@ -55,7 +55,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // bad_function_call
 
 _LIBCPP_DIAGNOSTIC_PUSH
+#  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
+#  endif
 class _LIBCPP_EXPORTED_FROM_ABI bad_function_call : public exception {
 public:
   _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT                                    = default;
@@ -64,7 +66,7 @@ public:
 // Note that when a key function is not used, every translation unit that uses
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
-#  ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
+#  if _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
   ~bad_function_call() _NOEXCEPT override;
 #  else
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
@@ -230,10 +232,10 @@ class _LIBCPP_TEMPLATE_VIS __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
-  __base(const __base&);
-  __base& operator=(const __base&);
-
 public:
+  __base(const __base&)            = delete;
+  __base& operator=(const __base&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI __base() {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
   virtual __base* __clone() const             = 0;
@@ -514,7 +516,7 @@ struct __policy {
   }
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         true,
@@ -541,7 +543,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         &__large_clone<_Fun>,
         &__large_destroy<_Fun>,
         false,
@@ -556,7 +558,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         false,

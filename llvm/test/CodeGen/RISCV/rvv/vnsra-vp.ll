@@ -12,10 +12,8 @@ define <vscale x 1 x i16> @vsra_vv_nxv1i16(<vscale x 1 x i32> %a, <vscale x 1 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsra.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> %allones, i32 %evl)
-  %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %vr = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i16.nxv1i32(<vscale x 1 x i32> %v, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %vr
 }
@@ -27,11 +25,9 @@ define <vscale x 1 x i16> @vsra_vv_nxv1i16_unmasked(<vscale x 1 x i32> %a, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsra.wv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> %allones, i32 %evl)
-  %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> %allones, i32 %evl)
-  %vr = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i16.nxv1i32(<vscale x 1 x i32> %v, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %v = call <vscale x 1 x i32> @llvm.vp.ashr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %vr = call <vscale x 1 x i16> @llvm.vp.trunc.nxv1i16.nxv1i32(<vscale x 1 x i32> %v, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 1 x i16> %vr
 }
 
@@ -45,10 +41,8 @@ define <vscale x 1 x i32> @vsra_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsra.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> %allones, i32 %evl)
-  %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   %vr = call <vscale x 1 x i32> @llvm.vp.trunc.nxv1i32.nxv1i64(<vscale x 1 x i64> %v, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %vr
 }
@@ -59,10 +53,8 @@ define <vscale x 1 x i32> @vsra_vv_nxv1i64_unmasked(<vscale x 1 x i64> %a, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsra.wv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> %allones, i32 %evl)
-  %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> %allones, i32 %evl)
-  %vr = call <vscale x 1 x i32> @llvm.vp.trunc.nxv1i32.nxv1i64(<vscale x 1 x i64> %v, <vscale x 1 x i1> %allones, i32 %evl)
+  %bext = call <vscale x 1 x i64> @llvm.vp.sext.nxv1i64.nxv1i32(<vscale x 1 x i32> %b, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %v = call <vscale x 1 x i64> @llvm.vp.ashr.nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %bext, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
+  %vr = call <vscale x 1 x i32> @llvm.vp.trunc.nxv1i32.nxv1i64(<vscale x 1 x i64> %v, <vscale x 1 x i1> splat (i1 -1), i32 %evl)
   ret <vscale x 1 x i32> %vr
 }

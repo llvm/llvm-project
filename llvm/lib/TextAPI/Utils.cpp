@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/Utils.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/TextAPI/TextAPIError.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -182,7 +184,7 @@ llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
       break;
     }
     default:
-      if (RegexMetachars.find(C) != StringRef::npos)
+      if (RegexMetachars.contains(C))
         RegexString.push_back('\\');
       RegexString.push_back(C);
     }
@@ -197,4 +199,46 @@ llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
     return make_error<StringError>(Error, inconvertibleErrorCode());
 
   return std::move(Rule);
+}
+
+Expected<AliasMap>
+llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
+  SmallVector<StringRef, 16> Lines;
+  AliasMap Aliases;
+  Buffer->getBuffer().split(Lines, "\n", /*MaxSplit=*/-1,
+                            /*KeepEmpty=*/false);
+  for (const StringRef Line : Lines) {
+    StringRef L = Line.trim();
+    if (L.empty())
+      continue;
+    // Skip comments.
+    if (L.starts_with("#"))
+      continue;
+    StringRef Symbol, Remain, Alias;
+    // Base symbol is separated by whitespace.
+    std::tie(Symbol, Remain) = getToken(L);
+    // The Alias symbol ends before a comment or EOL.
+    std::tie(Alias, Remain) = getToken(Remain, "#");
+    Alias = Alias.trim();
+    if (Alias.empty())
+      return make_error<TextAPIError>(
+          TextAPIError(TextAPIErrorCode::InvalidInputFormat,
+                       ("missing alias for: " + Symbol).str()));
+    SimpleSymbol AliasSym = parseSymbol(Alias);
+    SimpleSymbol BaseSym = parseSymbol(Symbol);
+    Aliases[{AliasSym.Name.str(), AliasSym.Kind}] = {BaseSym.Name.str(),
+                                                     BaseSym.Kind};
+  }
+
+  return Aliases;
+}
+
+PathSeq llvm::MachO::getPathsForPlatform(const PathToPlatformSeq &Paths,
+                                         PlatformType Platform) {
+  PathSeq Result;
+  for (const auto &[Path, CurrP] : Paths) {
+    if (!CurrP.has_value() || CurrP.value() == Platform)
+      Result.push_back(Path);
+  }
+  return Result;
 }

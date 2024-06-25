@@ -1069,7 +1069,7 @@ In certain circumstances, code licensed under other licenses can be added
 to the codebase.  However, this may only be done with approval of the LLVM
 Foundation Board of Directors, and contributors should plan for the approval
 process to take at least 4-6 weeks.  If you would like to contribute code
-under a different license, please create a Phabricator review with the code
+under a different license, please create a pull request with the code
 you want to contribute and email board@llvm.org requesting a review.
 
 If you have questions or comments about these topics, please ask on the
@@ -1124,20 +1124,17 @@ To relicense LLVM, we will be seeking approval from all of the copyright holders
 of code in the repository, or potentially remove/rewrite code if we cannot.
 This is a large
 and challenging project which will take a significant amount of time to
-complete.  In the interim, **all contributions to the project will be made under
-the terms of both the new license and the legacy license scheme** (each of which
-is described below).  The exception to this is the legacy patent grant, which
-will not be required for new contributions.
+complete.
 
-When all of the code in the project has been converted to the new license or
-removed, we will drop the requirement to contribute under the legacy license.
-This will achieve the goal of having
-a single standardized license for the entire codebase.
+Starting on 2024-06-01 (first of June 2024), new contributions only need to
+be covered by the new LLVM license, i.e. Apache-2.0 WITH LLVM-exception.
+Before this date, the project required all contributions to be made under
+both the new license and the legacy license.
 
-If you are a prior contributor to LLVM and have not done so already, please do
-*TODO* to allow us to use your code. *Add a link to a separate page here, which
-is probably a click through web form or something like that.  Details to be
-determined later*.
+If you are a contributor to LLVM with contributions committed before 2019-01-19
+and have not done so already, please do follow the instructions at
+https://foundation.llvm.org/docs/relicensing/, under section "Individual
+Relicensing Agreement" to relicense your contributions under the new license.
 
 
 .. _open source licensing terms:
@@ -1264,12 +1261,11 @@ Legacy License Structure
 
 .. note::
    The code base was previously licensed under the Terms described here.
-   We are in the middle of relicensing to a new approach (described above), but
-   until this effort is complete, the code is also still available under these
-   terms.  Once we finish the relicensing project, new versions of the code will
-   not be available under these terms.  However, nothing takes away your right
-   to use old versions under the licensing terms under which they were
-   originally released.
+   We are in the middle of relicensing to a new approach (described above).
+   More than 99% of all contributions made to LLVM are covered by the Apache-2.0
+   WITH LLVM-exception license. A small portion of LLVM code remains exclusively
+   covered by the legacy license. Contributions after 2024-06-01 are covered
+   exclusively by the new license._
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in

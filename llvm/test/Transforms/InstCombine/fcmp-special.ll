@@ -144,21 +144,21 @@ define <2 x i1> @uno_vec_with_nan(<2 x double> %x) {
   ret <2 x i1> %f
 }
 
-define <2 x i1> @uno_vec_with_undef(<2 x double> %x) {
-; CHECK-LABEL: @uno_vec_with_undef(
+define <2 x i1> @uno_vec_with_poison(<2 x double> %x) {
+; CHECK-LABEL: @uno_vec_with_poison(
 ; CHECK-NEXT:    [[F:%.*]] = fcmp uno <2 x double> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[F]]
 ;
-  %f = fcmp uno <2 x double> %x, <double 3.0, double undef>
+  %f = fcmp uno <2 x double> %x, <double 3.0, double poison>
   ret <2 x i1> %f
 }
 
-define <2 x i1> @ord_vec_with_undef(<2 x double> %x) {
-; CHECK-LABEL: @ord_vec_with_undef(
-; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> [[X:%.*]], <double 0.000000e+00, double undef>
+define <2 x i1> @ord_vec_with_poison(<2 x double> %x) {
+; CHECK-LABEL: @ord_vec_with_poison(
+; CHECK-NEXT:    [[F:%.*]] = fcmp ord <2 x double> [[X:%.*]], <double 0.000000e+00, double poison>
 ; CHECK-NEXT:    ret <2 x i1> [[F]]
 ;
-  %f = fcmp ord <2 x double> %x, <double 0.0, double undef>
+  %f = fcmp ord <2 x double> %x, <double 0.0, double poison>
   ret <2 x i1> %f
 }
 
@@ -224,12 +224,12 @@ define <2 x i1> @negative_zero_olt_vec(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @negative_zero_une_vec_undef(<2 x double> %x) {
-; CHECK-LABEL: @negative_zero_une_vec_undef(
+define <2 x i1> @negative_zero_une_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @negative_zero_une_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = fcmp nnan une <2 x double> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %r = fcmp nnan une <2 x double> %x, <double -0.0, double undef>
+  %r = fcmp nnan une <2 x double> %x, <double -0.0, double poison>
   ret <2 x i1> %r
 }
 

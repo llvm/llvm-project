@@ -217,6 +217,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   SDValue One = DAG->getConstant(1, DL, Int32VT);
   SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
+  SDValue SetCC = DAG->getSetCC(DL, Int32VT, Arg0, Const3, ISD::SETULT);
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Const87, m_ConstInt()));
@@ -233,6 +234,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
   EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
   EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
+
+  ISD::CondCode CC;
+  EXPECT_TRUE(sd_match(
+      SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(), m_CondCode(CC))));
+  EXPECT_EQ(CC, ISD::SETULT);
+  EXPECT_TRUE(sd_match(SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(),
+                                     m_SpecificCondCode(ISD::SETULT))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
@@ -249,6 +257,7 @@ TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
   EXPECT_TRUE(sd_match(
       Sub, m_AnyOf(m_Opc(ISD::ADD), m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
   EXPECT_TRUE(sd_match(Add, m_AllOf(m_Opc(ISD::ADD), m_OneUse())));
+  EXPECT_TRUE(sd_match(Add, m_NoneOf(m_Opc(ISD::SUB), m_Opc(ISD::MUL))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {

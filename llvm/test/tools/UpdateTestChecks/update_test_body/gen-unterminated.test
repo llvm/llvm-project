@@ -1,0 +1,8 @@
+# RUN: cp %s %t && not %update_test_body %t 2>&1 | FileCheck %s
+
+# CHECK: 'gen' should be followed by another part (---) or .endif
+
+#--- a.txt
+.long 0
+#--- gen
+cat a.txt

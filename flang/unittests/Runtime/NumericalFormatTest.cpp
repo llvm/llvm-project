@@ -958,3 +958,20 @@ TEST(IOApiTests, EditDoubleInputValues) {
                            << "', want " << want << ", got " << u.raw;
   }
 }
+
+// regression test for confusing digit minimization
+TEST(IOApiTests, ConfusingMinimization) {
+  char buffer[8]{};
+  auto cookie{IONAME(BeginInternalListOutput)(buffer, sizeof buffer)};
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::uint16_t x{0x7bff}; // HUGE(0._2)
+  desc.Establish(TypeCode{CFI_type_half_float}, sizeof x, &x, 0, nullptr);
+  desc.Check();
+  EXPECT_TRUE(IONAME(OutputDescriptor)(cookie, desc));
+  auto status{IONAME(EndIoStatement)(cookie)};
+  EXPECT_EQ(status, 0);
+  std::string got{std::string{buffer, sizeof buffer}};
+  EXPECT_TRUE(CompareFormattedStrings(" 65504. ", got))
+      << "expected ' 65504. ', got '" << got << '\''; // not 65500.!
+}

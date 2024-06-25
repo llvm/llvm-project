@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=finalize-isel -o - %s | FileCheck %s
 # Check that we're not copying the kill flags with the operands from the pseudo
 # instruction.
 --- |

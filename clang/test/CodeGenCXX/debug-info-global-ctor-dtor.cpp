@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -S -disable-O0-optnone  -emit-llvm -o - \
+// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -disable-O0-optnone -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=CHECK-NOKEXT
-// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -fapple-kext -S -disable-O0-optnone -emit-llvm -o - \
+// RUN: %clang_cc1 %s -debug-info-kind=limited -triple %itanium_abi_triple -fno-use-cxa-atexit -fapple-kext -disable-O0-optnone -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=CHECK-KEXT
-// RUN: %clang_cc1 %s -gcodeview -debug-info-kind=limited -triple x86_64-windows-msvc -fno-use-cxa-atexit -S -disable-O0-optnone  -emit-llvm -o - \
+// RUN: %clang_cc1 %s -gcodeview -debug-info-kind=limited -triple x86_64-windows-msvc -fno-use-cxa-atexit -disable-O0-optnone -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=CHECK-MSVC
 
 class A {

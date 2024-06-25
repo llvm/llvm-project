@@ -230,7 +230,8 @@ InstructionCost HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                                ArrayRef<int> Mask,
                                                TTI::TargetCostKind CostKind,
                                                int Index, Type *SubTp,
-                                               ArrayRef<const Value *> Args) {
+                                               ArrayRef<const Value *> Args,
+                                               const Instruction *CxtI) {
   return 1;
 }
 

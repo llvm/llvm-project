@@ -159,6 +159,10 @@ private:
   // Returns the symbol of the old value serving as the replacement.
   StringRef handleReplaceWithValue(DagNode tree);
 
+  // Emits the C++ statement to replace the matched DAG with an array of
+  // matched values.
+  std::string handleVariadic(DagNode tree, int depth);
+
   // Trailing directives are used at the end of DAG node argument lists to
   // specify additional behaviour for op matchers and creators, etc.
   struct TrailingDirectives {
@@ -1241,6 +1245,9 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
   if (resultTree.isReplaceWithValue())
     return handleReplaceWithValue(resultTree).str();
 
+  if (resultTree.isVariadic())
+    return handleVariadic(resultTree, depth);
+
   // Normal op creation.
   auto symbol = handleOpCreation(resultTree, resultIndex, depth);
   if (resultTree.getSymbol().empty()) {
@@ -1249,6 +1256,29 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
     symbolInfoMap.bindOpResult(symbol, pattern.getDialectOp(resultTree));
   }
   return symbol;
+}
+
+std::string PatternEmitter::handleVariadic(DagNode tree, int depth) {
+  assert(tree.isVariadic());
+
+  std::string output;
+  llvm::raw_string_ostream oss(output);
+  auto name = std::string(formatv("tblgen_variadic_values_{0}", nextValueId++));
+  symbolInfoMap.bindValue(name);
+  oss << "::llvm::SmallVector<::mlir::Value, 4> " << name << ";\n";
+  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+    if (auto child = tree.getArgAsNestedDag(i)) {
+      oss << name << ".push_back(" << handleResultPattern(child, i, depth + 1)
+          << ");\n";
+    } else {
+      oss << name << ".push_back("
+          << handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i))
+          << ");\n";
+    }
+  }
+
+  os << oss.str();
+  return name;
 }
 
 StringRef PatternEmitter::handleReplaceWithValue(DagNode tree) {

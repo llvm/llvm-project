@@ -18,13 +18,18 @@ module ieee_arithmetic
   use __fortran_ieee_exceptions
 
   use __fortran_builtins, only: &
+    ieee_away => __builtin_ieee_away, &
+    ieee_down => __builtin_ieee_down, &
     ieee_fma => __builtin_fma, &
     ieee_is_nan => __builtin_ieee_is_nan, &
     ieee_is_negative => __builtin_ieee_is_negative, &
     ieee_is_normal => __builtin_ieee_is_normal, &
+    ieee_nearest => __builtin_ieee_nearest, &
     ieee_next_after => __builtin_ieee_next_after, &
     ieee_next_down => __builtin_ieee_next_down, &
     ieee_next_up => __builtin_ieee_next_up, &
+    ieee_other => __builtin_ieee_other, &
+    ieee_round_type => __builtin_ieee_round_type, &
     ieee_scalb => scale, &
     ieee_selected_real_kind => __builtin_ieee_selected_real_kind, &
     ieee_support_datatype => __builtin_ieee_support_datatype, &
@@ -33,10 +38,14 @@ module ieee_arithmetic
     ieee_support_inf => __builtin_ieee_support_inf, &
     ieee_support_io => __builtin_ieee_support_io, &
     ieee_support_nan => __builtin_ieee_support_nan, &
+    ieee_support_rounding => __builtin_ieee_support_rounding, &
     ieee_support_sqrt => __builtin_ieee_support_sqrt, &
     ieee_support_standard => __builtin_ieee_support_standard, &
     ieee_support_subnormal => __builtin_ieee_support_subnormal, &
-    ieee_support_underflow_control => __builtin_ieee_support_underflow_control
+    ieee_support_underflow_control => __builtin_ieee_support_underflow_control, &
+    ieee_to_zero => __builtin_ieee_to_zero, &
+    ieee_up => __builtin_ieee_up
+
 
   implicit none
 
@@ -45,13 +54,18 @@ module ieee_arithmetic
   private
 
   ! Explicitly export the symbols from __fortran_builtins
+  public :: ieee_away
+  public :: ieee_down
   public :: ieee_fma
   public :: ieee_is_nan
   public :: ieee_is_negative
   public :: ieee_is_normal
+  public :: ieee_nearest
+  public :: ieee_other
   public :: ieee_next_after
   public :: ieee_next_down
   public :: ieee_next_up
+  public :: ieee_round_type
   public :: ieee_scalb
   public :: ieee_selected_real_kind
   public :: ieee_support_datatype
@@ -60,10 +74,13 @@ module ieee_arithmetic
   public :: ieee_support_inf
   public :: ieee_support_io
   public :: ieee_support_nan
+  public :: ieee_support_rounding
   public :: ieee_support_sqrt
   public :: ieee_support_standard
   public :: ieee_support_subnormal
   public :: ieee_support_underflow_control
+  public :: ieee_to_zero
+  public :: ieee_up
 
   ! Explicitly export the symbols from __fortran_ieee_exceptions
   public :: ieee_flag_type
@@ -113,19 +130,6 @@ module ieee_arithmetic
   type(ieee_class_type), parameter, public :: &
     ieee_negative_denormal = ieee_negative_subnormal, &
     ieee_positive_denormal = ieee_positive_subnormal
-
-  type, public :: ieee_round_type
-    private
-    integer(kind=1) :: mode = 0
-  end type ieee_round_type
-
-  type(ieee_round_type), parameter, public :: &
-    ieee_to_zero = ieee_round_type(_FORTRAN_RUNTIME_IEEE_TO_ZERO), &
-    ieee_nearest = ieee_round_type(_FORTRAN_RUNTIME_IEEE_NEAREST), &
-    ieee_up = ieee_round_type(_FORTRAN_RUNTIME_IEEE_UP), &
-    ieee_down = ieee_round_type(_FORTRAN_RUNTIME_IEEE_DOWN), &
-    ieee_away = ieee_round_type(_FORTRAN_RUNTIME_IEEE_AWAY), &
-    ieee_other = ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
   interface operator(==)
     elemental logical function ieee_class_eq(x, y)
@@ -585,22 +589,6 @@ module ieee_arithmetic
   end interface ieee_signbit
   public :: ieee_signbit
 #undef IEEE_SIGNBIT_R
-
-#define IEEE_SUPPORT_ROUNDING_R(XKIND) \
-  pure logical function ieee_support_rounding_a##XKIND(round_value, x); \
-    import ieee_round_type; \
-    type(ieee_round_type), intent(in) :: round_value; \
-    real(XKIND), intent(in) :: x(..); \
-  end function ieee_support_rounding_a##XKIND;
-  interface ieee_support_rounding
-    pure logical function ieee_support_rounding_0(round_value)
-      import ieee_round_type
-      type(ieee_round_type), intent(in) :: round_value
-    end function ieee_support_rounding_0
-    SPECIFICS_R(IEEE_SUPPORT_ROUNDING_R)
-  end interface ieee_support_rounding
-  public :: ieee_support_rounding
-#undef IEEE_SUPPORT_ROUNDING_R
 
 #define IEEE_UNORDERED_RR(XKIND, YKIND) \
   elemental logical function ieee_unordered_a##XKIND##_a##YKIND(x, y); \

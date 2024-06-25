@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic write
 
@@ -73,3 +73,17 @@ subroutine atomic_write_typed_assign
   !$omp atomic write
   r2 = 0
 end subroutine
+
+!CHECK-LABEL: func.func @_QPatomic_write_logical()
+!CHECK:    %[[L_REF:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFatomic_write_logicalEl"}
+!CHECK:    %[[L_DECL:.*]]:2 = hlfir.declare %[[L_REF]] {uniq_name = "_QFatomic_write_logicalEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+!CHECK:    %true = arith.constant true
+!CHECK:    %[[CVT:.*]] = fir.convert %true : (i1) -> !fir.logical<4>
+!CHECK:    omp.atomic.write %[[L_DECL]]#1 = %[[CVT]] : !fir.ref<!fir.logical<4>>, !fir.logical<4>
+
+subroutine atomic_write_logical
+  logical :: l
+  !$omp atomic write
+      l = .true.
+  !$omp end atomic
+end

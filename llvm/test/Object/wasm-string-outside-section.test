@@ -1,3 +1,0 @@
-RUN: not --crash llvm-objdump -s %p/Inputs/WASM/string-outside-section.wasm 2>&1 | FileCheck %s
-
-CHECK: LLVM ERROR: EOF while reading string

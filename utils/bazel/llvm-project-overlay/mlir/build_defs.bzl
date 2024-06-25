@@ -6,7 +6,8 @@
 
 def if_cuda_available(if_true, if_false = []):
     return select({
-        # CUDA is not yet supported.
+        # CUDA auto-detection is not yet supported.
+        "//mlir:enable_cuda_config": if_true,
         "//conditions:default": if_false,
     })
 

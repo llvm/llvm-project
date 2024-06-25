@@ -51,6 +51,20 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
               mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
+  PassOptions::Option<mlir::SparseEmitStrategy> emitStrategy{
+      *this, "sparse-emit-strategy",
+      ::llvm::cl::desc(
+          "Emit functional code or interfaces (to debug) for sparse loops"),
+      ::llvm::cl::init(mlir::SparseEmitStrategy::kFunctional),
+      llvm::cl::values(
+          clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                     "Emit functional code (with scf.for/while)."),
+          clEnumValN(mlir::SparseEmitStrategy::kSparseIterator,
+                     "sparse-iterator",
+                     "Emit (experimental) loops (with sparse.iterate)."),
+          clEnumValN(
+              mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+              "Emit non-functional but easy-to-read interfaces to debug."))};
 
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
@@ -143,7 +157,8 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableRuntimeLibrary);
+    return SparsificationOptions(parallelization, emitStrategy,
+                                 enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.

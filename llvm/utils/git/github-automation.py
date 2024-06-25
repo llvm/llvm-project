@@ -36,7 +36,7 @@ If you have any further questions about this issue, don't hesitate to ask via a 
 """
 
 
-def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     for team in teams:
         if team_name == team.name.lower():
             return team
@@ -70,7 +70,7 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -125,7 +125,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -201,7 +201,7 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             )
         return True
 
-    def _get_curent_team(self) -> Optional[github.Team.Team]:
+    def _get_current_team(self) -> Optional[github.Team.Team]:
         for team in self.org.get_teams():
             if self.team_name == team.name.lower():
                 return team
@@ -281,7 +281,7 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
 
 Please check whether problems have been caused by your change specifically, as
 the builds can include changes from many authors. It is not uncommon for your
@@ -637,9 +637,28 @@ class ReleaseWorkflow:
         return False
 
 
+def request_release_note(token: str, repo_name: str, pr_number: int):
+    repo = github.Github(token).get_repo(repo_name)
+    pr = repo.get_issue(pr_number).as_pull_request()
+    submitter = pr.user.login
+    if submitter == "llvmbot":
+        m = re.search("Requested by: @(.+)$", pr.body)
+        if not m:
+            submitter = None
+            print("Warning could not determine user who requested backport.")
+        submitter = m.group(1)
+
+    mention = ""
+    if submitter:
+        mention = f"@{submitter}"
+
+    comment = f"{mention} (or anyone else). If you would like to add a note about this fix in the release notes (completely optional). Please reply to this comment with a one or two sentence description of the fix.  When you are done, please add the release:note label to this PR. "
+    pr.as_issue().create_comment(comment)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--token", type=str, required=True, help="GitHub authentiation token"
+    "--token", type=str, required=True, help="GitHub authentication token"
 )
 parser.add_argument(
     "--repo",
@@ -669,7 +688,7 @@ release_workflow_parser.add_argument(
     "--llvm-project-dir",
     type=str,
     default=".",
-    help="directory containing the llvm-project checout",
+    help="directory containing the llvm-project checkout",
 )
 release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"
@@ -702,6 +721,18 @@ release_workflow_parser.add_argument(
     required=True,
     help="The user that requested this backport",
 )
+
+request_release_note_parser = subparsers.add_parser(
+    "request-release-note",
+    help="Request a release note for a pull request",
+)
+request_release_note_parser.add_argument(
+    "--pr-number",
+    type=int,
+    required=True,
+    help="The pull request to request the release note",
+)
+
 
 args = parser.parse_args()
 
@@ -743,3 +774,5 @@ elif args.command == "release-workflow":
             sys.exit(1)
 elif args.command == "setup-llvmbot-git":
     setup_llvmbot_git()
+elif args.command == "request-release-note":
+    request_release_note(args.token, args.repo, args.pr_number)

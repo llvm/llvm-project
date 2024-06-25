@@ -18,11 +18,8 @@
 
 using namespace llvm;
 
-static KnownBits computeForAddCarry(
-    const KnownBits &LHS, const KnownBits &RHS,
-    bool CarryZero, bool CarryOne) {
-  assert(!(CarryZero && CarryOne) &&
-         "Carry can't be zero and one at the same time");
+static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
+                                    bool CarryZero, bool CarryOne) {
 
   APInt PossibleSumZero = LHS.getMaxValue() + RHS.getMaxValue() + !CarryZero;
   APInt PossibleSumOne = LHS.getMinValue() + RHS.getMinValue() + CarryOne;
@@ -36,9 +33,6 @@ static KnownBits computeForAddCarry(
   APInt RHSKnownUnion = RHS.Zero | RHS.One;
   APInt CarryKnownUnion = std::move(CarryKnownZero) | CarryKnownOne;
   APInt Known = std::move(LHSKnownUnion) & RHSKnownUnion & CarryKnownUnion;
-
-  assert((PossibleSumZero & Known) == (PossibleSumOne & Known) &&
-         "known bits of sum differ");
 
   // Compute known bits of the result.
   KnownBits KnownOut;
@@ -232,41 +226,53 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::abdu(const KnownBits &LHS, const KnownBits &RHS) {
-  // abdu(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
-  KnownBits UMaxValue = umax(LHS, RHS);
-  KnownBits UMinValue = umin(LHS, RHS);
-  KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                          /*NUW=*/true, UMaxValue, UMinValue);
+  // If we know which argument is larger, return (sub LHS, RHS) or
+  // (sub RHS, LHS) directly.
+  if (LHS.getMinValue().uge(RHS.getMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS,
+                            RHS);
+  if (RHS.getMinValue().uge(LHS.getMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS,
+                            LHS);
 
-  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  // By construction, the subtraction in abdu never has unsigned overflow.
+  // Find the common bits between (sub nuw LHS, RHS) and (sub nuw RHS, LHS).
   KnownBits Diff0 =
-      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, LHS, RHS);
   KnownBits Diff1 =
-      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS, LHS);
-  KnownBits SubDiff = Diff0.intersectWith(Diff1);
-
-  KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
-  assert(!KnownAbsDiff.hasConflict() && "Bad Output");
-  return KnownAbsDiff;
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, RHS, LHS);
+  return Diff0.intersectWith(Diff1);
 }
 
-KnownBits KnownBits::abds(const KnownBits &LHS, const KnownBits &RHS) {
-  // abds(LHS,RHS) = sub(smax(LHS,RHS), smin(LHS,RHS)).
-  KnownBits SMaxValue = smax(LHS, RHS);
-  KnownBits SMinValue = smin(LHS, RHS);
-  KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
-                                          /*NUW=*/false, SMaxValue, SMinValue);
+KnownBits KnownBits::abds(KnownBits LHS, KnownBits RHS) {
+  // If we know which argument is larger, return (sub LHS, RHS) or
+  // (sub RHS, LHS) directly.
+  if (LHS.getSignedMinValue().sge(RHS.getSignedMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS,
+                            RHS);
+  if (RHS.getSignedMinValue().sge(LHS.getSignedMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS,
+                            LHS);
 
-  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  // Shift both arguments from the signed range to the unsigned range, e.g. from
+  // [-0x80, 0x7F] to [0, 0xFF]. This allows us to use "sub nuw" below just like
+  // abdu does.
+  // Note that we can't just use "sub nsw" instead because abds has signed
+  // inputs but an unsigned result, which makes the overflow conditions
+  // different.
+  unsigned SignBitPosition = LHS.getBitWidth() - 1;
+  for (auto Arg : {&LHS, &RHS}) {
+    bool Tmp = Arg->Zero[SignBitPosition];
+    Arg->Zero.setBitVal(SignBitPosition, Arg->One[SignBitPosition]);
+    Arg->One.setBitVal(SignBitPosition, Tmp);
+  }
+
+  // Find the common bits between (sub nuw LHS, RHS) and (sub nuw RHS, LHS).
   KnownBits Diff0 =
-      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, LHS, RHS);
   KnownBits Diff1 =
-      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS, LHS);
-  KnownBits SubDiff = Diff0.intersectWith(Diff1);
-
-  KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
-  assert(!KnownAbsDiff.hasConflict() && "Bad Output");
-  return KnownAbsDiff;
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, RHS, LHS);
+  return Diff0.intersectWith(Diff1);
 }
 
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
@@ -596,14 +602,12 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
     }
   }
 
-  assert(!KnownAbs.hasConflict() && "Bad Output");
   return KnownAbs;
 }
 
 static KnownBits computeForSatAddSub(bool Add, bool Signed,
                                      const KnownBits &LHS,
                                      const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   // We don't see NSW even for sadd/ssub as we want to check if the result has
   // signed overflow.
   KnownBits Res =
@@ -703,7 +707,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
     // We know whether or not we overflowed.
     if (!(*Overflow)) {
       // No overflow.
-      assert(!Res.hasConflict() && "Bad Output");
       return Res;
     }
 
@@ -725,7 +728,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
 
     Res.One = C;
     Res.Zero = ~C;
-    assert(!Res.hasConflict() && "Bad Output");
     return Res;
   }
 
@@ -745,7 +747,6 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
     Res.One.clearAllBits();
   }
 
-  assert(!Res.hasConflict() && "Bad Output");
   return Res;
 }
 
@@ -762,11 +763,41 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ false, /*Signed*/ false, LHS, RHS);
 }
 
+static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
+                            bool IsSigned) {
+  unsigned BitWidth = LHS.getBitWidth();
+  LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
+  RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
+  LHS =
+      computeForAddCarry(LHS, RHS, /*CarryZero*/ !IsCeil, /*CarryOne*/ IsCeil);
+  LHS = LHS.extractBits(BitWidth, 1);
+  return LHS;
+}
+
+KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ false,
+                    /* IsSigned */ true);
+}
+
+KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ false,
+                    /* IsSigned */ false);
+}
+
+KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ true,
+                    /* IsSigned */ true);
+}
+
+KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
+  return avgCompute(LHS, RHS, /* IsCeil */ true,
+                    /* IsSigned */ false);
+}
+
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
                          bool NoUndefSelfMultiply) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   assert((!NoUndefSelfMultiply || LHS == RHS) &&
          "Self multiplication knownbits mismatch");
 
@@ -862,8 +893,7 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
 KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   KnownBits WideLHS = LHS.sext(2 * BitWidth);
   KnownBits WideRHS = RHS.sext(2 * BitWidth);
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
@@ -871,8 +901,7 @@ KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
-         !RHS.hasConflict() && "Operand mismatch");
+  assert(BitWidth == RHS.getBitWidth() && "Operand mismatch");
   KnownBits WideLHS = LHS.zext(2 * BitWidth);
   KnownBits WideRHS = RHS.zext(2 * BitWidth);
   return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
@@ -921,7 +950,6 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
     return udiv(LHS, RHS, Exact);
 
   unsigned BitWidth = LHS.getBitWidth();
-  assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
@@ -968,15 +996,12 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   }
 
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
-
-  assert(!Known.hasConflict() && "Bad Output");
   return Known;
 }
 
 KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
                           bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
 
   if (LHS.isZero() || RHS.isZero()) {
@@ -998,7 +1023,6 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
   Known.Zero.setHighBits(LeadZ);
   Known = divComputeLowBit(Known, LHS, RHS, Exact);
 
-  assert(!Known.hasConflict() && "Bad Output");
   return Known;
 }
 
@@ -1016,8 +1040,6 @@ KnownBits KnownBits::remGetLowBits(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
-
   KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits set in `remGetLowBits`.
@@ -1035,8 +1057,6 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
-
   KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits are set in `remGetLowBits`.

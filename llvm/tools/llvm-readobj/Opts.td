@@ -62,7 +62,6 @@ def memtag : FF<"memtag", "Display memory tagging metadata (modes, Android notes
 def needed_libs : FF<"needed-libs", "Display the needed libraries">, Group<grp_elf>;
 def notes : FF<"notes", "Display notes">, Group<grp_elf>;
 def program_headers : FF<"program-headers", "Display program headers">, Group<grp_elf>;
-def raw_relr : FF<"raw-relr", "Do not decode relocations in SHT_RELR section, display raw contents">, Group<grp_elf>;
 def version_info : FF<"version-info", "Display version sections">, Group<grp_elf>;
 
 // Mach-O specific options.

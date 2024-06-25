@@ -21,7 +21,6 @@ add_flang_tool(flang-new
   # unable to generate executables.
   FortranRuntime
   FortranDecimal
-  Fortran_main
 )
 
 target_link_libraries(flang-new

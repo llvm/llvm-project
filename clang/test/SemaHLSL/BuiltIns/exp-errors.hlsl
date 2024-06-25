@@ -1,6 +1,6 @@
 
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -verify -verify-ignore-unexpected -DTEST_FUNC=__builtin_elementwise_exp
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -verify -verify-ignore-unexpected -DTEST_FUNC=__builtin_elementwise_exp2
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected -DTEST_FUNC=__builtin_elementwise_exp
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected -DTEST_FUNC=__builtin_elementwise_exp2
 float test_too_few_arg() {
   return TEST_FUNC();
   // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}

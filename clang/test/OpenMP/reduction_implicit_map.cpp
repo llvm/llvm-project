@@ -47,7 +47,7 @@ int bar() {
  S2 o[5];
   //warnig "copyable and not guaranteed to be mapped correctly" and
   //implicit map generated.
-#pragma omp target parallel reduction(+:o[0]) //expected-warning {{Type 'S2' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp target parallel reduction(+:o[0]) //expected-warning {{type 'S2' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (int i = 0; i < 10; i++);
   double b[10][10][10];
   //no error no implicit map generated, the map for b is generated but not

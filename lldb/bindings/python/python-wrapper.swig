@@ -1099,6 +1099,28 @@ static void LLDBSwigPythonCallPythonSBDebuggerTerminateCallback(lldb::user_id_t 
   }
 }
 
+static bool LLDBSwigPythonCallPythonSBCommandInterpreterSetCommandOverrideCallback(void *baton, const char **argv) {
+  bool ret_val = false;
+  if (baton != Py_None) {
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    // Create a PyList of items since we're going to pass it to the callback as a tuple
+    // of arguments.
+    PyObject *py_argv = PyList_New(0);
+    for (const char **arg = argv; arg && *arg; arg++) {
+      std::string arg_string = *arg;
+      PyObject *py_string = PyUnicode_FromStringAndSize(arg_string.c_str(), arg_string.size());
+      PyList_Append(py_argv, py_string);
+    }
+
+    PyObject *result = PyObject_CallObject(
+        reinterpret_cast<PyObject *>(baton), PyList_AsTuple(py_argv));
+    ret_val = result ? PyObject_IsTrue(result) : false;
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+  return ret_val;
+}
+
 static SBError LLDBSwigPythonCallLocateModuleCallback(
     void *callback_baton, const SBModuleSpec &module_spec_sb,
     SBFileSpec &module_file_spec_sb, SBFileSpec &symbol_file_spec_sb) {

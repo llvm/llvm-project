@@ -44,7 +44,7 @@ module {
     %cst = arith.constant 0.000000e+00 : f32
     %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
-    %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
+    %expanded = tensor.expand_shape %2 [[0], [1, 2]] output_shape [5,2,3]: tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
 
     // Note: tensor.collapse_shape is a metadata-only operation on dense tensors
@@ -60,7 +60,7 @@ module {
     %cst = arith.constant 0.000000e+00 : f32
     %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32, #COO_2D>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
-    %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
+    %expanded = tensor.expand_shape %2 [[0], [1, 2]] output_shape [5,2,3]: tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
 
     // Note: tensor.collapse_shape is a metadata-only operation on dense tensors
@@ -76,7 +76,7 @@ module {
     %cst = arith.constant 0.000000e+00 : f32
     %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32>, tensor<6x6xf32>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
-    %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
+    %expanded = tensor.expand_shape %2 [[0], [1, 2]] output_shape [5,2,3]: tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
     return %ret1 :  tensor<?x?x?xf32>
   }
@@ -88,7 +88,7 @@ module {
     %cst = arith.constant 0.000000e+00 : f32
     %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<5x6xf32>) -> tensor<5x6xf32>
     %2 = linalg.matmul ins(%arg0, %collapsed : tensor<5x6xf32, #COO_2D>, tensor<6x6xf32, #COO_2D>) outs(%1 : tensor<5x6xf32>) -> tensor<5x6xf32>
-    %expanded = tensor.expand_shape %2 [[0], [1, 2]] : tensor<5x6xf32> into tensor<5x2x3xf32>
+    %expanded = tensor.expand_shape %2 [[0], [1, 2]] output_shape [5,2,3]: tensor<5x6xf32> into tensor<5x2x3xf32>
     %ret1 = tensor.cast %expanded : tensor<5x2x3xf32> to tensor<?x?x?xf32>
 
     // Note: tensor.collapse_shape is a metadata-only operation on dense tensors

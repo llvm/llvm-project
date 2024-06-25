@@ -43,10 +43,10 @@ private:
 
 void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t MagicNumber = 0x07230203;
-  constexpr uint32_t GeneratorMagicNumber = 0;
+  constexpr uint32_t GeneratorID = 43;
+  constexpr uint32_t GeneratorMagicNumber =
+      (GeneratorID << 16) | (LLVM_VERSION_MAJOR);
   constexpr uint32_t Schema = 0;
-
-  // Construct SPIR-V version and Bound
   const MCAssembler::VersionInfoType &VIT = Asm.getVersionInfo();
   uint32_t VersionNumber = 0 | (VIT.Major << 16) | (VIT.Minor << 8);
   uint32_t Bound = VIT.Update;

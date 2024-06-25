@@ -55,7 +55,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
 }
 
 CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
-                                   std::vector<Record *> DefaultProperties) {
+                                   ArrayRef<Record *> DefaultProperties) {
   TheDef = R;
   std::string DefName = std::string(R->getName());
   ArrayRef<SMLoc> DefLoc = R->getLoc();
@@ -148,7 +148,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
-    Record *R, std::vector<Record *> DefaultProperties) {
+    Record *R, ArrayRef<Record *> DefaultProperties) {
   // opt-out of using default attributes.
   if (R->getValueAsBit("DisableDefaultAttributes"))
     return;

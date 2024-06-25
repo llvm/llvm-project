@@ -12,7 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -363,9 +363,9 @@ void UnrankedMemRefDescriptor::computeSizes(
   // Initialize shared constants.
   Value one = createIndexAttrConstant(builder, loc, indexType, 1);
   Value two = createIndexAttrConstant(builder, loc, indexType, 2);
-  Value indexSize =
-      createIndexAttrConstant(builder, loc, indexType,
-                              ceilDiv(typeConverter.getIndexTypeBitwidth(), 8));
+  Value indexSize = createIndexAttrConstant(
+      builder, loc, indexType,
+      llvm::divideCeil(typeConverter.getIndexTypeBitwidth(), 8));
 
   sizes.reserve(sizes.size() + values.size());
   for (auto [desc, addressSpace] : llvm::zip(values, addressSpaces)) {
@@ -378,7 +378,7 @@ void UnrankedMemRefDescriptor::computeSizes(
     // to data layout) into the unranked descriptor.
     Value pointerSize = createIndexAttrConstant(
         builder, loc, indexType,
-        ceilDiv(typeConverter.getPointerBitwidth(addressSpace), 8));
+        llvm::divideCeil(typeConverter.getPointerBitwidth(addressSpace), 8));
     Value doublePointerSize =
         builder.create<LLVM::MulOp>(loc, indexType, two, pointerSize);
 

@@ -184,8 +184,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
-  UseSlots.erase(std::unique(UseSlots.begin(), UseSlots.end(),
-                             SlotIndex::isSameInstr),
+  UseSlots.erase(llvm::unique(UseSlots, SlotIndex::isSameInstr),
                  UseSlots.end());
 
   // Compute per-live block info.

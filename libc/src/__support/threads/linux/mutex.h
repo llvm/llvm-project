@@ -9,126 +9,79 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
 
-#include "src/__support/CPP/atomic.h"
-#include "src/__support/OSUtil/syscall.h" // For syscall functions.
-#include "src/__support/threads/linux/futex_word.h"
+#include "hdr/types/pid_t.h"
+#include "src/__support/CPP/optional.h"
+#include "src/__support/libc_assert.h"
+#include "src/__support/threads/linux/futex_utils.h"
+#include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/mutex_common.h"
-
-#include <linux/futex.h>
-#include <stdint.h>
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
 
-struct Mutex {
+// TODO: support shared/recursive/robust mutexes.
+class Mutex final : private RawMutex {
+  // reserved timed, may be useful when combined with other flags.
   unsigned char timed;
   unsigned char recursive;
   unsigned char robust;
+  unsigned char pshared;
 
-  void *owner;
+  // TLS address may not work across forked processes. Use thread id instead.
+  pid_t owner;
   unsigned long long lock_count;
 
-  cpp::Atomic<FutexWordType> futex_word;
-
-  enum class LockState : FutexWordType {
-    Free,
-    Locked,
-    Waiting,
-  };
-
 public:
-  constexpr Mutex(bool istimed, bool isrecursive, bool isrobust)
-      : timed(istimed), recursive(isrecursive), robust(isrobust),
-        owner(nullptr), lock_count(0),
-        futex_word(FutexWordType(LockState::Free)) {}
+  LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
+                              bool is_pshared)
+      : RawMutex(), timed(is_timed), recursive(is_recursive), robust(is_robust),
+        pshared(is_pshared), owner(0), lock_count(0) {}
 
-  static MutexError init(Mutex *mutex, bool istimed, bool isrecur,
-                         bool isrobust) {
-    mutex->timed = istimed;
+  LIBC_INLINE static MutexError init(Mutex *mutex, bool is_timed, bool isrecur,
+                                     bool isrobust, bool is_pshared) {
+    RawMutex::init(mutex);
+    mutex->timed = is_timed;
     mutex->recursive = isrecur;
     mutex->robust = isrobust;
-    mutex->owner = nullptr;
+    mutex->pshared = is_pshared;
+    mutex->owner = 0;
     mutex->lock_count = 0;
-    mutex->futex_word.set(FutexWordType(LockState::Free));
     return MutexError::NONE;
   }
 
-  static MutexError destroy(Mutex *) { return MutexError::NONE; }
-
-  MutexError reset();
-
-  MutexError lock() {
-    bool was_waiting = false;
-    while (true) {
-      FutexWordType mutex_status = FutexWordType(LockState::Free);
-      FutexWordType locked_status = FutexWordType(LockState::Locked);
-
-      if (futex_word.compare_exchange_strong(
-              mutex_status, FutexWordType(LockState::Locked))) {
-        if (was_waiting)
-          futex_word = FutexWordType(LockState::Waiting);
-        return MutexError::NONE;
-      }
-
-      switch (LockState(mutex_status)) {
-      case LockState::Waiting:
-        // If other threads are waiting already, then join them. Note that the
-        // futex syscall will block if the futex data is still
-        // `LockState::Waiting` (the 4th argument to the syscall function
-        // below.)
-        LIBC_NAMESPACE::syscall_impl<long>(
-            FUTEX_SYSCALL_ID, &futex_word.val, FUTEX_WAIT_PRIVATE,
-            FutexWordType(LockState::Waiting), 0, 0, 0);
-        was_waiting = true;
-        // Once woken up/unblocked, try everything all over.
-        continue;
-      case LockState::Locked:
-        // Mutex has been locked by another thread so set the status to
-        // LockState::Waiting.
-        if (futex_word.compare_exchange_strong(
-                locked_status, FutexWordType(LockState::Waiting))) {
-          // If we are able to set the futex data to `LockState::Waiting`, then
-          // we will wait for the futex to be woken up. Note again that the
-          // following syscall will block only if the futex data is still
-          // `LockState::Waiting`.
-          LIBC_NAMESPACE::syscall_impl<long>(
-              FUTEX_SYSCALL_ID, &futex_word, FUTEX_WAIT_PRIVATE,
-              FutexWordType(LockState::Waiting), 0, 0, 0);
-          was_waiting = true;
-        }
-        continue;
-      case LockState::Free:
-        // If it was LockState::Free, we shouldn't be here at all.
-        return MutexError::BAD_LOCK_STATE;
-      }
-    }
+  LIBC_INLINE static MutexError destroy(Mutex *lock) {
+    LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
+                "Mutex destroyed while being locked.");
+    RawMutex::destroy(lock);
+    return MutexError::NONE;
   }
 
-  MutexError unlock() {
-    while (true) {
-      FutexWordType mutex_status = FutexWordType(LockState::Waiting);
-      if (futex_word.compare_exchange_strong(mutex_status,
-                                             FutexWordType(LockState::Free))) {
-        // If any thread is waiting to be woken up, then do it.
-        LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &futex_word,
-                                           FUTEX_WAKE_PRIVATE, 1, 0, 0, 0);
-        return MutexError::NONE;
-      }
-
-      if (mutex_status == FutexWordType(LockState::Locked)) {
-        // If nobody was waiting at this point, just free it.
-        if (futex_word.compare_exchange_strong(mutex_status,
-                                               FutexWordType(LockState::Free)))
-          return MutexError::NONE;
-      } else {
-        // This can happen, for example if some thread tries to unlock an
-        // already free mutex.
-        return MutexError::UNLOCK_WITHOUT_LOCK;
-      }
-    }
+  // TODO: record owner and lock count.
+  LIBC_INLINE MutexError lock() {
+    // Since timeout is not specified, we do not need to check the return value.
+    this->RawMutex::lock(
+        /* timeout=*/cpp::nullopt, this->pshared);
+    return MutexError::NONE;
   }
 
-  MutexError trylock();
+  // TODO: record owner and lock count.
+  LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
+    if (this->RawMutex::lock(abs_time, this->pshared))
+      return MutexError::NONE;
+    return MutexError::TIMEOUT;
+  }
+
+  LIBC_INLINE MutexError unlock() {
+    if (this->RawMutex::unlock(this->pshared))
+      return MutexError::NONE;
+    return MutexError::UNLOCK_WITHOUT_LOCK;
+  }
+
+  // TODO: record owner and lock count.
+  LIBC_INLINE MutexError try_lock() {
+    if (this->RawMutex::try_lock())
+      return MutexError::NONE;
+    return MutexError::BUSY;
+  }
 };
 
 } // namespace LIBC_NAMESPACE

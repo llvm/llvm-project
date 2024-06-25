@@ -69,12 +69,17 @@ const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 static const u64 kAddressSpaceSize = 1ULL << 38;
 typedef VeryDenseSizeClassMap SizeClassMap;
-#else
+#    elif SANITIZER_APPLE
 static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kAllocatorSize  = 0x010000000000ULL;  // 1T.
 static const u64 kAddressSpaceSize = 1ULL << 47;
 typedef DefaultSizeClassMap SizeClassMap;
-#endif
+#    else
+static const uptr kAllocatorSpace = 0x500000000000ULL;
+static const uptr kAllocatorSize = 0x010000000000ULL;  // 1T.
+static const u64 kAddressSpaceSize = 1ULL << 47;
+typedef DefaultSizeClassMap SizeClassMap;
+#    endif
 
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator Params. Short name for shorter demangled names..

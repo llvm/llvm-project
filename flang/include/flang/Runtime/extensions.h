@@ -44,5 +44,12 @@ std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int));
 // GNU extension subroutine SLEEP(SECONDS)
 void RTNAME(Sleep)(std::int64_t seconds);
 
+// GNU extension function ACCESS(NAME, MODE)
+// TODO: not supported on Windows
+#ifndef _WIN32
+std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
+    std::int64_t nameLength, const char *mode, std::int64_t modeLength);
+#endif
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

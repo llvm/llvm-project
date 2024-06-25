@@ -1,0 +1,9 @@
+// UNSUPPORTED: system-linux, system-windows
+//
+// RUN: %clangxx_host %p/Inputs/objc-cast.cpp -g -o %t
+// RUN: %lldb %t \
+// RUN:   -o "b main" -o run -o "expression --language objc -- *(id)0x1" \
+// RUN:   2>&1 | FileCheck %s
+
+// CHECK: (lldb) expression --language objc -- *(id)0x1
+// CHECK: error: Couldn't apply expression side effects : Couldn't dematerialize a result variable: couldn't read its memory

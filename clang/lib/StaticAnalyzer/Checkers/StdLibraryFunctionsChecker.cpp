@@ -30,7 +30,7 @@
 // was not consciously intended, and therefore it might have been unreachable.
 //
 // This checker uses eval::Call for modeling pure functions (functions without
-// side effets), for which their `Summary' is a precise model. This avoids
+// side effects), for which their `Summary' is a precise model. This avoids
 // unnecessary invalidation passes. Conflicts with other checkers are unlikely
 // because if the function has no other effects, other checkers would probably
 // never want to improve upon the modeling done by this checker.

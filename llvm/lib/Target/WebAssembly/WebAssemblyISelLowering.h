@@ -111,10 +111,6 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  const char *getClearCacheBuiltinName() const override {
-    report_fatal_error("llvm.clear_cache is not supported on wasm");
-  }
-
   bool
   shouldSimplifyDemandedVectorElts(SDValue Op,
                                    const TargetLoweringOpt &TLO) const override;

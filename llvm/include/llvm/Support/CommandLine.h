@@ -28,7 +28,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -236,12 +235,6 @@ public:
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
 };
-
-// A special subcommand representing no subcommand
-extern ManagedStatic<SubCommand> TopLevelSubCommand;
-
-// A special subcommand that can be used to put an option into all subcommands.
-extern ManagedStatic<SubCommand> AllSubCommands;
 
 class SubCommandGroup {
   SmallVector<SubCommand *, 4> Subs;
@@ -2001,6 +1994,16 @@ void PrintVersionMessage();
 /// \param Hidden if true will print hidden options
 /// \param Categorized if true print options in categories
 void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
+
+/// An array of optional enabled settings in the LLVM build configuration,
+/// which may be of interest to compiler developers. For example, includes
+/// "+assertions" if assertions are enabled. Used by printBuildConfig.
+ArrayRef<StringRef> getCompilerBuildConfig();
+
+/// Prints the compiler build configuration.
+/// Designed for compiler developers, not compiler end-users.
+/// Intended to be used in --version output when enabled.
+void printBuildConfig(raw_ostream &OS);
 
 //===----------------------------------------------------------------------===//
 // Public interface for accessing registered options.

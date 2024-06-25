@@ -46,6 +46,14 @@ void lld::macho::addInputSection(InputSection *inputSection) {
   if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
     if (isec->isCoalescedWeak())
       return;
+    if (config->emitRelativeMethodLists &&
+        ObjCMethListSection::isMethodList(isec)) {
+      if (in.objcMethList->inputOrder == UnspecifiedInputOrder)
+        in.objcMethList->inputOrder = inputSectionsOrder++;
+      in.objcMethList->addInput(isec);
+      isec->parent = in.objcMethList;
+      return;
+    }
     if (config->emitInitOffsets &&
         sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
       in.initOffsets->addInput(isec);
@@ -186,10 +194,8 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
-  for (auto &copySym : copy->symbols) {
+  for (auto &copySym : copy->symbols)
     copySym->wasIdenticalCodeFolded = true;
-    copySym->size = 0;
-  }
 
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
@@ -199,7 +205,7 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
     return;
   for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
     assert((*it)->value == 0);
-    (*it)->unwindEntry = nullptr;
+    (*it)->originalUnwindEntry = nullptr;
   }
 }
 
@@ -273,6 +279,9 @@ ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
   Section &section =
       *make<Section>(/*file=*/nullptr, segName, sectName, flags, /*addr=*/0);
   auto isec = make<ConcatInputSection>(section, data, align);
+  // Since this is an explicitly created 'fake' input section,
+  // it should not be dead stripped.
+  isec->live = true;
   section.subsections.push_back({0, isec});
   return isec;
 }

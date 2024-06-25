@@ -101,14 +101,14 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
   const Expr *Arg = nullptr;
   unsigned ArgNum;
 
-  if (Name.equals("CFArrayCreate") || Name.equals("CFSetCreate")) {
+  if (Name == "CFArrayCreate" || Name == "CFSetCreate") {
     if (CE->getNumArgs() != 4)
       return;
     ArgNum = 1;
     Arg = CE->getArg(ArgNum)->IgnoreParenCasts();
     if (hasPointerToPointerSizedType(Arg))
         return;
-  } else if (Name.equals("CFDictionaryCreate")) {
+  } else if (Name == "CFDictionaryCreate") {
     if (CE->getNumArgs() != 6)
       return;
     // Check first argument.

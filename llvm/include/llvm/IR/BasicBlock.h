@@ -59,7 +59,8 @@ class DbgMarker;
 class BasicBlock final : public Value, // Basic blocks are data objects also
                          public ilist_node_with_parent<BasicBlock, Function> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
   /// Flag recording whether or not this block stores debug-info in the form
   /// of intrinsic instructions (false) or non-instruction records (true).
   bool IsNewDbgInfoFormat;
@@ -92,6 +93,7 @@ public:
   /// in the new format (\p NewFlag == true), converting to the desired format
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
+  void setNewDbgInfoFormatFlag(bool NewFlag);
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
@@ -171,10 +173,11 @@ public:
   friend BasicBlock::iterator Instruction::eraseFromParent();
   friend BasicBlock::iterator Instruction::insertInto(BasicBlock *BB,
                                                       BasicBlock::iterator It);
-  friend class llvm::SymbolTableListTraits<llvm::Instruction,
-                                           ilist_iterator_bits<true>>;
+  friend class llvm::SymbolTableListTraits<
+      llvm::Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
   friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock,
-                                            ilist_iterator_bits<true>>;
+                                            ilist_iterator_bits<true>,
+                                            ilist_parent<BasicBlock>>;
 
   // Friendly methods that need to access us for the maintenence of
   // debug-info attachments.
@@ -791,7 +794,7 @@ template <> struct DenseMapInfo<BasicBlock::iterator> {
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^
-           It.getHeadBit();
+           (unsigned)It.getHeadBit();
   }
 
   static bool isEqual(const BasicBlock::iterator &LHS,

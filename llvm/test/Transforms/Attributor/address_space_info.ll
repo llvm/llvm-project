@@ -8,11 +8,11 @@
 @s2 = dso_local addrspace(3) global i32 undef, align 4
 
 ;.
-; CHECK: @[[DST:[a-zA-Z0-9_$"\\.-]+]] = dso_local addrspace(1) externally_initialized global i32 0, align 4
-; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = dso_local addrspace(1) externally_initialized global ptr null, align 4
-; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = dso_local addrspace(1) externally_initialized global i32 0, align 4
-; CHECK: @[[S1:[a-zA-Z0-9_$"\\.-]+]] = dso_local addrspace(3) global i32 undef, align 4
-; CHECK: @[[S2:[a-zA-Z0-9_$"\\.-]+]] = dso_local addrspace(3) global i32 undef, align 4
+; CHECK: @dst = dso_local addrspace(1) externally_initialized global i32 0, align 4
+; CHECK: @g1 = dso_local addrspace(1) externally_initialized global ptr null, align 4
+; CHECK: @g2 = dso_local addrspace(1) externally_initialized global i32 0, align 4
+; CHECK: @s1 = dso_local addrspace(3) global i32 undef, align 4
+; CHECK: @s2 = dso_local addrspace(3) global i32 undef, align 4
 ;.
 define internal void @_Z12global_writePi(ptr noundef %p) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(write)

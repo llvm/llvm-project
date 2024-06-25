@@ -1,0 +1,15 @@
+// Verify that PLTCall optimization works.
+
+RUN: %clang %cflags %p/../Inputs/plt-tailcall.c \
+RUN:    -o %t -Wl,-q
+RUN: llvm-bolt %t -o %t.bolt --plt=all --print-plt  --print-only=foo | FileCheck %s
+
+// Call to printf
+CHECK: adrp	x16, printf@GOT
+CHECK: ldr	x17, [x16, :lo12:printf@GOT]
+CHECK: blr	x17 # PLTCall: 1
+
+// Call to puts, that was tail-call optimized
+CHECK: adrp	x16, puts@GOT
+CHECK: ldr	x17, [x16, :lo12:puts@GOT]
+CHECK: br	x17 # TAILCALL  # PLTCall: 1

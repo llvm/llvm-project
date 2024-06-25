@@ -123,16 +123,16 @@ void mlir::linalg::LinalgDialect::initialize() {
 
   addInterfaces<LinalgInlinerInterface>();
 
-  declarePromisedInterface<GenericOp, mesh::ShardingInterface>();
+  declarePromisedInterface<mesh::ShardingInterface, GenericOp>();
   declarePromisedInterfaces<mesh::ShardingInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
                             >();
-  declarePromisedInterface<CopyOp, SubsetOpInterface>();
-  declarePromisedInterface<CopyOp, SubsetInsertionOpInterface>();
-  declarePromisedInterface<IndexOp, ValueBoundsOpInterface>();
-  declarePromisedInterface<linalg::GenericOp, TilingInterface>();
-  declarePromisedInterface<linalg::GenericOp, PartialReductionOpInterface>();
+  declarePromisedInterface<SubsetOpInterface, CopyOp>();
+  declarePromisedInterface<SubsetInsertionOpInterface, CopyOp>();
+  declarePromisedInterface<ValueBoundsOpInterface, IndexOp>();
+  declarePromisedInterface<TilingInterface, linalg::GenericOp>();
+  declarePromisedInterface<PartialReductionOpInterface, linalg::GenericOp>();
   declarePromisedInterfaces<TilingInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"

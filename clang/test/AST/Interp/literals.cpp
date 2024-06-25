@@ -66,7 +66,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
@@ -985,6 +990,8 @@ namespace DiscardExprs {
     __uuidof(GuidType);
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
 
+    requires{false;};
+
     return 0;
   }
   static_assert(ignoredExprs() == 0, "");
@@ -1202,11 +1209,23 @@ namespace incdecbool {
 constexpr int externvar1() { // both-error {{never produces a constant expression}}
   extern char arr[]; // ref-note {{declared here}}
    return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
-                  // expected-note {{array-to-pointer decay of array member without known bound is not supported}}
+                  // expected-note {{indexing of array without known bound}}
 }
 #endif
 
 namespace Extern {
   constexpr extern char Oops = 1;
   static_assert(Oops == 1, "");
+
+#if __cplusplus >= 201402L
+  struct NonLiteral {
+    NonLiteral() {}
+  };
+  NonLiteral nl;
+  constexpr NonLiteral &ExternNonLiteralVarDecl() {
+    extern NonLiteral nl;
+    return nl;
+  }
+  static_assert(&ExternNonLiteralVarDecl() == &nl, "");
+#endif
 }

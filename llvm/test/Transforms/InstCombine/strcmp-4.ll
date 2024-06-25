@@ -11,8 +11,8 @@ declare i32 @strcmp(ptr, ptr)
 
 define i32 @fold_strcmp_s3_x_s4_s3(i1 %C) {
 ; CHECK-LABEL: @fold_strcmp_s3_x_s4_s3(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr getelementptr inbounds ([10 x i8], ptr @s9, i64 0, i64 6), ptr getelementptr inbounds ([10 x i8], ptr @s9, i64 0, i64 5)
-; CHECK-NEXT:    [[CMP:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(1) [[PTR]], ptr noundef nonnull dereferenceable(4) getelementptr inbounds ([10 x i8], ptr @s9, i64 0, i64 6))
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr getelementptr inbounds (i8, ptr @s9, i64 6), ptr getelementptr inbounds (i8, ptr @s9, i64 5)
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(1) [[PTR]], ptr noundef nonnull dereferenceable(4) getelementptr inbounds (i8, ptr @s9, i64 6))
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
 

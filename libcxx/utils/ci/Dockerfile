@@ -72,33 +72,33 @@ RUN sudo apt-get update \
 
 RUN sudo apt-get update \
     && sudo apt-get install -y \
-        python3 \
-        python3-distutils \
-        python3-psutil \
-        git \
-        gdb \
-        ccache \
-        gpg \
-        wget \
         bash \
+        ccache \
         curl \
-        python3 \
-        python3-dev \
-        libpython3-dev \
-        uuid-dev \
-        libncurses5-dev \
-        swig3.0 \
-        libxml2-dev \
-        libedit-dev \
+        gdb \
+        git \
+        gpg \
         language-pack-en \
         language-pack-fr \
         language-pack-ja \
         language-pack-ru \
         language-pack-zh-hans \
+        libedit-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxml2-dev \
         lsb-release \
-        wget \
-        unzip \
+        make \
+        python3 \
+        python3-dev \
+        python3-distutils \
+        python3-packaging \
+        python3-psutil \
         software-properties-common \
+        swig4.0 \
+        unzip \
+        uuid-dev \
+        wget \
     && sudo rm -rf /var/lib/apt/lists/*
 
 
@@ -287,10 +287,6 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 # IMAGE: ghcr.io/libcxx/actions-builder.
 #
 FROM builder-base AS actions-builder
-
-# Install 'act' for running github actions locally. This provides an alternative to the run-buildbot script
-# while still providing reproducability.
-RUN curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
 
 WORKDIR /home/runner
 USER runner

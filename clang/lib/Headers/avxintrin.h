@@ -840,6 +840,7 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 
 /// Copies the values stored in a 128-bit vector of [4 x float] as
 ///    specified by the 128-bit integer vector operand.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPERMILPS </c> instruction.

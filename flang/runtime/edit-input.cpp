@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "edit-input.h"
-#include "freestanding-tools.h"
 #include "namelist.h"
 #include "utf.h"
 #include "flang/Common/optional.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cfenv>
 

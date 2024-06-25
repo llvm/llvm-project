@@ -212,7 +212,7 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
   M(float, mbb_frequencies, MBBFrequencyShape,                                 \
     "A vector of machine basic block frequencies")                             \
   M(int64_t, mbb_mapping, InstructionsShape,                                   \
-    "A vector of indicies mapping instructions to MBBs")
+    "A vector of indices mapping instructions to MBBs")
 #else
 #define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
 #define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)
@@ -963,9 +963,9 @@ void extractInstructionFeatures(
   // frequency vector, mapping each instruction to its associated MBB.
 
   // Start off by sorting the segments based on the beginning slot index.
-  std::sort(
-      LRPosInfo.begin(), LRPosInfo.end(),
-      [](LRStartEndInfo A, LRStartEndInfo B) { return A.Begin < B.Begin; });
+  llvm::sort(LRPosInfo, [](LRStartEndInfo A, LRStartEndInfo B) {
+    return A.Begin < B.Begin;
+  });
   size_t InstructionIndex = 0;
   size_t CurrentSegmentIndex = 0;
   SlotIndex CurrentIndex = LRPosInfo[0].Begin;

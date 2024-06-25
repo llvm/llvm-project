@@ -79,7 +79,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
     SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
     llvm::sort(WUsers);
-    WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
+    WUsers.erase(llvm::unique(WUsers), WUsers.end());
     while (!WUsers.empty())
       if (WeakTrackingVH WU = WUsers.pop_back_val()) {
         if (PHINode *PN = dyn_cast<PHINode>(WU)) {

@@ -9,20 +9,20 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Lex/Lexer.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
+namespace clang::tidy::bugprone {
+
 namespace {
 AST_MATCHER(ImplicitCastExpr, isPartOfExplicitCast) {
   return Node.isPartOfExplicitCast();
 }
+AST_MATCHER(Expr, containsErrors) { return Node.containsErrors(); }
 } // namespace
-} // namespace clang
-
-namespace clang::tidy::bugprone {
 
 static const Expr *getLHSOfMulBinOp(const Expr *E) {
   assert(E == E->IgnoreParens() && "Already skipped all parens!");
@@ -250,7 +250,8 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
 
 void ImplicitWideningOfMultiplicationResultCheck::registerMatchers(
     MatchFinder *Finder) {
-  Finder->addMatcher(implicitCastExpr(unless(anyOf(isInTemplateInstantiation(),
+  Finder->addMatcher(implicitCastExpr(unless(anyOf(containsErrors(),
+                                                   isInTemplateInstantiation(),
                                                    isPartOfExplicitCast())),
                                       hasCastKind(CK_IntegralCast))
                          .bind("x"),

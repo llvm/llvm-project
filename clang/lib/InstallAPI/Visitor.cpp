@@ -205,10 +205,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  std::pair<ObjCCategoryRecord *, FrontendAttrs *> Category =
-      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D,
-                                 *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category.first, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
@@ -218,7 +218,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  // Skip variables in records. They are handled seperately for C++.
+  // Skip variables in records. They are handled separately for C++.
   if (D->getDeclContext()->isRecord())
     return true;
 
@@ -255,7 +255,7 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
       return true;
 
     // Skip methods in CXX RecordDecls.
-    for (auto P : D->getASTContext().getParents(*M)) {
+    for (const DynTypedNode &P : D->getASTContext().getParents(*M)) {
       if (P.get<CXXRecordDecl>())
         return true;
     }

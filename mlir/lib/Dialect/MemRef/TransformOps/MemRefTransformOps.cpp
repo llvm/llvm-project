@@ -173,17 +173,16 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Assemble results.
-  results.set(getGlobal().cast<OpResult>(), globalOps);
-  results.set(getGetGlobal().cast<OpResult>(), getGlobalOps);
+  results.set(cast<OpResult>(getGlobal()), globalOps);
+  results.set(cast<OpResult>(getGetGlobal()), getGlobalOps);
 
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  producesHandle(getGlobal(), effects);
-  producesHandle(getGetGlobal(), effects);
-  consumesHandle(getAlloca(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getAllocaMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -249,7 +248,7 @@ transform::MemRefEraseDeadAllocAndStoresOp::applyToOne(
 
 void transform::MemRefEraseDeadAllocAndStoresOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
   transform::modifiesPayload(effects);
 }
 void transform::MemRefEraseDeadAllocAndStoresOp::build(OpBuilder &builder,

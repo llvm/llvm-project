@@ -151,7 +151,7 @@ Deleting an IR-level Instruction
 
 When an ``Instruction`` is deleted, its debug uses change to ``undef``. This is
 a loss of debug info: the value of one or more source variables becomes
-unavailable, starting with the ``llvm.dbg.value(undef, ...)``. When there is no
+unavailable, starting with the ``#dbg_value(undef, ...)``. When there is no
 way to reconstitute the value of the lost instruction, this is the best
 possible outcome. However, it's often possible to do better:
 
@@ -172,7 +172,7 @@ possible outcome. However, it's often possible to do better:
   define i16 @foo(i16 %a) {
     %b = sext i16 %a to i32
     %c = and i32 %b, 15
-    call void @llvm.dbg.value(metadata i32 %c, ...)
+      #dbg_value(i32 %c, ...)
     %d = trunc i32 %c to i16
     ret i16 %d
   }
@@ -183,7 +183,7 @@ replaced with a simplified instruction:
 .. code-block:: llvm
 
   define i16 @foo(i16 %a) {
-    call void @llvm.dbg.value(metadata i32 undef, ...)
+      #dbg_value(i32 undef, ...)
     %simplified = and i16 %a, 15
     ret i16 %simplified
   }
@@ -204,7 +204,7 @@ This results in better debug info because the debug use of ``%c`` is preserved:
 
   define i16 @foo(i16 %a) {
     %simplified = and i16 %a, 15
-    call void @llvm.dbg.value(metadata i16 %simplified, ...)
+      #dbg_value(i16 %simplified, ...)
     ret i16 %simplified
   }
 
@@ -249,7 +249,7 @@ module, and the second checks that this DI is still available after an
 optimization has occurred, reporting any errors/warnings while doing so.
 
 The instructions are assigned sequentially increasing line locations, and are
-immediately used by debug value intrinsics everywhere possible.
+immediately used by debug value records everywhere possible.
 
 For example, here is a module before:
 
@@ -271,10 +271,10 @@ and after running ``opt -debugify``:
    define void @f(i32* %x) !dbg !6 {
    entry:
      %x.addr = alloca i32*, align 8, !dbg !12
-     call void @llvm.dbg.value(metadata i32** %x.addr, metadata !9, metadata !DIExpression()), !dbg !12
+       #dbg_value(i32** %x.addr, !9, !DIExpression(), !12)
      store i32* %x, i32** %x.addr, align 8, !dbg !13
      %0 = load i32*, i32** %x.addr, align 8, !dbg !14
-     call void @llvm.dbg.value(metadata i32* %0, metadata !11, metadata !DIExpression()), !dbg !14
+       #dbg_value(i32* %0, !11, !DIExpression(), !14)
      store i32 10, i32* %0, align 4, !dbg !15
      ret void, !dbg !16
    }
@@ -409,7 +409,7 @@ as follows:
   $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
 
 Please do note that there are some known false positives, for source locations
-and debug intrinsic checking, so that will be addressed as a future work.
+and debug record checking, so that will be addressed as a future work.
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------

@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_FENVIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_FENVIMPL_H
 
+#include "hdr/fenv_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE_ASM
 #include "src/__support/macros/config.h"     // For LIBC_INLINE
 
-#include <fenv.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
@@ -64,19 +65,19 @@ struct FEnv {
   }
 
   LIBC_INLINE static int exception_bits_to_macro(uint32_t status) {
-    return (status & INVALID ? FE_INVALID : 0) |
-           (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (status & INEXACT ? FE_INEXACT : 0);
+    return ((status & INVALID) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT) ? FE_INEXACT : 0);
   }
 
   LIBC_INLINE static uint32_t exception_macro_to_bits(int except) {
-    return (except & FE_INVALID ? INVALID : 0) |
-           (except & FE_DIVBYZERO ? DIVBYZERO : 0) |
-           (except & FE_OVERFLOW ? OVERFLOW : 0) |
-           (except & FE_UNDERFLOW ? UNDERFLOW : 0) |
-           (except & FE_INEXACT ? INEXACT : 0);
+    return ((except & FE_INVALID) ? INVALID : 0) |
+           ((except & FE_DIVBYZERO) ? DIVBYZERO : 0) |
+           ((except & FE_OVERFLOW) ? OVERFLOW : 0) |
+           ((except & FE_UNDERFLOW) ? UNDERFLOW : 0) |
+           ((except & FE_INEXACT) ? INEXACT : 0);
   }
 };
 

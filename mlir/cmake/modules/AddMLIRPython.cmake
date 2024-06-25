@@ -203,8 +203,8 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX;COMMON_CAPI_LINK_LIBS"
-    "DECLARED_SOURCES"
+    "ROOT_PREFIX;INSTALL_PREFIX"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
   # Helper to process an individual target.
   function(_process_target modules_target sources_target)

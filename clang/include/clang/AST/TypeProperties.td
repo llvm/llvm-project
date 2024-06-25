@@ -136,6 +136,13 @@ let Class = ConstantArrayType in {
   }]>;
 }
 
+let Class = ArrayParameterType in {
+  def : Creator<[{ return ctx.getAdjustedParameterType(
+                              ctx.getConstantArrayType(elementType,sizeValue,
+                                    size,sizeModifier,
+                                    indexQualifiers.getCVRQualifiers())); }]>;
+}
+
 let Class = IncompleteArrayType in {
   def : Creator<[{
     return ctx.getIncompleteArrayType(elementType, sizeModifier,
@@ -345,6 +352,12 @@ let Class = FunctionProtoType in {
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
   }
+  def : Property<"functionEffects", Array<FunctionEffect>> {
+    let Read = [{ node->getFunctionEffectsWithoutConditions() }];
+  }
+  def : Property<"functionEffectConds", Array<EffectConditionExpr>> {
+    let Read = [{ node->getFunctionEffectConditions() }];
+  }
 
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
@@ -361,6 +374,7 @@ let Class = FunctionProtoType in {
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
     epi.AArch64SMEAttributes = AArch64SMEAttributes;
+    epi.FunctionEffects = FunctionEffectsRef::create(functionEffects, functionEffectConds);
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }
@@ -853,6 +867,10 @@ let Class = BuiltinType in {
 #define WASM_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+
+#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/AMDGPUTypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

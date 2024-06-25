@@ -1,6 +1,6 @@
-# Test the correctness of section names and function symbol names post cdsplit.
-# Warm section should have name .text.warm and warm function fragments should
-# have symbol names ending in warm.
+## Test the correctness of section names and function symbol names post cdsplit.
+## Warm section should have name .text.warm and warm function fragments should
+## have symbol names ending in warm.
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
@@ -10,6 +10,7 @@
 # RUN:         --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS-WARM
 
+# CHECK-SYMS-WARM: 0000000000000000 l df *ABS* 0000000000000000 bolt-pseudo.o
 # CHECK-SYMS-WARM: .text.warm
 # CHECK-SYMS-WARM-SAME: chain.warm
 # CHECK-SYMS-WARM: .text.cold

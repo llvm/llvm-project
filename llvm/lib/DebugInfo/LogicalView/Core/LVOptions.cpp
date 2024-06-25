@@ -512,7 +512,7 @@ bool LVPatterns::matchPattern(StringRef Input, const LVMatchInfo &MatchInfo) {
   for (const LVMatch &Match : MatchInfo) {
     switch (Match.Mode) {
     case LVMatchMode::Match:
-      Matched = Input.equals(Match.Pattern);
+      Matched = Input == Match.Pattern;
       break;
     case LVMatchMode::NoCase:
       Matched = Input.equals_insensitive(Match.Pattern);

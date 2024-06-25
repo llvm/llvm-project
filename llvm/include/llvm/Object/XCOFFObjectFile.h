@@ -70,6 +70,9 @@ public:
   }
 
   uint16_t getVersion() const { return static_cast<const T *>(this)->Version; }
+  uint64_t getEntryPointAddr() const {
+    return static_cast<const T *>(this)->EntryPointAddr;
+  }
 };
 
 struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {

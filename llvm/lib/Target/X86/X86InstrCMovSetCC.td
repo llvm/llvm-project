@@ -58,8 +58,8 @@ let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
 }
 let SchedRW = [WriteCMOV, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault],
     Predicates = [HasCMOV, HasCF, In64BitMode], mayStore = 1 in
-  def mr : ITy<0x40, MRMDestMemCC, t, (outs t.MemOperand:$dst),
-                (ins t.RegClass:$src1, ccode:$cond),
+  def mr : ITy<0x40, MRMDestMemCC, t, (outs),
+                (ins t.MemOperand:$dst, t.RegClass:$src1, ccode:$cond),
                 "cfcmov${cond}", unaryop_ndd_args, []>, UseEFLAGS, NF;
 }
 
@@ -126,6 +126,25 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
                 [(store (X86setcc timm:$cond, EFLAGS), addr:$dst)]>,
                 TB, Sched<[WriteSETCCStore]>;
 } // Uses = [EFLAGS]
+
+// SetZUCC and promoted SetCC instructions.
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
+  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasNDD] in {
+  def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
+                "setzu${cond}\t$dst", []>,
+                XD, ZU, NoCD8, Sched<[WriteSETCC]>;
+  def SETCCr_EVEX : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
+                "set${cond}\t$dst", []>,
+                XD, PL, Sched<[WriteSETCC]>;
+  let mayStore = 1 in {
+    def SETZUCCm : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
+                  "setzu${cond}\t$dst", []>,
+                  XD, ZU, NoCD8, Sched<[WriteSETCCStore]>;
+    def SETCCm_EVEX : I<0x40, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
+                  "set${cond}\t$dst", []>,
+                  XD, PL, Sched<[WriteSETCCStore]>;
+  }
+}
 
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html

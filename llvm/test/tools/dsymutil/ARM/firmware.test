@@ -1,0 +1,11 @@
+$ cat test.c
+int main() {
+  return 0;
+}
+
+$ xcrun clang -O0 -target arm64-apple-unknown-macho test.c -c -o test.o
+$ xcrun ld -arch arm64 -o test.out test.o -platform_version firmware 0 0
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/firmware/test.out -o %t.dSYM
+RUN: llvm-objdump -h %t.dSYM/Contents/Resources/DWARF/test.out | FileCheck %s
+CHECK: file format mach-o arm64

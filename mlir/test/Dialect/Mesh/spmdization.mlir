@@ -16,6 +16,21 @@ func.func @full_replication(
   return %1 : tensor<2xi8>
 }
 
+// CHECK-LABEL: func @sharding_triplet
+func.func @sharding_triplet(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<1xf32>
+  %arg0: tensor<2xf32>
+// CHECK-SAME: ) -> tensor<2xf32> {
+) -> tensor<2xf32> {
+  // CHECK: %[[ALL_GATHER:.*]] = mesh.all_gather %[[ARG]] on @mesh_1d mesh_axes = [0] gather_axis = 0 : tensor<1xf32> -> tensor<2xf32>
+  %sharding_annotated = mesh.shard %arg0 to <@mesh_1d, [[0]]> : tensor<2xf32>
+  %sharding_annotated_0 = mesh.shard %sharding_annotated to <@mesh_1d, [[0]]> annotate_for_users : tensor<2xf32>
+  %sharding_annotated_1 = mesh.shard %sharding_annotated_0 to <@mesh_1d, [[]]> : tensor<2xf32>
+  // CHECK: return %[[ALL_GATHER]] : tensor<2xf32>
+  return %sharding_annotated_1 : tensor<2xf32>
+}
+
+
 // CHECK-LABEL: func @move_split_axis
 func.func @move_split_axis(
   // CHECK-SAME: %[[ARG:.*]]: tensor<1x2xi8>

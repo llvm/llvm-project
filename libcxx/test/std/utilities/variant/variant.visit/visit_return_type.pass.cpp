@@ -120,36 +120,6 @@ void test_argument_forwarding() {
     std::visit<ReturnType>(obj, std::move(cv));
     assert(Fn::check_call<const int &&>(Val));
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  { // single argument - lvalue reference
-    using V = std::variant<int &>;
-    int x = 42;
-    V v(x);
-    const V &cv = v;
-    std::visit<ReturnType>(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit<ReturnType>(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit<ReturnType>(obj, std::move(v));
-    assert(Fn::check_call<int &>(Val));
-    std::visit<ReturnType>(obj, std::move(cv));
-    assert(Fn::check_call<int &>(Val));
-  }
-  { // single argument - rvalue reference
-    using V = std::variant<int &&>;
-    int x = 42;
-    V v(std::move(x));
-    const V &cv = v;
-    std::visit<ReturnType>(obj, v);
-    assert(Fn::check_call<int &>(Val));
-    std::visit<ReturnType>(obj, cv);
-    assert(Fn::check_call<int &>(Val));
-    std::visit<ReturnType>(obj, std::move(v));
-    assert(Fn::check_call<int &&>(Val));
-    std::visit<ReturnType>(obj, std::move(cv));
-    assert(Fn::check_call<int &&>(Val));
-  }
-#endif
   { // multi argument - multi variant
     using V = std::variant<int, std::string, long>;
     V v1(42), v2("hello"), v3(43l);

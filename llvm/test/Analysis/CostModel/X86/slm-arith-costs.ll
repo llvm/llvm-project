@@ -192,7 +192,7 @@ entry:
 
 define <16 x i8> @slm-costs_8_v16_mul(<16 x i8> %a, <16 x i8> %b)  {
 ; CHECK-LABEL: 'slm-costs_8_v16_mul'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = mul nsw <16 x i8> %a, %b
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res = mul nsw <16 x i8> %a, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %res
 ;
 entry:

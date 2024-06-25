@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // There is a bug in older versions of Clang that causes trouble with constraints in classes like
 // `ContainerWithDirectCtr`.
-// XFAIL: clang-16, apple-clang-15
+// XFAIL: apple-clang-15
 
 // template<template<class...> class C, input_range R, class... Args>
 //   constexpr auto to(R&& r, Args&&... args);  // Since C++23

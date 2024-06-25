@@ -31,16 +31,16 @@ define i32 @test2(i32 %a, i32 %b, i32 %z) {
   ret i32 %f
 }
 
-define <2 x i32> @negate_vec_undefs(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
-; CHECK-LABEL: @negate_vec_undefs(
+define <2 x i32> @negate_vec_poisons(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
+; CHECK-LABEL: @negate_vec_poisons(
 ; CHECK-NEXT:    [[E:%.*]] = mul <2 x i32> [[A:%.*]], <i32 40, i32 40>
 ; CHECK-NEXT:    [[F:%.*]] = mul <2 x i32> [[E]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[F]]
 ;
   %d = mul <2 x i32> %z, <i32 40, i32 40>
-  %c = sub <2 x i32> <i32 0, i32 undef>, %d
+  %c = sub <2 x i32> <i32 0, i32 poison>, %d
   %e = mul <2 x i32> %a, %c
-  %f = sub <2 x i32> <i32 0, i32 undef>, %e
+  %f = sub <2 x i32> <i32 0, i32 poison>, %e
   ret <2 x i32> %f
 }
 

@@ -169,6 +169,12 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
 
 // Verify that the given combination of options makes sense.
 static Error verifyOptions(const DsymutilOptions &Options) {
+  if (Options.LinkOpts.Verbose && Options.LinkOpts.Quiet) {
+    return make_error<StringError>(
+        "--quiet and --verbose cannot be specified together",
+        errc::invalid_argument);
+  }
+
   if (Options.InputFiles.empty()) {
     return make_error<StringError>("no input files specified",
                                    errc::invalid_argument);
@@ -311,6 +317,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
+  Options.LinkOpts.Quiet = Args.hasArg(OPT_quiet);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
   Options.LinkOpts.Fat64 = Args.hasArg(OPT_fat64);
   Options.LinkOpts.KeepFunctionForStatic =
@@ -483,16 +490,20 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
                          DsymutilOptions Options, std::mutex &Mutex) {
 
   if (OutputFile == "-") {
-    std::lock_guard<std::mutex> Guard(Mutex);
-    WithColor::warning() << "verification skipped for " << Arch
-                         << " because writing to stdout.\n";
+    if (!Options.LinkOpts.Quiet) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      WithColor::warning() << "verification skipped for " << Arch
+                           << " because writing to stdout.\n";
+    }
     return true;
   }
 
   if (Options.LinkOpts.NoOutput) {
-    std::lock_guard<std::mutex> Guard(Mutex);
-    WithColor::warning() << "verification skipped for " << Arch
-                         << " because --no-output was passed.\n";
+    if (!Options.LinkOpts.Quiet) {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      WithColor::warning() << "verification skipped for " << Arch
+                           << " because --no-output was passed.\n";
+    }
     return true;
   }
 
@@ -507,10 +518,12 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch,
   if (auto *Obj = dyn_cast<MachOObjectFile>(&Binary)) {
     std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(*Obj);
     if (DICtx->getMaxVersion() > 5) {
-      std::lock_guard<std::mutex> Guard(Mutex);
-      WithColor::warning()
-          << "verification skipped for " << Arch
-          << " because DWARF standard greater than v5 is not supported yet.\n";
+      if (!Options.LinkOpts.Quiet) {
+        std::lock_guard<std::mutex> Guard(Mutex);
+        WithColor::warning() << "verification skipped for " << Arch
+                             << " because DWARF standard greater than v5 is "
+                                "not supported yet.\n";
+      }
       return true;
     }
 
@@ -751,11 +764,13 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           continue;
 
         if (Map->begin() == Map->end()) {
-          std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
-          WithColor::warning()
-              << "no debug symbols in executable (-arch "
-              << MachOUtils::getArchName(Map->getTriple().getArchName())
-              << ")\n";
+          if (!Options.LinkOpts.Quiet) {
+            std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+            WithColor::warning()
+                << "no debug symbols in executable (-arch "
+                << MachOUtils::getArchName(Map->getTriple().getArchName())
+                << ")\n";
+          }
         }
 
         // Using a std::shared_ptr rather than std::unique_ptr because move-only

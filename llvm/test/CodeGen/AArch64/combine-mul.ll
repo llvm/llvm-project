@@ -44,8 +44,7 @@ define <4 x i1> @PR48683_vec_undef(<4 x i32> %x) {
 define i64 @combine_mul_self_demandedbits(i64 %x) {
 ; CHECK-LABEL: combine_mul_self_demandedbits:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x0, x0
-; CHECK-NEXT:    and x0, x8, #0xfffffffffffffffd
+; CHECK-NEXT:    mul x0, x0, x0
 ; CHECK-NEXT:    ret
   %1 = mul i64 %x, %x
   %2 = and i64 %1, -3
@@ -77,7 +76,7 @@ define i8 @one_demanded_bit(i8 %x) {
 define <2 x i64> @one_demanded_bit_splat(<2 x i64> %x) {
 ; CHECK-LABEL: one_demanded_bit_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #5
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -131,7 +130,7 @@ define i32 @squared_demanded_2_low_bits(i32 %x) {
 define <2 x i64> @squared_demanded_2_low_bits_splat(<2 x i64> %x) {
 ; CHECK-LABEL: squared_demanded_2_low_bits_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-2
+; CHECK-NEXT:    mov x8, #-2 // =0xfffffffffffffffe
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

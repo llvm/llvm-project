@@ -78,7 +78,7 @@ def VCIX_BinaryImmOp : VCIX_Op<"v.iv">,
           xlen, $opcode, $_location, moduleTranslation);
       llvm::Value *immConst = mlir::LLVM::detail::getLLVMConstant(
           xlen, $imm, $_location, moduleTranslation);
-      VectorType vt = op.getResult().getType().cast<VectorType>();
+      VectorType vt = mlir::cast<VectorType>(op.getResult().getType());
       llvm::Value *vl =
           createVL(builder, $vl, vt, xlen, $_location, moduleTranslation);
       $res = createIntrinsicCall(
@@ -120,7 +120,7 @@ def VCIX_BinaryOp : VCIX_Op<"v.sv">,
       } else {
         id = llvm::Intrinsic::riscv_sf_vc_v_fv_se;
       }
-      VectorType vt = op.getResult().getType().cast<VectorType>();
+      VectorType vt = mlir::cast<VectorType>(op.getResult().getType());
       llvm::Value *vl =
           createVL(builder, $vl, vt, xlen, $_location, moduleTranslation);
       $res = createIntrinsicCall(

@@ -179,7 +179,11 @@ define i32 @local_stack_remote_write_and_read() norecurse {
   ret i32 %r
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback }
-; CHECK: attributes #[[ATTR1]] = { norecurse nosync }
-; CHECK: attributes #[[ATTR2]] = { norecurse }
+; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback }
+; TUNIT: attributes #[[ATTR1]] = { norecurse nosync }
+; TUNIT: attributes #[[ATTR2]] = { norecurse }
+;.
+; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback }
+; CGSCC: attributes #[[ATTR1]] = { norecurse nosync }
+; CGSCC: attributes #[[ATTR2]] = { norecurse }
 ;.

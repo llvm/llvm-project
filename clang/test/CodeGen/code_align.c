@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -x c %s %s -o - | FileCheck -check-prefix=CHECK-C %s
-// RUN: %clang_cc1 -fsyntax-only -emit-llvm -x c++ -std=c++11 %s -o - | FileCheck %s --check-prefixes CHECK-C,CHECK-CPP
+// RUN: %clang_cc1 -emit-llvm -x c++ -std=c++11 %s -o - | FileCheck %s --check-prefixes CHECK-C,CHECK-CPP
 
 // CHECK-C: br label %for.cond, !llvm.loop ![[MD_FP:[0-9]+]]
 // CHECK-C: br label %while.cond, !llvm.loop ![[MD_FP_1:[0-9]+]]

@@ -181,6 +181,18 @@ public:
     return getKnownMinValue() % RHS == 0;
   }
 
+  /// Returns whether or not the callee is known to be a multiple of RHS.
+  constexpr bool isKnownMultipleOf(const FixedOrScalableQuantity &RHS) const {
+    // x % y == 0 => x % y == 0
+    // x % y == 0 => (vscale * x) % y == 0
+    // x % y == 0 => (vscale * x) % (vscale * y) == 0
+    // but
+    // x % y == 0 !=> x % (vscale * y) == 0
+    if (!isScalable() && RHS.isScalable())
+      return false;
+    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+  }
+
   // Return the minimum value with the assumption that the count is exact.
   // Use in places where a scalable count doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).

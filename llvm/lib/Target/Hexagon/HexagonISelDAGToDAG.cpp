@@ -60,13 +60,18 @@ namespace llvm {
 /// Hexagon-specific DAG, ready for instruction scheduling.
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
                                    CodeGenOptLevel OptLevel) {
-  return new HexagonDAGToDAGISel(TM, OptLevel);
+  return new HexagonDAGToDAGISelLegacy(TM, OptLevel);
 }
 }
 
-char HexagonDAGToDAGISel::ID = 0;
+HexagonDAGToDAGISelLegacy::HexagonDAGToDAGISelLegacy(HexagonTargetMachine &tm,
+                                                     CodeGenOptLevel OptLevel)
+    : SelectionDAGISelLegacy(
+          ID, std::make_unique<HexagonDAGToDAGISel>(tm, OptLevel)) {}
 
-INITIALIZE_PASS(HexagonDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+char HexagonDAGToDAGISelLegacy::ID = 0;
+
+INITIALIZE_PASS(HexagonDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();

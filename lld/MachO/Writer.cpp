@@ -725,10 +725,9 @@ void Writer::scanSymbols() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
         continue;
-      defined->canonicalize();
       if (defined->overridesWeakDef)
         addNonWeakDefinition(defined);
-      if (!defined->isAbsolute() && isCodeSection(defined->isec))
+      if (!defined->isAbsolute() && isCodeSection(defined->isec()))
         in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
@@ -756,9 +755,8 @@ void Writer::scanSymbols() {
         if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
           if (!defined->isLive())
             continue;
-          defined->canonicalize();
           if (!defined->isExternal() && !defined->isAbsolute() &&
-              isCodeSection(defined->isec))
+              isCodeSection(defined->isec()))
             in.unwindInfo->addSymbol(defined);
         }
       }
@@ -1292,6 +1290,8 @@ template <class LP> void Writer::run() {
   scanSymbols();
   if (in.objcStubs->isNeeded())
     in.objcStubs->setUp();
+  if (in.objcMethList->isNeeded())
+    in.objcMethList->setUp();
   scanRelocations();
   if (in.initOffsets->isNeeded())
     in.initOffsets->setUp();
@@ -1363,6 +1363,7 @@ void macho::createSyntheticSections() {
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
   in.initOffsets = make<InitOffsetsSection>();
+  in.objcMethList = make<ObjCMethListSection>();
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
@@ -1372,9 +1373,7 @@ void macho::createSyntheticSections() {
       segment_names::data, section_names::data, S_REGULAR,
       ArrayRef<uint8_t>{arr, target->wordSize},
       /*align=*/target->wordSize);
-  // References from dyld are not visible to us, so ensure this section is
-  // always treated as live.
-  in.imageLoaderCache->live = true;
+  assert(in.imageLoaderCache->live);
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;

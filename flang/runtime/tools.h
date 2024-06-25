@@ -9,12 +9,12 @@
 #ifndef FORTRAN_RUNTIME_TOOLS_H_
 #define FORTRAN_RUNTIME_TOOLS_H_
 
-#include "freestanding-tools.h"
 #include "stat.h"
 #include "terminator.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/memory.h"
 #include <cstring>
 #include <functional>
@@ -62,11 +62,21 @@ RT_API_ATTRS int IdentifyValue(
 RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from);
 
-// Utility for dealing with elemental LOGICAL arguments
+// Utilities for dealing with elemental LOGICAL arguments
 inline RT_API_ATTRS bool IsLogicalElementTrue(
     const Descriptor &logical, const SubscriptValue at[]) {
   // A LOGICAL value is false if and only if all of its bytes are zero.
   const char *p{logical.Element<char>(at)};
+  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
+    if (*p) {
+      return true;
+    }
+  }
+  return false;
+}
+inline RT_API_ATTRS bool IsLogicalScalarTrue(const Descriptor &logical) {
+  // A LOGICAL value is false if and only if all of its bytes are zero.
+  const char *p{logical.OffsetElement<char>()};
   for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
     if (*p) {
       return true;
@@ -86,6 +96,15 @@ template <int KIND> struct StoreIntegerAt {
       std::size_t at, std::int64_t value) const {
     *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
         Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
+  }
+};
+
+// Helper to store floating value in result[at].
+template <int KIND> struct StoreFloatingPointAt {
+  RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
+      std::size_t at, std::double_t value) const {
+    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
   }
 };
 
@@ -510,6 +529,10 @@ RT_API_ATTRS void CopyAndPad(
     }
   }
 }
+
+RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
+    const Descriptor &x, std::size_t resultElementSize, int dim, Terminator &,
+    const char *intrinsic, TypeCode);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

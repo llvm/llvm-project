@@ -13,10 +13,10 @@
 #ifndef LLVM_CODEGEN_PSEUDOSOURCEVALUEMANAGER_H
 #define LLVM_CODEGEN_PSEUDOSOURCEVALUEMANAGER_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/ValueMap.h"
-#include <map>
 
 namespace llvm {
 
@@ -27,7 +27,7 @@ class TargetMachine;
 class PseudoSourceValueManager {
   const TargetMachine &TM;
   const PseudoSourceValue StackPSV, GOTPSV, JumpTablePSV, ConstantPoolPSV;
-  std::map<int, std::unique_ptr<FixedStackPseudoSourceValue>> FSValues;
+  SmallVector<std::unique_ptr<FixedStackPseudoSourceValue>> FSValues;
   StringMap<std::unique_ptr<const ExternalSymbolPseudoSourceValue>>
       ExternalCallEntries;
   ValueMap<const GlobalValue *,

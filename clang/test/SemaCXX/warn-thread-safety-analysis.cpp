@@ -1954,6 +1954,125 @@ struct TestTryLock {
 } // end namespace TrylockTest
 
 
+// Regression test for trylock attributes with an enumerator success argument.
+// Prior versions of the analysis silently failed to evaluate success arguments
+// that were neither `CXXBoolLiteralExpr` nor `IntegerLiteral` and assumed the
+// value was false.
+namespace TrylockSuccessEnumFalseNegative {
+
+enum TrylockResult { Failure = 0, Success = 1 };
+
+class LOCKABLE Mutex {
+public:
+  TrylockResult TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(Success);
+  void Unlock() EXCLUSIVE_UNLOCK_FUNCTION();
+};
+
+class TrylockTest {
+  Mutex mu_;
+  int a_ GUARDED_BY(mu_) = 0;
+
+  void test_bool_expression() {
+    if (!mu_.TryLock()) { // expected-note {{mutex acquired here}}
+      a_++;  // expected-warning {{writing variable 'a_' requires holding mutex 'mu_' exclusively}}
+      mu_.Unlock();  // expected-warning {{releasing mutex 'mu_' that was not held}}
+    }
+  }  // expected-warning {{mutex 'mu_' is not held on every path through here}}
+};
+} // namespace TrylockSuccessEnumFalseNegative
+
+// This test demonstrates that the analysis does not distinguish between
+// different non-zero enumerators.
+namespace TrylockFalseNegativeWhenEnumHasMultipleFailures {
+
+enum TrylockResult { Failure1 = 0, Failure2, Success };
+
+class LOCKABLE Mutex {
+public:
+  TrylockResult TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(Success);
+  void Unlock() EXCLUSIVE_UNLOCK_FUNCTION();
+};
+
+class TrylockTest {
+  Mutex mu_;
+  int a_ GUARDED_BY(mu_) = 0;
+
+  void test_eq_success() {
+    if (mu_.TryLock() == Success) {
+      a_++;
+      mu_.Unlock();
+    }
+  }
+
+  void test_bool_expression() {
+    // This branch checks whether the trylock function returned a non-zero
+    // value. This satisfies the analysis, but fails to account for `Failure2`.
+    // From the analysis's perspective, `Failure2` and `Success` are equivalent!
+    if (mu_.TryLock()) {
+      a_++;
+      mu_.Unlock();
+    }
+  }
+};
+} // namespace TrylockSuccessEnumMultipleFailureModesFalseNegative
+
+
+// This test demonstrates that the analysis does not detect when all enumerators
+// are positive, and thus incapable of representing a failure.
+namespace TrylockSuccessEnumNoZeroFalseNegative {
+
+enum TrylockResult { Failure = 1, Success = 2 };
+
+class LOCKABLE Mutex {
+public:
+  TrylockResult TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(Success);
+  void Unlock() EXCLUSIVE_UNLOCK_FUNCTION();
+};
+
+class TrylockTest {
+  Mutex mu_;
+  int a_ GUARDED_BY(mu_) = 0;
+
+  void test_bool_expression() {
+    // This branch checks whether the trylock function returned a non-zero value
+    // This satisfies the analysis, but is actually incorrect because `Failure`
+    // and `Success` are both non-zero.
+    if (mu_.TryLock()) {
+      a_++;
+      mu_.Unlock();
+    }
+  }
+};
+} // namespace TrylockSuccessEnumNoZeroFalseNegative
+
+
+// Demonstrate a mutex with a trylock function that conditionally vends a
+// pointer to guarded data.
+namespace TrylockFunctionReturnPointer {
+
+class LOCKABLE OwningMutex {
+public:
+  int *TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
+  void Unlock() EXCLUSIVE_UNLOCK_FUNCTION();
+
+private:
+  int guarded_ GUARDED_BY(this) = 0;
+};
+
+class TrylockTest {
+  OwningMutex mu_;
+
+  void test_ptr_return() {
+    if (int *p = mu_.TryLock()) {
+      *p = 0;
+      mu_.Unlock();
+    }
+  }
+};
+
+} // namespace TrylockFunctionReturnPointer
+
+
 namespace TestTemplateAttributeInstantiation {
 
 class Foo1 {
@@ -3657,8 +3776,8 @@ class Foo {
   int a GUARDED_BY(mu_);
   bool c;
 
-  int    tryLockMutexI() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu_);
-  Mutex* tryLockMutexP() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu_);
+  int tryLockMutexI() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu_);
+  Mutex *tryLockMutexP() EXCLUSIVE_TRYLOCK_FUNCTION(1, mu_);
   void unlock() UNLOCK_FUNCTION(mu_);
 
   void test1();
@@ -5341,7 +5460,7 @@ void dispatch_log(const char *msg) __attribute__((requires_capability(!FlightCon
 void dispatch_log2(const char *msg) __attribute__((requires_capability(Logger))) {}
 
 void flight_control_entry(void) __attribute__((requires_capability(FlightControl))) {
-  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while mutex 'FlightControl' is held}} */
+  dispatch_log("wrong"); /* expected-warning {{cannot call function 'dispatch_log' while role 'FlightControl' is held}} */
   dispatch_log2("also wrong"); /* expected-warning {{calling function 'dispatch_log2' requires holding role 'Logger' exclusively}} */
 }
 
@@ -5838,12 +5957,12 @@ class Foo5 {
 
 
 class Foo6 {
-  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu1'}}
-  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu2'}}
-  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu3'}}
+  Mutex mu1 ACQUIRED_AFTER(mu3);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu1'}}
+  Mutex mu2 ACQUIRED_AFTER(mu1);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu2'}}
+  Mutex mu3 ACQUIRED_AFTER(mu2);     // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu3'}}
 
-  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_b'}}
-  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{Cycle in acquired_before/after dependencies, starting with 'mu_a'}}
+  Mutex mu_b ACQUIRED_BEFORE(mu_b);  // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_b'}}
+  Mutex mu_a ACQUIRED_AFTER(mu_a);   // expected-warning {{cycle in acquired_before/after dependencies, starting with 'mu_a'}}
 
   void test0() {
     mu_a.Lock();

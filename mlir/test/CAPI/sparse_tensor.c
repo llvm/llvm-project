@@ -27,7 +27,7 @@ static int testRoundtripEncoding(MlirContext ctx) {
   const char *originalAsm =
     "#sparse_tensor.encoding<{ "
     "map = [s0](d0, d1) -> (s0 : dense, d0 : compressed, d1 : compressed), "
-    "posWidth = 32, crdWidth = 64 }>";
+    "posWidth = 32, crdWidth = 64, explicitVal = 1 : i64}>";
   // clang-format on
   MlirAttribute originalAttr =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString(originalAsm));
@@ -56,8 +56,21 @@ static int testRoundtripEncoding(MlirContext ctx) {
   // CHECK: crdWidth: 64
   int crdWidth = mlirSparseTensorEncodingAttrGetCrdWidth(originalAttr);
   fprintf(stderr, "crdWidth: %d\n", crdWidth);
+
+  // CHECK: explicitVal: 1 : i64
+  MlirAttribute explicitVal =
+      mlirSparseTensorEncodingAttrGetExplicitVal(originalAttr);
+  fprintf(stderr, "explicitVal: ");
+  mlirAttributeDump(explicitVal);
+  // CHECK: implicitVal: <<NULL ATTRIBUTE>>
+  MlirAttribute implicitVal =
+      mlirSparseTensorEncodingAttrGetImplicitVal(originalAttr);
+  fprintf(stderr, "implicitVal: ");
+  mlirAttributeDump(implicitVal);
+
   MlirAttribute newAttr = mlirSparseTensorEncodingAttrGet(
-      ctx, lvlRank, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth);
+      ctx, lvlRank, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+      explicitVal, implicitVal);
   mlirAttributeDump(newAttr); // For debugging filecheck output.
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirAttributeEqual(originalAttr, newAttr));

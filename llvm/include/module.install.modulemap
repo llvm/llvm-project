@@ -31,5 +31,7 @@ module LLVM_Extern_Utils_DataTypes {
 }
 
 module LLVM_Extern_TargetParser_Gen {
+  textual header "llvm/TargetParser/ARMTargetParserDef.inc"
+  textual header "llvm/TargetParser/AArch64TargetParserDef.inc"
   textual header "llvm/TargetParser/RISCVTargetParserDef.inc"
 }

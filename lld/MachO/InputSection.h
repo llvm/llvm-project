@@ -149,6 +149,7 @@ public:
 };
 
 // Initialize a fake InputSection that does not belong to any InputFile.
+// The created ConcatInputSection will always have 'live=true'
 ConcatInputSection *makeSyntheticInputSection(StringRef segName,
                                               StringRef sectName,
                                               uint32_t flags = 0,
@@ -342,6 +343,7 @@ constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
 constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
+constexpr const char objcMethList[] = "__objc_methlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
 constexpr const char objCImageInfo[] = "__objc_imageinfo";

@@ -13,7 +13,7 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
@@ -22,6 +22,7 @@ namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T trunc(T x) {
+  using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
   // If x is infinity or NaN, return it.
@@ -43,12 +44,15 @@ LIBC_INLINE T trunc(T x) {
     return FPBits<T>::zero(bits.sign()).get_val();
 
   int trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  bits.set_mantissa(trunc_mantissa);
   return bits.get_val();
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE T ceil(T x) {
+  using StorageType = typename FPBits<T>::StorageType;
   FPBits<T> bits(x);
 
   // If x is infinity NaN or zero, return it.
@@ -71,7 +75,9 @@ LIBC_INLINE T ceil(T x) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  bits.set_mantissa(trunc_mantissa);
   T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
@@ -124,7 +130,9 @@ LIBC_INLINE T round(T x) {
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
-  bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  bits.set_mantissa(trunc_mantissa);
   T trunc_value = bits.get_val();
 
   // If x is already an integer, return it.
@@ -181,7 +189,9 @@ round_using_specific_rounding_mode(T x, int rnd) {
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   FPBits<T> new_bits = bits;
-  new_bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
+  StorageType trunc_mantissa =
+      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
+  new_bits.set_mantissa(trunc_mantissa);
   T trunc_value = new_bits.get_val();
 
   // If x is already an integer, return it.
@@ -190,7 +200,8 @@ round_using_specific_rounding_mode(T x, int rnd) {
 
   StorageType trim_value =
       bits.get_mantissa() & ((StorageType(1) << trim_size) - 1);
-  StorageType half_value = (StorageType(1) << (trim_size - 1));
+  StorageType half_value =
+      static_cast<StorageType>((StorageType(1) << (trim_size - 1)));
   // If exponent is 0, trimSize will be equal to the mantissa width, and
   // truncIsOdd` will not be correct. So, we handle it as a special case
   // below.
@@ -247,8 +258,22 @@ round_using_current_rounding_mode(T x) {
 template <bool IsSigned, typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 fromfp(T x, int rnd, unsigned int width) {
-  if (width == 0U)
+  using StorageType = typename FPBits<T>::StorageType;
+
+  constexpr StorageType EXPLICIT_BIT =
+      FPBits<T>::SIG_MASK - FPBits<T>::FRACTION_MASK;
+
+  if (width == 0U) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
+  FPBits<T> bits(x);
+
+  if (bits.is_inf_or_nan()) {
+    raise_except_if_required(FE_INVALID);
+    return FPBits<T>::quiet_nan().get_val();
+  }
 
   T rounded_value = round_using_specific_rounding_mode(x, rnd);
 
@@ -256,18 +281,47 @@ fromfp(T x, int rnd, unsigned int width) {
     // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
     if (width - 1 > FPBits<T>::EXP_BIAS)
       return rounded_value;
-    if (rounded_value < -T(1U << (width - 1U)))
+
+    StorageType range_exp =
+        static_cast<StorageType>(width - 1 + FPBits<T>::EXP_BIAS);
+    // rounded_value < -2^(width - 1)
+    T range_min =
+        FPBits<T>::create_value(Sign::NEG, range_exp, EXPLICIT_BIT).get_val();
+    if (rounded_value < range_min) {
+      raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
-    if (rounded_value > T((1U << (width - 1U)) - 1U))
+    }
+    // rounded_value > 2^(width - 1) - 1
+    T range_max =
+        FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+        T(1.0);
+    if (rounded_value > range_max) {
+      raise_except_if_required(FE_INVALID);
       return FPBits<T>::quiet_nan().get_val();
+    }
+
     return rounded_value;
   }
 
-  if (rounded_value < T(0.0))
+  if (rounded_value < T(0.0)) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
   // T can't hold a finite number >= 2.0 * 2^EXP_BIAS.
-  if (width <= FPBits<T>::EXP_BIAS && rounded_value > T(1U << width) - 1U)
+  if (width > FPBits<T>::EXP_BIAS)
+    return rounded_value;
+
+  StorageType range_exp = static_cast<StorageType>(width + FPBits<T>::EXP_BIAS);
+  // rounded_value > 2^width - 1
+  T range_max =
+      FPBits<T>::create_value(Sign::POS, range_exp, EXPLICIT_BIT).get_val() -
+      T(1.0);
+  if (rounded_value > range_max) {
+    raise_except_if_required(FE_INVALID);
     return FPBits<T>::quiet_nan().get_val();
+  }
+
   return rounded_value;
 }
 

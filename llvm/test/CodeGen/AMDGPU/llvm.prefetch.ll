@@ -53,14 +53,25 @@ entry:
 }
 
 define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr) {
-; GFX12-LABEL: prefetch_data_sgpr_min_offset:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_prefetch_data s[0:1], -0x800000, null, 0
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-LABEL: prefetch_data_sgpr_min_offset:
+; GFX12-SDAG:       ; %bb.0: ; %entry
+; GFX12-SDAG-NEXT:    s_mov_b32 s2, 0xff800000
+; GFX12-SDAG-NEXT:    s_mov_b32 s3, -1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: prefetch_data_sgpr_min_offset:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: prefetch_data_sgpr_min_offset:
+; GFX12-GISEL:       ; %bb.0: ; %entry
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
+; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
+; GFX12-GISEL-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
+; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 1)
@@ -215,14 +226,25 @@ entry:
 }
 
 define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr) {
-; GFX12-LABEL: prefetch_inst_sgpr_min_offset:
-; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_prefetch_inst s[0:1], -0x800000, null, 0
-; GFX12-NEXT:    s_endpgm
+; GFX12-SDAG-LABEL: prefetch_inst_sgpr_min_offset:
+; GFX12-SDAG:       ; %bb.0: ; %entry
+; GFX12-SDAG-NEXT:    s_mov_b32 s2, 0xff800000
+; GFX12-SDAG-NEXT:    s_mov_b32 s3, -1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX12-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
+; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: prefetch_inst_sgpr_min_offset:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-GISEL-LABEL: prefetch_inst_sgpr_min_offset:
+; GFX12-GISEL:       ; %bb.0: ; %entry
+; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 0xff800000
+; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, -1
+; GFX12-GISEL-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
+; GFX12-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i8, ptr addrspace(4) %ptr, i32 -8388608
   tail call void @llvm.prefetch.p4(ptr addrspace(4) %gep, i32 0, i32 0, i32 0)

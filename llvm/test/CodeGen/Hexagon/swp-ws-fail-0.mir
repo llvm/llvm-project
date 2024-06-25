@@ -1,0 +1,56 @@
+# REQUIRES: asserts
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -o - 2>&1 | FileCheck %s \
+# RUN: --check-prefix=CHECK-INITIALIZE
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -window-region-limit=1 -window-ii-limit=1 -o - \
+# RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-ANALYSE-II
+# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -window-region-limit=1 -window-search-ratio=80 \
+# RUN: -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SCHED-NOT-NEEDED
+
+# CHECK-INITIALIZE: There are too few MIs in the window region!
+# CHECK-INITIALIZE: The WindowScheduler failed to initialize!
+# CHECK-ANALYSE-II: Can't find a valid II. Keep searching...
+# CHECK-ANALYSE-II: Window scheduling is not needed!
+# CHECK-SCHED-NOT-NEEDED: Window scheduling is not needed!
+
+---
+name:            relu
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %0:intregs = COPY $r2
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r0
+    %3:predregs = C2_cmpeqi %2, 0
+    J2_jumpt killed %3, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %4:hvxvr = V6_vd0
+    %5:intregs = A2_addi %2, 31
+    %6:intregs = S2_lsr_i_r %5, 5
+    %7:intregs = COPY %6
+    J2_loop0r %bb.3, %7, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.3 (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    %8:intregs = PHI %1, %bb.1, %9, %bb.3
+    %10:intregs = PHI %0, %bb.1, %11, %bb.3
+    %12:hvxvr, %9:intregs = V6_vL32b_pi %8, 128
+    %13:hvxvr = V6_vmaxw killed %12, %4
+    %11:intregs = V6_vS32b_pi %10, 128, killed %13
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+...

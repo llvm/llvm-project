@@ -807,8 +807,8 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(), std::move(S),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
+      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -897,7 +897,7 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
     S.CreateMemoryManager = createSharedMemoryManager;
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       std::move(S), *SockFD, *SockFD);
 #endif
 }
@@ -1259,10 +1259,9 @@ Error Session::FileInfo::registerMultiStubEntry(
                      Sym.getTargetFlags());
 
   // Let's keep stubs ordered by ascending address.
-  std::sort(Entry.begin(), Entry.end(),
-            [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
-              return L.getTargetAddress() < R.getTargetAddress();
-            });
+  llvm::sort(Entry, [](const MemoryRegionInfo &L, const MemoryRegionInfo &R) {
+    return L.getTargetAddress() < R.getTargetAddress();
+  });
 
   return Error::success();
 }

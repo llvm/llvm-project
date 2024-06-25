@@ -26,16 +26,17 @@ class MCExpr;
 class MCSectionGOFF final : public MCSection {
 private:
   MCSection *Parent;
-  const MCExpr *SubsectionId;
+  uint32_t Subsection;
 
   friend class MCContext;
-  MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
-      : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub) {}
+  MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, uint32_t Sub)
+      : MCSection(SV_GOFF, Name, K.isText(), nullptr), Parent(P),
+        Subsection(Sub) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override {
+                            uint32_t /*Subsection*/) const override {
     OS << "\t.section\t\"" << getName() << "\"\n";
   }
 
@@ -44,7 +45,7 @@ public:
   bool isVirtualSection() const override { return false; }
 
   MCSection *getParent() const { return Parent; }
-  const MCExpr *getSubsectionId() const { return SubsectionId; }
+  uint32_t getSubsection() const { return Subsection; }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_GOFF; }
 };

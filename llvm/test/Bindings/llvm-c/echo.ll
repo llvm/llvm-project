@@ -348,6 +348,32 @@ define void @test_func_prologue_data_01() prologue %func_prolog_struct <{ i8 235
   ret void
 }
 
+
+define void @test_call_br_01(i32 %input) {
+entry:
+  callbr void asm "nop", "r,!i"(i32 %input) to label %bb_01 [label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+}
+
+define void @test_call_br_02(i32 %input0, i32 %input1) {
+entry:
+  ; Multiple indirect destinations, operand bundles, and arguments
+  callbr void asm "nop", "r,r,!i,!i"(i32 %input0, i32 %input1)
+    ["op0"(i32 %input1), "op1"(label %bb_02)]
+    to label %bb_01 [label %bb_03, label %bb_02]
+
+bb_01:
+  ret void
+bb_02:
+  ret void
+bb_03:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!3}
 

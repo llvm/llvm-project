@@ -284,9 +284,10 @@ public:
   /// found on the file system.
   SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
 
-  /// An individual requirement: a feature name and a flag indicating
-  /// the required state of that feature.
-  using Requirement = std::pair<std::string, bool>;
+  struct Requirement {
+    std::string FeatureName;
+    bool RequiredState;
+  };
 
   /// The set of language features required to use this module.
   ///
@@ -866,32 +867,6 @@ private:
   /// Visibility generation, bumped every time the visibility state changes.
   unsigned Generation = 0;
 };
-
-/// Abstracts clang modules and precompiled header files and holds
-/// everything needed to generate debug info for an imported module
-/// or PCH.
-class ASTSourceDescriptor {
-  StringRef PCHModuleName;
-  StringRef Path;
-  StringRef ASTFile;
-  ASTFileSignature Signature;
-  Module *ClangModule = nullptr;
-
-public:
-  ASTSourceDescriptor() = default;
-  ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                      ASTFileSignature Signature)
-      : PCHModuleName(std::move(Name)), Path(std::move(Path)),
-        ASTFile(std::move(ASTFile)), Signature(Signature) {}
-  ASTSourceDescriptor(Module &M);
-
-  std::string getModuleName() const;
-  StringRef getPath() const { return Path; }
-  StringRef getASTFile() const { return ASTFile; }
-  ASTFileSignature getSignature() const { return Signature; }
-  Module *getModuleOrNull() const { return ClangModule; }
-};
-
 
 } // namespace clang
 

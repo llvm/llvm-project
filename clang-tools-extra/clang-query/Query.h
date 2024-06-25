@@ -17,7 +17,7 @@
 namespace clang {
 namespace query {
 
-enum OutputKind { OK_Diag, OK_Print, OK_DetailedAST, OK_SrcLoc };
+enum OutputKind { OK_Diag, OK_Print, OK_DetailedAST };
 
 enum QueryKind {
   QK_Invalid,
@@ -30,7 +30,8 @@ enum QueryKind {
   QK_SetTraversalKind,
   QK_EnableOutputKind,
   QK_DisableOutputKind,
-  QK_Quit
+  QK_Quit,
+  QK_File
 };
 
 class QuerySession;
@@ -148,7 +149,6 @@ struct SetExclusiveOutputQuery : Query {
     QS.DiagOutput = false;
     QS.DetailedASTOutput = false;
     QS.PrintOutput = false;
-    QS.SrcLocOutput = false;
     QS.*Var = true;
     return true;
   }
@@ -186,6 +186,21 @@ struct DisableOutputQuery : SetNonExclusiveOutputQuery {
   static bool classof(const Query *Q) {
     return Q->Kind == QK_DisableOutputKind;
   }
+};
+
+struct FileQuery : Query {
+  FileQuery(StringRef File, StringRef Prefix = StringRef())
+      : Query(QK_File), File(File),
+        Prefix(!Prefix.empty() ? std::optional<std::string>(Prefix)
+                               : std::nullopt) {}
+
+  bool run(llvm::raw_ostream &OS, QuerySession &QS) const override;
+
+  static bool classof(const Query *Q) { return Q->Kind == QK_File; }
+
+private:
+  std::string File;
+  std::optional<std::string> Prefix;
 };
 
 } // namespace query

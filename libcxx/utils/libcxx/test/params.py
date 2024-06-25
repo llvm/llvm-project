@@ -144,6 +144,14 @@ def getSuitableClangTidy(cfg):
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
+        name="compiler",
+        type=str,
+        help="The path of the compiler to use for testing.",
+        actions=lambda cxx: [
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
+        ],
+    ),
+    Parameter(
         name="target_triple",
         type=str,
         help="The target triple to compile the test suite for. This must be "
@@ -257,6 +265,19 @@ DEFAULT_PARAMETERS = [
         ),
     ),
     Parameter(
+        name="using_system_stdlib",
+        choices=[True, False],
+        type=bool,
+        default=False,
+        help="""Whether the Standard Library being tested is the one that shipped with the system by default.
+
+                This is different from the 'stdlib' parameter, which describes the flavor of libc++ being
+                tested. 'using_system_stdlib' describes whether the target system passed with 'target_triple'
+                also corresponds to the version of the library being tested.
+             """,
+        actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
+    ),
+    Parameter(
         name="enable_warnings",
         choices=[True, False],
         type=bool,
@@ -331,7 +352,7 @@ DEFAULT_PARAMETERS = [
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
-            AddFeature("libcpp-has-no-incomplete-tzdb"),
+            AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
     ),
@@ -407,6 +428,6 @@ DEFAULT_PARAMETERS = [
             AddFeature('has-clang-tidy'),
             AddSubstitution('%{clang-tidy}', exe),
         ]
-     ),
+    ),
 ]
 # fmt: on

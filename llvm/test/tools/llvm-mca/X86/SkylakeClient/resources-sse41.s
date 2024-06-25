@@ -166,7 +166,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  3      9     1.00                        dppd	$22, %xmm0, %xmm2
 # CHECK-NEXT:  4      15    1.00    *                   dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  4      13    1.50                        dpps	$22, %xmm0, %xmm2
-# CHECK-NEXT:  5      19    1.50    *                   dpps	$22, (%rax), %xmm2
+# CHECK-NEXT:  6      19    1.50    *                   dpps	$22, (%rax), %xmm2
 # CHECK-NEXT:  2      3     1.00                        extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  3      2     1.00           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        insertps	$1, %xmm0, %xmm2
@@ -266,7 +266,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     37.33  31.33  23.67  23.67  5.00   63.33   -     1.67
+# CHECK-NEXT:  -      -     37.83  31.33  23.67  23.67  5.00   63.33  0.50   1.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -281,7 +281,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -     1.00    -      -     dppd	$22, %xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -     1.00    -      -     dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.50   1.50    -      -      -     1.00    -      -     dpps	$22, %xmm0, %xmm2
-# CHECK-NEXT:  -      -     1.50   1.50   0.50   0.50    -     1.00    -      -     dpps	$22, (%rax), %xmm2
+# CHECK-NEXT:  -      -     2.00   1.50   0.50   0.50    -     1.00   0.50    -     dpps	$22, (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -     extractps	$1, %xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33   extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     insertps	$1, %xmm0, %xmm2

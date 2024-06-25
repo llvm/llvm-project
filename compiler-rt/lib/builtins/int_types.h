@@ -107,8 +107,8 @@ typedef union {
 
 static __inline ti_int make_ti(di_int h, di_int l) {
   twords r;
-  r.s.high = h;
-  r.s.low = l;
+  r.s.high = (du_int)h;
+  r.s.low = (du_int)l;
   return r.all;
 }
 

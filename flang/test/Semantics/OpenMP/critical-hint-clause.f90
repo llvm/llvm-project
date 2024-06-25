@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp 
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags 
 ! Semantic checks on hint clauses, as they appear on critical construct
 
 program sample

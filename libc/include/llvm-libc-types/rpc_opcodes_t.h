@@ -31,6 +31,9 @@ typedef enum {
   RPC_FTELL,
   RPC_FFLUSH,
   RPC_UNGETC,
+  RPC_PRINTF_TO_STDOUT,
+  RPC_PRINTF_TO_STDERR,
+  RPC_PRINTF_TO_STREAM,
   RPC_LAST = 0xFFFF,
 } rpc_opcode_t;
 

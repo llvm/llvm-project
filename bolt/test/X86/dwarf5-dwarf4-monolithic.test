@@ -15,7 +15,7 @@
 # RUN: FileCheck --check-prefix=CHECK-LINE %s --input-file %t_line.txt
 
 
-# Check BOLT handles monolithic mix of DWARF4 and DWARF5.
+## Check BOLT handles monolithic mix of DWARF4 and DWARF5.
 
 # main.cpp
 # PRECHECK: version = 0x0005

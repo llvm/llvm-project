@@ -673,6 +673,11 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         // Can move as %add2 and %sub2 are control flow equivalent,
         // although %add2 does not strictly dominate %sub2.
         EXPECT_TRUE(isSafeToMoveBefore(*SubInst2, *AddInst2, DT, &PDT, &DI));
+
+        BasicBlock *BB0 = getBasicBlockByName(F, "if.then.first");
+        BasicBlock *BB1 = getBasicBlockByName(F, "if.then.second");
+        EXPECT_TRUE(
+            isSafeToMoveBefore(*BB0, *BB1->getTerminator(), DT, &PDT, &DI));
       });
 }
 

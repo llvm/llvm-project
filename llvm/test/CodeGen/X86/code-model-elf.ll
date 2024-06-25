@@ -350,7 +350,7 @@ define dso_local ptr @lea_forced_small_data() #0 {
 ;
 ; LARGE-STATIC-LABEL: lea_forced_small_data:
 ; LARGE-STATIC:       # %bb.0:
-; LARGE-STATIC-NEXT:    movl $forced_small_data, %eax
+; LARGE-STATIC-NEXT:    movabsq $forced_small_data, %rax
 ; LARGE-STATIC-NEXT:    retq
 ;
 ; SMALL-PIC-LABEL: lea_forced_small_data:
@@ -403,7 +403,7 @@ define dso_local i32 @load_forced_small_data() #0 {
 ;
 ; LARGE-STATIC-LABEL: load_forced_small_data:
 ; LARGE-STATIC:       # %bb.0:
-; LARGE-STATIC-NEXT:    movl $forced_small_data+8, %eax
+; LARGE-STATIC-NEXT:    movabsq $forced_small_data+8, %rax
 ; LARGE-STATIC-NEXT:    movl (%rax), %eax
 ; LARGE-STATIC-NEXT:    retq
 ;

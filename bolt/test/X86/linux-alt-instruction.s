@@ -6,30 +6,36 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=2 -o %t.out \
+# RUN: llvm-bolt %t.exe --print-cfg --alt-inst-feature-size=2 -o %t.out \
 # RUN:   | FileCheck %s
 
 ## Older kernels used to have padlen field in alt_instr. Check compatibility.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --defsym PADLEN=1 \
-# RUN:   %s -o %t.o
-# RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
+# RUN:   %s -o %t.padlen.o
+# RUN: %clang %cflags -nostdlib %t.padlen.o -o %t.padlen.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-has-padlen -o %t.out \
+# RUN: llvm-bolt %t.padlen.exe --print-cfg --alt-inst-has-padlen -o %t.padlen.out \
 # RUN:   | FileCheck %s
 
 ## Check with a larger size of "feature" field in alt_instr.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
-# RUN:   --defsym FEATURE_SIZE_4=1 %s -o %t.o
-# RUN: %clang %cflags -nostdlib %t.o -o %t.exe \
+# RUN:   --defsym FEATURE_SIZE_4=1 %s -o %t.fs4.o
+# RUN: %clang %cflags -nostdlib %t.fs4.o -o %t.fs4.exe \
 # RUN:   -Wl,--image-base=0xffffffff80000000,--no-dynamic-linker,--no-eh-frame-hdr,--no-pie
-# RUN: llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=4 -o %t.out \
+# RUN: llvm-bolt %t.fs4.exe --print-cfg --alt-inst-feature-size=4 -o %t.fs4.out \
 # RUN:   | FileCheck %s
 
 ## Check that out-of-bounds read is handled properly.
 
-# RUN: not llvm-bolt %t.exe --print-normalized --alt-inst-feature-size=2 -o %t.out
+# RUN: not llvm-bolt %t.fs4.exe --alt-inst-feature-size=2 -o %t.fs4.out
+
+## Check that BOLT automatically detects structure fields in .altinstructions.
+
+# RUN: llvm-bolt %t.exe --print-cfg -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-cfg -o %t.padlen.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-cfg -o %t.fs4.out | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 alternative instruction entries

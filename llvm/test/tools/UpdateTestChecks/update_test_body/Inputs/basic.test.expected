@@ -1,0 +1,16 @@
+; RUN: cp %s %t && %update_test_body %t 2>&1 | count 0
+; RUN: diff -u %S/Inputs/basic.test.expected %t
+
+;--- a.txt
+@a = global i32 0
+;--- b.txt
+@b = global i32 0
+;--- gen
+cat a.txt
+echo ';--- b.ll'
+cat b.txt
+
+;--- a.ll
+@a = global i32 0
+;--- b.ll
+@b = global i32 0

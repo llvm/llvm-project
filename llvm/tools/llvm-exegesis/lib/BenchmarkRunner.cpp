@@ -18,6 +18,7 @@
 #include "PerfHelper.h"
 #include "SubprocessMemory.h"
 #include "Target.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -283,6 +284,7 @@ private:
                    SmallVectorImpl<int64_t> &CounterValues,
                    ArrayRef<const char *> ValidationCounters,
                    SmallVectorImpl<int64_t> &ValidationCounterValues) const {
+    auto WriteFDClose = make_scope_exit([WriteFD]() { close(WriteFD); });
     const ExegesisTarget &ET = State.getExegesisTarget();
     auto CounterOrError =
         ET.createCounter(CounterName, State, ValidationCounters, ChildPID);

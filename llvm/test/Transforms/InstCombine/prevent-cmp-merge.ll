@@ -7,9 +7,9 @@
 
 define zeroext i1 @test1(i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[LHS:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[XOR]], 10
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[XOR]], [[RHS:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LHS:%.*]], 15
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[LHS]], [[RHS:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP1]], 5
 ; CHECK-NEXT:    [[SEL:%.*]] = or i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
@@ -23,9 +23,9 @@ define zeroext i1 @test1(i32 %lhs, i32 %rhs) {
 
 define zeroext i1 @test1_logical(i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: @test1_logical(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[LHS:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[XOR]], 10
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[XOR]], [[RHS:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LHS:%.*]], 15
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[LHS]], [[RHS:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP1]], 5
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
@@ -40,7 +40,7 @@ define zeroext i1 @test1_logical(i32 %lhs, i32 %rhs) {
 define zeroext i1 @test2(i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[LHS:%.*]], [[RHS:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[XOR]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LHS]], [[RHS]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[XOR]], 32
 ; CHECK-NEXT:    [[SEL:%.*]] = xor i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]

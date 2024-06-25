@@ -11,7 +11,11 @@
 
 #include "llvm-libc-types/struct_epoll_data.h"
 
-typedef struct epoll_event {
+typedef struct
+#ifdef __x86_64__
+    [[gnu::packed]] // Necessary for compatibility.
+#endif
+    epoll_event {
   __UINT32_TYPE__ events;
   epoll_data_t data;
 } epoll_event;

@@ -125,3 +125,8 @@ constexpr int RecordWithRef2() {
   return r.a;
 }
 static_assert(RecordWithRef2() == 200, "");
+
+const char (&nonextended_string_ref)[3] = {"hi"};
+static_assert(nonextended_string_ref[0] == 'h', "");
+static_assert(nonextended_string_ref[1] == 'i', "");
+static_assert(nonextended_string_ref[2] == '\0', "");

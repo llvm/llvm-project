@@ -19,4 +19,5 @@ struct Derived : Base { };
 
 void foo () {
   Derived d;
+  d.deref();
 }

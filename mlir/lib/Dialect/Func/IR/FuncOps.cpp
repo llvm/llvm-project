@@ -19,7 +19,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
@@ -42,8 +41,8 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
-  declarePromisedInterface<FuncDialect, DialectInlinerInterface>();
-  declarePromisedInterface<FuncDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
                             FuncOp, ReturnOp>();
 }

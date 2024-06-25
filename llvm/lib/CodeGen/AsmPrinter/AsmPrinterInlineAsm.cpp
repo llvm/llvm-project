@@ -102,9 +102,6 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, OutContext, *OutStreamer, *MAI, BufNum));
 
-  // Do not use assembler-level information for parsing inline assembly.
-  OutStreamer->setUseAssemblerInfoForParsing(false);
-
   // We create a new MCInstrInfo here since we might be at the module level
   // and not have a MachineFunction to initialize the TargetInstrInfo from and
   // we only need MCInstrInfo for asm parsing. We create one unconditionally

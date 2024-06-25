@@ -649,7 +649,7 @@ class BaseEnumeration:
 
     @classmethod
     def from_id(cls, id):
-        if id >= len(cls._kinds) or cls._kinds[id] is None:
+        if id < 0 or id >= len(cls._kinds) or cls._kinds[id] is None:
             raise ValueError("Unknown template argument kind %d" % id)
         return cls._kinds[id]
 
@@ -1336,7 +1336,7 @@ CursorKind.OMP_TARGET_SIMD_DIRECTIVE = CursorKind(270)
 CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(271)
 
 # OpenMP teams distribute simd directive.
-CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(272)
+CursorKind.OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(272)
 
 # OpenMP teams distribute parallel for simd directive.
 CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(273)
@@ -2215,7 +2215,7 @@ class StorageClass:
 
     @staticmethod
     def from_id(id):
-        if id >= len(StorageClass._kinds) or not StorageClass._kinds[id]:
+        if id < 0 or id >= len(StorageClass._kinds) or not StorageClass._kinds[id]:
             raise ValueError("Unknown storage class %d" % id)
         return StorageClass._kinds[id]
 
@@ -2395,7 +2395,7 @@ TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
 
 TypeKind.OBJCOBJECT = TypeKind(161)
-TypeKind.OBJCCLASS = TypeKind(162)
+TypeKind.OBJCTYPEPARAM = TypeKind(162)
 TypeKind.ATTRIBUTED = TypeKind(163)
 
 TypeKind.OCLINTELSUBGROUPAVCMCEPAYLOAD = TypeKind(164)

@@ -1,0 +1,9 @@
+Name: LayeredKitImpl
+Classes:
+- Name: PerfectlyNormalClass
+  Availability: none
+- Name: UpwardClass
+  Availability: none
+Protocols:
+- Name: UpwardProto
+  Availability: none

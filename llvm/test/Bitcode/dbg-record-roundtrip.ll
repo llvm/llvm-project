@@ -15,6 +15,16 @@
 ; RUN: | llvm-dis --load-bitcode-into-experimental-debuginfo-iterators=true --write-experimental-debuginfo=true \
 ; RUN: | FileCheck %s --check-prefixes=RECORDS
 
+;; When preserving, we should output the format the bitcode was written in
+;; regardless of the value of the write flag.
+; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=true %s -o - \
+; RUN: | llvm-dis --preserve-input-debuginfo-format=true --write-experimental-debuginfo=false \
+; RUN: | FileCheck %s --check-prefixes=RECORDS
+
+; RUN: llvm-as --write-experimental-debuginfo-iterators-to-bitcode=false %s -o - \
+; RUN: | llvm-dis --preserve-input-debuginfo-format=true --write-experimental-debuginfo=true \
+; RUN: | FileCheck %s
+
 ;; Check that verify-uselistorder passes regardless of input format.
 ; RUN: llvm-as %s --write-experimental-debuginfo-iterators-to-bitcode=true -o - | verify-uselistorder
 ; RUN: verify-uselistorder %s

@@ -26,10 +26,8 @@ define <2 x i1> @test_vp_splice_v2i1(<2 x i1> %va, <2 x i1> %vb, i32 zeroext %ev
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
 
-  %v = call <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1> %va, <2 x i1> %vb, i32 5, <2 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1> %va, <2 x i1> %vb, i32 5, <2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <2 x i1> %v
 }
 
@@ -52,10 +50,8 @@ define <2 x i1> @test_vp_splice_v2i1_negative_offset(<2 x i1> %va, <2 x i1> %vb,
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
 
-  %v = call <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1> %va, <2 x i1> %vb, i32 -5, <2 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <2 x i1> @llvm.experimental.vp.splice.v2i1(<2 x i1> %va, <2 x i1> %vb, i32 -5, <2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <2 x i1> %v
 }
 
@@ -72,8 +68,8 @@ define <2 x i1> @test_vp_splice_v2i1_masked(<2 x i1> %va, <2 x i1> %vb, <2 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -103,10 +99,8 @@ define <4 x i1> @test_vp_splice_v4i1(<4 x i1> %va, <4 x i1> %vb, i32 zeroext %ev
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> undef, <4 x i32> zeroinitializer
 
-  %v = call <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1> %va, <4 x i1> %vb, i32 5, <4 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1> %va, <4 x i1> %vb, i32 5, <4 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <4 x i1> %v
 }
 
@@ -129,10 +123,8 @@ define <4 x i1> @test_vp_splice_v4i1_negative_offset(<4 x i1> %va, <4 x i1> %vb,
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> undef, <4 x i32> zeroinitializer
 
-  %v = call <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1> %va, <4 x i1> %vb, i32 -5, <4 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <4 x i1> @llvm.experimental.vp.splice.v4i1(<4 x i1> %va, <4 x i1> %vb, i32 -5, <4 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <4 x i1> %v
 }
 
@@ -149,8 +141,8 @@ define <4 x i1> @test_vp_splice_v4i1_masked(<4 x i1> %va, <4 x i1> %vb, <4 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -180,10 +172,8 @@ define <8 x i1> @test_vp_splice_v8i1(<8 x i1> %va, <8 x i1> %vb, i32 zeroext %ev
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <8 x i1> %head, <8 x i1> undef, <8 x i32> zeroinitializer
 
-  %v = call <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1> %va, <8 x i1> %vb, i32 5, <8 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1> %va, <8 x i1> %vb, i32 5, <8 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <8 x i1> %v
 }
 
@@ -206,10 +196,8 @@ define <8 x i1> @test_vp_splice_v8i1_negative_offset(<8 x i1> %va, <8 x i1> %vb,
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <8 x i1> %head, <8 x i1> undef, <8 x i32> zeroinitializer
 
-  %v = call <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1> %va, <8 x i1> %vb, i32 -5, <8 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <8 x i1> @llvm.experimental.vp.splice.v8i1(<8 x i1> %va, <8 x i1> %vb, i32 -5, <8 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <8 x i1> %v
 }
 
@@ -226,8 +214,8 @@ define <8 x i1> @test_vp_splice_v8i1_masked(<8 x i1> %va, <8 x i1> %vb, <8 x i1>
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t
@@ -257,10 +245,8 @@ define <16 x i1> @test_vp_splice_v16i1(<16 x i1> %va, <16 x i1> %vb, i32 zeroext
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <16 x i1> %head, <16 x i1> undef, <16 x i32> zeroinitializer
 
-  %v = call <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1> %va, <16 x i1> %vb, i32 5, <16 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1> %va, <16 x i1> %vb, i32 5, <16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <16 x i1> %v
 }
 
@@ -283,10 +269,8 @@ define <16 x i1> @test_vp_splice_v16i1_negative_offset(<16 x i1> %va, <16 x i1> 
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <16 x i1> %head, <16 x i1> undef, <16 x i32> zeroinitializer
 
-  %v = call <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1> %va, <16 x i1> %vb, i32 -5, <16 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <16 x i1> @llvm.experimental.vp.splice.v16i1(<16 x i1> %va, <16 x i1> %vb, i32 -5, <16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <16 x i1> %v
 }
 
@@ -303,8 +287,8 @@ define <16 x i1> @test_vp_splice_v16i1_masked(<16 x i1> %va, <16 x i1> %vb, <16 
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v10, v11, 1, v0
 ; CHECK-NEXT:    addi a0, a0, -5
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v10, 5, v0.t
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0, v0.t

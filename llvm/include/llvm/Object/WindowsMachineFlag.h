@@ -13,6 +13,9 @@
 #ifndef LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 #define LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/TargetParser/Triple.h"
+
 namespace llvm {
 
 class StringRef;
@@ -28,6 +31,23 @@ StringRef machineToStr(COFF::MachineTypes MT);
 // Only returns ARMNT, ARM64, AMD64, I386, or IMAGE_FILE_MACHINE_UNKNOWN.
 COFF::MachineTypes getMachineType(StringRef S);
 
+template <typename T> Triple::ArchType getMachineArchType(T machine) {
+  switch (machine) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    return llvm::Triple::ArchType::x86;
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    return llvm::Triple::ArchType::x86_64;
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    return llvm::Triple::ArchType::thumb;
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return llvm::Triple::ArchType::aarch64;
+  default:
+    return llvm::Triple::ArchType::UnknownArch;
+  }
 }
+
+} // namespace llvm
 
 #endif

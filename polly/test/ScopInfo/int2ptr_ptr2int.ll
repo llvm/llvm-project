@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s 2>&1 | FileCheck %s --check-prefix=IR
 ;
 ;    void f(long *A, long *ptr, long val) {
 ;      for (long i = 0; i < 100; i++) {

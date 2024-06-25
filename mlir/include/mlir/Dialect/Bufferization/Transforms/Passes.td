@@ -315,11 +315,20 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     The main issue with this pass (and the out-param calling convention) is that
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
+
+    If the hoist-static-allocs option is on, the pass tries to eliminate the
+    allocation for the returned memref and avoid the memory-copy if possible.
+    This optimization applies on the returned memref which has static shape and
+    is allocated by memref.alloc in the function. It will use the memref given
+    in function argument to replace the allocated memref.
   }];
   let options = [
     Option<"addResultAttribute", "add-result-attr", "bool",
        /*default=*/"false",
        "Add the attribute 'bufferize.result' to all output parameters.">,
+    Option<"hoistStaticAllocs", "hoist-static-allocs",
+       "bool", /*default=*/"false",
+       "Hoist static allocations to call sites.">,
   ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
@@ -339,11 +348,6 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
     with tensor typed operands remains.
   }];
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
@@ -494,6 +498,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",

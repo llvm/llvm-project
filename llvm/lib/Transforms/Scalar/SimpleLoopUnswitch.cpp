@@ -133,6 +133,7 @@ static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
                          "not-taken 1/<this option> times or less."),
     cl::init(16));
 
+AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
 namespace {
 struct CompareDesc {
   BranchInst *Term;
@@ -1260,9 +1261,8 @@ static BasicBlock *buildClonedLoopBlocks(
   Module *M = ClonedPH->getParent()->getParent();
   for (auto *ClonedBB : NewBlocks)
     for (Instruction &I : *ClonedBB) {
-      RemapDbgVariableRecordRange(M, I.getDbgRecordRange(), VMap,
-                                  RF_NoModuleLevelChanges |
-                                      RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(M, I.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       if (auto *II = dyn_cast<AssumeInst>(&I))

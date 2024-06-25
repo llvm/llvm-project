@@ -177,8 +177,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   uint64_t PageAlignedBitmapLength =
       NumBitmapBytes + PaddingBytesAfterBitmapBytes;
   uint64_t FileOffsetToBitmap =
-      CurrentFileOffset + sizeof(__llvm_profile_header) + DataSize +
-      PaddingBytesBeforeCounters + CountersSize + PaddingBytesAfterCounters;
+      FileOffsetToCounters + CountersSize + PaddingBytesAfterCounters;
   void *BitmapMmap =
       mmap((void *)BitmapBegin, PageAlignedBitmapLength, PROT_READ | PROT_WRITE,
            MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToBitmap);
@@ -211,9 +210,10 @@ COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 #define WIN_SYM_PREFIX
 #endif
 #pragma comment(                                                               \
-    linker, "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
-                INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX        \
-                INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
+        linker,                                                                \
+            "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
+                    INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX    \
+            INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
 #else
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR
     __attribute__((weak, alias(INSTR_PROF_QUOTE(
@@ -243,18 +243,20 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   if (getProfileFileSizeForMerging(File, &FileSize))
     return 1;
 
+  int Fileno = fileno(File);
+  uint64_t FileOffsetToCounters =
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
+
   /* Map the profile. */
   char *Profile = (char *)mmap(NULL, FileSize, PROT_READ | PROT_WRITE,
-                               MAP_SHARED, fileno(File), 0);
+                               MAP_SHARED, Fileno, 0);
   if (Profile == MAP_FAILED) {
     PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
     return 1;
   }
-  const uint64_t CountersOffsetInBiasMode =
-      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
   /* Update the profile fields based on the current mapping. */
   INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =
-      (intptr_t)Profile - (uintptr_t)CountersBegin + CountersOffsetInBiasMode;
+      (intptr_t)Profile - (uintptr_t)CountersBegin + FileOffsetToCounters;
 
   /* Return the memory allocated for counters to OS. */
   lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);

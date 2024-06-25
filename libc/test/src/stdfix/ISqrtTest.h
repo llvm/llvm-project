@@ -27,6 +27,18 @@ template <typename T> class ISqrtTest : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef OutType (*SqrtFunc)(T);
 
+  void testSpecificInput(T input, OutType result, double expected,
+                         double tolerance) {
+    double y_d = static_cast<double>(result);
+    double errors = LIBC_NAMESPACE::fputil::abs((y_d / expected) - 1.0);
+    if (errors > tolerance) {
+      // Print out the failure input and output.
+      EXPECT_EQ(input, T(0));
+      EXPECT_EQ(result, zero);
+    }
+    ASSERT_TRUE(errors <= tolerance);
+  }
+
   void testSpecialNumbers(SqrtFunc func) {
     EXPECT_EQ(zero, func(T(0)));
 
@@ -42,15 +54,9 @@ public:
     for (int i = 0; i < COUNT; ++i) {
       x_d += 1.0;
       ++x;
-      double y_d = static_cast<double>(func(x));
-      double result = LIBC_NAMESPACE::fputil::sqrt(x_d);
-      double errors = LIBC_NAMESPACE::fputil::abs((y_d / result) - 1.0);
-      if (errors > ERR) {
-        // Print out the failure input and output.
-        EXPECT_EQ(x, T(0));
-        EXPECT_EQ(func(x), zero);
-      }
-      ASSERT_TRUE(errors <= ERR);
+      OutType result = func(x);
+      double expected = LIBC_NAMESPACE::fputil::sqrt<double>(x_d);
+      testSpecificInput(x, result, expected, ERR);
     }
   }
 };

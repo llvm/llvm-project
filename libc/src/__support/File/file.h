@@ -154,10 +154,11 @@ public:
                  uint8_t *buffer, size_t buffer_size, int buffer_mode,
                  bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), mutex(false, false, false), ungetc_buf(0),
-        buf(buffer), bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
-        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
-        eof(false), err(false) {
+        platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
+                                  /*robust=*/false, /*pshared=*/false),
+        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        read_limit(0), eof(false), err(false) {
     adjust_buf();
   }
 

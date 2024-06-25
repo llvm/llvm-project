@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/OSUtil/quick_exit.h"
+#include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
 
 #include "src/stdlib/_Exit.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
-  quick_exit(status);
-  __builtin_unreachable();
+[[noreturn]] LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
+  internal::exit(status);
 }
 
 } // namespace LIBC_NAMESPACE

@@ -104,18 +104,18 @@ module {
     // CHECK-NEXT: nse = 4
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 4,
-    // CHECK-NEXT: crd[0] : ( 0, 1, 28, 31,
-    // CHECK-NEXT: values : ( ( 511.13, 2 ), ( 1, 0 ), ( 5, 4 ), ( 8, 6 ),
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 28, 31 )
+    // CHECK-NEXT: values : ( ( 511.13, 2 ), ( 1, 0 ), ( 5, 4 ), ( 8, 6 ) )
     // CHECK-NEXT: ----
     //
     // CHECK-NEXT: ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 2
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 2,
-    // CHECK-NEXT: crd[0] : ( 28, 31,
-    // CHECK-NEXT: values : ( ( 6, 8 ), ( 15, 18 ),
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 28, 31 )
+    // CHECK-NEXT: values : ( ( 6, 8 ), ( 15, 18 ) )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?xcomplex<f32>, #SparseVector>

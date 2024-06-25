@@ -369,6 +369,22 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.unistd.close
       libc.test.UnitTest.ErrnoSetterMatcher
   )
+
+  add_libc_test(
+    fdopen_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      fdopen_test.cpp
+    DEPENDS
+      libc.src.fcntl.open
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.fgets
+      libc.src.stdio.fputs
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
 endif()
 
 add_libc_test(
@@ -442,6 +458,8 @@ add_libc_test(
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.ftell
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftello
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
 )

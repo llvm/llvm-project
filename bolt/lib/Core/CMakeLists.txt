@@ -25,6 +25,7 @@ add_llvm_library(LLVMBOLTCore
   DynoStats.cpp
   Exceptions.cpp
   FunctionLayout.cpp
+  GDBIndex.cpp
   HashUtilities.cpp
   JumpTable.cpp
   MCPlusBuilder.cpp

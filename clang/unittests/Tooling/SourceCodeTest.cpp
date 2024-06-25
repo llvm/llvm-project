@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "TestVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
@@ -18,10 +19,12 @@
 #include <gtest/gtest.h>
 
 using namespace clang;
+using namespace clang::ast_matchers;
 
 using llvm::Failed;
 using llvm::Succeeded;
 using llvm::ValueIs;
+using testing::Optional;
 using tooling::getAssociatedRange;
 using tooling::getExtendedRange;
 using tooling::getExtendedText;
@@ -48,6 +51,15 @@ struct CallsVisitor : TestVisitor<CallsVisitor> {
   }
 
   std::function<void(CallExpr *, ASTContext *Context)> OnCall;
+};
+
+struct TypeLocVisitor : TestVisitor<TypeLocVisitor> {
+  bool VisitTypeLoc(TypeLoc TL) {
+    OnTypeLoc(TL, Context);
+    return true;
+  }
+
+  std::function<void(TypeLoc, ASTContext *Context)> OnTypeLoc;
 };
 
 // Equality matcher for `clang::CharSourceRange`, which lacks `operator==`.
@@ -508,6 +520,54 @@ int c = M3(3);
         getFileRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
   };
   Visitor.runOver(Code.code());
+}
+
+TEST(SourceCodeTest, InnerNestedTemplate) {
+  llvm::Annotations Code(R"cpp(
+    template <typename T>
+    struct A {};
+    template <typename T>
+    struct B {};
+    template <typename T>
+    struct C {};
+
+    void f(A<B<C<int>$r[[>>]]);
+  )cpp");
+
+  TypeLocVisitor Visitor;
+  Visitor.OnTypeLoc = [&](TypeLoc TL, ASTContext *Context) {
+    if (TL.getSourceRange().isInvalid())
+      return;
+
+    // There are no macros, so every TypeLoc's range should be valid.
+    auto Range = CharSourceRange::getTokenRange(TL.getSourceRange());
+    auto LastTokenRange = CharSourceRange::getTokenRange(TL.getEndLoc());
+    EXPECT_TRUE(getFileRangeForEdit(Range, *Context,
+                                    /*IncludeMacroExpansion=*/false))
+        << TL.getSourceRange().printToString(Context->getSourceManager());
+    EXPECT_TRUE(getFileRangeForEdit(LastTokenRange, *Context,
+                                    /*IncludeMacroExpansion=*/false))
+        << TL.getEndLoc().printToString(Context->getSourceManager());
+
+    if (auto matches = match(
+            templateSpecializationTypeLoc(
+                loc(templateSpecializationType(
+                    hasDeclaration(cxxRecordDecl(hasName("A"))))),
+                hasTemplateArgumentLoc(
+                    0, templateArgumentLoc(hasTypeLoc(typeLoc().bind("b"))))),
+            TL, *Context);
+        !matches.empty()) {
+      // A range where the start token is split, but the end token is not.
+      auto OuterTL = TL;
+      auto MiddleTL = *matches[0].getNodeAs<TypeLoc>("b");
+      EXPECT_THAT(
+          getFileRangeForEdit(CharSourceRange::getTokenRange(
+                                  MiddleTL.getEndLoc(), OuterTL.getEndLoc()),
+                              *Context, /*IncludeMacroExpansion=*/false),
+          Optional(EqualsAnnotatedRange(Context, Code.range("r"))));
+    }
+  };
+  Visitor.runOver(Code.code(), TypeLocVisitor::Lang_CXX11);
 }
 
 TEST_P(GetFileRangeForEditTest, EditPartialMacroExpansionShouldFail) {

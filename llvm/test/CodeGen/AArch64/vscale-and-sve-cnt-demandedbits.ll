@@ -194,7 +194,7 @@ define i32 @vscale_with_multiplier() vscale_range(1,16) {
 ; CHECK-LABEL: vscale_with_multiplier:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #5
+; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    and w9, w8, #0x3f
@@ -212,7 +212,7 @@ define i32 @vscale_with_negative_multiplier() vscale_range(1,16) {
 ; CHECK-LABEL: vscale_with_negative_multiplier:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov x9, #-5
+; CHECK-NEXT:    mov x9, #-5 // =0xfffffffffffffffb
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    and w9, w8, #0xffffffc0
@@ -230,9 +230,9 @@ define i32 @pow2_vscale_with_negative_multiplier() vscale_range(1,16) {
 ; CHECK-LABEL: pow2_vscale_with_negative_multiplier:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    neg x8, x8
-; CHECK-NEXT:    orr w9, w8, #0xfffffff0
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    neg x9, x8
+; CHECK-NEXT:    orr w9, w9, #0xfffffff0
+; CHECK-NEXT:    sub w0, w9, w8
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, -2

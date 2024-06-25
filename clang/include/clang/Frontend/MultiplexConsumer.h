@@ -32,10 +32,10 @@ public:
   MultiplexASTDeserializationListener(
       const std::vector<ASTDeserializationListener *> &L);
   void ReaderInitialized(ASTReader *Reader) override;
-  void IdentifierRead(serialization::IdentID ID, IdentifierInfo *II) override;
+  void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
-  void DeclRead(serialization::DeclID ID, const Decl *D) override;
+  void DeclRead(GlobalDeclID ID, const Decl *D) override;
   void SelectorRead(serialization::SelectorID iD, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID,
                            MacroDefinitionRecord *MD) override;

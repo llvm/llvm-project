@@ -124,3 +124,12 @@ func.func @no_nested_expression(%arg0: i32, %arg1: i32) -> i1 {
   }
   return %a : i1
 }
+
+
+// CHECK-LABEL: func.func @single_result_requirement
+//   CHECK-NOT:  emitc.expression
+
+func.func @single_result_requirement() -> (i32, i32) {
+  %0:2 = emitc.call_opaque "foo" () : () -> (i32, i32)
+  return %0#0, %0#1 : i32, i32
+}

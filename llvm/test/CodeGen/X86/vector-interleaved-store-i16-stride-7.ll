@@ -471,9 +471,8 @@ define void @store_i16_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vpackusdw %xmm8, %xmm7, %xmm7
 ; AVX-NEXT:    vpackusdw %xmm7, %xmm7, %xmm7
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm7[4,5,6],xmm5[7]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[10,11,u,u,u,u,u,u,u,u,u,u,4,5,12,13]
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[0,1,3,3,4,5,6,7]
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2],xmm1[3,4,5,6,7]
+; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4,5,6,7]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[10,11,2,3,6,7,u,u,u,u,u,u,4,5,12,13]
 ; AVX-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm6[5],xmm0[6,7]

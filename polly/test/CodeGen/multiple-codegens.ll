@@ -1,4 +1,3 @@
-; RUN: opt %loadPolly -polly-scops -polly-opt-isl -polly-codegen -polly-scops -polly-codegen -S < %s | FileCheck %s
 ; RUN: opt %loadNPMPolly "-passes=scop(polly-opt-isl,polly-codegen,polly-codegen)" -S < %s | FileCheck %s
 ; RUN: opt %loadNPMPolly "-passes=scop(polly-opt-isl,polly-codegen),scop(polly-codegen)" -S < %s | FileCheck %s
 ;

@@ -137,9 +137,9 @@ private:
   // static mapping of indices to the position in the dynamic values array
   using _DynamicIdxMap = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
 
-  template <size_t... Indices>
-  _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<Indices...>) noexcept {
-    return _DynamicValues{((void)Indices, 0)...};
+  template <size_t... _Indices>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<_Indices...>) noexcept {
+    return _DynamicValues{((void)_Indices, 0)...};
   }
 
 public:
@@ -165,7 +165,7 @@ public:
   template <class... _DynVals>
     requires(sizeof...(_DynVals) != __size_dynamic_)
   _LIBCPP_HIDE_FROM_ABI constexpr __maybe_static_array(_DynVals... __vals) {
-    static_assert((sizeof...(_DynVals) == __size_), "Invalid number of values.");
+    static_assert(sizeof...(_DynVals) == __size_, "Invalid number of values.");
     _TDynamic __values[__size_] = {static_cast<_TDynamic>(__vals)...};
     for (size_t __i = 0; __i < __size_; __i++) {
       _TStatic __static_val = _StaticValues::__get(__i);
@@ -185,7 +185,7 @@ public:
   template <class _Tp, size_t _Size>
     requires(_Size != __size_dynamic_)
   _LIBCPP_HIDE_FROM_ABI constexpr __maybe_static_array(const span<_Tp, _Size>& __vals) {
-    static_assert((_Size == __size_) || (__size_ == dynamic_extent));
+    static_assert(_Size == __size_ || __size_ == dynamic_extent);
     for (size_t __i = 0; __i < __size_; __i++) {
       _TStatic __static_val = _StaticValues::__get(__i);
       if (__static_val == _DynTag) {

@@ -257,17 +257,33 @@ public:
 
 /// Helper class to identify an entry in DWARF5AccelTable based on their DIE
 /// offset and UnitID.
-struct OffsetAndUnitID : std::pair<uint64_t, uint32_t> {
-  using Base = std::pair<uint64_t, uint32_t>;
-  OffsetAndUnitID(Base B) : Base(B) {}
-
-  OffsetAndUnitID(uint64_t Offset, uint32_t UnitID) : Base(Offset, UnitID) {}
-  uint64_t offset() const { return first; };
-  uint32_t unitID() const { return second; };
+struct OffsetAndUnitID {
+  uint64_t Offset = 0;
+  uint32_t UnitID = 0;
+  bool IsTU = false;
+  OffsetAndUnitID() = delete;
+  OffsetAndUnitID(uint64_t Offset, uint32_t UnitID, bool IsTU)
+      : Offset(Offset), UnitID(UnitID), IsTU(IsTU) {}
+  uint64_t offset() const { return Offset; };
+  uint32_t unitID() const { return UnitID; };
+  bool isTU() const { return IsTU; }
 };
 
-template <>
-struct DenseMapInfo<OffsetAndUnitID> : DenseMapInfo<OffsetAndUnitID::Base> {};
+template <> struct DenseMapInfo<OffsetAndUnitID> {
+  static inline OffsetAndUnitID getEmptyKey() {
+    return OffsetAndUnitID(-1, -1, false);
+  }
+  static inline OffsetAndUnitID getTombstoneKey() {
+    return OffsetAndUnitID(-2, -2, false);
+  }
+  static unsigned getHashValue(const OffsetAndUnitID &Val) {
+    return (unsigned)llvm::hash_combine(Val.offset(), Val.unitID(), Val.IsTU);
+  }
+  static bool isEqual(const OffsetAndUnitID &LHS, const OffsetAndUnitID &RHS) {
+    return LHS.offset() == RHS.offset() && LHS.unitID() == RHS.unitID() &&
+           LHS.IsTU == RHS.isTU();
+  }
+};
 
 /// The Data class implementation for DWARF v5 accelerator table. Unlike the
 /// Apple Data classes, this class is just a DIE wrapper, and does not know to
@@ -277,12 +293,11 @@ class DWARF5AccelTableData : public AccelTableData {
 public:
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
-  DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID,
-                       const bool IsTU = false);
+  DWARF5AccelTableData(const DIE &Die, const uint32_t UnitID, const bool IsTU);
   DWARF5AccelTableData(const uint64_t DieOffset,
                        const std::optional<uint64_t> DefiningParentOffset,
                        const unsigned DieTag, const unsigned UnitID,
-                       const bool IsTU = false)
+                       const bool IsTU)
       : OffsetVal(DieOffset), ParentOffset(DefiningParentOffset),
         DieTag(DieTag), AbbrevNumber(0), IsTU(IsTU), UnitID(UnitID) {}
 
@@ -296,7 +311,7 @@ public:
   }
 
   OffsetAndUnitID getDieOffsetAndUnitID() const {
-    return {getDieOffset(), UnitID};
+    return {getDieOffset(), getUnitID(), isTU()};
   }
 
   unsigned getDieTag() const { return DieTag; }
@@ -322,7 +337,7 @@ public:
     assert(isNormalized() && "Accessing DIE Offset before normalizing.");
     if (!ParentOffset)
       return std::nullopt;
-    return OffsetAndUnitID(*ParentOffset, getUnitID());
+    return OffsetAndUnitID(*ParentOffset, getUnitID(), isTU());
   }
 
   /// Sets AbbrevIndex for an Entry.
@@ -416,7 +431,7 @@ public:
       for (auto *Data : Entry.second.getValues<DWARF5AccelTableData *>()) {
         addName(Entry.second.Name, Data->getDieOffset(),
                 Data->getParentDieOffset(), Data->getDieTag(),
-                Data->getUnitID(), true);
+                Data->getUnitID(), Data->isTU());
       }
     }
   }

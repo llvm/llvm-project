@@ -266,6 +266,8 @@ LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
 
   // Parse the input file.
   OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
+  if (!module)
+    return failure();
 
   // Load IRDL dialects.
   return irdl::loadDialects(module.get());

@@ -312,8 +312,7 @@ llvm::AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
 
   LaneBitmask UseMask, DefMask;
 
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    const MachineOperand &MO = *O;
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (!MO.isReg() || MO.getReg() != Reg)
       continue;
 
@@ -339,9 +338,7 @@ PhysRegInfo llvm::AnalyzePhysRegInBundle(const MachineInstr &MI, Register Reg,
   PhysRegInfo PRI = {false, false, false, false, false, false, false, false};
 
   assert(Reg.isPhysical() && "analyzePhysReg not given a physical register!");
-  for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
-    const MachineOperand &MO = *O;
-
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (MO.isRegMask() && MO.clobbersPhysReg(Reg)) {
       PRI.Clobbered = true;
       continue;

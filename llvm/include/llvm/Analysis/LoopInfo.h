@@ -649,6 +649,9 @@ int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
 std::optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
                                                            StringRef Name);
 
+/// Find the convergence heart of the loop.
+CallBase *getLoopConvergenceHeart(const Loop *TheLoop);
+
 /// Look for the loop attribute that requires progress within the loop.
 /// Note: Most consumers probably want "isMustProgress" which checks
 /// the containing function attribute too.

@@ -12,7 +12,7 @@
 #include "FPBits.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
@@ -58,9 +58,9 @@ template <size_t Bits> struct DyadicFloat {
   // significant bit.
   LIBC_INLINE constexpr DyadicFloat &normalize() {
     if (!mantissa.is_zero()) {
-      int shift_length = static_cast<int>(mantissa.clz());
+      int shift_length = cpp::countl_zero(mantissa);
       exponent -= shift_length;
-      mantissa.shift_left(static_cast<size_t>(shift_length));
+      mantissa <<= static_cast<size_t>(shift_length);
     }
     return *this;
   }
@@ -122,15 +122,17 @@ template <size_t Bits> struct DyadicFloat {
 
     int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
 
-    MantissaType m_hi(mantissa >> shift);
+    MantissaType m_hi =
+        shift >= MantissaType::BITS ? MantissaType(0) : mantissa >> shift;
 
     T d_hi = FPBits<T>::create_value(
-                 sign, exp_hi,
+                 sign, static_cast<output_bits_t>(exp_hi),
                  (static_cast<output_bits_t>(m_hi) & FPBits<T>::SIG_MASK) |
                      IMPLICIT_MASK)
                  .get_val();
 
-    MantissaType round_mask = MantissaType(1) << (shift - 1);
+    MantissaType round_mask =
+        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
@@ -141,25 +143,32 @@ template <size_t Bits> struct DyadicFloat {
 
     if (LIBC_UNLIKELY(exp_lo <= 0)) {
       // d_lo is denormal, but the output is normal.
-      int scale_up_exponent = 2 * PRECISION;
+      int scale_up_exponent = 1 - exp_lo;
       T scale_up_factor =
-          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS + scale_up_exponent,
+          FPBits<T>::create_value(sign,
+                                  static_cast<output_bits_t>(
+                                      FPBits<T>::EXP_BIAS + scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
       T scale_down_factor =
-          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS - scale_up_exponent,
+          FPBits<T>::create_value(sign,
+                                  static_cast<output_bits_t>(
+                                      FPBits<T>::EXP_BIAS - scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
 
-      d_lo = FPBits<T>::create_value(sign, exp_lo + scale_up_exponent,
-                                     IMPLICIT_MASK)
+      d_lo = FPBits<T>::create_value(
+                 sign, static_cast<output_bits_t>(exp_lo + scale_up_exponent),
+                 IMPLICIT_MASK)
                  .get_val();
 
       return multiply_add(d_lo, T(round_and_sticky), d_hi * scale_up_factor) *
              scale_down_factor;
     }
 
-    d_lo = FPBits<T>::create_value(sign, exp_lo, IMPLICIT_MASK).get_val();
+    d_lo = FPBits<T>::create_value(sign, static_cast<output_bits_t>(exp_lo),
+                                   IMPLICIT_MASK)
+               .get_val();
 
     // Still correct without FMA instructions if `d_lo` is not underflow.
     T r = multiply_add(d_lo, T(round_and_sticky), d_hi);
@@ -167,7 +176,8 @@ template <size_t Bits> struct DyadicFloat {
     if (LIBC_UNLIKELY(denorm)) {
       // Exponent before rounding is in denormal range, simply clear the
       // exponent field.
-      output_bits_t clear_exp = (output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
+      output_bits_t clear_exp = static_cast<output_bits_t>(
+          output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
       if (!(r_bits & FPBits<T>::EXP_MASK)) {
         // Output is denormal after rounding, clear the implicit bit for 80-bit
@@ -233,7 +243,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
     result.sign = a.sign;
     result.exponent = a.exponent;
     result.mantissa = a.mantissa;
-    if (result.mantissa.add(b.mantissa)) {
+    if (result.mantissa.add_overflow(b.mantissa)) {
       // Mantissa addition overflow.
       result.shift_right(1);
       result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] |=
@@ -268,11 +278,11 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
-                                                  DyadicFloat<Bits> b) {
+LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
+                                                  const DyadicFloat<Bits> &b) {
   DyadicFloat<Bits> result;
   result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
-  result.exponent = a.exponent + b.exponent + int(Bits);
+  result.exponent = a.exponent + b.exponent + static_cast<int>(Bits);
 
   if (!(a.mantissa.is_zero() || b.mantissa.is_zero())) {
     result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
@@ -299,7 +309,7 @@ multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
 // Simple exponentiation implementation for printf. Only handles positive
 // exponents, since division isn't implemented.
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
+LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(const DyadicFloat<Bits> &a,
                                               uint32_t power) {
   DyadicFloat<Bits> result = 1.0;
   DyadicFloat<Bits> cur_power = a;
@@ -315,7 +325,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
 }
 
 template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a,
+LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(const DyadicFloat<Bits> &a,
                                                   int32_t pow_2) {
   DyadicFloat<Bits> result = a;
   result.exponent += pow_2;

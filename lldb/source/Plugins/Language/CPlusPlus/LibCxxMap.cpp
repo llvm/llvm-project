@@ -295,13 +295,13 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
     bool child_is_base_class;
     bool child_is_deref_of_parent;
     uint64_t language_flags;
-    if (tree_node_type
-            .GetChildCompilerTypeAtIndex(
-                nullptr, 4, true, true, true, child_name, child_byte_size,
-                child_byte_offset, child_bitfield_bit_size,
-                child_bitfield_bit_offset, child_is_base_class,
-                child_is_deref_of_parent, nullptr, language_flags)
-            .IsValid())
+    auto child_type =
+        llvm::expectedToStdOptional(tree_node_type.GetChildCompilerTypeAtIndex(
+            nullptr, 4, true, true, true, child_name, child_byte_size,
+            child_byte_offset, child_bitfield_bit_size,
+            child_bitfield_bit_offset, child_is_base_class,
+            child_is_deref_of_parent, nullptr, language_flags));
+    if (child_type && child_type->IsValid())
       m_skip_size = (uint32_t)child_byte_offset;
   }
 }

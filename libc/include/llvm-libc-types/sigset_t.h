@@ -13,8 +13,8 @@
 
 // This definition can be adjusted/specialized for different targets and
 // platforms as necessary. This definition works for Linux on most targets.
-typedef struct {
+struct sigset_t {
   unsigned long __signals[__NSIGSET_WORDS];
-} sigset_t;
+};
 
 #endif // LLVM_LIBC_TYPES_SIGSET_T_H

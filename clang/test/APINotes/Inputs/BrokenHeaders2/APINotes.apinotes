@@ -1,0 +1,7 @@
+Name: SomeBrokenLib
+Functions:
+  - Name: do_something_with_pointers
+    NullabilityOfRet: O
+  - Name: do_something_with_pointers
+    NullabilityOfRet: O
+    

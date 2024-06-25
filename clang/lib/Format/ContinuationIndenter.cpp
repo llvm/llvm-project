@@ -684,7 +684,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         // arguments to function calls. We do this by ensuring that either all
         // arguments (including any lambdas) go on the same line as the function
         // call, or we break before the first argument.
-        auto PrevNonComment = Current.getPreviousNonComment();
+        const auto *Prev = Current.Previous;
+        if (!Prev)
+          return false;
+        // For example, `/*Newline=*/false`.
+        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+          return false;
+        const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
           return false;
         if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
@@ -1251,6 +1257,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     }
     return CurrentState.Indent;
   }
+  if (Current.is(TT_TrailingReturnArrow) &&
+      Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
+                       tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
+    return ContinuationIndent;
+  }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
        (Current.is(tok::greater) && (Style.isProto() || Style.isTableGen()))) &&
       State.Stack.size() > 1) {
@@ -1416,7 +1427,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // the next line.
   if (State.Line->InPragmaDirective) {
     FormatToken *PragmaType = State.Line->First->Next->Next;
-    if (PragmaType && PragmaType->TokenText.equals("omp"))
+    if (PragmaType && PragmaType->TokenText == "omp")
       return CurrentState.Indent + Style.ContinuationIndentWidth;
   }
 
@@ -1706,7 +1717,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0) &&
+         PrecedenceLevel > prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
          (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
                                         TT_TableGenDAGArgListCommaToBreak)))) {

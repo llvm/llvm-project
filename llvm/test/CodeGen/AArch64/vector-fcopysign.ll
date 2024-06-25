@@ -264,15 +264,15 @@ define <4 x bfloat> @test_copysign_v4bf16_v4bf16(<4 x bfloat> %a, <4 x bfloat> %
 define <4 x bfloat> @test_copysign_v4bf16_v4f32(<4 x bfloat> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4bf16_v4f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.4s v2, #127, msl #8
-; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    movi.4s v2, #1
+; CHECK-NEXT:    movi.4s v3, #127, msl #8
 ; CHECK-NEXT:    ushr.4s v4, v1, #16
-; CHECK-NEXT:    add.4s v2, v1, v2
-; CHECK-NEXT:    and.16b v3, v4, v3
-; CHECK-NEXT:    add.4s v2, v3, v2
-; CHECK-NEXT:    fcmeq.4s v3, v1, v1
+; CHECK-NEXT:    and.16b v2, v4, v2
+; CHECK-NEXT:    add.4s v3, v1, v3
+; CHECK-NEXT:    fcmeq.4s v4, v1, v1
 ; CHECK-NEXT:    orr.4s v1, #64, lsl #16
-; CHECK-NEXT:    bit.16b v1, v2, v3
+; CHECK-NEXT:    add.4s v2, v2, v3
+; CHECK-NEXT:    bit.16b v1, v2, v4
 ; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
 ; CHECK-NEXT:    shrn.4h v1, v1, #16
 ; CHECK-NEXT:    bif.8b v0, v1, v2
@@ -286,16 +286,16 @@ define <4 x bfloat> @test_copysign_v4bf16_v4f64(<4 x bfloat> %a, <4 x double> %b
 ; CHECK-LABEL: test_copysign_v4bf16_v4f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
-; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    movi.4s v3, #127, msl #8
 ; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
-; CHECK-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-NEXT:    movi.4s v2, #1
 ; CHECK-NEXT:    ushr.4s v4, v1, #16
-; CHECK-NEXT:    add.4s v2, v1, v2
-; CHECK-NEXT:    and.16b v3, v4, v3
-; CHECK-NEXT:    add.4s v2, v3, v2
-; CHECK-NEXT:    fcmeq.4s v3, v1, v1
+; CHECK-NEXT:    add.4s v3, v1, v3
+; CHECK-NEXT:    and.16b v2, v4, v2
+; CHECK-NEXT:    fcmeq.4s v4, v1, v1
 ; CHECK-NEXT:    orr.4s v1, #64, lsl #16
-; CHECK-NEXT:    bit.16b v1, v2, v3
+; CHECK-NEXT:    add.4s v2, v2, v3
+; CHECK-NEXT:    bit.16b v1, v2, v4
 ; CHECK-NEXT:    mvni.4h v2, #128, lsl #8
 ; CHECK-NEXT:    shrn.4h v1, v1, #16
 ; CHECK-NEXT:    bif.8b v0, v1, v2
@@ -322,22 +322,22 @@ define <8 x bfloat> @test_copysign_v8bf16_v8bf16(<8 x bfloat> %a, <8 x bfloat> %
 define <8 x bfloat> @test_copysign_v8bf16_v8f32(<8 x bfloat> %a, <8 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v8bf16_v8f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    movi.4s v3, #127, msl #8
-; CHECK-NEXT:    movi.4s v4, #1
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    movi.4s v4, #127, msl #8
 ; CHECK-NEXT:    ushr.4s v5, v2, #16
 ; CHECK-NEXT:    ushr.4s v6, v1, #16
-; CHECK-NEXT:    add.4s v7, v2, v3
-; CHECK-NEXT:    add.4s v3, v1, v3
-; CHECK-NEXT:    and.16b v5, v5, v4
-; CHECK-NEXT:    and.16b v4, v6, v4
+; CHECK-NEXT:    and.16b v5, v5, v3
+; CHECK-NEXT:    add.4s v7, v2, v4
+; CHECK-NEXT:    and.16b v3, v6, v3
+; CHECK-NEXT:    add.4s v4, v1, v4
 ; CHECK-NEXT:    fcmeq.4s v6, v2, v2
 ; CHECK-NEXT:    orr.4s v2, #64, lsl #16
 ; CHECK-NEXT:    add.4s v5, v5, v7
-; CHECK-NEXT:    add.4s v3, v4, v3
-; CHECK-NEXT:    fcmeq.4s v4, v1, v1
+; CHECK-NEXT:    fcmeq.4s v7, v1, v1
 ; CHECK-NEXT:    orr.4s v1, #64, lsl #16
+; CHECK-NEXT:    add.4s v3, v3, v4
 ; CHECK-NEXT:    bit.16b v2, v5, v6
-; CHECK-NEXT:    bit.16b v1, v3, v4
+; CHECK-NEXT:    bit.16b v1, v3, v7
 ; CHECK-NEXT:    uzp2.8h v1, v1, v2
 ; CHECK-NEXT:    mvni.8h v2, #128, lsl #8
 ; CHECK-NEXT:    bif.16b v0, v1, v2

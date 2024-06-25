@@ -11,22 +11,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithBufferizePass : Pass<"arith-bufferize", "ModuleOp"> {
-  let summary = "Bufferize Arith dialect ops.";
-  let description = [{
-    This pass bufferizes arith dialect ops.
-
-    This pass needs to be a module pass because it inserts memref.global
-    ops into the module, which cannot be done safely from a function pass due to
-    multi-threading. Most other bufferization passes can run in parallel at
-    function granularity.
-  }];
-  let options = [
-    Option<"alignment", "alignment", "unsigned", /*default=*/"0",
-           "Create global memrefs with a specified alignment">,
-  ];
-}
-
 def ArithExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
   let dependentDialects = ["vector::VectorDialect"];
@@ -56,9 +40,14 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
   let summary = "Do optimizations based on integer range analysis";
   let description = [{
     This pass runs integer range analysis and apllies optimizations based on its
-    results. e.g. replace arith.cmpi with const if it can be inferred from
-    args ranges.
+    results. It replaces operations with known-constant results with said constants,
+    rewrites `(0 <= %x < D) mod D` to `%x`.
   }];
+  // Explicitly depend on "arith" because this pass could create operations in
+  // `arith` out of thin air in some cases.
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
 }
 
 def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {

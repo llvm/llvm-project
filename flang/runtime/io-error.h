@@ -61,7 +61,7 @@ public:
   RT_API_ATTRS void SignalPendingError();
 
   RT_API_ATTRS int GetIoStat() const { return ioStat_; }
-  bool GetIoMsg(char *, std::size_t);
+  RT_API_ATTRS bool GetIoMsg(char *, std::size_t);
 
 private:
   enum Flag : std::uint8_t {

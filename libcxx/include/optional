@@ -178,7 +178,6 @@ namespace std {
 */
 
 #include <__assert>
-#include <__availability>
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/invocable.h>
@@ -210,6 +209,7 @@ namespace std {
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -581,6 +581,8 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
 public:
   using value_type = _Tp;
 
+  using __trivially_relocatable = conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
+
 private:
   // Disable the reference extension using this static assert.
   static_assert(!is_same_v<__remove_cvref_t<value_type>, in_place_t>,
@@ -722,9 +724,9 @@ public:
   template <
       class _Up = value_type,
       class     = enable_if_t< _And< _IsNotSame<__remove_cvref_t<_Up>, optional>,
-                                 _Or< _IsNotSame<__remove_cvref_t<_Up>, value_type>, _Not<is_scalar<value_type>> >,
-                                 is_constructible<value_type, _Up>,
-                                 is_assignable<value_type&, _Up> >::value> >
+                                     _Or< _IsNotSame<__remove_cvref_t<_Up>, value_type>, _Not<is_scalar<value_type>> >,
+                                     is_constructible<value_type, _Up>,
+                                     is_assignable<value_type&, _Up> >::value> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(_Up&& __v) {
     if (this->has_value())
       this->__get() = std::forward<_Up>(__v);
@@ -1240,9 +1242,9 @@ operator<=>(const optional<_Tp>& __x, const _Up& __v) {
 #  endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    enable_if_t< is_move_constructible_v<_Tp> && is_swappable_v<_Tp>, void >
-    swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 enable_if_t< is_move_constructible_v<_Tp> && is_swappable_v<_Tp>, void >
+swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y))) {
   __x.swap(__y);
 }
 

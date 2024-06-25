@@ -2,6 +2,10 @@
 # RUN: llc -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
 # RUN: llc -run-pass=mir-debugify,mir-strip-debug,mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
 # RUN: llc -run-pass=mir-debugify,mir-strip-debug -o - %s | FileCheck --check-prefix=STRIP %s
+# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
+# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
+# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify,mir-strip-debug,mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
+# RUN: llc --experimental-debuginfo-iterators=false -run-pass=mir-debugify,mir-strip-debug -o - %s | FileCheck --check-prefix=STRIP %s
 
 --- |
   ; ModuleID = 'loc-only.ll'
@@ -11,10 +15,10 @@
   define i32 @test(i32 %a, i32 %b) {
     %add = add i32 %a, 2
   ; ALL-NEXT:  %add = add i32 %a, 2, !dbg [[L1:![0-9]+]]
-  ; VALUE-NEXT: call{{( addrspace\([0-9]+\))?}} void @llvm.dbg.value(metadata i32 %add, metadata [[add:![0-9]+]], metadata !DIExpression()), !dbg [[L1]]
+  ; VALUE-NEXT: #dbg_value(i32 %add, [[add:![0-9]+]], !DIExpression(), [[L1]]
     %sub = sub i32 %add, %b
   ; ALL-NEXT: %sub = sub i32 %add, %b, !dbg [[L2:![0-9]+]]
-  ; VALUE-NEXT: call{{( addrspace\([0-9]+\))?}} void @llvm.dbg.value(metadata i32 %sub, metadata [[sub:![0-9]+]], metadata !DIExpression()), !dbg [[L2]]
+  ; VALUE-NEXT: #dbg_value(i32 %sub, [[sub:![0-9]+]], !DIExpression(), [[L2]]
   ; ALL-NEXT: ret i32 %sub, !dbg [[L3:![0-9]+]]
     ret i32 %sub
   }

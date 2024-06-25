@@ -17,6 +17,8 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 
 #include <string>
@@ -44,18 +46,15 @@ lldb::ValueObjectSP ValueObjectConstResultImpl::Dereference(Status &error) {
   return m_impl_backend->ValueObject::Dereference(error);
 }
 
-ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
-    size_t idx, bool synthetic_array_member, int32_t synthetic_index) {
+ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(size_t idx) {
   if (m_impl_backend == nullptr)
     return nullptr;
 
   m_impl_backend->UpdateValueIfNeeded(false);
 
-  ValueObjectConstResultChild *valobj = nullptr;
-
   bool omit_empty_base_classes = true;
-  bool ignore_array_bounds = synthetic_array_member;
-  std::string child_name_str;
+  bool ignore_array_bounds = false;
+  std::string child_name;
   uint32_t child_byte_size = 0;
   int32_t child_byte_offset = 0;
   uint32_t child_bitfield_bit_size = 0;
@@ -63,16 +62,14 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
   bool child_is_base_class = false;
   bool child_is_deref_of_parent = false;
   uint64_t language_flags;
-
-  const bool transparent_pointers = !synthetic_array_member;
+  const bool transparent_pointers = true;
   CompilerType compiler_type = m_impl_backend->GetCompilerType();
-  CompilerType child_compiler_type;
 
   ExecutionContext exe_ctx(m_impl_backend->GetExecutionContextRef());
 
-  child_compiler_type = compiler_type.GetChildCompilerTypeAtIndex(
+  auto child_compiler_type_or_err = compiler_type.GetChildCompilerTypeAtIndex(
       &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-      ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
+      ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
       child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
       child_is_deref_of_parent, m_impl_backend, language_flags);
 
@@ -81,32 +78,84 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
   // ValueObject if that's not the case, but it turns out there
   // are languages out there which allow zero-size types with
   // children (e.g. Swift).
-  if (child_compiler_type) {
-    if (synthetic_index)
-      child_byte_offset += child_byte_size * synthetic_index;
-
-    ConstString child_name;
-    if (!child_name_str.empty())
-      child_name.SetCString(child_name_str.c_str());
-
-    lldb::addr_t child_live_addr = LLDB_INVALID_ADDRESS;
-    // Transfer the live address (with offset) to the child.  But if
-    // the parent is a pointer, the live address is where that pointer
-    // value lives in memory, so the children live addresses aren't
-    // offsets from that value, they are just other load addresses that
-    // are recorded in the Value of the child ValueObjects.
-    if (m_live_address != LLDB_INVALID_ADDRESS) {
-      if (!compiler_type.IsPointerType())
-        child_live_addr = m_live_address + child_byte_offset;
-    }
-    valobj = new ValueObjectConstResultChild(
-        *m_impl_backend, child_compiler_type, child_name, child_byte_size,
-        child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent, child_live_addr,
-        language_flags);
+  if (!child_compiler_type_or_err || !child_compiler_type_or_err->IsValid()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                   child_compiler_type_or_err.takeError(),
+                   "could not find child: {0}");
+    return nullptr;
   }
 
-  return valobj;
+  lldb::addr_t child_live_addr = LLDB_INVALID_ADDRESS;
+  // Transfer the live address (with offset) to the child.  But if
+  // the parent is a pointer, the live address is where that pointer
+  // value lives in memory, so the children live addresses aren't
+  // offsets from that value, they are just other load addresses that
+  // are recorded in the Value of the child ValueObjects.
+  if (m_live_address != LLDB_INVALID_ADDRESS && !compiler_type.IsPointerType())
+    child_live_addr = m_live_address + child_byte_offset;
+
+  return new ValueObjectConstResultChild(
+      *m_impl_backend, *child_compiler_type_or_err, ConstString(child_name),
+      child_byte_size, child_byte_offset, child_bitfield_bit_size,
+      child_bitfield_bit_offset, child_is_base_class, child_is_deref_of_parent,
+      child_live_addr, language_flags);
+}
+
+ValueObject *
+ValueObjectConstResultImpl::CreateSyntheticArrayMember(size_t idx) {
+  if (m_impl_backend == nullptr)
+    return nullptr;
+
+  m_impl_backend->UpdateValueIfNeeded(false);
+
+  bool omit_empty_base_classes = true;
+  bool ignore_array_bounds = true;
+  std::string child_name;
+  uint32_t child_byte_size = 0;
+  int32_t child_byte_offset = 0;
+  uint32_t child_bitfield_bit_size = 0;
+  uint32_t child_bitfield_bit_offset = 0;
+  bool child_is_base_class = false;
+  bool child_is_deref_of_parent = false;
+  uint64_t language_flags;
+
+  const bool transparent_pointers = false;
+  CompilerType compiler_type = m_impl_backend->GetCompilerType();
+
+  ExecutionContext exe_ctx(m_impl_backend->GetExecutionContextRef());
+
+  auto child_compiler_type_or_err = compiler_type.GetChildCompilerTypeAtIndex(
+      &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+      child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
+      child_is_deref_of_parent, m_impl_backend, language_flags);
+  // One might think we should check that the size of the children
+  // is always strictly positive, hence we could avoid creating a
+  // ValueObject if that's not the case, but it turns out there
+  // are languages out there which allow zero-size types with
+  // children (e.g. Swift).
+  if (!child_compiler_type_or_err || !child_compiler_type_or_err->IsValid()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                   child_compiler_type_or_err.takeError(),
+                   "could not find child: {0}");
+    return nullptr;
+  }
+
+  child_byte_offset += child_byte_size * idx;
+
+  lldb::addr_t child_live_addr = LLDB_INVALID_ADDRESS;
+  // Transfer the live address (with offset) to the child.  But if
+  // the parent is a pointer, the live address is where that pointer
+  // value lives in memory, so the children live addresses aren't
+  // offsets from that value, they are just other load addresses that
+  // are recorded in the Value of the child ValueObjects.
+  if (m_live_address != LLDB_INVALID_ADDRESS && !compiler_type.IsPointerType())
+    child_live_addr = m_live_address + child_byte_offset;
+  return new ValueObjectConstResultChild(
+      *m_impl_backend, *child_compiler_type_or_err, ConstString(child_name),
+      child_byte_size, child_byte_offset, child_bitfield_bit_size,
+      child_bitfield_bit_offset, child_is_base_class, child_is_deref_of_parent,
+      child_live_addr, language_flags);
 }
 
 lldb::ValueObjectSP ValueObjectConstResultImpl::GetSyntheticChildAtOffset(

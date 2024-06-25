@@ -3682,18 +3682,12 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; KNL-LABEL: movmsk_v16i8:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k1
-; KNL-NEXT:    kmovw %k1, %ecx
-; KNL-NEXT:    kshiftrw $8, %k0, %k1
-; KNL-NEXT:    kmovw %k1, %edx
-; KNL-NEXT:    kshiftrw $3, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    xorb %dl, %al
-; KNL-NEXT:    andb %cl, %al
+; KNL-NEXT:    vpextrb $15, %xmm0, %ecx
+; KNL-NEXT:    vpextrb $8, %xmm0, %edx
+; KNL-NEXT:    vpextrb $3, %xmm0, %eax
+; KNL-NEXT:    xorl %edx, %eax
+; KNL-NEXT:    andl %ecx, %eax
 ; KNL-NEXT:    # kill: def $al killed $al killed $eax
-; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: movmsk_v16i8:

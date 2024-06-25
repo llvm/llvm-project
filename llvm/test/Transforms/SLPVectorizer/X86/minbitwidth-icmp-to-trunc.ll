@@ -19,8 +19,8 @@ define i1 @test(ptr noalias %0, i64 %1, ptr noalias %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i24> [[TMP8]], <i24 24, i24 24>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i24> <i24 23, i24 23>, <2 x i24> [[TMP8]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc <2 x i24> [[TMP10]] to <2 x i8>
-; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i8> [[TMP23]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP11]], <i32 254, i32 254>
+; CHECK-NEXT:    [[TMP26:%.*]] = zext <2 x i8> [[TMP23]] to <2 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP26]], <i32 254, i32 254>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <2 x i32> [[TMP12]], <i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP25:%.*]] = select <2 x i1> [[TMP13]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[TMP23]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext <2 x i8> [[TMP25]] to <2 x i32>

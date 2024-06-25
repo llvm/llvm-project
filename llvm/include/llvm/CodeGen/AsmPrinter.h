@@ -38,6 +38,7 @@ class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
+class ConstantPtrAuth;
 class DataLayout;
 class DIE;
 class DIEAbbrev;
@@ -585,6 +586,10 @@ public:
     emitGlobalConstant(DL, CV);
   }
 
+  virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+    report_fatal_error("ptrauth constant lowering not implemented");
+  }
+
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
   /// fall-through.
@@ -867,6 +872,9 @@ private:
 
   /// This method emits a comment next to header for the current function.
   virtual void emitFunctionHeaderComment();
+
+  /// This method emits prefix-like data before the current function.
+  void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
   void

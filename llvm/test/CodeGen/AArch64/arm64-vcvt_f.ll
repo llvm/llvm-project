@@ -205,15 +205,15 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; GENERIC-LABEL: test_vcvt_bf16_f64:
 ; GENERIC:       // %bb.0:
 ; GENERIC-NEXT:    fcvtxn v0.2s, v0.2d
-; GENERIC-NEXT:    movi.4s v1, #127, msl #8
-; GENERIC-NEXT:    movi.4s v2, #1
+; GENERIC-NEXT:    movi.4s v1, #1
+; GENERIC-NEXT:    movi.4s v2, #127, msl #8
 ; GENERIC-NEXT:    ushr.4s v3, v0, #16
-; GENERIC-NEXT:    add.4s v1, v0, v1
-; GENERIC-NEXT:    and.16b v2, v3, v2
-; GENERIC-NEXT:    add.4s v1, v2, v1
-; GENERIC-NEXT:    fcmeq.4s v2, v0, v0
+; GENERIC-NEXT:    add.4s v2, v0, v2
+; GENERIC-NEXT:    and.16b v1, v3, v1
+; GENERIC-NEXT:    fcmeq.4s v3, v0, v0
 ; GENERIC-NEXT:    orr.4s v0, #64, lsl #16
-; GENERIC-NEXT:    bit.16b v0, v1, v2
+; GENERIC-NEXT:    add.4s v1, v1, v2
+; GENERIC-NEXT:    bit.16b v0, v1, v3
 ; GENERIC-NEXT:    shrn.4h v0, v0, #16
 ; GENERIC-NEXT:    ret
 ;
@@ -238,15 +238,15 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; GISEL-LABEL: test_vcvt_bf16_f64:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    fcvtxn v0.2s, v0.2d
-; GISEL-NEXT:    movi.4s v1, #127, msl #8
-; GISEL-NEXT:    movi.4s v2, #1
+; GISEL-NEXT:    movi.4s v1, #1
+; GISEL-NEXT:    movi.4s v2, #127, msl #8
 ; GISEL-NEXT:    ushr.4s v3, v0, #16
-; GISEL-NEXT:    add.4s v1, v0, v1
-; GISEL-NEXT:    and.16b v2, v3, v2
-; GISEL-NEXT:    add.4s v1, v2, v1
-; GISEL-NEXT:    fcmeq.4s v2, v0, v0
+; GISEL-NEXT:    add.4s v2, v0, v2
+; GISEL-NEXT:    and.16b v1, v3, v1
+; GISEL-NEXT:    fcmeq.4s v3, v0, v0
 ; GISEL-NEXT:    orr.4s v0, #64, lsl #16
-; GISEL-NEXT:    bit.16b v0, v1, v2
+; GISEL-NEXT:    add.4s v1, v1, v2
+; GISEL-NEXT:    bit.16b v0, v1, v3
 ; GISEL-NEXT:    shrn.4h v0, v0, #16
 ; GISEL-NEXT:    ret
   %vcvt1.i = fptrunc <2 x double> %v to <2 x bfloat>

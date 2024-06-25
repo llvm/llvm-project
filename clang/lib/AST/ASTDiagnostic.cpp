@@ -1215,46 +1215,19 @@ class TemplateDiff {
                                              bool &NeedAddressOf) {
     if (!Iter.isEnd()) {
       switch (Iter->getKind()) {
-        default:
-          llvm_unreachable("unknown ArgumentKind");
-        case TemplateArgument::Integral:
-          Value = Iter->getAsIntegral();
-          HasInt = true;
-          IntType = Iter->getIntegralType();
-          return;
-        case TemplateArgument::Declaration: {
-          VD = Iter->getAsDecl();
-          QualType ArgType = Iter->getParamTypeForDecl();
-          QualType VDType = VD->getType();
-          if (ArgType->isPointerType() &&
-              Context.hasSameType(ArgType->getPointeeType(), VDType))
-            NeedAddressOf = true;
-          return;
-        }
-        case TemplateArgument::NullPtr:
-          IsNullPtr = true;
-          return;
-        case TemplateArgument::Expression:
-          E = Iter->getAsExpr();
-      }
-    } else if (!Default->isParameterPack()) {
-      E = Default->getDefaultArgument();
-    }
-
-    if (!Iter.hasDesugaredTA()) return;
-
-    const TemplateArgument& TA = Iter.getDesugaredTA();
-    switch (TA.getKind()) {
-      default:
-        llvm_unreachable("unknown ArgumentKind");
+      case TemplateArgument::StructuralValue:
+        // FIXME: Diffing of structural values is not implemented.
+        // There is no possible fallback in this case, this will show up
+        // as '(no argument)'.
+        return;
       case TemplateArgument::Integral:
-        Value = TA.getAsIntegral();
+        Value = Iter->getAsIntegral();
         HasInt = true;
-        IntType = TA.getIntegralType();
+        IntType = Iter->getIntegralType();
         return;
       case TemplateArgument::Declaration: {
-        VD = TA.getAsDecl();
-        QualType ArgType = TA.getParamTypeForDecl();
+        VD = Iter->getAsDecl();
+        QualType ArgType = Iter->getParamTypeForDecl();
         QualType VDType = VD->getType();
         if (ArgType->isPointerType() &&
             Context.hasSameType(ArgType->getPointeeType(), VDType))
@@ -1265,13 +1238,62 @@ class TemplateDiff {
         IsNullPtr = true;
         return;
       case TemplateArgument::Expression:
-        // TODO: Sometimes, the desugared template argument Expr differs from
-        // the sugared template argument Expr.  It may be useful in the future
-        // but for now, it is just discarded.
-        if (!E)
-          E = TA.getAsExpr();
-        return;
+        E = Iter->getAsExpr();
+        break;
+      case TemplateArgument::Null:
+      case TemplateArgument::Type:
+      case TemplateArgument::Template:
+      case TemplateArgument::TemplateExpansion:
+        llvm_unreachable("TemplateArgument kind is not expected for NTTP");
+      case TemplateArgument::Pack:
+        llvm_unreachable("TemplateArgument kind should be handled elsewhere");
+      }
+    } else if (!Default->isParameterPack()) {
+      E = Default->getDefaultArgument().getArgument().getAsExpr();
     }
+
+    if (!Iter.hasDesugaredTA())
+      return;
+
+    const TemplateArgument &TA = Iter.getDesugaredTA();
+    switch (TA.getKind()) {
+    case TemplateArgument::StructuralValue:
+      // FIXME: Diffing of structural values is not implemented.
+      //        Just fall back to the expression.
+      return;
+    case TemplateArgument::Integral:
+      Value = TA.getAsIntegral();
+      HasInt = true;
+      IntType = TA.getIntegralType();
+      return;
+    case TemplateArgument::Declaration: {
+      VD = TA.getAsDecl();
+      QualType ArgType = TA.getParamTypeForDecl();
+      QualType VDType = VD->getType();
+      if (ArgType->isPointerType() &&
+          Context.hasSameType(ArgType->getPointeeType(), VDType))
+        NeedAddressOf = true;
+      return;
+    }
+    case TemplateArgument::NullPtr:
+      IsNullPtr = true;
+      return;
+    case TemplateArgument::Expression:
+      // TODO: Sometimes, the desugared template argument Expr differs from
+      // the sugared template argument Expr.  It may be useful in the future
+      // but for now, it is just discarded.
+      if (!E)
+        E = TA.getAsExpr();
+      return;
+    case TemplateArgument::Null:
+    case TemplateArgument::Type:
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      llvm_unreachable("TemplateArgument kind is not expected for NTTP");
+    case TemplateArgument::Pack:
+      llvm_unreachable("TemplateArgument kind should be handled elsewhere");
+    }
+    llvm_unreachable("Unexpected TemplateArgument kind");
   }
 
   /// DiffNonTypes - Handles any template parameters not handled by DiffTypes
@@ -1911,6 +1933,11 @@ class TemplateDiff {
       }
 
       OS << "nullptr";
+      return;
+    }
+
+    if (E) {
+      PrintExpr(E);
       return;
     }
 

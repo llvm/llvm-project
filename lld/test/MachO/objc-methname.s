@@ -16,7 +16,7 @@
 
 # CSTRING: Contents of (__TEXT,__cstring) section
 # CSTRING-NEXT: existing-cstring
-# CSTIRNG-EMPTY:
+# CSTRING-EMPTY:
 
 # METHNAME: Contents of (__TEXT,__objc_methname) section
 # METHNAME-NEXT: existing_methname

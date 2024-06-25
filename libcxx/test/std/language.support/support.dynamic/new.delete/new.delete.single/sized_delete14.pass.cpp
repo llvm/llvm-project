@@ -8,11 +8,11 @@
 
 // test sized operator delete replacement.
 
+// TODO(mordante) fix this test after updating clang in Docker
+// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18, clang-19
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
-
-// NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
-// default. It is only enabled when -fsized-deallocation is given.
-// XFAIL: clang, apple-clang
+// XFAIL: apple-clang
+// XFAIL: using-built-library-before-llvm-11
 
 #include <new>
 #include <cstddef>

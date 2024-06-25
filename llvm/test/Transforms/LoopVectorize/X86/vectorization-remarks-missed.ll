@@ -124,7 +124,7 @@
 ; YAML-NEXT:   - String:          'loop not vectorized: '
 ; YAML-NEXT:   - String:          could not determine number of loop iterations
 ; YAML-NEXT: ...
-; YAML-NEXT: --- !Missed
+; YAML:      --- !Missed
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            MissedDetails
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }

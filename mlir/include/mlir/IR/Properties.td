@@ -153,4 +153,17 @@ class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
   let assignToStorage = "::llvm::copy($_value, $_storage)";
 }
 
+class EnumProperty<string storageTypeParam, string desc = ""> :
+    Property<storageTypeParam, desc> {
+  code writeToMlirBytecode = [{
+    $_writer.writeVarInt(static_cast<uint64_t>($_storage));
+  }];
+  code readFromMlirBytecode = [{
+    uint64_t val;
+    if (failed($_reader.readVarInt(val)))
+      return ::mlir::failure();
+    $_storage = static_cast<}] # storageTypeParam # [{>(val);
+  }];
+}
+
 #endif // PROPERTIES

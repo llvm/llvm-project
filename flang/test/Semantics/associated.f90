@@ -94,18 +94,21 @@ subroutine assoc()
     integer, pointer :: intPointerArr(:)
     procedure(objPtrFunc), pointer :: objPtrFuncPointer
 
-    !ERROR: Assumed-rank array cannot be forwarded to 'target=' argument
-    lvar = associated(assumedRank, assumedRank)
+    lvar = associated(assumedRank, assumedRank) ! ok
+    !ERROR: TARGET= argument 'realscalarptr' may not be assumed-rank when POINTER= argument is not
+    lvar = associated(realScalarPtr, assumedRank)
+    !ERROR: TARGET= argument 'realvecptr' may not be assumed-rank when POINTER= argument is not
+    lvar = associated(realVecPtr, assumedRank)
     lvar = associated(assumedRank, targetRealVar) ! ok
     lvar = associated(assumedRank, targetRealMat) ! ok
     lvar = associated(realScalarPtr, targetRealVar) ! ok
-    !ERROR: 'target=' argument has unacceptable rank 0
+    !ERROR: POINTER= argument and TARGET= argument have incompatible ranks 1 and 0
     lvar = associated(realVecPtr, targetRealVar)
-    !ERROR: 'target=' argument has unacceptable rank 0
+    !ERROR: POINTER= argument and TARGET= argument have incompatible ranks 2 and 0
     lvar = associated(realMatPtr, targetRealVar)
-    !ERROR: 'target=' argument has unacceptable rank 2
+    !ERROR: POINTER= argument and TARGET= argument have incompatible ranks 0 and 2
     lvar = associated(realScalarPtr, targetRealMat)
-    !ERROR: 'target=' argument has unacceptable rank 2
+    !ERROR: POINTER= argument and TARGET= argument have incompatible ranks 1 and 2
     lvar = associated(realVecPtr, targetRealMat)
     lvar = associated(realMatPtr, targetRealMat) ! ok
     !ERROR: missing mandatory 'pointer=' argument

@@ -140,4 +140,20 @@ void __vectorcall vectorcall_indirect_vec(
 // X86-SAME: ptr inreg noundef %0,
 // X86-SAME: i32 inreg noundef %edx,
 // X86-SAME: ptr noundef %1)
+
+void __vectorcall vectorcall_indirect_fp(
+    double xmm0, double xmm1, double xmm2, double xmm3, double xmm4,
+    v4f32 xmm5, v4f32 ecx, int edx, double mem) {
+}
+
+// X86: define dso_local x86_vectorcallcc void @"\01vectorcall_indirect_fp@@{{[0-9]+}}"
+// X86-SAME: (double inreg noundef %xmm0,
+// X86-SAME: double inreg noundef %xmm1,
+// X86-SAME: double inreg noundef %xmm2,
+// X86-SAME: double inreg noundef %xmm3,
+// X86-SAME: double inreg noundef %xmm4,
+// X86-SAME: <4 x float> inreg noundef %xmm5,
+// X86-SAME: ptr inreg noundef %0,
+// X86-SAME: i32 inreg noundef %edx,
+// X86-SAME: double noundef %mem)
 #endif

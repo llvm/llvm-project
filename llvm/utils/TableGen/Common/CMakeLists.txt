@@ -12,10 +12,11 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   GlobalISel/CodeExpander.cpp
+  GlobalISel/CombinerUtils.cpp
   GlobalISel/CXXPredicates.cpp
   GlobalISel/GlobalISelMatchTable.cpp
   GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp
-  GlobalISel/MatchDataInfo.cpp
+  GlobalISel/PatternParser.cpp
   GlobalISel/Patterns.cpp
 
   AsmWriterInst.cpp
@@ -39,8 +40,8 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
 
   DEPENDS
   vt_gen
+  intrinsics_gen
   )
-set_target_properties(LLVMTableGenCommon PROPERTIES FOLDER "Tablegenning")
 
 # Users may include its headers as "Common/*.h"
 target_include_directories(LLVMTableGenCommon

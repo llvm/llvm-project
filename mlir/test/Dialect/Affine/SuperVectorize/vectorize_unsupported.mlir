@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -affine-super-vectorizer-test  -vectorize-affine-loop-nest -split-input-file 2>&1 |  FileCheck %s
+// RUN: mlir-opt %s -affine-super-vectorizer-test=vectorize-affine-loop-nest -split-input-file 2>&1 |  FileCheck %s
 
 func.func @unparallel_loop_reduction_unsupported(%in: memref<256x512xf32>, %out: memref<256xf32>) {
  // CHECK: Outermost loop cannot be parallel

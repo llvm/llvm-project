@@ -912,8 +912,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:  $BB4_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    slt $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    seh $4, $4
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    slt $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movn $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -922,9 +926,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB4_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -952,8 +954,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:  $BB4_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    slt $5, $2, $7
-; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    seh $4, $4
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    slt $5, $4, $7
+; MIPSR6-NEXT:    seleqz $3, $4, $5
 ; MIPSR6-NEXT:    selnez $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -961,10 +967,9 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB4_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -991,8 +996,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:  $BB4_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    slt $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    seh $4, $4
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    slt $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movn $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -1000,9 +1009,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB4_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -1029,8 +1036,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:  $BB4_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    slt $5, $2, $7
-; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    seh $4, $4
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    slt $5, $4, $7
+; MMR6-NEXT:    seleqz $3, $4, $5
 ; MMR6-NEXT:    selnez $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -1039,9 +1050,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB4_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -1067,14 +1076,13 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB4_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    sll $7, $7, 16
-; MIPS32-NEXT:    sra $7, $7, 16
-; MIPS32-NEXT:    slt $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    sll $4, $4, 16
+; MIPS32-NEXT:    sra $4, $4, 16
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    slt $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movn $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -1083,10 +1091,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB4_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -1095,7 +1100,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
 ;
 ; MIPSEL-LABEL: test_max_16:
 ; MIPSEL:       # %bb.0: # %entry
@@ -1114,12 +1118,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB4_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    srav $2, $2, $10
-; MIPSEL-NEXT:    srav $7, $7, $10
-; MIPSEL-NEXT:    seh $2, $2
-; MIPSEL-NEXT:    seh $7, $7
-; MIPSEL-NEXT:    slt $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    seh $4, $4
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    slt $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movn $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -1128,9 +1132,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB4_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -1157,12 +1159,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB4_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    srav $2, $2, $10
-; MIPSELR6-NEXT:    srav $7, $7, $10
-; MIPSELR6-NEXT:    seh $2, $2
-; MIPSELR6-NEXT:    seh $7, $7
-; MIPSELR6-NEXT:    slt $5, $2, $7
-; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    seh $4, $4
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    slt $5, $4, $7
+; MIPSELR6-NEXT:    seleqz $3, $4, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -1170,10 +1172,9 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB4_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -1199,12 +1200,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB4_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    srav $2, $2, $10
-; MMEL-NEXT:    srav $7, $7, $10
-; MMEL-NEXT:    seh $2, $2
-; MMEL-NEXT:    seh $7, $7
-; MMEL-NEXT:    slt $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    seh $4, $4
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    slt $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -1212,9 +1213,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB4_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -1240,12 +1239,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB4_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    srav $2, $2, $10
-; MMELR6-NEXT:    srav $7, $7, $10
-; MMELR6-NEXT:    seh $2, $2
-; MMELR6-NEXT:    seh $7, $7
-; MMELR6-NEXT:    slt $5, $2, $7
-; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    seh $4, $4
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    slt $5, $4, $7
+; MMELR6-NEXT:    seleqz $3, $4, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -1254,9 +1253,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB4_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -1283,8 +1280,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:  .LBB4_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    slt $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    seh $4, $4
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    slt $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movn $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -1293,9 +1294,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB4_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -1323,8 +1322,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:  .LBB4_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    slt $5, $2, $7
-; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    seh $4, $4
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    slt $5, $4, $7
+; MIPS64R6-NEXT:    seleqz $3, $4, $5
 ; MIPS64R6-NEXT:    selnez $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -1332,10 +1335,9 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB4_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -1361,12 +1363,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB4_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    srav $2, $2, $10
-; MIPS64EL-NEXT:    srav $7, $7, $10
-; MIPS64EL-NEXT:    seh $2, $2
-; MIPS64EL-NEXT:    seh $7, $7
-; MIPS64EL-NEXT:    slt $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    seh $4, $4
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    slt $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movn $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -1375,9 +1377,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB4_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -1404,12 +1404,12 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB4_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    srav $2, $2, $10
-; MIPS64ELR6-NEXT:    srav $7, $7, $10
-; MIPS64ELR6-NEXT:    seh $2, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
-; MIPS64ELR6-NEXT:    slt $5, $2, $7
-; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    seh $4, $4
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    slt $5, $4, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $4, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -1417,10 +1417,9 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB4_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -1428,6 +1427,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
+
 entry:
   %0 = atomicrmw max ptr %ptr, i16 %val seq_cst
   ret i16 %0
@@ -1452,8 +1452,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:  $BB5_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    slt $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    seh $4, $4
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    slt $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movz $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -1462,9 +1466,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB5_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -1492,8 +1494,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:  $BB5_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    slt $5, $2, $7
-; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    seh $4, $4
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    slt $5, $4, $7
+; MIPSR6-NEXT:    selnez $3, $4, $5
 ; MIPSR6-NEXT:    seleqz $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -1501,10 +1507,9 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB5_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -1531,8 +1536,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:  $BB5_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    slt $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    seh $4, $4
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    slt $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movz $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -1540,9 +1549,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB5_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -1569,8 +1576,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:  $BB5_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    slt $5, $2, $7
-; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    seh $4, $4
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    slt $5, $4, $7
+; MMR6-NEXT:    selnez $3, $4, $5
 ; MMR6-NEXT:    seleqz $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -1579,9 +1590,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB5_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -1607,14 +1616,13 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB5_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    sll $7, $7, 16
-; MIPS32-NEXT:    sra $7, $7, 16
-; MIPS32-NEXT:    slt $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    sll $4, $4, 16
+; MIPS32-NEXT:    sra $4, $4, 16
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    slt $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movz $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -1623,10 +1631,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB5_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -1653,12 +1658,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB5_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    srav $2, $2, $10
-; MIPSEL-NEXT:    srav $7, $7, $10
-; MIPSEL-NEXT:    seh $2, $2
-; MIPSEL-NEXT:    seh $7, $7
-; MIPSEL-NEXT:    slt $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    seh $4, $4
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    slt $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movz $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -1667,9 +1672,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB5_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -1696,12 +1699,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB5_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    srav $2, $2, $10
-; MIPSELR6-NEXT:    srav $7, $7, $10
-; MIPSELR6-NEXT:    seh $2, $2
-; MIPSELR6-NEXT:    seh $7, $7
-; MIPSELR6-NEXT:    slt $5, $2, $7
-; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    seh $4, $4
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    slt $5, $4, $7
+; MIPSELR6-NEXT:    selnez $3, $4, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -1709,10 +1712,9 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB5_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -1738,12 +1740,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB5_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    srav $2, $2, $10
-; MMEL-NEXT:    srav $7, $7, $10
-; MMEL-NEXT:    seh $2, $2
-; MMEL-NEXT:    seh $7, $7
-; MMEL-NEXT:    slt $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    seh $4, $4
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    slt $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -1751,9 +1753,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB5_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -1779,12 +1779,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB5_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    srav $2, $2, $10
-; MMELR6-NEXT:    srav $7, $7, $10
-; MMELR6-NEXT:    seh $2, $2
-; MMELR6-NEXT:    seh $7, $7
-; MMELR6-NEXT:    slt $5, $2, $7
-; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    seh $4, $4
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    slt $5, $4, $7
+; MMELR6-NEXT:    selnez $3, $4, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -1793,9 +1793,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB5_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -1822,8 +1820,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:  .LBB5_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    slt $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    seh $4, $4
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    slt $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movz $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -1832,9 +1834,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB5_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -1862,8 +1862,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:  .LBB5_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    slt $5, $2, $7
-; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    seh $4, $4
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    slt $5, $4, $7
+; MIPS64R6-NEXT:    selnez $3, $4, $5
 ; MIPS64R6-NEXT:    seleqz $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -1871,10 +1875,9 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB5_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -1900,12 +1903,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB5_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    srav $2, $2, $10
-; MIPS64EL-NEXT:    srav $7, $7, $10
-; MIPS64EL-NEXT:    seh $2, $2
-; MIPS64EL-NEXT:    seh $7, $7
-; MIPS64EL-NEXT:    slt $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    seh $4, $4
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    slt $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movz $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -1914,9 +1917,7 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB5_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -1943,12 +1944,12 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB5_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    srav $2, $2, $10
-; MIPS64ELR6-NEXT:    srav $7, $7, $10
-; MIPS64ELR6-NEXT:    seh $2, $2
-; MIPS64ELR6-NEXT:    seh $7, $7
-; MIPS64ELR6-NEXT:    slt $5, $2, $7
-; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    seh $4, $4
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    slt $5, $4, $7
+; MIPS64ELR6-NEXT:    selnez $3, $4, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -1956,10 +1957,9 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB5_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -1991,8 +1991,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:  $BB6_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    sltu $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    andi $4, $4, 65535
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    sltu $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movn $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -2001,9 +2005,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB6_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -2031,8 +2033,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:  $BB6_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    sltu $5, $2, $7
-; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    andi $4, $4, 65535
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    sltu $5, $4, $7
+; MIPSR6-NEXT:    seleqz $3, $4, $5
 ; MIPSR6-NEXT:    selnez $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -2040,10 +2046,9 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB6_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -2070,8 +2075,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:  $BB6_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    sltu $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    andi $4, $4, 65535
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    sltu $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movn $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -2079,9 +2088,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB6_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -2108,8 +2115,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:  $BB6_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    sltu $5, $2, $7
-; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    andi $4, $4, 65535
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    sltu $5, $4, $7
+; MMR6-NEXT:    seleqz $3, $4, $5
 ; MMR6-NEXT:    selnez $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -2118,9 +2129,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB6_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -2146,10 +2155,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB6_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    and $2, $2, $8
-; MIPS32-NEXT:    and $7, $7, $8
-; MIPS32-NEXT:    sltu $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    andi $4, $4, 65535
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    sltu $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movn $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -2158,10 +2169,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB6_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -2188,10 +2196,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB6_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    and $2, $2, $8
-; MIPSEL-NEXT:    and $7, $7, $8
-; MIPSEL-NEXT:    sltu $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    andi $4, $4, 65535
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    sltu $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movn $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -2200,9 +2210,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB6_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -2229,10 +2237,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB6_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    and $2, $2, $8
-; MIPSELR6-NEXT:    and $7, $7, $8
-; MIPSELR6-NEXT:    sltu $5, $2, $7
-; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    andi $4, $4, 65535
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    sltu $5, $4, $7
+; MIPSELR6-NEXT:    seleqz $3, $4, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -2240,10 +2250,9 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB6_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -2269,10 +2278,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB6_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    and $2, $2, $8
-; MMEL-NEXT:    and $7, $7, $8
-; MMEL-NEXT:    sltu $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    andi $4, $4, 65535
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    sltu $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -2280,9 +2291,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB6_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -2308,10 +2317,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB6_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    and $2, $2, $8
-; MMELR6-NEXT:    and $7, $7, $8
-; MMELR6-NEXT:    sltu $5, $2, $7
-; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    andi $4, $4, 65535
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    sltu $5, $4, $7
+; MMELR6-NEXT:    seleqz $3, $4, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -2320,9 +2331,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB6_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -2349,8 +2358,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:  .LBB6_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    sltu $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    andi $4, $4, 65535
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    sltu $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movn $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -2359,9 +2372,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB6_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -2389,8 +2400,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:  .LBB6_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    sltu $5, $2, $7
-; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    andi $4, $4, 65535
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    sltu $5, $4, $7
+; MIPS64R6-NEXT:    seleqz $3, $4, $5
 ; MIPS64R6-NEXT:    selnez $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -2398,10 +2413,9 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB6_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -2427,10 +2441,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB6_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    and $2, $2, $8
-; MIPS64EL-NEXT:    and $7, $7, $8
-; MIPS64EL-NEXT:    sltu $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    andi $4, $4, 65535
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    sltu $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movn $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -2439,9 +2455,7 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB6_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -2468,10 +2482,12 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB6_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    and $2, $2, $8
-; MIPS64ELR6-NEXT:    and $7, $7, $8
-; MIPS64ELR6-NEXT:    sltu $5, $2, $7
-; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    andi $4, $4, 65535
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    sltu $5, $4, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $4, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -2479,10 +2495,9 @@ define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB6_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -2514,8 +2529,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:  $BB7_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    sltu $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    andi $4, $4, 65535
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    sltu $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movz $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -2524,9 +2543,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB7_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -2554,8 +2571,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:  $BB7_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    sltu $5, $2, $7
-; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    andi $4, $4, 65535
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    sltu $5, $4, $7
+; MIPSR6-NEXT:    selnez $3, $4, $5
 ; MIPSR6-NEXT:    seleqz $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -2563,10 +2584,9 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB7_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -2593,8 +2613,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:  $BB7_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    sltu $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    andi $4, $4, 65535
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    sltu $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movz $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -2602,9 +2626,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB7_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -2631,8 +2653,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:  $BB7_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    sltu $5, $2, $7
-; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    andi $4, $4, 65535
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    sltu $5, $4, $7
+; MMR6-NEXT:    selnez $3, $4, $5
 ; MMR6-NEXT:    seleqz $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -2641,9 +2667,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB7_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -2669,10 +2693,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB7_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    and $2, $2, $8
-; MIPS32-NEXT:    and $7, $7, $8
-; MIPS32-NEXT:    sltu $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    andi $4, $4, 65535
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    sltu $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movz $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -2681,10 +2707,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB7_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -2693,7 +2716,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-;
 ;
 ; MIPSEL-LABEL: test_umin_16:
 ; MIPSEL:       # %bb.0: # %entry
@@ -2712,10 +2734,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:  $BB7_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    and $2, $2, $8
-; MIPSEL-NEXT:    and $7, $7, $8
-; MIPSEL-NEXT:    sltu $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    andi $4, $4, 65535
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    sltu $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movz $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -2724,9 +2748,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB7_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -2753,10 +2775,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:  $BB7_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    and $2, $2, $8
-; MIPSELR6-NEXT:    and $7, $7, $8
-; MIPSELR6-NEXT:    sltu $5, $2, $7
-; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    andi $4, $4, 65535
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    sltu $5, $4, $7
+; MIPSELR6-NEXT:    selnez $3, $4, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -2764,10 +2788,9 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB7_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -2793,10 +2816,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:  $BB7_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    and $2, $2, $8
-; MMEL-NEXT:    and $7, $7, $8
-; MMEL-NEXT:    sltu $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    andi $4, $4, 65535
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    sltu $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -2804,9 +2829,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB7_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -2832,10 +2855,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:  $BB7_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    and $2, $2, $8
-; MMELR6-NEXT:    and $7, $7, $8
-; MMELR6-NEXT:    sltu $5, $2, $7
-; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    andi $4, $4, 65535
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    sltu $5, $4, $7
+; MMELR6-NEXT:    selnez $3, $4, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -2844,9 +2869,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB7_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -2873,8 +2896,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:  .LBB7_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    sltu $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    andi $4, $4, 65535
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    sltu $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movz $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -2883,9 +2910,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB7_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -2913,8 +2938,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:  .LBB7_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    sltu $5, $2, $7
-; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    andi $4, $4, 65535
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    sltu $5, $4, $7
+; MIPS64R6-NEXT:    selnez $3, $4, $5
 ; MIPS64R6-NEXT:    seleqz $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -2922,10 +2951,9 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB7_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -2951,10 +2979,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:  .LBB7_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    and $2, $2, $8
-; MIPS64EL-NEXT:    and $7, $7, $8
-; MIPS64EL-NEXT:    sltu $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    andi $4, $4, 65535
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    sltu $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movz $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -2963,9 +2993,7 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB7_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -2992,10 +3020,12 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB7_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    and $2, $2, $8
-; MIPS64ELR6-NEXT:    and $7, $7, $8
-; MIPS64ELR6-NEXT:    sltu $5, $2, $7
-; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    andi $4, $4, 65535
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    sltu $5, $4, $7
+; MIPS64ELR6-NEXT:    selnez $3, $4, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -3003,10 +3033,9 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB7_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -3039,8 +3068,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:  $BB8_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    slt $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    seb $4, $4
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    slt $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movn $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -3049,9 +3082,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB8_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seb $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -3079,8 +3110,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:  $BB8_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    slt $5, $2, $7
-; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    seb $4, $4
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    slt $5, $4, $7
+; MIPSR6-NEXT:    seleqz $3, $4, $5
 ; MIPSR6-NEXT:    selnez $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -3088,10 +3123,9 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB8_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seb $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -3118,8 +3152,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:  $BB8_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    slt $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    seb $4, $4
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    slt $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movn $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -3127,9 +3165,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB8_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seb $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -3156,8 +3192,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:  $BB8_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    slt $5, $2, $7
-; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    seb $4, $4
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    slt $5, $4, $7
+; MMR6-NEXT:    seleqz $3, $4, $5
 ; MMR6-NEXT:    selnez $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -3166,9 +3206,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB8_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seb $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -3194,14 +3232,13 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB8_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    sll $7, $7, 24
-; MIPS32-NEXT:    sra $7, $7, 24
-; MIPS32-NEXT:    slt $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    sll $4, $4, 24
+; MIPS32-NEXT:    sra $4, $4, 24
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    slt $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movn $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -3210,10 +3247,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB8_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 24
-; MIPS32-NEXT:    sra $1, $1, 24
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -3240,12 +3274,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB8_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    srav $2, $2, $10
-; MIPSEL-NEXT:    srav $7, $7, $10
-; MIPSEL-NEXT:    seb $2, $2
-; MIPSEL-NEXT:    seb $7, $7
-; MIPSEL-NEXT:    slt $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    seb $4, $4
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    slt $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movn $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -3254,9 +3288,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB8_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seb $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -3283,12 +3315,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB8_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    srav $2, $2, $10
-; MIPSELR6-NEXT:    srav $7, $7, $10
-; MIPSELR6-NEXT:    seb $2, $2
-; MIPSELR6-NEXT:    seb $7, $7
-; MIPSELR6-NEXT:    slt $5, $2, $7
-; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    seb $4, $4
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    slt $5, $4, $7
+; MIPSELR6-NEXT:    seleqz $3, $4, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -3296,10 +3328,9 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB8_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seb $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -3325,12 +3356,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB8_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    srav $2, $2, $10
-; MMEL-NEXT:    srav $7, $7, $10
-; MMEL-NEXT:    seb $2, $2
-; MMEL-NEXT:    seb $7, $7
-; MMEL-NEXT:    slt $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    seb $4, $4
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    slt $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -3338,9 +3369,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB8_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seb $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -3366,12 +3395,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB8_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    srav $2, $2, $10
-; MMELR6-NEXT:    srav $7, $7, $10
-; MMELR6-NEXT:    seb $2, $2
-; MMELR6-NEXT:    seb $7, $7
-; MMELR6-NEXT:    slt $5, $2, $7
-; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    seb $4, $4
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    slt $5, $4, $7
+; MMELR6-NEXT:    seleqz $3, $4, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -3380,9 +3409,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB8_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seb $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -3409,8 +3436,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:  .LBB8_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    slt $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    seb $4, $4
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    slt $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movn $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -3419,9 +3450,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB8_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seb $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -3449,8 +3478,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:  .LBB8_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    slt $5, $2, $7
-; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    seb $4, $4
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    slt $5, $4, $7
+; MIPS64R6-NEXT:    seleqz $3, $4, $5
 ; MIPS64R6-NEXT:    selnez $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -3458,10 +3491,9 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB8_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seb $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -3487,12 +3519,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB8_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    srav $2, $2, $10
-; MIPS64EL-NEXT:    srav $7, $7, $10
-; MIPS64EL-NEXT:    seb $2, $2
-; MIPS64EL-NEXT:    seb $7, $7
-; MIPS64EL-NEXT:    slt $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    seb $4, $4
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    slt $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movn $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -3501,9 +3533,7 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB8_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seb $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -3530,12 +3560,12 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB8_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    srav $2, $2, $10
-; MIPS64ELR6-NEXT:    srav $7, $7, $10
-; MIPS64ELR6-NEXT:    seb $2, $2
-; MIPS64ELR6-NEXT:    seb $7, $7
-; MIPS64ELR6-NEXT:    slt $5, $2, $7
-; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    seb $4, $4
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    slt $5, $4, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $4, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -3543,10 +3573,9 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB8_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seb $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -3578,8 +3607,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:  $BB9_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    slt $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    seb $4, $4
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    slt $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movz $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -3588,9 +3621,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB9_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seb $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -3618,8 +3649,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:  $BB9_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    slt $5, $2, $7
-; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    seb $4, $4
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    slt $5, $4, $7
+; MIPSR6-NEXT:    selnez $3, $4, $5
 ; MIPSR6-NEXT:    seleqz $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -3627,10 +3662,9 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB9_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seb $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -3657,8 +3691,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:  $BB9_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    slt $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    seb $4, $4
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    slt $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movz $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -3666,9 +3704,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB9_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seb $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -3695,8 +3731,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:  $BB9_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    slt $5, $2, $7
-; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    seb $4, $4
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    slt $5, $4, $7
+; MMR6-NEXT:    selnez $3, $4, $5
 ; MMR6-NEXT:    seleqz $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -3705,9 +3745,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB9_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seb $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -3733,14 +3771,13 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB9_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    sll $7, $7, 24
-; MIPS32-NEXT:    sra $7, $7, 24
-; MIPS32-NEXT:    slt $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    sll $4, $4, 24
+; MIPS32-NEXT:    sra $4, $4, 24
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    slt $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movz $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -3749,10 +3786,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB9_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 24
-; MIPS32-NEXT:    sra $1, $1, 24
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -3779,12 +3813,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB9_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    srav $2, $2, $10
-; MIPSEL-NEXT:    srav $7, $7, $10
-; MIPSEL-NEXT:    seb $2, $2
-; MIPSEL-NEXT:    seb $7, $7
-; MIPSEL-NEXT:    slt $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    seb $4, $4
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    slt $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movz $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -3793,9 +3827,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB9_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seb $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -3822,12 +3854,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB9_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    srav $2, $2, $10
-; MIPSELR6-NEXT:    srav $7, $7, $10
-; MIPSELR6-NEXT:    seb $2, $2
-; MIPSELR6-NEXT:    seb $7, $7
-; MIPSELR6-NEXT:    slt $5, $2, $7
-; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    seb $4, $4
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    slt $5, $4, $7
+; MIPSELR6-NEXT:    selnez $3, $4, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -3835,10 +3867,9 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB9_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seb $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -3864,12 +3895,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB9_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    srav $2, $2, $10
-; MMEL-NEXT:    srav $7, $7, $10
-; MMEL-NEXT:    seb $2, $2
-; MMEL-NEXT:    seb $7, $7
-; MMEL-NEXT:    slt $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    seb $4, $4
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    slt $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -3877,9 +3908,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB9_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seb $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -3905,12 +3934,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB9_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    srav $2, $2, $10
-; MMELR6-NEXT:    srav $7, $7, $10
-; MMELR6-NEXT:    seb $2, $2
-; MMELR6-NEXT:    seb $7, $7
-; MMELR6-NEXT:    slt $5, $2, $7
-; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    seb $4, $4
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    slt $5, $4, $7
+; MMELR6-NEXT:    selnez $3, $4, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -3919,9 +3948,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB9_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seb $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -3948,8 +3975,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:  .LBB9_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    slt $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    seb $4, $4
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    slt $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movz $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -3958,9 +3989,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB9_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seb $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -3988,8 +4017,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:  .LBB9_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    slt $5, $2, $7
-; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    seb $4, $4
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    slt $5, $4, $7
+; MIPS64R6-NEXT:    selnez $3, $4, $5
 ; MIPS64R6-NEXT:    seleqz $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -3997,10 +4030,9 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB9_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seb $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -4026,12 +4058,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB9_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    srav $2, $2, $10
-; MIPS64EL-NEXT:    srav $7, $7, $10
-; MIPS64EL-NEXT:    seb $2, $2
-; MIPS64EL-NEXT:    seb $7, $7
-; MIPS64EL-NEXT:    slt $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    seb $4, $4
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    slt $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movz $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -4040,9 +4072,7 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB9_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seb $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -4069,12 +4099,12 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB9_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    srav $2, $2, $10
-; MIPS64ELR6-NEXT:    srav $7, $7, $10
-; MIPS64ELR6-NEXT:    seb $2, $2
-; MIPS64ELR6-NEXT:    seb $7, $7
-; MIPS64ELR6-NEXT:    slt $5, $2, $7
-; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    seb $4, $4
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    slt $5, $4, $7
+; MIPS64ELR6-NEXT:    selnez $3, $4, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -4082,10 +4112,9 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB9_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seb $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -4117,8 +4146,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:  $BB10_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    sltu $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    andi $4, $4, 255
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    sltu $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movn $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -4127,9 +4160,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB10_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -4157,8 +4188,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:  $BB10_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    sltu $5, $2, $7
-; MIPSR6-NEXT:    seleqz $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    andi $4, $4, 255
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    sltu $5, $4, $7
+; MIPSR6-NEXT:    seleqz $3, $4, $5
 ; MIPSR6-NEXT:    selnez $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -4166,10 +4201,9 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB10_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -4196,8 +4230,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:  $BB10_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    sltu $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    andi $4, $4, 255
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    sltu $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movn $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -4205,9 +4243,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB10_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -4234,8 +4270,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:  $BB10_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    sltu $5, $2, $7
-; MMR6-NEXT:    seleqz $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    andi $4, $4, 255
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    sltu $5, $4, $7
+; MMR6-NEXT:    seleqz $3, $4, $5
 ; MMR6-NEXT:    selnez $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -4244,9 +4284,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB10_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -4272,10 +4310,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB10_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    and $2, $2, $8
-; MIPS32-NEXT:    and $7, $7, $8
-; MIPS32-NEXT:    sltu $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    andi $4, $4, 255
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    sltu $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movn $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -4284,10 +4324,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB10_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -4314,10 +4351,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB10_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    and $2, $2, $8
-; MIPSEL-NEXT:    and $7, $7, $8
-; MIPSEL-NEXT:    sltu $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    andi $4, $4, 255
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    sltu $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movn $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -4326,9 +4365,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB10_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -4355,10 +4392,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB10_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    and $2, $2, $8
-; MIPSELR6-NEXT:    and $7, $7, $8
-; MIPSELR6-NEXT:    sltu $5, $2, $7
-; MIPSELR6-NEXT:    seleqz $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    andi $4, $4, 255
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    sltu $5, $4, $7
+; MIPSELR6-NEXT:    seleqz $3, $4, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -4366,10 +4405,9 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB10_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -4395,10 +4433,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB10_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    and $2, $2, $8
-; MMEL-NEXT:    and $7, $7, $8
-; MMEL-NEXT:    sltu $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    andi $4, $4, 255
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    sltu $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -4406,9 +4446,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB10_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -4434,10 +4472,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB10_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    and $2, $2, $8
-; MMELR6-NEXT:    and $7, $7, $8
-; MMELR6-NEXT:    sltu $5, $2, $7
-; MMELR6-NEXT:    seleqz $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    andi $4, $4, 255
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    sltu $5, $4, $7
+; MMELR6-NEXT:    seleqz $3, $4, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -4446,9 +4486,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB10_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -4475,8 +4513,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:  .LBB10_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    sltu $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    sltu $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movn $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -4485,9 +4527,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB10_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -4515,8 +4555,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:  .LBB10_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    sltu $5, $2, $7
-; MIPS64R6-NEXT:    seleqz $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    sltu $5, $4, $7
+; MIPS64R6-NEXT:    seleqz $3, $4, $5
 ; MIPS64R6-NEXT:    selnez $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -4524,10 +4568,9 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB10_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -4553,10 +4596,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB10_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    and $2, $2, $8
-; MIPS64EL-NEXT:    and $7, $7, $8
-; MIPS64EL-NEXT:    sltu $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    andi $4, $4, 255
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    sltu $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movn $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -4565,9 +4610,7 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB10_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -4594,10 +4637,12 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB10_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    and $2, $2, $8
-; MIPS64ELR6-NEXT:    and $7, $7, $8
-; MIPS64ELR6-NEXT:    sltu $5, $2, $7
-; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    andi $4, $4, 255
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    sltu $5, $4, $7
+; MIPS64ELR6-NEXT:    seleqz $3, $4, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -4605,10 +4650,9 @@ define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB10_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry
@@ -4640,8 +4684,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:  $BB11_1: # %entry
 ; MIPS-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS-NEXT:    ll $2, 0($6)
-; MIPS-NEXT:    sltu $5, $2, $7
-; MIPS-NEXT:    move $3, $2
+; MIPS-NEXT:    srav $4, $2, $10
+; MIPS-NEXT:    andi $4, $4, 255
+; MIPS-NEXT:    or $1, $zero, $4
+; MIPS-NEXT:    sllv $4, $4, $10
+; MIPS-NEXT:    sltu $5, $4, $7
+; MIPS-NEXT:    move $3, $4
 ; MIPS-NEXT:    movz $3, $7, $5
 ; MIPS-NEXT:    and $3, $3, $8
 ; MIPS-NEXT:    and $4, $2, $9
@@ -4650,9 +4698,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-NEXT:    beqz $4, $BB11_1
 ; MIPS-NEXT:    nop
 ; MIPS-NEXT:  # %bb.2: # %entry
-; MIPS-NEXT:    and $1, $2, $8
-; MIPS-NEXT:    srlv $1, $1, $10
-; MIPS-NEXT:    seh $1, $1
+; MIPS-NEXT:    .insn
 ; MIPS-NEXT:  # %bb.3: # %entry
 ; MIPS-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS-NEXT:  # %bb.4: # %entry
@@ -4680,8 +4726,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:  $BB11_1: # %entry
 ; MIPSR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSR6-NEXT:    ll $2, 0($6)
-; MIPSR6-NEXT:    sltu $5, $2, $7
-; MIPSR6-NEXT:    selnez $3, $2, $5
+; MIPSR6-NEXT:    srav $4, $2, $10
+; MIPSR6-NEXT:    andi $4, $4, 255
+; MIPSR6-NEXT:    or $1, $zero, $4
+; MIPSR6-NEXT:    sllv $4, $4, $10
+; MIPSR6-NEXT:    sltu $5, $4, $7
+; MIPSR6-NEXT:    selnez $3, $4, $5
 ; MIPSR6-NEXT:    seleqz $5, $7, $5
 ; MIPSR6-NEXT:    or $3, $3, $5
 ; MIPSR6-NEXT:    and $3, $3, $8
@@ -4689,10 +4739,9 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSR6-NEXT:    or $4, $4, $3
 ; MIPSR6-NEXT:    sc $4, 0($6)
 ; MIPSR6-NEXT:    beqzc $4, $BB11_1
+; MIPSR6-NEXT:    nop
 ; MIPSR6-NEXT:  # %bb.2: # %entry
-; MIPSR6-NEXT:    and $1, $2, $8
-; MIPSR6-NEXT:    srlv $1, $1, $10
-; MIPSR6-NEXT:    seh $1, $1
+; MIPSR6-NEXT:    .insn
 ; MIPSR6-NEXT:  # %bb.3: # %entry
 ; MIPSR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSR6-NEXT:  # %bb.4: # %entry
@@ -4719,8 +4768,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:  $BB11_1: # %entry
 ; MM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MM-NEXT:    ll $2, 0($6)
-; MM-NEXT:    sltu $5, $2, $7
-; MM-NEXT:    or $3, $2, $zero
+; MM-NEXT:    srav $4, $2, $10
+; MM-NEXT:    andi $4, $4, 255
+; MM-NEXT:    or $1, $zero, $4
+; MM-NEXT:    sllv $4, $4, $10
+; MM-NEXT:    sltu $5, $4, $7
+; MM-NEXT:    or $3, $4, $zero
 ; MM-NEXT:    movz $3, $7, $5
 ; MM-NEXT:    and $3, $3, $8
 ; MM-NEXT:    and $4, $2, $9
@@ -4728,9 +4781,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MM-NEXT:    sc $4, 0($6)
 ; MM-NEXT:    beqzc $4, $BB11_1
 ; MM-NEXT:  # %bb.2: # %entry
-; MM-NEXT:    and $1, $2, $8
-; MM-NEXT:    srlv $1, $1, $10
-; MM-NEXT:    seh $1, $1
+; MM-NEXT:    .insn
 ; MM-NEXT:  # %bb.3: # %entry
 ; MM-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MM-NEXT:  # %bb.4: # %entry
@@ -4757,8 +4808,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:  $BB11_1: # %entry
 ; MMR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMR6-NEXT:    ll $2, 0($6)
-; MMR6-NEXT:    sltu $5, $2, $7
-; MMR6-NEXT:    selnez $3, $2, $5
+; MMR6-NEXT:    srav $4, $2, $10
+; MMR6-NEXT:    andi $4, $4, 255
+; MMR6-NEXT:    or $1, $zero, $4
+; MMR6-NEXT:    sllv $4, $4, $10
+; MMR6-NEXT:    sltu $5, $4, $7
+; MMR6-NEXT:    selnez $3, $4, $5
 ; MMR6-NEXT:    seleqz $5, $7, $5
 ; MMR6-NEXT:    or $3, $3, $5
 ; MMR6-NEXT:    and $3, $3, $8
@@ -4767,9 +4822,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMR6-NEXT:    sc $4, 0($6)
 ; MMR6-NEXT:    beqc $4, $zero, $BB11_1
 ; MMR6-NEXT:  # %bb.2: # %entry
-; MMR6-NEXT:    and $1, $2, $8
-; MMR6-NEXT:    srlv $1, $1, $10
-; MMR6-NEXT:    seh $1, $1
+; MMR6-NEXT:    .insn
 ; MMR6-NEXT:  # %bb.3: # %entry
 ; MMR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMR6-NEXT:  # %bb.4: # %entry
@@ -4795,10 +4848,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB11_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    and $2, $2, $8
-; MIPS32-NEXT:    and $7, $7, $8
-; MIPS32-NEXT:    sltu $5, $2, $7
-; MIPS32-NEXT:    move $3, $2
+; MIPS32-NEXT:    srav $4, $2, $10
+; MIPS32-NEXT:    andi $4, $4, 255
+; MIPS32-NEXT:    or $1, $zero, $4
+; MIPS32-NEXT:    sllv $4, $4, $10
+; MIPS32-NEXT:    sltu $5, $4, $7
+; MIPS32-NEXT:    move $3, $4
 ; MIPS32-NEXT:    movz $3, $7, $5
 ; MIPS32-NEXT:    and $3, $3, $8
 ; MIPS32-NEXT:    and $4, $2, $9
@@ -4807,10 +4862,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:    beqz $4, $BB11_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %entry
-; MIPS32-NEXT:    and $1, $2, $8
-; MIPS32-NEXT:    srlv $1, $1, $10
-; MIPS32-NEXT:    sll $1, $1, 16
-; MIPS32-NEXT:    sra $1, $1, 16
+; MIPS32-NEXT:    .insn
 ; MIPS32-NEXT:  # %bb.3: # %entry
 ; MIPS32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  # %bb.4: # %entry
@@ -4837,10 +4889,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:  $BB11_1: # %entry
 ; MIPSEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSEL-NEXT:    ll $2, 0($6)
-; MIPSEL-NEXT:    and $2, $2, $8
-; MIPSEL-NEXT:    and $7, $7, $8
-; MIPSEL-NEXT:    sltu $5, $2, $7
-; MIPSEL-NEXT:    move $3, $2
+; MIPSEL-NEXT:    srav $4, $2, $10
+; MIPSEL-NEXT:    andi $4, $4, 255
+; MIPSEL-NEXT:    or $1, $zero, $4
+; MIPSEL-NEXT:    sllv $4, $4, $10
+; MIPSEL-NEXT:    sltu $5, $4, $7
+; MIPSEL-NEXT:    move $3, $4
 ; MIPSEL-NEXT:    movz $3, $7, $5
 ; MIPSEL-NEXT:    and $3, $3, $8
 ; MIPSEL-NEXT:    and $4, $2, $9
@@ -4849,9 +4903,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    beqz $4, $BB11_1
 ; MIPSEL-NEXT:    nop
 ; MIPSEL-NEXT:  # %bb.2: # %entry
-; MIPSEL-NEXT:    and $1, $2, $8
-; MIPSEL-NEXT:    srlv $1, $1, $10
-; MIPSEL-NEXT:    seh $1, $1
+; MIPSEL-NEXT:    .insn
 ; MIPSEL-NEXT:  # %bb.3: # %entry
 ; MIPSEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:  # %bb.4: # %entry
@@ -4878,10 +4930,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:  $BB11_1: # %entry
 ; MIPSELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPSELR6-NEXT:    ll $2, 0($6)
-; MIPSELR6-NEXT:    and $2, $2, $8
-; MIPSELR6-NEXT:    and $7, $7, $8
-; MIPSELR6-NEXT:    sltu $5, $2, $7
-; MIPSELR6-NEXT:    selnez $3, $2, $5
+; MIPSELR6-NEXT:    srav $4, $2, $10
+; MIPSELR6-NEXT:    andi $4, $4, 255
+; MIPSELR6-NEXT:    or $1, $zero, $4
+; MIPSELR6-NEXT:    sllv $4, $4, $10
+; MIPSELR6-NEXT:    sltu $5, $4, $7
+; MIPSELR6-NEXT:    selnez $3, $4, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
 ; MIPSELR6-NEXT:    or $3, $3, $5
 ; MIPSELR6-NEXT:    and $3, $3, $8
@@ -4889,10 +4943,9 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    or $4, $4, $3
 ; MIPSELR6-NEXT:    sc $4, 0($6)
 ; MIPSELR6-NEXT:    beqzc $4, $BB11_1
+; MIPSELR6-NEXT:    nop
 ; MIPSELR6-NEXT:  # %bb.2: # %entry
-; MIPSELR6-NEXT:    and $1, $2, $8
-; MIPSELR6-NEXT:    srlv $1, $1, $10
-; MIPSELR6-NEXT:    seh $1, $1
+; MIPSELR6-NEXT:    .insn
 ; MIPSELR6-NEXT:  # %bb.3: # %entry
 ; MIPSELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPSELR6-NEXT:  # %bb.4: # %entry
@@ -4918,10 +4971,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:  $BB11_1: # %entry
 ; MMEL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMEL-NEXT:    ll $2, 0($6)
-; MMEL-NEXT:    and $2, $2, $8
-; MMEL-NEXT:    and $7, $7, $8
-; MMEL-NEXT:    sltu $5, $2, $7
-; MMEL-NEXT:    or $3, $2, $zero
+; MMEL-NEXT:    srav $4, $2, $10
+; MMEL-NEXT:    andi $4, $4, 255
+; MMEL-NEXT:    or $1, $zero, $4
+; MMEL-NEXT:    sllv $4, $4, $10
+; MMEL-NEXT:    sltu $5, $4, $7
+; MMEL-NEXT:    or $3, $4, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
 ; MMEL-NEXT:    and $3, $3, $8
 ; MMEL-NEXT:    and $4, $2, $9
@@ -4929,9 +4984,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    sc $4, 0($6)
 ; MMEL-NEXT:    beqzc $4, $BB11_1
 ; MMEL-NEXT:  # %bb.2: # %entry
-; MMEL-NEXT:    and $1, $2, $8
-; MMEL-NEXT:    srlv $1, $1, $10
-; MMEL-NEXT:    seh $1, $1
+; MMEL-NEXT:    .insn
 ; MMEL-NEXT:  # %bb.3: # %entry
 ; MMEL-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMEL-NEXT:  # %bb.4: # %entry
@@ -4957,10 +5010,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:  $BB11_1: # %entry
 ; MMELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MMELR6-NEXT:    ll $2, 0($6)
-; MMELR6-NEXT:    and $2, $2, $8
-; MMELR6-NEXT:    and $7, $7, $8
-; MMELR6-NEXT:    sltu $5, $2, $7
-; MMELR6-NEXT:    selnez $3, $2, $5
+; MMELR6-NEXT:    srav $4, $2, $10
+; MMELR6-NEXT:    andi $4, $4, 255
+; MMELR6-NEXT:    or $1, $zero, $4
+; MMELR6-NEXT:    sllv $4, $4, $10
+; MMELR6-NEXT:    sltu $5, $4, $7
+; MMELR6-NEXT:    selnez $3, $4, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
 ; MMELR6-NEXT:    or $3, $3, $5
 ; MMELR6-NEXT:    and $3, $3, $8
@@ -4969,9 +5024,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    sc $4, 0($6)
 ; MMELR6-NEXT:    beqc $4, $zero, $BB11_1
 ; MMELR6-NEXT:  # %bb.2: # %entry
-; MMELR6-NEXT:    and $1, $2, $8
-; MMELR6-NEXT:    srlv $1, $1, $10
-; MMELR6-NEXT:    seh $1, $1
+; MMELR6-NEXT:    .insn
 ; MMELR6-NEXT:  # %bb.3: # %entry
 ; MMELR6-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MMELR6-NEXT:  # %bb.4: # %entry
@@ -4998,8 +5051,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:  .LBB11_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64-NEXT:    ll $2, 0($6)
-; MIPS64-NEXT:    sltu $5, $2, $7
-; MIPS64-NEXT:    move $3, $2
+; MIPS64-NEXT:    srav $4, $2, $10
+; MIPS64-NEXT:    andi $4, $4, 255
+; MIPS64-NEXT:    or $1, $zero, $4
+; MIPS64-NEXT:    sllv $4, $4, $10
+; MIPS64-NEXT:    sltu $5, $4, $7
+; MIPS64-NEXT:    move $3, $4
 ; MIPS64-NEXT:    movz $3, $7, $5
 ; MIPS64-NEXT:    and $3, $3, $8
 ; MIPS64-NEXT:    and $4, $2, $9
@@ -5008,9 +5065,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64-NEXT:    beqz $4, .LBB11_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  # %bb.2: # %entry
-; MIPS64-NEXT:    and $1, $2, $8
-; MIPS64-NEXT:    srlv $1, $1, $10
-; MIPS64-NEXT:    seh $1, $1
+; MIPS64-NEXT:    .insn
 ; MIPS64-NEXT:  # %bb.3: # %entry
 ; MIPS64-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64-NEXT:  # %bb.4: # %entry
@@ -5038,8 +5093,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:  .LBB11_1: # %entry
 ; MIPS64R6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64R6-NEXT:    ll $2, 0($6)
-; MIPS64R6-NEXT:    sltu $5, $2, $7
-; MIPS64R6-NEXT:    selnez $3, $2, $5
+; MIPS64R6-NEXT:    srav $4, $2, $10
+; MIPS64R6-NEXT:    andi $4, $4, 255
+; MIPS64R6-NEXT:    or $1, $zero, $4
+; MIPS64R6-NEXT:    sllv $4, $4, $10
+; MIPS64R6-NEXT:    sltu $5, $4, $7
+; MIPS64R6-NEXT:    selnez $3, $4, $5
 ; MIPS64R6-NEXT:    seleqz $5, $7, $5
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    and $3, $3, $8
@@ -5047,10 +5106,9 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64R6-NEXT:    or $4, $4, $3
 ; MIPS64R6-NEXT:    sc $4, 0($6)
 ; MIPS64R6-NEXT:    beqzc $4, .LBB11_1
+; MIPS64R6-NEXT:    nop
 ; MIPS64R6-NEXT:  # %bb.2: # %entry
-; MIPS64R6-NEXT:    and $1, $2, $8
-; MIPS64R6-NEXT:    srlv $1, $1, $10
-; MIPS64R6-NEXT:    seh $1, $1
+; MIPS64R6-NEXT:    .insn
 ; MIPS64R6-NEXT:  # %bb.3: # %entry
 ; MIPS64R6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6-NEXT:  # %bb.4: # %entry
@@ -5076,10 +5134,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:  .LBB11_1: # %entry
 ; MIPS64EL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64EL-NEXT:    ll $2, 0($6)
-; MIPS64EL-NEXT:    and $2, $2, $8
-; MIPS64EL-NEXT:    and $7, $7, $8
-; MIPS64EL-NEXT:    sltu $5, $2, $7
-; MIPS64EL-NEXT:    move $3, $2
+; MIPS64EL-NEXT:    srav $4, $2, $10
+; MIPS64EL-NEXT:    andi $4, $4, 255
+; MIPS64EL-NEXT:    or $1, $zero, $4
+; MIPS64EL-NEXT:    sllv $4, $4, $10
+; MIPS64EL-NEXT:    sltu $5, $4, $7
+; MIPS64EL-NEXT:    move $3, $4
 ; MIPS64EL-NEXT:    movz $3, $7, $5
 ; MIPS64EL-NEXT:    and $3, $3, $8
 ; MIPS64EL-NEXT:    and $4, $2, $9
@@ -5088,9 +5148,7 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    beqz $4, .LBB11_1
 ; MIPS64EL-NEXT:    nop
 ; MIPS64EL-NEXT:  # %bb.2: # %entry
-; MIPS64EL-NEXT:    and $1, $2, $8
-; MIPS64EL-NEXT:    srlv $1, $1, $10
-; MIPS64EL-NEXT:    seh $1, $1
+; MIPS64EL-NEXT:    .insn
 ; MIPS64EL-NEXT:  # %bb.3: # %entry
 ; MIPS64EL-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64EL-NEXT:  # %bb.4: # %entry
@@ -5117,10 +5175,12 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:  .LBB11_1: # %entry
 ; MIPS64ELR6-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS64ELR6-NEXT:    ll $2, 0($6)
-; MIPS64ELR6-NEXT:    and $2, $2, $8
-; MIPS64ELR6-NEXT:    and $7, $7, $8
-; MIPS64ELR6-NEXT:    sltu $5, $2, $7
-; MIPS64ELR6-NEXT:    selnez $3, $2, $5
+; MIPS64ELR6-NEXT:    srav $4, $2, $10
+; MIPS64ELR6-NEXT:    andi $4, $4, 255
+; MIPS64ELR6-NEXT:    or $1, $zero, $4
+; MIPS64ELR6-NEXT:    sllv $4, $4, $10
+; MIPS64ELR6-NEXT:    sltu $5, $4, $7
+; MIPS64ELR6-NEXT:    selnez $3, $4, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
 ; MIPS64ELR6-NEXT:    or $3, $3, $5
 ; MIPS64ELR6-NEXT:    and $3, $3, $8
@@ -5128,10 +5188,9 @@ define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    or $4, $4, $3
 ; MIPS64ELR6-NEXT:    sc $4, 0($6)
 ; MIPS64ELR6-NEXT:    beqzc $4, .LBB11_1
+; MIPS64ELR6-NEXT:    nop
 ; MIPS64ELR6-NEXT:  # %bb.2: # %entry
-; MIPS64ELR6-NEXT:    and $1, $2, $8
-; MIPS64ELR6-NEXT:    srlv $1, $1, $10
-; MIPS64ELR6-NEXT:    seh $1, $1
+; MIPS64ELR6-NEXT:    .insn
 ; MIPS64ELR6-NEXT:  # %bb.3: # %entry
 ; MIPS64ELR6-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS64ELR6-NEXT:  # %bb.4: # %entry

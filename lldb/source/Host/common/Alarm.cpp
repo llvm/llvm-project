@@ -154,54 +154,60 @@ lldb::thread_result_t Alarm::AlarmThread() {
     //
     // Below we only deal with the timeout expiring and fall through for dealing
     // with the rest.
-    std::unique_lock<std::mutex> alarm_lock(m_alarm_mutex);
-    if (next_alarm) {
-      if (!m_alarm_cv.wait_until(alarm_lock, *next_alarm, predicate)) {
-        // The timeout for the next alarm expired.
+    llvm::SmallVector<Callback, 1> callbacks;
+    {
+      std::unique_lock<std::mutex> alarm_lock(m_alarm_mutex);
+      if (next_alarm) {
+        if (!m_alarm_cv.wait_until(alarm_lock, *next_alarm, predicate)) {
+          // The timeout for the next alarm expired.
 
-        // Clear the next timeout to signal that we need to recompute the next
-        // timeout.
-        next_alarm.reset();
+          // Clear the next timeout to signal that we need to recompute the next
+          // timeout.
+          next_alarm.reset();
 
-        // Iterate over all the callbacks. Call the ones that have expired
-        // and remove them from the list.
-        const TimePoint now = std::chrono::system_clock::now();
-        auto it = m_entries.begin();
-        while (it != m_entries.end()) {
-          if (it->expiration <= now) {
-            it->callback();
-            it = m_entries.erase(it);
-          } else {
-            it++;
+          // Iterate over all the callbacks. Call the ones that have expired
+          // and remove them from the list.
+          const TimePoint now = std::chrono::system_clock::now();
+          auto it = m_entries.begin();
+          while (it != m_entries.end()) {
+            if (it->expiration <= now) {
+              callbacks.emplace_back(std::move(it->callback));
+              it = m_entries.erase(it);
+            } else {
+              it++;
+            }
           }
         }
+      } else {
+        m_alarm_cv.wait(alarm_lock, predicate);
       }
-    } else {
-      m_alarm_cv.wait(alarm_lock, predicate);
+
+      // Fall through after waiting on the condition variable. At this point
+      // either the predicate is true or we woke up because an alarm expired.
+
+      // The alarm thread is shutting down.
+      if (m_exit) {
+        exit = true;
+        if (m_run_callbacks_on_exit) {
+          for (Entry &entry : m_entries)
+            callbacks.emplace_back(std::move(entry.callback));
+        }
+      }
+
+      // A new alarm was added or an alarm expired. Either way we need to
+      // recompute when this thread should wake up for the next alarm.
+      if (m_recompute_next_alarm || !next_alarm) {
+        for (Entry &entry : m_entries) {
+          if (!next_alarm || entry.expiration < *next_alarm)
+            next_alarm = entry.expiration;
+        }
+        m_recompute_next_alarm = false;
+      }
     }
 
-    // Fall through after waiting on the condition variable. At this point
-    // either the predicate is true or we woke up because an alarm expired.
-
-    // The alarm thread is shutting down.
-    if (m_exit) {
-      exit = true;
-      if (m_run_callbacks_on_exit) {
-        for (Entry &entry : m_entries)
-          entry.callback();
-      }
-      continue;
-    }
-
-    // A new alarm was added or an alarm expired. Either way we need to
-    // recompute when this thread should wake up for the next alarm.
-    if (m_recompute_next_alarm || !next_alarm) {
-      for (Entry &entry : m_entries) {
-        if (!next_alarm || entry.expiration < *next_alarm)
-          next_alarm = entry.expiration;
-      }
-      m_recompute_next_alarm = false;
-    }
+    // Outside the lock, call the callbacks.
+    for (Callback &callback : callbacks)
+      callback();
   }
   return {};
 }

@@ -1,0 +1,13 @@
+---
+Name: SwiftImportAs
+Tags:
+- Name: ImmortalRefType
+  SwiftImportAs: reference
+- Name: RefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: RCRelease
+  SwiftRetainOp: RCRetain
+- Name: NonCopyableType
+  SwiftCopyable: false
+- Name: CopyableType
+  SwiftCopyable: true

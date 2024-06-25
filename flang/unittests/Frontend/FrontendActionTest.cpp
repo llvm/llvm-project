@@ -143,7 +143,7 @@ TEST_F(FrontendActionTest, PrintPreprocessedInput) {
   EXPECT_TRUE(success);
   EXPECT_TRUE(!outputFileBuffer.empty());
   EXPECT_TRUE(
-      llvm::StringRef(outputFileBuffer.data()).starts_with("program b\n"));
+      llvm::StringRef(outputFileBuffer.data()).starts_with(" program b\n"));
 }
 
 TEST_F(FrontendActionTest, ParseSyntaxOnly) {

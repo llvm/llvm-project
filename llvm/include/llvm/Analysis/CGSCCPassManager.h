@@ -230,17 +230,6 @@ using ModuleAnalysisManagerCGSCCProxy =
 /// Passes which do not change the call graph structure in any way can just
 /// ignore this argument to their run method.
 struct CGSCCUpdateResult {
-  /// Worklist of the RefSCCs queued for processing.
-  ///
-  /// When a pass refines the graph and creates new RefSCCs or causes them to
-  /// have a different shape or set of component SCCs it should add the RefSCCs
-  /// to this worklist so that we visit them in the refined form.
-  ///
-  /// This worklist is in reverse post-order, as we pop off the back in order
-  /// to observe RefSCCs in post-order. When adding RefSCCs, clients should add
-  /// them in reverse post-order.
-  SmallPriorityWorklist<LazyCallGraph::RefSCC *, 1> &RCWorklist;
-
   /// Worklist of the SCCs queued for processing.
   ///
   /// When a pass refines the graph and creates new SCCs or causes them to have
@@ -305,6 +294,10 @@ struct CGSCCUpdateResult {
   /// for a better technique.
   SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
       &InlinedInternalEdges;
+
+  /// Functions that a pass has considered to be dead to be removed at the end
+  /// of the call graph walk in batch.
+  SmallVector<Function *, 4> &DeadFunctions;
 
   /// Weak VHs to keep track of indirect calls for the purposes of detecting
   /// devirtualization.

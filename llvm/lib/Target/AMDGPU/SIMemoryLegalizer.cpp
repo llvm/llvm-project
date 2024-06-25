@@ -18,9 +18,11 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -677,6 +679,49 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
+static const StringMap<SIAtomicAddrSpace> ASNames = {{
+    {"global", SIAtomicAddrSpace::GLOBAL},
+    {"local", SIAtomicAddrSpace::LDS},
+}};
+
+void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "unknown address space '" << AS << "'; expected one of ";
+  ListSeparator LS;
+  for (const auto &[Name, Val] : ASNames)
+    OS << LS << '\'' << Name << '\'';
+  DiagnosticInfoUnsupported BadTag(Fn, Str.str(), MI.getDebugLoc(), DS_Warning);
+  Fn.getContext().diagnose(BadTag);
+}
+
+/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns \p
+/// Default. Otherwise returns all the address spaces concerned by the MMRA.
+static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
+                                               SIAtomicAddrSpace Default) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+
+  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+  if (!MMRA)
+    return Default;
+
+  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != FenceASPrefix)
+      continue;
+
+    if (auto It = ASNames.find(Suffix); It != ASNames.end())
+      Result |= It->second;
+    else
+      diagnoseUnknownMMRAASName(MI, Suffix);
+  }
+
+  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
+}
 
 } // end namespace anonymous
 
@@ -2535,12 +2580,17 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
+  // Refine fenced address space based on MMRAs.
+  //
+  // TODO: Should we support this MMRA on other atomic operations?
+  auto OrderingAddrSpace =
+      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Acquire)
-      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
-                                SIMemOp::LOAD | SIMemOp::STORE,
-                                MOI.getIsCrossAddressSpaceOrdering(),
-                                Position::BEFORE);
+      Changed |= CC->insertWait(
+          MI, MOI.getScope(), OrderingAddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+          MOI.getIsCrossAddressSpaceOrdering(), Position::BEFORE);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
@@ -2552,8 +2602,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// generate a fence. Could add support in this file for
       /// barrier. SIInsertWaitcnt.cpp could then stop unconditionally
       /// adding S_WAITCNT before a S_BARRIER.
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
@@ -2565,8 +2614,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     if (MOI.getOrdering() == AtomicOrdering::Acquire ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
 
     return Changed;

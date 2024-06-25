@@ -69,7 +69,7 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-NEXT:  entry:
 ; FUCHSIA-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; FUCHSIA-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
 ; FUCHSIA-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-NEXT:    ret i32 [[X]]
 ;
@@ -77,7 +77,7 @@ define i32 @test_load(ptr %a) sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FUCHSIA-LIBCALL-NEXT:  entry:
 ; FUCHSIA-LIBCALL-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
-; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; FUCHSIA-LIBCALL-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
 ; FUCHSIA-LIBCALL-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; FUCHSIA-LIBCALL-NEXT:    ret i32 [[X]]
 ;

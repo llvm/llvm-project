@@ -39,6 +39,8 @@ public:
 
   ~InterpState();
 
+  void cleanup();
+
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
 
@@ -89,10 +91,16 @@ public:
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    return M ? M->getSource(F, PC) : F->getSource(PC);
+    if (M)
+      return M->getSource(F, PC);
+
+    assert(F && "Function cannot be null");
+    return F->getSource(PC);
   }
 
   Context &getContext() const { return Ctx; }
+
+  void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
 private:
   /// AST Walker state.
@@ -111,6 +119,8 @@ public:
   Context &Ctx;
   /// The current frame.
   InterpFrame *Current = nullptr;
+  /// Source location of the evaluating expression
+  SourceLocation EvalLocation;
 };
 
 } // namespace interp

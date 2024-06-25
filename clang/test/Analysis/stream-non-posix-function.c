@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -fno-builtin -analyzer-checker=core,alpha.unix.Stream -verify %s
+// RUN: %clang_analyze_cc1 -fno-builtin -analyzer-checker=core,unix.Stream -verify %s
 // RUN: %clang_analyze_cc1 -fno-builtin -analyzer-checker=core,alpha.unix.SimpleStream -verify %s
 
 // expected-no-diagnostics

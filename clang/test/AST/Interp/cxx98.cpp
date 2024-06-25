@@ -18,11 +18,11 @@ template struct C<cval>;
 
 /// FIXME: This example does not get properly diagnosed in the new interpreter.
 extern const int recurse1;
-const int recurse2 = recurse1; // ref-note {{declared here}}
+const int recurse2 = recurse1; // both-note {{declared here}}
 const int recurse1 = 1;
 int array1[recurse1];
 int array2[recurse2]; // ref-warning 2{{variable length array}} \
-                      // ref-note {{initializer of 'recurse2' is not a constant expression}} \
+                      // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-warning {{variable length array}} \
                       // expected-error {{variable length array}}
 
@@ -45,3 +45,12 @@ struct C0 {
 };
 const int c0_test = C0::Data<int*>;
 _Static_assert(c0_test == 0, "");
+
+
+int a = 0; // both-note {{declared here}}
+_Static_assert(a == 0, ""); // both-error {{static assertion expression is not an integral constant expression}} \
+                            // both-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+
+struct SelfReference { SelfReference &r; };
+extern SelfReference self_reference_1;
+SelfReference self_reference_2 = {self_reference_1};

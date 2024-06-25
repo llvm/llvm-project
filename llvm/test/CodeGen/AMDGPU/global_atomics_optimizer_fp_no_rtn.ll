@@ -117,8 +117,8 @@ define amdgpu_ps void @global_atomic_fadd_uni_address_div_value_scope_agent_scop
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, float inreg %val) #1 {
-; IR-ITERATIVE-LABEL: @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, float inreg %val) #1 {
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7:[0-9]+]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP17:%.*]]
 ; IR-ITERATIVE:       2:
@@ -142,7 +142,7 @@ define amdgpu_ps void @global_atomic_fadd_uni_address_uni_value_one_as_scope_uns
 ; IR-ITERATIVE:       17:
 ; IR-ITERATIVE-NEXT:    ret void
 ;
-; IR-DPP-LABEL: @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fadd_uni_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8:[0-9]+]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP17:%.*]]
 ; IR-DPP:       2:
@@ -170,8 +170,8 @@ define amdgpu_ps void @global_atomic_fadd_uni_address_uni_value_one_as_scope_uns
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, float %val) #1 {
-; IR-ITERATIVE-LABEL: @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, float %val) #1 {
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-ITERATIVE:       2:
@@ -208,7 +208,7 @@ define amdgpu_ps void @global_atomic_fadd_uni_address_div_value_one_as_scope_uns
 ; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[TMP8]], 0
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP24]], label [[TMP10:%.*]], label [[TMP12]]
 ;
-; IR-DPP-LABEL: @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fadd_uni_address_div_value_one_as_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
 ; IR-DPP:       2:
@@ -494,8 +494,8 @@ define amdgpu_ps void @global_atomic_fmin_uni_address_div_value_agent_scope_unsa
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, float inreg %val) #1{
-; IR-ITERATIVE-LABEL: @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, float inreg %val) #1{
+; IR-ITERATIVE-LABEL: @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-ITERATIVE:       2:
@@ -515,7 +515,7 @@ define amdgpu_ps void @global_atomic_fmax_uni_address_uni_value_agent_scope_unsa
 ; IR-ITERATIVE:       13:
 ; IR-ITERATIVE-NEXT:    ret void
 ;
-; IR-DPP-LABEL: @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fmax_uni_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-DPP:       2:
@@ -539,8 +539,8 @@ define amdgpu_ps void @global_atomic_fmax_uni_address_uni_value_agent_scope_unsa
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, float %val) #1{
-; IR-ITERATIVE-LABEL: @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, float %val) #1{
+; IR-ITERATIVE-LABEL: @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-ITERATIVE:       2:
@@ -577,7 +577,7 @@ define amdgpu_ps void @global_atomic_fmax_uni_address_div_value_agent_scope_unsa
 ; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[TMP8]], 0
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP24]], label [[TMP10:%.*]], label [[TMP12]]
 ;
-; IR-DPP-LABEL: @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fmax_uni_address_div_value_agent_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
 ; IR-DPP:       2:
@@ -774,8 +774,8 @@ define amdgpu_ps void @global_atomic_fadd_div_address_div_value_agent_scope_unsa
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_div_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr, float inreg %val) #1 {
-; IR-LABEL: @global_atomic_fadd_div_address_uni_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_div_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr, float inreg %val) #1 {
+; IR-LABEL: @global_atomic_fadd_div_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VAL:%.*]] syncscope("one-as") monotonic, align 4
 ; IR-NEXT:    ret void
 ;
@@ -783,8 +783,8 @@ define amdgpu_ps void @global_atomic_fadd_div_address_uni_value_one_as_scope_uns
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_div_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr, float %val) #1 {
-; IR-LABEL: @global_atomic_fadd_div_address_div_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_div_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr, float %val) #1 {
+; IR-LABEL: @global_atomic_fadd_div_address_div_value_one_as_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], float [[VAL:%.*]] syncscope("one-as") monotonic, align 4
 ; IR-NEXT:    ret void
 ;
@@ -828,8 +828,8 @@ define amdgpu_ps void @global_atomic_fmin_div_address_div_value_agent_scope(ptr 
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_div_address_uni_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr, float inreg %val) #1{
-; IR-LABEL: @global_atomic_fmax_div_address_uni_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_div_address_uni_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr, float inreg %val) #1{
+; IR-LABEL: @global_atomic_fmax_div_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], float [[VAL:%.*]] syncscope("agent") monotonic, align 4
 ; IR-NEXT:    ret void
 ;
@@ -837,8 +837,8 @@ define amdgpu_ps void @global_atomic_fmax_div_address_uni_value_agent_scope_unsa
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_div_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr, float %val) #1{
-; IR-LABEL: @global_atomic_fmax_div_address_div_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_div_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr, float %val) #1{
+; IR-LABEL: @global_atomic_fmax_div_address_div_value_agent_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], float [[VAL:%.*]] syncscope("agent") monotonic, align 4
 ; IR-NEXT:    ret void
 ;
@@ -902,8 +902,8 @@ define amdgpu_ps void @global_atomic_fadd_double_uni_address_div_value_scope_age
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, double inreg %val) #1 {
-; IR-ITERATIVE-LABEL: @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double inreg %val) #1 {
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP17:%.*]]
 ; IR-ITERATIVE:       2:
@@ -927,7 +927,7 @@ define amdgpu_ps void @global_atomic_fadd_double_uni_address_uni_value_one_as_sc
 ; IR-ITERATIVE:       17:
 ; IR-ITERATIVE-NEXT:    ret void
 ;
-; IR-DPP-LABEL: @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fadd_double_uni_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP17:%.*]]
 ; IR-DPP:       2:
@@ -955,8 +955,8 @@ define amdgpu_ps void @global_atomic_fadd_double_uni_address_uni_value_one_as_sc
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, double %val) #1 {
-; IR-LABEL: @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double %val) #1 {
+; IR-LABEL: @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("one-as") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
@@ -1060,8 +1060,8 @@ define amdgpu_ps void @global_atomic_fmin_double_uni_address_div_value_agent_sco
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, double inreg %val) #1{
-; IR-ITERATIVE-LABEL: @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double inreg %val) #1{
+; IR-ITERATIVE-LABEL: @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
 ; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-ITERATIVE:       2:
@@ -1081,7 +1081,7 @@ define amdgpu_ps void @global_atomic_fmax_double_uni_address_uni_value_agent_sco
 ; IR-ITERATIVE:       13:
 ; IR-ITERATIVE-NEXT:    ret void
 ;
-; IR-DPP-LABEL: @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_structfp(
+; IR-DPP-LABEL: @global_atomic_fmax_double_uni_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
 ; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP13:%.*]]
 ; IR-DPP:       2:
@@ -1105,8 +1105,8 @@ define amdgpu_ps void @global_atomic_fmax_double_uni_address_uni_value_agent_sco
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_double_uni_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) inreg %ptr, double %val) #1{
-; IR-LABEL: @global_atomic_fmax_double_uni_address_div_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double %val) #1{
+; IR-LABEL: @global_atomic_fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
@@ -1194,8 +1194,8 @@ define amdgpu_ps void @global_atomic_fadd_double_div_address_div_value_agent_sco
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_double_div_address_uni_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr, double inreg %val) #1 {
-; IR-LABEL: @global_atomic_fadd_double_div_address_uni_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_double_div_address_uni_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr, double inreg %val) #1 {
+; IR-LABEL: @global_atomic_fadd_double_div_address_uni_value_one_as_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("one-as") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
@@ -1203,8 +1203,8 @@ define amdgpu_ps void @global_atomic_fadd_double_div_address_uni_value_one_as_sc
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fadd_double_div_address_div_value_one_as_scope_unsafe_structfp(ptr addrspace(1) %ptr, double %val) #1 {
-; IR-LABEL: @global_atomic_fadd_double_div_address_div_value_one_as_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fadd_double_div_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) %ptr, double %val) #1 {
+; IR-LABEL: @global_atomic_fadd_double_div_address_div_value_one_as_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("one-as") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
@@ -1248,8 +1248,8 @@ define amdgpu_ps void @global_atomic_fmin_double_div_address_div_value_agent_sco
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_double_div_address_uni_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr, double inreg %val) #1{
-; IR-LABEL: @global_atomic_fmax_double_div_address_uni_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_double_div_address_uni_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr, double inreg %val) #1{
+; IR-LABEL: @global_atomic_fmax_double_div_address_uni_value_agent_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
@@ -1257,8 +1257,8 @@ define amdgpu_ps void @global_atomic_fmax_double_div_address_uni_value_agent_sco
   ret void
 }
 
-define amdgpu_ps void @global_atomic_fmax_double_div_address_div_value_agent_scope_unsafe_structfp(ptr addrspace(1) %ptr, double %val) #1{
-; IR-LABEL: @global_atomic_fmax_double_div_address_div_value_agent_scope_unsafe_structfp(
+define amdgpu_ps void @global_atomic_fmax_double_div_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) %ptr, double %val) #1{
+; IR-LABEL: @global_atomic_fmax_double_div_address_div_value_agent_scope_unsafe_strictfp(
 ; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
 ; IR-NEXT:    ret void
 ;
