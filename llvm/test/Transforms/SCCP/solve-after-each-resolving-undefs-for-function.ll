@@ -10,7 +10,7 @@ define internal i32 @testf(i1 %c) {
 ; CHECK:       [[IF_COND]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br i1 %c, label %if.cond, label %if.end
@@ -35,7 +35,7 @@ define internal i32 @test1(i1 %c) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @testf(i1 [[C]])
 ; CHECK-NEXT:    br label %[[RET1:.*]]
 ; CHECK:       [[RET1]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br label %if.then

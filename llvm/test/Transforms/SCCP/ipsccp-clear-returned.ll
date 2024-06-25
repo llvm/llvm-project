@@ -20,7 +20,7 @@ define internal i32 @func_return_undef(i32 returned %arg) {
 ; CHECK-LABEL: define internal i32 @func_return_undef(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   ret i32 %arg
@@ -44,7 +44,7 @@ define internal i32 @blockaddr_user(i1 %c, i32 returned %d) {
 ; CHECK:       [[TARGET1]]:
 ; CHECK-NEXT:    br label %[[TARGET2]]
 ; CHECK:       [[TARGET2]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   br i1 %c, label %bb1, label %bb2
