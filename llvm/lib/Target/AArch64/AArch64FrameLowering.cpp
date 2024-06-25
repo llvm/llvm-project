@@ -1036,7 +1036,10 @@ static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
-  if (&MF->front() == MBB)
+  // preserve_none functions may be using X9 to pass arguments,
+  // so prefer to pick an available register below.
+  if (&MF->front() == MBB &&
+      MF->getFunction().getCallingConv() != CallingConv::PreserveNone)
     return AArch64::X9;
 
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
