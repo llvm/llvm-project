@@ -72,7 +72,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsFP = VT->getValueAsBit("isFP");
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
-    bool IsNormalValueType = VT->getValueAsBit("isNormalValueType");
+    bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
     StringRef EltName = IsVector ? VT->getValueAsDef("ElementType")->getName()
                                  : "INVALID_SIMPLE_VALUE_TYPE";
