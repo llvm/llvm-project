@@ -2465,7 +2465,6 @@ func.func @test_remsi_1(%arg : vector<4xi32>) -> (vector<4xi32>) {
 }
 
 // -----
-// llvm.frem: "The remainder has the same sign as the dividend"
 
 // CHECK-LABEL: @test_remf(
 // CHECK: %[[res:.+]] = arith.constant 1.000000e+00 : f32
