@@ -308,17 +308,18 @@ struct BuiltinTypeDeclBuilder {
     return *this;
   }
 
-  TemplateParameterListBuilder addTemplateArgumentList();
-  BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names);
+  TemplateParameterListBuilder addTemplateArgumentList(Sema &S);
+  BuiltinTypeDeclBuilder &addSimpleTemplateParams(Sema &S,
+                                                  ArrayRef<StringRef> Names);
 };
 
 struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &Builder;
-  ASTContext &AST;
+  Sema &S;
   llvm::SmallVector<NamedDecl *> Params;
 
-  TemplateParameterListBuilder(BuiltinTypeDeclBuilder &RB)
-      : Builder(RB), AST(RB.Record->getASTContext()) {}
+  TemplateParameterListBuilder(Sema &S, BuiltinTypeDeclBuilder &RB)
+      : Builder(RB), S(S) {}
 
   ~TemplateParameterListBuilder() { finalizeTemplateArgs(); }
 
@@ -328,12 +329,15 @@ struct TemplateParameterListBuilder {
       return *this;
     unsigned Position = static_cast<unsigned>(Params.size());
     auto *Decl = TemplateTypeParmDecl::Create(
-        AST, Builder.Record->getDeclContext(), SourceLocation(),
+        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         SourceLocation(), /* TemplateDepth */ 0, Position,
-        &AST.Idents.get(Name, tok::TokenKind::identifier), /* Typename */ false,
+        &S.Context.Idents.get(Name, tok::TokenKind::identifier),
+        /* Typename */ false,
         /* ParameterPack */ false);
     if (!DefaultValue.isNull())
-      Decl->setDefaultArgument(AST.getTrivialTypeSourceInfo(DefaultValue));
+      Decl->setDefaultArgument(
+          S.Context, S.getTrivialTemplateArgumentLoc(DefaultValue, QualType(),
+                                                     SourceLocation()));
 
     Params.emplace_back(Decl);
     return *this;
@@ -342,11 +346,11 @@ struct TemplateParameterListBuilder {
   BuiltinTypeDeclBuilder &finalizeTemplateArgs() {
     if (Params.empty())
       return Builder;
-    auto *ParamList =
-        TemplateParameterList::Create(AST, SourceLocation(), SourceLocation(),
-                                      Params, SourceLocation(), nullptr);
+    auto *ParamList = TemplateParameterList::Create(S.Context, SourceLocation(),
+                                                    SourceLocation(), Params,
+                                                    SourceLocation(), nullptr);
     Builder.Template = ClassTemplateDecl::Create(
-        AST, Builder.Record->getDeclContext(), SourceLocation(),
+        S.Context, Builder.Record->getDeclContext(), SourceLocation(),
         DeclarationName(Builder.Record->getIdentifier()), ParamList,
         Builder.Record);
     Builder.Record->setDescribedClassTemplate(Builder.Template);
@@ -359,20 +363,22 @@ struct TemplateParameterListBuilder {
     Params.clear();
 
     QualType T = Builder.Template->getInjectedClassNameSpecialization();
-    T = AST.getInjectedClassNameType(Builder.Record, T);
+    T = S.Context.getInjectedClassNameType(Builder.Record, T);
 
     return Builder;
   }
 };
 } // namespace
 
-TemplateParameterListBuilder BuiltinTypeDeclBuilder::addTemplateArgumentList() {
-  return TemplateParameterListBuilder(*this);
+TemplateParameterListBuilder
+BuiltinTypeDeclBuilder::addTemplateArgumentList(Sema &S) {
+  return TemplateParameterListBuilder(S, *this);
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSimpleTemplateParams(ArrayRef<StringRef> Names) {
-  TemplateParameterListBuilder Builder = this->addTemplateArgumentList();
+BuiltinTypeDeclBuilder::addSimpleTemplateParams(Sema &S,
+                                                ArrayRef<StringRef> Names) {
+  TemplateParameterListBuilder Builder = this->addTemplateArgumentList(S);
   for (StringRef Name : Names)
     Builder.addTypeParameter(Name);
   return Builder.finalizeTemplateArgs();
@@ -426,7 +432,9 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
   auto *TypeParam = TemplateTypeParmDecl::Create(
       AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 0,
       &AST.Idents.get("element", tok::TokenKind::identifier), false, false);
-  TypeParam->setDefaultArgument(AST.getTrivialTypeSourceInfo(AST.FloatTy));
+  TypeParam->setDefaultArgument(
+      AST, SemaPtr->getTrivialTemplateArgumentLoc(
+               TemplateArgument(AST.FloatTy), QualType(), SourceLocation()));
 
   TemplateParams.emplace_back(TypeParam);
 
@@ -434,10 +442,12 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
       AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 1,
       &AST.Idents.get("element_count", tok::TokenKind::identifier), AST.IntTy,
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
-  Expr *LiteralExpr =
-      IntegerLiteral::Create(AST, llvm::APInt(AST.getIntWidth(AST.IntTy), 4),
-                             AST.IntTy, SourceLocation());
-  SizeParam->setDefaultArgument(LiteralExpr);
+  llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
+  TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
+                           /*IsDefaulted=*/true);
+  SizeParam->setDefaultArgument(
+      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
+                                                  SourceLocation(), SizeParam));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
@@ -492,7 +502,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   CXXRecordDecl *Decl;
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
-             .addSimpleTemplateParams({"element_type"})
+             .addSimpleTemplateParams(*SemaPtr, {"element_type"})
              .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
@@ -503,7 +513,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
-          .addSimpleTemplateParams({"element_type"})
+          .addSimpleTemplateParams(*SemaPtr, {"element_type"})
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,

@@ -12,16 +12,16 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_v16i1_v32i1(<32 x i1> %vec) {
 ; CHECK-NEXT:    vmerge.vim v10, v8, 1, v0
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    vadd.vv v11, v9, v9
-; CHECK-NEXT:    vrgather.vv v9, v10, v11
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v10, v11
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vadd.vi v12, v11, -16
 ; CHECK-NEXT:    li a0, -256
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vadd.vi v12, v11, -16
 ; CHECK-NEXT:    vrgather.vv v9, v8, v12, v0.t
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
 ; CHECK-NEXT:    vadd.vi v12, v11, 1
@@ -80,9 +80,8 @@ define {<2 x i64>, <2 x i64>} @vector_deinterleave_v2i64_v4i64(<4 x i64> %vec) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 2
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
@@ -167,9 +166,8 @@ define {<2 x double>, <2 x double>} @vector_deinterleave_v2f64_v4f64(<4 x double
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 2
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 2
 ; CHECK-NEXT:    vrgather.vi v9, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1

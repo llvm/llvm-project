@@ -9,6 +9,7 @@
 #include "flang/Semantics/semantics.h"
 #include "assignment.h"
 #include "canonicalize-acc.h"
+#include "canonicalize-directives.h"
 #include "canonicalize-do.h"
 #include "canonicalize-omp.h"
 #include "check-acc-structure.h"
@@ -543,6 +544,14 @@ const Scope &SemanticsContext::GetCUDABuiltinsScope() {
   return **cudaBuiltinsScope_;
 }
 
+const Scope &SemanticsContext::GetCUDADeviceScope() {
+  if (!cudaDeviceScope_) {
+    cudaDeviceScope_ = GetBuiltinModule("cudadevice");
+    CHECK(cudaDeviceScope_.value() != nullptr);
+  }
+  return **cudaDeviceScope_;
+}
+
 void SemanticsContext::UsePPCBuiltinsModule() {
   if (ppcBuiltinsScope_ == nullptr) {
     ppcBuiltinsScope_ = GetBuiltinModule("__ppc_intrinsics");
@@ -591,6 +600,7 @@ bool Semantics::Perform() {
       CanonicalizeAcc(context_.messages(), program_) &&
       CanonicalizeOmp(context_.messages(), program_) &&
       CanonicalizeCUDA(program_) &&
+      CanonicalizeDirectives(context_.messages(), program_) &&
       PerformStatementSemantics(context_, program_) &&
       ModFileWriter{context_}.WriteAll();
 }

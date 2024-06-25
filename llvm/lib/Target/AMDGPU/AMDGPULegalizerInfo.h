@@ -108,6 +108,8 @@ public:
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
+  bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
 
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg,
@@ -207,6 +209,9 @@ public:
                           bool IsTyped) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
+
+  bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
+                      Intrinsic::ID IID) const;
 
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 

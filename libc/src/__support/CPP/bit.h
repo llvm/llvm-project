@@ -271,9 +271,10 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 popcount(T value) {
   int count = 0;
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    if ((value >> i) & 0x1)
-      ++count;
+  while (value) {
+    value &= value - 1;
+    ++count;
+  }
   return count;
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \

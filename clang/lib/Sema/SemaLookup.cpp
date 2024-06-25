@@ -34,6 +34,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -945,13 +946,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
-      if (DeclareRISCVVBuiltins || DeclareRISCVSiFiveVectorBuiltins) {
-        if (!RVIntrinsicManager)
-          RVIntrinsicManager = CreateRISCVIntrinsicManager(*this);
+      if (RISCV().DeclareRVVBuiltins || RISCV().DeclareSiFiveVectorBuiltins) {
+        if (!RISCV().IntrinsicManager)
+          RISCV().IntrinsicManager = CreateRISCVIntrinsicManager(*this);
 
-        RVIntrinsicManager->InitIntrinsicList();
+        RISCV().IntrinsicManager->InitIntrinsicList();
 
-        if (RVIntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
+        if (RISCV().IntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
           return true;
       }
 
@@ -1282,6 +1283,7 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
+
   // C++23 [temp.dep.general]p2:
   //   The component name of an unqualified-id is dependent if
   //   - it is a conversion-function-id whose conversion-type-id
@@ -1292,21 +1294,6 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       Name.getCXXNameType()->isDependentType()) {
     R.setNotFoundInCurrentInstantiation();
     return false;
-  }
-
-  // If this is the name of an implicitly-declared special member function,
-  // go through the scope stack to implicitly declare
-  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
-    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
-      if (DeclContext *DC = PreS->getEntity()) {
-        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
-            Name.getCXXOverloadedOperator() == OO_Equal &&
-            !R.isTemplateNameLookup()) {
-          R.setNotFoundInCurrentInstantiation();
-          return false;
-        }
-        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
-      }
   }
 
   // Implicitly declare member functions with the name we're looking for, if in
@@ -1619,22 +1606,32 @@ bool Sema::isUsableModule(const Module *M) {
   // [module.global.frag]p1:
   //   The global module fragment can be used to provide declarations that are
   //   attached to the global module and usable within the module unit.
-  if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment ||
-      // If M is the module we're parsing, it should be usable. This covers the
-      // private module fragment. The private module fragment is usable only if
-      // it is within the current module unit. And it must be the current
-      // parsing module unit if it is within the current module unit according
-      // to the grammar of the private module fragment. NOTE: This is covered by
-      // the following condition. The intention of the check is to avoid string
-      // comparison as much as possible.
-      M == getCurrentModule() ||
-      // The module unit which is in the same module with the current module
-      // unit is usable.
-      //
-      // FIXME: Here we judge if they are in the same module by comparing the
-      // string. Is there any better solution?
-      M->getPrimaryModuleInterfaceName() ==
-          llvm::StringRef(getLangOpts().CurrentModule).split(':').first) {
+  if (M == TheGlobalModuleFragment || M == TheImplicitGlobalModuleFragment) {
+    UsableModuleUnitsCache.insert(M);
+    return true;
+  }
+
+  // Otherwise, the global module fragment from other translation unit is not
+  // directly usable.
+  if (M->isGlobalModule())
+    return false;
+
+  Module *Current = getCurrentModule();
+
+  // If we're not parsing a module, we can't use all the declarations from
+  // another module easily.
+  if (!Current)
+    return false;
+
+  // If M is the module we're parsing or M and the current module unit lives in
+  // the same module, M should be usable.
+  //
+  // Note: It should be fine to search the vector `ModuleScopes` linearly since
+  // it should be generally small enough. There should be rare module fragments
+  // in a named module unit.
+  if (llvm::count_if(ModuleScopes,
+                     [&M](const ModuleScope &MS) { return MS.Module == M; }) ||
+      getASTContext().isInSameModule(M, Current)) {
     UsableModuleUnitsCache.insert(M);
     return true;
   }
@@ -2472,8 +2469,10 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
-  bool TemplateNameLookup = R.isTemplateNameLookup();
   CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
+  // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
+  // if it's a dependent conversion-function-id or operator= where the current
+  // class is a templated entity. This should be handled in LookupName.
   if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
     // C++23 [temp.dep.type]p5:
     //   A qualified name is dependent if
@@ -2484,10 +2483,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     //     is operator=, or
     //   - [...]
     if (DeclarationName Name = R.getLookupName();
-        (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
-         Name.getCXXNameType()->isDependentType()) ||
-        (Name.getCXXOverloadedOperator() == OO_Equal && LookupRec &&
-         LookupRec->isDependentContext() && !TemplateNameLookup)) {
+        Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+        Name.getCXXNameType()->isDependentType()) {
       R.setNotFoundInCurrentInstantiation();
       return false;
     }
@@ -2582,6 +2579,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         return false;
     return true;
   };
+
+  bool TemplateNameLookup = R.isTemplateNameLookup();
 
   // Determine whether two sets of members contain the same members, as
   // required by C++ [class.member.lookup]p6.
@@ -2783,9 +2782,6 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
-    if (NestedNameSpecifier *NNS = SS->getScopeRep();
-        NNS->getKind() == NestedNameSpecifier::Super)
-      return LookupInSuper(R, NNS->getAsRecordDecl());
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so long into the context associated with the prior nested-name-specifier.
     if ((DC = computeDeclContext(*SS, EnteringContext))) {
@@ -2793,6 +2789,12 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
       R.setContextRange(SS->getRange());
+      // FIXME: '__super' lookup semantics could be implemented by a
+      // LookupResult::isSuperLookup flag which skips the initial search of
+      // the lookup context in LookupQualified.
+      if (NestedNameSpecifier *NNS = SS->getScopeRep();
+          NNS->getKind() == NestedNameSpecifier::Super)
+        return LookupInSuper(R, NNS->getAsRecordDecl());
     }
     IsDependent = !DC && isDependentScopeSpecifier(*SS);
   } else {
@@ -3375,15 +3377,6 @@ NamedDecl *Sema::LookupSingleName(Scope *S, DeclarationName Name,
   LookupResult R(*this, Name, Loc, NameKind, Redecl);
   LookupName(R, S);
   return R.getAsSingle<NamedDecl>();
-}
-
-/// Find the protocol with the given name, if any.
-ObjCProtocolDecl *Sema::LookupProtocol(IdentifierInfo *II,
-                                       SourceLocation IdLoc,
-                                       RedeclarationKind Redecl) {
-  Decl *D = LookupSingleName(TUScope, II, IdLoc,
-                             LookupObjCProtocolName, Redecl);
-  return cast_or_null<ObjCProtocolDecl>(D);
 }
 
 void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
@@ -5833,19 +5826,13 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
     if (M->isModuleMapModule())
       return M->getFullModuleName();
 
-    Module *CurrentModule = getCurrentModule();
-
     if (M->isImplicitGlobalModule())
       M = M->getTopLevelModule();
-
-    bool IsInTheSameModule =
-        CurrentModule && CurrentModule->getPrimaryModuleInterfaceName() ==
-                             M->getPrimaryModuleInterfaceName();
 
     // If the current module unit is in the same module with M, it is OK to show
     // the partition name. Otherwise, it'll be sufficient to show the primary
     // module name.
-    if (IsInTheSameModule)
+    if (getASTContext().isInSameModule(M, getCurrentModule()))
       return M->getTopLevelModuleName().str();
     else
       return M->getPrimaryModuleInterfaceName().str();
@@ -5914,6 +5901,16 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
 
   NamedDecl *ChosenDecl =
       Correction.isKeyword() ? nullptr : Correction.getFoundDecl();
+
+  // For builtin functions which aren't declared anywhere in source,
+  // don't emit the "declared here" note.
+  if (const auto *FD = dyn_cast_if_present<FunctionDecl>(ChosenDecl);
+      FD && FD->getBuiltinID() &&
+      PrevNote.getDiagID() == diag::note_previous_decl &&
+      Correction.getCorrectionRange().getBegin() == FD->getBeginLoc()) {
+    ChosenDecl = nullptr;
+  }
+
   if (PrevNote.getDiagID() && ChosenDecl)
     Diag(ChosenDecl->getLocation(), PrevNote)
       << CorrectedQuotedStr << (ErrorRecovery ? FixItHint() : FixTypo);

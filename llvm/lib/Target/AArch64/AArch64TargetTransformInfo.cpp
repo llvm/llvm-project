@@ -58,6 +58,9 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
 static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
                                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
+                                      cl::init(true), cl::Hidden);
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -982,6 +985,33 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with zeroed object
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    Constant *Node;
+    Type *RetTy = II.getType();
+    if (RetTy->isStructTy()) {
+      auto StructT = cast<StructType>(RetTy);
+      auto VecT = StructT->getElementType(0);
+      SmallVector<llvm::Constant *, 4> ZerVec;
+      for (unsigned i = 0; i < StructT->getNumElements(); i++) {
+        ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0)
+                                                  : ConstantInt::get(VecT, 0));
+      }
+      Node = ConstantStruct::get(StructT, ZerVec);
+    } else if (RetTy->isFPOrFPVectorTy())
+      Node = ConstantFP::get(RetTy, 0.0);
+    else
+      Node = ConstantInt::get(II.getType(), 0);
+
+    IC.replaceInstUsesWith(II, Node);
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // svsel(ptrue, x, y) => x
@@ -1395,6 +1425,10 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   if (isAllActivePredicate(Pred)) {
     LoadInst *Load = IC.Builder.CreateLoad(VecTy, PtrOp);
     Load->copyMetadata(II);
@@ -1742,6 +1776,10 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Type *Ty = II.getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   // Contiguous gather => masked load.
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
   // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
@@ -1968,6 +2006,41 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+
+  case Intrinsic::aarch64_sve_ld1_gather:
+  case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
+  case Intrinsic::aarch64_sve_ld1ro:
+  case Intrinsic::aarch64_sve_ld1rq:
+  case Intrinsic::aarch64_sve_ld1udq:
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ldff1:
+  case Intrinsic::aarch64_sve_ldff1_gather:
+  case Intrinsic::aarch64_sve_ldff1_gather_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ldnf1:
+  case Intrinsic::aarch64_sve_ldnt1:
+  case Intrinsic::aarch64_sve_ldnt1_gather:
+  case Intrinsic::aarch64_sve_ldnt1_gather_index:
+  case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+    return instCombineSVENoActiveUnaryZero(IC, II);
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
@@ -2159,19 +2232,20 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
-
-    if (ST->hasSVE())
+    if (ST->useSVEForFixedLengthVectors() &&
+        (ST->isSVEAvailable() || EnableFixedwidthAutovecInStreamingMode))
       return TypeSize::getFixed(
           std::max(ST->getMinSVEVectorSizeInBits(), 128u));
-
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    else if (ST->isNeonAvailable())
+      return TypeSize::getFixed(128);
+    else
+      return TypeSize::getFixed(0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
+    if (ST->isSVEAvailable() || (ST->isSVEorStreamingSVEAvailable() &&
+                                 EnableScalableAutovecInStreamingMode))
+      return TypeSize::getScalable(128);
+    else
       return TypeSize::getScalable(0);
-
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -4183,7 +4257,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
 
 InstructionCost
 AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                     int64_t BaseOffset, bool HasBaseReg,
+                                     StackOffset BaseOffset, bool HasBaseReg,
                                      int64_t Scale, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
@@ -4194,9 +4268,10 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // Rt, [Xn, Wm, <extend> #imm]  |
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.
@@ -4214,4 +4289,20 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {
       cast<BranchInst>(I->getNextNode())->isUnconditional())
     return true;
   return BaseT::shouldTreatInstructionLikeSelect(I);
+}
+
+bool AArch64TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                                   const TargetTransformInfo::LSRCost &C2) {
+  // AArch64 specific here is adding the number of instructions to the
+  // comparison (though not as the first consideration, as some targets do)
+  // along with changing the priority of the base additions.
+  // TODO: Maybe a more nuanced tradeoff between instruction count
+  // and number of registers? To be investigated at a later date.
+  if (EnableLSRCostOpt)
+    return std::tie(C1.NumRegs, C1.Insns, C1.NumBaseAdds, C1.AddRecCost,
+                    C1.NumIVMuls, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.NumRegs, C2.Insns, C2.NumBaseAdds, C2.AddRecCost,
+                    C2.NumIVMuls, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }

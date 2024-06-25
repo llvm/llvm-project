@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -61,7 +62,8 @@ protected:
                                msgpack::MapDocNode Kern) = 0;
 };
 
-class MetadataStreamerMsgPackV4 : public MetadataStreamer {
+class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
+    : public MetadataStreamer {
 protected:
   std::unique_ptr<msgpack::Document> HSAMetadataDoc =
       std::make_unique<msgpack::Document>();

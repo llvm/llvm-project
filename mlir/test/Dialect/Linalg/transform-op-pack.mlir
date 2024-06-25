@@ -372,8 +372,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
       %sz = transform.structured.match ops{["some_tile_size"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1 = transform.structured.pack %0 packed_sizes = [0, %sz : !transform.any_op, %sz : !transform.any_op]
-        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+      %1 = transform.structured.pack %0 packed_sizes = [0, %sz, %sz]
+        : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.op<"linalg.generic">)
         transform.yield
   }
 }

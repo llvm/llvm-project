@@ -13,9 +13,11 @@ def VOP_F32_F32_F32_F32_VCC : VOPProfile<[f32, f32, f32, f32]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
+  let IsSingle = 1;
 }
 def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
+  let IsSingle = 1;
 }
 }
 
@@ -62,7 +64,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
   let Src0Mod = FPVRegInputMods;
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    InterpAttr:$attr, InterpAttrChan:$attrchan,
-                   clampmod0:$clamp, omod0:$omod);
+                   Clamp0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
 }
@@ -70,7 +72,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
 def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Ins64 = (ins InterpSlot:$src0,
                    InterpAttr:$attr, InterpAttrChan:$attrchan,
-                   clampmod0:$clamp, omod0:$omod);
+                   Clamp0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
 
@@ -92,20 +94,20 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                          InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                         highmod:$high, clampmod0:$clamp, omod0:$omod),
+                         highmod:$high, Clamp0:$clamp, omod0:$omod),
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                          InterpAttr:$attr, InterpAttrChan:$attrchan,
                          Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                         highmod:$high, clampmod0:$clamp)
+                         highmod:$high, Clamp0:$clamp)
                 ),
                 (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                      InterpAttr:$attr, InterpAttrChan:$attrchan,
-                     highmod:$high, clampmod0:$clamp, omod0:$omod)
+                     highmod:$high, Clamp0:$clamp, omod0:$omod)
             );
 }
 
 class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
-
+  let IsSingle = 1;
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
 
@@ -155,12 +157,12 @@ defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_l
 } // End SubtargetPredicate = isNotGFX12Plus
 } // End SchedRW = [WriteDoubleAdd]
 
-let SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul], IsInvalidSingleUseConsumer = 1 in {
 defm V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", V_MUL_PROF<VOP_I32_I32_I32>, DivergentBinFrag<mul>>;
 defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu>;
 defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
-} // End SchedRW = [WriteIntMul]
+} // End SchedRW = [WriteIntMul], IsInvalidSingleUseConsumer = 1
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fminimum>>;
@@ -258,9 +260,9 @@ let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it d
 let isReMaterializable = 1 in
 defm V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 
-let Constraints = "@earlyclobber $vdst" in {
+let Constraints = "@earlyclobber $vdst", IsInvalidSingleUseConsumer = 1 in {
 defm V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
-} // End Constraints = "@earlyclobber $vdst"
+} // End Constraints = "@earlyclobber $vdst", IsInvalidSingleUseConsumer = 1
 
 
 let isReMaterializable = 1 in {
@@ -275,14 +277,16 @@ let SchedRW = [Write64Bit] in {
   defm V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, csra_64>;
   } // End SubtargetPredicate = isGFX6GFX7
 
+  let IsInvalidSingleUseConsumer = 1 in {
   let SubtargetPredicate = isGFX8Plus in {
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
   defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
-  } // End SubtargetPredicate = isGFX8Plus
+  } // End SubtargetPredicate = isGFX8Plus, , IsInvalidSingleUseConsumer = 1
 
   let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
   defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
   } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11
+  } // End IsInvalidSingleUseConsumer = 1
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
@@ -307,14 +311,14 @@ def VOPProfileMQSAD : VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP> {
   let HasModifiers = 0;
 }
 
-let SubtargetPredicate = isGFX7Plus in {
+let SubtargetPredicate = isGFX7Plus, IsInvalidSingleUseConsumer = 1 in {
 let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
 defm V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
-} // End SubtargetPredicate = isGFX7Plus
+} // End SubtargetPredicate = isGFX7Plus, IsInvalidSingleUseConsumer = 1
 
-let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
+let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], IsInvalidSingleUseConsumer = 1 in {
   let SubtargetPredicate = isGFX7Plus, OtherPredicates = [HasNotMADIntraFwdBug] in {
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
     defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
@@ -324,7 +328,7 @@ let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
     defm V_MAD_U64_U32_gfx11 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
     defm V_MAD_I64_I32_gfx11 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
   }
-} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU]
+} // End isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU], IsInvalidSingleUseConsumer = 1
 
 
 let FPDPRounding = 1 in {
@@ -859,10 +863,10 @@ let SubtargetPredicate = isGFX10Plus in {
   } // End isCommutable = 1, isReMaterializable = 1
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32_e64>;
 
-  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
+  let Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in", IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1 in {
     defm V_PERMLANE16_B32 : VOP3Inst<"v_permlane16_b32", VOP3_PERMLANE_Profile>;
     defm V_PERMLANEX16_B32 : VOP3Inst<"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
-  } // End $vdst = $vdst_in, DisableEncoding $vdst_in
+  } // End $vdst = $vdst_in, DisableEncoding $vdst_in, IsInvalidSingleUseConsumer = 1, IsInvalidSingleUseProducer = 1
 
   def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64>;
   def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64>;
@@ -1275,11 +1279,12 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
-defm V_READLANE_B32  : VOP3_Real_No_Suffix_gfx10<0x360>;
-
-let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
-  defm V_WRITELANE_B32 : VOP3_Real_No_Suffix_gfx10<0x361>;
-} // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
+let IsInvalidSingleUseConsumer = 1 in {
+  defm V_READLANE_B32  : VOP3_Real_No_Suffix_gfx10<0x360>;
+  let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in), IsInvalidSingleUseProducer = 1 in {
+    defm V_WRITELANE_B32 : VOP3_Real_No_Suffix_gfx10<0x361>;
+  } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32: $src1, VGPR_32:$vdst_in), IsInvalidSingleUseProducer = 1
+} // End IsInvalidSingleUseConsumer = 1
 
 let SubtargetPredicate = isGFX10Before1030 in {
   defm V_MUL_LO_I32      : VOP3_Real_gfx10<0x16b>;

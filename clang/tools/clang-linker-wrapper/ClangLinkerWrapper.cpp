@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -413,7 +415,7 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
   for (const auto &[File, Arch] : InputFiles)
-    Targets.push_back(Saver.save("hipv4-amdgcn-amd-amdhsa--" + Arch));
+    Targets.push_back(Saver.save("hip-amdgcn-amd-amdhsa--" + Arch));
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
 #ifdef _WIN32
@@ -1149,6 +1151,39 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   return DAL;
 }
 
+Error handleOverrideImages(
+    const InputArgList &Args,
+    MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> &Images) {
+  for (StringRef Arg : Args.getAllArgValues(OPT_override_image)) {
+    OffloadKind Kind = getOffloadKind(Arg.split("=").first);
+    StringRef Filename = Arg.split("=").second;
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(Filename);
+    if (std::error_code EC = BufferOrErr.getError())
+      return createFileError(Filename, EC);
+
+    Expected<std::unique_ptr<ObjectFile>> ElfOrErr =
+        ObjectFile::createELFObjectFile(**BufferOrErr,
+                                        /*InitContent=*/false);
+    if (!ElfOrErr)
+      return ElfOrErr.takeError();
+    ObjectFile &Elf = **ElfOrErr;
+
+    OffloadingImage TheImage{};
+    TheImage.TheImageKind = IMG_Object;
+    TheImage.TheOffloadKind = Kind;
+    TheImage.StringData["triple"] =
+        Args.MakeArgString(Elf.makeTriple().getTriple());
+    if (std::optional<StringRef> CPU = Elf.tryGetCPUName())
+      TheImage.StringData["arch"] = Args.MakeArgString(*CPU);
+    TheImage.Image = std::move(*BufferOrErr);
+
+    Images[Kind].emplace_back(std::move(TheImage));
+  }
+  return Error::success();
+}
+
 /// Transforms all the extracted offloading input files into an image that can
 /// be registered by the runtime.
 Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
@@ -1157,7 +1192,13 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
   std::mutex ImageMtx;
-  DenseMap<OffloadKind, SmallVector<OffloadingImage>> Images;
+  MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> Images;
+
+  // Initialize the images with any overriding inputs.
+  if (Args.hasArg(OPT_override_image))
+    if (Error Err = handleOverrideImages(Args, Images))
+      return std::move(Err);
+
   auto Err = parallelForEachError(LinkerInputFiles, [&](auto &Input) -> Error {
     llvm::TimeTraceScope TimeScope("Link device input");
 
@@ -1439,6 +1480,10 @@ Expected<SmallVector<SmallVector<OffloadFile>>>
 getDeviceInput(const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("ExtractDeviceCode");
 
+  // Skip all the input if the user is overriding the output.
+  if (Args.hasArg(OPT_override_image))
+    return SmallVector<SmallVector<OffloadFile>>();
+
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
@@ -1496,7 +1541,7 @@ getDeviceInput(const ArgList &Args) {
   }
 
   // Link all standard input files and update the list of symbols.
-  DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile>> InputFiles;
+  MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())

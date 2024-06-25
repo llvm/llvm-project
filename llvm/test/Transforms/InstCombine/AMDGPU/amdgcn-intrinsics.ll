@@ -2714,7 +2714,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_constant(
-; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
@@ -2737,7 +2737,7 @@ define amdgpu_kernel void @readfirstlane_constant(i32 %arg) {
 
 define i32 @readfirstlane_idempotent(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_idempotent(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2748,7 +2748,7 @@ define i32 @readfirstlane_idempotent(i32 %arg) {
 
 define i32 @readfirstlane_readlane(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readlane(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2759,10 +2759,10 @@ define i32 @readfirstlane_readlane(i32 %arg) {
 define i32 @readfirstlane_readfirstlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readfirstlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[READ0]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[READ0]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2777,10 +2777,10 @@ bb1:
 define i32 @readfirstlane_readlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readfirstlane_readlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 0)
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 0)
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[READ0]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[READ0]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2800,7 +2800,7 @@ declare i32 @llvm.amdgcn.readlane(i32, i32)
 
 define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_constant(
-; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 7)
+; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 0, ptr undef, align 4
 ; CHECK-NEXT:    store volatile i32 123, ptr undef, align 4
@@ -2823,7 +2823,7 @@ define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane) {
 
 define i32 @readlane_idempotent(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_idempotent(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 %lane)
@@ -2833,8 +2833,8 @@ define i32 @readlane_idempotent(i32 %arg, i32 %lane) {
 
 define i32 @readlane_idempotent_different_lanes(i32 %arg, i32 %lane0, i32 %lane1) {
 ; CHECK-LABEL: @readlane_idempotent_different_lanes(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE0:%.*]])
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 [[LANE1:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE0:%.*]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 [[LANE1:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
   %read0 = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 %lane0)
@@ -2844,7 +2844,7 @@ define i32 @readlane_idempotent_different_lanes(i32 %arg, i32 %lane0, i32 %lane1
 
 define i32 @readlane_readfirstlane(i32 %arg) {
 ; CHECK-LABEL: @readlane_readfirstlane(
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readfirstlane(i32 %arg)
@@ -2855,10 +2855,10 @@ define i32 @readlane_readfirstlane(i32 %arg) {
 define i32 @readlane_idempotent_different_block(i32 %arg, i32 %lane) {
 ; CHECK-LABEL: @readlane_idempotent_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 [[LANE]])
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 [[LANE]])
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:
@@ -2874,10 +2874,10 @@ bb1:
 define i32 @readlane_readfirstlane_different_block(i32 %arg) {
 ; CHECK-LABEL: @readlane_readfirstlane_different_block(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[ARG:%.*]])
+; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[READ0]], i32 0)
+; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 0)
 ; CHECK-NEXT:    ret i32 [[READ1]]
 ;
 bb0:

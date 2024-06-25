@@ -1,5 +1,7 @@
 // Test rewrite of fir.declare. The result is replaced by the memref operand.
-// RUN: fir-opt --cg-rewrite %s -o - | FileCheck %s
+// RUN: fir-opt --cg-rewrite="preserve-declare=true" %s -o - | FileCheck %s --check-prefixes DECL
+// RUN: fir-opt --cg-rewrite="preserve-declare=false" %s -o - | FileCheck %s --check-prefixes NODECL
+// RUN: fir-opt --cg-rewrite %s -o - | FileCheck %s --check-prefixes NODECL
 
 
 func.func @test(%arg0: !fir.ref<!fir.array<12x23xi32>>) {
@@ -15,9 +17,14 @@ func.func @test(%arg0: !fir.ref<!fir.array<12x23xi32>>) {
 func.func private @bar(%arg0: !fir.ref<!fir.array<12x23xi32>>)
 
 
-// CHECK-LABEL: func.func @test(
-// CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
-// CHECK-NEXT: fir.call @bar(%[[arg0]]) : (!fir.ref<!fir.array<12x23xi32>>) -> ()
+// NODECL-LABEL: func.func @test(
+// NODECL-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
+// NODECL-NEXT: fir.call @bar(%[[arg0]]) : (!fir.ref<!fir.array<12x23xi32>>) -> ()
+
+// DECL-LABEL: func.func @test(
+// DECL-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
+// DECL: fircg.ext_declare
+
 
 func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.array<3x3xf32>>) {
   %c3 = arith.constant 3 : index
@@ -26,5 +33,8 @@ func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.arra
   return
 }
 
-// CHECK-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
-// CHECK-NEXT: return
+// NODECL-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
+// NODECL-NEXT: return
+
+// DECL-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
+// DECL: fircg.ext_declare

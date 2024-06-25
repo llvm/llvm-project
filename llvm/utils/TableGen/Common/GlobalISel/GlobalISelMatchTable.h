@@ -473,6 +473,10 @@ protected:
   /// have succeeded.
   ActionList Actions;
 
+  /// Combiners can sometimes just run C++ code to finish matching a rule &
+  /// mutate instructions instead of relying on MatchActions. Empty if unused.
+  std::string CustomCXXAction;
+
   using DefinedInsnVariablesMap = std::map<InstructionMatcher *, unsigned>;
 
   /// A map of instruction matchers to the local variables
@@ -562,6 +566,10 @@ public:
   /// If \p ID has already been erased, returns false and GIR_EraseFromParent
   /// should NOT be emitted.
   bool tryEraseInsnID(unsigned ID) { return ErasedInsnIDs.insert(ID).second; }
+
+  void setCustomCXXAction(StringRef FnEnumName) {
+    CustomCXXAction = FnEnumName.str();
+  }
 
   // Emplaces an action of the specified Kind at the end of the action list.
   //
@@ -798,6 +806,7 @@ public:
     IPM_MemoryAlignment,
     IPM_VectorSplatImm,
     IPM_NoUse,
+    IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
     OPM_SameOperand,
@@ -1683,6 +1692,28 @@ public:
   }
 };
 
+/// Generates code to check that the first result has only one use.
+class OneUsePredicateMatcher : public InstructionPredicateMatcher {
+public:
+  OneUsePredicateMatcher(unsigned InsnVarID)
+      : InstructionPredicateMatcher(IPM_OneUse, InsnVarID) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == IPM_OneUse;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B);
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override {
+    Table << MatchTable::Opcode("GIM_CheckHasOneUse")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+          << MatchTable::LineBreak;
+  }
+};
+
 /// Generates code to check that a set of predicates and operands match for a
 /// particular instruction.
 ///
@@ -2206,7 +2237,6 @@ class MatchAction {
 public:
   enum ActionKind {
     AK_DebugComment,
-    AK_CustomCXX,
     AK_BuildMI,
     AK_BuildConstantMI,
     AK_EraseInst,
@@ -2259,20 +2289,6 @@ public:
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
-};
-
-class CustomCXXAction : public MatchAction {
-  std::string FnEnumName;
-
-public:
-  CustomCXXAction(StringRef FnEnumName)
-      : MatchAction(AK_CustomCXX), FnEnumName(FnEnumName.str()) {}
-
-  static bool classof(const MatchAction *A) {
-    return A->getKind() == AK_CustomCXX;
-  }
-
-  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Generates code to build an instruction or mutate an existing instruction

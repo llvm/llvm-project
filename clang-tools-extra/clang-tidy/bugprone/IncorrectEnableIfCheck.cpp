@@ -19,10 +19,11 @@ namespace {
 AST_MATCHER_P(TemplateTypeParmDecl, hasUnnamedDefaultArgument,
               ast_matchers::internal::Matcher<TypeLoc>, InnerMatcher) {
   if (Node.getIdentifier() != nullptr || !Node.hasDefaultArgument() ||
-      Node.getDefaultArgumentInfo() == nullptr)
+      Node.getDefaultArgument().getArgument().isNull())
     return false;
 
-  TypeLoc DefaultArgTypeLoc = Node.getDefaultArgumentInfo()->getTypeLoc();
+  TypeLoc DefaultArgTypeLoc =
+      Node.getDefaultArgument().getTypeSourceInfo()->getTypeLoc();
   return InnerMatcher.matches(DefaultArgTypeLoc, Finder, Builder);
 }
 

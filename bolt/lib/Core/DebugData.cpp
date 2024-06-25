@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -867,10 +868,17 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                                             DIEBuilder &DIEBldr) {
   std::optional<AttrInfo> AttrVal =
       findAttributeInfo(Unit.getUnitDIE(), dwarf::DW_AT_str_offsets_base);
-  if (!AttrVal)
+  if (!AttrVal && !Unit.isDWOUnit())
     return;
-  std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
-  assert(Val && "DW_AT_str_offsets_base Value not present.");
+  std::optional<uint64_t> Val = std::nullopt;
+  if (AttrVal) {
+    Val = AttrVal->V.getAsSectionOffset();
+  } else {
+    if (!Unit.isDWOUnit())
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+                   "DW_AT_str_offsets_base Value not present\n";
+    Val = 0;
+  }
   DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
   DIEValue StrListBaseAttrInfo =
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
@@ -915,7 +923,11 @@ void DebugStrWriter::create() {
 }
 
 void DebugStrWriter::initialize() {
-  auto StrSection = BC.DwCtx->getDWARFObj().getStrSection();
+  StringRef StrSection;
+  if (IsDWO)
+    StrSection = DwCtx.getDWARFObj().getStrDWOSection();
+  else
+    StrSection = DwCtx.getDWARFObj().getStrSection();
   (*StrStream) << StrSection;
 }
 

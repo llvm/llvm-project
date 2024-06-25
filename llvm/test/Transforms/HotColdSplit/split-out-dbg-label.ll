@@ -11,9 +11,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1
-; CHECK: llvm.dbg.label(metadata [[LABEL:![0-9]+]]), !dbg [[LINE:![0-9]+]]
-; CHECK: llvm.dbg.label(metadata [[LABEL_IN_INLINE_ME:![0-9]+]]), !dbg [[LINE2:![0-9]+]]
-; CHECK: llvm.dbg.label(metadata [[SCOPED_LABEL:![0-9]+]]), !dbg [[LINE]]
+; CHECK: #dbg_label([[LABEL:![0-9]+]],  [[LINE:![0-9]+]]
+; CHECK: #dbg_label([[LABEL_IN_INLINE_ME:![0-9]+]],  [[LINE2:![0-9]+]]
+; CHECK: #dbg_label([[SCOPED_LABEL:![0-9]+]],  [[LINE]]
 
 ; CHECK: [[FILE:![0-9]+]] = !DIFile
 ; CHECK: [[INLINE_ME_SCOPE:![0-9]+]] = distinct !DISubprogram(name: "inline_me"

@@ -342,6 +342,76 @@ csrrs t1, sireg, zero
 # uimm12
 csrrs t2, 0x151, zero
 
+# sireg2
+# name
+# CHECK-INST: csrrs t1, sireg2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg2
+# uimm12
+# CHECK-INST: csrrs t2, sireg2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg2
+# name
+csrrs t1, sireg2, zero
+# uimm12
+csrrs t2, 0x152, zero
+
+# sireg3
+# name
+# CHECK-INST: csrrs t1, sireg3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg3
+# uimm12
+# CHECK-INST: csrrs t2, sireg3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg3
+# name
+csrrs t1, sireg3, zero
+# uimm12
+csrrs t2, 0x153, zero
+
+# sireg4
+# name
+# CHECK-INST: csrrs t1, sireg4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg4
+# uimm12
+# CHECK-INST: csrrs t2, sireg4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg4
+# name
+csrrs t1, sireg4, zero
+# uimm12
+csrrs t2, 0x155, zero
+
+# sireg5
+# name
+# CHECK-INST: csrrs t1, sireg5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg5
+# uimm12
+# CHECK-INST: csrrs t2, sireg5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg5
+# name
+csrrs t1, sireg5, zero
+# uimm12
+csrrs t2, 0x156, zero
+
+# sireg6
+# name
+# CHECK-INST: csrrs t1, sireg6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x15]
+# CHECK-INST-ALIAS: csrr t1, sireg6
+# uimm12
+# CHECK-INST: csrrs t2, sireg6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x15]
+# CHECK-INST-ALIAS: csrr t2, sireg6
+# name
+csrrs t1, sireg6, zero
+# uimm12
+csrrs t2, 0x157, zero
+
 # stopei
 # name
 # CHECK-INST: csrrs t1, stopei, zero
@@ -369,3 +439,21 @@ csrrs t2, 0x15C, zero
 csrrs t1, stopi, zero
 # uimm12
 csrrs t2, 0xDB0, zero
+
+#########################################
+# Counter Configuration (Ssccfg)
+#########################################
+
+# scountinhibit
+# name
+# CHECK-INST: csrrs t1, scountinhibit, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x12]
+# CHECK-INST-ALIAS: csrr t1, scountinhibit
+# uimm12
+# CHECK-INST: csrrs t2, scountinhibit, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x12]
+# CHECK-INST-ALIAS: csrr t2, scountinhibit
+# name
+csrrs t1, scountinhibit, zero
+# uimm12
+csrrs t2, 0x120, zero

@@ -367,6 +367,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABDS:
+  case ISD::ABDU:
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
   case ISD::BSWAP:
   case ISD::BITREVERSE:
   case ISD::CTLZ:
@@ -395,6 +401,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
@@ -442,6 +449,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
+  case ISD::SCMP:
+  case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -504,7 +513,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         break;                                                                 \
     }                                                                          \
     /* Defer non-vector results to LegalizeDAG. */                             \
-    if (!Node->getValueType(0).isVector()) {                                   \
+    if (!Node->getValueType(0).isVector() &&                                   \
+        Node->getValueType(0) != MVT::Other) {                                 \
       Action = TargetLowering::Legal;                                          \
       break;                                                                   \
     }                                                                          \
@@ -914,6 +924,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+    if (SDValue Expanded = TLI.expandAVG(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::BITREVERSE:
     ExpandBITREVERSE(Node, Results);
     return;
@@ -988,11 +1007,8 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
-    if (SDValue Expanded = TLI.expandFMINIMUM_FMAXIMUM(Node, DAG)) {
-      Results.push_back(Expanded);
-      return;
-    }
-    break;
+    Results.push_back(TLI.expandFMINIMUM_FMAXIMUM(Node, DAG));
+    return;
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:

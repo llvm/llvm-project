@@ -427,6 +427,10 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/DebugExtensionOps.md"]
 
+## IRDL (extension) Transform Operations
+
+[include "Dialects/IRDLExtensionOps.md"]
+
 ## Func Transform Operations
 
 [include "Dialects/FuncTransformOps.md"]

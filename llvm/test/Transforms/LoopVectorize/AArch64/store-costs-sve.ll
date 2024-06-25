@@ -85,9 +85,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
-; PRED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 16
-; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 101, [[TMP4]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

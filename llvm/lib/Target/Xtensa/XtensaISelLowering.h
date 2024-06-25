@@ -23,6 +23,7 @@ namespace llvm {
 namespace XtensaISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
+  BR_JT,
 
   // Calls a function.  Operand 0 is the chain operand and operand 1
   // is the target address.  The arguments start at operand 2.
@@ -42,6 +43,8 @@ class XtensaTargetLowering : public TargetLowering {
 public:
   explicit XtensaTargetLowering(const TargetMachine &TM,
                                 const XtensaSubtarget &STI);
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 
@@ -71,9 +74,23 @@ public:
 private:
   const XtensaSubtarget &Subtarget;
 
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
+
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 

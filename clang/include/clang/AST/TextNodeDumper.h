@@ -213,6 +213,9 @@ public:
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
   void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
   void dumpConceptReference(const ConceptReference *R);
+  void dumpTemplateArgument(const TemplateArgument &TA);
+  void dumpBareTemplateName(TemplateName TN);
+  void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 
@@ -405,6 +408,8 @@ public:
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
+  void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);
+  void VisitEmbedExpr(const EmbedExpr *S);
 };
 
 } // namespace clang

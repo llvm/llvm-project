@@ -32,10 +32,16 @@ EvalEmitter::~EvalEmitter() {
   }
 }
 
+/// Clean up all our resources. This needs to done in failed evaluations before
+/// we call InterpStack::clear(), because there might be a Pointer on the stack
+/// pointing into a Block in the EvalEmitter.
+void EvalEmitter::cleanup() { S.cleanup(); }
+
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
   S.setEvalLocation(E->getExprLoc());
-  this->ConvertResultToRValue = ConvertResultToRValue;
+  this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E)) {
@@ -50,13 +56,17 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
-  this->ConvertResultToRValue =
-      VD->getAnyInitializer() &&
-      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
-       VD->getAnyInitializer()->getType()->isVectorType());
+
+  if (const Expr *Init = VD->getAnyInitializer()) {
+    QualType T = VD->getType();
+    this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
+                                  !T->isObjCObjectPointerType();
+  } else
+    this->ConvertResultToRValue = false;
+
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD) && EvalResult.empty())
+  if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
     EvalResult.setInvalid();
 
   return std::move(this->EvalResult);
@@ -132,6 +142,10 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
     if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
@@ -140,17 +154,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
-    if (CheckFullyInitialized) {
-      if (!EvalResult.checkFullyInitialized(S, Ptr))
-        return false;
-
-      std::optional<APValue> RValueResult = Ptr.toRValue(Ctx);
-      if (!RValueResult)
-        return false;
-      EvalResult.setValue(*RValueResult);
-    } else {
-      EvalResult.setValue(Ptr.toAPValue());
-    }
+    EvalResult.setValue(Ptr.toAPValue());
   }
 
   return true;
@@ -170,6 +174,10 @@ bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
 
 bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+
+  if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+
   if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
     EvalResult.setValue(*APV);
     return true;

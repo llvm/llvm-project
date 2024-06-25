@@ -47,6 +47,10 @@ using namespace llvm;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OperandBundleDef, LLVMOperandBundleRef)
 
+inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
+  return reinterpret_cast<BasicBlock **>(BBs);
+}
+
 #define DEBUG_TYPE "ir"
 
 void llvm::initializeCore(PassRegistry &Registry) {
@@ -1742,25 +1746,6 @@ LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
                                    unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getICmp(Predicate,
-                                    unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFCmp(Predicate,
-                                    unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getShl(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
@@ -2865,18 +2850,12 @@ void LLVMDeleteInstruction(LLVMValueRef Inst) {
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(unwrap(Inst)))
-    if (CE->getOpcode() == Instruction::ICmp)
-      return (LLVMIntPredicate)CE->getPredicate();
   return (LLVMIntPredicate)0;
 }
 
 LLVMRealPredicate LLVMGetFCmpPredicate(LLVMValueRef Inst) {
   if (FCmpInst *I = dyn_cast<FCmpInst>(unwrap(Inst)))
     return (LLVMRealPredicate)I->getPredicate();
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(unwrap(Inst)))
-    if (CE->getOpcode() == Instruction::FCmp)
-      return (LLVMRealPredicate)CE->getPredicate();
   return (LLVMRealPredicate)0;
 }
 
@@ -3031,6 +3010,18 @@ void LLVMSetUnwindDest(LLVMValueRef Invoke, LLVMBasicBlockRef B) {
   unwrap<InvokeInst>(Invoke)->setUnwindDest(unwrap(B));
 }
 
+LLVMBasicBlockRef LLVMGetCallBrDefaultDest(LLVMValueRef CallBr) {
+  return wrap(unwrap<CallBrInst>(CallBr)->getDefaultDest());
+}
+
+unsigned LLVMGetCallBrNumIndirectDests(LLVMValueRef CallBr) {
+  return unwrap<CallBrInst>(CallBr)->getNumIndirectDests();
+}
+
+LLVMBasicBlockRef LLVMGetCallBrIndirectDest(LLVMValueRef CallBr, unsigned Idx) {
+  return wrap(unwrap<CallBrInst>(CallBr)->getIndirectDest(Idx));
+}
+
 /*--.. Operations on terminators ...........................................--*/
 
 unsigned LLVMGetNumSuccessors(LLVMValueRef Term) {
@@ -3141,16 +3132,35 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
   return LLVMCreateBuilderInContext(LLVMGetGlobalContext());
 }
 
+static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,
+                                    Instruction *Instr, bool BeforeDbgRecords) {
+  BasicBlock::iterator I = Instr ? Instr->getIterator() : Block->end();
+  I.setHeadBit(BeforeDbgRecords);
+  Builder->SetInsertPoint(Block, I);
+}
+
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr) {
-  BasicBlock *BB = unwrap(Block);
-  auto I = Instr ? unwrap<Instruction>(Instr)->getIterator() : BB->end();
-  unwrap(Builder)->SetInsertPoint(BB, I);
+  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+                                 unwrap<Instruction>(Instr), false);
+}
+
+void LLVMPositionBuilderBeforeDbgRecords(LLVMBuilderRef Builder,
+                                         LLVMBasicBlockRef Block,
+                                         LLVMValueRef Instr) {
+  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+                                 unwrap<Instruction>(Instr), true);
 }
 
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr) {
   Instruction *I = unwrap<Instruction>(Instr);
-  unwrap(Builder)->SetInsertPoint(I->getParent(), I->getIterator());
+  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, false);
+}
+
+void LLVMPositionBuilderBeforeInstrAndDbgRecords(LLVMBuilderRef Builder,
+                                                 LLVMValueRef Instr) {
+  Instruction *I = unwrap<Instruction>(Instr);
+  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, true);
 }
 
 void LLVMPositionBuilderAtEnd(LLVMBuilderRef Builder, LLVMBasicBlockRef Block) {
@@ -3256,6 +3266,25 @@ LLVMValueRef LLVMBuildSwitch(LLVMBuilderRef B, LLVMValueRef V,
 LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests) {
   return wrap(unwrap(B)->CreateIndirectBr(unwrap(Addr), NumDests));
+}
+
+LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                             LLVMBasicBlockRef DefaultDest,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
+                             unsigned NumArgs, LLVMOperandBundleRef *Bundles,
+                             unsigned NumBundles, const char *Name) {
+
+  SmallVector<OperandBundleDef, 8> OBs;
+  for (auto *Bundle : ArrayRef(Bundles, NumBundles)) {
+    OperandBundleDef *OB = unwrap(Bundle);
+    OBs.push_back(*OB);
+  }
+
+  return wrap(unwrap(B)->CreateCallBr(
+      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(DefaultDest),
+      ArrayRef(unwrap(IndirectDests), NumIndirectDests),
+      ArrayRef<Value *>(unwrap(Args), NumArgs), OBs, Name));
 }
 
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
