@@ -4472,6 +4472,18 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
   }
 }
 
+MCInst *BinaryFunction::getInstructionContainingOffset(uint64_t Offset) {
+  assert(CurrentState == State::Disassembled && "Wrong function state");
+
+  if (Offset > Size)
+    return nullptr;
+
+  auto II = Instructions.upper_bound(Offset);
+  assert(II != Instructions.begin() && "First instruction not at offset 0");
+  --II;
+  return &II->second;
+}
+
 void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
   if (!opts::shouldPrint(*this))
     return;
