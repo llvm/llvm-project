@@ -3259,11 +3259,16 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
+  auto *VT = cast<VectorType>(Src);
+  if (VT->getElementType()->isIntegerTy(1))
+    return InstructionCost::getInvalid();
+
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(Src)->getElementCount() == ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   return LT.first;
@@ -3284,16 +3289,17 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
   if (!LT.second.isVector() ||
-      !isElementTypeLegalForScalableVector(VT->getElementType()))
+      !isElementTypeLegalForScalableVector(VT->getElementType()) ||
+      VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(DataTy)->getElementCount() ==
-      ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
@@ -3331,8 +3337,12 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
+  // We also only support full register predicate loads and stores.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
+        (VTy->getElementType()->isIntegerTy(1) &&
+         !VTy->getElementCount().isKnownMultipleOf(
+             ElementCount::getScalable(16))))
       return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
