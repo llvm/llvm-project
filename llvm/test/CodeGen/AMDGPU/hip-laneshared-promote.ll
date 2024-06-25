@@ -5,9 +5,6 @@ target datalayout = "A5"
 @v1 = external local_unnamed_addr addrspace(10) global float, align 4
 @vx = external local_unnamed_addr addrspace(10) global [7 x float], align 4
 @v2 = external local_unnamed_addr addrspace(10) global float, align 4
-@__hip_cuid_ = addrspace(1) global i8 0
-@__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
-@llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
 define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr #0 {

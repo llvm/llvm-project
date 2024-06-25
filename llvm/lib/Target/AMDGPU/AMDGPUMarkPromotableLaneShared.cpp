@@ -37,8 +37,7 @@ public:
   bool runOnFunction(Function &F);
 
 private:
-  bool checkPromotable(GlobalVariable &GV,
-                       SmallVector<Instruction *> &WorkList);
+  bool checkPromotable(GlobalVariable &GV);
 };
 
 bool AMDGPUMarkPromotableLaneShared::runOnFunction(Function &F) {
@@ -53,18 +52,12 @@ bool AMDGPUMarkPromotableLaneShared::runOnFunction(Function &F) {
   }
   if (LaneSharedGlobals.empty())
     return false;
-  // expand constant-expr before traversing uses
-  convertUsersOfConstantsToInstructions(LaneSharedGlobals);
 
   bool Changed = false;
   for (auto *GVC : LaneSharedGlobals) {
     GlobalVariable &GV = *cast<GlobalVariable>(GVC);
-    SmallVector<Instruction *> WorkList;
-    if (checkPromotable(GV, WorkList)) {
+    if (checkPromotable(GV)) {
       GV.addAttribute("lane-shared-in-vgpr");
-      for (auto I : WorkList) {
-        I->setMetadata("lane-shared-in-vgpr", MDNode::get(I->getContext(), {}));
-      }
       Changed = true;
     } else
       GV.addAttribute("lane-shared-in-mem");
@@ -132,8 +125,7 @@ static bool isSupportedMemset(MemSetInst *I, const GlobalVariable &GV,
 
 // Check if a lane-shared global variable can be stored in VGPRs, and
 // accumulate a list of use-insts that need to be marked or transformed.
-bool AMDGPUMarkPromotableLaneShared::checkPromotable(
-    GlobalVariable &GV, SmallVector<Instruction *> &WorkList) {
+bool AMDGPUMarkPromotableLaneShared::checkPromotable(GlobalVariable &GV) {
 
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote lane-shared to vgpr: " << Msg << "\n"
@@ -171,25 +163,21 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(
       if (DataSize != 4 && DataSize != 8 && DataSize != 12 && DataSize != 16)
         return RejectUser(Inst, "data-size is not supported");
 
-      WorkList.push_back(Inst);
       continue;
     }
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-      WorkList.push_back(Inst);
       continue;
     }
 
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
       if (allPtrInputsInSameClass(&GV, Inst)) {
-        WorkList.push_back(Inst);
         continue;
       }
       return RejectUser(Inst, "phi on ptrs from two different GVs");
     }
     if (auto *Phi = dyn_cast<SelectInst>(Inst)) {
       if (allPtrInputsInSameClass(&GV, Inst)) {
-        WorkList.push_back(Inst);
         continue;
       }
       return RejectUser(Inst, "select on ptrs from two different GVs");
@@ -197,7 +185,6 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
         MSI && isSupportedMemset(MSI, GV, *DL)) {
-      WorkList.push_back(Inst);
       continue;
     } else
       return RejectUser(Inst, "cannot handle partial memset inst yet");
@@ -207,7 +194,6 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(
 
     if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
       if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
-        // WorkList.push_back(Inst);
         continue;
       }
     }

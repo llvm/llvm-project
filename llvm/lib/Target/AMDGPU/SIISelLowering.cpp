@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ByteProvider.h"
@@ -6090,14 +6091,9 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       bool LaneSharedInVGPR = false;
       for (const auto *MemOp : MI.memoperands()) {
         if (auto *val = MemOp->getValue()) {
-          if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(val)) {
+          auto *Obj = getUnderlyingObject(val);
+          if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
             if (GV->hasAttribute("lane-shared-in-vgpr")) {
-              assert(MemOp->getAddrSpace() == AMDGPUAS::LANE_SHARED);
-              LaneSharedInVGPR = true;
-              break;
-            }
-          } else if (const Instruction *I = dyn_cast<const Instruction>(val)) {
-            if (I->hasMetadata("lane-shared-in-vgpr")) {
               assert(MemOp->getAddrSpace() == AMDGPUAS::LANE_SHARED);
               LaneSharedInVGPR = true;
               break;
