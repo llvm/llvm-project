@@ -10495,9 +10495,8 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   if (!IsConstant) {
     if (S.ObjC().isSignedCharBool(T)) {
       return S.ObjC().adornBoolConversionDiagWithTernaryFixit(
-          E,
-          S.Diag(CContext, diag::warn_impcast_float_to_objc_signed_char_bool)
-              << E->getType());
+          E, S.Diag(CContext, diag::warn_impcast_float_to_objc_signed_char_bool)
+                 << E->getType());
     }
 
     return DiagnoseImpCast(S, E, T, CContext,
@@ -10523,9 +10522,8 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
 
   if (S.ObjC().isSignedCharBool(T) && IntegerValue != 0 && IntegerValue != 1) {
     return S.ObjC().adornBoolConversionDiagWithTernaryFixit(
-        E,
-        S.Diag(CContext, diag::warn_impcast_constant_value_to_objc_bool)
-            << PrettySourceValue);
+        E, S.Diag(CContext, diag::warn_impcast_constant_value_to_objc_bool)
+               << PrettySourceValue);
   }
 
   if (Result == llvm::APFloat::opOK && isExact) {
@@ -10801,10 +10799,8 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
   }
 }
 
-void Sema::CheckImplicitConversion(Expr *E, QualType T,
-                                    SourceLocation CC,
-                                    bool *ICContext,
-                                    bool IsListInit) {
+void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
+                                   bool *ICContext, bool IsListInit) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = Context.getCanonicalType(E->getType()).getTypePtr();
@@ -10841,7 +10837,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
     if (Source->isPointerType() || Source->canDecayToPointerType()) {
       // Warn on pointer to bool conversion that is always true.
       DiagnoseAlwaysNonNullPointer(E, Expr::NPCK_NotNull, /*IsEqual*/ false,
-                                     SourceRange(CC));
+                                   SourceRange(CC));
     }
   }
 
@@ -10850,13 +10846,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
   // or 0.
   if (ObjC().isSignedCharBool(T) && Source->isIntegralType(Context)) {
     Expr::EvalResult Result;
-    if (E->EvaluateAsInt(Result, getASTContext(),
-                         Expr::SE_AllowSideEffects)) {
+    if (E->EvaluateAsInt(Result, getASTContext(), Expr::SE_AllowSideEffects)) {
       if (Result.Val.getInt() != 1 && Result.Val.getInt() != 0) {
         ObjC().adornBoolConversionDiagWithTernaryFixit(
-            E,
-            Diag(CC, diag::warn_impcast_constant_value_to_objc_bool)
-                << toString(Result.Val.getInt(), 10));
+            E, Diag(CC, diag::warn_impcast_constant_value_to_objc_bool)
+                   << toString(Result.Val.getInt(), 10));
       }
       return;
     }
@@ -10873,16 +10867,16 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
   if (isa<VectorType>(Source)) {
     if (Target->isSveVLSBuiltinType() &&
         (Context.areCompatibleSveTypes(QualType(Target, 0),
-                                         QualType(Source, 0)) ||
+                                       QualType(Source, 0)) ||
          Context.areLaxCompatibleSveTypes(QualType(Target, 0),
-                                            QualType(Source, 0))))
+                                          QualType(Source, 0))))
       return;
 
     if (Target->isRVVVLSBuiltinType() &&
         (Context.areCompatibleRVVTypes(QualType(Target, 0),
-                                         QualType(Source, 0)) ||
+                                       QualType(Source, 0)) ||
          Context.areLaxCompatibleRVVTypes(QualType(Target, 0),
-                                            QualType(Source, 0))))
+                                          QualType(Source, 0))))
       return;
 
     if (!isa<VectorType>(Target)) {
@@ -10894,7 +10888,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
                    Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
-      DiagnoseImpCast(*this, E, T, CC, diag::warn_hlsl_impcast_vector_truncation);
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_vector_truncation);
     }
 
     // If the vector cast is cast between two vectors of the same size, it is
@@ -10935,9 +10930,9 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
     // Handle conversion from scalable to fixed when msve-vector-bits is
     // specified
     if (Context.areCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                        QualType(Source, 0)) ||
+                                      QualType(Source, 0)) ||
         Context.areLaxCompatibleSveTypes(QualType(OriginalTarget, 0),
-                                           QualType(Source, 0)))
+                                         QualType(Source, 0)))
       return;
 
     // If the vector cast is cast between two vectors of the same size, it is
@@ -10965,9 +10960,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
         Expr::EvalResult result;
         if (E->EvaluateAsRValue(result, Context)) {
           // Value might be a float, a float vector, or a float complex.
-          if (IsSameFloatAfterCast(result.Val,
-                   Context.getFloatTypeSemantics(QualType(TargetBT, 0)),
-                   Context.getFloatTypeSemantics(QualType(SourceBT, 0))))
+          if (IsSameFloatAfterCast(
+                  result.Val,
+                  Context.getFloatTypeSemantics(QualType(TargetBT, 0)),
+                  Context.getFloatTypeSemantics(QualType(SourceBT, 0))))
             return;
         }
 
@@ -11032,31 +11028,30 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
         llvm::APFixedPoint MinVal = Context.getFixedPointMin(T);
         if (Value > MaxVal || Value < MinVal) {
           DiagRuntimeBehavior(E->getExprLoc(), E,
-                                PDiag(diag::warn_impcast_fixed_point_range)
-                                    << Value.toString() << T
-                                    << E->getSourceRange()
-                                    << clang::SourceRange(CC));
+                              PDiag(diag::warn_impcast_fixed_point_range)
+                                  << Value.toString() << T
+                                  << E->getSourceRange()
+                                  << clang::SourceRange(CC));
           return;
         }
       }
     } else if (Target->isIntegerType()) {
       Expr::EvalResult Result;
       if (!isConstantEvaluatedContext() &&
-          E->EvaluateAsFixedPoint(Result, Context,
-                                  Expr::SE_AllowSideEffects)) {
+          E->EvaluateAsFixedPoint(Result, Context, Expr::SE_AllowSideEffects)) {
         llvm::APFixedPoint FXResult = Result.Val.getFixedPoint();
 
         bool Overflowed;
         llvm::APSInt IntResult = FXResult.convertToInt(
-            Context.getIntWidth(T),
-            Target->isSignedIntegerOrEnumerationType(), &Overflowed);
+            Context.getIntWidth(T), Target->isSignedIntegerOrEnumerationType(),
+            &Overflowed);
 
         if (Overflowed) {
           DiagRuntimeBehavior(E->getExprLoc(), E,
-                                PDiag(diag::warn_impcast_fixed_point_range)
-                                    << FXResult.toString() << T
-                                    << E->getSourceRange()
-                                    << clang::SourceRange(CC));
+                              PDiag(diag::warn_impcast_fixed_point_range)
+                                  << FXResult.toString() << T
+                                  << E->getSourceRange()
+                                  << clang::SourceRange(CC));
           return;
         }
       }
@@ -11074,10 +11069,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
 
         if (Overflowed) {
           DiagRuntimeBehavior(E->getExprLoc(), E,
-                                PDiag(diag::warn_impcast_fixed_point_range)
-                                    << toString(Value, /*Radix=*/10) << T
-                                    << E->getSourceRange()
-                                    << clang::SourceRange(CC));
+                              PDiag(diag::warn_impcast_fixed_point_range)
+                                  << toString(Value, /*Radix=*/10) << T
+                                  << E->getSourceRange()
+                                  << clang::SourceRange(CC));
           return;
         }
       }
@@ -11153,9 +11148,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
   if (ObjC().isSignedCharBool(T) && !Source->isCharType() &&
       !E->isKnownToHaveBooleanValue(/*Semantic=*/false)) {
     return ObjC().adornBoolConversionDiagWithTernaryFixit(
-        E,
-        Diag(CC, diag::warn_impcast_int_to_objc_signed_char_bool)
-            << E->getType());
+        E, Diag(CC, diag::warn_impcast_int_to_objc_signed_char_bool)
+               << E->getType());
   }
 
   IntRange SourceTypeRange =
@@ -11179,11 +11173,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
       std::string PrettySourceValue = toString(Value, 10);
       std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-      DiagRuntimeBehavior(
-          E->getExprLoc(), E,
-          PDiag(diag::warn_impcast_integer_precision_constant)
-              << PrettySourceValue << PrettyTargetValue << E->getType() << T
-              << E->getSourceRange() << SourceRange(CC));
+      DiagRuntimeBehavior(E->getExprLoc(), E,
+                          PDiag(diag::warn_impcast_integer_precision_constant)
+                              << PrettySourceValue << PrettyTargetValue
+                              << E->getType() << T << E->getSourceRange()
+                              << SourceRange(CC));
       return;
     }
 
@@ -11194,7 +11188,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
     if (TargetRange.Width == 32 && Context.getIntWidth(E->getType()) == 64)
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_integer_64_32,
                              /* pruneControlFlow */ true);
-    return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_integer_precision);
+    return DiagnoseImpCast(*this, E, T, CC,
+                           diag::warn_impcast_integer_precision);
   }
 
   if (TargetRange.Width > SourceTypeRange.Width) {
@@ -11226,9 +11221,9 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T,
         std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
         Diag(E->getExprLoc(),
-               PDiag(diag::warn_impcast_integer_precision_constant)
-                   << PrettySourceValue << PrettyTargetValue << E->getType()
-                   << T << E->getSourceRange() << SourceRange(CC));
+             PDiag(diag::warn_impcast_integer_precision_constant)
+                 << PrettySourceValue << PrettyTargetValue << E->getType() << T
+                 << E->getSourceRange() << SourceRange(CC));
         return;
       }
     }
@@ -11329,11 +11324,11 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
   if (E->getType() == T) return;
 
   Suspicious = false;
-  S.CheckImplicitConversion(TrueExpr->IgnoreParenImpCasts(),
-                          E->getType(), CC, &Suspicious);
+  S.CheckImplicitConversion(TrueExpr->IgnoreParenImpCasts(), E->getType(), CC,
+                            &Suspicious);
   if (!Suspicious)
     S.CheckImplicitConversion(E->getFalseExpr()->IgnoreParenImpCasts(),
-                            E->getType(), CC, &Suspicious);
+                              E->getType(), CC, &Suspicious);
 }
 
 /// Check conversion of given expression to boolean.

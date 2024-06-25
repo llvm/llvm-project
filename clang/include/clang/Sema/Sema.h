@@ -2255,10 +2255,9 @@ public:
 
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
-  void CheckImplicitConversion(Expr *E, QualType T,
-                                  SourceLocation CC,
-                                  bool *ICContext = nullptr,
-                                  bool IsListInit = false);
+  void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
+                               bool *ICContext = nullptr,
+                               bool IsListInit = false);
 
   bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
                                      bool CheckForFloatArgs = true);

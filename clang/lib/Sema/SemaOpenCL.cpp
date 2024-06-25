@@ -139,9 +139,10 @@ bool SemaOpenCL::checkSubgroupExt(CallExpr *Call) {
   // OpenCL device can support extension but not the feature as extension
   // requires subgroup independent forward progress, but subgroup independent
   // forward progress is optional in OpenCL C 3.0 __opencl_c_subgroups feature.
-  if (!SemaRef.getOpenCLOptions().isSupported("cl_khr_subgroups", getLangOpts()) &&
+  if (!SemaRef.getOpenCLOptions().isSupported("cl_khr_subgroups",
+                                              getLangOpts()) &&
       !SemaRef.getOpenCLOptions().isSupported("__opencl_c_subgroups",
-                                        getLangOpts())) {
+                                              getLangOpts())) {
     Diag(Call->getBeginLoc(), diag::err_opencl_requires_extension)
         << 1 << Call->getDirectCallee()
         << "cl_khr_subgroups or __opencl_c_subgroups";
@@ -207,7 +208,7 @@ static bool checkOpenCLEnqueueLocalSizeArgs(Sema &S, CallExpr *TheCall,
   bool IllegalParams = false;
   for (unsigned I = Start; I <= End; ++I)
     IllegalParams |= checkOpenCLEnqueueIntType(S, TheCall->getArg(I),
-                                              S.Context.getSizeType());
+                                               S.Context.getSizeType());
   return IllegalParams;
 }
 
@@ -240,8 +241,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   unsigned NumArgs = TheCall->getNumArgs();
 
   if (NumArgs < 4) {
-    Diag(TheCall->getBeginLoc(),
-           diag::err_typecheck_call_too_few_args_at_least)
+    Diag(TheCall->getBeginLoc(), diag::err_typecheck_call_too_few_args_at_least)
         << 0 << 4 << NumArgs << /*is non object*/ 0;
     return true;
   }
@@ -254,7 +254,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   // First argument always needs to be a queue_t type.
   if (!Arg0->getType()->isQueueT()) {
     Diag(TheCall->getArg(0)->getBeginLoc(),
-           diag::err_opencl_builtin_expected_type)
+         diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << getASTContext().OCLQueueTy;
     return true;
   }
@@ -262,7 +262,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   // Second argument always needs to be a kernel_enqueue_flags_t enum value.
   if (!Arg1->getType()->isIntegerType()) {
     Diag(TheCall->getArg(1)->getBeginLoc(),
-           diag::err_opencl_builtin_expected_type)
+         diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << "'kernel_enqueue_flags_t' (i.e. uint)";
     return true;
   }
@@ -270,7 +270,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   // Third argument is always an ndrange_t type.
   if (Arg2->getType().getUnqualifiedType().getAsString() != "ndrange_t") {
     Diag(TheCall->getArg(2)->getBeginLoc(),
-           diag::err_opencl_builtin_expected_type)
+         diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << "'ndrange_t'";
     return true;
   }
@@ -287,9 +287,9 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
     // we have a block type, check the prototype
     const BlockPointerType *BPT =
         cast<BlockPointerType>(Arg3->getType().getCanonicalType());
-    if (BPT->getPointeeType()->castAs<FunctionProtoType>()->getNumParams() > 0) {
-      Diag(Arg3->getBeginLoc(),
-             diag::err_opencl_enqueue_kernel_blocks_no_args);
+    if (BPT->getPointeeType()->castAs<FunctionProtoType>()->getNumParams() >
+        0) {
+      Diag(Arg3->getBeginLoc(), diag::err_opencl_enqueue_kernel_blocks_no_args);
       return true;
     }
     return false;
@@ -313,7 +313,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
     // Forth argument has to be any integer type.
     if (!Arg3->getType()->isIntegerType()) {
       Diag(TheCall->getArg(3)->getBeginLoc(),
-             diag::err_opencl_builtin_expected_type)
+           diag::err_opencl_builtin_expected_type)
           << TheCall->getDirectCallee() << "integer";
       return true;
     }
@@ -326,7 +326,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
                                      Expr::NPC_ValueDependentIsNotNull) &&
         !Arg4->getType()->getPointeeOrArrayElementType()->isClkEventT()) {
       Diag(TheCall->getArg(4)->getBeginLoc(),
-             diag::err_opencl_builtin_expected_type)
+           diag::err_opencl_builtin_expected_type)
           << TheCall->getDirectCallee()
           << Context.getPointerType(Context.OCLClkEventTy);
       return true;
@@ -338,7 +338,7 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
         !(Arg5->getType()->isPointerType() &&
           Arg5->getType()->getPointeeType()->isClkEventT())) {
       Diag(TheCall->getArg(5)->getBeginLoc(),
-             diag::err_opencl_builtin_expected_type)
+           diag::err_opencl_builtin_expected_type)
           << TheCall->getDirectCallee()
           << Context.getPointerType(Context.OCLClkEventTy);
       return true;
@@ -351,14 +351,13 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   }
 
   // None of the specific case has been detected, give generic error
-  Diag(TheCall->getBeginLoc(),
-         diag::err_opencl_enqueue_kernel_incorrect_args);
+  Diag(TheCall->getBeginLoc(), diag::err_opencl_enqueue_kernel_incorrect_args);
   return true;
 }
 
 /// Returns OpenCL access qual.
 static OpenCLAccessAttr *getOpenCLArgAccess(const Decl *D) {
-    return D->getAttr<OpenCLAccessAttr>();
+  return D->getAttr<OpenCLAccessAttr>();
 }
 
 /// Returns true if pipe element type is different from the pointer.
@@ -541,8 +540,8 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
     return true;
 
   auto RT = Call->getArg(0)->getType();
-  if (!RT->isPointerType() || RT->getPointeeType()
-      .getAddressSpace() == LangAS::opencl_constant) {
+  if (!RT->isPointerType() ||
+      RT->getPointeeType().getAddressSpace() == LangAS::opencl_constant) {
     Diag(Call->getBeginLoc(), diag::err_opencl_builtin_to_addr_invalid_arg)
         << Call->getArg(0) << Call->getDirectCallee() << Call->getSourceRange();
     return true;
@@ -550,7 +549,7 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
 
   if (RT->getPointeeType().getAddressSpace() != LangAS::opencl_generic) {
     Diag(Call->getArg(0)->getBeginLoc(),
-           diag::warn_opencl_generic_address_space_arg)
+         diag::warn_opencl_generic_address_space_arg)
         << Call->getDirectCallee()->getNameInfo().getAsString()
         << Call->getArg(0)->getSourceRange();
   }
@@ -570,8 +569,8 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
   default:
     llvm_unreachable("Invalid builtin function");
   }
-  Call->setType(getASTContext().getPointerType(getASTContext().getQualifiedType(
-      RT.getUnqualifiedType(), Qual)));
+  Call->setType(getASTContext().getPointerType(
+      getASTContext().getQualifiedType(RT.getUnqualifiedType(), Qual)));
 
   return false;
 }
