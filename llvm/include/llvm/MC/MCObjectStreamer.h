@@ -43,7 +43,6 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
-  unsigned CurSubsectionIdx = 0;
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
