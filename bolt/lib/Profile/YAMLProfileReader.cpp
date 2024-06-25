@@ -27,7 +27,8 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 
 cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
-    "name-similarity-function-matching-threshold", cl::desc("edit distance."),
+    "name-similarity-function-matching-threshold",
+    cl::desc("Matches functions using namespace and edit distance."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static llvm::cl::opt<bool>
@@ -426,13 +427,14 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithNameSimilarity = 0;
 
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
+    ItaniumPartialDemangler ItaniumPartialDemangler;
+
     auto DemangleName = [&](std::string &FunctionName) {
       StringRef RestoredName = NameResolver::restore(FunctionName);
       return demangle(RestoredName);
     };
 
-    auto DeriveNameSpace = [&](ItaniumPartialDemangler &ItaniumPartialDemangler,
-      std::string &DemangledName) {
+    auto DeriveNameSpace = [&](std::string &DemangledName) {
       if (ItaniumPartialDemangler.partialDemangle(DemangledName.c_str()))
         return std::string("");
       std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
@@ -446,11 +448,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         NamespaceToBFs;
 
     NamespaceToBFs.reserve(BC.getBinaryFunctions().size());
-    ItaniumPartialDemangler ItaniumPartialDemangler;
 
     for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
       std::string DemangledName = BF->getDemangledName();
-      std::string Namespace = DeriveNameSpace(ItaniumPartialDemangler, DemangledName);
+      std::string Namespace = DeriveNameSpace(DemangledName);
       auto It = NamespaceToBFs.find(Namespace);
       if (It == NamespaceToBFs.end())
         NamespaceToBFs[Namespace] = {BF};
@@ -462,7 +463,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       if (YamlBF.Used)
         continue;
       std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
-      std::string YamlBFNamespace = DeriveNameSpace(ItaniumPartialDemangler, YamlBFDemangledName);
+      std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
       auto It = NamespaceToBFs.find(YamlBFNamespace);
       if (It == NamespaceToBFs.end())
         continue;
