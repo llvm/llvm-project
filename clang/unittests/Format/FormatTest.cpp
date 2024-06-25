@@ -45,6 +45,10 @@ TEST_F(FormatTest, FormatsGlobalStatementsAt0) {
   verifyFormat("\nint i;", " \n\t \v \f  int i;");
   verifyFormat("int i;\nint j;", "    int i; int j;");
   verifyFormat("int i;\nint j;", "    int i;\n  int j;");
+
+  auto Style = getLLVMStyle();
+  Style.KeepEmptyLines.AtStartOfFile = false;
+  verifyFormat("int i;", " \n\t \v \f  int i;", Style);
 }
 
 TEST_F(FormatTest, FormatsUnwrappedLinesAtFirstFormat) {
@@ -163,7 +167,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   auto CustomStyle = getLLVMStyle();
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
-  CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -389,7 +393,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
-  Style.KeepEmptyLinesAtTheStartOfBlocks = false;
+  Style.KeepEmptyLines.AtStartOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
@@ -12912,6 +12916,15 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                "  int j;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  Style.AttributeMacros.push_back("BAR");
+  verifyFormat("struct foo {\n"
+               "FOO private:\n"
+               "  int i;\n"
+               "BAR(x) protected:\n"
+               "  int j;\n"
+               "};",
+               Style);
 
   FormatStyle NoEmptyLines = getLLVMStyle();
   NoEmptyLines.MaxEmptyLinesToKeep = 0;
@@ -21947,6 +21960,11 @@ TEST_F(FormatTest, HandlesUTF8BOM) {
   verifyFormat("\xef\xbb\xbf");
   verifyFormat("\xef\xbb\xbf#include <iostream>");
   verifyFormat("\xef\xbb\xbf\n#include <iostream>");
+
+  auto Style = getLLVMStyle();
+  Style.KeepEmptyLines.AtStartOfFile = false;
+  verifyFormat("\xef\xbb\xbf#include <iostream>",
+               "\xef\xbb\xbf\n#include <iostream>", Style);
 }
 
 // FIXME: Encode Cyrillic and CJK characters below to appease MS compilers.
@@ -26130,6 +26148,12 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "      int i;\n"
                "};",
                Style);
+  Style.AttributeMacros.push_back("FOO");
+  verifyFormat("class C {\n"
+               "   FOO public:\n"
+               "      int i;\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, LimitlessStringsAndComments) {
@@ -26992,6 +27016,9 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+
+  Style.TypenameMacros.push_back("STRUCT");
+  verifyFormat("STRUCT(T, B) { int i; };", Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
@@ -27212,7 +27239,7 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   FormatStyle Style = getLLVMStyle();
-  Style.KeepEmptyLinesAtEOF = true;
+  Style.KeepEmptyLines.AtEndOfFile = true;
 
   const StringRef Code{"int i;\n\n"};
   verifyNoChange(Code, Style);

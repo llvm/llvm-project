@@ -179,6 +179,10 @@ def ParallelOp : OpenMP_Op<"parallel", [
     OpBuilder<(ins CArg<"const ParallelClauseOps &">:$clauses)>
   ];
   let extraClassDeclaration = [{
+    unsigned getNumAllocateVars() { return getAllocateVars().size(); }
+
+    unsigned getNumAllocatorsVars() { return getAllocatorsVars().size(); }
+
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
   }];

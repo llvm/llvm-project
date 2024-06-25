@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");

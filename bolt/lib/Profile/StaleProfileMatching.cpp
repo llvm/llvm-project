@@ -51,6 +51,12 @@ cl::opt<bool>
                       cl::desc("Infer counts from stale profile data."),
                       cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
+cl::opt<unsigned> StaleMatchingMinMatchedBlock(
+    "stale-matching-min-matched-block",
+    cl::desc("Percentage threshold of matched basic blocks at which stale "
+             "profile inference is executed."),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
     cl::desc("The maximum size of a function to consider for inference."),
@@ -301,7 +307,9 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
     BB->setHash(BlendedHashes[I].combine());
   }
 }
-
+// TODO: mediate the difference between flow function construction here in BOLT
+// and in the compiler by splitting blocks with exception throwing calls at the
+// call and adding the landing pad as the successor.
 /// Create a wrapper flow function to use with the profile inference algorithm,
 /// and initialize its jumps and metadata.
 FlowFunction
@@ -309,13 +317,11 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
 
   // Add a special "dummy" source so that there is always a unique entry point.
-  // Because of the extra source, for all other blocks in FlowFunction it holds
-  // that Block.Index == BB->getIndex() + 1
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
   Func.Blocks.push_back(EntryBlock);
 
-  // Create FlowBlock for every basic block in the binary function
+  // Create FlowBlock for every basic block in the binary function.
   for (const BinaryBasicBlock *BB : BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
@@ -325,7 +331,12 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
            "incorrectly assigned basic block index");
   }
 
-  // Create FlowJump for each jump between basic blocks in the binary function
+  // Add a special "dummy" sink block so there is always a unique sink.
+  FlowBlock SinkBlock;
+  SinkBlock.Index = Func.Blocks.size();
+  Func.Blocks.push_back(SinkBlock);
+
+  // Create FlowJump for each jump between basic blocks in the binary function.
   std::vector<uint64_t> InDegree(Func.Blocks.size(), 0);
   for (const BinaryBasicBlock *SrcBB : BlockOrder) {
     std::unordered_set<const BinaryBasicBlock *> UniqueSuccs;
@@ -342,6 +353,16 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       InDegree[Jump.Target]++;
       UniqueSuccs.insert(DstBB);
     }
+    // TODO: set jump from exit block to landing pad to Unlikely.
+    // If the block is an exit, add a dummy edge from it to the sink block.
+    if (UniqueSuccs.empty()) {
+      Func.Jumps.emplace_back();
+      FlowJump &Jump = Func.Jumps.back();
+      Jump.Source = SrcBB->getIndex() + 1;
+      Jump.Target = Func.Blocks.size() - 1;
+      InDegree[Jump.Target]++;
+    }
+
     // Collect jumps to landing pads
     for (const BinaryBasicBlock *DstBB : SrcBB->landing_pads()) {
       // Ignoring parallel edges
@@ -358,9 +379,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   }
 
   // Add dummy edges to the extra sources. If there are multiple entry blocks,
-  // add an unlikely edge from 0 to the subsequent ones
+  // add an unlikely edge from 0 to the subsequent ones. Skips the sink block.
   assert(InDegree[0] == 0 && "dummy entry blocks shouldn't have predecessors");
-  for (uint64_t I = 1; I < Func.Blocks.size(); I++) {
+  for (uint64_t I = 1; I < Func.Blocks.size() - 1; I++) {
     const BinaryBasicBlock *BB = BlockOrder[I - 1];
     if (BB->isEntryPoint() || InDegree[I] == 0) {
       Func.Jumps.emplace_back();
@@ -391,11 +412,10 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-void matchWeightsByHashes(BinaryContext &BC,
-                          const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                          const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func) {
-  assert(Func.Blocks.size() == BlockOrder.size() + 1);
+size_t matchWeightsByHashes(
+    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
+    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func) {
+  assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
@@ -500,6 +520,8 @@ void matchWeightsByHashes(BinaryContext &BC,
     Block.HasUnknownWeight = false;
     Block.Weight = std::max(OutWeight[Block.Index], InWeight[Block.Index]);
   }
+
+  return MatchedBlocks.size();
 }
 
 /// The function finds all blocks that are (i) reachable from the Entry block
@@ -575,13 +597,19 @@ void preprocessUnreachableBlocks(FlowFunction &Func) {
 /// Decide if stale profile matching can be applied for a given function.
 /// Currently we skip inference for (very) large instances and for instances
 /// having "unexpected" control flow (e.g., having no sink basic blocks).
-bool canApplyInference(const FlowFunction &Func) {
+bool canApplyInference(const FlowFunction &Func,
+                       const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                       const uint64_t &MatchedBlocks) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  bool HasExitBlocks = llvm::any_of(
-      Func.Blocks, [&](const FlowBlock &Block) { return Block.isExit(); });
-  if (!HasExitBlocks)
+  if (MatchedBlocks * 100 <
+      opts::StaleMatchingMinMatchedBlock * YamlBF.Blocks.size())
+    return false;
+
+  // Returns false if the artificial sink block has no predecessors meaning
+  // there are no exit blocks.
+  if (Func.Blocks[Func.Blocks.size() - 1].isEntry())
     return false;
 
   return true;
@@ -618,7 +646,7 @@ void assignProfile(BinaryFunction &BF,
                    FlowFunction &Func) {
   BinaryContext &BC = BF.getBinaryContext();
 
-  assert(Func.Blocks.size() == BlockOrder.size() + 1);
+  assert(Func.Blocks.size() == BlockOrder.size() + 2);
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     FlowBlock &Block = Func.Blocks[I + 1];
     BinaryBasicBlock *BB = BlockOrder[I];
@@ -640,6 +668,9 @@ void assignProfile(BinaryFunction &BF,
       if (Jump->Flow == 0)
         continue;
 
+      // Skips the artificial sink block.
+      if (Jump->Target == Func.Blocks.size() - 1)
+        continue;
       BinaryBasicBlock &SuccBB = *BlockOrder[Jump->Target - 1];
       // Check if the edge corresponds to a regular jump or a landing pad
       if (BB->getSuccessor(SuccBB.getLabel())) {
@@ -725,18 +756,21 @@ bool YAMLProfileReader::inferStaleProfile(
   const BinaryFunction::BasicBlockOrderType BlockOrder(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
+  // Tracks the number of matched blocks.
+
   // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
+  size_t MatchedBlocks =
+      matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
   preprocessUnreachableBlocks(Func);
 
   // Check if profile inference can be applied for the instance.
-  if (!canApplyInference(Func))
+  if (!canApplyInference(Func, YamlBF, MatchedBlocks))
     return false;
 
   // Apply the profile inference algorithm.

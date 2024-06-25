@@ -480,7 +480,7 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
   assert(allowAutoPadding() && "incorrect initialization!");
 
   // We only pad in text section.
-  if (!OS.getCurrentSectionOnly()->getKind().isText())
+  if (!OS.getCurrentSectionOnly()->isText())
     return false;
 
   // To be Done: Currently don't deal with Bundle cases.
@@ -530,7 +530,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!canPadInst(Inst, OS))
     return;
 
-  if (PendingBA && PendingBA->getNextNode() == OS.getCurrentFragment()) {
+  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -556,7 +556,9 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    OS.insert(PendingBA = new MCBoundaryAlignFragment(AlignBoundary, STI));
+    PendingBA = OS.getContext().allocFragment<MCBoundaryAlignFragment>(
+        AlignBoundary, STI);
+    OS.insert(PendingBA);
   }
 }
 
@@ -589,7 +591,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   // MCAssembler::relaxBoundaryAlign. The easiest way is to insert a new empty
   // DataFragment.
   if (isa_and_nonnull<MCDataFragment>(CF))
-    OS.insert(new MCDataFragment());
+    OS.insert(OS.getContext().allocFragment<MCDataFragment>());
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();
@@ -876,7 +878,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
     LabeledFragments.insert(S.getFragment(false));
 
   for (MCSection &Sec : Asm) {
-    if (!Sec.getKind().isText())
+    if (!Sec.isText())
       continue;
 
     SmallVector<MCRelaxableFragment *, 4> Relaxable;
@@ -978,8 +980,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.getFragmentList().rbegin());
-    Asm.computeFragmentSize(Layout, *Section.getFragmentList().rbegin());
+    Layout.getFragmentOffset(&*Section.curFragList()->Tail);
+    Asm.computeFragmentSize(Layout, *Section.curFragList()->Tail);
   }
 }
 

@@ -1746,11 +1746,6 @@ LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
                                    unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getShl(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),

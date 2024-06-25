@@ -937,15 +937,16 @@ entry:
 define i1 @is_minus_zero_f(float %x) {
 ; X86-LABEL: is_minus_zero_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    cmpl $-2147483648, {{[0-9]+}}(%esp) # imm = 0x80000000
-; X86-NEXT:    sete %al
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    seto %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: is_minus_zero_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; X64-NEXT:    sete %al
+; X64-NEXT:    negl %eax
+; X64-NEXT:    seto %al
 ; X64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 32)  ; 0x20 = "-zero"
@@ -955,15 +956,16 @@ entry:
 define i1 @not_is_minus_zero_f(float %x) {
 ; X86-LABEL: not_is_minus_zero_f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    cmpl $-2147483648, {{[0-9]+}}(%esp) # imm = 0x80000000
-; X86-NEXT:    setne %al
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setno %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: not_is_minus_zero_f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; X64-NEXT:    setne %al
+; X64-NEXT:    negl %eax
+; X64-NEXT:    setno %al
 ; X64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 991)  ; ~0x20 = ~"-zero"
