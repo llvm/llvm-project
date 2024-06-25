@@ -190,9 +190,8 @@ public:
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
+    PreservedIDs.remove_if(
+        [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
   }
 
   /// Intersect this set with a temporary other set in place.
@@ -212,9 +211,8 @@ public:
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto *ID : PreservedIDs)
-      if (!Arg.PreservedIDs.count(ID))
-        PreservedIDs.erase(ID);
+    PreservedIDs.remove_if(
+        [&](void *ID) { return !Arg.PreservedIDs.contains(ID); });
   }
 
   /// A checker object that makes it easy to query for whether an analysis or
