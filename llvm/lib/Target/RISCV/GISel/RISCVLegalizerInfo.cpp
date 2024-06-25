@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -690,42 +691,46 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
 
   Register DstReg = MI.getOperand(0).getReg();
   Register PtrReg = MI.getOperand(1).getReg();
-  LLT LoadTy = MRI.getType(DstReg);
-  assert(LoadTy.isVector() && "Expect vector load.");
+  LLT DataTy = MRI.getType(DstReg);
+  assert(DataTy.isVector() && "Expect vector load.");
   assert(STI.hasVInstructions() &&
-         (LoadTy.getScalarSizeInBits() != 64 || STI.hasVInstructionsI64()) &&
-         (LoadTy.getElementCount().getKnownMinValue() != 1 ||
+         (DataTy.getScalarSizeInBits() != 64 || STI.hasVInstructionsI64()) &&
+         (DataTy.getElementCount().getKnownMinValue() != 1 ||
           STI.getELen() == 64) &&
          "Load type must be legal integer or floating point vector.");
 
   assert(MI.hasOneMemOperand() &&
          "Load instructions only have one MemOperand.");
-  Align Alignment = (*MI.memoperands_begin())->getAlign();
-  MachineMemOperand *LoadMMO = MF->getMachineMemOperand(
-      MachinePointerInfo(), MachineMemOperand::MOLoad, LoadTy, Alignment);
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  Align Alignment = MMO->getAlign();
 
   const auto *TLI = STI.getTargetLowering();
-  EVT VT = EVT::getEVT(getTypeForLLT(LoadTy, Ctx));
+  EVT VT = EVT::getEVT(getTypeForLLT(DataTy, Ctx));
 
-  if (TLI->allowsMemoryAccessForAlignment(Ctx, DL, VT, *LoadMMO))
+  if (TLI->allowsMemoryAccessForAlignment(Ctx, DL, VT, *MMO))
     return true;
 
-  unsigned EltSizeBits = LoadTy.getScalarSizeInBits();
+  unsigned EltSizeBits = DataTy.getScalarSizeInBits();
   assert((EltSizeBits == 16 || EltSizeBits == 32 || EltSizeBits == 64) &&
          "Unexpected unaligned RVV load type");
 
   // Calculate the new vector type with i8 elements
   unsigned NumElements =
-      LoadTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
-  LLT NewLoadTy = LLT::scalable_vector(NumElements, 8);
+      DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
 
-  MachinePointerInfo PI = cast<GLoad>(MI).getMMO().getPointerInfo();
-  MachineMemOperand *NewLoadMMO = MF->getMachineMemOperand(
-      PI, MachineMemOperand::MOLoad, NewLoadTy, Alignment);
+  MachinePointerInfo PI = MMO->getPointerInfo();
+  MachineMemOperand *NewMMO =
+      MF->getMachineMemOperand(PI, MMO->getFlags(), NewDataTy, Alignment);
 
-  auto NewLoad = MIB.buildLoad(NewLoadTy, PtrReg, *NewLoadMMO);
-
-  MIB.buildBitcast(DstReg, NewLoad);
+  if (isa<GLoad>(MI)) {
+    auto NewLoad = MIB.buildLoad(NewDataTy, PtrReg, *NewMMO);
+    MIB.buildBitcast(DstReg, NewLoad);
+  } else {
+    assert(isa<GStore>(MI) && "Machine instructions must be Load/Store.");
+    auto BitcastedData = MIB.buildBitcast(NewDataTy, DstReg);
+    MIB.buildStore(BitcastedData, PtrReg, *NewMMO);
+  }
 
   MI.eraseFromParent();
 
