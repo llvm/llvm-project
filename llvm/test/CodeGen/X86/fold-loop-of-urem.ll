@@ -15,25 +15,31 @@ define void @simple_urem_to_sel(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %r14d, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    incl %r14d
-; CHECK-NEXT:    cmpl %r14d, %ebp
+; CHECK-NEXT:    cmpl %ebx, %r14d
+; CHECK-NEXT:    cmovel %r15d, %r14d
+; CHECK-NEXT:    incl %r12d
+; CHECK-NEXT:    cmpl %r12d, %ebp
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:  .LBB0_4: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -60,24 +66,28 @@ define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    je .LBB1_8
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_5: # %for.body1
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    movl %r14d, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:  .LBB1_6: # %for.body.tail
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
-; CHECK-NEXT:    cmpl %r14d, %ebp
+; CHECK-NEXT:    cmpl %ebx, %r14d
+; CHECK-NEXT:    cmovel %r15d, %r14d
+; CHECK-NEXT:    incl %r12d
+; CHECK-NEXT:    cmpl %r12d, %ebp
 ; CHECK-NEXT:    je .LBB1_7
 ; CHECK-NEXT:  .LBB1_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -97,7 +107,9 @@ define void @simple_urem_to_sel_nested2(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    jmp .LBB1_6
 ; CHECK-NEXT:  .LBB1_7:
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:  .LBB1_8: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -213,40 +225,36 @@ for.body.tail:
 define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-LABEL: simple_urem_to_sel_vec:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movq %xmm0, %rbx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; CHECK-NEXT:    movq %xmm0, %r14
+; CHECK-NEXT:    pxor %xmm0, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movdqa %xmm1, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movq %xmm1, %rax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divq %rbx
-; CHECK-NEXT:    movq %rdx, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movq %xmm1, %rax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divq %r14
-; CHECK-NEXT:    movq %rdx, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    callq use.2xi64@PLT
-; CHECK-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    psubq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    movdqa (%rsp), %xmm2 # 16-byte Reload
+; CHECK-NEXT:    psubq %xmm1, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    pcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pandn %xmm3, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    psubq %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq get.i1@PLT
 ; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    je .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    retq
 entry:
   br label %for.body
@@ -336,27 +344,33 @@ define void @simple_urem_to_sel_second_acc(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    movl $1, %r15d
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB5_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %r14d, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    cmpl %ebx, %r14d
+; CHECK-NEXT:    cmovel %r12d, %r14d
+; CHECK-NEXT:    incl %r13d
 ; CHECK-NEXT:    addl $2, %r15d
 ; CHECK-NEXT:    cmpl %ebp, %r15d
 ; CHECK-NEXT:    jbe .LBB5_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
@@ -676,23 +690,27 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    decl %ebp
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB12_2
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB12_3: # %for.body.backedge
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    cmpl %ebx, %r14d
+; CHECK-NEXT:    cmovel %r12d, %r14d
+; CHECK-NEXT:    incl %r13d
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %r14d, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    callq get.i1@PLT
 ; CHECK-NEXT:    movl %eax, %r15d
@@ -702,11 +720,13 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:  # %bb.4: # %for.body0
 ; CHECK-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; CHECK-NEXT:    callq do_stuff1@PLT
-; CHECK-NEXT:    cmpl %r14d, %ebp
+; CHECK-NEXT:    cmpl %r13d, %ebp
 ; CHECK-NEXT:    jne .LBB12_3
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
