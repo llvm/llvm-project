@@ -108,7 +108,6 @@ struct Foo {
   Foo(T const (&)[N]);
 };
 
-// FIXME: Clarify that __is_deducible constraints are unsatisfied. For example, GCC currently prints the code snippet around constructors
 // FIXME: Prefer non-canonical template arguments in the deduction guide?
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
