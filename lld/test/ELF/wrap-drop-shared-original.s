@@ -20,7 +20,7 @@
 # RUN: llvm-readelf --dynamic --dyn-syms %t/libref-with-original-and-wrapped.so | \
 # RUN:   FileCheck --check-prefix=ORIGINAL-AND-WRAPPED %s
 
-# ORIGINAL-NOT: (NEEDED) Shared library: [liboriginal.so]
+# ORIGINAL-NOT: (NEEDED) Shared library: liboriginal.so
 # ORIGINAL:      Symbol table '.dynsym' contains 3 entries:
 # ORIGINAL:      NOTYPE  LOCAL  DEFAULT   UND
 # ORIGINAL-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap_foo
