@@ -91,7 +91,7 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
 EnableOption(ConstantArgumentGlobalisation, "constant-argument-globalisation",
-    "enable the local constants to global constant conversion");
+    "the local constant argument to global constant conversion");
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
