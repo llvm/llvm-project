@@ -569,6 +569,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now has an improved error message when trying to capture a variable for lambda function expressions.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
