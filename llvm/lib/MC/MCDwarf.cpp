@@ -1777,7 +1777,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 namespace {
 
 struct CIEKey {
-  CIEKey() {}
+  CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
@@ -1818,7 +1818,7 @@ struct CIEKey {
   unsigned LsdaEncoding = -1;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(INT_MAX);
+  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
 };
