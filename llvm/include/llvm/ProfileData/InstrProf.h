@@ -1173,17 +1173,7 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling,
   Version12 = 12,
-  // Additional fields for profile reader to have limited forward compatibility.
-  // 1. Records the byte size of the profile header. This allows profile reader
-  // to skip unknown new header fields (introduced in newer versions of
-  // profiles) and correctly locate the start of payload sections.
-  // 2. Records the minimum compatible version required from profile reader to
-  // parse the profiles in the correct semantic. Indexed profile reader compares
-  // the latest version it can parse with the minimum version required
-  // by the profile to decide if it can reasonably interpret the payload. If
-  // yes, it proceeds to parse known sections and skip new unknown sections;
-  // otherwise it stops reading and throws error. In the latter case, users
-  // should update the compilers or tools binary to support newer versions.
+  // Added limited forward compatibility.  See XYZ for details.
   Version13 = 13,
   // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
