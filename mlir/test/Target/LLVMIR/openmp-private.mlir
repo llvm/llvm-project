@@ -140,3 +140,47 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
   llvm.store %1, %arg2 : f32, !llvm.ptr
   omp.yield(%arg2 : !llvm.ptr)
 }
+
+// Tests fix for Fujitsu test suite test: 0007_0019.f90: the
+// `llvm.mlir.addressof` op needs access to the parent module when lowering
+// from the LLVM dialect to LLVM IR. If such op is used inside an `omp.private`
+// op instance that was not created/cloned inside the module, we would get a
+// seg fault due to trying to access a null pointer.
+
+// CHECK-LABEL: define internal void @lower_region_with_addressof..omp_par
+// CHECK:         omp.par.region:
+// CHECK:           br label %[[PAR_REG_BEG:.*]]
+// CHECK:         [[PAR_REG_BEG]]:
+// CHECK:           %[[PRIVATIZER_GEP:.*]] = getelementptr double, ptr @_QQfoo, i64 111
+// CHECK:           call void @bar(ptr %[[PRIVATIZER_GEP]])
+// CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
+llvm.func @lower_region_with_addressof() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr
+  omp.parallel private(@_QFlower_region_with_addressof_privatizer %1 -> %arg0 : !llvm.ptr) {
+    %c0 = llvm.mlir.constant(111 : i64) : i64
+    %2 = llvm.getelementptr %arg0[%c0] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%2) : (!llvm.ptr) -> ()
+
+    %c1 = llvm.mlir.constant(222 : i64) : i64
+    %3 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+    %4 = llvm.getelementptr %3[%c1] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%4) : (!llvm.ptr) -> ()
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr alloc {
+^bb0(%arg0: !llvm.ptr):
+  %0 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+
+llvm.mlir.global linkonce constant @_QQfoo() {addr_space = 0 : i32} : !llvm.array<3 x i8> {
+  %0 = llvm.mlir.constant("foo") : !llvm.array<3 x i8>
+  llvm.return %0 : !llvm.array<3 x i8>
+}
+
+llvm.func @bar(!llvm.ptr)
