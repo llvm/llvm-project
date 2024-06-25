@@ -40,7 +40,7 @@ void local_stringlit() {
   const char *s = "whatnow";
 }
 
-// CHECK: cir.global "private" constant internal @".str" = #cir.const_array<"whatnow\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
+// CHECK: cir.global "private" constant internal dsolocal @".str" = #cir.const_array<"whatnow\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
 // CHECK: cir.func @_Z15local_stringlitv()
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["s", init] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 8>>

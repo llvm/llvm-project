@@ -30,6 +30,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Interfaces/CIROpInterfaces.h"
 
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -280,6 +281,8 @@ public:
   /// Emit any vtables which we deferred and still have a use for.
   void buildDeferredVTables();
   bool shouldOpportunisticallyEmitVTables();
+
+  void setDSOLocal(mlir::cir::CIRGlobalValueInterface GV) const;
 
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.

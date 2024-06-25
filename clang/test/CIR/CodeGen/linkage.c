@@ -12,7 +12,7 @@ int foo(void) {
   return bar(5);
 }
 
-// CIR:   cir.func internal private @bar(
+// CIR:   cir.func internal private dsolocal @bar(
 // CIR:   cir.func @foo(
 
 // LLVM: define internal i32 @bar(

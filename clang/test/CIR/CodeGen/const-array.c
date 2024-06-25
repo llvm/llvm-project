@@ -4,7 +4,7 @@ void bar() {
   const int arr[1] = {1};
 }
 
-// CHECK: cir.global "private" constant internal @bar.arr = #cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1> {alignment = 4 : i64}
+// CHECK: cir.global "private" constant internal dsolocal @bar.arr = #cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1> {alignment = 4 : i64}
 // CHECK: cir.func no_proto @bar()
 // CHECK:   {{.*}} = cir.get_global @bar.arr : !cir.ptr<!cir.array<!s32i x 1>>
 

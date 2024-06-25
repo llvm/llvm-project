@@ -49,10 +49,10 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @rgb = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<233> : !u8i, #cir.int<33> : !u8i]> : !cir.array<!u8i x 3>
 // CHECK-NEXT: cir.global external @alpha = #cir.const_array<"abc\00" : !cir.array<!s8i x 4>> : !cir.array<!s8i x 4>
 
-// CHECK-NEXT: cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
+// CHECK-NEXT: cir.global "private" constant internal dsolocal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
-// CHECK-NEXT: cir.global "private" constant internal @".str1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
+// CHECK-NEXT: cir.global "private" constant internal dsolocal @".str1" = #cir.const_array<"example1\00" : !cir.array<!s8i x 9>> : !cir.array<!s8i x 9> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global external @s1 = #cir.global_view<@".str1"> : !cir.ptr<!s8i>
 
 // CHECK-NEXT: cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>

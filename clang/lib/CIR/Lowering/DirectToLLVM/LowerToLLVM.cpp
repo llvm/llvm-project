@@ -1512,6 +1512,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto fnType = op.getFunctionType();
+    auto isDsoLocal = op.getDsolocal();
     mlir::TypeConverter::SignatureConversion signatureConversion(
         fnType.getNumInputs());
 
@@ -1545,7 +1546,7 @@ public:
     filterFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
     auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-        Loc, op.getName(), llvmFnTy, linkage, false, mlir::LLVM::CConv::C,
+        Loc, op.getName(), llvmFnTy, linkage, isDsoLocal, mlir::LLVM::CConv::C,
         mlir::SymbolRefAttr(), attributes);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
@@ -1654,6 +1655,7 @@ public:
     // Fetch required values to create LLVM op.
     const auto llvmType = getTypeConverter()->convertType(op.getSymType());
     const auto isConst = op.getConstant();
+    const auto isDsoLocal = op.getDsolocal();
     const auto linkage = convertLinkage(op.getLinkage());
     const auto symbol = op.getSymName();
     const auto loc = op.getLoc();
@@ -1670,7 +1672,7 @@ public:
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, mlir::Attribute(),
           /*alignment*/ 0, /*addrSpace*/ 0,
-          /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
+          /*dsoLocal*/ isDsoLocal, /*threadLocal*/ (bool)op.getTlsModelAttr(),
           /*comdat*/ mlir::SymbolRefAttr(), attributes);
       return mlir::success();
     }

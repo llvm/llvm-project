@@ -48,6 +48,8 @@ struct MissingFeatures {
   static bool hiddenVisibility() { return false; }
   static bool protectedVisibility() { return false; }
   static bool addCompilerUsedGlobal() { return false; }
+  static bool supportIFuncAttr() { return false; }
+  static bool setDefaultVisibility() { return false; }
 
   // Sanitizers
   static bool reportGlobalToASan() { return false; }
