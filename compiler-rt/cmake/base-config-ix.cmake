@@ -23,13 +23,13 @@ endif()
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
+set_property(TARGET compiler-rt PROPERTY FOLDER "Compiler-RT/Metatargets")
 set_property(
   TARGET
-    compiler-rt
     install-compiler-rt
     install-compiler-rt-stripped
   PROPERTY
-    FOLDER "Compiler-RT Misc"
+    FOLDER "Compiler-RT/Installation"
 )
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
@@ -156,6 +156,7 @@ if(APPLE)
 
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
+  option(COMPILER_RT_ENABLE_XROS "Enable building for xrOS - Experimental" Off)
 
 else()
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)

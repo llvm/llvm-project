@@ -31,7 +31,8 @@ b5:                                               ; preds = %b5, %b1
 
 b7:                                               ; preds = %b10, %b4
   %v8 = call i32 @llvm.hexagon.V6.extractw(<16 x i32> zeroinitializer, i32 0)
-  br i1 icmp eq (ptr @f0, ptr null), label %b11, label %b9
+  %cmp = icmp eq ptr @f0, null
+  br i1 %cmp, label %b11, label %b9
 
 b9:                                               ; preds = %b7
   call void (i32, ptr, i32, ptr, ...) @f0(i32 2, ptr @g0, i32 2346, ptr @g1, i32 %v8)

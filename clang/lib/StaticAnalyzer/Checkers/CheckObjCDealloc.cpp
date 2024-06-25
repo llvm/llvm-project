@@ -768,8 +768,8 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
   Block_releaseII = &Ctx.Idents.get("_Block_release");
   CIFilterII = &Ctx.Idents.get("CIFilter");
 
-  IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
-  IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
+  const IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
+  const IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
   DeallocSel = Ctx.Selectors.getSelector(0, &DeallocII);
   ReleaseSel = Ctx.Selectors.getSelector(0, &ReleaseII);
 }

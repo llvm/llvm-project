@@ -129,6 +129,12 @@ APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
   return APFixedPoint(Val, Sema);
 }
 
+APFixedPoint APFixedPoint::getEpsilon(const FixedPointSemantics &Sema) {
+  APSInt Val(Sema.getWidth(), !Sema.isSigned());
+  Val.setBit(/*BitPosition=*/0);
+  return APFixedPoint(Val, Sema);
+}
+
 bool FixedPointSemantics::fitsInFloatSemantics(
     const fltSemantics &FloatSema) const {
   // A fixed point semantic fits in a floating point semantic if the maximum

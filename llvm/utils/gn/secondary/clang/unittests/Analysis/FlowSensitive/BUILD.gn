@@ -18,6 +18,7 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "ASTOpsTest.cpp",
     "ArenaTest.cpp",
     "CFGMatchSwitchTest.cpp",
     "ChromiumCheckModelTest.cpp",
@@ -33,7 +34,6 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "SignAnalysisTest.cpp",
     "SimplifyConstraintsTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
-    "SolverTest.cpp",
     "TestingSupport.cpp",
     "TestingSupportTest.cpp",
     "TransferBranchTest.cpp",
@@ -41,5 +41,6 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "TypeErasedDataflowAnalysisTest.cpp",
     "UncheckedOptionalAccessModelTest.cpp",
     "ValueTest.cpp",
+    "WatchedLiteralsSolverTest.cpp",
   ]
 }

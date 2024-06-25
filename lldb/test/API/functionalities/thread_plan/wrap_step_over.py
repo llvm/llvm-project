@@ -2,7 +2,7 @@ import lldb
 
 
 class WrapStepOver:
-    def __init__(self, thread_plan, args_data):
+    def __init__(self, thread_plan, args_data, dict):
         self.plan = thread_plan
         thread = thread_plan.GetThread()
         target = thread.GetProcess().GetTarget()

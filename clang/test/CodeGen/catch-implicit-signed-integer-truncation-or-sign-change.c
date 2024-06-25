@@ -5,10 +5,10 @@
 
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_INT:.*]] = {{.*}} c"'unsigned int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-NEXT: @[[SIGNED_CHAR:.*]] = {{.*}} c"'signed char'\00" }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 4 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200_SIGN_CHANGE:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300_SIGN_CHANGE:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3 }
-// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_100_SIGNED_TRUNCATION_OR_SIGN_CHANGE:.*]] = {{.*}}, i32 100, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 4, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_200_SIGN_CHANGE:.*]] = {{.*}}, i32 200, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_300_SIGN_CHANGE:.*]] = {{.*}}, i32 300, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 3, i32 0 }
+// CHECK-SANITIZE-ANYRECOVER-NEXT: @[[LINE_400_SIGNED_TRUNCATION:.*]] = {{.*}}, i32 400, i32 10 }, ptr @[[UNSIGNED_INT]], ptr @[[SIGNED_CHAR]], i8 2, i32 0 }
 
 //============================================================================//
 // Both sanitizers are enabled, and not disabled per-function.

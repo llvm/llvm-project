@@ -31,9 +31,9 @@
 
 using namespace llvm;
 
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs);
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs);
 
 namespace {
 
@@ -51,8 +51,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -78,7 +78,7 @@ public:
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainIncomingRegisterTakenAsIs(Incoming &In) override;
+  void constrainAsLaneMask(Incoming &In) override;
 
   bool lowerCopiesFromI1();
   bool lowerCopiesToI1();
@@ -304,7 +304,8 @@ public:
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
   void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
-                      MachineRegisterInfo &MRI, Register LaneMaskRegAttrs,
+                      MachineRegisterInfo &MRI,
+                      MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs,
                       ArrayRef<Incoming> Incomings = {}) {
     assert(LoopLevel < CommonDominators.size());
 
@@ -398,8 +399,8 @@ private:
 
 INITIALIZE_PASS_BEGIN(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILowerI1Copies, DEBUG_TYPE, "SI Lower i1 Copies", false,
                     false)
 
@@ -411,14 +412,15 @@ FunctionPass *llvm::createSILowerI1CopiesPass() {
   return new SILowerI1Copies();
 }
 
-Register llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
-                                 Register LaneMaskRegAttrs) {
-  return MRI->cloneVirtualRegister(LaneMaskRegAttrs);
+Register
+llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
+                        MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
+  return MRI->createVirtualRegister(LaneMaskRegAttrs);
 }
 
-static Register insertUndefLaneMask(MachineBasicBlock *MBB,
-                                    MachineRegisterInfo *MRI,
-                                    Register LaneMaskRegAttrs) {
+static Register
+insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
+                    MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
   MachineFunction &MF = *MBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -443,8 +445,9 @@ bool SILowerI1Copies::runOnMachineFunction(MachineFunction &TheMF) {
           MachineFunctionProperties::Property::Selected))
     return false;
 
-  Vreg1LoweringHelper Helper(&TheMF, &getAnalysis<MachineDominatorTree>(),
-                             &getAnalysis<MachinePostDominatorTree>());
+  Vreg1LoweringHelper Helper(
+      &TheMF, &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree());
 
   bool Changed = false;
   Changed |= Helper.lowerCopiesFromI1();
@@ -619,7 +622,7 @@ bool PhiLoweringHelper::lowerPhis() {
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         if (PIA.isSource(IMBB)) {
-          constrainIncomingRegisterTakenAsIs(Incoming);
+          constrainAsLaneMask(Incoming);
           SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
         } else {
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
@@ -911,6 +914,4 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
   }
 }
 
-void Vreg1LoweringHelper::constrainIncomingRegisterTakenAsIs(Incoming &In) {
-  return;
-}
+void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}

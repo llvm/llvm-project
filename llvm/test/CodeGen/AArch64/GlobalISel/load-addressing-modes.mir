@@ -2,29 +2,28 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define void @ldrxrox_breg_oreg(i64* %addr) { ret void }
-  define void @ldrdrox_breg_oreg(i64* %addr) { ret void }
-  define void @more_than_one_use(i64* %addr) { ret void }
-  define void @ldrxrox_shl(i64* %addr) { ret void }
-  define void @ldrdrox_shl(i64* %addr) { ret void }
-  define void @ldrxrox_mul_rhs(i64* %addr) { ret void }
-  define void @ldrdrox_mul_rhs(i64* %addr) { ret void }
-  define void @ldrxrox_mul_lhs(i64* %addr) { ret void }
-  define void @ldrdrox_mul_lhs(i64* %addr) { ret void }
-  define void @mul_not_pow_2(i64* %addr) { ret void }
-  define void @mul_wrong_pow_2(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_1(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_2(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_lsl_fast(i64* %addr) #1 { ret void }
-  define void @more_than_one_use_shl_lsl_slow(i64* %addr) { ret void }
-  define void @more_than_one_use_shl_minsize(i64* %addr) #0 { ret void }
-  define void @ldrwrox(i64* %addr) { ret void }
-  define void @ldrsrox(i64* %addr) { ret void }
-  define void @ldrhrox(i64* %addr) { ret void }
-  define void @ldbbrox(i64* %addr) { ret void }
-  define void @ldrqrox(i64* %addr) { ret void }
+  define void @ldrxrox_breg_oreg(ptr %addr) { ret void }
+  define void @ldrdrox_breg_oreg(ptr %addr) { ret void }
+  define void @more_than_one_use(ptr %addr) { ret void }
+  define void @ldrxrox_shl(ptr %addr) { ret void }
+  define void @ldrdrox_shl(ptr %addr) { ret void }
+  define void @ldrxrox_mul_rhs(ptr %addr) { ret void }
+  define void @ldrdrox_mul_rhs(ptr %addr) { ret void }
+  define void @ldrxrox_mul_lhs(ptr %addr) { ret void }
+  define void @ldrdrox_mul_lhs(ptr %addr) { ret void }
+  define void @mul_not_pow_2(ptr %addr) { ret void }
+  define void @mul_wrong_pow_2(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_1(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_2(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_lsl_fast(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_lsl_slow(ptr %addr) { ret void }
+  define void @more_than_one_use_shl_minsize(ptr %addr) #0 { ret void }
+  define void @ldrwrox(ptr %addr) { ret void }
+  define void @ldrsrox(ptr %addr) { ret void }
+  define void @ldrhrox(ptr %addr) { ret void }
+  define void @ldbbrox(ptr %addr) { ret void }
+  define void @ldrqrox(ptr %addr) { ret void }
   attributes #0 = { optsize }
-  attributes #1 = { "target-features"="+addr-lsl-fast" }
 ...
 
 ---
@@ -40,11 +39,12 @@ body:             |
 
     ; CHECK-LABEL: name: ldrxrox_breg_oreg
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
-    ; CHECK: $x0 = COPY [[LDRXroX]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $x0 = COPY [[LDRXroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -65,11 +65,12 @@ body:             |
     liveins: $d0, $x1
     ; CHECK-LABEL: name: ldrdrox_breg_oreg
     ; CHECK: liveins: $d0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
-    ; CHECK: $d0 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY]], [[COPY1]], 0, 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d0 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -78,6 +79,9 @@ body:             |
     RET_ReallyLR implicit $d0
 ...
 ---
+# This shouldn't be folded, since we reuse the result of the G_PTR_ADD outside
+# the G_LOAD
+
 name:            more_than_one_use
 alignment:       4
 legalized:       true
@@ -87,18 +91,17 @@ machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $x0, $x1
-    ; This shouldn't be folded, since we reuse the result of the G_PTR_ADD outside
-    ; the G_LOAD
     ; CHECK-LABEL: name: more_than_one_use
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY]], [[COPY1]]
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
-    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[LDRXui]]
-    ; CHECK: $x0 = COPY [[ADDXrr1]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
+    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[LDRXui]]
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrr1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -121,11 +124,12 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: ldrxrox_shl
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $x2 = COPY [[LDRXroX]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $x2 = COPY [[LDRXroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -148,11 +152,12 @@ body:             |
     liveins: $x0, $x1, $d2
     ; CHECK-LABEL: name: ldrdrox_shl
     ; CHECK: liveins: $x0, $x1, $d2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $d2 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d2 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -175,11 +180,12 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: ldrxrox_mul_rhs
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $x2 = COPY [[LDRXroX]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $x2 = COPY [[LDRXroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_MUL %0, %1(s64)
@@ -202,11 +208,12 @@ body:             |
     liveins: $x0, $x1, $d2
     ; CHECK-LABEL: name: ldrdrox_mul_rhs
     ; CHECK: liveins: $x0, $x1, $d2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $d2 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d2 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_MUL %0, %1(s64)
@@ -229,11 +236,12 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: ldrxrox_mul_lhs
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $x2 = COPY [[LDRXroX]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $x2 = COPY [[LDRXroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_MUL %1, %0(s64)
@@ -256,11 +264,12 @@ body:             |
     liveins: $x0, $x1, $d2
     ; CHECK-LABEL: name: ldrdrox_mul_lhs
     ; CHECK: liveins: $x0, $x1, $d2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: $d2 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d2 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_MUL %1, %0(s64)
@@ -272,6 +281,9 @@ body:             |
 
 ...
 ---
+# Show that we don't get a shifted load from a mul when we don't have a
+# power of 2. (The bit isn't set on the load.)
+
 name:            mul_not_pow_2
 alignment:       4
 legalized:       true
@@ -280,19 +292,18 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that we don't get a shifted load from a mul when we don't have a
-    ; power of 2. (The bit isn't set on the load.)
     liveins: $x0, $x1, $d2
     ; CHECK-LABEL: name: mul_not_pow_2
     ; CHECK: liveins: $x0, $x1, $d2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 7
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
-    ; CHECK: $d2 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 7
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d2 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 7
     %2:gpr(s64) = G_MUL %1, %0(s64)
@@ -304,6 +315,9 @@ body:             |
 
 ...
 ---
+# Show that we don't get a shifted load from a mul when we don't have
+# the right power of 2. (The bit isn't set on the load.)
+
 name:            mul_wrong_pow_2
 alignment:       4
 legalized:       true
@@ -312,19 +326,18 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that we don't get a shifted load from a mul when we don't have
-    ; the right power of 2. (The bit isn't set on the load.)
     liveins: $x0, $x1, $d2
     ; CHECK-LABEL: name: mul_wrong_pow_2
     ; CHECK: liveins: $x0, $x1, $d2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 16
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
-    ; CHECK: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
-    ; CHECK: $d2 = COPY [[LDRDroX]]
-    ; CHECK: RET_ReallyLR implicit $d2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 16
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[SUBREG_TO_REG]], [[COPY]], $xzr
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRDroX:%[0-9]+]]:fpr64 = LDRDroX [[COPY1]], [[MADDXrrr]], 0, 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: $d2 = COPY [[LDRDroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $d2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 16
     %2:gpr(s64) = G_MUL %1, %0(s64)
@@ -336,6 +349,9 @@ body:             |
 
 ...
 ---
+# Show that we can still fall back to the register-register addressing
+# mode when we fail to pull in the shift.
+
 name:            more_than_one_use_shl_1
 alignment:       4
 legalized:       true
@@ -344,19 +360,18 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that we can still fall back to the register-register addressing
-    ; mode when we fail to pull in the shift.
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: more_than_one_use_shl_1
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[UBFMXri]], 0, 0 :: (load (s64) from %ir.addr)
-    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
-    ; CHECK: $x2 = COPY [[ADDXrr]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[UBFMXri]], 0, 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
+    ; CHECK-NEXT: $x2 = COPY [[ADDXrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -370,6 +385,9 @@ body:             |
 
 ...
 ---
+# Show that when the GEP is used outside a memory op, we don't do any
+# folding at all.
+
 name:            more_than_one_use_shl_2
 alignment:       4
 legalized:       true
@@ -378,22 +396,21 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that when the GEP is used outside a memory op, we don't do any
-    ; folding at all.
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: more_than_one_use_shl_2
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
-    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[ADDXri]]
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
-    ; CHECK: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[ADDXrr1]]
-    ; CHECK: $x2 = COPY [[ADDXrr2]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY1]], [[UBFMXri]]
+    ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrr]], 0 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
+    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[ADDXri]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[ADDXrr]]
+    ; CHECK-NEXT: [[ADDXrr2:%[0-9]+]]:gpr64 = ADDXrr [[COPY2]], [[ADDXrr1]]
+    ; CHECK-NEXT: $x2 = COPY [[ADDXrr2]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -409,6 +426,9 @@ body:             |
 
 ...
 ---
+# Show that when we have a fastpath for shift-left, we perform the folding
+# if it has more than one use.
+
 name:            more_than_one_use_shl_lsl_fast
 alignment:       4
 legalized:       true
@@ -417,18 +437,17 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that when we have a fastpath for shift-left, we perform the folding
-    ; if it has more than one use.
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: more_than_one_use_shl_lsl_fast
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[LDRXroX1]]
-    ; CHECK: $x2 = COPY [[ADDXrr]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[LDRXroX1]]
+    ; CHECK-NEXT: $x2 = COPY [[ADDXrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -442,6 +461,9 @@ body:             |
 
 ...
 ---
+# Show that we don't fold into multiple memory ops when we don't have a
+# fastpath for shift-left.
+
 name:            more_than_one_use_shl_lsl_slow
 alignment:       4
 legalized:       true
@@ -450,19 +472,17 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that we don't fold into multiple memory ops when we don't have a
-    ; fastpath for shift-left.
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: more_than_one_use_shl_lsl_slow
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64common = ADDXrs [[COPY1]], [[COPY]], 3
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64) from %ir.addr)
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXui]], [[LDRXui1]]
-    ; CHECK: $x2 = COPY [[ADDXrr]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[LDRXroX1:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[LDRXroX1]]
+    ; CHECK-NEXT: $x2 = COPY [[ADDXrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -476,6 +496,9 @@ body:             |
 
 ...
 ---
+# Show that when we're optimizing for size, we'll do the folding no matter
+# what.
+
 name:            more_than_one_use_shl_minsize
 alignment:       4
 legalized:       true
@@ -484,22 +507,21 @@ tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    ; Show that when we're optimizing for size, we'll do the folding no matter
-    ; what.
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: more_than_one_use_shl_minsize
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
-    ; CHECK: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY2]], [[COPY]], 3
-    ; CHECK: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
-    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
-    ; CHECK: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
-    ; CHECK: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrs]], [[ADDXrr]]
-    ; CHECK: $x2 = COPY [[ADDXrr1]]
-    ; CHECK: RET_ReallyLR implicit $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[COPY]], 61, 60
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY1]]
+    ; CHECK-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[COPY2]], [[COPY]], 3
+    ; CHECK-NEXT: [[LDRXroX:%[0-9]+]]:gpr64 = LDRXroX [[COPY1]], [[COPY]], 0, 1 :: (load (s64) from %ir.addr)
+    ; CHECK-NEXT: [[ADDXri:%[0-9]+]]:gpr64common = ADDXri [[UBFMXri]], 3, 0
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[LDRXroX]], [[ADDXri]]
+    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[ADDXrs]], [[ADDXrr]]
+    ; CHECK-NEXT: $x2 = COPY [[ADDXrr1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x2
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 3
     %2:gpr(s64) = G_SHL %0, %1(s64)
@@ -525,11 +547,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: ldrwrox
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
-    ; CHECK: $w2 = COPY [[LDRWroX]]
-    ; CHECK: RET_ReallyLR implicit $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
+    ; CHECK-NEXT: $w2 = COPY [[LDRWroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -549,11 +572,12 @@ body:             |
     liveins: $d0, $x1
     ; CHECK-LABEL: name: ldrsrox
     ; CHECK: liveins: $d0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
-    ; CHECK: $s2 = COPY [[LDRSroX]]
-    ; CHECK: RET_ReallyLR implicit $h2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRSroX:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 0 :: (load (s32) from %ir.addr)
+    ; CHECK-NEXT: $s2 = COPY [[LDRSroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h2
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -573,11 +597,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: ldrhrox
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRHroX:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], [[COPY1]], 0, 0 :: (load (s16) from %ir.addr)
-    ; CHECK: $h2 = COPY [[LDRHroX]]
-    ; CHECK: RET_ReallyLR implicit $h2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRHroX:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], [[COPY1]], 0, 0 :: (load (s16) from %ir.addr)
+    ; CHECK-NEXT: $h2 = COPY [[LDRHroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -597,11 +622,12 @@ body:             |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: ldbbrox
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRBBroX:%[0-9]+]]:gpr32 = LDRBBroX [[COPY]], [[COPY1]], 0, 0 :: (load (s8) from %ir.addr)
-    ; CHECK: $w2 = COPY [[LDRBBroX]]
-    ; CHECK: RET_ReallyLR implicit $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRBBroX:%[0-9]+]]:gpr32 = LDRBBroX [[COPY]], [[COPY1]], 0, 0 :: (load (s8) from %ir.addr)
+    ; CHECK-NEXT: $w2 = COPY [[LDRBBroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w2
     %0:gpr(p0) = COPY $x0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1
@@ -621,11 +647,12 @@ body:             |
     liveins: $d0, $x1
     ; CHECK-LABEL: name: ldrqrox
     ; CHECK: liveins: $d0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY]], [[COPY1]], 0, 0 :: (load (<2 x s64>) from %ir.addr)
-    ; CHECK: $q0 = COPY [[LDRQroX]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[LDRQroX:%[0-9]+]]:fpr128 = LDRQroX [[COPY]], [[COPY1]], 0, 0 :: (load (<2 x s64>) from %ir.addr)
+    ; CHECK-NEXT: $q0 = COPY [[LDRQroX]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $d0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = G_PTR_ADD %0, %1

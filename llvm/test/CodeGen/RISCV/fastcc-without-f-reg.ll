@@ -160,17 +160,13 @@ define double @caller_double(double %x) nounwind {
 ;
 ; ZDINX32-LABEL: caller_double:
 ; ZDINX32:       # %bb.0: # %entry
-; ZDINX32-NEXT:    addi sp, sp, -32
-; ZDINX32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; ZDINX32-NEXT:    sw a0, 16(sp)
-; ZDINX32-NEXT:    sw a1, 20(sp)
-; ZDINX32-NEXT:    lw a0, 16(sp)
-; ZDINX32-NEXT:    lw a1, 20(sp)
+; ZDINX32-NEXT:    addi sp, sp, -16
+; ZDINX32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; ZDINX32-NEXT:    sw a0, 0(sp)
 ; ZDINX32-NEXT:    sw a1, 4(sp)
 ; ZDINX32-NEXT:    call d
-; ZDINX32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; ZDINX32-NEXT:    addi sp, sp, 32
+; ZDINX32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; ZDINX32-NEXT:    addi sp, sp, 16
 ; ZDINX32-NEXT:    ret
 ;
 ; ZDINX64-LABEL: caller_double:
@@ -200,14 +196,8 @@ define internal fastcc double @d(double %x) nounwind {
 ;
 ; ZDINX32-LABEL: d:
 ; ZDINX32:       # %bb.0: # %entry
-; ZDINX32-NEXT:    addi sp, sp, -16
-; ZDINX32-NEXT:    lw a0, 16(sp)
-; ZDINX32-NEXT:    lw a1, 20(sp)
-; ZDINX32-NEXT:    sw a0, 8(sp)
-; ZDINX32-NEXT:    sw a1, 12(sp)
-; ZDINX32-NEXT:    lw a0, 8(sp)
-; ZDINX32-NEXT:    lw a1, 12(sp)
-; ZDINX32-NEXT:    addi sp, sp, 16
+; ZDINX32-NEXT:    lw a0, 0(sp)
+; ZDINX32-NEXT:    lw a1, 4(sp)
 ; ZDINX32-NEXT:    ret
 ;
 ; ZDINX64-LABEL: d:
@@ -1360,14 +1350,8 @@ define fastcc double @callee_double_32(<32 x double> %A) nounwind {
 ;
 ; ZDINX32-LABEL: callee_double_32:
 ; ZDINX32:       # %bb.0:
-; ZDINX32-NEXT:    addi sp, sp, -16
-; ZDINX32-NEXT:    lw a0, 16(sp)
-; ZDINX32-NEXT:    lw a1, 20(sp)
-; ZDINX32-NEXT:    sw a0, 8(sp)
-; ZDINX32-NEXT:    sw a1, 12(sp)
-; ZDINX32-NEXT:    lw a0, 8(sp)
-; ZDINX32-NEXT:    lw a1, 12(sp)
-; ZDINX32-NEXT:    addi sp, sp, 16
+; ZDINX32-NEXT:    lw a0, 0(sp)
+; ZDINX32-NEXT:    lw a1, 4(sp)
 ; ZDINX32-NEXT:    ret
 ;
 ; ZDINX64-LABEL: callee_double_32:

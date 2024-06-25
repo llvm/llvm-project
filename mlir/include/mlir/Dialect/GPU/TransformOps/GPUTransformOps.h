@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_GPU_TRANSFORMOPS_GPUTRANSFORMOPS_H
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 

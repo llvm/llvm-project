@@ -19,11 +19,13 @@
 #ifndef FORTRAN_COMMON_RESTORER_H_
 #define FORTRAN_COMMON_RESTORER_H_
 #include "idioms.h"
+#include "flang/Common/api-attrs.h"
 namespace Fortran::common {
 template <typename A> class Restorer {
 public:
-  explicit Restorer(A &p, A original) : p_{p}, original_{std::move(original)} {}
-  ~Restorer() { p_ = std::move(original_); }
+  explicit RT_API_ATTRS Restorer(A &p, A original)
+      : p_{p}, original_{std::move(original)} {}
+  RT_API_ATTRS ~Restorer() { p_ = std::move(original_); }
 
   // Inhibit any recreation of this restorer that would result in two restorers
   // trying to restore the same reference.
@@ -38,13 +40,14 @@ private:
 };
 
 template <typename A, typename B>
-common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, B &&from) {
+RT_API_ATTRS common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, B &&from) {
   A original{std::move(to)};
   to = std::move(from);
   return Restorer<A>{to, std::move(original)};
 }
 template <typename A, typename B>
-common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, const B &from) {
+RT_API_ATTRS common::IfNoLvalue<Restorer<A>, B> ScopedSet(
+    A &to, const B &from) {
   A original{std::move(to)};
   to = from;
   return Restorer<A>{to, std::move(original)};

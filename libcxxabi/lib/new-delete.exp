@@ -1,3 +1,4 @@
+# Symbols for all variants of global operator new and delete
 __Znwm
 __ZnwmRKSt9nothrow_t
 __ZnwmSt11align_val_t

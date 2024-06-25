@@ -225,6 +225,7 @@ public:
   ImportKind GetImportKind() const;
   // Names appearing in IMPORT statements in this scope
   std::set<SourceName> importNames() const { return importNames_; }
+  bool CanImport(const SourceName &) const;
 
   // Set the kind of imports from host into this scope.
   // Return an error message for incompatible kinds.
@@ -298,7 +299,6 @@ private:
   // or Symbol& points to one in there.
   static Symbols<1024> allSymbols;
 
-  bool CanImport(const SourceName &) const;
   const DeclTypeSpec &MakeLengthlessType(DeclTypeSpec &&);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);

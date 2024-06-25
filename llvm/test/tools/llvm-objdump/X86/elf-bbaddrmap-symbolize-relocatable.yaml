@@ -24,17 +24,32 @@ Sections:
     Link:    .text
     Entries:
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0x1
-            Metadata:        0x1
+        BBRanges:
+          - BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0x1
+               Metadata:        0xa
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0x1
-            Metadata:        0x1
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xb
+      - Version: 2
+        Feature: 0x8
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xc
+          - BBEntries:
+            - ID:              1
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0xd
   - Name:  .rela.llvm_bb_addr_map
     Type:  SHT_RELA
     Flags: [ SHF_INFO_LINK ]
@@ -48,6 +63,15 @@ Sections:
         Symbol: .text
         Type:   R_X86_64_64
         Addend: 1
+      - Offset: 0x21
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 0x2
+      - Offset: 0x2e
+        Symbol: .text
+        Type:   R_X86_64_64
+        Addend: 0x3
+
 Symbols:
   - Name:    a
     Section: .text
@@ -55,6 +79,12 @@ Symbols:
   - Name:    c
     Section: .text
     Value:   0x1
+  - Name:    h
+    Section: .text
+    Value:   0x2
+  - Name:    h1
+    Section: .text
+    Value:   0x3
   - Name:    .text
     Type:    STT_SECTION
     Section: .text

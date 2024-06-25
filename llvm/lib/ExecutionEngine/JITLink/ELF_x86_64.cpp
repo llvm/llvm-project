@@ -153,6 +153,9 @@ private:
     Edge::Kind Kind = Edge::Invalid;
 
     switch (ELFReloc) {
+    case ELF::R_X86_64_PC8:
+      Kind = x86_64::Delta8;
+      break;
     case ELF::R_X86_64_PC32:
     case ELF::R_X86_64_GOTPC32:
       Kind = x86_64::Delta32;
@@ -341,24 +344,6 @@ createLinkGraphFromELFObject_x86_64(MemoryBufferRef ObjectBuffer) {
                                     ELFObjFile.getELFFile(),
                                     std::move(*Features))
       .buildGraph();
-}
-
-static SectionRangeSymbolDesc
-identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
-  constexpr StringRef StartSymbolPrefix = "__start";
-  constexpr StringRef EndSymbolPrefix = "__end";
-
-  auto SymName = Sym.getName();
-  if (SymName.starts_with(StartSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
-      return {*Sec, true};
-  } else if (SymName.starts_with(EndSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
-      return {*Sec, false};
-  }
-  return {};
 }
 
 void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,

@@ -1,0 +1,30 @@
+# REQUIRES: target-aarch64 && native
+# UNSUPPORTED: system-windows
+# llvm.org/pr91610, rdar://128031075
+# XFAIL: system-darwin
+
+
+# RUN: %clang_host %S/Inputs/signal-in-leaf-function-aarch64.c -o %t
+# RUN: %lldb -s %s -o exit %t | FileCheck %s
+
+# Convert EXC_BAD_INSTRUCTION to SIGILL on darwin
+settings set platform.plugin.darwin.ignored-exceptions EXC_BAD_INSTRUCTION
+
+breakpoint set -n sigill_handler
+# CHECK: Breakpoint 1: where = {{.*}}`sigill_handler
+
+run
+# CHECK: thread #1, {{.*}} stop reason = signal SIGILL
+
+thread backtrace
+# CHECK: frame #0: [[ADD:0x[0-9a-fA-F]*]] {{.*}}`signal_generating_add
+# CHECK: frame #1: [[MAIN:0x[0-9a-fA-F]*]] {{.*}}`main
+
+continue
+# CHECK: thread #1, {{.*}} stop reason = breakpoint 1
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`sigill_handler
+# Unknown number of signal trampoline frames
+# CHECK: frame #{{[0-9]+}}: [[ADD]] {{.*}}`signal_generating_add
+# CHECK: frame #{{[0-9]+}}: [[MAIN]] {{.*}}`main

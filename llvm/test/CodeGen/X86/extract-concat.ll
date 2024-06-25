@@ -9,22 +9,17 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    shll $8, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
-; SSE2-NEXT:    movl %eax, (%rdi)
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: foo:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE42-NEXT:    movl $255, %eax
 ; SSE42-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE42-NEXT:    movd %xmm0, (%rdi)
@@ -33,7 +28,7 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; AVX-LABEL: foo:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX-NEXT:    movl $255, %eax
 ; AVX-NEXT:    vpinsrb $3, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
@@ -140,9 +135,9 @@ define <16 x i64> @load_catcat(ptr %p) {
 ; AVX512F-LABEL: load_catcat:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = mem[0,1,2,3,0,1,2,3]
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,4,0,4,1,5,1,5]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,4,0,4,1,5,1,5]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
   %x = load <4 x i64>, ptr %p

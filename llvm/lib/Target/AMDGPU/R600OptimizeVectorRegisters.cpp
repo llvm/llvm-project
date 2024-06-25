@@ -103,8 +103,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -261,12 +261,8 @@ void R600VectorRegMerger::SwizzleInput(MachineInstr &MI,
 }
 
 bool R600VectorRegMerger::areAllUsesSwizzeable(Register Reg) const {
-  for (MachineRegisterInfo::use_instr_iterator It = MRI->use_instr_begin(Reg),
-      E = MRI->use_instr_end(); It != E; ++It) {
-    if (!canSwizzle(*It))
-      return false;
-  }
-  return true;
+  return llvm::all_of(MRI->use_instructions(Reg),
+                      [&](const MachineInstr &MI) { return canSwizzle(MI); });
 }
 
 bool R600VectorRegMerger::tryMergeUsingCommonSlot(RegSeqInfo &RSI,

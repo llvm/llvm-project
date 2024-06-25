@@ -25,12 +25,8 @@ define <vscale x 2 x i64> @add_umax_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %ins1 = insertelement <vscale x 2 x i64> poison, i64 7, i32 0
-  %splat1 = shufflevector <vscale x 2 x i64> %ins1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %ins2 = insertelement <vscale x 2 x i64> poison, i64 -7, i32 0
-  %splat2 = shufflevector <vscale x 2 x i64> %ins2, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v1 = call <vscale x 2 x i64> @llvm.umax.nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> %splat1)
-  %v2 = add <vscale x 2 x i64> %v1, %splat2
+  %v1 = call <vscale x 2 x i64> @llvm.umax.nxv2i64(<vscale x 2 x i64> %a0, <vscale x 2 x i64> splat (i64 7))
+  %v2 = add <vscale x 2 x i64> %v1, splat (i64 -7)
   ret <vscale x 2 x i64> %v2
 }
 
@@ -162,12 +158,8 @@ define <vscale x 2 x i64> @vselect_add_const_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %cm1 = insertelement <vscale x 2 x i64> poison, i64 -6, i32 0
-  %splatcm1 = shufflevector <vscale x 2 x i64> %cm1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %nc = insertelement <vscale x 2 x i64> poison, i64 5, i32 0
-  %splatnc = shufflevector <vscale x 2 x i64> %nc, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v1 = add <vscale x 2 x i64> %a0, %splatcm1
-  %cmp = icmp ugt <vscale x 2 x i64> %a0, %splatnc
+  %v1 = add <vscale x 2 x i64> %a0, splat (i64 -6)
+  %cmp = icmp ugt <vscale x 2 x i64> %a0, splat (i64 5)
   %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %v1, <vscale x 2 x i64> zeroinitializer
   ret <vscale x 2 x i64> %v2
 }
@@ -194,12 +186,8 @@ define <vscale x 2 x i16> @vselect_add_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %cm1 = insertelement <vscale x 2 x i16> poison, i16 32766, i32 0
-  %splatcm1 = shufflevector <vscale x 2 x i16> %cm1, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %nc = insertelement <vscale x 2 x i16> poison, i16 -32767, i32 0
-  %splatnc = shufflevector <vscale x 2 x i16> %nc, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %cmp = icmp ugt <vscale x 2 x i16> %a0, %splatcm1
-  %v1 = add <vscale x 2 x i16> %a0, %splatnc
+  %cmp = icmp ugt <vscale x 2 x i16> %a0, splat (i16 32766)
+  %v1 = add <vscale x 2 x i16> %a0, splat (i16 -32767)
   %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i16> %v1, <vscale x 2 x i16> zeroinitializer
   ret <vscale x 2 x i16> %v2
 }
@@ -227,9 +215,7 @@ define <vscale x 2 x i16> @vselect_xor_const_signbit_nxv2i16(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vssubu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 2 x i16> %a0, zeroinitializer
-  %ins = insertelement <vscale x 2 x i16> poison, i16 -32768, i32 0
-  %splat = shufflevector <vscale x 2 x i16> %ins, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %v1 = xor <vscale x 2 x i16> %a0, %splat
+  %v1 = xor <vscale x 2 x i16> %a0, splat (i16 -32768)
   %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i16> %v1, <vscale x 2 x i16> zeroinitializer
   ret <vscale x 2 x i16> %v2
 }
@@ -259,9 +245,7 @@ define <vscale x 2 x i64> @vselect_add_nxv2i64(<vscale x 2 x i64> %a0, <vscale x
 ; CHECK-NEXT:    ret
   %v1 = add <vscale x 2 x i64> %a0, %a1
   %cmp = icmp ule <vscale x 2 x i64> %a0, %v1
-  %allones = insertelement <vscale x 2 x i64> poison, i64 -1, i32 0
-  %splatallones = shufflevector <vscale x 2 x i64> %allones, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %splatallones
+  %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %v1, <vscale x 2 x i64> splat (i64 -1)
   ret <vscale x 2 x i64> %v2
 }
 
@@ -286,15 +270,9 @@ define <vscale x 2 x i64> @vselect_add_const_2_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vsaddu.vi v8, v8, 6
 ; CHECK-NEXT:    ret
-  %cm1 = insertelement <vscale x 2 x i64> poison, i64 6, i32 0
-  %splatcm1 = shufflevector <vscale x 2 x i64> %cm1, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %nc = insertelement <vscale x 2 x i64> poison, i64 -7, i32 0
-  %splatnc = shufflevector <vscale x 2 x i64> %nc, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v1 = add <vscale x 2 x i64> %a0, %splatcm1
-  %cmp = icmp ule <vscale x 2 x i64> %a0, %splatnc
-  %allones = insertelement <vscale x 2 x i64> poison, i64 -1, i32 0
-  %splatallones = shufflevector <vscale x 2 x i64> %allones, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %v1, <vscale x 2 x i64> %splatallones
+  %v1 = add <vscale x 2 x i64> %a0, splat (i64 6)
+  %cmp = icmp ule <vscale x 2 x i64> %a0, splat (i64 -7)
+  %v2 = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %v1, <vscale x 2 x i64> splat (i64 -1)
   ret <vscale x 2 x i64> %v2
 }
 

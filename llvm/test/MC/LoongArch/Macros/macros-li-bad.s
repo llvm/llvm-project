@@ -5,3 +5,9 @@ li.w $a0, 0x100000000
 
 li.d $a0, 0x10000000000000000
 # CHECK: :[[#@LINE-1]]:11: error: unknown operand
+
+li.w $a0, non_const_val
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a 32 bit immediate
+
+li.d $a0, non_const_val
+# CHECK: :[[#@LINE-1]]:11: error: operand must be a 64 bit immediate

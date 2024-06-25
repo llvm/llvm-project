@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.12
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.12
 
 // <ostream>
 

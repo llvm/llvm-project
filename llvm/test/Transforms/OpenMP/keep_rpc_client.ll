@@ -6,11 +6,11 @@
 @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 
 ;.
-; POSTLINK: @[[CLIENT:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(1) global i64 0, align 8
-; POSTLINK: @[[__LLVM_LIBC_RPC_CLIENT:[a-zA-Z0-9_$"\\.-]+]] = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; POSTLINK: @client = internal addrspace(1) global i64 0, align 8
+; POSTLINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 ;.
-; PRELINK: @[[CLIENT:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(1) global i64 0, align 8
-; PRELINK: @[[__LLVM_LIBC_RPC_CLIENT:[a-zA-Z0-9_$"\\.-]+]] = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
+; PRELINK: @client = internal addrspace(1) global i64 0, align 8
+; PRELINK: @__llvm_libc_rpc_client = protected local_unnamed_addr addrspace(1) global ptr addrspacecast (ptr addrspace(1) @client to ptr), align 8
 ;.
 define i64 @a() {
 ; POSTLINK-LABEL: define {{[^@]+}}@a
@@ -32,3 +32,16 @@ define i64 @a() {
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"openmp", i32 50}
 !2 = !{i32 7, !"openmp-device", i32 50}
+;.
+; POSTLINK: attributes #[[ATTR0]] = { norecurse nosync }
+;.
+; PRELINK: attributes #[[ATTR0]] = { norecurse nosync }
+;.
+; POSTLINK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; POSTLINK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; POSTLINK: [[META2:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+;.
+; PRELINK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; PRELINK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; PRELINK: [[META2:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+;.

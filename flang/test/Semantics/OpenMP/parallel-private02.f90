@@ -10,7 +10,7 @@ program omp_parallel_private
     array(i) = i
   end do
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause
+  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE clause
   !$omp parallel private(array(i))
   do i = 1, 10
     c(i) = a(i) + b(i) + k

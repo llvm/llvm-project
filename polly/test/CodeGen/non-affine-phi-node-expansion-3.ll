@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen \
+; RUN: opt %loadNPMPolly -passes=polly-codegen \
 ; RUN:     -S < %s | FileCheck %s
 
 define void @foo(ptr %A, i1 %cond0, i1 %cond1) {

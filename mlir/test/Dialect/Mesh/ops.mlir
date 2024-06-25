@@ -17,36 +17,12 @@ mesh.mesh @mesh4(shape = 3)
 // CHECK: mesh.mesh @mesh5(shape = ?)
 mesh.mesh @mesh5(shape = ?)
 
-// CHECK-LABEL: func @mesh_shard_encoding_fully_replicated
-func.func @mesh_shard_encoding_fully_replicated(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32, #mesh.shard<@mesh0, {{\[\[}}]]>>
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[]]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[]]>>
-}
-
-// CHECK-LABEL: func @mesh_shard_encoding_1st_dim
-func.func @mesh_shard_encoding_1st_dim(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32, #mesh.shard<@mesh0, {{\[\[}}0]]>>
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>>) -> 
-            tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh0, [[0]]>>
-}
-
-// CHECK-LABEL: func @mesh_shard_encoding_2nd_dim
-func.func @mesh_shard_encoding_2nd_dim(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32, #mesh.shard<@mesh1, {{\[\[}}], [0]]>>
-    %arg0 : tensor<4x8xf32, #mesh.shard<@mesh1, [[], [0]]>>) -> 
-    tensor<4x8xf32, #mesh.shard<@mesh1, [[], [0]]>> {
-  return %arg0 : tensor<4x8xf32, #mesh.shard<@mesh1, [[], [0]]>>
-}
-
-// CHECK-LABEL: func @mesh_shard_encoding_1st_and_3rd_dim
-func.func @mesh_shard_encoding_1st_and_3rd_dim(
-    // CHECK-SAME: %[[ARG:.*]]: tensor<4x8x16xf32, #mesh.shard<@mesh3, {{\[\[}}0], [], [1]]>>
-    %arg0 : tensor<4x8x16xf32, #mesh.shard<@mesh3, [[0], [], [1]]>>) -> 
-            tensor<4x8x16xf32, #mesh.shard<@mesh3, [[0], [], [1]]>> {
-  return %arg0 : tensor<4x8x16xf32, #mesh.shard<@mesh3, [[0], [], [1]]>>
+// CHECK-LABEL: func @mesh_shard_op_fully_replicated
+// CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
+func.func @mesh_shard_op_fully_replicated(%arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // CHECK-NEXT: mesh.shard %[[ARG]] to <@mesh0, {{\[\[}}]]> : tensor<4x8xf32>
+  %0 = mesh.shard %arg0 to <@mesh0, [[]]> : tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
 }
 
 // CHECK-LABEL: func @mesh_shard_op_1st_dim
@@ -230,6 +206,30 @@ func.func @all_gather_dynamic_dims_in_mesh(
   %0 = mesh.all_gather %arg0 on @mesh3 mesh_axes = [1] gather_axis = 1
     : tensor<5x6xf32> -> tensor<5x?xf32>
   return %0 : tensor<5x?xf32>
+}
+
+// CHECK-LABEL: func @all_slice_static_dimensions
+func.func @all_slice_static_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<3x4xf32>
+    %arg0 : tensor<3x4xf32>) -> tensor<3x1xf32> {
+  // CHECK-NEXT: mesh.all_slice %[[ARG]]
+  // CHECK-SAME: on @mesh0 mesh_axes = [2] slice_axis = 1
+  // CHECK-SAME: : tensor<3x4xf32> -> tensor<3x1xf32>
+  %0 = mesh.all_slice %arg0 on @mesh0 mesh_axes = [2] slice_axis = 1
+    : tensor<3x4xf32> -> tensor<3x1xf32>
+  return %0 : tensor<3x1xf32>
+}
+
+// CHECK-LABEL: func @all_slice_dynamic_dimensions
+func.func @all_slice_dynamic_dimensions(
+    // CHECK-SAME: %[[ARG:.*]]: tensor<?xf32>
+    %arg0 : tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-NEXT: mesh.all_slice %[[ARG]]
+  // CHECK-SAME: on @mesh3 mesh_axes = [0, 1] slice_axis = 0
+  // CHECK-SAME: : tensor<?xf32> -> tensor<?xf32>
+  %0 = mesh.all_slice %arg0 on @mesh3 mesh_axes = [0, 1] slice_axis = 0
+    : tensor<?xf32> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
 }
 
 // CHECK-LABEL: func @all_to_all

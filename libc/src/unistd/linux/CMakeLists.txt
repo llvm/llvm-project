@@ -274,6 +274,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pipe
+  SRCS
+    pipe.cpp
+  HDRS
+    ../pipe.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pread
   SRCS
     pread.cpp
@@ -283,6 +296,7 @@ add_entrypoint_object(
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 
@@ -309,6 +323,7 @@ add_entrypoint_object(
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.sanitizer
     libc.src.errno.errno
 )
 

@@ -1,5 +1,5 @@
-# Tests whether llvm-bolt is able to reorder blocks and fix branches
-# according to the new function layout.
+## Tests whether llvm-bolt is able to reorder blocks and fix branches
+## according to the new function layout.
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.null --data %p/Inputs/blarge.fdata \
@@ -46,4 +46,3 @@ CHECK:      Exec Count : 0
 CHECK:      Predecessors: .Ltmp{{.*}}
 CHECK:        {{.*}}:   movq    %rax, (%rsi)
 CHECK:        {{.*}}:   retq
-

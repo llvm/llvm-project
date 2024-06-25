@@ -54,6 +54,7 @@ static_library("LLVMSystemZCodeGen") {
     "SystemZSubtarget.cpp",
     "SystemZTDC.cpp",
     "SystemZTargetMachine.cpp",
+    "SystemZTargetObjectFile.cpp",
     "SystemZTargetTransformInfo.cpp",
   ]
 }

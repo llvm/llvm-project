@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 
 int @TOOL_NAME@_main(int argc, char **, const llvm::ToolContext &);
 

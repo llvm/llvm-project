@@ -13,7 +13,7 @@ define void @test() {
   ret void
 
 dead:
-  zext i1 icmp ne (ptr getelementptr inbounds ([2 x [1 x [6 x ptr]]], ptr @g, i32 0, i32 1), ptr getelementptr inbounds ([6 x ptr], ptr getelementptr inbounds ([2 x [1 x [6 x ptr]]], ptr @g, i32 0, i32 1), i32 0, i32 5)) to i16
+  %cmp = icmp ne ptr getelementptr inbounds ([2 x [1 x [6 x ptr]]], ptr @g, i32 0, i32 1), getelementptr inbounds ([6 x ptr], ptr getelementptr inbounds ([2 x [1 x [6 x ptr]]], ptr @g, i32 0, i32 1), i32 0, i32 5)
   ret void
 }
 

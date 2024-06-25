@@ -190,6 +190,17 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
   return FD->getType()->isReferenceType();
 }
 
+static bool isFoundInStmt(const Stmt *S, const VarDecl *VD) {
+  if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
+    for (const Decl *D : DS->decls()) {
+      // Once we reach the declaration of the VD we can return.
+      if (D->getCanonicalDecl() == VD)
+        return true;
+    }
+  }
+  return false;
+}
+
 // A loop counter is considered escaped if:
 // case 1: It is a global variable.
 // case 2: It is a reference parameter or a reference capture.
@@ -219,13 +230,19 @@ static bool isPossiblyEscaped(ExplodedNode *N, const DeclRefExpr *DR) {
       continue;
     }
 
-    if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-      for (const Decl *D : DS->decls()) {
-        // Once we reach the declaration of the VD we can return.
-        if (D->getCanonicalDecl() == VD)
-          return false;
+    if (isFoundInStmt(S, VD)) {
+      return false;
+    }
+
+    if (const auto *SS = dyn_cast<SwitchStmt>(S)) {
+      if (const auto *CST = dyn_cast<CompoundStmt>(SS->getBody())) {
+        for (const Stmt *CB : CST->body()) {
+          if (isFoundInStmt(CB, VD))
+            return false;
+        }
       }
     }
+
     // Check the usage of the pass-by-ref function calls and adress-of operator
     // on VD and reference initialized by VD.
     ASTContext &ASTCtx =

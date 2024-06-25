@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Verify we introduce two ScopArrayInfo objects (or virtual arrays) for the %out variable
 ; as it is used as a memory base pointer (%0) but also as a scalar (%out.addr.0.lcssa).

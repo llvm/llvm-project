@@ -32,7 +32,7 @@ entry:
   <{ i32 trunc ( ; Relative pointer to async function
        i64 sub (
          i64 ptrtoint (ptr @unreachable to i64),
-         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @unreachable_fp, i32 0, i32 1) to i64)
+         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @unreachable_fp, i32 0, i32 1) to i64)
        )
      to i32),
      i32 128    ; Initial async context size without space for frame
@@ -45,7 +45,7 @@ entry:
   %proj.2 = getelementptr inbounds { i64, i64 }, ptr %tmp, i64 0, i32 1
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
-          ptr bitcast (<{i32, i32}>* @unreachable_fp to ptr))
+          ptr @unreachable_fp)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   store i64 0, ptr %proj.1, align 8
   store i64 1, ptr %proj.2, align 8
@@ -53,7 +53,7 @@ entry:
 
 	; Begin lowering: apply %my_other_async_function(%args...)
   ; setup callee context
-  %arg1 = bitcast <{ i32, i32}>* @my_other_async_function_fp to ptr
+  %arg1 = bitcast ptr @my_other_async_function_fp to ptr
   %callee_context = call ptr @llvm.coro.async.context.alloc(ptr %task, ptr %arg1)
   ; store the return continuation
   %callee_context.return_to_caller.addr = getelementptr inbounds %async.ctxt, ptr %callee_context, i32 0, i32 1

@@ -28,7 +28,7 @@ define dso_local void @prog1() #0 !dbg !28 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !31, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !36, !llvm.preserve.access.index !7
-  %call = call i32 %0(i64 %1, ptr getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, ptr @tmp__abc, i32 0, i32 0, i32 0), i32 104), !dbg !31
+  %call = call i32 %0(i64 %1, ptr @tmp__abc, i32 104), !dbg !31
   ret void, !dbg !37
 }
 
@@ -40,7 +40,7 @@ define dso_local void @prog2() #0 !dbg !38 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !39, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !40, !llvm.preserve.access.index !6
-  %call = call i32 %0(i64 %1, ptr getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, ptr @tmp__abc, i32 0, i32 0, i32 0), i32 104), !dbg !39
+  %call = call i32 %0(i64 %1, ptr @tmp__abc, i32 104), !dbg !39
   ret void, !dbg !41
 }
 
@@ -49,7 +49,7 @@ define dso_local void @prog3() #0 !dbg !42 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !43, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 2, i64 1), !dbg !44, !llvm.preserve.access.index !11
-  %call = call i32 %0(i64 %1, ptr getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, ptr @tmp__abc, i32 0, i32 0, i32 0), i32 104), !dbg !43
+  %call = call i32 %0(i64 %1, ptr @tmp__abc, i32 104), !dbg !43
   ret void, !dbg !45
 }
 

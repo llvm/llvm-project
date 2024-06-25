@@ -264,6 +264,9 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @pow(double, double)\n"
       "declare float @powf(float, float)\n"
       "declare x86_fp80 @powl(x86_fp80, x86_fp80)\n"
+      "declare double @erf(double)\n"
+      "declare float @erff(float)\n"
+      "declare x86_fp80 @erfl(x86_fp80)\n"
       "declare i32 @printf(i8*, ...)\n"
       "declare i32 @putc(i32, %struct*)\n"
       "declare i32 @putc_unlocked(i32, %struct*)\n"
@@ -491,6 +494,8 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare void @__cxa_guard_abort(%struct*)\n"
       "declare i32 @__cxa_guard_acquire(%struct*)\n"
       "declare void @__cxa_guard_release(%struct*)\n"
+
+      "declare i32 @atexit(void ()*)\n"
 
       "declare i32 @__nvvm_reflect(i8*)\n"
 

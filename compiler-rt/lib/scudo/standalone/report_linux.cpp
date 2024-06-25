@@ -24,33 +24,30 @@ namespace scudo {
 
 // Fatal internal map() error (potentially OOM related).
 void NORETURN reportMapError(uptr SizeIfOOM) {
-  char Error[128] = "Scudo ERROR: internal map failure\n";
-  if (SizeIfOOM) {
-    formatString(
-        Error, sizeof(Error),
-        "Scudo ERROR: internal map failure (NO MEMORY) requesting %zuKB\n",
-        SizeIfOOM >> 10);
-  }
-  reportRawError(Error);
+  ScopedString Error;
+  Error.append("Scudo ERROR: internal map failure (error desc=%s)",
+               strerror(errno));
+  if (SizeIfOOM)
+    Error.append(" requesting %zuKB", SizeIfOOM >> 10);
+  Error.append("\n");
+  reportRawError(Error.data());
 }
 
 void NORETURN reportUnmapError(uptr Addr, uptr Size) {
-  char Error[128];
-  formatString(Error, sizeof(Error),
-               "Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "
+  ScopedString Error;
+  Error.append("Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "
                "Size %zu\n",
                strerror(errno), Addr, Size);
-  reportRawError(Error);
+  reportRawError(Error.data());
 }
 
 void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot) {
-  char Error[128];
-  formatString(
-      Error, sizeof(Error),
+  ScopedString Error;
+  Error.append(
       "Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
       "Size %zu Prot %x\n",
       strerror(errno), Addr, Size, Prot);
-  reportRawError(Error);
+  reportRawError(Error.data());
 }
 
 } // namespace scudo

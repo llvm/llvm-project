@@ -228,11 +228,14 @@ func.func @nested_isolated() -> i32 {
   // CHECK-NEXT: arith.constant 1
   %0 = arith.constant 1 : i32
 
+  // CHECK-NEXT: builtin.module
   // CHECK-NEXT: @nested_func
-  func.func @nested_func() {
-    // CHECK-NEXT: arith.constant 1
-    %foo = arith.constant 1 : i32
-    "foo.yield"(%foo) : (i32) -> ()
+  builtin.module {
+    func.func @nested_func() {
+      // CHECK-NEXT: arith.constant 1
+      %foo = arith.constant 1 : i32
+      "foo.yield"(%foo) : (i32) -> ()
+    }
   }
 
   // CHECK: "foo.region"

@@ -17,9 +17,9 @@
 ; STATIC-DAG: R_MIPS_32 00000000 .gcc_except_table
 
 ; PIC-LABEL: Relocation section '.rel.eh_frame'
-; PIC-DAG: R_MIPS_32   00000000 DW.ref.__gxx_personality_v0
-; PIC-DAG: R_MIPS_PC32
-; PIC-DAG: R_MIPS_32   00000000 .gcc_except_table
+; PIC-DAG: R_MIPS_PC32   00000000 DW.ref.__gxx_personality_v0
+; PIC-DAG: R_MIPS_PC32   00000000 .L0
+; PIC-DAG: R_MIPS_PC32   00000000 .L0
 
 ; CHECK-READELF: DW.ref.__gxx_personality_v0
 ; CHECK-READELF-STATIC-NEXT: R_MIPS_32 00000000 .text

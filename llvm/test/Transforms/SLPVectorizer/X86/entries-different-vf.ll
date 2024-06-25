@@ -6,11 +6,11 @@ define i1 @test() {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 0, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> <i64 poison, i64 poison, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i64> [[TMP1]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i64> [[TMP2]], i64 0, i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <4 x i32> <i32 3, i32 poison, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> <i64 undef, i64 0, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>, <8 x i64> [[TMP3]], <8 x i32> <i32 11, i32 11, i32 11, i32 1, i32 9, i32 9, i32 1, i32 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0, i64 0>, i64 0, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> <i64 undef, i64 undef, i64 0, i64 0>, i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP11]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 1, i32 3, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <8 x i64> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <8 x i64> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i64> [[TMP6]], <8 x i64> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 7>

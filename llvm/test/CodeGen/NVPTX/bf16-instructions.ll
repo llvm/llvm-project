@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx70 | FileCheck --check-prefixes=CHECK,SM80 %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | FileCheck --check-prefixes=CHECK,SM80 %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | FileCheck --check-prefixes=CHECK,SM90 %s
 ; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_80 -mattr=+ptx71 | %ptxas-verify -arch=sm_80 %}
 ; RUN: %if ptxas-11.8 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx78 | %ptxas-verify -arch=sm_90 %}
@@ -328,5 +328,17 @@ define bfloat @test_uitofp_i32(i32 %a) {
 ; CHECK:      ret;
 define bfloat @test_uitofp_i64(i64 %a) {
   %r = uitofp i64 %a to bfloat
+  ret bfloat %r
+}
+
+; CHECK-LABEL: test_roundeven(
+; CHECK:      ld.param.b16      [[A:%rs[0-9]+]], [test_roundeven_param_0];
+; SM80:       cvt.rni.f32.f32   [[F:%f[0-9]+]]
+; SM80:       cvt.rn.bf16.f32   [[R:%rs[0-9]+]], [[F]];
+; SM90:       cvt.rni.bf16.bf16 [[R:%rs[0-9]+]], [[A]];
+; CHECK:      st.param.b16      [func_retval0+0], [[R]];
+; CHECK:      ret;
+define bfloat @test_roundeven(bfloat %a) {
+  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
   ret bfloat %r
 }

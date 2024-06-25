@@ -17,8 +17,8 @@
 #include <tuple>
 
 void f() {
-    (void)std::tuple_size_v<std::tuple<> &>; // expected-note {{requested here}}
-    (void)std::tuple_size_v<int>; // expected-note {{requested here}}
-    (void)std::tuple_size_v<std::tuple<>*>; // expected-note {{requested here}}
-    // expected-error@tuple:* 3 {{implicit instantiation of undefined template}}
+  (void)std::tuple_size_v<std::tuple<>&>; // expected-note {{requested here}}
+  (void)std::tuple_size_v<int>;           // expected-note {{requested here}}
+  (void)std::tuple_size_v<std::tuple<>*>; // expected-note {{requested here}}
+                                          // expected-error@*:* 3 {{implicit instantiation of undefined template}}
 }

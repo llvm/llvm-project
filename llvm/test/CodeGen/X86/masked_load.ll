@@ -6429,7 +6429,7 @@ define <4 x i32> @mload_constmask_v4i32(ptr %addr, <4 x i32> %dst) {
 ;
 ; AVX2-LABEL: mload_constmask_v4i32:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,4294967295,4294967295,4294967295]
 ; AVX2-NEXT:    vpmaskmovd (%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX2-NEXT:    retq
@@ -6962,7 +6962,7 @@ define <4 x i64> @mload_constmask_v4i64_undef_passthrough(ptr %addr) {
 ;
 ; AVX2-LABEL: mload_constmask_v4i64_undef_passthrough:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551615,0]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,18446744073709551615,18446744073709551615,0]
 ; AVX2-NEXT:    vpmaskmovq (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -7203,12 +7203,12 @@ define <16 x i64> @load_one_mask_bit_set6(ptr %addr, <16 x i64> %val) {
 ;
 ; AVX2-LABEL: load_one_mask_bit_set6:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,0,18446744073709551615,0]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,0,18446744073709551615,0]
 ; AVX2-NEXT:    vpmaskmovq (%rdi), %ymm4, %ymm5
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm5[4,5],ymm0[6,7]
 ; AVX2-NEXT:    vpmaskmovq 64(%rdi), %ymm4, %ymm4
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm4[4,5],ymm2[6,7]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,18446744073709551615,0,0]
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} ymm4 = [0,18446744073709551615,0,0]
 ; AVX2-NEXT:    vpmaskmovq 96(%rdi), %ymm4, %ymm4
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1],ymm4[2,3],ymm3[4,5,6,7]
 ; AVX2-NEXT:    retq

@@ -115,6 +115,10 @@ OPTIONS
  Specifies an alternate ``path`` to place the dSYM bundle. The default dSYM
  bundle path is created by appending ``.dSYM`` to the executable name.
 
+.. option:: -q, --quiet
+
+ Enable quiet mode and limit output.
+
 .. option:: --remarks-drop-without-debug
 
  Drop remarks without valid debug locations. Without this flags, all remarks are kept.
@@ -139,10 +143,6 @@ OPTIONS
  size of the debug info in the object file (in bytes) and the size contributed
  (in bytes) to the linked dSYM. The table is sorted by the output size listing
  the object files with the largest contribution first.
-
-.. option:: --symbol-map <bcsymbolmap>
-
- Update the existing dSYMs inplace using symbol map specified.
 
 .. option:: -s, --symtab
 

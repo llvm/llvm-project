@@ -9,7 +9,6 @@ import lldbdap_testcase
 
 class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_basic_functionality(self):
         """
         Tests the basic restarting functionality: set two breakpoints in
@@ -29,7 +28,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         self.verify_breakpoint_hit([bp_B])
 
         # Make sure i has been modified from its initial value of 0.
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("i")),
             1234,
             "i != 1234 after hitting breakpoint B",
@@ -38,14 +37,13 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         # Restart then check we stop back at A and program state has been reset.
         self.dap_server.request_restart()
         self.verify_breakpoint_hit([bp_A])
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("i")),
             0,
             "i != 0 after hitting breakpoint A on restart",
         )
 
     @skipIfWindows
-    @skipIfRemote
     def test_stopOnEntry(self):
         """
         Check that the stopOnEntry setting is still honored after a restart.
@@ -87,7 +85,6 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
                     )
 
     @skipIfWindows
-    @skipIfRemote
     def test_arguments(self):
         """
         Tests that lldb-dap will use updated launch arguments included
@@ -105,7 +102,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
 
         # We don't set any arguments in the initial launch request, so argc
         # should be 1.
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("argc")),
             1,
             "argc != 1 before restart",
@@ -122,7 +119,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
             }
         )
         self.verify_breakpoint_hit([bp_A])
-        self.assertEquals(
+        self.assertEqual(
             int(self.dap_server.get_local_variable_value("argc")),
             5,
             "argc != 5 after restart",

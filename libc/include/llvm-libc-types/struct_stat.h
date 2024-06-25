@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_STAT_H__
-#define __LLVM_LIBC_TYPES_STRUCT_STAT_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_STAT_H
+#define LLVM_LIBC_TYPES_STRUCT_STAT_H
 
-#include <llvm-libc-types/blkcnt_t.h>
-#include <llvm-libc-types/blksize_t.h>
-#include <llvm-libc-types/dev_t.h>
-#include <llvm-libc-types/gid_t.h>
-#include <llvm-libc-types/ino_t.h>
-#include <llvm-libc-types/mode_t.h>
-#include <llvm-libc-types/nlink_t.h>
-#include <llvm-libc-types/off_t.h>
-#include <llvm-libc-types/struct_timespec.h>
-#include <llvm-libc-types/uid_t.h>
+#include "llvm-libc-types/blkcnt_t.h"
+#include "llvm-libc-types/blksize_t.h"
+#include "llvm-libc-types/dev_t.h"
+#include "llvm-libc-types/gid_t.h"
+#include "llvm-libc-types/ino_t.h"
+#include "llvm-libc-types/mode_t.h"
+#include "llvm-libc-types/nlink_t.h"
+#include "llvm-libc-types/off_t.h"
+#include "llvm-libc-types/struct_timespec.h"
+#include "llvm-libc-types/uid_t.h"
 
 struct stat {
   dev_t st_dev;
@@ -36,4 +36,4 @@ struct stat {
   blkcnt_t st_blocks;
 };
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_STAT_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_STAT_H

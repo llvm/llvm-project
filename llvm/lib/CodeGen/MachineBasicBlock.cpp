@@ -80,10 +80,11 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
       }
       CachedMCSymbol = Ctx.getOrCreateSymbol(MF->getName() + Suffix);
     } else {
-      const StringRef Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
-      CachedMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB" +
-                                             Twine(MF->getFunctionNumber()) +
-                                             "_" + Twine(getNumber()));
+      // If the block occurs as label in inline assembly, parsing the assembly
+      // needs an actual label name => set AlwaysEmit in these cases.
+      CachedMCSymbol = Ctx.createBlockSymbol(
+          "BB" + Twine(MF->getFunctionNumber()) + "_" + Twine(getNumber()),
+          /*AlwaysEmit=*/hasLabelMustBeEmitted());
     }
   }
   return CachedMCSymbol;
@@ -104,10 +105,9 @@ MCSymbol *MachineBasicBlock::getEndSymbol() const {
   if (!CachedEndMCSymbol) {
     const MachineFunction *MF = getParent();
     MCContext &Ctx = MF->getContext();
-    auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
-    CachedEndMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB_END" +
-                                              Twine(MF->getFunctionNumber()) +
-                                              "_" + Twine(getNumber()));
+    CachedEndMCSymbol = Ctx.createBlockSymbol(
+        "BB_END" + Twine(MF->getFunctionNumber()) + "_" + Twine(getNumber()),
+        /*AlwaysEmit=*/false);
   }
   return CachedEndMCSymbol;
 }
@@ -1137,7 +1137,6 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 
   MachineFunction *MF = getParent();
   MachineBasicBlock *PrevFallthrough = getNextNode();
-  DebugLoc DL;  // FIXME: this is nowhere
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
   NMBB->setCallFrameSize(Succ->getCallFrameSize());
@@ -1218,6 +1217,15 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
+
+    // In original 'this' BB, there must be a branch instruction targeting at
+    // Succ. We can not find it out since currently getBranchDestBlock was not
+    // implemented for all targets. However, if the merged DL has column or line
+    // number, the scope and non-zero column and line number is same with that
+    // branch instruction so we can safely use it.
+    DebugLoc DL, MergedDL = findBranchDebugLoc();
+    if (MergedDL && (MergedDL.getLine() || MergedDL.getCol()))
+      DL = MergedDL;
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
@@ -1322,9 +1330,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (MachineDominatorTree *MDT =
-          P.getAnalysisIfAvailable<MachineDominatorTree>())
-    MDT->recordSplitCriticalEdge(this, Succ, NMBB);
+  if (auto *MDTWrapper =
+          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
 
   if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
@@ -1718,6 +1726,12 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
 
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
+}
+
+void MachineBasicBlock::clearLiveIns(
+    std::vector<RegisterMaskPair> &OldLiveIns) {
+  assert(OldLiveIns.empty() && "Vector must be empty");
+  std::swap(LiveIns, OldLiveIns);
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {

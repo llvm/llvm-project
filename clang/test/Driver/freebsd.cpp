@@ -1,15 +1,15 @@
-// RUN: %clangxx %s -### -o %t.o -target amd64-unknown-freebsd -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -o %t.o --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
-// RUN: %clangxx %s -### -o %t.o -target amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -o %t.o --target=amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-TEN %s
 // CHECK-DEFAULT: "-lc++" "-lm"
 // CHECK-TEN: "-lc++" "-lm"
 
-// RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -pg -o %t.o --target=amd64-unknown-freebsd -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-DEFAULT %s
-// RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd14.0 -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -pg -o %t.o --target=amd64-unknown-freebsd14.0 -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-FOURTEEN %s
-// RUN: %clangxx %s -### -pg -o %t.o -target amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
+// RUN: %clangxx %s -### -pg -o %t.o --target=amd64-unknown-freebsd10.0 -stdlib=platform 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PG-TEN %s
 // CHECK-PG-DEFAULT: "-lc++" "-lm"
 // CHECK-PG-FOURTEEN: "-lc++" "-lm"

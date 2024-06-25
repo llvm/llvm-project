@@ -159,19 +159,21 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getName() << '\n');
 
   bool Changed = false;
-  SmallPtrSet<MachineBasicBlock *, 16> MBBSet;
+  SetVector<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 16>,
+            DenseSet<MachineBasicBlock *>, 16>
+      MBBSet;
   for (auto &MBB : MF)
     MBBSet.insert(&MBB);
 
   while (!MBBSet.empty()) {
     MachineBasicBlock *MBB = *MBBSet.begin();
-    MBBSet.erase(MBB);
+    MBBSet.remove(MBB);
     for (auto &MI : *MBB) {
       if (WebAssembly::isBrTable(MI.getOpcode())) {
         fixBrTableIndex(MI, MBB, MF);
         auto *Fixed = fixBrTableDefault(MI, MBB, MF);
         if (Fixed != nullptr) {
-          MBBSet.erase(Fixed);
+          MBBSet.remove(Fixed);
           Changed = true;
         }
         break;

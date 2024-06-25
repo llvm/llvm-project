@@ -71,6 +71,13 @@ public:
 
 template class B<int>;
 
+template<typename T> struct C;
+
+// Test lookup with incomplete lookup context
+template<typename T>
+auto C<T>::f() -> decltype(x) { } // expected-error {{use of undeclared identifier 'x'}}
+                                  // expected-error@-1 {{out-of-line definition of 'f' from class 'C<T>' without definition}}
+
 }
 
 
@@ -95,7 +102,7 @@ public:
 };
 template class B<int>; // expected-note {{requested here}}
 
-} 
+}
 
 
 
@@ -104,8 +111,8 @@ namespace lookup_dependent_base_class_default_argument {
 template<class T>
 class A {
 public:
-  static int f1(); // expected-note {{must qualify identifier to find this declaration in dependent base class}} 
-  int f2(); // expected-note {{must qualify identifier to find this declaration in dependent base class}} 
+  static int f1(); // expected-note {{must qualify identifier to find this declaration in dependent base class}}
+  int f2(); // expected-note {{must qualify identifier to find this declaration in dependent base class}}
 };
 
 template<class T>
@@ -130,7 +137,7 @@ namespace lookup_dependent_base_class_friend {
 template <class T>
 class B {
 public:
-  static void g();  // expected-note {{must qualify identifier to find this declaration in dependent base class}} 
+  static void g();  // expected-note {{must qualify identifier to find this declaration in dependent base class}}
 };
 
 template <class T>
@@ -221,7 +228,7 @@ template <typename T> struct C : T {
   int    *bar() { return &b; }     // expected-error {{no member named 'b' in 'PR16014::C<A>'}} expected-warning {{lookup into dependent bases}}
   int     baz() { return T::b; }   // expected-error {{no member named 'b' in 'PR16014::A'}}
   int T::*qux() { return &T::b; }  // expected-error {{no member named 'b' in 'PR16014::A'}}
-  int T::*fuz() { return &U::a; }  // expected-error {{use of undeclared identifier 'U'}} \
+  int T::*fuz() { return &U::a; }  // expected-error {{no member named 'U' in 'PR16014::C<A>'}} \
   // expected-warning {{unqualified lookup into dependent bases of class template 'C'}}
 };
 
@@ -251,7 +258,7 @@ struct A : T {
     ::UndefClass::undef(); // expected-error {{no member named 'UndefClass' in the global namespace}}
   }
   void baz() {
-    B::qux(); // expected-error {{use of undeclared identifier 'B'}} \
+    B::qux(); // expected-error {{no member named 'B' in 'PR19233::A<D>'}} \
     // expected-warning {{unqualified lookup into dependent bases of class template 'A'}}
   }
 };

@@ -10,7 +10,7 @@
 
 // class value_compare
 
-// REQUIRES: c++98 || c++03 || c++11 || c++14
+// REQUIRES: c++03 || c++11 || c++14
 
 #include <map>
 #include <string>

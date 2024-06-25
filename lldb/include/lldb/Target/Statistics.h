@@ -130,10 +130,56 @@ struct ConstStringStats {
   ConstString::MemoryStats stats = ConstString::GetMemoryStats();
 };
 
+struct StatisticsOptions {
+public:
+  void SetSummaryOnly(bool value) { m_summary_only = value; }
+  bool GetSummaryOnly() const { return m_summary_only.value_or(false); }
+
+  void SetLoadAllDebugInfo(bool value) { m_load_all_debug_info = value; }
+  bool GetLoadAllDebugInfo() const {
+    return m_load_all_debug_info.value_or(false);
+  }
+
+  void SetIncludeTargets(bool value) { m_include_targets = value; }
+  bool GetIncludeTargets() const {
+    if (m_include_targets.has_value())
+      return m_include_targets.value();
+    // `m_include_targets` has no value set, so return a value based on
+    // `m_summary_only`.
+    return !GetSummaryOnly();
+  }
+
+  void SetIncludeModules(bool value) { m_include_modules = value; }
+  bool GetIncludeModules() const {
+    if (m_include_modules.has_value())
+      return m_include_modules.value();
+    // `m_include_modules` has no value set, so return a value based on
+    // `m_summary_only`.
+    return !GetSummaryOnly();
+  }
+
+  void SetIncludeTranscript(bool value) { m_include_transcript = value; }
+  bool GetIncludeTranscript() const {
+    if (m_include_transcript.has_value())
+      return m_include_transcript.value();
+    // `m_include_transcript` has no value set, so return a value based on
+    // `m_summary_only`.
+    return !GetSummaryOnly();
+  }
+
+private:
+  std::optional<bool> m_summary_only;
+  std::optional<bool> m_load_all_debug_info;
+  std::optional<bool> m_include_targets;
+  std::optional<bool> m_include_modules;
+  std::optional<bool> m_include_transcript;
+};
+
 /// A class that represents statistics for a since lldb_private::Target.
 class TargetStats {
 public:
-  llvm::json::Value ToJSON(Target &target);
+  llvm::json::Value ToJSON(Target &target,
+                           const lldb_private::StatisticsOptions &options);
 
   void SetLaunchOrAttachTime();
   void SetFirstPrivateStopTime();
@@ -171,9 +217,15 @@ public:
   ///   The single target to emit statistics for if non NULL, otherwise dump
   ///   statistics only for the specified target.
   ///
+  /// \param summary_only
+  ///   If true, only report high level summary statistics without
+  ///   targets/modules/breakpoints etc.. details.
+  ///
   /// \return
   ///     Returns a JSON value that contains all target metrics.
-  static llvm::json::Value ReportStatistics(Debugger &debugger, Target *target);
+  static llvm::json::Value
+  ReportStatistics(Debugger &debugger, Target *target,
+                   const lldb_private::StatisticsOptions &options);
 
 protected:
   // Collecting stats can be set to true to collect stats that are expensive

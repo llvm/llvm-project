@@ -21,10 +21,10 @@
 ; VI-NEXT:          .vgpr_count:     0x5
 ; GFX9-NEXT:        .vgpr_count:     0x5
 ; GCN-NEXT:     .registers:
-; SI-NEXT:        0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}81
-; VI-NEXT:        0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}c1
-; GFX9-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0x{{[0-9a-f]*}}81
-; GCN-NEXT:       0x2e13 (COMPUTE_PGM_RSRC2): 0
+; SI-NEXT:        '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}81
+; VI-NEXT:        '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}c1
+; GFX9-NEXT:      '0x2e12 (COMPUTE_PGM_RSRC1)': 0x{{[0-9a-f]*}}81
+; GCN-NEXT:       '0x2e13 (COMPUTE_PGM_RSRC2)': 0
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 

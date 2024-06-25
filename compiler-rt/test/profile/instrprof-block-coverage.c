@@ -5,6 +5,9 @@
 // RUN: %clang_profuse=%t.profdata -mllvm -pgo-verify-bfi -o - -S -emit-llvm %s 2>%t.errs | FileCheck %s --implicit-check-not="!prof"
 // RUN: FileCheck %s < %t.errs --allow-empty --check-prefix=CHECK-ERROR
 
+// RUN: llvm-profdata merge -o %t2.profdata %t1.profraw %t1.profraw %t2.profraw %t2.profraw
+// RUN: llvm-profdata show %t2.profdata | FileCheck %s --check-prefix=COUNTS
+
 #include <stdlib.h>
 
 // CHECK: @foo({{.*}})
@@ -45,3 +48,5 @@ int main(int argc, char *argv[]) {
 // CHECK-DAG: ![[PROF2]] = !{!"branch_weights", i32 0, i32 1}
 
 // CHECK-ERROR-NOT: warning: {{.*}}: Found inconsistent block coverage
+
+// COUNTS: Maximum function count: 4

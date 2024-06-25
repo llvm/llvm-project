@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-linux-gnu -passes=pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
 
 ; Make sure calls to the objc intrinsics are translated to calls in to the
 ; runtime

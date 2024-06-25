@@ -16,8 +16,8 @@ define %struct.test @alloca(<vscale x 1 x i32> %x, <vscale x 1 x i32> %y) {
   %addr = alloca %struct.test, align 4
   %agg0 = insertvalue %struct.test undef, <vscale x 1 x i32> %x, 0
   %agg1 = insertvalue %struct.test %agg0, <vscale x 1 x i32> %y, 1
-  store %struct.test %agg1, %struct.test* %addr, align 4
-  %val = load %struct.test, %struct.test* %addr, align 4
+  store %struct.test %agg1, ptr %addr, align 4
+  %val = load %struct.test, ptr %addr, align 4
   ret %struct.test %val
 }
 

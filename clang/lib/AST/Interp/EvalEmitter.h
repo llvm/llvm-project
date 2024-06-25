@@ -34,14 +34,17 @@ public:
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
 
-  EvaluationResult interpretExpr(const Expr *E);
-  EvaluationResult interpretDecl(const VarDecl *VD);
+  EvaluationResult interpretExpr(const Expr *E,
+                                 bool ConvertResultToRValue = false);
+  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+
+  /// Clean up all resources.
+  void cleanup();
 
   InterpState &getState() { return S; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
-              APValue &Result);
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
 
   virtual ~EvalEmitter();
 
@@ -52,13 +55,17 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E) = 0;
-  virtual bool visitDecl(const VarDecl *VD) = 0;
+  virtual bool visitDecl(const VarDecl *VD, bool ConstantContext) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
+
+  /// Since expressions can only jump forward, predicated execution is
+  /// used to deal with if-else statements.
+  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
   /// Callback for registering a local.
   Local createLocal(Descriptor *D);
@@ -73,7 +80,7 @@ protected:
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.
-  unsigned LambdaThisCapture = 0;
+  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 
@@ -86,6 +93,11 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  /// Whether the result should be converted to an RValue.
+  bool ConvertResultToRValue = false;
+  /// Whether we should check if the result has been fully
+  /// initialized.
+  bool CheckFullyInitialized = false;
 
   /// Temporaries which require storage.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;
@@ -108,10 +120,6 @@ private:
   LabelTy CurrentLabel = 0;
   /// Active block which should be executed.
   LabelTy ActiveLabel = 0;
-
-  /// Since expressions can only jump forward, predicated execution is
-  /// used to deal with if-else statements.
-  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
 protected:
 #define GET_EVAL_PROTO

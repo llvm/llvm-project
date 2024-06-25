@@ -18,7 +18,7 @@ entry:
           to label %ret unwind label %lpad
 
 ret:
-; CHECK: call void @llvm.pseudoprobe
+; CHECK-NOT: call void @llvm.pseudoprobe
   ret void
 
 lpad:                                             ; preds = %entry

@@ -46,7 +46,7 @@ public:
   }
 
   /// Implement target specific parsing of immediate mnemonics. The mnemonic is
-  /// dot seperated strings.
+  /// dot separated strings.
   virtual bool parseImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                                 StringRef Src, int64_t &Imm,
                                 ErrorCallbackType ErrorCallback) const {

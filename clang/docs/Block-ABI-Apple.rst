@@ -80,7 +80,7 @@ The following flags bits are in use thusly for a possible ABI.2010.3.16:
 In 10.6.ABI the (1<<29) was usually set and was always ignored by the runtime -
 it had been a transitional marker that did not get deleted after the
 transition. This bit is now paired with (1<<30), and represented as the pair
-(3<<30), for the following combinations of valid bit settings, and their
+(3<<29), for the following combinations of valid bit settings, and their
 meanings:
 
 .. code-block:: c

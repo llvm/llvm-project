@@ -31,7 +31,7 @@
 ; After the prologue is set.
 ; DISABLE: cmpw 3, 4
 ; DISABLE-32: stw 0,
-; DISABLE-64-AIX: std 0, 
+; DISABLE-64-AIX: std 0,
 ; DISABLE-NEXT: bge 0, {{.*}}[[EXIT_LABEL:BB[0-9_]+]]
 ;
 ; Store %a on the stack
@@ -421,14 +421,14 @@ entry:
 ; ENABLE-NEXT: beq 0, {{.*}}[[ELSE_LABEL:BB[0-9_]+]]
 ;
 ; Prologue code.
-; Make sure we save the CSR used in the inline asm: r14
+; Make sure we save the CSR used in the inline asm: r31
 ; ENABLE-DAG: li [[IV:[0-9]+]], 10
-; ENABLE-64-DAG: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
-; ENABLE-32-DAG: stw 14, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
+; ENABLE-64-DAG: std 31, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
+; ENABLE-32-DAG: stw 31, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
 ;
 ; DISABLE: cmplwi 3, 0
-; DISABLE-64-NEXT: std 14, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
-; DISABLE-32-NEXT: stw 14, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
+; DISABLE-64-NEXT: std 31, -[[STACK_OFFSET:[0-9]+]](1) # 8-byte Folded Spill
+; DISABLE-32-NEXT: stw 31, -[[STACK_OFFSET:[0-9]+]](1) # 4-byte Folded Spill
 ; DISABLE-NEXT: beq 0, {{.*}}[[ELSE_LABEL:BB[0-9_]+]]
 ; DISABLE: li [[IV:[0-9]+]], 10
 ;
@@ -437,20 +437,20 @@ entry:
 ;
 ; CHECK: {{.*}}[[LOOP_LABEL:BB[0-9_]+]]: # %for.body
 ; Inline asm statement.
-; CHECK: addi 14, 14, 1
+; CHECK: addi 31, 14, 1
 ; CHECK: bdnz {{.*}}[[LOOP_LABEL]]
 ;
 ; Epilogue code.
 ; CHECK: li 3, 0
-; CHECK-64-DAG: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; CHECK-32-DAG: lwz 14, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
+; CHECK-64-DAG: ld 31, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
+; CHECK-32-DAG: lwz 31, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
 ; CHECK-DAG: nop
 ; CHECK: blr
 ;
 ; CHECK: [[ELSE_LABEL]]
 ; CHECK-NEXT: slwi 3, 4, 1
-; DISABLE-64-NEXT: ld 14, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
-; DISABLE-32-NEXT: lwz 14, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
+; DISABLE-64-NEXT: ld 31, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
+; DISABLE-32-NEXT: lwz 31, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
 ; CHECK-NEXT: blr
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
@@ -463,7 +463,7 @@ for.preheader:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.03 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
-  tail call void asm "addi 14, 14, 1", "~{r14}"()
+  tail call void asm "addi 31, 14, 1", "~{r31}"()
   %inc = add nuw nsw i32 %i.03, 1
   %exitcond = icmp eq i32 %inc, 10
   br i1 %exitcond, label %for.exit, label %for.body

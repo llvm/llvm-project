@@ -2,10 +2,10 @@
 # RUN: llc -mtriple=aarch64-unknown-unknown -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define void @test_load_acquire_i8(i8* %addr) { ret void }
-  define void @test_load_acquire_i16(i16* %addr) { ret void }
-  define void @test_load_acquire_i32(i32* %addr) { ret void }
-  define void @test_load_acquire_i64(i64* %addr) { ret void }
+  define void @test_load_acquire_i8(ptr %addr) { ret void }
+  define void @test_load_acquire_i16(ptr %addr) { ret void }
+  define void @test_load_acquire_i32(ptr %addr) { ret void }
+  define void @test_load_acquire_i64(ptr %addr) { ret void }
 ...
 ---
 

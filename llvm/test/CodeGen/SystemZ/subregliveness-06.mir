@@ -20,19 +20,19 @@
   @g_747 = external dso_local unnamed_addr global i1, align 2
   @0 = internal unnamed_addr global i8 74, align 2
   @g_1055 = external dso_local unnamed_addr global i16, align 2
-  @g_195 = external dso_local global i64**, align 8
+  @g_195 = external dso_local global ptr, align 8
 
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
 
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #0
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 
   define dso_local fastcc void @func_32(i8 zeroext %arg, i16 zeroext %arg1) unnamed_addr #1 {
   bb:
     %tmp = alloca i32, align 4
-    %tmp2 = alloca [5 x [5 x i32***]], align 8
-    %tmp3 = bitcast [5 x [5 x i32***]]* %tmp2 to i8*
-    %tmp4 = getelementptr inbounds [5 x [5 x i32***]], [5 x [5 x i32***]]* %tmp2, i64 0, i64 2, i64 2
-    %tmp5 = bitcast i32**** %tmp4 to i64***
+    %tmp2 = alloca [5 x [5 x ptr]], align 8
+    %tmp3 = bitcast ptr %tmp2 to ptr
+    %tmp4 = getelementptr inbounds [5 x [5 x ptr]], ptr %tmp2, i64 0, i64 2, i64 2
+    %tmp5 = bitcast ptr %tmp4 to ptr
     br label %bb6
 
   bb6:                                              ; preds = %bb40, %bb
@@ -41,66 +41,66 @@
     %tmp9 = phi i8 [ %arg, %bb ], [ 0, %bb40 ]
     %tmp10 = sext i8 %tmp7 to i64
     %tmp11 = add nsw i64 %tmp10, 1
-    %tmp12 = getelementptr inbounds [10 x i8], [10 x i8]* @g_314, i64 0, i64 %tmp11
-    %tmp13 = load volatile i8, i8* %tmp12, align 1
+    %tmp12 = getelementptr inbounds [10 x i8], ptr @g_314, i64 0, i64 %tmp11
+    %tmp13 = load volatile i8, ptr %tmp12, align 1
     br i1 undef, label %bb39, label %bb14
 
   bb14:                                             ; preds = %bb6
-    %tmp15 = load i64**, i64*** @g_195, align 8
-    %tmp16 = load volatile i8, i8* %tmp12, align 1
-    store i32 7, i32* %tmp, align 4
-    call void @llvm.lifetime.start.p0i8(i64 200, i8* nonnull %tmp3)
-    store i32 580868341, i32* @g_69, align 4
+    %tmp15 = load ptr, ptr @g_195, align 8
+    %tmp16 = load volatile i8, ptr %tmp12, align 1
+    store i32 7, ptr %tmp, align 4
+    call void @llvm.lifetime.start.p0(i64 200, ptr nonnull %tmp3)
+    store i32 580868341, ptr @g_69, align 4
     %tmp17 = zext i8 %tmp9 to i64
-    %tmp18 = load i64, i64* @g_352, align 8
+    %tmp18 = load i64, ptr @g_352, align 8
     %tmp19 = and i64 %tmp18, %tmp17
     %tmp20 = icmp ne i64 %tmp19, 1
     %tmp21 = zext i1 %tmp20 to i64
-    %tmp22 = load i64*, i64** %tmp15, align 8
-    store i64 %tmp21, i64* %tmp22, align 8
-    %tmp23 = load i32, i32* @g_334, align 4
+    %tmp22 = load ptr, ptr %tmp15, align 8
+    store i64 %tmp21, ptr %tmp22, align 8
+    %tmp23 = load i32, ptr @g_334, align 4
     %tmp24 = xor i32 %tmp23, 1
-    store i32 %tmp24, i32* @g_334, align 4
+    store i32 %tmp24, ptr @g_334, align 4
     %tmp25 = zext i8 %tmp9 to i16
     %tmp26 = mul i16 %tmp25, 26036
-    %tmp27 = load i64**, i64*** %tmp5, align 8
+    %tmp27 = load ptr, ptr %tmp5, align 8
     br label %bb28
 
   bb28:                                             ; preds = %bb14
     %tmp29 = mul i16 %tmp26, %tmp8
     %tmp30 = zext i16 %tmp29 to i32
-    store i32 %tmp30, i32* @g_69, align 4
-    store i8 0, i8* @g_226, align 2
+    store i32 %tmp30, ptr @g_69, align 4
+    store i8 0, ptr @g_226, align 2
     br label %bb32
 
   bb31:                                             ; preds = %bb35
-    call void @llvm.lifetime.end.p0i8(i64 200, i8* nonnull %tmp3)
+    call void @llvm.lifetime.end.p0(i64 200, ptr nonnull %tmp3)
     br label %bb40
 
   bb32:                                             ; preds = %bb34, %bb28
-    store i16 1, i16* @g_1055, align 2
-    store i64 0, i64* @g_352, align 8
-    store i32* @g_334, i32** undef, align 8
+    store i16 1, ptr @g_1055, align 2
+    store i64 0, ptr @g_352, align 8
+    store ptr @g_334, ptr undef, align 8
     %tmp33 = or i64 0, 1
-    store i64 %tmp33, i64* @g_352, align 8
-    store i32* @g_334, i32** null, align 8
+    store i64 %tmp33, ptr @g_352, align 8
+    store ptr @g_334, ptr null, align 8
     br label %bb34
 
   bb34:                                             ; preds = %bb32
     br i1 false, label %bb32, label %bb35
 
   bb35:                                             ; preds = %bb34
-    store i32* %tmp, i32** undef, align 8
-    store i8 0, i8* @0, align 2
-    store i16 2, i16* @g_189, align 2
-    store i8 1, i8* @g_54, align 2
-    store i1 true, i1* @g_747, align 2
-    store i64 0, i64* undef, align 8
-    %tmp36 = load i64*, i64** undef, align 8
-    %tmp37 = load i64, i64* %tmp36, align 8
-    %tmp38 = load i64*, i64** %tmp27, align 8
-    store i64 %tmp37, i64* %tmp38, align 8
-    store i16 0, i16* @g_189, align 2
+    store ptr %tmp, ptr undef, align 8
+    store i8 0, ptr @0, align 2
+    store i16 2, ptr @g_189, align 2
+    store i8 1, ptr @g_54, align 2
+    store i1 true, ptr @g_747, align 2
+    store i64 0, ptr undef, align 8
+    %tmp36 = load ptr, ptr undef, align 8
+    %tmp37 = load i64, ptr %tmp36, align 8
+    %tmp38 = load ptr, ptr %tmp27, align 8
+    store i64 %tmp37, ptr %tmp38, align 8
+    store i16 0, ptr @g_189, align 2
     br label %bb31
 
   bb39:                                             ; preds = %bb6
@@ -108,7 +108,7 @@
 
   bb40:                                             ; preds = %bb39, %bb31
     %tmp41 = phi i16 [ undef, %bb39 ], [ 0, %bb31 ]
-    %tmp42 = load volatile i8, i8* %tmp12, align 1
+    %tmp42 = load volatile i8, ptr %tmp12, align 1
     %tmp43 = add i8 %tmp7, 1
     br i1 false, label %bb6, label %bb44
 
@@ -205,9 +205,9 @@ body:             |
   bb.4.bb32:
     STHRL %11, @g_1055 :: (store (s16) into @g_1055)
     STGRL %9, @g_352 :: (store (s64) into @g_352)
-    STG %10, undef %42:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG %10, undef %42:addr64bit, 0, $noreg :: (store (s64) into `ptr undef`)
     STGRL %13, @g_352 :: (store (s64) into @g_352)
-    STG %10, $noreg, 0, $noreg :: (store (s64) into `i32** null`)
+    STG %10, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
 
   bb.5.bb34:
     successors: %bb.4(0x7c000000), %bb.6(0x04000000)
@@ -217,12 +217,12 @@ body:             |
     J %bb.6
 
   bb.6.bb35:
-    STG %14, undef %43:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    STG %14, undef %43:addr64bit, 0, $noreg :: (store (s64) into `ptr undef`)
     MVI %15, 0, 0 :: (store (s8) into @0, align 2)
     STHRL %16, @g_189 :: (store (s16) into @g_189)
     MVI %17, 0, 1 :: (store (s8) into @g_54, align 2)
     MVI %18, 0, 1 :: (store (s8) into @g_747, align 2)
-    MVGHI undef %44:addr64bit, 0, 0 :: (store (s64) into `i64* undef`)
+    MVGHI undef %44:addr64bit, 0, 0 :: (store (s64) into `ptr undef`)
     %45:gr64bit = LG $noreg, 0, $noreg :: (load (s64) from %ir.tmp36)
     %46:addr64bit = LG killed %39, 0, $noreg :: (load (s64) from %ir.tmp27)
     STG killed %45, killed %46, 0, $noreg :: (store (s64) into %ir.tmp38)

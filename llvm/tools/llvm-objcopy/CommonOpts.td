@@ -7,6 +7,9 @@ multiclass Eq<string name, string help> {
                   HelpText<help>;
 }
 
+def grp_coff : OptionGroup<"kind">, HelpText<"OPTIONS (COFF specific)">;
+def grp_macho : OptionGroup<"kind">, HelpText<"OPTIONS (Mach-O specific)">;
+
 def help : Flag<["--"], "help">;
 def h : Flag<["-"], "h">, Alias<help>;
 
@@ -39,13 +42,13 @@ def p : Flag<["-"], "p">,
         HelpText<"Alias for --preserve-dates">;
 
 def strip_all : Flag<["--"], "strip-all">,
-                HelpText<"Remove non-allocated sections outside segments. "
-                         ".gnu.warning* and .ARM.attribute sections are not "
-                         "removed">;
+    HelpText<"For ELF, remove all symbols and non-alloc sections not within "
+             "segments, except for .gnu.warning*, .ARM.attribute, and the section name table. "
+             "For COFF and Mach-O, remove all symbols, debug sections, and relocations">;
 
 def strip_all_gnu
     : Flag<["--"], "strip-all-gnu">,
-      HelpText<"Compatible with GNU's --strip-all">;
+      HelpText<"Remove all symbols, debug sections and relocations. Compatible with GNU's --strip-all">;
 
 def strip_debug : Flag<["--"], "strip-debug">,
                   HelpText<"Remove all debug sections">;
@@ -64,7 +67,7 @@ def R : JoinedOrSeparate<["-"], "R">,
 
 def strip_sections
     : Flag<["--"], "strip-sections">,
-      HelpText<"Remove all section headers and all sections not in segments">;
+      HelpText<"Remove all section headers and all section data not within segments">;
 
 defm strip_symbol : Eq<"strip-symbol", "Strip <symbol>">,
                     MetaVarName<"symbol">;
@@ -75,17 +78,17 @@ def N : JoinedOrSeparate<["-"], "N">,
 defm keep_section : Eq<"keep-section", "Keep <section>">,
                     MetaVarName<"section">;
 
-defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
+defm keep_symbol : Eq<"keep-symbol", "When removing symbols, do not remove <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">,
         Alias<keep_symbol>,
         HelpText<"Alias for --keep-symbol">;
 
 def keep_file_symbols : Flag<["--"], "keep-file-symbols">,
-                        HelpText<"Do not remove file symbols">;
+                        HelpText<"Keep symbols of type STT_FILE, even if they would otherwise be stripped">;
 
 def keep_undefined : Flag<["--"], "keep-undefined">,
-                        HelpText<"Do not remove undefined symbols">;
+                        HelpText<"Do not remove undefined symbols">, Group<grp_macho>;
 
 def only_keep_debug
     : Flag<["--"], "only-keep-debug">,
@@ -94,16 +97,16 @@ def only_keep_debug
           "sections useful for debugging purposes">;
 
 def discard_locals : Flag<["--"], "discard-locals">,
-                     HelpText<"Remove compiler-generated local symbols, (e.g. "
-                              "symbols starting with .L)">;
+                     HelpText<"Remove local symbols starting with .L">;
 def X : Flag<["-"], "X">,
         Alias<discard_locals>,
         HelpText<"Alias for --discard-locals">;
 
 def discard_all
     : Flag<["--"], "discard-all">,
-      HelpText<"Remove all local symbols except file and section symbols. Also "
-               "remove all debug sections">;
+      HelpText<"Remove most local symbols. Different file formats may limit this to a subset. "
+      "For ELF, file and section symbols are not discarded. "
+      "Additionally, remove all debug sections">;
 def x : Flag<["-"], "x">,
         Alias<discard_all>,
         HelpText<"Alias for --discard-all">;

@@ -18,3 +18,4 @@ class TestCase(TestBase):
         dbg.RunCommandInterpreter(True, True, opts, 0, False, False)
         # Try resizing the terminal which shouldn't crash.
         dbg.SetTerminalWidth(47)
+        dbg.GetInputFile().Close()

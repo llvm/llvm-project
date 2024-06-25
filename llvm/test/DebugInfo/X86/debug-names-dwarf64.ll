@@ -30,11 +30,6 @@
 ; CHECK-NEXT:     CU[0]: 0x00000000
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Abbreviations [
-; CHECK-NEXT:     Abbreviation [[ABBREV_LABEL:0x[0-9a-f]*]] {
-; CHECK-NEXT:       Tag: DW_TAG_label
-; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
-; CHECK-NEXT:       DW_IDX_parent: DW_FORM_ref4
-; CHECK-NEXT:     }
 ; CHECK-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
 ; CHECK-NEXT:       Tag: DW_TAG_base_type
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
@@ -49,6 +44,11 @@
 ; CHECK-NEXT:       Tag: DW_TAG_subprogram
 ; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
 ; CHECK-NEXT:       DW_IDX_parent: DW_FORM_flag_present
+; CHECK-NEXT:     }
+; CHECK-NEXT:     Abbreviation [[ABBREV_LABEL:0x[0-9a-f]*]] {
+; CHECK-NEXT:       Tag: DW_TAG_label
+; CHECK-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-NEXT:       DW_IDX_parent: DW_FORM_ref4
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT:   Bucket 0 [

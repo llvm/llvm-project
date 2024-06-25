@@ -28,18 +28,17 @@ body:             |
   ; GCN-LABEL: name: test_main
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $vgpr0, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GCN-NEXT:   liveins: $vcc_hi, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $sgpr102, $sgpr103, $vgpr0, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr0 = COPY $sgpr33
+  ; GCN-NEXT:   $vcc_hi = frame-setup COPY $sgpr33
   ; GCN-NEXT:   $sgpr33 = frame-setup COPY $sgpr32
-  ; GCN-NEXT:   $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr3, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.69, addrspace 5)
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr4, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.70, addrspace 5)
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.71, addrspace 5)
   ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR $vgpr2, $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.72, addrspace 5)
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.74, addrspace 5)
-  ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr1
-  ; GCN-NEXT:   $vgpr5 = SI_SPILL_S32_TO_VGPR $sgpr0, 4, undef $vgpr5
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.73, addrspace 5)
+  ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
   ; GCN-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24, implicit-def dead $scc
   ; GCN-NEXT:   renamable $vgpr2 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, $vgpr3
@@ -116,18 +115,18 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GCN-NEXT:   liveins: $vcc_hi, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   KILL implicit-def $vcc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, implicit-def $sgpr32_sgpr33_sgpr34_sgpr35_sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99_sgpr100_sgpr101_sgpr102_sgpr103
+  ; GCN-NEXT:   KILL implicit-def $vcc_lo, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31, implicit-def $sgpr32_sgpr33_sgpr34_sgpr35_sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99_sgpr100_sgpr101_sgpr102_sgpr103
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GCN-NEXT:   liveins: $vcc_hi, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr22 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
-  ; GCN-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GCN-NEXT:   liveins: $vcc_hi, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr103 = SI_RESTORE_S32_FROM_VGPR $vgpr5, 3
   ; GCN-NEXT:   $sgpr102 = SI_RESTORE_S32_FROM_VGPR $vgpr5, 2
@@ -198,16 +197,15 @@ body:             |
   ; GCN-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr3, 1
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr3, 0
   ; GCN-NEXT:   KILL killed renamable $vgpr2
-  ; GCN-NEXT:   $sgpr0 = SI_RESTORE_S32_FROM_VGPR $vgpr5, 4
-  ; GCN-NEXT:   $sgpr1 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr3 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.69, addrspace 5)
   ; GCN-NEXT:   $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.70, addrspace 5)
   ; GCN-NEXT:   $vgpr5 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.71, addrspace 5)
   ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.72, addrspace 5)
-  ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.74, addrspace 5)
-  ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr1
+  ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.73, addrspace 5)
+  ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
   ; GCN-NEXT:   $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -24, implicit-def dead $scc
-  ; GCN-NEXT:   $sgpr33 = COPY $sgpr0
+  ; GCN-NEXT:   $sgpr33 = frame-destroy COPY $vcc_hi
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0

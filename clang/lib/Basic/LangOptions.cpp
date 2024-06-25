@@ -48,7 +48,7 @@ void LangOptions::resetNonModularOptions() {
 
 bool LangOptions::isNoBuiltinFunc(StringRef FuncName) const {
   for (unsigned i = 0, e = NoBuiltinFuncs.size(); i != e; ++i)
-    if (FuncName.equals(NoBuiltinFuncs[i]))
+    if (FuncName == NoBuiltinFuncs[i])
       return true;
   return false;
 }

@@ -1,0 +1,4 @@
+Checks: readability-identifier-naming
+CheckOptions:
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k

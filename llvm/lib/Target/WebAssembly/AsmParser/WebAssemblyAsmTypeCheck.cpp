@@ -288,6 +288,18 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
+  } else if (Name == "table.size") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
+  } else if (Name == "table.grow") {
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    Stack.push_back(wasm::ValType::I32);
   } else if (Name == "table.fill") {
     if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;

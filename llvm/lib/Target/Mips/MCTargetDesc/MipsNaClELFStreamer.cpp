@@ -259,15 +259,12 @@ bool baseRegNeedsLoadStoreMask(unsigned Reg) {
   return Reg != Mips::SP && Reg != Mips::T8;
 }
 
-MCELFStreamer *createMipsNaClELFStreamer(MCContext &Context,
-                                         std::unique_ptr<MCAsmBackend> TAB,
-                                         std::unique_ptr<MCObjectWriter> OW,
-                                         std::unique_ptr<MCCodeEmitter> Emitter,
-                                         bool RelaxAll) {
+MCELFStreamer *
+createMipsNaClELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                          std::unique_ptr<MCObjectWriter> OW,
+                          std::unique_ptr<MCCodeEmitter> Emitter) {
   MipsNaClELFStreamer *S = new MipsNaClELFStreamer(
       Context, std::move(TAB), std::move(OW), std::move(Emitter));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
 
   // Set bundle-alignment as required by the NaCl ABI for the target.
   S->emitBundleAlignMode(MIPS_NACL_BUNDLE_ALIGN);

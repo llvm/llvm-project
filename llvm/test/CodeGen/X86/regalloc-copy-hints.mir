@@ -103,6 +103,7 @@ registers:
   - { id: 82, class: gr32 }
 frameInfo:       
   maxAlignment:    4
+  adjustsStack:    true
   hasCalls:        true
 fixedStack:      
   - { id: 0, size: 4, alignment: 4, stack-id: default, isImmutable: true }

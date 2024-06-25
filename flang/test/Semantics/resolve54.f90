@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Tests based on examples in C.10.6
 
 ! C.10.6(10)
@@ -170,7 +170,7 @@ end
 ! C.10.6(25)
 ! Invalid generic (according to the rules), despite the fact that it is unambiguous
 module m8
-  !ERROR: Generic 'bad8' may not have specific procedures 's8a' and 's8b' as their interfaces are not distinguishable
+  !PORTABILITY: Generic 'bad8' should not have specific procedures 's8a' and 's8b' as their interfaces are not distinguishable by the rules in the standard
   interface BAD8
     subroutine S8A(X, Y, Z)
       real, optional :: X

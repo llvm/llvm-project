@@ -68,8 +68,8 @@
 # RUN:   symbol = .; \
 # RUN:   .data : { *(.data) } > ram \
 # RUN: }' > %t.script
-# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_OVERFLOW %s
-# ERR_OVERFLOW: error: section '.data' will not fit in region 'ram': overflowed by 2 bytes
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=NOT_CONVERGE %s
+# NOT_CONVERGE: error: address (0x14) of section '.text' does not converge
 
 nop
 

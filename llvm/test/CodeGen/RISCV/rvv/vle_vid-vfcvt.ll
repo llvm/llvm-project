@@ -112,3 +112,19 @@ entry:
   store <4 x float> <float 1.5, float 2.5, float 3.5, float 4.5>, ptr %t, align 16
   ret void
 }
+
+; Make sure we don't try to use vid+vsll+vfcvt. We previously flipped the sign
+; of 2147483648.0.
+define void @foo_9(ptr nocapture noundef writeonly %t) {
+; CHECK-LABEL: foo_9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a1, %hi(.LCPI8_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI8_0)
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  store <4 x float> <float 0.0, float -2147483648.0, float 0.0, float 2147483648.0>, ptr %t, align 16
+  ret void
+}

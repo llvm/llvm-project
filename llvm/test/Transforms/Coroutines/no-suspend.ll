@@ -325,7 +325,7 @@ body:
   %save = call token @llvm.coro.save(ptr %hdl)
   %subfn = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
   call fastcc void %subfn(ptr %hdl)
-  ; memcpy separates destory from suspend, therefore cannot simplify.
+  ; memcpy separates destroy from suspend, therefore cannot simplify.
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 1, i1 false)
   %0 = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %0, label %suspend [i8 0, label %resume

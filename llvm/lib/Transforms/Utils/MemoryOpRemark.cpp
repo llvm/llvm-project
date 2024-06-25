@@ -332,7 +332,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
     }
   };
   for_each(findDbgDeclares(const_cast<Value *>(V)), FindDI);
-  for_each(findDPVDeclares(const_cast<Value *>(V)), FindDI);
+  for_each(findDVRDeclares(const_cast<Value *>(V)), FindDI);
 
   if (FoundDI) {
     assert(!Result.empty());

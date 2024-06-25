@@ -26,7 +26,7 @@ define void @stackrestore1(ptr %out) {
   %val1 = load float, ptr %addr1, align 4
   %val2 = load float, ptr %addr2, align 4
   %val3 = load float, ptr %addr3, align 4
-  call void @llvm.stackrestore(i8* %stack)
+  call void @llvm.stackrestore(ptr %stack)
   %outaddr2 = getelementptr inbounds float, ptr %out, i64 2
   store float %val0, ptr %outaddr2, align 4
   %outaddr3 = getelementptr inbounds float, ptr %out, i64 3
@@ -37,5 +37,5 @@ define void @stackrestore1(ptr %out) {
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)

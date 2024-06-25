@@ -1,0 +1,57 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: mkdir -p %t/DstRoot/
+; RUN: cp -r %S/Inputs/LibFoo/* %t/DstRoot/
+
+; RUN: clang-installapi \
+; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -I%t/DstRoot/usr/include -dynamiclib \
+; RUN: -exclude-public-header %t/DstRoot/usr/include/public.h \
+; RUN: %t/DstRoot -o %t/output.tbd 2>&1 | FileCheck %s --allow-empty \
+; RUN: --implicit-check-not=error --implicit-check-not=warning 
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 
+
+# Test expected error by empty directory.
+; RUN: mkdir -p %t/EmptyRoot
+; RUN: not clang-installapi \
+; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: %t/DstRoot/usr/include -dynamiclib \
+; RUN: %t/EmptyRoot -o %t/output.tbd 2>&1 | FileCheck %s --check-prefix=EMPTY 
+
+; EMPTY: could not read directory {{.*}} cannot find any public (usr/include) or private (usr/local/include) header directory
+
+;--- expected.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "12",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

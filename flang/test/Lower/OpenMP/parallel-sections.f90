@@ -1,4 +1,6 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !===============================================================================
 ! Parallel sections construct
@@ -37,13 +39,10 @@ end subroutine omp_parallel_sections
 subroutine omp_parallel_sections_allocate(x, y)
   use omp_lib
   integer, intent(inout) :: x, y
-  !CHECK: %[[allocator_1:.*]] = arith.constant 1 : i32
-  !CHECK: %[[allocator_2:.*]] = arith.constant 1 : i32
-  !CHECK: omp.parallel allocate(
-  !CHECK: %[[allocator_2]] : i32 -> %{{.*}} : !fir.ref<i32>) {
-  !CHECK: omp.sections allocate(
-  !CHECK: %[[allocator_1]] : i32 -> %{{.*}} : !fir.ref<i32>) {
-  !$omp parallel sections allocate(omp_high_bw_mem_alloc: x)
+  !CHECK: omp.parallel
+  !CHECK: %[[allocator_1:.*]] = arith.constant 4 : i64
+  !CHECK: omp.sections allocate(%[[allocator_1]] : i64 -> %{{.*}} : !fir.ref<i32>) {
+  !$omp parallel sections allocate(omp_high_bw_mem_alloc: x) private(x, y)
     !CHECK: omp.section {
     !$omp section
       x = x + 12

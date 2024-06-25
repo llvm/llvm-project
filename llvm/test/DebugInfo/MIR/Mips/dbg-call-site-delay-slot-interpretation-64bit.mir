@@ -34,15 +34,15 @@
   target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
   target triple = "mips64-unknown-linux-gnu"
   ; Function Attrs: noinline nounwind
-  define void @set(i32* nocapture %adr, i32 signext %val) local_unnamed_addr !dbg !13 {
+  define void @set(ptr nocapture %adr, i32 signext %val) local_unnamed_addr !dbg !13 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %adr, metadata !18, metadata !DIExpression()), !dbg !20
+    call void @llvm.dbg.value(metadata ptr %adr, metadata !18, metadata !DIExpression()), !dbg !20
     call void @llvm.dbg.value(metadata i32 %val, metadata !19, metadata !DIExpression()), !dbg !20
     %inc = add nsw i32 %val, 1, !dbg !20
     call void @llvm.dbg.value(metadata i32 %inc, metadata !19, metadata !DIExpression()), !dbg !20
     %call = tail call signext i32 @sum(i32 signext %inc, i32 signext %inc), !dbg !20
     %add = add nsw i32 %call, %inc, !dbg !20
-    store i32 %add, i32* %adr, align 4, !dbg !20
+    store i32 %add, ptr %adr, align 4, !dbg !20
     ret void
   }
 

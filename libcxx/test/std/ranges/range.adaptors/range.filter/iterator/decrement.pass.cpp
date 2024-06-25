@@ -38,14 +38,14 @@ using FilterIteratorFor = std::ranges::iterator_t<
   std::ranges::filter_view<minimal_view<Iterator, sentinel_wrapper<Iterator>>, EqualTo>
 >;
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using View = minimal_view<Iterator, Sentinel>;
+  using View = minimal_view<Iter, Sent>;
   using FilterView = std::ranges::filter_view<View, EqualTo>;
   using FilterIterator = std::ranges::iterator_t<FilterView>;
 
   auto make_filter_view = [](auto begin, auto end, auto pred) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
+    View view{Iter(begin), Sent(Iter(end))};
     return FilterView(std::move(view), pred);
   };
 

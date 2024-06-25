@@ -160,9 +160,10 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
             "'%s' is a host-associated allocatable and is not definable in a device subprogram"_err_en_US,
             original);
       } else if (*cudaDataAttr != common::CUDADataAttr::Device &&
-          *cudaDataAttr != common::CUDADataAttr::Managed) {
+          *cudaDataAttr != common::CUDADataAttr::Managed &&
+          *cudaDataAttr != common::CUDADataAttr::Shared) {
         return BlameSymbol(at,
-            "'%s' is not device or managed data and is not definable in a device subprogram"_err_en_US,
+            "'%s' is not device or managed or shared data and is not definable in a device subprogram"_err_en_US,
             original);
       }
     } else if (!isOwnedByDeviceCode) {

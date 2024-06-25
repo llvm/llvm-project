@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK: pragma simd reduction
 ;

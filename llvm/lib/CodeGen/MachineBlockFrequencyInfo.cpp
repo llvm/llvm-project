@@ -198,12 +198,11 @@ void MachineBlockFrequencyInfo::calculate(
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MLI);
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }
   if (PrintMachineBlockFreq &&
-      (PrintBFIFuncName.empty() || F.getName().equals(PrintBFIFuncName))) {
+      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     MBFI->print(dbgs());
   }
 }
@@ -280,7 +279,7 @@ BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
 Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
                                BlockFrequency Freq) {
   return Printable([&MBFI, Freq](raw_ostream &OS) {
-    printBlockFreqImpl(OS, MBFI.getEntryFreq(), Freq);
+    printRelativeBlockFreq(OS, MBFI.getEntryFreq(), Freq);
   });
 }
 

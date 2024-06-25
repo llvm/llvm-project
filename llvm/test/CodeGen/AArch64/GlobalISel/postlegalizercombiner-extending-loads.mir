@@ -4,11 +4,11 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
-  define void @test_zeroext(i8* %addr) {
+  define void @test_zeroext(ptr %addr) {
   entry:
     ret void
   }
-  define void @test_s32_to_s64(i8* %addr) {
+  define void @test_s32_to_s64(ptr %addr) {
   entry:
     ret void
   }

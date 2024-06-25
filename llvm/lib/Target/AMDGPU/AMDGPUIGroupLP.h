@@ -11,10 +11,17 @@
 
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
+#include <vector>
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(bool IsReentry);
+namespace AMDGPU {
+// The current phase of instruction scheduling
+enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
+} // namespace AMDGPU
+
+std::unique_ptr<ScheduleDAGMutation>
+createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase);
 
 } // namespace llvm
 

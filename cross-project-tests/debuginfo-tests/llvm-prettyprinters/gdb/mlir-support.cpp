@@ -38,7 +38,7 @@ mlir::Attribute TypeAttr = mlir::TypeAttr::get(IndexType);
 mlir::Attribute ArrayAttr = mlir::ArrayAttr::get(&Context, {UnitAttr});
 mlir::Attribute StringAttr = mlir::StringAttr::get(&Context, "foo");
 mlir::Attribute ElementsAttr = mlir::DenseElementsAttr::get(
-    VectorType.cast<mlir::ShapedType>(), llvm::ArrayRef<float>{2.0f, 3.0f});
+    mlir::cast<mlir::ShapedType>(VectorType), llvm::ArrayRef<float>{2.0f, 3.0f});
 
 int main() {
   // Reference symbols that might otherwise be stripped.

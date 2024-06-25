@@ -21,10 +21,10 @@ template <typename VEC> VEC __attribute__((noinline)) test(vector unsigned char 
     return (VEC)(a * b);
 }
 vector unsigned int test1(vector unsigned char RetImplicitConv) {
-  return RetImplicitConv; // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}} 
+  return RetImplicitConv; // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 vector unsigned int test2(vector unsigned char RetImplicitConvAddConst) {
-  return RetImplicitConvAddConst + 5; // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}} 
+  return RetImplicitConvAddConst + 5; // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 vector unsigned int test3(vector unsigned char RetExplicitConv) {
   return (vector unsigned int)RetExplicitConv;
@@ -34,7 +34,7 @@ vector unsigned int test4(vector unsigned char RetExplicitConvAddConst) {
 }
 vector unsigned int test5(vector unsigned char RetImplicitConvAddSame1,
                           vector unsigned char RetImplicitConvAddSame2) {
-  return RetImplicitConvAddSame1 + RetImplicitConvAddSame2; // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}} 
+  return RetImplicitConvAddSame1 + RetImplicitConvAddSame2; // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 vector unsigned int test6(vector unsigned char RetExplicitConvAddSame1,
                           vector unsigned char RetExplicitConvAddSame2) {
@@ -54,10 +54,10 @@ vector unsigned long long test9(vector unsigned char a, vector unsigned char b) 
     return test<vector unsigned long long>(a, b);
 }
 void test1a(vector unsigned char ArgImplicitConv) {
-  return dummy(ArgImplicitConv); // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  return dummy(ArgImplicitConv); // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 void test2a(vector unsigned char ArgImplicitConvAddConst) {
-  return dummy(ArgImplicitConvAddConst + 5); // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  return dummy(ArgImplicitConvAddConst + 5); // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 void test3a(vector unsigned char ArgExplicitConv) {
   return dummy((vector unsigned int)ArgExplicitConv);
@@ -67,7 +67,7 @@ void test4a(vector unsigned char ArgExplicitConvAddConst) {
 }
 void test5a(vector unsigned char ArgImplicitConvAddSame1,
             vector unsigned char ArgImplicitConvAddSame2) {
-  return dummy(ArgImplicitConvAddSame1 + ArgImplicitConvAddSame2); // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  return dummy(ArgImplicitConvAddSame1 + ArgImplicitConvAddSame2); // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 void test6a(vector unsigned char ArgExplicitConvAddSame1,
             vector unsigned char ArgExplicitConvAddSame2) {
@@ -80,33 +80,33 @@ void test7a(vector unsigned char ArgExplicitConvAddSame1Full,
                                      ArgExplicitConvAddSame2Full));
 }
 void test_bool_compat(void) {
-  vbs = vss; // expected-warning {{Implicit conversion between vector types (''__vector short' (vector of 8 'short' values)' and ''__vector __bool unsigned short' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vbs = vus; // expected-warning {{Implicit conversion between vector types (''__vector unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __bool unsigned short' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vbs = vss; // expected-warning {{implicit conversion between vector types (''__vector short' (vector of 8 'short' values)' and ''__vector __bool unsigned short' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vbs = vus; // expected-warning {{implicit conversion between vector types (''__vector unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __bool unsigned short' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vbi = vsi; // expected-warning {{Implicit conversion between vector types (''__vector int' (vector of 4 'int' values)' and ''__vector __bool unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vbi = vui; // expected-warning {{Implicit conversion between vector types (''__vector unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __bool unsigned int' (vector of 4 'unsigned int' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vbi = vsi; // expected-warning {{implicit conversion between vector types (''__vector int' (vector of 4 'int' values)' and ''__vector __bool unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vbi = vui; // expected-warning {{implicit conversion between vector types (''__vector unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __bool unsigned int' (vector of 4 'unsigned int' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vbl = vsl; // expected-warning {{Implicit conversion between vector types (''__vector long long' (vector of 2 'long long' values)' and ''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vbl = vul; // expected-warning {{Implicit conversion between vector types (''__vector unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vbl = vsl; // expected-warning {{implicit conversion between vector types (''__vector long long' (vector of 2 'long long' values)' and ''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vbl = vul; // expected-warning {{implicit conversion between vector types (''__vector unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vbc = vsc; // expected-warning {{Implicit conversion between vector types (''__vector signed char' (vector of 16 'signed char' values)' and ''__vector __bool unsigned char' (vector of 16 'unsigned char' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vbc = vuc; // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __bool unsigned char' (vector of 16 'unsigned char' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vbc = vsc; // expected-warning {{implicit conversion between vector types (''__vector signed char' (vector of 16 'signed char' values)' and ''__vector __bool unsigned char' (vector of 16 'unsigned char' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vbc = vuc; // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __bool unsigned char' (vector of 16 'unsigned char' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }
 
 void test_pixel_compat(void) {
-  vp = vbs; // expected-warning {{Implicit conversion between vector types (''__vector __bool unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vss; // expected-warning {{Implicit conversion between vector types (''__vector short' (vector of 8 'short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vus; // expected-warning {{Implicit conversion between vector types (''__vector unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vp = vbs; // expected-warning {{implicit conversion between vector types (''__vector __bool unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vss; // expected-warning {{implicit conversion between vector types (''__vector short' (vector of 8 'short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vus; // expected-warning {{implicit conversion between vector types (''__vector unsigned short' (vector of 8 'unsigned short' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vp = vbi; // expected-warning {{Implicit conversion between vector types (''__vector __bool unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vsi; // expected-warning {{Implicit conversion between vector types (''__vector int' (vector of 4 'int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vui; // expected-warning {{Implicit conversion between vector types (''__vector unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vp = vbi; // expected-warning {{implicit conversion between vector types (''__vector __bool unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vsi; // expected-warning {{implicit conversion between vector types (''__vector int' (vector of 4 'int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vui; // expected-warning {{implicit conversion between vector types (''__vector unsigned int' (vector of 4 'unsigned int' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vp = vbl; // expected-warning {{Implicit conversion between vector types (''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vsl; // expected-warning {{Implicit conversion between vector types (''__vector long long' (vector of 2 'long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vul; // expected-warning {{Implicit conversion between vector types (''__vector unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vp = vbl; // expected-warning {{implicit conversion between vector types (''__vector __bool unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vsl; // expected-warning {{implicit conversion between vector types (''__vector long long' (vector of 2 'long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vul; // expected-warning {{implicit conversion between vector types (''__vector unsigned long long' (vector of 2 'unsigned long long' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 
-  vp = vbc; // expected-warning {{Implicit conversion between vector types (''__vector __bool unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vsc; // expected-warning {{Implicit conversion between vector types (''__vector signed char' (vector of 16 'signed char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
-  vp = vuc; // expected-warning {{Implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated. In the future, the behavior implied by '-fno-lax-vector-conversions' will be the default.}}
+  vp = vbc; // expected-warning {{implicit conversion between vector types (''__vector __bool unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vsc; // expected-warning {{implicit conversion between vector types (''__vector signed char' (vector of 16 'signed char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
+  vp = vuc; // expected-warning {{implicit conversion between vector types (''__vector unsigned char' (vector of 16 'unsigned char' values)' and ''__vector __pixel ' (vector of 8 'unsigned short' values)') is deprecated; in the future, the behavior implied by '-fno-lax-vector-conversions' will be the default}}
 }

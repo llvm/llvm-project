@@ -25,7 +25,7 @@ static void nullJoinTest() {
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   nullJoinTest();
   return 0;
 }

@@ -84,6 +84,32 @@ define ptr @test2a(ptr %p, i64 %x, i64 %y) {
   ret ptr %select
 }
 
+define ptr @test2a_nusw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2a_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 [[X]], i64 0
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr nusw i32, ptr [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    ret ptr [[SELECT]]
+;
+  %gep = getelementptr nusw i32, ptr %p, i64 %x
+  %cmp = icmp ugt i64 %x, %y
+  %select = select i1 %cmp, ptr %gep, ptr %p
+  ret ptr %select
+}
+
+define ptr @test2a_nuw(ptr %p, i64 %x, i64 %y) {
+; CHECK-LABEL: @test2a_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT_IDX:%.*]] = select i1 [[CMP]], i64 [[X]], i64 0
+; CHECK-NEXT:    [[SELECT:%.*]] = getelementptr nuw i32, ptr [[P:%.*]], i64 [[SELECT_IDX]]
+; CHECK-NEXT:    ret ptr [[SELECT]]
+;
+  %gep = getelementptr nuw i32, ptr %p, i64 %x
+  %cmp = icmp ugt i64 %x, %y
+  %select = select i1 %cmp, ptr %gep, ptr %p
+  ret ptr %select
+}
+
 ; PR50183
 define ptr @test2b(ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @test2b(

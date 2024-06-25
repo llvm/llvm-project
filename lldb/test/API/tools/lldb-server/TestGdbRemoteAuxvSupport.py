@@ -117,8 +117,8 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
         # small (usually smaller than 50), they can sometimes be larger.
         self.trace("auxv dict: {}".format(auxv_dict))
         for auxv_key in auxv_dict:
-            self.assertTrue(auxv_key >= 1)
-            self.assertTrue(auxv_key <= 2500)
+            self.assertGreaterEqual(auxv_key, 1)
+            self.assertLessEqual(auxv_key, 2500)
 
     @skipIfWindows
     @expectedFailureNetBSD

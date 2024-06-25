@@ -12,12 +12,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub1:sreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   undef [[DEF:%[0-9]+]].sub1:sreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   %0.sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
-  ; CHECK-NEXT:   dead %0.sub1:sreg_64 = COPY %0.sub0
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]].sub0:sreg_64 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]]
+  ; CHECK-NEXT:   dead [[DEF:%[0-9]+]].sub1:sreg_64 = COPY [[DEF]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1
@@ -41,12 +41,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub1:sreg_64 = S_MOV_B32 -1
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 -1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   %0.sub0:sreg_64 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY %0
-  ; CHECK-NEXT:   dead %0.sub1:sreg_64 = COPY %0.sub0
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY [[S_MOV_B32_]]
+  ; CHECK-NEXT:   dead [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]].sub1
   bb.0:
     successors: %bb.1

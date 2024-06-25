@@ -15,6 +15,7 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <map>
@@ -64,6 +65,9 @@ enum ActionKind {
   /// Translate input source into HTML.
   EmitHTML,
 
+  /// Emit a .cir file
+  EmitCIR,
+
   /// Emit a .ll file.
   EmitLLVM,
 
@@ -85,8 +89,12 @@ enum ActionKind {
   /// Generate pre-compiled module from a module map.
   GenerateModule,
 
-  /// Generate pre-compiled module from a C++ module interface file.
+  /// Generate pre-compiled module from a standard C++ module interface unit.
   GenerateModuleInterface,
+
+  /// Generate reduced module interface for a standard C++ module interface
+  /// unit.
+  GenerateReducedModuleInterface,
 
   /// Generate a C++20 header unit module from a header file.
   GenerateHeaderUnit,
@@ -383,6 +391,30 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ModulesShareFileManager : 1;
 
+  /// Whether to emit symbol graph files as a side effect of compilation.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitSymbolGraph : 1;
+
+  /// Whether to emit additional symbol graphs for extended modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitExtensionSymbolGraphs : 1;
+
+  /// Whether to emit symbol labels for testing in generated symbol graphs
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitSymbolGraphSymbolLabelsForTesting : 1;
+
+  /// Whether to emit symbol labels for testing in generated symbol graphs
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned EmitPrettySymbolGraphs : 1;
+
+  /// Whether to generate reduced BMI for C++20 named modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned GenReducedBMI : 1;
+
+  /// Use Clang IR pipeline to emit code
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UseClangIRPipeline : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -488,14 +520,12 @@ public:
   std::string ProductName;
 
   // Currently this is only used as part of the `-extract-api` action.
-  // A comma seperated list of files providing a list of APIs to
+  // A comma separated list of files providing a list of APIs to
   // ignore when extracting documentation.
   std::vector<std::string> ExtractAPIIgnoresFileList;
 
-  // Currently this is only used as part of the `-emit-symbol-graph`
-  // action.
   // Location of output directory where symbol graph information would
-  // be dumped
+  // be dumped. This overrides regular -o output file specification
   std::string SymbolGraphOutputDir;
 
   /// Args to pass to the plugins
@@ -549,6 +579,9 @@ public:
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
+  /// Output Path for module output file.
+  std::string ModuleOutputPath;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -561,7 +594,10 @@ public:
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
         IncludeTimestamps(true), UseTemporary(true),
         AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
-        TimeTraceGranularity(500) {}
+        EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
+        EmitSymbolGraphSymbolLabelsForTesting(false),
+        EmitPrettySymbolGraphs(false), GenReducedBMI(false),
+        UseClangIRPipeline(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

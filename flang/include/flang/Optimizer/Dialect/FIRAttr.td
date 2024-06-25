@@ -16,7 +16,7 @@
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<fir_Dialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
 
 def FIRnoAttributes  : I32BitEnumAttrCaseNone<"None">;
 def FIRallocatable  : I32BitEnumAttrCaseBit<"allocatable", 0>;
@@ -55,7 +55,7 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
   let returnType = "::fir::FortranVariableFlagsEnum";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
+        "::fir::FortranVariableFlagsAttr::get($_builder.getContext(), $0)";
 }
 
 def fir_BoxFieldAttr : I32EnumAttr<
@@ -67,8 +67,48 @@ def fir_BoxFieldAttr : I32EnumAttr<
   let cppNamespace = "fir";
 }
 
+def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
+    "intrinsic operations and functions supported by DO CONCURRENT REDUCE",
+    [
+      I32BitEnumAttrCaseBit<"Add", 0, "add">,
+      I32BitEnumAttrCaseBit<"Multiply", 1, "multiply">,
+      I32BitEnumAttrCaseBit<"AND", 2, "and">,
+      I32BitEnumAttrCaseBit<"OR", 3, "or">,
+      I32BitEnumAttrCaseBit<"EQV", 4, "eqv">,
+      I32BitEnumAttrCaseBit<"NEQV", 5, "neqv">,
+      I32BitEnumAttrCaseBit<"MAX", 6, "max">,
+      I32BitEnumAttrCaseBit<"MIN", 7, "min">,
+      I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
+      I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
+      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+    ]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_ReduceAttr : fir_Attr<"Reduce"> {
+  let mnemonic = "reduce_attr";
+
+  let parameters = (ins
+    "ReduceOperationEnum":$reduce_operation
+  );
+
+  let assemblyFormat = "`<` $reduce_operation `>`";
+}
 
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
+
+def fir_LowerBoundModifierAttribute : I32EnumAttr<
+    "LowerBoundModifierAttribute",
+    "Describes how to modify lower bounds",
+    [
+      I32EnumAttrCase<"Preserve", 0, "preserve">,
+      I32EnumAttrCase<"SetToOnes", 1, "ones">,
+      I32EnumAttrCase<"SetToZeroes", 2, "zeroes">,
+    ]> {
+  let cppNamespace = "::fir";
+}
 
 #endif // FIR_DIALECT_FIR_ATTRS

@@ -114,6 +114,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     Type newType = RankedTensorType::get(
         newShape,
         cast<RankedTensorType>(operand->get().getType()).getElementType());
+
     Value newInput = b.create<tensor::ExpandShapeOp>(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);

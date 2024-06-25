@@ -172,6 +172,7 @@ forwarded for this to work.
 
 .. note::
   These options are used to create a "port map" within ``lldb-server``.
-  Unfortunately this map is not shared across all the processes it may create,
+  Unfortunately this map is not cleaned up on Windows on connection close,
   and across a few uses you may run out of valid ports. To work around this,
   restart the platform every so often, especially after running a set of tests.
+  This is tracked here: https://github.com/llvm/llvm-project/issues/90923

@@ -1,0 +1,7 @@
+# These Python packages are required to be able to run the LLDB test suite.
+
+psutil>=5.9.4
+# Pexpect tests are known not to work on Windows, so are disabled.
+# See llvm.org/pr22274.
+pexpect>=4.9.0; sys_platform != 'win32'
+packaging

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -x c -fsyntax-only -verify -Wint-in-bool-context %s
 // RUN: %clang_cc1 -x c -fsyntax-only -verify -Wall %s
+// RUN: %clang_cc1 -x c -std=c23 -fsyntax-only -verify -Wall %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wint-in-bool-context %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wall %s
 
@@ -42,6 +43,9 @@ int test(int a, unsigned b, enum num n) {
   r = ONE << a; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
   if (TWO << a) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(2 << a) != 0'?}}
     return a;
+  
+  a = 1 << 2 ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
+  a = 1 << a ? 0: 1; // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
 
   for (a = 0; 1 << a; a++) // expected-warning {{converting the result of '<<' to a boolean; did you mean '(1 << a) != 0'?}}
     ;
@@ -69,6 +73,20 @@ int test(int a, unsigned b, enum num n) {
     // expected-warning@-1 {{converting the enum constant to a boolean}}
     return a;
 
+  if(1 << 5) // expected-warning {{converting the result of '<<' to a boolean always evaluates to true}}
+    return a;
+
   // Don't warn in macros.
   return SHIFT(1, a);
+}
+
+int GH64356(int arg) {
+  if ((arg == 1) && (1 == 1)) return 1;
+    return 0;
+
+  if ((64 > 32) && (32 < 64))
+    return 2;
+
+  if ((1 == 1) && (arg == 1)) return 1;
+    return 0;
 }

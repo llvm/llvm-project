@@ -48,6 +48,17 @@ struct ASITag {
 #define GET_ASITagsList_DECL
 #include "SparcGenSearchableTables.inc"
 } // end namespace SparcASITag
+
+// Defines symbolic names for Sparc v9 prefetch tag names.
+namespace SparcPrefetchTag {
+struct PrefetchTag {
+  const char *Name;
+  unsigned Encoding;
+};
+
+#define GET_PrefetchTagsList_DECL
+#include "SparcGenSearchableTables.inc"
+} // end namespace SparcPrefetchTag
 } // End llvm namespace
 
 // Defines symbolic names for Sparc registers.  This defines a mapping from

@@ -6,7 +6,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that .debug_line gets generated correctly when .debug_info is DWARF5, and .debug_line is DWARF4.
+## This test checks that .debug_line gets generated correctly when .debug_info is DWARF5, and .debug_line is DWARF4.
 
 # PRECHECK: version: 4
 # PRECHECK: file_names[  1]:

@@ -14,13 +14,13 @@ target triple = "x86_64-apple-macosx"
 
 ; DEBUGIFY-LABEL: @twoArgsNoPromotion
 ; DEBUGIFY-NEXT: %add = add
-; DEBUGIFY-NEXT: call void @llvm.dbg.value(metadata i32 %add,
+; DEBUGIFY-NEXT: #dbg_value(i32 %add,
 ; DEBUGIFY-NEXT: %sextadd = sext
-; DEBUGIFY-NEXT: call void @llvm.dbg.value(metadata i64 %sextadd,
+; DEBUGIFY-NEXT: #dbg_value(i64 %sextadd,
 ; DEBUGIFY-NEXT: %arrayidx = getelementptr
-; DEBUGIFY-NEXT: call void @llvm.dbg.value(metadata ptr %arrayidx,
+; DEBUGIFY-NEXT: #dbg_value(ptr %arrayidx,
 ; DEBUGIFY-NEXT: %res = load i8,
-; DEBUGIFY-NEXT: call void @llvm.dbg.value(metadata i8 %res,
+; DEBUGIFY-NEXT: #dbg_value(i8 %res,
 ; DEBUGIFY-NEXT: ret i8 %res,
 define i8 @twoArgsNoPromotion(i32 %arg1, i32 %arg2, ptr %base) {
   %add = add nsw i32 %arg1, %arg2

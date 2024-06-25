@@ -8,22 +8,22 @@
   %struct.S = type { i32, i32, i32, i32 }
 
   ; Function Attrs: nounwind uwtable
-  define void @test_imm_store(%struct.S* noalias nocapture %s1, %struct.S* nocapture %s2, i32 %x, %struct.S* nocapture %s3) local_unnamed_addr #0 {
+  define void @test_imm_store(ptr noalias nocapture %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3) local_unnamed_addr #0 {
   entry:
-    %a2 = bitcast %struct.S* %s1 to i32*
-    store i32 0, i32* %a2, align 4
-    %a13 = bitcast %struct.S* %s3 to i32*
-    store i32 1, i32* %a13, align 4
-    %0 = bitcast %struct.S* %s2 to i8*
-    %1 = bitcast %struct.S* %s1 to i8*
-    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 %1, i64 16, i1 false)
+    %a2 = bitcast ptr %s1 to ptr
+    store i32 0, ptr %a2, align 4
+    %a13 = bitcast ptr %s3 to ptr
+    store i32 1, ptr %a13, align 4
+    %0 = bitcast ptr %s2 to ptr
+    %1 = bitcast ptr %s1 to ptr
+    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 %1, i64 16, i1 false)
     ret void
   }
 
-  declare void @bar(%struct.S*) local_unnamed_addr
+  declare void @bar(ptr) local_unnamed_addr
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+  declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 ...
 ---

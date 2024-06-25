@@ -94,7 +94,7 @@ subroutine test_taskloop
   !DEF: /test_taskloop/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   !REF: /test_taskloop/OtherConstruct1/i
   do j=1,i
-   !REF: /test_taskloop/a
+   !DEF: /test_taskloop/OtherConstruct1/a (OmpFirstPrivate, OmpImplicit) HostAssoc REAL(4)
    !REF: /test_taskloop/OtherConstruct1/j
    !REF: /test_taskloop/OtherConstruct1/i
    a(j,i) = 3.14

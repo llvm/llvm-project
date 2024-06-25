@@ -1,4 +1,6 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -passes=loop-unroll -unroll-threshold=49 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -passes=loop-unroll -unroll-threshold=57 -unroll-peel-count=0 -unroll-allow-partial=false -unroll-max-iteration-count-to-analyze=16 < %s | FileCheck %s
+
+@indices = external global [16 x i32]
 
 ; CHECK-LABEL: @test_func_addrspacecast_cost_noop(
 ; CHECK-NOT: br i1
@@ -9,8 +11,10 @@ entry:
 for.body:
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi float [ %fmul, %for.body ], [ 0.0, %entry ]
-  %arrayidx.in = getelementptr inbounds float, ptr addrspace(1) %in, i32 %indvars.iv
-  %arrayidx.out = getelementptr inbounds float, ptr addrspace(1) %out, i32 %indvars.iv
+  %idx.ptr = getelementptr inbounds [16 x i32], ptr @indices, i32 0, i32 %indvars.iv
+  %index = load i32, ptr %idx.ptr
+  %arrayidx.in = getelementptr inbounds float, ptr addrspace(1) %in, i32 %index
+  %arrayidx.out = getelementptr inbounds float, ptr addrspace(1) %out, i32 %index
   %cast.in = addrspacecast ptr addrspace(1) %arrayidx.in to ptr
   %cast.out = addrspacecast ptr addrspace(1) %arrayidx.out to ptr
   %load = load float, ptr %cast.in
@@ -34,8 +38,10 @@ entry:
 for.body:
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi float [ %fmul, %for.body ], [ 0.0, %entry ]
-  %arrayidx.in = getelementptr inbounds float, ptr %in, i32 %indvars.iv
-  %arrayidx.out = getelementptr inbounds float, ptr %out, i32 %indvars.iv
+  %idx.ptr = getelementptr inbounds [16 x i32], ptr @indices, i32 0, i32 %indvars.iv
+  %index = load i32, ptr %idx.ptr
+  %arrayidx.in = getelementptr inbounds float, ptr %in, i32 %index
+  %arrayidx.out = getelementptr inbounds float, ptr %out, i32 %index
   %cast.in = addrspacecast ptr %arrayidx.in to ptr addrspace(3)
   %cast.out = addrspacecast ptr %arrayidx.out to ptr addrspace(3)
   %load = load float, ptr addrspace(3) %cast.in
@@ -58,8 +64,10 @@ entry:
 for.body:
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi float [ %fmul, %for.body ], [ 0.0, %entry ]
-  %arrayidx.in = getelementptr inbounds float, ptr addrspace(3) %in, i32 %indvars.iv
-  %arrayidx.out = getelementptr inbounds float, ptr addrspace(3) %out, i32 %indvars.iv
+  %idx.ptr = getelementptr inbounds [16 x i32], ptr @indices, i32 0, i32 %indvars.iv
+  %index = load i32, ptr %idx.ptr
+  %arrayidx.in = getelementptr inbounds float, ptr addrspace(3) %in, i32 %index
+  %arrayidx.out = getelementptr inbounds float, ptr addrspace(3) %out, i32 %index
   %cast.in = addrspacecast ptr addrspace(3) %arrayidx.in to ptr
   %cast.out = addrspacecast ptr addrspace(3) %arrayidx.out to ptr
   %load = load float, ptr %cast.in

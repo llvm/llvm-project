@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; This crashed our codegen at some point, verify it runs through

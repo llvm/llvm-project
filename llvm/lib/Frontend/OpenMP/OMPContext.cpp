@@ -44,6 +44,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::ppcle:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::systemz:
   case Triple::x86:
   case Triple::x86_64:
     ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
@@ -62,7 +63,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch) {        \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
-    if (StringRef(Str) == StringRef("x86_64") &&                               \
+    if (StringRef(Str) == "x86_64" &&                                          \
         TargetTriple.getArch() == Triple::x86_64)                              \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }

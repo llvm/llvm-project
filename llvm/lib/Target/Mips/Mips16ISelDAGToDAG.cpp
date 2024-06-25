@@ -219,7 +219,11 @@ bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
   return false;
 }
 
+Mips16DAGToDAGISelLegacy::Mips16DAGToDAGISelLegacy(MipsTargetMachine &TM,
+                                                   CodeGenOptLevel OL)
+    : MipsDAGToDAGISelLegacy(std::make_unique<Mips16DAGToDAGISel>(TM, OL)) {}
+
 FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
-  return new Mips16DAGToDAGISel(TM, OptLevel);
+  return new Mips16DAGToDAGISelLegacy(TM, OptLevel);
 }

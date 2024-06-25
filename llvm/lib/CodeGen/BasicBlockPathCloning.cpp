@@ -119,6 +119,16 @@ bool IsValidCloning(const MachineFunction &MF,
           return false;
         }
       }
+      if (PathBB->isMachineBlockAddressTaken()) {
+        // Avoid cloning blocks which have their address taken since we can't
+        // rewire branches to those blocks as easily (e.g., branches within
+        // inline assembly).
+        WithColor::warning()
+            << "block #" << BBID
+            << " has its machine block address taken in function "
+            << MF.getName() << "\n";
+        return false;
+      }
     }
 
     if (I != ClonePath.size() - 1 && !PathBB->empty() &&

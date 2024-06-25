@@ -18,11 +18,11 @@
 ; CHECK:      %div.i.epil = sdiv i32 %t.08.i.epil, 2,
 ; CHECK-NEXT: %add.i.epil = add i32 %t.08.i.epil, %a,
 ; CHECK-NEXT: %add1.i.epil = add i32 %add.i.epil, %div.i.epil,
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add1.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %add1.i.epil,
 ; CHECK-NEXT: %inc.i.epil = add nuw i32 %i.09.i.epil, 1, !dbg !36
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %inc.i.epil,
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %inc.i.epil,
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add1.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %inc.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %inc.i.epil,
+; CHECK-NEXT: #dbg_value(i32 %add1.i.epil,
 
 ; CHECK: lee1.exit.loopexit:
 ; CHECK:   br label %lee1.exit, !dbg ![[EXIT_LOC:[0-9]+]]

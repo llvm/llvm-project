@@ -182,9 +182,9 @@ public:
     // Pad the weight so that it is modulo of the striding.
     llvm::SmallVector<int32_t, 8> weightPadding = {0, 0, 0, 0, 0, 0, 0, 0};
     weightPadding[3] =
-        weightHeight % stride[0] ? stride[0] - weightHeight % stride[0] : 0;
+        (weightHeight % stride[0]) ? (stride[0] - weightHeight % stride[0]) : 0;
     weightPadding[5] =
-        weightWidth % stride[1] ? stride[1] - weightWidth % stride[1] : 0;
+        (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
     DenseElementsAttr weightPaddingAttr = DenseIntElementsAttr::get(
         RankedTensorType::get({4, 2}, rewriter.getI32Type()), weightPadding);
     Value weightPaddingVal = createOpAndInfer<tosa::ConstOp>(

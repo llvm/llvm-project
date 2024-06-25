@@ -1,7 +1,7 @@
 # Test handing of dwarf expressions specifying the location of registers, if
 # those expressions refer to the frame's CFA value.
 
-# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-windows, ld_new-bug
 # REQUIRES: target-x86_64, native
 
 # RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/eh-frame-dwarf-unwind.s -o %t

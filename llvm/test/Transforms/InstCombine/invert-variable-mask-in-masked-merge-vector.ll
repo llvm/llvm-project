@@ -20,14 +20,14 @@ define <2 x i4> @vector (<2 x i4> %x, <2 x i4> %y, <2 x i4> %m) {
   ret <2 x i4> %r
 }
 
-define <3 x i4> @vector_undef (<3 x i4> %x, <3 x i4> %y, <3 x i4> %m) {
-; CHECK-LABEL: @vector_undef(
+define <3 x i4> @vector_poison (<3 x i4> %x, <3 x i4> %y, <3 x i4> %m) {
+; CHECK-LABEL: @vector_poison(
 ; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[N0]], [[M:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
-  %im = xor <3 x i4> %m, <i4 -1, i4 undef, i4 -1>
+  %im = xor <3 x i4> %m, <i4 -1, i4 poison, i4 -1>
   %n0 = xor <3 x i4> %x, %y
   %n1 = and <3 x i4> %n0, %im
   %r  = xor <3 x i4> %n1, %y
@@ -78,17 +78,17 @@ define <2 x i4> @in_constant_varx_6_invmask_nonsplat(<2 x i4> %x, <2 x i4> %mask
   ret <2 x i4> %r
 }
 
-define <3 x i4> @in_constant_varx_6_invmask_undef(<3 x i4> %x, <3 x i4> %mask) {
-; CHECK-LABEL: @in_constant_varx_6_invmask_undef(
-; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], <i4 6, i4 undef, i4 7>
+define <3 x i4> @in_constant_varx_6_invmask_poison(<3 x i4> %x, <3 x i4> %mask) {
+; CHECK-LABEL: @in_constant_varx_6_invmask_poison(
+; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[X:%.*]], <i4 6, i4 poison, i4 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[N0]], [[MASK:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
-  %notmask = xor <3 x i4> %mask, <i4 -1, i4 undef, i4 -1>
-  %n0 = xor <3 x i4> %x, <i4 6, i4 undef, i4 7> ; %x
+  %notmask = xor <3 x i4> %mask, <i4 -1, i4 poison, i4 -1>
+  %n0 = xor <3 x i4> %x, <i4 6, i4 poison, i4 7> ; %x
   %n1 = and <3 x i4> %n0, %notmask
-  %r = xor <3 x i4> %n1, <i4 6, i4 undef, i4 7>
+  %r = xor <3 x i4> %n1, <i4 6, i4 poison, i4 7>
   ret <3 x i4> %r
 }
 
@@ -133,15 +133,15 @@ define <2 x i4> @in_constant_6_vary_invmask_nonsplat(<2 x i4> %y, <2 x i4> %mask
   ret <2 x i4> %r
 }
 
-define <3 x i4> @in_constant_6_vary_invmask_undef(<3 x i4> %y, <3 x i4> %mask) {
-; CHECK-LABEL: @in_constant_6_vary_invmask_undef(
-; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[Y:%.*]], <i4 6, i4 undef, i4 6>
+define <3 x i4> @in_constant_6_vary_invmask_poison(<3 x i4> %y, <3 x i4> %mask) {
+; CHECK-LABEL: @in_constant_6_vary_invmask_poison(
+; CHECK-NEXT:    [[N0:%.*]] = xor <3 x i4> [[Y:%.*]], <i4 6, i4 poison, i4 6>
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <3 x i4> [[N0]], [[MASK:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], <i4 6, i4 undef, i4 6>
+; CHECK-NEXT:    [[R:%.*]] = xor <3 x i4> [[TMP1]], <i4 6, i4 poison, i4 6>
 ; CHECK-NEXT:    ret <3 x i4> [[R]]
 ;
-  %notmask = xor <3 x i4> %mask, <i4 -1, i4 undef, i4 -1>
-  %n0 = xor <3 x i4> %y, <i4 6, i4 undef, i4 6> ; %x
+  %notmask = xor <3 x i4> %mask, <i4 -1, i4 poison, i4 -1>
+  %n0 = xor <3 x i4> %y, <i4 6, i4 poison, i4 6> ; %x
   %n1 = and <3 x i4> %n0, %notmask
   %r = xor <3 x i4> %n1, %y
   ret <3 x i4> %r

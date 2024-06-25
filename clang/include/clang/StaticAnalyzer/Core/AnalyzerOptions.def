@@ -414,22 +414,6 @@ ANALYZER_OPTION(
     "serves as an upper bound instead.", 10000)
 
 ANALYZER_OPTION(
-    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
-    "Controls which functions will be inlined during the first phase of the ctu "
-    "analysis. "
-    "If the value is set to 'all' then all foreign functions are inlinied "
-    "immediately during the first phase, thus rendering the second phase a noop. "
-    "The 'ctu-max-nodes-*' budge has no effect in this case. "
-    "If the value is 'small' then only functions with a linear CFG and with a "
-    "limited number of statements would be inlined during the first phase. The "
-    "long and/or nontrivial functions are handled in the second phase and are "
-    "controlled by the 'ctu-max-nodes-*' budge. "
-    "The value 'none' means that all foreign functions are inlined only in the "
-    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
-    "Value: \"none\", \"small\", \"all\".",
-    "small")
-
-ANALYZER_OPTION(
     unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
     "The largest number of fields a struct can have and still be considered "
     "small. This is currently used to decide whether or not it is worth forcing "
@@ -477,6 +461,22 @@ ANALYZER_OPTION(
     "call site if the called function's body is not available. This is a path "
     "where to look for those alternative implementations (called models).",
     "")
+
+ANALYZER_OPTION(
+    StringRef, CTUPhase1InliningMode, "ctu-phase1-inlining",
+    "Controls which functions will be inlined during the first phase of the ctu "
+    "analysis. "
+    "If the value is set to 'all' then all foreign functions are inlinied "
+    "immediately during the first phase, thus rendering the second phase a noop. "
+    "The 'ctu-max-nodes-*' budge has no effect in this case. "
+    "If the value is 'small' then only functions with a linear CFG and with a "
+    "limited number of statements would be inlined during the first phase. The "
+    "long and/or nontrivial functions are handled in the second phase and are "
+    "controlled by the 'ctu-max-nodes-*' budge. "
+    "The value 'none' means that all foreign functions are inlined only in the "
+    "second phase, 'ctu-max-nodes-*' budge limits the second phase. "
+    "Value: \"none\", \"small\", \"all\".",
+    "small")
 
 ANALYZER_OPTION(
     StringRef, CXXMemberInliningMode, "c++-inlining",

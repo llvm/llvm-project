@@ -79,7 +79,7 @@ if (LLVM_ENABLE_DOXYGEN)
     COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating flang doxygen documentation." VERBATIM)
-
+  set_target_properties(doxygen-flang PROPERTIES FOLDER "Flang/Docs")
   if (LLVM_BUILD_DOCS)
    add_dependencies(doxygen doxygen-flang)
   endif()

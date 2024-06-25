@@ -32,7 +32,7 @@ namespace clang {
     enum {
       DIAG_SIZE_COMMON        =  300,
       DIAG_SIZE_DRIVER        =  400,
-      DIAG_SIZE_FRONTEND      =  150,
+      DIAG_SIZE_FRONTEND      =  200,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
       DIAG_SIZE_PARSE         =  700,
@@ -42,6 +42,7 @@ namespace clang {
       DIAG_SIZE_SEMA          = 4500,
       DIAG_SIZE_ANALYSIS      =  100,
       DIAG_SIZE_REFACTORING   = 1000,
+      DIAG_SIZE_INSTALLAPI    =  100,
     };
     // Start position for diagnostics.
     enum {
@@ -57,7 +58,8 @@ namespace clang {
       DIAG_START_SEMA          = DIAG_START_CROSSTU       + static_cast<int>(DIAG_SIZE_CROSSTU),
       DIAG_START_ANALYSIS      = DIAG_START_SEMA          + static_cast<int>(DIAG_SIZE_SEMA),
       DIAG_START_REFACTORING   = DIAG_START_ANALYSIS      + static_cast<int>(DIAG_SIZE_ANALYSIS),
-      DIAG_UPPER_LIMIT         = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING)
+      DIAG_START_INSTALLAPI    = DIAG_START_REFACTORING   + static_cast<int>(DIAG_SIZE_REFACTORING),
+      DIAG_UPPER_LIMIT         = DIAG_START_INSTALLAPI    + static_cast<int>(DIAG_SIZE_INSTALLAPI)
     };
 
     class CustomDiagInfo;
@@ -275,6 +277,9 @@ public:
   /// Return true if a given diagnostic falls into an ARC diagnostic
   /// category.
   static bool isARCDiagnostic(unsigned DiagID);
+
+  /// Return true if a given diagnostic is a codegen-time ABI check.
+  static bool isCodegenABICheckDiagnostic(unsigned DiagID);
 
   /// Enumeration describing how the emission of a diagnostic should
   /// be treated when it occurs during C++ template argument deduction.

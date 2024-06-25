@@ -199,8 +199,10 @@ Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
   IRMapping bvm;
   OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
                        op->getAttrs());
-  for (Region &r : op->getRegions())
-    r.cloneInto(state.addRegion(), bvm);
+  for (Region &r : op->getRegions()) {
+    Region *newRegion = state.addRegion();
+    b.cloneRegionBefore(r, *newRegion, newRegion->begin(), bvm);
+  }
   return b.create(state);
 }
 

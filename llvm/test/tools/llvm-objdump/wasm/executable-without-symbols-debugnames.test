@@ -36,14 +36,14 @@ Sections:
 
 # CHECK:       Disassembly of section CODE:
 # CHECK-EMPTY:
-# CHECK-NEXT:  00000000 <CODE>:
+# CHECK-NEXT:  00000026 <CODE>:
 # CHECK-NEXT:          # 2 functions in section.
 # CHECK-EMPTY:
-# CHECK-NEXT:  00000001 <f>:
+# CHECK-NEXT:  00000027 <f>:
 # CHECK-EMPTY:
-# CHECK-NEXT:         3: 0b           	end
+# CHECK-NEXT:         29: 0b       	end
 # CHECK-EMPTY:
-# CHECK-NEXT:  00000004 <g>:
+# CHECK-NEXT:  0000002a <g>:
 # CHECK-EMPTY:
-# CHECK-NEXT:         6: 20 00        	local.get	0
-# CHECK-NEXT:         8: 0b           	end
+# CHECK-NEXT:         2c: 20 00    	local.get	0
+# CHECK-NEXT:         2e: 0b       	end

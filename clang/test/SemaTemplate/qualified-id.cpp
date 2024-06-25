@@ -52,5 +52,6 @@ namespace PR12291 {
     template <typename V>
     template <typename W>
     class Outer2<V>::Inner; // expected-error{{nested name specifier 'Outer2<V>::' for declaration does not refer into a class, class template or class template partial specialization}}
+                            // expected-error@-1{{forward declaration of class cannot have a nested name specifier}}
   };
 }

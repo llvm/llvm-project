@@ -1,0 +1,198 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-types-debug-names-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-types-dup-helper.s \
+; RUN: -split-dwarf-file=helper.dwo -o helper.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --debug-info -r 0 main.exe.bolt > log.txt
+; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-str-offsets main.dwo.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-str-offsets helper.dwo.dwo >> log.txt
+; RUN: cat log.txt | FileCheck -check-prefix=BOLT %s
+
+;; Test is a mix of DWARF5 TUs where one has DW_AT_comp_dir/DW_AT_dwo_name, and another one doesn't.
+;; Tests that BOLT correctly updates DW_AT_dwo_name for TUs.
+
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_comp_dir  (".")
+; BOLT: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_comp_dir  (".")
+; BOLT: DW_AT_dwo_name  ("helper.dwo.dwo")
+; BOLT: DW_TAG_type_unit
+; BOLT: DW_AT_comp_dir  (".")
+; BOLT: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT: DW_TAG_type_unit
+; BOLT: DW_AT_comp_dir  (".")
+; BOLT: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT: DW_TAG_type_unit
+; BOLT-NOT: DW_AT_dwo_name
+; BOLT: DW_TAG_type_unit
+; BOLT-NOT: DW_AT_dwo_name
+; BOLT: DW_TAG_compile_unit
+; BOLT:      .debug_str_offsets.dwo contents:
+; BOLT-NEXT: 0x00000000: Contribution size = 68, Format = DWARF32, Version = 5
+; BOLT-NEXT: "main"
+; BOLT-NEXT: "int"
+; BOLT-NEXT: "argc"
+; BOLT-NEXT: "argv"
+; BOLT-NEXT: "char"
+; BOLT-NEXT: "f2"
+; BOLT-NEXT: "."
+; BOLT-NEXT: "main.dwo.dwo"
+; BOLT-NEXT: "c1"
+; BOLT-NEXT: "Foo2"
+; BOLT-NEXT: "f3"
+; BOLT-NEXT: "c2"
+; BOLT-NEXT: "c3"
+; BOLT-NEXT: "Foo2a"
+; BOLT-NEXT: "clang version 18.0.0git (git@github.com:ayermolo/llvm-project.git db35fa8fc524127079662802c4735dbf397f86d0)"
+; BOLT-NEXT: "main.cpp"
+; BOLT-NEXT: helper.dwo.dwo: file format elf64-x86-64
+
+; BOLT:      .debug_str_offsets.dwo contents:
+; BOLT-NEXT: 0x00000000: Contribution size = 64, Format = DWARF32, Version = 5
+; BOLT-NEXT: "fooint"
+; BOLT-NEXT: "int"
+; BOLT-NEXT: "_Z3foov"
+; BOLT-NEXT: "foo"
+; BOLT-NEXT: "fint"
+; BOLT-NEXT: "c1"
+; BOLT-NEXT: "c2"
+; BOLT-NEXT: "Foo2Int"
+; BOLT-NEXT: "f"
+; BOLT-NEXT: "char"
+; BOLT-NEXT: "c3"
+; BOLT-NEXT: "Foo2a"
+; BOLT-NEXT: "clang version 18.0.0"
+; BOLT-NEXT: "helper.cpp"
+; BOLT-NEXT: "helper.dwo"
+
+
+;; Tests that BOLT correctly handles updating DW_AT_dwo_name when it outputs a DWP file.
+;; Currently skipping one of Type units because it is not being de-dupped.
+;; In the tu-index this TU is not present.
+; RUN: rm main.exe.bolt
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
+; RUN: llvm-dwarfdump --debug-info -r 0 main.exe.bolt.dwp > logDWP.txt
+; RUN: llvm-dwarfdump --debug-str-offsets main.exe.bolt.dwp >> logDWP.txt
+; RUN: cat logDWP.txt | FileCheck -check-prefix=BOLT-DWP %s
+; BOLT-DWP: DW_TAG_type_unit
+; BOLT-DWP: DW_AT_comp_dir  (".")
+; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT-DWP: DW_TAG_type_unit
+; BOLT-DWP: DW_AT_comp_dir  (".")
+; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT-DWP: DW_TAG_compile_unit
+; BOLT-DWP: DW_AT_dwo_name  ("main.dwo.dwo")
+; BOLT-DWP: DW_TAG_type_unit
+; BOLT-DW-NOT: DW_AT_dwo_name
+; BOLT-DWP:       Contribution size = 68, Format = DWARF32, Version = 5
+; BOLT-DWP-NEXT: "main"
+; BOLT-DWP-NEXT: "int"
+; BOLT-DWP-NEXT: "argc"
+; BOLT-DWP-NEXT: "argv"
+; BOLT-DWP-NEXT: "char"
+; BOLT-DWP-NEXT: "f2"
+; BOLT-DWP-NEXT: "."
+; BOLT-DWP-NEXT: "main.dwo.dwo"
+; BOLT-DWP-NEXT: "c1"
+; BOLT-DWP-NEXT: "Foo2"
+; BOLT-DWP-NEXT: "f3"
+; BOLT-DWP-NEXT: "c2"
+; BOLT-DWP-NEXT: "c3"
+; BOLT-DWP-NEXT: "Foo2a"
+; BOLT-DWP-NEXT: "clang version 18.0.0git (git@github.com:ayermolo/llvm-project.git db35fa8fc524127079662802c4735dbf397f86d0)"
+; BOLT-DWP-NEXT: "main.cpp"
+; BOLT-DWP-NEXT: Contribution size = 64, Format = DWARF32, Version = 5
+; BOLT-DWP-NEXT: "fooint"
+; BOLT-DWP-NEXT: "int"
+; BOLT-DWP-NEXT: "_Z3foov"
+; BOLT-DWP-NEXT: "foo"
+; BOLT-DWP-NEXT: "fint"
+; BOLT-DWP-NEXT: "c1"
+; BOLT-DWP-NEXT: "c2"
+; BOLT-DWP-NEXT: "Foo2Int"
+; BOLT-DWP-NEXT: "f"
+; BOLT-DWP-NEXT: "char"
+; BOLT-DWP-NEXT: "c3"
+; BOLT-DWP-NEXT: "Foo2a"
+; BOLT-DWP-NEXT: "clang version 18.0.0"
+; BOLT-DWP-NEXT: "helper.cpp"
+; BOLT-DWP-NEXT: "helper.dwo
+
+;; Tests that BOLT correctly handles updating DW_AT_comp_dir/DW_AT_dwo_name when outptut directory is specified.
+
+; RUN: mkdir DWOOut
+; RUN: rm main.exe.bolt
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --dwarf-output-path=%t/DWOOut
+; RUN: cd DWOOut
+; RUN: llvm-dwarfdump --debug-info -r 0 ../main.exe.bolt > log.txt
+; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo0.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo0.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-str-offsets main.dwo0.dwo >> log.txt
+; RUN: llvm-dwarfdump --debug-str-offsets helper.dwo0.dwo >> log.txt
+; RUN: cat log.txt | FileCheck -check-prefix=BOLT-PATH %s
+
+; BOLT-PATH: DW_TAG_skeleton_unit
+; BOLT-PATH: DW_AT_comp_dir  ("
+; BOLT-PATH-SAME: dwarf5-df-types-modify-dwo-name-mixed.test.tmp/DWOOut
+; BOLT-PATH: DW_AT_dwo_name  ("main.dwo0.dwo")
+; BOLT-PATH: DW_TAG_skeleton_unit
+; BOLT-PATH: DW_AT_comp_dir  ("
+; BOLT-PATH-SAME: dwarf5-df-types-modify-dwo-name-mixed.test.tmp/DWOOut
+; BOLT-PATH: DW_AT_dwo_name  ("helper.dwo0.dwo")
+; BOLT-PATH: DW_TAG_type_unit
+; BOLT-PATH: DW_AT_comp_dir  ("
+; BOLT-PATH-SAME: dwarf5-df-types-modify-dwo-name-mixed.test.tmp/DWOOut
+; BOLT-PATH: DW_AT_dwo_name  ("main.dwo0.dwo")
+; BOLT-PATH: DW_TAG_type_unit
+; BOLT-PATH: DW_AT_comp_dir  ("
+; BOLT-PATH-SAME: dwarf5-df-types-modify-dwo-name-mixed.test.tmp/DWOOut
+; BOLT-PATH: DW_AT_dwo_name  ("main.dwo0.dwo")
+; BOLT-PATH: DW_TAG_type_unit
+; BOLT-PATH-NOT: DW_AT_comp_dir
+; BOLT-PATH: DW_TAG_type_unit
+; BOLT-PATH-NOT: DW_AT_comp_dir
+; BOLT-PATH: DW_TAG_compile_unit
+; BOLT-PATH:      .debug_str_offsets.dwo contents:
+; BOLT-PATH-NEXT: 0x00000000: Contribution size = 68, Format = DWARF32, Version = 5
+; BOLT-PATH-NEXT: "main"
+; BOLT-PATH-NEXT: "int"
+; BOLT-PATH-NEXT: "argc"
+; BOLT-PATH-NEXT: "argv"
+; BOLT-PATH-NEXT: "char"
+; BOLT-PATH-NEXT: "f2"
+; BOLT-PATH-NEXT: dwarf5-df-types-modify-dwo-name-mixed.test.tmp/DWOOut"
+; BOLT-PATH-NEXT: "main.dwo0.dwo"
+; BOLT-PATH-NEXT: "c1"
+; BOLT-PATH-NEXT: "Foo2"
+; BOLT-PATH-NEXT: "f3"
+; BOLT-PATH-NEXT: "c2"
+; BOLT-PATH-NEXT: "c3"
+; BOLT-PATH-NEXT: "Foo2a"
+; BOLT-PATH-NEXT: "clang version 18.0.0git (git@github.com:ayermolo/llvm-project.git db35fa8fc524127079662802c4735dbf397f86d0)"
+; BOLT-PATH-NEXT: "main.cpp"
+; BOLT-PATH-NEXT: helper.dwo0.dwo: file format elf64-x86-64
+
+; BOLT-PATH:      .debug_str_offsets.dwo contents:
+; BOLT-PATH-NEXT: Contribution size = 64, Format = DWARF32, Version = 5
+; BOLT-PATH-NEXT: "fooint"
+; BOLT-PATH-NEXT: "int"
+; BOLT-PATH-NEXT: "_Z3foov"
+; BOLT-PATH-NEXT: "foo"
+; BOLT-PATH-NEXT: "fint"
+; BOLT-PATH-NEXT: "c1"
+; BOLT-PATH-NEXT: "c2"
+; BOLT-PATH-NEXT: "Foo2Int"
+; BOLT-PATH-NEXT: "f"
+; BOLT-PATH-NEXT: "char"
+; BOLT-PATH-NEXT: "c3"
+; BOLT-PATH-NEXT: "Foo2a"
+; BOLT-PATH-NEXT: "clang version 18.0.0"
+; BOLT-PATH-NEXT: "helper.cpp"
+; BOLT-PATH-NEXT: "helper.dwo"

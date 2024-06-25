@@ -43,7 +43,6 @@ body:             |
   ; GCN-NEXT: bb.4:
   ; GCN-NEXT:   successors: %bb.5(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}

@@ -191,7 +191,7 @@ bool fir::MutableBoxValue::verify() const {
   mlir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
   if (!type)
     return false;
-  auto box = type.dyn_cast<fir::BaseBoxType>();
+  auto box = mlir::dyn_cast<fir::BaseBoxType>(type);
   if (!box)
     return false;
   // A boxed value always takes a memory reference,
@@ -210,7 +210,7 @@ bool fir::MutableBoxValue::verify() const {
 /// Debug verifier for BoxValue ctor. There is no guarantee this will
 /// always be called.
 bool fir::BoxValue::verify() const {
-  if (!addr.getType().isa<fir::BaseBoxType>())
+  if (!mlir::isa<fir::BaseBoxType>(addr.getType()))
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
     return false;

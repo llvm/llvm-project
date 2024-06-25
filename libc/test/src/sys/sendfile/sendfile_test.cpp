@@ -35,7 +35,7 @@ TEST(LlvmLibcSendfileTest, CreateAndTransfer) {
   constexpr const char *OUT_FILE = "testdata/sendfile_out.test";
   const char IN_DATA[] = "sendfile test";
   constexpr ssize_t IN_SIZE = ssize_t(sizeof(IN_DATA));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int in_fd = LIBC_NAMESPACE::open(IN_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(in_fd, 0);

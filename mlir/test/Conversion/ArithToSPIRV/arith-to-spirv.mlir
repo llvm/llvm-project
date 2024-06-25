@@ -60,8 +60,8 @@ func.func @index_scalar(%lhs: index, %rhs: index) {
 // CHECK-LABEL: @index_scalar_srem
 // CHECK-SAME: (%[[A:.+]]: index, %[[B:.+]]: index)
 func.func @index_scalar_srem(%lhs: index, %rhs: index) {
-  // CHECK: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
-  // CHECK: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
+  // CHECK-DAG: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
+  // CHECK-DAG: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
   // CHECK: %[[LABS:.+]] = spirv.GL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spirv.GL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spirv.UMod %[[LABS]], %[[RABS]] : i32
@@ -1422,6 +1422,8 @@ func.func @ops_flags(%arg0: i64, %arg1: i64) {
   %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
   // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} {no_signed_wrap, no_unsigned_wrap} : i64
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = spirv.ShiftLeftLogical %{{.*}}, %{{.*}} {no_signed_wrap, no_unsigned_wrap} : i64
+  %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
   return
 }
 
@@ -1443,6 +1445,8 @@ func.func @ops_flags(%arg0: i64, %arg1: i64) {
   %1 = arith.subi %arg0, %arg1 overflow<nuw> : i64
   // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} : i64
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = spirv.IMul %{{.*}}, %{{.*}} : i64
+  %3 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
   return
 }
 

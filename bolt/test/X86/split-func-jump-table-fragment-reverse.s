@@ -1,6 +1,6 @@
-# This reproduces a bug with jump table identification where jump table has
-# entries pointing to code in function and its cold fragment.
-# The fragment is only reachable through jump table.
+## This reproduces a bug with jump table identification where jump table has
+## entries pointing to code in function and its cold fragment.
+## The fragment is only reachable through jump table.
 
 # REQUIRES: system-linux
 
@@ -26,10 +26,10 @@ main.cold:
 LBB0:
   andl $0xf, %ecx
   cmpb $0x4, %cl
-  # exit through ret
+  ## exit through ret
   ja LBB3
 
-# jump table dispatch, jumping to label indexed by val in %ecx
+## jump table dispatch, jumping to label indexed by val in %ecx
 LBB1:
   leaq JUMP_TABLE(%rip), %r8
   movzbl %cl, %ecx
@@ -44,20 +44,20 @@ LBB3:
   ret
 .size main.cold, .-main.cold
 
-# main function, referenced from jump table in cold fragment
+## main function, referenced from jump table in cold fragment
   .globl main
   .type main, %function
   .p2align 2
 main:
-  # load bearing nop: pad LBB4 so that it can't be treated
-  # as __builtin_unreachable by analyzeJumpTable
+  ## load bearing nop: pad LBB4 so that it can't be treated
+  ## as __builtin_unreachable by analyzeJumpTable
   nop
 LBB4:
   callq abort
 .size main, .-main
 
   .rodata
-# jmp table, entries must be R_X86_64_PC32 relocs
+## jmp table, entries must be R_X86_64_PC32 relocs
   .globl JUMP_TABLE
 JUMP_TABLE:
   .long LBB2-JUMP_TABLE

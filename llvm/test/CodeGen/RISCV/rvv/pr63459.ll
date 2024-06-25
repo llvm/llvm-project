@@ -14,7 +14,7 @@ define void @snork(ptr %arg, <vscale x 2 x i64> %arg1) {
 ; CHECK-NEXT:    ret
 bb:
   %getelementptr = getelementptr inbounds <vscale x 2 x i32>, ptr %arg, <vscale x 2 x i64> %arg1
-  tail call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x ptr> align 4 %getelementptr, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 4)
+  tail call void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32> splat (i32 1), <vscale x 2 x ptr> align 4 %getelementptr, <vscale x 2 x i1> splat (i1 true), i32 4)
   ret void
 }
 

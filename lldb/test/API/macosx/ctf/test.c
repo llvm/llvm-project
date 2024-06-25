@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 
 struct ForwardDecl;
@@ -24,6 +25,7 @@ typedef struct MyNestedStruct {
   char a[4];
   MyEnumT e;
   MyUnionT u;
+  _Bool b;
 } MyNestedStructT;
 
 typedef struct MyStruct {
@@ -54,6 +56,7 @@ void populate(MyInt i) {
   foo.n.a[2] = 'c';
   foo.n.a[3] = 'd';
   foo.n.e = eOne;
+  foo.n.b = false;
   foo.f = NULL;
   forward = NULL;
   bar.b = i;

@@ -79,6 +79,7 @@
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c1_i32 = arith.constant 1 : i32
+    %dscope = fir.dummy_scope : !fir.dscope
     %0 = fir.address_of(@_QMmodEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %2 = fir.address_of(@_QMmodEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -107,10 +108,10 @@
     %25 = fir.declare %24 {uniq_name = "_QMmodFcalleeEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
     %26 = fir.alloca i32 {bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}
     %27 = fir.declare %26 {uniq_name = "_QMmodFcalleeEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    %28 = fir.declare %arg2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-    %29 = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
+    %28 = fir.declare %arg2 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
+    %29 = fir.declare %arg1 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
     %30 = fir.rebox %29 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
-    %31 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
+    %31 = fir.declare %arg0 dummy_scope %dscope {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
     %32 = fir.rebox %31 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
     %33 = fir.load %15 : !fir.ref<i32>
     %34 = arith.addi %33, %c1_i32 : i32
@@ -232,6 +233,7 @@
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
+// CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_7:.*]] = fir.address_of(@_QMmodEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QMmodEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -260,10 +262,10 @@
 // CHECK:           %[[VAL_32:.*]] = fir.declare %[[VAL_31]] {uniq_name = "_QMmodFcalleeEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_33:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QMmodFcalleeEk"}
 // CHECK:           %[[VAL_34:.*]] = fir.declare %[[VAL_33]] {uniq_name = "_QMmodFcalleeEk"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_2]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
-// CHECK:           %[[VAL_36:.*]] = fir.declare %[[VAL_1]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK:           %[[VAL_35:.*]] = fir.declare %[[VAL_2]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<allocatable>, uniq_name = "_QMmodFcalleeElow"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
+// CHECK:           %[[VAL_36:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEy"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_37:.*]] = fir.rebox %[[VAL_36]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
-// CHECK:           %[[VAL_38:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK:           %[[VAL_38:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {fortran_attrs = #{{.*}}<intent_in>, uniq_name = "_QMmodFcalleeEz"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_39:.*]] = fir.rebox %[[VAL_38]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_22]] {tbaa = [#[[GLBL_ZSTART_TAG]]]} : !fir.ref<i32>
 // CHECK:           %[[VAL_41:.*]] = arith.addi %[[VAL_40]], %[[VAL_6]] : i32

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -disassemble -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --implicit-check-not=warning: --check-prefix=GFX12 %s
+# RUN: not llvm-mc -disassemble -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --implicit-check-not=warning: --check-prefix=GFX12 %s
 
 # v_dot4_f32_fp8_bf8
 

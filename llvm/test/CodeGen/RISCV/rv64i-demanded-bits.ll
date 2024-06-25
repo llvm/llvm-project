@@ -192,3 +192,17 @@ entry:
   %or = or i32 %and, 255
   ret i32 %or
 }
+
+define i64 @and_allones(i32 signext %x) {
+; CHECK-LABEL: and_allones:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sll a0, a1, a0
+; CHECK-NEXT:    ret
+entry:
+  %y = zext i32 %x to i64
+  %shamt = add nsw i64 %y, -1
+  %ret = shl i64 1, %shamt
+  ret i64 %ret
+}

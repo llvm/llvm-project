@@ -28,6 +28,21 @@ Symbol *SymbolSet::addGlobal(EncodeKind Kind, StringRef Name, SymbolFlags Flags,
   return Sym;
 }
 
-const Symbol *SymbolSet::findSymbol(EncodeKind Kind, StringRef Name) const {
-  return Symbols.lookup({Kind, Name});
+const Symbol *SymbolSet::findSymbol(EncodeKind Kind, StringRef Name,
+                                    ObjCIFSymbolKind ObjCIF) const {
+  if (auto result = Symbols.lookup({Kind, Name}))
+    return result;
+  if ((ObjCIF == ObjCIFSymbolKind::None) || (ObjCIF > ObjCIFSymbolKind::EHType))
+    return nullptr;
+  assert(ObjCIF <= ObjCIFSymbolKind::EHType &&
+         "expected single ObjCIFSymbolKind enum value");
+  // Non-complete ObjC Interfaces are represented as global symbols.
+  if (ObjCIF == ObjCIFSymbolKind::Class)
+    return Symbols.lookup(
+        {EncodeKind::GlobalSymbol, (ObjC2ClassNamePrefix + Name).str()});
+  if (ObjCIF == ObjCIFSymbolKind::MetaClass)
+    return Symbols.lookup(
+        {EncodeKind::GlobalSymbol, (ObjC2MetaClassNamePrefix + Name).str()});
+  return Symbols.lookup(
+      {EncodeKind::GlobalSymbol, (ObjC2EHTypePrefix + Name).str()});
 }

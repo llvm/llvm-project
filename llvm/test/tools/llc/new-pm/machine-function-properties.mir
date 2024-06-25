@@ -1,0 +1,12 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -mtriple=x86_64-pc-linux-gnu -passes=require-all-machine-function-properties -filetype=null %s 2>&1 | FileCheck %s
+
+# CHECK: MachineFunctionProperties required by RequireAllMachineFunctionPropertiesPass pass are not met by function f.
+
+---
+name: f
+selected:        false
+body: |
+  bb.0:
+    RET 0
+...

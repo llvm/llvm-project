@@ -1,10 +1,9 @@
-; RUN: opt %loadPolly -polly-print-function-scops -disable-output < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 \
 ; RUN:  | FileCheck %s -check-prefix=FUNC-SCOP
-; RUN: opt %loadPolly -polly-print-function-dependences -disable-output < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>,scop(print<polly-dependences>)' -disable-output < %s 2>&1 \
 ; RUN:  | FileCheck %s -check-prefix=FUNC-DEPS
 ;
 ; FUNC-SCOP-NOT: Statement
-; FUNC-DEPS-LABEL: Printing analysis 'Polly - Calculate dependences for all the SCoPs of a function' for function 'readgeo'
 ; FUNC-DEPS-NOT: RAW dependences
 ;
 ; Due to an infeasible run-time check, scop object is empty and we do not compute dependences.

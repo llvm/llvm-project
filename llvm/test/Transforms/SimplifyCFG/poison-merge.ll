@@ -7,8 +7,8 @@ define i32 @undef_merge(i32 %x) {
 ; CHECK-LABEL: @undef_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ undef, [[ENTRY]] ]
@@ -40,8 +40,8 @@ define i32 @poison_merge(i32 %x) {
 ; CHECK-LABEL: @poison_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ poison, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ poison, [[ENTRY]] ]
@@ -73,8 +73,8 @@ define i32 @defined_merge(i32 %x) {
 ; CHECK-LABEL: @defined_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ 42, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ 42, [[ENTRY]] ]
@@ -106,8 +106,8 @@ define i32 @defined_and_undef_merge(i32 %x) {
 ; CHECK-LABEL: @defined_and_undef_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ 42, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ 42, [[ENTRY]] ]
@@ -139,8 +139,8 @@ define i32 @defined_and_poison_merge(i32 %x) {
 ; CHECK-LABEL: @defined_and_poison_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ 42, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ 42, [[ENTRY]] ]
@@ -172,8 +172,8 @@ define i32 @PR49218(i32 %x) {
 ; CHECK-LABEL: @PR49218(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i32 4, label [[G:%.*]]
-; CHECK-NEXT:    i32 12, label [[G]]
+; CHECK-NEXT:      i32 4, label [[G:%.*]]
+; CHECK-NEXT:      i32 12, label [[G]]
 ; CHECK-NEXT:    ]
 ; CHECK:       g:
 ; CHECK-NEXT:    [[K3:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[K3]], [[G]] ], [ undef, [[ENTRY]] ]

@@ -10,7 +10,7 @@
 
 // ___cxa_throw_bad_array_new_length is re-exported from libc++ only starting
 // in macosx 10.15
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 #include <cxxabi.h>
 #include <new>

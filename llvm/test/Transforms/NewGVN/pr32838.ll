@@ -10,7 +10,7 @@ define void @fn1(i64 noundef %arg) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 false, label [[FIRSTPHIBLOCK:%.*]], label [[TEMP:%.*]]
 ; CHECK:       firstphiblock:
-; CHECK-NEXT:    br i1 undef, label %for.cond17thread-pre-split, label [[SECONDPHIBLOCK:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[FOR_COND17THREAD_PRE_SPLIT:%.*]], label [[SECONDPHIBLOCK:%.*]]
 ; CHECK:       secondphiblock:
 ; CHECK-NEXT:    [[SECONDPHI:%.*]] = phi i64 [ [[THIRDPHI:%.*]], [[THIRDPHIBLOCK:%.*]] ], [ undef, [[FIRSTPHIBLOCK]] ]
 ; CHECK-NEXT:    br i1 undef, label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
@@ -55,7 +55,7 @@ define void @fn2(i64 noundef %arg) {
 ; CHECK-NEXT:    br i1 false, label [[FIRSTPHIBLOCK:%.*]], label [[TEMP:%.*]]
 ; CHECK:       firstphiblock:
 ; CHECK-NEXT:    [[FIRSTPHI:%.*]] = phi i64 [ poison, [[IF_THEN]] ], [ [[SECONDPHI:%.*]], [[SECONDPHIBLOCK:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label %for.cond17thread-pre-split, label [[SECONDPHIBLOCK]]
+; CHECK-NEXT:    br i1 undef, label [[FOR_COND17THREAD_PRE_SPLIT:%.*]], label [[SECONDPHIBLOCK]]
 ; CHECK:       secondphiblock:
 ; CHECK-NEXT:    [[SECONDPHI]] = phi i64 [ [[THIRDPHI:%.*]], [[THIRDPHIBLOCK:%.*]] ], [ [[FIRSTPHI]], [[FIRSTPHIBLOCK]] ]
 ; CHECK-NEXT:    br i1 undef, label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
@@ -65,7 +65,7 @@ define void @fn2(i64 noundef %arg) {
 ; CHECK:       for.cond17thread-pre-split:
 ; CHECK-NEXT:    br label [[COND_TRUE]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[FOURTHPHI:%.*]] = phi i64 [ [[ARG:%.*]], [[ENTRY:%.*]] ], [ [[FIRSTPHI]], %for.cond17thread-pre-split ]
+; CHECK-NEXT:    [[FOURTHPHI:%.*]] = phi i64 [ [[ARG:%.*]], [[ENTRY:%.*]] ], [ [[FIRSTPHI]], [[FOR_COND17THREAD_PRE_SPLIT]] ]
 ; CHECK-NEXT:    [[DIV]] = sdiv i64 [[FOURTHPHI]], 4
 ; CHECK-NEXT:    br label [[THIRDPHIBLOCK]]
 ; CHECK:       temp:
@@ -105,7 +105,7 @@ define void @fn3() {
 ; CHECK-NEXT:    [[F_0:%.*]] = phi ptr [ @b, [[ENTRY:%.*]] ], [ @a, [[L1_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond.loopexit:
-; CHECK-NEXT:    store i8 poison, ptr null
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]

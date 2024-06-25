@@ -204,11 +204,11 @@ const interpose_substitution substitution_##func_name[]             \
        ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
          ASM_TYPE_FUNCTION_STR "\n"                                            \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
-       SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
+       C_ASM_STARTPROC "\n"                                                    \
        C_ASM_TAIL_CALL(SANITIZER_STRINGIFY(TRAMPOLINE(func)),                  \
                        "__interceptor_"                                        \
                          SANITIZER_STRINGIFY(ASM_PREEMPTIBLE_SYM(func))) "\n"  \
-       SANITIZER_STRINGIFY(CFI_ENDPROC) "\n"                                   \
+       C_ASM_ENDPROC "\n"                                                      \
        ".size  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
             ".-" SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
      );
@@ -348,6 +348,18 @@ typedef unsigned long long uptr;
 #else
 typedef unsigned long uptr;
 #endif  // _WIN64
+
+#if defined(__ELF__) && !SANITIZER_FUCHSIA
+// The use of interceptors makes many sanitizers unusable for static linking.
+// Define a function, if called, will cause a linker error (undefined _DYNAMIC).
+// However, -static-pie (which is not common) cannot be detected at link time.
+extern uptr kDynamic[] asm("_DYNAMIC");
+inline void DoesNotSupportStaticLinking() {
+  [[maybe_unused]] volatile auto x = &kDynamic;
+}
+#else
+inline void DoesNotSupportStaticLinking() {}
+#endif
 }  // namespace __interception
 
 #define INCLUDED_FROM_INTERCEPTION_LIB

@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -std=c++20 %t/Templ.cppm -emit-module-interface -o %t/Templ.pcm
 // RUN: %clang_cc1 -std=c++20 %t/Use.cppm -fprebuilt-module-path=%t -emit-module-interface -o %t/Use.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use.cpp -verify -fsyntax-only
+
+// RUN: %clang_cc1 -std=c++20 %t/Templ.cppm -emit-reduced-module-interface -o %t/Templ.pcm
+// RUN: %clang_cc1 -std=c++20 %t/Use.cppm -fprebuilt-module-path=%t -emit-reduced-module-interface -o %t/Use.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use.cpp -verify -fsyntax-only
 //
 //--- Templ.h
 #ifndef TEMPL_H

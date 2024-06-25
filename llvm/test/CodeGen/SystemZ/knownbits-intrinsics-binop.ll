@@ -458,3 +458,22 @@ define <16 x i8> @f30() {
                                i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %res
 }
+
+; Test VPERM with various constant operands.
+define i32 @f31() {
+; CHECK-LABEL: f31:
+; CHECK-LABEL: # %bb.0:
+; CHECK-NEXT: larl %r1, .LCPI31_0
+; CHECK-NEXT: vl %v0, 0(%r1), 3
+; CHECK-NEXT: larl %r1, .LCPI31_1
+; CHECK-NEXT: vl %v1, 0(%r1), 3
+; CHECK-NEXT: vperm %v0, %v1, %v1, %v0
+; CHECK-NEXT: vlgvb %r2, %v0, 0
+; CHECK-NEXT: nilf %r2, 7
+; CHECK-NEXT:                           # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT: br %r14
+  %P = tail call <16 x i8> @llvm.s390.vperm(<16 x i8> <i8 0, i8 1, i8 1, i8 2, i8 1, i8 2, i8 2, i8 3, i8 1, i8 2, i8 2, i8 3, i8 2, i8 3, i8 3, i8 4>, <16 x i8> <i8 0, i8 1, i8 1, i8 2, i8 1, i8 2, i8 2, i8 3, i8 1, i8 2, i8 2, i8 3, i8 2, i8 3, i8 3, i8 4>, <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0>)
+  %E = extractelement <16 x i8> %P, i64 0
+  %res = zext i8 %E to i32
+  ret i32 %res
+}

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
@@ -688,33 +689,7 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
 
 LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
                                               PatternRewriter &rewriter) const {
-  Location loc = forallOp.getLoc();
-  if (!forallOp.getOutputs().empty())
-    return rewriter.notifyMatchFailure(
-        forallOp,
-        "only fully bufferized scf.forall ops can be lowered to scf.parallel");
-
-  // Convert mixed bounds and steps to SSA values.
-  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedLowerBound());
-  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedUpperBound());
-  SmallVector<Value> steps =
-      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
-
-  // Create empty scf.parallel op.
-  auto parallelOp = rewriter.create<ParallelOp>(loc, lbs, ubs, steps);
-  rewriter.eraseBlock(&parallelOp.getRegion().front());
-  rewriter.inlineRegionBefore(forallOp.getRegion(), parallelOp.getRegion(),
-                              parallelOp.getRegion().begin());
-  // Replace the terminator.
-  rewriter.setInsertionPointToEnd(&parallelOp.getRegion().front());
-  rewriter.replaceOpWithNewOp<scf::ReduceOp>(
-      parallelOp.getRegion().front().getTerminator());
-
-  // Erase the scf.forall op.
-  rewriter.replaceOp(forallOp, parallelOp);
-  return success();
+  return scf::forallToParallelLoop(rewriter, forallOp);
 }
 
 void mlir::populateSCFToControlFlowConversionPatterns(

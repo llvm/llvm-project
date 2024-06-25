@@ -157,3 +157,157 @@ bb3:
   %p = phi i32 [0, %bb1], [%a, %bb2]
   ret i32 %p
 }
+
+define i1 @sink_to_unreachable_ret(i16 %X)  {
+; CHECK-LABEL: @sink_to_unreachable_ret(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[UNREACH:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    ret i1 poison
+;
+entry:
+  br label %loop
+
+loop:
+  %p = icmp sgt i16 %X, 16
+  br i1 true, label %loop, label %unreach
+
+unreach:
+  ret i1 %p
+}
+
+define void @sink_to_unreachable_condbr(i16 %X)  {
+; CHECK-LABEL: @sink_to_unreachable_condbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[UNREACH:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    br i1 poison, label [[DUMMY:%.*]], label [[LOOP]]
+; CHECK:       dummy:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %p = icmp sgt i16 %X, 16
+  br i1 true, label %loop, label %unreach
+
+unreach:
+  br i1 %p, label %dummy, label %loop
+
+dummy:
+  unreachable
+}
+
+define void @sink_to_unreachable_switch(i16 %X)  {
+; CHECK-LABEL: @sink_to_unreachable_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[UNREACH:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    switch i16 poison, label [[UNREACH_RET:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       unreach.ret:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %quantum = srem i16 %X, 32
+  br i1 true, label %loop, label %unreach
+
+unreach:
+  switch i16 %quantum, label %unreach.ret []
+
+unreach.ret:
+  unreachable
+}
+
+define void @sink_to_unreachable_indirectbr(ptr %Ptr)  {
+; CHECK-LABEL: @sink_to_unreachable_indirectbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[UNREACH:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    indirectbr ptr poison, [label %loop]
+;
+entry:
+  br label %loop
+
+loop:
+  %gep = getelementptr inbounds ptr, ptr %Ptr, i16 1
+  br i1 true, label %loop, label %unreach
+
+unreach:
+  indirectbr ptr %gep, [label %loop]
+}
+
+define void @sink_to_unreachable_invoke(ptr %Ptr) personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: @sink_to_unreachable_invoke(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[UNREACH:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    invoke void poison(i1 false)
+; CHECK-NEXT:            to label [[DUMMY:%.*]] unwind label [[ICATCH_DISPATCH:%.*]]
+; CHECK:       unreach2:
+; CHECK-NEXT:    invoke void @__CxxFrameHandler3(ptr poison)
+; CHECK-NEXT:            to label [[DUMMY]] unwind label [[ICATCH_DISPATCH]]
+; CHECK:       unreach3:
+; CHECK-NEXT:    [[CLEAN:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    invoke void @__CxxFrameHandler3(ptr poison) [ "funclet"(token [[CLEAN]]) ]
+; CHECK-NEXT:            to label [[DUMMY]] unwind label [[ICATCH_DISPATCH]]
+; CHECK:       icatch.dispatch:
+; CHECK-NEXT:    [[TMP1:%.*]] = catchswitch within none [label %icatch] unwind to caller
+; CHECK:       icatch:
+; CHECK-NEXT:    [[TMP2:%.*]] = catchpad within [[TMP1]] [ptr null, i32 64, ptr null]
+; CHECK-NEXT:    catchret from [[TMP2]] to label [[DUMMY2:%.*]]
+; CHECK:       dummy:
+; CHECK-NEXT:    ret void
+; CHECK:       dummy2:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %gep = getelementptr inbounds ptr, ptr %Ptr, i16 1
+  br i1 true, label %loop, label %unreach
+
+unreach:
+  invoke void %gep(i1 false)
+  to label %dummy unwind label %icatch.dispatch
+
+unreach2:
+  invoke void @__CxxFrameHandler3(ptr %gep)
+  to label %dummy unwind label %icatch.dispatch
+
+unreach3:
+  %clean = cleanuppad within none []
+  invoke void @__CxxFrameHandler3(ptr %gep) [ "funclet"(token %clean) ]
+  to label %dummy unwind label %icatch.dispatch
+
+icatch.dispatch:
+  %tmp1 = catchswitch within none [label %icatch] unwind to caller
+
+icatch:
+  %tmp2 = catchpad within %tmp1 [ptr null, i32 64, ptr null]
+  catchret from %tmp2 to label %dummy2
+
+dummy:
+  ret void
+
+dummy2:
+  ret void
+}
+
+declare void @may_throw()
+declare i32 @__CxxFrameHandler3(...)

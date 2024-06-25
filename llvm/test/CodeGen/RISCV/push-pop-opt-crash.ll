@@ -1,8 +1,8 @@
 ; RUN: llc -mattr=+zcmp -verify-machineinstrs  \
-; RUN: -mtriple=riscv32 -target-abi ilp32 < %s \
+; RUN: -mtriple=riscv32 -target-abi=ilp32 < %s \
 ; RUN: | FileCheck %s -check-prefixes=RV32IZCMP
 ; RUN: llc -mattr=+zcmp -verify-machineinstrs  \
-; RUN: -mtriple=riscv64 -target-abi ilp64 < %s \
+; RUN: -mtriple=riscv64 -target-abi=lp64 < %s \
 ; RUN: | FileCheck %s -check-prefixes=RV64IZCMP
 
 ; This source code exposed a crash in the RISC-V Zcmp Push/Pop optimization

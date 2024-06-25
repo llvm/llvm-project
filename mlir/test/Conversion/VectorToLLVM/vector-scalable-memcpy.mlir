@@ -6,8 +6,8 @@ func.func @vector_scalable_memcopy(%src : memref<?xf32>, %dst : memref<?xf32>, %
   %c4 = arith.constant 4 : index
   %vs = vector.vscale
   %step = arith.muli %c4, %vs : index
-  // CHECK: [[SRCMRS:%[0-9]+]] = builtin.unrealized_conversion_cast [[SRC]] : memref<?xf32> to !llvm.struct<(ptr
-  // CHECK: [[DSTMRS:%[0-9]+]] = builtin.unrealized_conversion_cast [[DST]] : memref<?xf32> to !llvm.struct<(ptr
+  // CHECK-DAG: [[SRCMRS:%[0-9]+]] = builtin.unrealized_conversion_cast [[SRC]] : memref<?xf32> to !llvm.struct<(ptr
+  // CHECK-DAG: [[DSTMRS:%[0-9]+]] = builtin.unrealized_conversion_cast [[DST]] : memref<?xf32> to !llvm.struct<(ptr
   // CHECK: scf.for [[LOOPIDX:%arg[0-9]+]] = {{.*}}
   scf.for %i0 = %c0 to %size step %step {
     // CHECK: [[DATAIDX:%[0-9]+]] = builtin.unrealized_conversion_cast [[LOOPIDX]] : index to i64

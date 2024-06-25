@@ -5,7 +5,7 @@ add_entrypoint_object(
     wctob.cpp
   HDRS
     wctob.h
-  DEPENDS 
+  DEPENDS
     libc.include.stdio
     libc.include.wchar
     libc.src.__support.wctype_utils

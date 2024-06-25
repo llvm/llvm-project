@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck -check-prefixes=ALL,SLOW,RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ALL,SLOW,RV64I %s
-; RUN: llc -mtriple=riscv32 -mattr=+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+unaligned-scalar-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ALL,FAST,RV32I-FAST %s
-; RUN: llc -mtriple=riscv64 -mattr=+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+unaligned-scalar-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ALL,FAST,RV64I-FAST %s
 
 ; A collection of cases showing codegen for unaligned loads and stores
@@ -419,7 +419,7 @@ define void @merge_stores_i32_i64(ptr %p) {
 define void @store_large_constant(ptr %x) {
 ; SLOW-LABEL: store_large_constant:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    li a1, 254
+; SLOW-NEXT:    li a1, -2
 ; SLOW-NEXT:    sb a1, 7(a0)
 ; SLOW-NEXT:    li a1, 220
 ; SLOW-NEXT:    sb a1, 6(a0)

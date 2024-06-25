@@ -4,10 +4,9 @@
 define void @f(ptr %0, <32 x i1> %1, i32 %2) nounwind {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm0
-; CHECK-NEXT:    vpmovb2m %ymm0, %k0
-; CHECK-NEXT:    kshiftrd $3, %k0, %k1
-; CHECK-NEXT:    kmovd %k1, %eax
+; CHECK-NEXT:    vpsllw $7, %ymm0, %ymm1
+; CHECK-NEXT:    vpmovb2m %ymm1, %k0
+; CHECK-NEXT:    vpextrb $3, %xmm0, %eax
 ; CHECK-NEXT:    vpbroadcastb %esi, %ymm0
 ; CHECK-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k1
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0

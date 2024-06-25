@@ -1,5 +1,5 @@
 // Test without serialization:
-// RUN: %clang_cc1 -fsyntax-only %s -ast-dump -std=c++17 | FileCheck %s
+// RUN: %clang_cc1 %s -ast-dump -std=c++17 | FileCheck %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -std=c++17 -emit-pch -o %t %s

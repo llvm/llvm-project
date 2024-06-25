@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ignore-inbounds -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-ignore-inbounds '-passes=print<polly-simplify>' -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Test scalability.
 ;

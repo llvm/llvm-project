@@ -4,6 +4,9 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+# Windows does not allow quotes in file names.
+@skipIf(hostoslist=["windows"])
+@skipIfRemote
 class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase):
     FEATURE_NAME = "qXfer:libraries-svr4:read"
 
@@ -72,7 +75,7 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
         self.assertEqual(xml_root.tag, "library-list-svr4")
         for child in xml_root:
             self.assertEqual(child.tag, "library")
-            self.assertItemsEqual(child.attrib.keys(), ["name", "lm", "l_addr", "l_ld"])
+            self.assertCountEqual(child.attrib.keys(), ["name", "lm", "l_addr", "l_ld"])
 
     def libraries_svr4_has_correct_load_addr(self):
         xml_root = self.get_libraries_svr4_xml()

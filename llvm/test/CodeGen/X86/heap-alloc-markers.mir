@@ -34,6 +34,7 @@ name: test
 # CHECK-LABEL: {{^}}test:
 tracksRegLiveness: true
 frameInfo:
+  adjustsStack:    true
   hasCalls: true
 body: |
   bb.0.entry:

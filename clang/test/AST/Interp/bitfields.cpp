@@ -102,3 +102,24 @@ namespace Compound {
   }
   static_assert(div() == 1, "");
 }
+
+namespace test0 {
+  extern int int_source();
+  struct A {
+    int aField;
+    int bField;
+  };
+
+  struct B {
+    int onebit : 2;
+    int twobit : 6;
+    int intField;
+  };
+
+  struct C : A, B {
+  };
+
+  void b(C &c) {
+    c.onebit = int_source();
+  }
+}

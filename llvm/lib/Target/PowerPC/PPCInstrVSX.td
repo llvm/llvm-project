@@ -1596,7 +1596,7 @@ let Predicates = [HasVSX, HasP9Vector] in {
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let hasSideEffects = 1 in {
     def XSTSTDCSP : XX2_BF3_DCMX7_RS6<60, 298,
-                                (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),
+                                (outs crrc:$BF), (ins u7imm:$DCMX, vssrc:$XB),
                                 "xststdcsp $BF, $XB, $DCMX", IIC_VecFP, []>;
     def XSTSTDCDP : XX2_BF3_DCMX7_RS6<60, 362,
                                 (outs crrc:$BF), (ins u7imm:$DCMX, vsfrc:$XB),

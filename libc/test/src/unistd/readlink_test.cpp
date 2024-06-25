@@ -18,9 +18,11 @@ namespace cpp = LIBC_NAMESPACE::cpp;
 
 TEST(LlvmLibcReadlinkTest, CreateAndUnlink) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char LINK_VAL[] = "readlink_test_value";
-  constexpr const char LINK[] = "testdata/readlink.test.link";
-  libc_errno = 0;
+  constexpr const char *FILENAME = "readlink_test_value";
+  auto LINK_VAL = libc_make_test_file_path(FILENAME);
+  constexpr const char *FILENAME2 = "readlink.test.link";
+  auto LINK = libc_make_test_file_path(FILENAME2);
+  LIBC_NAMESPACE::libc_errno = 0;
 
   // The test strategy is as follows:
   //   1. Create a symlink with value LINK_VAL.

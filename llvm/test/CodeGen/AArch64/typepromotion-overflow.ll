@@ -246,9 +246,8 @@ define i32 @safe_sub_var_imm(ptr nocapture readonly %b) local_unnamed_addr #1 {
 ; CHECK-LABEL: safe_sub_var_imm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    add w8, w8, #8
-; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #252
+; CHECK-NEXT:    sub w8, w8, #248
+; CHECK-NEXT:    cmn w8, #4
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
 entry:

@@ -60,9 +60,6 @@ struct Config {
   bool VerifyEach = false;
   bool DisableVerify = false;
 
-  /// Use the standard optimization pipeline.
-  bool UseDefaultPipeline = false;
-
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
   bool Freestanding = false;

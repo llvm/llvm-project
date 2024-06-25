@@ -158,6 +158,7 @@ public:
       Stream *s, ExecutionContextScope *exe_scope, const Address &so_addr,
       bool show_fullpaths, bool show_module, bool show_inlined_frames,
       bool show_function_arguments, bool show_function_name,
+      bool show_function_display_name = false,
       std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   /// Get the address range contained within a symbol context.

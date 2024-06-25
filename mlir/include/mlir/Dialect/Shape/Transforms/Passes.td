@@ -103,11 +103,4 @@ def ShapeToShapeLowering : Pass<"shape-to-shape-lowering", "func::FuncOp"> {
   let constructor = "mlir::createShapeToShapeLowering()";
 }
 
-// TODO: Generalize this to allow any type conversions desired.
-def ShapeBufferize : Pass<"shape-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the shape dialect.";
-  let constructor = "mlir::createShapeBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
-}
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES

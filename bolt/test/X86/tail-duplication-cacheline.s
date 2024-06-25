@@ -1,5 +1,5 @@
-# This reproduces a bug in TailDuplication::isInCacheLine
-# with accessing BlockLayout past bounds (unreachable blocks).
+## This reproduces a bug in TailDuplication::isInCacheLine
+## with accessing BlockLayout past bounds (unreachable blocks).
 
 # REQUIRES: system-linux
 

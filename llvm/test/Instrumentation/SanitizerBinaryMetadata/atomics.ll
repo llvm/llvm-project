@@ -2037,7 +2037,8 @@ entry:
 
 ; CHECK-LABEL: __sanitizer_metadata_atomics.module_ctor
 ; CHECK-DAG: entry:
-; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_atomics_add, ptr null), label %callfunc, label %ret
+; CHECK-NEXT:  [[CMP:%.*]] = icmp ne ptr @__sanitizer_metadata_atomics_add, null
+; CHECK-NEXT:  br i1 [[CMP]], label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
 ; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_add(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 ; CHECK-NEXT:  br label %ret
@@ -2046,7 +2047,8 @@ entry:
 
 ; CHECK-LABEL: __sanitizer_metadata_atomics.module_dtor
 ; CHECK-DAG: entry:
-; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_atomics_del, ptr null), label %callfunc, label %ret
+; CHECK-NEXT:  [[CMP:%.*]] = icmp ne ptr @__sanitizer_metadata_atomics_del, null
+; CHECK-NEXT:  br i1 [[CMP]], label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
 ; CHECK-NEXT:  call void @__sanitizer_metadata_atomics_del(i32 2, ptr @__start_sanmd_atomics, ptr @__stop_sanmd_atomics)
 ; CHECK-NEXT:  br label %ret
@@ -2055,7 +2057,8 @@ entry:
 
 ; CHECK-LABEL: __sanitizer_metadata_covered.module_ctor
 ; CHECK-DAG: entry:
-; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_covered_add, ptr null), label %callfunc, label %ret
+; CHECK-NEXT:  [[CMP:%.*]] = icmp ne ptr @__sanitizer_metadata_covered_add, null
+; CHECK-NEXT:  br i1 [[CMP]], label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
 ; CHECK-NEXT:  call void @__sanitizer_metadata_covered_add(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 ; CHECK-NEXT:  br label %ret
@@ -2064,7 +2067,8 @@ entry:
 
 ; CHECK-LABEL: __sanitizer_metadata_covered.module_dtor
 ; CHECK-DAG: entry:
-; CHECK-NEXT:  br i1 icmp ne (ptr @__sanitizer_metadata_covered_del, ptr null), label %callfunc, label %ret
+; CHECK-NEXT:  [[CMP:%.*]] = icmp ne ptr @__sanitizer_metadata_covered_del, null
+; CHECK-NEXT:  br i1 [[CMP]], label %callfunc, label %ret
 ; CHECK-DAG: callfunc:
 ; CHECK-NEXT:  call void @__sanitizer_metadata_covered_del(i32 2, ptr @__start_sanmd_covered, ptr @__stop_sanmd_covered)
 ; CHECK-NEXT:  br label %ret

@@ -11,22 +11,22 @@
   entry:
     %a = alloca [36 x i32], align 16
     %z = alloca [36 x i32], align 16
-    %0 = bitcast [36 x i32]* %z to i8*
-    %scevgep = getelementptr inbounds [36 x i32], [36 x i32]* %a, i64 0, i64 1
-    %scevgep40 = bitcast i32* %scevgep to i8*
-    %arrayidx.9 = getelementptr inbounds [36 x i32], [36 x i32]* %a, i64 0, i64 9
-    %1 = load i32, i32* %arrayidx.9, align 4
+    %0 = bitcast ptr %z to ptr
+    %scevgep = getelementptr inbounds [36 x i32], ptr %a, i64 0, i64 1
+    %scevgep40 = bitcast ptr %scevgep to ptr
+    %arrayidx.9 = getelementptr inbounds [36 x i32], ptr %a, i64 0, i64 9
+    %1 = load i32, ptr %arrayidx.9, align 4
     %add.9 = add i32 %1, 9
-    store i32 %add.9, i32* %arrayidx.9, align 4
-    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 %0, i8* nonnull align 4 %scevgep40, i64 136, i1 false)
+    store i32 %add.9, ptr %arrayidx.9, align 4
+    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 16 %0, ptr nonnull align 4 %scevgep40, i64 136, i1 false)
     ret i32 %1
   }
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+  declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { "target-cpu"="core-avx2" }
   attributes #1 = { argmemonly nounwind "target-cpu"="core-avx2" }

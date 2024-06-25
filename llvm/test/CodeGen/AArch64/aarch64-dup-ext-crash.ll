@@ -32,12 +32,12 @@ vector.ph:                                        ; preds = %vector.memcheck
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
-  %wide.load = load <2 x i32>, <2 x i32>* undef, align 4
+  %wide.load = load <2 x i32>, ptr undef, align 4
   %0 = zext <2 x i32> %wide.load to <2 x i64>
   %1 = mul nuw <2 x i64> %broadcast.splat, %0
   %2 = trunc <2 x i64> %1 to <2 x i32>
   %3 = select <2 x i1> undef, <2 x i32> undef, <2 x i32> %2
-  %4 = bitcast i32* undef to <2 x i32>*
-  store <2 x i32> %3, <2 x i32>* %4, align 4
+  %4 = bitcast ptr undef to ptr
+  store <2 x i32> %3, ptr %4, align 4
   br label %vector.body
 }

@@ -29,4 +29,5 @@ if(TARGET lldb-commandinterpreter-fuzzer)
     COMMAND  $<TARGET_FILE:lldb-commandinterpreter-fuzzer> -dict=${CMAKE_CURRENT_SOURCE_DIR}/inputdictionary.txt  -only_ascii=1 -artifact_prefix=commandinterpreter-
     USES_TERMINAL
     )
+  set_target_properties(fuzz-lldb-commandinterpreter PROPERTIES FOLDER "LLDB/Fuzzer")  
 endif()

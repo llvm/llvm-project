@@ -95,17 +95,19 @@ static const EnumEntry<uint8_t> FrameCookieKinds[] = {
 };
 
 static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
-    CV_ENUM_ENT(SourceLanguage, C),       CV_ENUM_ENT(SourceLanguage, Cpp),
-    CV_ENUM_ENT(SourceLanguage, Fortran), CV_ENUM_ENT(SourceLanguage, Masm),
-    CV_ENUM_ENT(SourceLanguage, Pascal),  CV_ENUM_ENT(SourceLanguage, Basic),
-    CV_ENUM_ENT(SourceLanguage, Cobol),   CV_ENUM_ENT(SourceLanguage, Link),
-    CV_ENUM_ENT(SourceLanguage, Cvtres),  CV_ENUM_ENT(SourceLanguage, Cvtpgd),
-    CV_ENUM_ENT(SourceLanguage, CSharp),  CV_ENUM_ENT(SourceLanguage, VB),
-    CV_ENUM_ENT(SourceLanguage, ILAsm),   CV_ENUM_ENT(SourceLanguage, Java),
-    CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
-    CV_ENUM_ENT(SourceLanguage, HLSL),    CV_ENUM_ENT(SourceLanguage, D),
-    CV_ENUM_ENT(SourceLanguage, Swift),   CV_ENUM_ENT(SourceLanguage, Rust),
-    CV_ENUM_ENT(SourceLanguage, ObjC),    CV_ENUM_ENT(SourceLanguage, ObjCpp),
+    CV_ENUM_ENT(SourceLanguage, C),        CV_ENUM_ENT(SourceLanguage, Cpp),
+    CV_ENUM_ENT(SourceLanguage, Fortran),  CV_ENUM_ENT(SourceLanguage, Masm),
+    CV_ENUM_ENT(SourceLanguage, Pascal),   CV_ENUM_ENT(SourceLanguage, Basic),
+    CV_ENUM_ENT(SourceLanguage, Cobol),    CV_ENUM_ENT(SourceLanguage, Link),
+    CV_ENUM_ENT(SourceLanguage, Cvtres),   CV_ENUM_ENT(SourceLanguage, Cvtpgd),
+    CV_ENUM_ENT(SourceLanguage, CSharp),   CV_ENUM_ENT(SourceLanguage, VB),
+    CV_ENUM_ENT(SourceLanguage, ILAsm),    CV_ENUM_ENT(SourceLanguage, Java),
+    CV_ENUM_ENT(SourceLanguage, JScript),  CV_ENUM_ENT(SourceLanguage, MSIL),
+    CV_ENUM_ENT(SourceLanguage, HLSL),     CV_ENUM_ENT(SourceLanguage, D),
+    CV_ENUM_ENT(SourceLanguage, Swift),    CV_ENUM_ENT(SourceLanguage, Rust),
+    CV_ENUM_ENT(SourceLanguage, ObjC),     CV_ENUM_ENT(SourceLanguage, ObjCpp),
+    CV_ENUM_ENT(SourceLanguage, AliasObj), CV_ENUM_ENT(SourceLanguage, Go),
+    {"Swift", SourceLanguage::OldSwift},
 };
 
 static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {
@@ -205,6 +207,7 @@ static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, HybridX86ARM64),
     CV_ENUM_CLASS_ENT(CPUType, ARM64EC),
     CV_ENUM_CLASS_ENT(CPUType, ARM64X),
+    CV_ENUM_CLASS_ENT(CPUType, Unknown),
     CV_ENUM_CLASS_ENT(CPUType, D3D11_Shader),
 };
 
@@ -421,6 +424,7 @@ static const EnumEntry<uint8_t> CallingConventions[] = {
     CV_ENUM_CLASS_ENT(CallingConvention, ClrCall),
     CV_ENUM_CLASS_ENT(CallingConvention, Inline),
     CV_ENUM_CLASS_ENT(CallingConvention, NearVector),
+    CV_ENUM_CLASS_ENT(CallingConvention, Swift),
 };
 
 static const EnumEntry<uint8_t> FunctionOptionEnum[] = {

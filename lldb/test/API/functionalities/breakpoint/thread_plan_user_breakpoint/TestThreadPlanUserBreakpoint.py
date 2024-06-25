@@ -8,7 +8,7 @@ and eStopReasonPlanComplete when breakpoint's condition fails or it is disabled.
 """
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -43,12 +43,12 @@ class ThreadPlanUserBreakpointsTestCase(TestBase):
             thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(
                 self.process, self.breakpoints[breakpoint_idx]
             )
-            self.assertEquals(
+            self.assertEqual(
                 self.thread, thread1, "Didn't stop at breakpoint %i." % breakpoint_idx
             )
         else:
             # Breakpoints are inactive, stop reason is plan complete
-            self.assertEquals(
+            self.assertEqual(
                 self.thread.GetStopReason(),
                 lldb.eStopReasonPlanComplete,
                 "Expected stop reason to be step into/over/out for inactive breakpoint %i line."

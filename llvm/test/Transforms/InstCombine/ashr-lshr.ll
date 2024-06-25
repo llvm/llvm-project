@@ -229,24 +229,24 @@ define <2 x i32> @ashr_lshr_inv_nonsplat_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %ret
 }
 
-define <2 x i32> @ashr_lshr_vec_undef(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @ashr_lshr_vec_undef(
+define <2 x i32> @ashr_lshr_vec_poison(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @ashr_lshr_vec_poison(
 ; CHECK-NEXT:    [[CMP12:%.*]] = ashr <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[CMP12]]
 ;
-  %cmp = icmp sgt <2 x i32> %x, <i32 undef, i32 -1>
+  %cmp = icmp sgt <2 x i32> %x, <i32 poison, i32 -1>
   %l = lshr <2 x i32> %x, %y
   %r = ashr exact <2 x i32> %x, %y
   %ret = select <2 x i1> %cmp, <2 x i32> %l, <2 x i32> %r
   ret <2 x i32> %ret
 }
 
-define <2 x i32> @ashr_lshr_vec_undef2(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @ashr_lshr_vec_undef2(
+define <2 x i32> @ashr_lshr_vec_poison2(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @ashr_lshr_vec_poison2(
 ; CHECK-NEXT:    [[CMP1:%.*]] = ashr exact <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[CMP1]]
 ;
-  %cmp = icmp slt <2 x i32> %x, <i32 1, i32 undef>
+  %cmp = icmp slt <2 x i32> %x, <i32 1, i32 poison>
   %l = lshr exact <2 x i32> %x, %y
   %r = ashr exact <2 x i32> %x, %y
   %ret = select <2 x i1> %cmp, <2 x i32> %r, <2 x i32> %l
@@ -498,14 +498,14 @@ define <3 x i42> @lshr_sub_nsw_splat(<3 x i42> %x, <3 x i42> %y) {
   ret <3 x i42> %shr
 }
 
-define <3 x i42> @lshr_sub_nsw_splat_undef(<3 x i42> %x, <3 x i42> %y) {
-; CHECK-LABEL: @lshr_sub_nsw_splat_undef(
+define <3 x i42> @lshr_sub_nsw_splat_poison(<3 x i42> %x, <3 x i42> %y) {
+; CHECK-LABEL: @lshr_sub_nsw_splat_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i42> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 undef, i42 41>
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 poison, i42 41>
 ; CHECK-NEXT:    ret <3 x i42> [[SHR]]
 ;
   %sub = sub nsw <3 x i42> %x, %y
-  %shr = lshr <3 x i42> %sub, <i42 41, i42 undef, i42 41>
+  %shr = lshr <3 x i42> %sub, <i42 41, i42 poison, i42 41>
   ret <3 x i42> %shr
 }
 
@@ -572,14 +572,14 @@ define <3 x i43> @ashr_sub_nsw_splat(<3 x i43> %x, <3 x i43> %y) {
   ret <3 x i43> %shr
 }
 
-define <3 x i43> @ashr_sub_nsw_splat_undef(<3 x i43> %x, <3 x i43> %y) {
-; CHECK-LABEL: @ashr_sub_nsw_splat_undef(
+define <3 x i43> @ashr_sub_nsw_splat_poison(<3 x i43> %x, <3 x i43> %y) {
+; CHECK-LABEL: @ashr_sub_nsw_splat_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i43> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 undef, i43 42>
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 poison, i43 42>
 ; CHECK-NEXT:    ret <3 x i43> [[SHR]]
 ;
   %sub = sub nsw <3 x i43> %x, %y
-  %shr = ashr <3 x i43> %sub, <i43 42, i43 undef, i43 42>
+  %shr = ashr <3 x i43> %sub, <i43 42, i43 poison, i43 42>
   ret <3 x i43> %shr
 }
 
@@ -604,3 +604,262 @@ define <2 x i8> @ashr_known_pos_exact_vec(<2 x i8> %x, <2 x i8> %y) {
   %r = ashr exact <2 x i8> %p, %y
   ret <2 x i8> %r
 }
+
+define i32 @lshr_mul_times_3_div_2(i32 %0) {
+; CHECK-LABEL: @lshr_mul_times_3_div_2(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nsw nuw i32 %0, 3
+  %lshr = lshr i32 %mul, 1
+  ret i32 %lshr
+}
+
+define i32 @lshr_mul_times_3_div_2_exact(i32 %x) {
+; CHECK-LABEL: @lshr_mul_times_3_div_2_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nsw i32 %x, 3
+  %lshr = lshr exact i32 %mul, 1
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @lshr_mul_times_3_div_2_no_flags(i32 %0) {
+; CHECK-LABEL: @lshr_mul_times_3_div_2_no_flags(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[MUL]], 1
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul i32 %0, 3
+  %lshr = lshr i32 %mul, 1
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @mul_times_3_div_2_multiuse_lshr(i32 %x) {
+; CHECK-LABEL: @mul_times_3_div_2_multiuse_lshr(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = lshr i32 [[MUL]], 1
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mul = mul nuw i32 %x, 3
+  %res = lshr i32 %mul, 1
+  call void @use(i32 %mul)
+  ret i32 %res
+}
+
+define i32 @lshr_mul_times_3_div_2_exact_2(i32 %x) {
+; CHECK-LABEL: @lshr_mul_times_3_div_2_exact_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nuw i32 %x, 3
+  %lshr = lshr exact i32 %mul, 1
+  ret i32 %lshr
+}
+
+define i32 @lshr_mul_times_5_div_4(i32 %0) {
+; CHECK-LABEL: @lshr_mul_times_5_div_4(
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nsw nuw i32 %0, 5
+  %lshr = lshr i32 %mul, 2
+  ret i32 %lshr
+}
+
+define i32 @lshr_mul_times_5_div_4_exact(i32 %x) {
+; CHECK-LABEL: @lshr_mul_times_5_div_4_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[LSHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nsw i32 %x, 5
+  %lshr = lshr exact i32 %mul, 2
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @lshr_mul_times_5_div_4_no_flags(i32 %0) {
+; CHECK-LABEL: @lshr_mul_times_5_div_4_no_flags(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP0:%.*]], 5
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[MUL]], 2
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul i32 %0, 5
+  %lshr = lshr i32 %mul, 2
+  ret i32 %lshr
+}
+
+; Negative test
+
+define i32 @mul_times_5_div_4_multiuse_lshr(i32 %x) {
+; CHECK-LABEL: @mul_times_5_div_4_multiuse_lshr(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[RES:%.*]] = lshr i32 [[MUL]], 2
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mul = mul nuw i32 %x, 5
+  %res = lshr i32 %mul, 2
+  call void @use(i32 %mul)
+  ret i32 %res
+}
+
+define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
+; CHECK-LABEL: @lshr_mul_times_5_div_4_exact_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[LSHR]]
+;
+  %mul = mul nuw i32 %x, 5
+  %lshr = lshr exact i32 %mul, 2
+  ret i32 %lshr
+}
+
+define i32 @ashr_mul_times_3_div_2(i32 %0) {
+; CHECK-LABEL: @ashr_mul_times_3_div_2(
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nuw nsw i32 %0, 3
+  %ashr = ashr i32 %mul, 1
+  ret i32 %ashr
+}
+
+define i32 @ashr_mul_times_3_div_2_exact(i32 %x) {
+; CHECK-LABEL: @ashr_mul_times_3_div_2_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nsw i32 %x, 3
+  %ashr = ashr exact i32 %mul, 1
+  ret i32 %ashr
+}
+
+; Negative test
+
+define i32 @ashr_mul_times_3_div_2_no_flags(i32 %0) {
+; CHECK-LABEL: @ashr_mul_times_3_div_2_no_flags(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[MUL]], 1
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul i32 %0, 3
+  %ashr = ashr i32 %mul, 1
+  ret i32 %ashr
+}
+
+; Negative test
+
+define i32 @ashr_mul_times_3_div_2_no_nsw(i32 %0) {
+; CHECK-LABEL: @ashr_mul_times_3_div_2_no_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[MUL]], 1
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nuw i32 %0, 3
+  %ashr = ashr i32 %mul, 1
+  ret i32 %ashr
+}
+
+; Negative test
+
+define i32 @mul_times_3_div_2_multiuse_ashr(i32 %x) {
+; CHECK-LABEL: @mul_times_3_div_2_multiuse_ashr(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[RES:%.*]] = ashr i32 [[MUL]], 1
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mul = mul nsw i32 %x, 3
+  %res = ashr i32 %mul, 1
+  call void @use(i32 %mul)
+  ret i32 %res
+}
+
+define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
+; CHECK-LABEL: @ashr_mul_times_3_div_2_exact_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nsw i32 %x, 3
+  %ashr = ashr exact i32 %mul, 1
+  ret i32 %ashr
+}
+
+define i32 @ashr_mul_times_5_div_4(i32 %0) {
+; CHECK-LABEL: @ashr_mul_times_5_div_4(
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nuw nsw i32 %0, 5
+  %ashr = ashr i32 %mul, 2
+  ret i32 %ashr
+}
+
+define i32 @ashr_mul_times_5_div_4_exact(i32 %x) {
+; CHECK-LABEL: @ashr_mul_times_5_div_4_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nsw i32 %x, 5
+  %ashr = ashr exact i32 %mul, 2
+  ret i32 %ashr
+}
+
+; Negative test
+
+define i32 @ashr_mul_times_5_div_4_no_flags(i32 %0) {
+; CHECK-LABEL: @ashr_mul_times_5_div_4_no_flags(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP0:%.*]], 5
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[MUL]], 2
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul i32 %0, 5
+  %ashr = ashr i32 %mul, 2
+  ret i32 %ashr
+}
+
+; Negative test
+
+define i32 @mul_times_5_div_4_multiuse_ashr(i32 %x) {
+; CHECK-LABEL: @mul_times_5_div_4_multiuse_ashr(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 5
+; CHECK-NEXT:    [[RES:%.*]] = ashr i32 [[MUL]], 2
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %mul = mul nsw i32 %x, 5
+  %res = ashr i32 %mul, 2
+  call void @use(i32 %mul)
+  ret i32 %res
+}
+
+define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
+; CHECK-LABEL: @ashr_mul_times_5_div_4_exact_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[ASHR:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[ASHR]]
+;
+  %mul = mul nsw i32 %x, 5
+  %ashr = ashr exact i32 %mul, 2
+  ret i32 %ashr
+}
+
+declare void @use(i32)

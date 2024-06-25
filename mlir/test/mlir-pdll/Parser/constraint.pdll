@@ -12,6 +12,14 @@ Constraint Foo() [{ /* Native Code */ }];
 
 // -----
 
+// Test that native constraints support returning results.
+
+// CHECK:  Module
+// CHECK:  `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Attr>
+Constraint Foo() -> Attr;
+
+// -----
+
 // CHECK: Module
 // CHECK: `-UserConstraintDecl {{.*}} Name<Foo> ResultType<Value>
 // CHECK:   `Inputs`

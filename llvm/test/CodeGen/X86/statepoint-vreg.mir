@@ -134,6 +134,8 @@ registers:
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
+frameInfo:
+  adjustsStack:    true
 fixedStack:      []
 stack:           []
 callSites:       []

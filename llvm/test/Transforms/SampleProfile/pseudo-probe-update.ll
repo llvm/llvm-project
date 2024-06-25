@@ -14,15 +14,15 @@ T1:
 	%v1 = call i32 @f1()
 ; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1)
 ;; The distribution factor -8513881372706734080 stands for 53.85%, whic is from 7/6+7.
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -8513881372706734080)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 6, i32 0, i64 -8513881372706734080)
     %cond3 = icmp eq i32 %v1, 412
 	br label %Merge
 F1:
 ; CHECK: %v2 = call i32 @f2(), !prof ![[#PROF2:]]
 	%v2 = call i32 @f2()
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
 ;; The distribution factor 8513881922462547968 stands for 46.25%, which is from 6/6+7.
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 8513881922462547968)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 6, i32 0, i64 8513881922462547968)
 	br label %Merge
 Merge:
 
@@ -30,11 +30,11 @@ Merge:
 	%B = phi i32 [%v1, %T1], [%v2, %F1]
 	br i1 %A, label %T2, label %F2
 T2:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 5, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 7, i32 0, i64 -1)
 	call void @f3()
 	ret i32 %B
 F2:
-; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 6, i32 0, i64 -1)
+; CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 9, i32 0, i64 -1)
 	ret i32 %B
 }
 
@@ -42,4 +42,3 @@ F2:
 ; CHECK: ![[#PROF2]] = !{!"branch_weights", i32 6}
 
 attributes #0 = {"use-sample-profile"}
-

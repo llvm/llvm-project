@@ -429,6 +429,6 @@ All the "is-present" checks and the data actions for the auxiliary pointers must
 
 The API relies on the primitives provided by `liboffload`, so it is provided by a new F18 runtime library, e.g. `FortranOffloadRuntime`, that depends on `FortranRuntime` and `liboffload`.  The F18 driver adds `FortranOffloadRuntime` for linking under `-fopenacc`/`-fopenmp` (and maybe additional switches like `-fopenmp-targets`).
 
-# TODOs:
+## TODOs:
 
 * Cover the detach action.

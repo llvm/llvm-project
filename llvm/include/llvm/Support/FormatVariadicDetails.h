@@ -19,6 +19,7 @@ namespace llvm {
 template <typename T, typename Enable = void> struct format_provider {};
 class Error;
 
+namespace support {
 namespace detail {
 class format_adapter {
   virtual void anchor();
@@ -156,7 +157,8 @@ std::enable_if_t<uses_missing_provider<T>::value, missing_format_adapter<T>>
 build_format_adapter(T &&) {
   return missing_format_adapter<T>();
 }
-}
-}
+} // namespace detail
+} // namespace support
+} // namespace llvm
 
 #endif

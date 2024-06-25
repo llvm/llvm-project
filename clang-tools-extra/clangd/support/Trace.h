@@ -143,8 +143,8 @@ bool enabled();
 class Span {
 public:
   Span(llvm::Twine Name);
-  /// Records span's duration in seconds to \p LatencyMetric with \p Name as the
-  /// label.
+  /// Records span's duration in milliseconds to \p LatencyMetric with \p Name
+  /// as the label.
   Span(llvm::Twine Name, const Metric &LatencyMetric);
   ~Span();
 

@@ -41,7 +41,7 @@ namespace ARM_AM {
 
   inline const char *getAddrOpcStr(AddrOpc Op) { return Op == sub ? "-" : ""; }
 
-  inline const char *getShiftOpcStr(ShiftOpc Op) {
+  inline const StringRef getShiftOpcStr(ShiftOpc Op) {
     switch (Op) {
     default: llvm_unreachable("Unknown shift opc!");
     case ARM_AM::asr: return "asr";

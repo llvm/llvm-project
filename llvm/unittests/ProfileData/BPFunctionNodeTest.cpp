@@ -8,7 +8,6 @@
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/BalancedPartitioning.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -31,22 +30,32 @@ TEST(BPFunctionNodeTest, Basic) {
                        UnorderedElementsAreArray(UNs)));
   };
 
-  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes({
-      TemporalProfTraceTy({0, 1, 2, 3}),
-  });
+  std::vector<BPFunctionNode> Nodes;
+  TemporalProfTraceTy::createBPFunctionNodes(
+      {TemporalProfTraceTy({0, 1, 2, 3})}, Nodes, /*RemoveOutlierUNs=*/false);
+  // Utility nodes that are too infrequent or too prevalent are filtered out.
   EXPECT_THAT(Nodes,
               UnorderedElementsAre(NodeIs(0, {0, 1, 2}), NodeIs(1, {1, 2}),
-                                   NodeIs(2, {1, 2}), NodeIs(3, {2})));
+                                   NodeIs(2, {2}), NodeIs(3, {2})));
 
-  Nodes = TemporalProfTraceTy::createBPFunctionNodes({
-      TemporalProfTraceTy({0, 1, 2, 3, 4}),
-      TemporalProfTraceTy({4, 2}),
-  });
+  Nodes.clear();
+  TemporalProfTraceTy::createBPFunctionNodes(
+      {TemporalProfTraceTy({0, 1, 2, 3, 4}), TemporalProfTraceTy({4, 2})},
+      Nodes, /*RemoveOutlierUNs=*/false);
 
   EXPECT_THAT(Nodes,
-              UnorderedElementsAre(NodeIs(0, {0, 1, 2}), NodeIs(1, {1, 2}),
-                                   NodeIs(2, {1, 2, 4, 5}), NodeIs(3, {2}),
-                                   NodeIs(4, {2, 3, 4, 5})));
+              UnorderedElementsAre(NodeIs(0, {0, 1, 2, 3}),
+                                   NodeIs(1, {1, 2, 3}), NodeIs(2, {2, 3, 5}),
+                                   NodeIs(3, {2, 3}), NodeIs(4, {3, 4, 5})));
+
+  Nodes.clear();
+  TemporalProfTraceTy::createBPFunctionNodes(
+      {TemporalProfTraceTy({0, 1, 2, 3, 4}), TemporalProfTraceTy({4, 2})},
+      Nodes, /*RemoveOutlierUNs=*/true);
+
+  EXPECT_THAT(Nodes, UnorderedElementsAre(NodeIs(0, {1}), NodeIs(1, {1}),
+                                          NodeIs(2, {5}), NodeIs(3, {}),
+                                          NodeIs(4, {5})));
 }
 
 } // end namespace llvm

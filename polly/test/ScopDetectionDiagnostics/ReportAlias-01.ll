@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-use-runtime-alias-checks=false -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-print-detect -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly -polly-use-runtime-alias-checks=false -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output < %s 2>&1| FileCheck %s
 
 ;void f(int A[], int B[]) {
 ;  for (int i=0; i<42; i++)

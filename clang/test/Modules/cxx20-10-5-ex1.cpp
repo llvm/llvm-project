@@ -2,14 +2,26 @@
 // RUN: split-file %s %t
 // RUN: cd %t
 
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface std-10-5-ex1-interface.cpp \
+// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-interface.cpp \
 // RUN: -DBAD_FWD_DECL  -fsyntax-only -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface std-10-5-ex1-interface.cpp \
 // RUN: -o A.pcm
 
-// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-use.cpp  -fmodule-file=A=A.pcm \
+// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-use.cpp -fmodule-file=A=A.pcm \
 // RUN:    -fsyntax-only -verify
+
+// Test again with reduced BMI.
+// RUN: rm A.pcm
+// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-interface.cpp \
+// RUN: -DBAD_FWD_DECL  -fsyntax-only -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface std-10-5-ex1-interface.cpp \
+// RUN: -o A.pcm
+
+// RUN: %clang_cc1 -std=c++20 std-10-5-ex1-use.cpp -fmodule-file=A=A.pcm \
+// RUN:    -fsyntax-only -verify
+
 
 //--- std-10-5-ex1-interface.cpp
 

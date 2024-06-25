@@ -264,7 +264,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Print<Block> &P) {
   MachineBasicBlock *BB = P.Obj.Addr->getCode();
   unsigned NP = BB->pred_size();
   std::vector<int> Ns;
-  auto PrintBBs = [&OS](std::vector<int> Ns) -> void {
+  auto PrintBBs = [&OS](const std::vector<int> &Ns) -> void {
     unsigned N = Ns.size();
     for (int I : Ns) {
       OS << "%bb." << I;
@@ -870,7 +870,7 @@ void DataFlowGraph::build(const Config &config) {
     std::set<RegisterId> BaseSet;
     if (BuildCfg.Classes.empty()) {
       // Insert every register.
-      for (unsigned R = 0, E = getPRI().getTRI().getNumRegs(); R != E; ++R)
+      for (unsigned R = 1, E = getPRI().getTRI().getNumRegs(); R != E; ++R)
         BaseSet.insert(R);
     } else {
       for (const TargetRegisterClass *RC : BuildCfg.Classes) {

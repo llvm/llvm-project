@@ -18,7 +18,7 @@
 
 // This test exercises the fix for locale name construction (D119441), which
 // isn't in the dylib for some systems.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
 #include <locale>
 #include <cassert>

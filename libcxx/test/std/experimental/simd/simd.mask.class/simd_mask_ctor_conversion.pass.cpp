@@ -42,7 +42,7 @@ struct CheckConversionMaskCtor {
     constexpr std::size_t array_size = ex::simd_size_v<T, SimdAbi>;
     std::array<bool, array_size> expected_value{};
 
-    types::for_each(arithmetic_no_bool_types(), ConversionHelper<T, SimdAbi, array_size>(expected_value));
+    types::for_each(simd_test_types(), ConversionHelper<T, SimdAbi, array_size>(expected_value));
   }
 };
 
@@ -65,7 +65,7 @@ struct CheckConversionMaskCtorTraits {
   void operator()() {
     constexpr std::size_t array_size = ex::simd_size_v<T, SimdAbi>;
 
-    types::for_each(arithmetic_no_bool_types(), CheckConversionMaskCtorTraitsHelper<T, SimdAbi, array_size>());
+    types::for_each(simd_test_types(), CheckConversionMaskCtorTraitsHelper<T, SimdAbi, array_size>());
   }
 };
 

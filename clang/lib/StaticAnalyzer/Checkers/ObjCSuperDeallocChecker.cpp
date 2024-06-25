@@ -26,8 +26,8 @@ namespace {
 class ObjCSuperDeallocChecker
     : public Checker<check::PostObjCMessage, check::PreObjCMessage,
                      check::PreCall, check::Location> {
-  mutable IdentifierInfo *IIdealloc = nullptr;
-  mutable IdentifierInfo *IINSObject = nullptr;
+  mutable const IdentifierInfo *IIdealloc = nullptr;
+  mutable const IdentifierInfo *IINSObject = nullptr;
   mutable Selector SELdealloc;
 
   const BugType DoubleSuperDeallocBugType{

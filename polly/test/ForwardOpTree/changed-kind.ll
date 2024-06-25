@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
 
 ; In the code below, %0 is known to be equal to the content of @c (constant 0).
 ; Thus, in order to save a scalar dependency, forward-optree replaces

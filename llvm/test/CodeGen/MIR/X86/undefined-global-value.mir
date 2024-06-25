@@ -8,7 +8,7 @@
 
   define i32 @inc() {
   entry:
-    %a = load i32, i32* @0
+    %a = load i32, ptr @0
     %b = add i32 %a, 1
     ret i32 %b
   }

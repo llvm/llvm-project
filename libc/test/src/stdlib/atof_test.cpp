@@ -23,13 +23,13 @@ TEST(LlvmLibcAToFTest, SimpleTest) {
   LIBC_NAMESPACE::fputil::FPBits<double> expected_fp =
       LIBC_NAMESPACE::fputil::FPBits<double>(uint64_t(0x405ec00000000000));
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_THAT(LIBC_NAMESPACE::atof("123"),
               Succeeds<double>(expected_fp.get_val()));
 }
 
 TEST(LlvmLibcAToFTest, FailedParsingTest) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   // atof does not flag errors.
   EXPECT_THAT(LIBC_NAMESPACE::atof("???"), Succeeds<double>(0.0));
 }

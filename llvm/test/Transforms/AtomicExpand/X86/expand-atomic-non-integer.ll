@@ -1,4 +1,4 @@
-; RUN: opt -S %s -atomic-expand -mtriple=x86_64-linux-gnu | FileCheck %s
+; RUN: opt -S %s -passes=atomic-expand -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; This file tests the functions `llvm::convertAtomicLoadToIntegerType` and
 ; `llvm::convertAtomicStoreToIntegerType`. If X86 stops using this 

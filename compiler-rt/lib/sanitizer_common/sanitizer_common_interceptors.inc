@@ -974,7 +974,7 @@ INTERCEPTOR(SSIZE_T, read, int fd, void *ptr, SIZE_T count) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  SSIZE_T res = REAL(read)(fd, ptr, count);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(read)(fd, ptr, count);
   if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1009,7 +1009,7 @@ INTERCEPTOR(SSIZE_T, pread, int fd, void *ptr, SIZE_T count, OFF_T offset) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  SSIZE_T res = REAL(pread)(fd, ptr, count, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(pread)(fd, ptr, count, offset);
   if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1027,7 +1027,7 @@ INTERCEPTOR(SSIZE_T, pread64, int fd, void *ptr, SIZE_T count, OFF64_T offset) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  SSIZE_T res = REAL(pread64)(fd, ptr, count, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(pread64)(fd, ptr, count, offset);
   if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1043,7 +1043,7 @@ INTERCEPTOR_WITH_SUFFIX(SSIZE_T, readv, int fd, __sanitizer_iovec *iov,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, readv, fd, iov, iovcnt);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  SSIZE_T res = REAL(readv)(fd, iov, iovcnt);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(readv)(fd, iov, iovcnt);
   if (res > 0) write_iovec(ctx, iov, iovcnt, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1059,7 +1059,7 @@ INTERCEPTOR(SSIZE_T, preadv, int fd, __sanitizer_iovec *iov, int iovcnt,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, preadv, fd, iov, iovcnt, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  SSIZE_T res = REAL(preadv)(fd, iov, iovcnt, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(preadv)(fd, iov, iovcnt, offset);
   if (res > 0) write_iovec(ctx, iov, iovcnt, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1075,7 +1075,8 @@ INTERCEPTOR(SSIZE_T, preadv64, int fd, __sanitizer_iovec *iov, int iovcnt,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, preadv64, fd, iov, iovcnt, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  SSIZE_T res = REAL(preadv64)(fd, iov, iovcnt, offset);
+  SSIZE_T res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(preadv64)(fd, iov, iovcnt, offset);
   if (res > 0) write_iovec(ctx, iov, iovcnt, res);
   if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
@@ -1091,8 +1092,9 @@ INTERCEPTOR(SSIZE_T, write, int fd, void *ptr, SIZE_T count) {
   COMMON_INTERCEPTOR_ENTER(ctx, write, fd, ptr, count);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(write)(fd, ptr, count);
-  // FIXME: this check should be _before_ the call to REAL(write), not after
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(write)(fd, ptr, count);
+  // FIXME: this check should be _before_ the call to
+  // COMMON_INTERCEPTOR_BLOCK_REAL(write), not after
   if (res > 0) COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, res);
   return res;
 }
@@ -1121,7 +1123,7 @@ INTERCEPTOR(SSIZE_T, pwrite, int fd, void *ptr, SIZE_T count, OFF_T offset) {
   COMMON_INTERCEPTOR_ENTER(ctx, pwrite, fd, ptr, count, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(pwrite)(fd, ptr, count, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(pwrite)(fd, ptr, count, offset);
   if (res > 0) COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, res);
   return res;
 }
@@ -1137,7 +1139,7 @@ INTERCEPTOR(SSIZE_T, pwrite64, int fd, void *ptr, OFF64_T count,
   COMMON_INTERCEPTOR_ENTER(ctx, pwrite64, fd, ptr, count, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(pwrite64)(fd, ptr, count, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(pwrite64)(fd, ptr, count, offset);
   if (res > 0) COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, res);
   return res;
 }
@@ -1153,7 +1155,7 @@ INTERCEPTOR_WITH_SUFFIX(SSIZE_T, writev, int fd, __sanitizer_iovec *iov,
   COMMON_INTERCEPTOR_ENTER(ctx, writev, fd, iov, iovcnt);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(writev)(fd, iov, iovcnt);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(writev)(fd, iov, iovcnt);
   if (res > 0) read_iovec(ctx, iov, iovcnt, res);
   return res;
 }
@@ -1169,7 +1171,7 @@ INTERCEPTOR(SSIZE_T, pwritev, int fd, __sanitizer_iovec *iov, int iovcnt,
   COMMON_INTERCEPTOR_ENTER(ctx, pwritev, fd, iov, iovcnt, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(pwritev)(fd, iov, iovcnt, offset);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(pwritev)(fd, iov, iovcnt, offset);
   if (res > 0) read_iovec(ctx, iov, iovcnt, res);
   return res;
 }
@@ -1185,7 +1187,8 @@ INTERCEPTOR(SSIZE_T, pwritev64, int fd, __sanitizer_iovec *iov, int iovcnt,
   COMMON_INTERCEPTOR_ENTER(ctx, pwritev64, fd, iov, iovcnt, offset);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   if (fd >= 0) COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
-  SSIZE_T res = REAL(pwritev64)(fd, iov, iovcnt, offset);
+  SSIZE_T res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(pwritev64)(fd, iov, iovcnt, offset);
   if (res > 0) read_iovec(ctx, iov, iovcnt, res);
   return res;
 }
@@ -2549,7 +2552,7 @@ INTERCEPTOR_WITH_SUFFIX(int, wait, int *status) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(wait)(status);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(wait)(status);
   if (res != -1 && status)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, status, sizeof(*status));
   return res;
@@ -2567,7 +2570,7 @@ INTERCEPTOR_WITH_SUFFIX(int, waitid, int idtype, int id, void *infop,
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(waitid)(idtype, id, infop, options);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(waitid)(idtype, id, infop, options);
   if (res != -1 && infop)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, infop, siginfo_t_sz);
   return res;
@@ -2578,7 +2581,7 @@ INTERCEPTOR_WITH_SUFFIX(int, waitpid, int pid, int *status, int options) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(waitpid)(pid, status, options);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(waitpid)(pid, status, options);
   if (res != -1 && status)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, status, sizeof(*status));
   return res;
@@ -2589,7 +2592,7 @@ INTERCEPTOR(int, wait3, int *status, int options, void *rusage) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(wait3)(status, options, rusage);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(wait3)(status, options, rusage);
   if (res != -1) {
     if (status) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, status, sizeof(*status));
     if (rusage) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, rusage, struct_rusage_sz);
@@ -2603,7 +2606,8 @@ INTERCEPTOR(int, __wait4, int pid, int *status, int options, void *rusage) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(__wait4)(pid, status, options, rusage);
+  int res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(__wait4)(pid, status, options, rusage);
   if (res != -1) {
     if (status) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, status, sizeof(*status));
     if (rusage) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, rusage, struct_rusage_sz);
@@ -2618,7 +2622,7 @@ INTERCEPTOR(int, wait4, int pid, int *status, int options, void *rusage) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int res = REAL(wait4)(pid, status, options, rusage);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(wait4)(pid, status, options, rusage);
   if (res != -1) {
     if (status) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, status, sizeof(*status));
     if (rusage) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, rusage, struct_rusage_sz);
@@ -2996,7 +3000,7 @@ INTERCEPTOR(int, accept, int fd, void *addr, unsigned *addrlen) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, addrlen, sizeof(*addrlen));
     addrlen0 = *addrlen;
   }
-  int fd2 = REAL(accept)(fd, addr, addrlen);
+  int fd2 = COMMON_INTERCEPTOR_BLOCK_REAL(accept)(fd, addr, addrlen);
   if (fd2 >= 0) {
     if (fd >= 0) COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, fd2);
     if (addr && addrlen)
@@ -3021,7 +3025,7 @@ INTERCEPTOR(int, accept4, int fd, void *addr, unsigned *addrlen, int f) {
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  int fd2 = REAL(accept4)(fd, addr, addrlen, f);
+  int fd2 = COMMON_INTERCEPTOR_BLOCK_REAL(accept4)(fd, addr, addrlen, f);
   if (fd2 >= 0) {
     if (fd >= 0) COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, fd2);
     if (addr && addrlen)
@@ -3045,7 +3049,7 @@ INTERCEPTOR(int, paccept, int fd, void *addr, unsigned *addrlen,
     addrlen0 = *addrlen;
   }
   if (set) COMMON_INTERCEPTOR_READ_RANGE(ctx, set, sizeof(*set));
-  int fd2 = REAL(paccept)(fd, addr, addrlen, set, f);
+  int fd2 = COMMON_INTERCEPTOR_BLOCK_REAL(paccept)(fd, addr, addrlen, set, f);
   if (fd2 >= 0) {
     if (fd >= 0) COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, fd2);
     if (addr && addrlen)
@@ -3126,7 +3130,7 @@ INTERCEPTOR(SSIZE_T, recvmsg, int fd, struct __sanitizer_msghdr *msg,
   // FIXME: under ASan the call below may write to freed memory and corrupt
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
-  SSIZE_T res = REAL(recvmsg)(fd, msg, flags);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(recvmsg)(fd, msg, flags);
   if (res >= 0) {
     if (fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
     if (msg) {
@@ -3147,7 +3151,8 @@ INTERCEPTOR(int, recvmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, recvmmsg, fd, msgvec, vlen, flags, timeout);
   if (timeout) COMMON_INTERCEPTOR_READ_RANGE(ctx, timeout, struct_timespec_sz);
-  int res = REAL(recvmmsg)(fd, msgvec, vlen, flags, timeout);
+  int res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(recvmmsg)(fd, msgvec, vlen, flags, timeout);
   if (res >= 0) {
     if (fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
     for (int i = 0; i < res; ++i) {
@@ -3225,7 +3230,7 @@ INTERCEPTOR(SSIZE_T, sendmsg, int fd, struct __sanitizer_msghdr *msg,
     COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
     COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
   }
-  SSIZE_T res = REAL(sendmsg)(fd, msg, flags);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(sendmsg)(fd, msg, flags);
   if (common_flags()->intercept_send && res >= 0 && msg)
     read_msghdr(ctx, msg, res);
   return res;
@@ -3244,7 +3249,7 @@ INTERCEPTOR(int, sendmmsg, int fd, struct __sanitizer_mmsghdr *msgvec,
     COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
     COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
   }
-  int res = REAL(sendmmsg)(fd, msgvec, vlen, flags);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(sendmmsg)(fd, msgvec, vlen, flags);
   if (res >= 0 && msgvec) {
     for (int i = 0; i < res; ++i) {
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, &msgvec[i].msg_len,
@@ -3267,7 +3272,7 @@ INTERCEPTOR(int, msgsnd, int msqid, const void *msgp, SIZE_T msgsz,
   COMMON_INTERCEPTOR_ENTER(ctx, msgsnd, msqid, msgp, msgsz, msgflg);
   if (msgp)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, msgp, sizeof(long) + msgsz);
-  int res = REAL(msgsnd)(msqid, msgp, msgsz, msgflg);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(msgsnd)(msqid, msgp, msgsz, msgflg);
   return res;
 }
 
@@ -3275,7 +3280,8 @@ INTERCEPTOR(SSIZE_T, msgrcv, int msqid, void *msgp, SIZE_T msgsz,
             long msgtyp, int msgflg) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, msgrcv, msqid, msgp, msgsz, msgtyp, msgflg);
-  SSIZE_T len = REAL(msgrcv)(msqid, msgp, msgsz, msgtyp, msgflg);
+  SSIZE_T len =
+      COMMON_INTERCEPTOR_BLOCK_REAL(msgrcv)(msqid, msgp, msgsz, msgtyp, msgflg);
   if (len != -1)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, msgp, sizeof(long) + len);
   return len;
@@ -6119,7 +6125,7 @@ INTERCEPTOR(int, flopen, const char *path, int flags, ...) {
   if (path) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   }
-  return REAL(flopen)(path, flags, mode);
+  return COMMON_INTERCEPTOR_BLOCK_REAL(flopen)(path, flags, mode);
 }
 
 INTERCEPTOR(int, flopenat, int dirfd, const char *path, int flags, ...) {
@@ -6132,7 +6138,7 @@ INTERCEPTOR(int, flopenat, int dirfd, const char *path, int flags, ...) {
   if (path) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   }
-  return REAL(flopenat)(dirfd, path, flags, mode);
+  return COMMON_INTERCEPTOR_BLOCK_REAL(flopenat)(dirfd, path, flags, mode);
 }
 
 #define INIT_FLOPEN    \
@@ -6717,7 +6723,7 @@ INTERCEPTOR(SSIZE_T, recv, int fd, void *buf, SIZE_T len, int flags) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, recv, fd, buf, len, flags);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  SSIZE_T res = REAL(recv)(fd, buf, len, flags);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(recv)(fd, buf, len, flags);
   if (res > 0) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, Min((SIZE_T)res, len));
   }
@@ -6734,7 +6740,8 @@ INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
   SIZE_T srcaddr_sz;
   if (srcaddr) srcaddr_sz = *addrlen;
   (void)srcaddr_sz;  // prevent "set but not used" warning
-  SSIZE_T res = REAL(recvfrom)(fd, buf, len, flags, srcaddr, addrlen);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(recvfrom)(fd, buf, len, flags,
+                                                        srcaddr, addrlen);
   if (res > 0)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, Min((SIZE_T)res, len));
   if (res >= 0 && srcaddr)
@@ -6757,7 +6764,7 @@ INTERCEPTOR(SSIZE_T, send, int fd, void *buf, SIZE_T len, int flags) {
     COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
     COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
   }
-  SSIZE_T res = REAL(send)(fd, buf, len, flags);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(send)(fd, buf, len, flags);
   if (common_flags()->intercept_send && res > 0)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, buf, Min((SIZE_T)res, len));
   return res;
@@ -6772,7 +6779,8 @@ INTERCEPTOR(SSIZE_T, sendto, int fd, void *buf, SIZE_T len, int flags,
     COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
   }
   // Can't check dstaddr as it may have uninitialized padding at the end.
-  SSIZE_T res = REAL(sendto)(fd, buf, len, flags, dstaddr, addrlen);
+  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(sendto)(fd, buf, len, flags,
+                                                      dstaddr, addrlen);
   if (common_flags()->intercept_send && res > 0)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, buf, Min((SIZE_T)res, len));
   return res;
@@ -6789,7 +6797,7 @@ INTERCEPTOR(int, eventfd_read, int fd, __sanitizer_eventfd_t *value) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, eventfd_read, fd, value);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  int res = REAL(eventfd_read)(fd, value);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(eventfd_read)(fd, value);
   if (res == 0) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, value, sizeof(*value));
     if (fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
@@ -6803,7 +6811,7 @@ INTERCEPTOR(int, eventfd_write, int fd, __sanitizer_eventfd_t value) {
     COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
     COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
   }
-  int res = REAL(eventfd_write)(fd, value);
+  int res = COMMON_INTERCEPTOR_BLOCK_REAL(eventfd_write)(fd, value);
   return res;
 }
 #define INIT_EVENTFD_READ_WRITE            \
@@ -7426,7 +7434,8 @@ INTERCEPTOR(int, open_by_handle_at, int mount_fd, struct file_handle* handle,
   COMMON_INTERCEPTOR_READ_RANGE(
       ctx, &sanitizer_handle->f_handle, sanitizer_handle->handle_bytes);
 
-  return REAL(open_by_handle_at)(mount_fd, handle, flags);
+  return COMMON_INTERCEPTOR_BLOCK_REAL(open_by_handle_at)(mount_fd, handle,
+                                                          flags);
 }
 
 #define INIT_OPEN_BY_HANDLE_AT COMMON_INTERCEPT_FUNCTION(open_by_handle_at)
@@ -7641,9 +7650,9 @@ static void write_protoent(void *ctx, struct __sanitizer_protoent *p) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases, pp_size * sizeof(char *));
 }
 
-INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
+INTERCEPTOR(struct __sanitizer_protoent *, getprotoent,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent);
+  COMMON_INTERCEPTOR_ENTER(ctx, getprotoent,);
   struct __sanitizer_protoent *p = REAL(getprotoent)();
   if (p)
     write_protoent(ctx, p);
@@ -7730,9 +7739,9 @@ INTERCEPTOR(int, getprotobynumber_r, int num,
 #endif
 
 #if SANITIZER_INTERCEPT_NETENT
-INTERCEPTOR(struct __sanitizer_netent *, getnetent) {
+INTERCEPTOR(struct __sanitizer_netent *, getnetent,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getnetent);
+  COMMON_INTERCEPTOR_ENTER(ctx, getnetent,);
   struct __sanitizer_netent *n = REAL(getnetent)();
   if (n) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n, sizeof(*n));
@@ -9894,9 +9903,9 @@ INTERCEPTOR(char *, fdevname_r,  int fd, char *buf, SIZE_T len) {
 #endif
 
 #if SANITIZER_INTERCEPT_GETUSERSHELL
-INTERCEPTOR(char *, getusershell) {
+INTERCEPTOR(char *, getusershell,) {
   void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, getusershell);
+  COMMON_INTERCEPTOR_ENTER(ctx, getusershell,);
   char *res = REAL(getusershell)();
   if (res)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, internal_strlen(res) + 1);

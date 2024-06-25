@@ -10,8 +10,8 @@
 #define FORTRAN_RUNTIME_TYPE_CODE_H_
 
 #include "flang/Common/Fortran.h"
+#include "flang/Common/optional.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
-#include <optional>
 #include <utility>
 
 namespace Fortran::runtime {
@@ -54,7 +54,7 @@ public:
     return IsValid() && !IsDerived();
   }
 
-  RT_API_ATTRS std::optional<std::pair<TypeCategory, int>>
+  RT_API_ATTRS Fortran::common::optional<std::pair<TypeCategory, int>>
   GetCategoryAndKind() const;
 
   RT_API_ATTRS bool operator==(TypeCode that) const {

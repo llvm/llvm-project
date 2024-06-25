@@ -1,22 +1,40 @@
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -DNOERROR %s -fexperimental-new-constant-interpreter
+
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
 // RUN: -x c++ -DCPP -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -x c++ -DCPP -DNOERROR %s -fexperimental-new-constant-interpreter
 
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
 // RUN: -ffp-eval-method=extended -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=extended -DNOERROR %s -fexperimental-new-constant-interpreter
+
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
 // RUN: -ffp-eval-method=extended -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
+// RUN: -ffp-eval-method=extended -DNOERROR %s -fexperimental-new-constant-interpreter
 
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
 // RUN: -ffp-eval-method=source %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=source %s -fexperimental-new-constant-interpreter
+
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
 // RUN: -ffp-eval-method=source %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
+// RUN: -ffp-eval-method=source %s -fexperimental-new-constant-interpreter
 
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
 // RUN: -ffp-eval-method=double %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=double %s -fexperimental-new-constant-interpreter
+
 // RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
 // RUN: -ffp-eval-method=double %s
-
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
+// RUN: -ffp-eval-method=double %s -fexperimental-new-constant-interpreter
 
 #ifdef NOERROR
 // expected-no-diagnostics

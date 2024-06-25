@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 ; Do not vectorize epilogues for loops with minsize attribute
-; CHECK-LABLE: @f1
+; CHECK-LABEL: @f1
 ; CHECK-NOT: vector.main.loop.iter.check
 ; CHECK-NOT: vec.epilog.iter.check
 ; CHECK-NOT: vec.epilog.ph
@@ -48,7 +48,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 ; Do not vectorize epilogues for loops with optsize attribute
-; CHECK-LABLE: @f2
+; CHECK-LABEL: @f2
 ; CHECK-NOT: vector.main.loop.iter.check
 ; CHECK-NOT: vec.epilog.iter.check
 ; CHECK-NOT: vec.epilog.ph
@@ -86,7 +86,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 ; Do not vectorize the epilogue for loops with VF less than the default -epilogue-vectorization-minimum-VF of 16.
-; CHECK-MIN-D-LABLE: @f3
+; CHECK-MIN-D-LABEL: @f3
 ; CHECK-MIN-D-NOT: vector.main.loop.iter.check
 ; CHECK-MIN-D-NOT: vec.epilog.iter.check
 ; CHECK-MIN-D-NOT: vec.epilog.ph
@@ -96,7 +96,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 ; Specify a smaller minimum VF (via `-epilogue-vectorization-minimum-VF=4`) and
 ; make sure the epilogue gets vectorized in that case.
-; CHECK-MIN-D-LABLE: @f3
+; CHECK-MIN-4-LABEL: @f3
 ; CHECK-MIN-4: vector.main.loop.iter.check
 ; CHECK-MIN-4: vec.epilog.iter.check
 ; CHECK-MIN-4: vec.epilog.ph

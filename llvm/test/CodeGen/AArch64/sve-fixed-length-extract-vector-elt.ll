@@ -70,9 +70,9 @@ define half @extractelement_v64f16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    mov w8, #63 // =0x3f
-; CHECK-NEXT:    whilels p1.h, xzr, x8
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    lastb h0, p1, z0.h
+; CHECK-NEXT:    whilels p0.h, xzr, x8
+; CHECK-NEXT:    lastb h0, p0, z0.h
 ; CHECK-NEXT:    ret
     %op1 = load <64 x half>, ptr %a
     %r = extractelement <64 x half> %op1, i64 63
@@ -84,9 +84,9 @@ define half @extractelement_v128f16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    mov w8, #127 // =0x7f
-; CHECK-NEXT:    whilels p1.h, xzr, x8
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    lastb h0, p1, z0.h
+; CHECK-NEXT:    whilels p0.h, xzr, x8
+; CHECK-NEXT:    lastb h0, p0, z0.h
 ; CHECK-NEXT:    ret
     %op1 = load <128 x half>, ptr %a
     %r = extractelement <128 x half> %op1, i64 127
@@ -154,9 +154,9 @@ define float @extractelement_v32f32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    mov w8, #31 // =0x1f
-; CHECK-NEXT:    whilels p1.s, xzr, x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    lastb s0, p1, z0.s
+; CHECK-NEXT:    whilels p0.s, xzr, x8
+; CHECK-NEXT:    lastb s0, p0, z0.s
 ; CHECK-NEXT:    ret
     %op1 = load <32 x float>, ptr %a
     %r = extractelement <32 x float> %op1, i64 31
@@ -168,9 +168,9 @@ define float @extractelement_v64f32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    mov w8, #63 // =0x3f
-; CHECK-NEXT:    whilels p1.s, xzr, x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    lastb s0, p1, z0.s
+; CHECK-NEXT:    whilels p0.s, xzr, x8
+; CHECK-NEXT:    lastb s0, p0, z0.s
 ; CHECK-NEXT:    ret
     %op1 = load <64 x float>, ptr %a
     %r = extractelement <64 x float> %op1, i64 63
@@ -236,9 +236,9 @@ define double @extractelement_v16f64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    mov w8, #15 // =0xf
-; CHECK-NEXT:    whilels p1.d, xzr, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    lastb d0, p1, z0.d
+; CHECK-NEXT:    whilels p0.d, xzr, x8
+; CHECK-NEXT:    lastb d0, p0, z0.d
 ; CHECK-NEXT:    ret
     %op1 = load <16 x double>, ptr %a
     %r = extractelement <16 x double> %op1, i64 15
@@ -250,9 +250,9 @@ define double @extractelement_v32f64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    mov w8, #31 // =0x1f
-; CHECK-NEXT:    whilels p1.d, xzr, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    lastb d0, p1, z0.d
+; CHECK-NEXT:    whilels p0.d, xzr, x8
+; CHECK-NEXT:    lastb d0, p0, z0.d
 ; CHECK-NEXT:    ret
     %op1 = load <32 x double>, ptr %a
     %r = extractelement <32 x double> %op1, i64 31

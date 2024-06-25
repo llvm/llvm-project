@@ -107,7 +107,7 @@ public:
                                             int64_t *value_bits = nullptr,
                                             uint64_t *payload = nullptr) = 0;
     /// @}
- 
+
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers
@@ -321,8 +321,8 @@ public:
     m_negative_complete_class_cache.clear();
   }
 
-  bool GetTypeBitSize(const CompilerType &compiler_type,
-                      uint64_t &size) override;
+  std::optional<uint64_t>
+  GetTypeBitSize(const CompilerType &compiler_type) override;
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".

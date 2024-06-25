@@ -202,41 +202,41 @@ define <2 x i8> @shl_or_non_splat(<2 x i8> %x) {
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_add(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_add
+define <2 x i8> @shl_or_poison_in_add(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_add
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x
-  %add = add <2 x i8> %x, <i8 1, i8 undef>
+  %add = add <2 x i8> %x, <i8 1, i8 poison>
   %shift2 = shl <2 x i8> <i8 3, i8 3>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_shift1(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_shift1
+define <2 x i8> @shl_or_poison_in_shift1(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_shift1
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 -1>, [[X]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
-  %shift = shl <2 x i8> <i8 16, i8 undef>, %x
+  %shift = shl <2 x i8> <i8 16, i8 poison>, %x
   %add = add <2 x i8> %x, <i8 1, i8 1>
   %shift2 = shl <2 x i8> <i8 3, i8 3>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }
 
-define <2 x i8> @shl_or_undef_in_shift2(<2 x i8> %x) {
-; CHECK-LABEL: define <2 x i8> @shl_or_undef_in_shift2
+define <2 x i8> @shl_or_poison_in_shift2(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i8> @shl_or_poison_in_shift2
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 16>, [[X]]
+; CHECK-NEXT:    [[BINOP:%.*]] = shl <2 x i8> <i8 22, i8 poison>, [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[BINOP]]
 ;
   %shift = shl <2 x i8> <i8 16, i8 16>, %x
   %add = add <2 x i8> %x, <i8 1, i8 1>
-  %shift2 = shl <2 x i8> <i8 3, i8 undef>, %add
+  %shift2 = shl <2 x i8> <i8 3, i8 poison>, %add
   %binop = or <2 x i8> %shift, %shift2
   ret <2 x i8> %binop
 }

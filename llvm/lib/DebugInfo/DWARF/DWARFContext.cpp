@@ -807,13 +807,14 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // type units in dwo or dwp files) share contributions. We don't want
   // to report them more than once.
   Contributions.erase(
-      std::unique(Contributions.begin(), Contributions.end(),
-                  [](const std::optional<StrOffsetsContributionDescriptor> &L,
-                     const std::optional<StrOffsetsContributionDescriptor> &R) {
-                    if (L && R)
-                      return L->Base == R->Base && L->Size == R->Size;
-                    return false;
-                  }),
+      llvm::unique(
+          Contributions,
+          [](const std::optional<StrOffsetsContributionDescriptor> &L,
+             const std::optional<StrOffsetsContributionDescriptor> &R) {
+            if (L && R)
+              return L->Base == R->Base && L->Size == R->Size;
+            return false;
+          }),
       Contributions.end());
   return Contributions;
 }
@@ -1408,6 +1409,7 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (DumpOpts.DumpType & DIDT_DebugStrOffsets)
     Success &= verifier.handleDebugStrOffsets();
   Success &= verifier.handleAccelTables();
+  verifier.summarize();
   return Success;
 }
 

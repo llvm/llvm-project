@@ -29,6 +29,8 @@ liveins:
   - { reg: '$vgpr0', virtual-reg: '' }
   - { reg: '$vgpr1', virtual-reg: '' }
   - { reg: '$vgpr2', virtual-reg: '' }
+frameInfo:
+  adjustsStack:    true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 4,
       stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,

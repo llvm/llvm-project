@@ -152,11 +152,11 @@ define <vscale x 2 x i64> @xar_nxv2i64_l_neg1(<vscale x 2 x i64> %x, <vscale x 2
 ; CHECK-LABEL: xar_nxv2i64_l_neg1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z3.d, z2.d
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    subr z2.d, z2.d, #0 // =0x0
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
-; CHECK-NEXT:    and z2.d, z2.d, #0x3f
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
+; CHECK-NEXT:    and z2.d, z2.d, #0x3f
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d

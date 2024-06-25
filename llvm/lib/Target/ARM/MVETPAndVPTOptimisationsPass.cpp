@@ -59,8 +59,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>();
     AU.addPreserved<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -93,7 +93,7 @@ INITIALIZE_PASS_BEGIN(MVETPAndVPTOptimisations, DEBUG_TYPE,
                       "ARM MVE TailPred and VPT Optimisations pass", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MVETPAndVPTOptimisations, DEBUG_TYPE,
                     "ARM MVE TailPred and VPT Optimisations pass", false, false)
 
@@ -667,17 +667,18 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
   MachineOperand *VPNOTOperandKiller = nullptr;
   for (; Iter != MBB.end(); ++Iter) {
     if (MachineOperand *MO =
-            Iter->findRegisterUseOperand(VPNOTOperand, /*isKill*/ true)) {
+            Iter->findRegisterUseOperand(VPNOTOperand, /*TRI=*/nullptr,
+                                         /*isKill*/ true)) {
       // If we find the operand that kills the VPNOTOperand's result, save it.
       VPNOTOperandKiller = MO;
     }
 
-    if (Iter->findRegisterUseOperandIdx(Reg) != -1) {
+    if (Iter->findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != -1) {
       MustMove = true;
       continue;
     }
 
-    if (Iter->findRegisterUseOperandIdx(VPNOTResult) == -1)
+    if (Iter->findRegisterUseOperandIdx(VPNOTResult, /*TRI=*/nullptr) == -1)
       continue;
 
     HasUser = true;
@@ -731,7 +732,7 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
       // If we already have a VCCRValue, and this is a VPNOT on VCCRValue, we've
       // found what we were looking for.
       if (VCCRValue && Iter->getOpcode() == ARM::MVE_VPNOT &&
-          Iter->findRegisterUseOperandIdx(VCCRValue) != -1) {
+          Iter->findRegisterUseOperandIdx(VCCRValue, /*TRI=*/nullptr) != -1) {
         // Move the VPNOT closer to its first user if needed, and ignore if it
         // has no users.
         if (!MoveVPNOTBeforeFirstUser(MBB, Iter, VCCRValue))
@@ -763,7 +764,8 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
     for (; Iter != End; ++Iter) {
       bool IsInteresting = false;
 
-      if (MachineOperand *MO = Iter->findRegisterUseOperand(VCCRValue)) {
+      if (MachineOperand *MO =
+              Iter->findRegisterUseOperand(VCCRValue, /*TRI=*/nullptr)) {
         IsInteresting = true;
 
         // - If the instruction is a VPNOT, it can be removed, and we can just
@@ -794,8 +796,8 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
       } else {
         // If the instr uses OppositeVCCRValue, make it use LastVPNOTResult
         // instead as they contain the same value.
-        if (MachineOperand *MO =
-                Iter->findRegisterUseOperand(OppositeVCCRValue)) {
+        if (MachineOperand *MO = Iter->findRegisterUseOperand(
+                OppositeVCCRValue, /*TRI=*/nullptr)) {
           IsInteresting = true;
 
           // This is pointless if LastVPNOTResult == OppositeVCCRValue.
@@ -855,8 +857,9 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
 
   for (MachineInstr &Instr : MBB.instrs()) {
     if (PrevVCMP) {
-      if (MachineOperand *MO = Instr.findRegisterUseOperand(
-              PrevVCMP->getOperand(0).getReg(), /*isKill*/ true)) {
+      if (MachineOperand *MO =
+              Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
+                                           /*TRI=*/nullptr, /*isKill*/ true)) {
         // If we come accross the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
@@ -958,6 +961,7 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 
     unsigned NotImm = ~Imm & 0xffff;
     if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
+      MRI->clearKillFlags(LastVPTReg);
       Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
       if (MRI->use_empty(VPR)) {
         DeadInstructions.insert(Copy);
@@ -1061,7 +1065,8 @@ bool MVETPAndVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   TII = static_cast<const Thumb2InstrInfo *>(STI.getInstrInfo());
   MRI = &Fn.getRegInfo();
   MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfo>();
-  MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree *DT =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   LLVM_DEBUG(dbgs() << "********** ARM MVE VPT Optimisations **********\n"
                     << "********** Function: " << Fn.getName() << '\n');

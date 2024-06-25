@@ -166,19 +166,20 @@ TEST(RegAllocScoreTest, Counts) {
   ASSERT_EQ(MF->size(), 2U);
   const auto TotalScore =
       llvm::calculateRegAllocScore(*MF, MBBFreqMock, IsRemat);
-  ASSERT_EQ(Freq1, TotalScore.copyCounts());
-  ASSERT_EQ(2.0 * Freq1 + Freq2, TotalScore.loadCounts());
-  ASSERT_EQ(Freq1 + Freq2, TotalScore.storeCounts());
-  ASSERT_EQ(Freq2, TotalScore.loadStoreCounts());
-  ASSERT_EQ(Freq1, TotalScore.cheapRematCounts());
-  ASSERT_EQ(Freq2, TotalScore.expensiveRematCounts());
-  ASSERT_EQ(TotalScore.getScore(),
-            TotalScore.copyCounts() * CopyWeight +
-                TotalScore.loadCounts() * LoadWeight +
-                TotalScore.storeCounts() * StoreWeight +
-                TotalScore.loadStoreCounts() * (LoadWeight + StoreWeight) +
-                TotalScore.cheapRematCounts() * CheapRematWeight +
-                TotalScore.expensiveRematCounts() * ExpensiveRematWeight
+  ASSERT_DOUBLE_EQ(Freq1, TotalScore.copyCounts());
+  ASSERT_DOUBLE_EQ(2.0 * Freq1 + Freq2, TotalScore.loadCounts());
+  ASSERT_DOUBLE_EQ(Freq1 + Freq2, TotalScore.storeCounts());
+  ASSERT_DOUBLE_EQ(Freq2, TotalScore.loadStoreCounts());
+  ASSERT_DOUBLE_EQ(Freq1, TotalScore.cheapRematCounts());
+  ASSERT_DOUBLE_EQ(Freq2, TotalScore.expensiveRematCounts());
+  ASSERT_DOUBLE_EQ(
+      TotalScore.getScore(),
+      TotalScore.copyCounts() * CopyWeight +
+          TotalScore.loadCounts() * LoadWeight +
+          TotalScore.storeCounts() * StoreWeight +
+          TotalScore.loadStoreCounts() * (LoadWeight + StoreWeight) +
+          TotalScore.cheapRematCounts() * CheapRematWeight +
+          TotalScore.expensiveRematCounts() * ExpensiveRematWeight
 
   );
 }

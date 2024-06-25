@@ -24,7 +24,7 @@ define void @test_indirect_read_write_loop_also_modifies_pointer_array(ptr nound
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndidrectUnsafe:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
 ; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
 ; CHECK-EMPTY:
@@ -229,7 +229,7 @@ define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr nou
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndidrectUnsafe:
+; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
 ; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
 ; CHECK-EMPTY:

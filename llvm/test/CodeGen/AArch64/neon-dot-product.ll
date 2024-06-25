@@ -7,6 +7,7 @@
 ; RUN: llc -mtriple aarch64-none-linux-gnu -mcpu=neoverse-n2  < %s | FileCheck %s
 ; RUN: llc -mtriple aarch64-none-linux-gnu -mcpu=ampere1      < %s | FileCheck %s
 ; RUN: llc -mtriple aarch64-none-linux-gnu -mcpu=ampere1a     < %s | FileCheck %s
+; RUN: llc -mtriple aarch64-none-linux-gnu -mcpu=ampere1b     < %s | FileCheck %s
 
 declare <2 x i32> @llvm.aarch64.neon.udot.v2i32.v8i8(<2 x i32>, <8 x i8>, <8 x i8>)
 declare <4 x i32> @llvm.aarch64.neon.udot.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>)

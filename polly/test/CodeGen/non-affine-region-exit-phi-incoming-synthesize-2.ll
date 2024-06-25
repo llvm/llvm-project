@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; This caused the code generation to generate invalid code as the same operand
 ; of the PHI node in the non-affine region was synthesized at the wrong place.

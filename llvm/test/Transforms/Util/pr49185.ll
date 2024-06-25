@@ -53,7 +53,7 @@ land.end1851:                                     ; preds = %land.rhs1834, %lbl_
   br i1 %tobool2351, label %if.then2352, label %if.else3029
 
 if.then2352:                                      ; preds = %land.end1851
-  %3 = load i16, ptr getelementptr inbounds ({ i16, i16 }, ptr @g_79, i32 0, i32 0), align 1, !tbaa !1
+  %3 = load i16, ptr @g_79, align 1, !tbaa !1
   %tobool3011 = icmp ne i16 %3, 0
   call void @llvm.assume(i1 %tobool3011)
   store i32 11, ptr %cleanup.dest.slot, align 1

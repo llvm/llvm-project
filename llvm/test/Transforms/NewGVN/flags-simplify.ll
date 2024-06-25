@@ -52,7 +52,7 @@ define i64 @lshr_lsh_nuw(i64 %tmp) {
 ;
 entry:
   %conv3 = shl nuw i64 %tmp, 32
-  store i64 %conv3, i64* @f, align 8
+  store i64 %conv3, ptr @f, align 8
   %sext = shl i64 %tmp, 32
   %lshr = lshr i64 %sext, 32
   ret i64 %lshr

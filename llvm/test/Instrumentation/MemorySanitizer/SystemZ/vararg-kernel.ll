@@ -39,7 +39,7 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; Only 56 bytes of the register save area is copied, because of
 ; "use-soft-float".
 
-; CHECK: call void @llvm.va_start(ptr %vl)
+; CHECK: call void @llvm.va_start.p0(ptr %vl)
 ; CHECK: [[VlAddr:%.*]] = ptrtoint ptr %vl to i64
 ; CHECK: [[RegSaveAreaAddrAddr:%.*]] = add i64 [[VlAddr]], 24
 ; CHECK: [[RegSaveAreaAddr:%.*]] = inttoptr i64 [[RegSaveAreaAddrAddr]] to ptr

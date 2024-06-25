@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/SectionKind.h"
@@ -49,13 +50,13 @@ private:
   friend class MCContext;
 
   // The storage of Name is owned by MCContext's ELFUniquingMap.
-  MCSectionELF(StringRef Name, unsigned type, unsigned flags, SectionKind K,
+  MCSectionELF(StringRef Name, unsigned type, unsigned flags,
                unsigned entrySize, const MCSymbolELF *group, bool IsComdat,
                unsigned UniqueID, MCSymbol *Begin,
                const MCSymbolELF *LinkedToSym)
-      : MCSection(SV_ELF, Name, K, Begin), Type(type), Flags(flags),
-        UniqueID(UniqueID), EntrySize(entrySize), Group(group, IsComdat),
-        LinkedToSym(LinkedToSym) {
+      : MCSection(SV_ELF, Name, flags & ELF::SHF_EXECINSTR, Begin), Type(type),
+        Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
+        Group(group, IsComdat), LinkedToSym(LinkedToSym) {
     if (Group.getPointer())
       Group.getPointer()->setIsSignature();
   }
@@ -78,7 +79,7 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getVirtualSectionKind() const override;

@@ -9,9 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 
+#include "hdr/fenv_macros.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-
-#include <fenv.h>
 
 namespace LIBC_NAMESPACE::fputil {
 

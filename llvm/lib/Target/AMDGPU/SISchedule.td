@@ -165,8 +165,10 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<WriteTrans32,       4>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
 
+  let ReleaseAtCycles = [4] in
   def : HWVALUWriteRes<Write4PassDGEMM,    4>;
-  def : HWVALUWriteRes<Write8PassDGEMM,   16>;
+  let ReleaseAtCycles = [8] in
+  def : HWVALUWriteRes<Write8PassDGEMM,    8>;
 
   let ReleaseAtCycles = [2] in
   def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;

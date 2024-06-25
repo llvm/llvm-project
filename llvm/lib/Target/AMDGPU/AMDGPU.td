@@ -9,6 +9,7 @@
 include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
+include "AMDGPUPredicateControl.td"
 
 def p0 : PtrValueType<i64, 0>;
 def p1 : PtrValueType<i64, 1>;
@@ -167,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
@@ -226,6 +231,21 @@ def FeatureLdsBranchVmemWARHazard : SubtargetFeature<"lds-branch-vmem-war-hazard
   "true",
   "Switching between LDS and VMEM-tex not waiting VM_VSRC=0"
 >;
+
+class FeatureMaxHardClauseLength<int size> : SubtargetFeature<
+  "max-hard-clause-length-"#size,
+  "MaxHardClauseLength",
+  !cast<string>(size),
+  "Maximum number of instructions in an explicit S_CLAUSE is "#size
+>;
+
+/// Work around a hardware bug on some chips that can be triggered
+/// under certain circumstances when clauses are longer than 32 operations.
+def FeatureMaxHardClauseLength32 : FeatureMaxHardClauseLength<32>;
+/// While the S_CLAUSE instruction permits encoding clause lengths up to 64,
+/// hardware documentation for gfx10+ indicates that 63 is the maximum
+/// permitted clause length.
+def FeatureMaxHardClauseLength63 : FeatureMaxHardClauseLength<63>;
 
 def FeatureNSAtoVMEMBug : SubtargetFeature<"nsa-to-vmem-bug",
   "HasNSAtoVMEMBug",
@@ -287,6 +307,12 @@ def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "MSAA loads not honoring dst_sel bug"
 >;
 
+def FeaturePrivEnabledTrap2NopBug : SubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "HasPrivEnabledTrap2NopBug",
+  "true",
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -325,6 +351,7 @@ def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
   "GFX90AInsts",
   "true",
   "Additional instructions for GFX90A+"
+  // [HasAtomicFMinFMaxF64GlobalInsts, HasAtomicFMinFMaxF64FlatInsts] // TODO
 >;
 
 def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
@@ -634,6 +661,12 @@ def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
   "Has v_dot2_f32_f16 instruction"
 >;
 
+def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
+  "HasDot11Insts",
+  "true",
+  "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
+>;
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -677,6 +710,30 @@ def FeatureAtomicFaddRtnInsts : SubtargetFeature<"atomic-fadd-rtn-insts",
   "Has buffer_atomic_add_f32 and global_atomic_add_f32 instructions that "
   "return original value",
   [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicFMinFMaxF32GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-global-f32",
+  "HasAtomicFMinFMaxF32GlobalInsts",
+  "true",
+  "Has global/buffer instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-global-f64",
+  "HasAtomicFMinFMaxF64GlobalInsts",
+  "true",
+  "Has global/buffer instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
+  "HasAtomicFMinFMaxF32FlatInsts",
+  "true",
+  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
+  "HasAtomicFMinFMaxF64FlatInsts",
+  "true",
+  "Has flat memory instructions for atomicrmw fmin/fmax for double"
 >;
 
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
@@ -809,10 +866,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
-  "HasGFX11FullVGPRs",
+// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// with allocation granularity 24 for wave32 and 12 for wave64
+def Feature1_5xVGPRs : SubtargetFeature<"allocate1_5xvgprs",
+  "Has1_5xVGPRs",
   "true",
-  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+  "Has 50% more physical VGPRs and 50% larger allocation granule"
 >;
 
 
@@ -1002,6 +1061,12 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
+def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
+  "RequiresCOV6",
+  "true",
+  "Target Requires Code Object V6"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1021,7 +1086,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
-  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts
   ]
 >;
 
@@ -1032,7 +1098,9 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
-  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
+  FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
   ]
 >;
 
@@ -1086,7 +1154,10 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
-   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength63,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
   ]
 >;
 
@@ -1106,7 +1177,9 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
-   FeatureGWS, FeatureDefaultComponentZero
+   FeatureGWS, FeatureDefaultComponentZero,
+   FeatureMaxHardClauseLength32,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts
   ]
 >;
 
@@ -1126,7 +1199,9 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts
   ]
 >;
 
@@ -1212,6 +1287,17 @@ def FeatureISAVersion9_0_Common : FeatureSet<
    FeatureImageInsts,
    FeatureMadMacF32Insts]>;
 
+def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
+  !listconcat(FeatureISAVersion9_0_Common.Features,
+    [FeatureImageGather4D16Bug,
+     FeatureDsSrc2Insts,
+     FeatureExtendedImageInsts,
+     FeatureGDS])>;
+
+def FeatureISAVersion9_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
     [FeatureFmaMixInsts,
@@ -1230,43 +1316,27 @@ def FeatureISAVersion9_0_MI_Common : FeatureSet<
      FeatureSupportsSRAMECC])>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureFmaMixInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureFmaMixInsts])>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     HalfRate64Ops,
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [HalfRate64Ops,
      FeatureFmaMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
      FeatureDot7Insts,
      FeatureDot10Insts,
-     FeatureSupportsSRAMECC,
-     FeatureImageGather4D16Bug])>;
+     FeatureSupportsSRAMECC])>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
@@ -1279,13 +1349,9 @@ def FeatureISAVersion9_0_8 : FeatureSet<
      FeatureImageGather4D16Bug])>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts,
+     FeatureImageInsts])>;
 
 def FeatureISAVersion9_0_A : FeatureSet<
   !listconcat(FeatureISAVersion9_0_MI_Common.Features,
@@ -1298,15 +1364,14 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeaturePackedTID,
      FullRate64Ops,
      FeatureBackOffBarrier,
-     FeatureKernargPreload])>;
+     FeatureKernargPreload,
+     FeatureAtomicFMinFMaxF64GlobalInsts,
+     FeatureAtomicFMinFMaxF64FlatInsts
+     ])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
-  !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureGDS,
-     FeatureMadMixInsts,
-     FeatureDsSrc2Insts,
-     FeatureExtendedImageInsts,
-     FeatureImageGather4D16Bug])>;
+  !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
+    [FeatureMadMixInsts])>;
 
 def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
@@ -1342,7 +1407,10 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FullRate64Ops,
    FeatureBackOffBarrier,
-   FeatureKernargPreload]>;
+   FeatureKernargPreload,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts
+   ]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -1387,6 +1455,10 @@ def FeatureISAVersion10_1_Common : FeatureSet<
      FeatureFlatSegmentOffsetBug,
      FeatureNegativeUnalignedScratchOffsetBug])>;
 
+def FeatureISAVersion10_1_Generic : FeatureSet<
+  !listconcat(FeatureISAVersion10_1_Common.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion10_1_0 : FeatureSet<
   !listconcat(FeatureISAVersion10_1_Common.Features,
     [])>;
@@ -1426,6 +1498,10 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureDot10Insts,
      FeatureShaderCyclesRegister])>;
 
+def FeatureISAVersion10_3_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion10_3_0.Features,
+    [FeatureRequiresCOV6])>;
+
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
    FeatureLDSBankCount32,
@@ -1447,20 +1523,33 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
+// There are few workarounds that need to be
+// added to all targets. This pessimizes codegen
+// a bit on the generic GFX11 target.
+def FeatureISAVersion11_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard,
+     FeatureUserSGPRInit16Bug,
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug,
+     FeatureRequiresCOV6])>;
+
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
-     FeatureMADIntraFwdBug])>;
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs,
+    [Feature1_5xVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [Feature1_5xVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1481,7 +1570,13 @@ def FeatureISAVersion11_5_1 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     FeatureGFX11FullVGPRs])>;
+     Feature1_5xVGPRs])>;
+
+def FeatureISAVersion11_5_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureVGPRSingleUseHintInsts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1491,6 +1586,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1514,7 +1610,13 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
-   FeatureDPPSrc1SGPR]>;
+   FeatureDPPSrc1SGPR,
+   FeatureMaxHardClauseLength32,
+   Feature1_5xVGPRs]>;
+
+def FeatureISAVersion12_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12.Features,
+    [FeatureRequiresCOV6])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1800,6 +1902,32 @@ def isGFX12Plus :
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
+
+def HasBufferFlatGlobalAtomicsF64 : // FIXME: Rename to show it's only for fadd
+  Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
+  // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX10Insts, FeatureSouthernIslands, FeatureSeaIslands)>;
+
+def HasAtomicFMinFMaxF32GlobalInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF32GlobalInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF32GlobalInsts)>;
+
+def HasAtomicFMinFMaxF64GlobalInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF64GlobalInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64GlobalInsts)>;
+
+def HasAtomicFMinFMaxF32FlatInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF32FlatInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF32FlatInsts)>;
+
+def HasAtomicFMinFMaxF64FlatInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF64FlatInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64FlatInsts)>;
+
+def HasLdsAtomicAddF64 :
+  Predicate<"Subtarget->hasLdsAtomicAddF64()">,
+  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
 def HasFlatScratchInsts : Predicate<"Subtarget->hasFlatScratchInsts()">,
@@ -1837,10 +1965,16 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
-def HasLDSFPAtomicAdd : Predicate<"Subtarget->hasLDSFPAtomicAdd()">,
+def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
   AssemblerPredicate<(all_of FeatureGFX8Insts)>;
 
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
@@ -1853,16 +1987,20 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
 // instructions have the same encoding as real ones but syntactically
 // only allow 32-bit registers in operands and use low halves thereof.
-def UseRealTrue16Insts : Predicate<"Subtarget->useRealTrue16Insts()">,
+def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
-def UseFakeTrue16Insts : Predicate<"Subtarget->hasTrue16BitInsts() && "
-                                   "!Subtarget->useRealTrue16Insts()">;
+def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
+                                              "!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
+  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
@@ -1985,6 +2123,9 @@ def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
 
 def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
   AssemblerPredicate<(all_of FeatureDot10Insts)>;
+
+def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
+  AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

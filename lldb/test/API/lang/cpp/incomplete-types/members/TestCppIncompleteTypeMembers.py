@@ -19,7 +19,7 @@ class TestCppIncompleteTypeMembers(TestBase):
 
         # Sanity check that we really have to debug info for this type.
         this = self.expect_var_path("this", type="A *")
-        self.assertEquals(
+        self.assertEqual(
             this.GetType().GetPointeeType().GetNumberOfFields(), 0, str(this)
         )
 

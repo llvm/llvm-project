@@ -12,7 +12,7 @@ ittt eq
 vcx1a   p1, s7, #2047
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: instructions in IT block must be predicable
 vcx2    p0, d0, d15, #0
-// ERROR-FP: [[@LINE+2]]:{{[0-9]+}}: error: invalid instruction
+// ERROR-FP: [[@LINE+2]]:{{[0-9]+}}: error: instruction requires: mve
 // ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: error: instructions in IT block must be predicable
 vcx3    p0, q0, q7, q0, #12
 nop
@@ -33,12 +33,15 @@ vcx1a   p1, d3, #2047
 // ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this:
 vcx1    p0, q1, #1234
 // CHECK-MVE-NEXT: vcx1a p1, q5, #4095 @ encoding: [0x2f,0xfd,0xff,0xa1]
-// ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+// ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
 vcx1a   p1, q5, #4095
 
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
 vcx1a   p1, s7, s7, #2047
-// ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,2047]
+// ERROR-FP: [[@LINE+4]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,2047]
+// ERROR-MVE: [[@LINE+3]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this
+// ERROR-MVE: [[@LINE+2]]:{{[0-9]+}}: note: operand must be a register in range [q0, q7]
+// ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: note: operand must be an immediate in the range [0,2047]
 vcx1    p0, d0, #2048
 // ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,2047]
 vcx1a   p1, s0, #2048
@@ -51,10 +54,13 @@ vcx1    p8, d0, #1234
 vcx1    p0, d16, #1234
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
 vcx1    p0, s32, #1234
-// ERROR-FP: [[@LINE+4]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this:
-// ERROR-FP: [[@LINE+3]]:{{[0-9]+}}: note: operand must be a register in range [s0, s31]
-// ERROR-FP: [[@LINE+2]]:{{[0-9]+}}: note: operand must be a register in range [d0, d15]
-// ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [q0, q7]
+// ERROR-FP: [[@LINE+7]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this:
+// ERROR-FP: [[@LINE+6]]:{{[0-9]+}}: note: operand must be a register in range [s0, s31]
+// ERROR-FP: [[@LINE+5]]:{{[0-9]+}}: note: operand must be a register in range [d0, d15]
+// ERROR-MVE: [[@LINE+4]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this:
+// ERROR-MVE: [[@LINE+3]]:{{[0-9]+}}: note: operand must be a register in range [q0, q7]
+// ERROR-MVE: [[@LINE+2]]:{{[0-9]+}}: note: operand must be a register in range [s0, s31]
+// ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: note: operand must be a register in range [d0, d15]
 vcx1    p0, q8, #1234
 // ERROR: [[@LINE+3]]:{{[0-9]+}}: error: invalid instruction, any one of the following would fix this:
 // ERROR: [[@LINE+2]]:{{[0-9]+}}: note: operand must be a register in range [s0, s31]
@@ -116,7 +122,7 @@ vcx3a   p1, d1, d11, d12, #8
 // ERROR-MVE: [[@LINE+2]]:{{[0-9]+}}: error: operand must be an immediate in the range [0,15]
 // ERROR-FP: error: invalid instruction
 vcx3a   p1, q1, q2, q3, #16
-// ERROR-MVE: [[@LINE+2]]:{{[0-9]+}}: error: invalid instruction
+// ERROR-MVE: [[@LINE+2]]:{{[0-9]+}}: error: operand must be a register in range [d0, d15]
 // ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [d0, d15]
 vcx3    p0, d0, q0, d7, #1
 // ERROR: [[@LINE+1]]:{{[0-9]+}}: error: operand must be a register in range [s0, s31]

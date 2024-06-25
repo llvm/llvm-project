@@ -80,7 +80,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
               namespace std
               {
                 template<class _E>
-                class [[initializer_list]] {};
+                class [[initializer_list]] { const _E *a, *b; };
               }
 
               ^auto i = {1,2};

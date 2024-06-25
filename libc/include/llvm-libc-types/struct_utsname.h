@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_STRUCT_UTSNAME_H__
-#define __LLVM_LIBC_TYPES_STRUCT_UTSNAME_H__
+#ifndef LLVM_LIBC_TYPES_STRUCT_UTSNAME_H
+#define LLVM_LIBC_TYPES_STRUCT_UTSNAME_H
 
 #if defined(__linux__)
 #define __UTS_NAME_LENGTH 65
@@ -31,4 +31,4 @@ struct utsname {
 
 #undef __UTS_NAME_LENGTH
 
-#endif // __LLVM_LIBC_TYPES_STRUCT_UTSNAME_H__
+#endif // LLVM_LIBC_TYPES_STRUCT_UTSNAME_H

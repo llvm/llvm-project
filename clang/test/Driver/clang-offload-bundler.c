@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 //
 // Generate all the types of files we can bundle.
@@ -10,7 +10,21 @@
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -emit-llvm -o %t.bc
 // RUN: %clang -O0 -target %itanium_abi_triple %s -S -o %t.s
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.o
+// RUN: obj2yaml %t.o > %t.o.yaml
 // RUN: %clang -O0 -target %itanium_abi_triple %s -emit-ast -o %t.ast
+
+// RUN: echo 'void a() {}' >%t.a.cpp
+// RUN: echo 'void b() {}' >%t.b.cpp
+// RUN: %clang -target %itanium_abi_triple %t.a.cpp -c -o %t.a.o
+// RUN: %clang -target %itanium_abi_triple %t.b.cpp -c -o %t.b.o
+//
+// Remove .llvm_addrsig section since its offset changes after llvm-objcopy
+// removes clang-offload-bundler sections, therefore not good for comparison.
+//
+// RUN: llvm-objcopy --remove-section=.llvm_addrsig %t.a.o
+// RUN: llvm-objcopy --remove-section=.llvm_addrsig %t.b.o
+// RUN: obj2yaml %t.a.o > %t.a.yaml
+// RUN: obj2yaml %t.b.o > %t.b.yaml
 
 //
 // Generate an empty file to help with the checks of empty files.
@@ -305,11 +319,13 @@
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bundle3.o
 // RUN: clang-offload-bundler -type=o -input=%t.bundle3.o -list | FileCheck -check-prefix=CKLST %s
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.o -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.bundle3.o -unbundle
-// RUN: diff %t.bundle3.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-%itanium_abi_triple,openmp-x86_64-pc-linux-gnu -output=%t.res.tgt1 -output=%t.res.o -output=%t.res.tgt2 -input=%t.bundle3.o -unbundle
-// RUN: diff %t.bundle3.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
@@ -318,11 +334,13 @@
 // Check if we can unbundle a file with no magic strings.
 // RUN: clang-offload-bundler -type=o -input=%t.o -list | FileCheck -check-prefix=CKLST2 --allow-empty %s
 // RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu -output=%t.res.o -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.o -unbundle -allow-missing-bundles
-// RUN: diff %t.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.empty %t.res.tgt1
 // RUN: diff %t.empty %t.res.tgt2
 // RUN: clang-offload-bundler -type=o -targets=openmp-powerpc64le-ibm-linux-gnu,host-%itanium_abi_triple,openmp-x86_64-pc-linux-gnu -output=%t.res.tgt1 -output=%t.res.o -output=%t.res.tgt2 -input=%t.o -unbundle -allow-missing-bundles
-// RUN: diff %t.o %t.res.o
+// RUN: obj2yaml %t.res.o > %t.res.o.yaml
+// RUN: diff %t.o.yaml %t.res.o.yaml
 // RUN: diff %t.empty %t.res.tgt1
 // RUN: diff %t.empty %t.res.tgt2
 
@@ -409,6 +427,25 @@
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 // HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 
+//
+// Check unbundling archive for host target
+//
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -input=%t.a.o -input=%t.tgt1 -output=%t.a.bundled.o
+// RUN: clang-offload-bundler -type=o -targets=host-%itanium_abi_triple,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -input=%t.b.o -input=%t.tgt1 -output=%t.b.bundled.o
+// RUN: rm -f %t.bundled.a
+// RUN: llvm-ar cr %t.bundled.a %t.a.bundled.o %t.b.bundled.o
+// RUN: cp %t.bundled.a %t.bundled.a.bak
+// RUN: clang-offload-bundler -unbundle --targets=host-%itanium_abi_triple -type=a -input=%t.bundled.a -output=%t.host.a
+// RUN: rm -f *%itanium_abi_triple*.a.bundled.o *%itanium_abi_triple*.b.bundled.o
+// RUN: llvm-ar -x %t.host.a
+// RUN: diff %t.bundled.a %t.bundled.a.bak
+// RUN: obj2yaml *%itanium_abi_triple*.a.bundled.o > %t.a.unbundled.yaml
+// RUN: diff %t.a.unbundled.yaml %t.a.yaml
+// RUN: obj2yaml *%itanium_abi_triple*.b.bundled.o > %t.b.unbundled.yaml
+// RUN: diff %t.b.unbundled.yaml %t.b.yaml
+//
 // Check clang-offload-bundler reporting an error when trying to unbundle an archive but
 // the input file is not an archive.
 //
@@ -467,6 +504,17 @@
 // RUN: not clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle 2>&1 | FileCheck %s -check-prefix=NOGFX906
 // NOGFX906: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906
+
+//
+// Check hip and hipv4 are compatible as offload kind.
+//
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
+
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: diff %t.tgt1 %t.res.tgt1
 
 //
 // Check archive unbundling

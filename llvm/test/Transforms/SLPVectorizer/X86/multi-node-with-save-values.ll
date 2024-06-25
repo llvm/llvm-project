@@ -7,9 +7,9 @@ define void @foo() {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    switch i32 0, label [[BB3:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB4]]
+; CHECK-NEXT:      i32 0, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB4]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB4]]

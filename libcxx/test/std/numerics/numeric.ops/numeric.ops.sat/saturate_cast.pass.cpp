@@ -329,7 +329,7 @@ constexpr bool test() {
   { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(sBigMax); }
   assert(std::saturate_cast<unsigned long int>(  sBigMin) == 0UL);       // saturated
   assert(std::saturate_cast<unsigned long int>(    sZero) == 0UL);
-  assert(std::saturate_cast<unsigned long int>(  sBigMax) == ULONG_MAX); // saturated
+  assert(std::saturate_cast<unsigned long int>(  sBigMax) == (sizeof(UIntT) > sizeof(unsigned long int) ? ULONG_MAX : LONG_MAX)); // saturated depending on underlying types
 
   { [[maybe_unused]] std::same_as<unsigned long int> decltype(auto) _ = std::saturate_cast<unsigned long int>(uBigMax); }
   assert(std::saturate_cast<unsigned long int>(    uZero) == 0UL);

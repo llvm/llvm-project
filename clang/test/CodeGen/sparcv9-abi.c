@@ -21,6 +21,47 @@ char f_int_4(char x) { return x; }
 // CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 noundef %x)
 long double f_ld(long double x) { return x; }
 
+// Zero-sized structs reserves an argument register slot if passed directly.
+struct empty {};
+struct emptyarr { struct empty a[10]; };
+
+// CHECK-LABEL: define{{.*}} i64 @f_empty(i64 %x.coerce)
+struct empty f_empty(struct empty x) { return x; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 %x.coerce)
+struct empty f_emptyarr(struct emptyarr x) { return x.a[0]; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptyvar(i32 noundef zeroext %count, ...)
+long f_emptyvar(unsigned count, ...) {
+    long ret;
+    va_list args;
+    va_start(args, count);
+
+// CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %args
+// CHECK-DAG: %[[NXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
+// CHECK-DAG: store ptr %[[NXT]], ptr %args
+    va_arg(args, struct empty);
+
+// CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %args
+// CHECK-DAG: %[[NXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
+// CHECK-DAG: store ptr %[[NXT]], ptr %args
+// CHECK-DAG: load i64, ptr %[[CUR]]
+    ret = va_arg(args, long);
+    va_end(args);
+    return ret;
+}
+
+// If the zero-sized struct is contained in a non-zero-sized struct,
+// though, it doesn't reserve any registers.
+struct emptymixed { struct empty a; long b; };
+struct emptyflex { unsigned count; struct empty data[10]; };
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptymixed(i64 %x.coerce)
+long f_emptymixed(struct emptymixed x) { return x.b; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptyflex(i64 %x.coerce, i64 noundef %y)
+long f_emptyflex(struct emptyflex x, long y) { return y; }
+
 // Small structs are passed in registers.
 struct small {
   int *a, *b;

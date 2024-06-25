@@ -17,4 +17,4 @@ void free(void *ptr);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_LDIV_H
+#endif // LLVM_LIBC_SRC_STDLIB_FREE_H

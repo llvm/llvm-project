@@ -31,20 +31,20 @@ const uint16_t clang::charinfo::InfoTable[256] = {
   0           , 0           , 0           , 0           ,
   //32 SP         33  !         34  "         35  #
   //36  $         37  %         38  &         39  '
-  CHAR_SPACE  , CHAR_RAWDEL , CHAR_RAWDEL , CHAR_RAWDEL ,
-  CHAR_PUNCT  , CHAR_RAWDEL , CHAR_RAWDEL , CHAR_RAWDEL ,
+  CHAR_SPACE  , CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  ,
   //40  (         41  )         42  *         43  +
   //44  ,         45  -         46  .         47  /
-  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_RAWDEL , CHAR_RAWDEL ,
-  CHAR_RAWDEL , CHAR_RAWDEL , CHAR_PERIOD , CHAR_RAWDEL ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PERIOD , CHAR_PUNCT  ,
   //48  0         49  1         50  2         51  3
   //52  4         53  5         54  6         55  7
   CHAR_DIGIT  , CHAR_DIGIT  , CHAR_DIGIT  , CHAR_DIGIT  ,
   CHAR_DIGIT  , CHAR_DIGIT  , CHAR_DIGIT  , CHAR_DIGIT  ,
   //56  8         57  9         58  :         59  ;
   //60  <         61  =         62  >         63  ?
-  CHAR_DIGIT  , CHAR_DIGIT  , CHAR_RAWDEL , CHAR_RAWDEL ,
-  CHAR_RAWDEL , CHAR_RAWDEL , CHAR_RAWDEL , CHAR_RAWDEL ,
+  CHAR_DIGIT  , CHAR_DIGIT  , CHAR_PUNCT  , CHAR_PUNCT  ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  ,
   //64  @         65  A         66  B         67  C
   //68  D         69  E         70  F         71  G
   CHAR_PUNCT  , CHAR_XUPPER , CHAR_XUPPER , CHAR_XUPPER ,
@@ -59,8 +59,8 @@ const uint16_t clang::charinfo::InfoTable[256] = {
   CHAR_UPPER  , CHAR_UPPER  , CHAR_UPPER  , CHAR_UPPER  ,
   //88  X         89  Y         90  Z         91  [
   //92  \         93  ]         94  ^         95  _
-  CHAR_UPPER  , CHAR_UPPER  , CHAR_UPPER  , CHAR_RAWDEL ,
-  CHAR_PUNCT  , CHAR_RAWDEL , CHAR_RAWDEL , CHAR_UNDER  ,
+  CHAR_UPPER  , CHAR_UPPER  , CHAR_UPPER  , CHAR_PUNCT  ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  , CHAR_UNDER  ,
   //96  `         97  a         98  b         99  c
   //100  d       101  e        102  f        103  g
   CHAR_PUNCT  , CHAR_XLOWER , CHAR_XLOWER , CHAR_XLOWER ,
@@ -75,6 +75,6 @@ const uint16_t clang::charinfo::InfoTable[256] = {
   CHAR_LOWER  , CHAR_LOWER  , CHAR_LOWER  , CHAR_LOWER  ,
   //120  x       121  y        122  z        123  {
   //124  |       125  }        126  ~        127 DEL
-  CHAR_LOWER  , CHAR_LOWER  , CHAR_LOWER  , CHAR_RAWDEL ,
-  CHAR_RAWDEL , CHAR_RAWDEL , CHAR_RAWDEL , 0
+  CHAR_LOWER  , CHAR_LOWER  , CHAR_LOWER  , CHAR_PUNCT  ,
+  CHAR_PUNCT  , CHAR_PUNCT  , CHAR_PUNCT  , 0
 };

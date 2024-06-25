@@ -27,22 +27,6 @@ define void @test_write_register_intrin() {
 @_ZTIi = external global ptr
 declare i32 @__gxx_personality_v0(...)
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<2 x p0>) = G_INSERT_VECTOR_ELT %0:_, %{{[0-9]+}}:_(p0), %{{[0-9]+}}:_(s32) (in function: vector_of_pointers_insertelement)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for vector_of_pointers_insertelement
-; FALLBACK-WITH-REPORT-OUT-LABEL: vector_of_pointers_insertelement:
-define void @vector_of_pointers_insertelement() {
-  br label %end
-
-block:
-  %dummy = insertelement <2 x ptr> %vec, ptr null, i32 0
-  store <2 x ptr> %dummy, ptr undef
-  ret void
-
-end:
-  %vec = load <2 x ptr>, ptr undef
-  br label %block
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: RET_ReallyLR implicit $x0 (in function: strict_align_feature)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for strict_align_feature
 ; FALLBACK-WITH-REPORT-OUT-LABEL: strict_align_feature

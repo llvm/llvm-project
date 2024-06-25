@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=LIST %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list -mlir-output-format=json 2>&1 | FileCheck -check-prefix=LIST-JSON %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree -mlir-output-format=json 2>&1 | FileCheck -check-prefix=PIPELINE-JSON %s
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_PIPELINE %s
@@ -11,6 +13,14 @@
 // LIST-DAG: CSE
 // LIST-DAG: DominanceInfo
 // LIST: Total
+
+// LIST-JSON-NOT: Execution time report
+// LIST-JSON-NOT: Total Execution Time:
+// LIST-JSON-NOT: Name
+// LIST-JSON-DAG: "name": "Canonicalizer"}
+// LIST-JSON-DAG: "name": "CSE"}
+// LIST-JSON-DAG: "name": "(A) DominanceInfo"}
+// LIST-JSON: "name": "Total"}
 
 // PIPELINE: Execution time report
 // PIPELINE: Total Execution Time:
@@ -25,6 +35,28 @@
 // PIPELINE-NEXT: Output
 // PIPELINE-NEXT: Rest
 // PIPELINE-NEXT: Total
+
+// PIPELINE-JSON-NOT: Execution time report
+// PIPELINE-JSON-NOT: Total Execution Time:
+// PIPELINE-JSON-NOT: Name
+// PIPELINE-JSON:      "name": "Parser", "passes": [
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: "name": "'func.func' Pipeline", "passes": [
+// PIPELINE-JSON-NEXT: "name": "CSE", "passes": [
+// PIPELINE-JSON-NEXT: "name": "(A) DominanceInfo", "passes": [
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: "name": "Canonicalizer", "passes": [
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: "name": "CSE", "passes": [
+// PIPELINE-JSON-NEXT: "name": "(A) DominanceInfo", "passes": [
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: "name": "Output", "passes": [
+// PIPELINE-JSON-NEXT: {}]},
+// PIPELINE-JSON-NEXT: "name": "Rest"
+// PIPELINE-JSON-NEXT: "name": "Total"
 
 // MT_LIST: Execution time report
 // MT_LIST: Total Execution Time:

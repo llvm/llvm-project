@@ -1,5 +1,7 @@
 ; RUN: opt -hexagon-loop-idiom < %s -mtriple=hexagon-unknown-unknown -S \
 ; RUN:  | FileCheck %s
+; RUN: opt -p hexagon-loop-idiom < %s -mtriple=hexagon-unknown-unknown -S \
+; RUN:  | FileCheck %s
 
 target triple = "hexagon"
 

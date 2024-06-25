@@ -414,6 +414,34 @@ namespace deduction_substitution_failure {
   int bi = B<char, char>; // expected-note {{during template argument deduction for variable template partial specialization 'B<T, typename Fail<T>::error>' [with T = char]}}
 }
 
+namespace deduce_pack_from_argument {
+  template <typename... T>
+  void separator(args_tag<T...>, T..., int, T...) {}
+  template <typename... T>
+  void separator_dependent(args_tag<T...>, type_identity_t<T>..., int, type_identity_t<T>...) {}
+  template <typename... Y, typename... T>
+  void separator_multiple_parameters(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
+
+  void test_separator() {
+    separator(args_tag<int, int>{}, 4, 8, 42, 16, 25);
+    separator(args_tag<>{}, 42);
+    separator_dependent(args_tag<int, int>{}, 4, 8, 42, 16, 25);
+    separator_dependent(args_tag<>{}, 42);
+    separator_multiple_parameters(args_tag<const int, const int>{}, args_tag<int, int>{}, 8, 9, 15, 16, 23);
+  }
+
+  template <typename... Y, typename... T> void no_separator(args_tag<T...>, T..., T...) {}
+  template <typename... Y, typename... T>
+  void no_separator_dependent(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., type_identity_t<T>...) {}
+
+  void test_no_separator() {
+    no_separator(args_tag<int, int>{}, 1, 2, 3, 4);
+    no_separator(args_tag<>{});
+    no_separator_dependent(args_tag<const int, const int>{}, args_tag<int, int>{}, 8, 9, 15, 16);
+    no_separator_dependent(args_tag<>{}, args_tag<>{});
+  }
+}
+
 namespace deduction_after_explicit_pack {
   template<typename ...T, typename U> int *f(T ...t, int &r, U *u) {
     return u;
@@ -440,29 +468,6 @@ namespace deduction_after_explicit_pack {
     i<>(0, 1, 2); // expected-error {{no match}}
     i<int, int>(0, 1, 2, 3, 4);
     i<int, int>(0, 1, 2, 3, 4, 5); // expected-error {{no match}}
-  }
-
-  template <typename... T>
-  void bar(args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
-  void call_bar() {
-    bar(args_tag<int, int>{}, 4, 8, 1001, 16, 23);
-  }
-
-  template <typename... Y, typename... T>
-  void foo(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., int mid, type_identity_t<T>...) {}
-  void call_foo() {
-    foo(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23, 1);
-  }
-
-  template <typename... Y, typename... T>
-  void foo2(args_tag<Y...>, args_tag<T...>, type_identity_t<T>..., type_identity_t<T>...) {}
-  void call_foo2() {
-    foo2(args_tag<const int,const int, const int>{}, args_tag<int, int, int>{}, 4, 8, 9, 15, 16, 23);
-  }
-
-  template <typename... Y, typename... T> void baz(args_tag<T...>, T..., T...) {}
-  void call_baz() {
-    baz(args_tag<int, int>{}, 1, 2, 3, 4);
   }
 
   // GCC alarmingly accepts this by deducing T={int} by matching the second

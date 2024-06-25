@@ -100,7 +100,7 @@ exit:
 }
 
 ; Address calculation cheap enough on some cores.
-define i32 @f3(i1 %c1, ptr %p, i64 %i) nounwind  "target-features"="+alu-lsl-fast,+addr-lsl-fast" {
+define i32 @f3(i1 %c1, ptr %p, i64 %i) nounwind  "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: f3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tbz w0, #0, .LBB3_2
@@ -130,7 +130,7 @@ exit:
   ret i32 %v
 }
 
-define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast,+addr-lsl-fast" {
+define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: f4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x1, #1

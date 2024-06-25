@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl \
 // RUN:   -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl \
-// RUN:   -include-pch %t -fsyntax-only -ast-dump-all %S/Inputs/empty.hlsl \
+// RUN:   -include-pch %t -ast-dump-all %S/Inputs/empty.hlsl \
 // RUN: | FileCheck  %s
 
 cbuffer A {

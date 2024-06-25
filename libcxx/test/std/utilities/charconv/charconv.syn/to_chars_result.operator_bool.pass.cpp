@@ -28,13 +28,13 @@ constexpr bool test() {
   {
     std::to_chars_result value{nullptr, std::errc{}};
     assert(bool(value) == true);
-    static_assert(noexcept(bool(true)) == true);
+    static_assert(noexcept(bool(value)) == true);
   }
   // False
   {
     std::to_chars_result value{nullptr, std::errc::value_too_large};
     assert(bool(value) == false);
-    static_assert(noexcept(bool(true)) == true);
+    static_assert(noexcept(bool(value)) == true);
   }
 
   return true;

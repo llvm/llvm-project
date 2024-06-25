@@ -73,3 +73,18 @@ class C {
   // CHECK: void pwtt(void *, int) __attribute__((pointer_with_type_tag(foo, 2, 3)));
   void pwtt(void *, int) __attribute__((pointer_with_type_tag(foo, 2, 3)));
 };
+
+#define ANNOTATE_ATTR __attribute__((annotate("Annotated")))
+ANNOTATE_ATTR int annotated_attr ANNOTATE_ATTR = 0;
+// CHECK: __attribute__((annotate("Annotated"))) int annotated_attr __attribute__((annotate("Annotated"))) = 0;
+
+// FIXME: We do not print the attribute as written after the type specifier.
+int ANNOTATE_ATTR annotated_attr_fixme = 0;
+// CHECK: __attribute__((annotate("Annotated"))) int annotated_attr_fixme = 0;
+
+#define NONNULL_ATTR  __attribute__((nonnull(1)))
+ANNOTATE_ATTR NONNULL_ATTR void fn_non_null_annotated_attr(int *) __attribute__((annotate("AnnotatedRHS")));
+// CHECK:__attribute__((annotate("Annotated"))) __attribute__((nonnull(1))) void fn_non_null_annotated_attr(int *) __attribute__((annotate("AnnotatedRHS")));
+
+[[gnu::nonnull(1)]] [[gnu::always_inline]] void cxx11_attr(int*) ANNOTATE_ATTR;
+// CHECK: {{\[\[}}gnu::nonnull(1)]] {{\[\[}}gnu::always_inline]] void cxx11_attr(int *) __attribute__((annotate("Annotated")));

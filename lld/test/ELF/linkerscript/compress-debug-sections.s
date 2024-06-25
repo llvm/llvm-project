@@ -34,3 +34,5 @@
 .section .debug_str,"MS",@progbits,1
   .asciz "AAA"
   .asciz "BBB"
+  .fill 64,1,0x41
+  .byte 0

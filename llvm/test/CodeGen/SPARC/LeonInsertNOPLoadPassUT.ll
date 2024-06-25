@@ -20,12 +20,12 @@ define float @ld_float_test() #0 {
 ; CHECK-NEXT:    add %sp, 96, %sp
 entry:
   %f = alloca float, align 4
-  store float 0x3FF3C08320000000, float* %f, align 4
-  %0 = load float, float* %f, align 4
+  store float 0x3FF3C08320000000, ptr %f, align 4
+  %0 = load float, ptr %f, align 4
   ret float %0
 }
 
-define i32 @ld_i32_test(i32 *%p) {
+define i32 @ld_i32_test(ptr %p) {
 ; CHECK-LABEL: ld_i32_test:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
@@ -33,6 +33,6 @@ define i32 @ld_i32_test(i32 *%p) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    nop
-  %res = load i32, i32* %p
+  %res = load i32, ptr %p
   ret i32 %res
 }

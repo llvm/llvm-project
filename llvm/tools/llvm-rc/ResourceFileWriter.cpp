@@ -550,6 +550,11 @@ Error ResourceFileWriter::visitVersionStmt(const VersionStmt *Stmt) {
   return Error::success();
 }
 
+Error ResourceFileWriter::visitMenuStmt(const MenuStmt *Stmt) {
+  ObjectData.Menu = Stmt->Value;
+  return Error::success();
+}
+
 Error ResourceFileWriter::writeResource(
     const RCResource *Res,
     Error (ResourceFileWriter::*BodyWriter)(const RCResource *)) {
@@ -1132,9 +1137,8 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
            ulittle16_t(Res->Height)};
   writeObject(Middle);
 
-  // MENU field. As of now, we don't keep them in the state and can peacefully
-  // think there is no menu attached to the dialog.
-  writeInt<uint16_t>(0);
+  // MENU field.
+  RETURN_IF_ERROR(writeIntOrString(ObjectData.Menu));
 
   // Window CLASS field.
   RETURN_IF_ERROR(writeIntOrString(ObjectData.Class));
@@ -1537,15 +1541,14 @@ Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {
   };
 
   auto FileVer = GetField(VersionInfoFixed::FtFileVersion);
-  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
-      *std::max_element(FileVer.begin(), FileVer.end()), "FILEVERSION fields"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(*llvm::max_element(FileVer),
+                                            "FILEVERSION fields"));
   FixedInfo.FileVersionMS = (FileVer[0] << 16) | FileVer[1];
   FixedInfo.FileVersionLS = (FileVer[2] << 16) | FileVer[3];
 
   auto ProdVer = GetField(VersionInfoFixed::FtProductVersion);
-  RETURN_IF_ERROR(checkNumberFits<uint16_t>(
-      *std::max_element(ProdVer.begin(), ProdVer.end()),
-      "PRODUCTVERSION fields"));
+  RETURN_IF_ERROR(checkNumberFits<uint16_t>(*llvm::max_element(ProdVer),
+                                            "PRODUCTVERSION fields"));
   FixedInfo.ProductVersionMS = (ProdVer[0] << 16) | ProdVer[1];
   FixedInfo.ProductVersionLS = (ProdVer[2] << 16) | ProdVer[3];
 

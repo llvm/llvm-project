@@ -240,8 +240,8 @@ define i23 @test11(i23 %x) {
 
 define i47 @test12(i47 %X) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[SH2:%.*]] = and i47 [[X:%.*]], -256
-; CHECK-NEXT:    ret i47 [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and i47 [[X:%.*]], -256
+; CHECK-NEXT:    ret i47 [[SH1]]
 ;
   %sh1 = ashr i47 %X, 8
   %sh2 = shl i47 %sh1, 8
@@ -250,8 +250,8 @@ define i47 @test12(i47 %X) {
 
 define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
 ; CHECK-LABEL: @test12_splat_vec(
-; CHECK-NEXT:    [[SH2:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
-; CHECK-NEXT:    ret <2 x i47> [[SH2]]
+; CHECK-NEXT:    [[SH1:%.*]] = and <2 x i47> [[X:%.*]], <i47 -256, i47 -256>
+; CHECK-NEXT:    ret <2 x i47> [[SH1]]
 ;
   %sh1 = ashr <2 x i47> %X, <i47 8, i47 8>
   %sh2 = shl <2 x i47> %sh1, <i47 8, i47 8>
@@ -564,14 +564,7 @@ define i40 @test26(i40 %A) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
 define i177 @ossfuzz_9880(i177 %X) {
 ; CHECK-LABEL: @ossfuzz_9880(
-; CHECK-NEXT:    [[A:%.*]] = alloca i177, align 8
-; CHECK-NEXT:    [[L1:%.*]] = load i177, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L1]], -1
-; CHECK-NEXT:    [[B5_NEG:%.*]] = sext i1 [[TMP1]] to i177
-; CHECK-NEXT:    [[B14:%.*]] = add i177 [[L1]], [[B5_NEG]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i177 [[B14]], -1
-; CHECK-NEXT:    [[B1:%.*]] = zext i1 [[TMP2]] to i177
-; CHECK-NEXT:    ret i177 [[B1]]
+; CHECK-NEXT:    ret i177 0
 ;
   %A = alloca i177
   %L1 = load i177, ptr %A

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Check that we do not consolidate the invariant loads to smp[order - 1] and
 ; smp[order - 2] in the blocks %0 and %16. While they have the same pointer

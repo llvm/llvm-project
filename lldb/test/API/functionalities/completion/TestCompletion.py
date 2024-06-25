@@ -60,10 +60,12 @@ class CommandLineCompletionTestCase(TestBase):
 
     def do_test_variable_completion(self, command):
         self.complete_from_to(f"{command} fo", f"{command} fooo")
-        self.complete_from_to(f"{command} fooo.", f"{command} fooo.")
+        self.complete_from_to(f"{command} fooo.", f"{command} fooo.t")
+        self.complete_from_to(f"{command} fooo.t.", f"{command} fooo.t.x")
         self.complete_from_to(f"{command} fooo.dd", f"{command} fooo.dd")
 
-        self.complete_from_to(f"{command} ptr_fooo->", f"{command} ptr_fooo->")
+        self.complete_from_to(f"{command} ptr_fooo->", f"{command} ptr_fooo->t")
+        self.complete_from_to(f"{command} ptr_fooo->t.", f"{command} ptr_fooo->t.x")
         self.complete_from_to(f"{command} ptr_fooo->dd", f"{command} ptr_fooo->dd")
 
         self.complete_from_to(f"{command} cont", f"{command} container")
@@ -105,9 +107,18 @@ class CommandLineCompletionTestCase(TestBase):
             self, "// Break here", lldb.SBFileSpec("main.cpp")
         )
         err = lldb.SBError()
-        self.process().LoadImage(
-            lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err
-        )
+        local_spec = lldb.SBFileSpec(self.getBuildArtifact("libshared.so"))
+        if lldb.remote_platform:
+            self.process().LoadImage(
+                local_spec,
+                lldb.SBFileSpec(
+                    lldbutil.append_to_process_working_directory(self, "libshared.so"),
+                    False,
+                ),
+                err,
+            )
+        else:
+            self.process().LoadImage(local_spec, err)
         self.assertSuccess(err)
 
         self.complete_from_to("process unload ", "process unload 0")
@@ -471,7 +482,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("my_test_cmd main.cp", ["main.cpp"])
         self.expect("my_test_cmd main.cpp", substrs=["main.cpp"])
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     def test_completion_target_create_from_root_dir(self):
         """Tests source file completion by completing ."""
         root_dir = os.path.abspath(os.sep)
@@ -895,3 +906,40 @@ class CommandLineCompletionTestCase(TestBase):
     def test_ambiguous_subcommand(self):
         """Test completing a subcommand of an ambiguous command"""
         self.complete_from_to("settings s ta", [])
+
+    def test_shlib_name(self):
+        self.build()
+        error = lldb.SBError()
+        # Create a target, but don't load dependent modules
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"), None, None, False, error)
+        self.assertSuccess(error)
+        self.registerSharedLibrariesWithTarget(target, ["shared"])
+
+        basenames = []
+        paths = []
+        for m in target.modules:
+            basenames.append(m.file.basename)
+            paths.append(m.file.fullpath)
+
+        # To see all the diffs
+        self.maxDiff = None
+
+        # An empty string completes to everything
+        self.completions_match("target symbols add -s ", basenames + paths)
+
+        # Base name completion
+        self.completions_match("target symbols add -s a.", ["a.out"])
+
+        # Full path completion
+        prefix = os.path.commonpath(paths)
+        self.completions_match("target symbols add -s '" + prefix, paths)
+
+        # Full path, but ending with a path separator
+        prefix_sep = prefix + os.path.sep
+        self.completions_match("target symbols add -s '" + prefix_sep, paths)
+
+        # The completed path should match the spelling of the input, so if the
+        # input contains a double separator, so should the completions.
+        prefix_sep_sep = prefix_sep + os.path.sep
+        paths_sep = [prefix_sep_sep + p[len(prefix_sep) :] for p in paths]
+        self.completions_match("target symbols add -s '" + prefix_sep_sep, paths_sep)

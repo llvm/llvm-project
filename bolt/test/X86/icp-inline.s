@@ -1,7 +1,7 @@
-# This test verifies the effect of -icp-inline option: that ICP is only
-# performed for call targets eligible for inlining.
+## This test verifies the effect of -icp-inline option: that ICP is only
+## performed for call targets eligible for inlining.
 
-# The assembly was produced from C code compiled with clang-15 -O1 -S:
+## The assembly was produced from C code compiled with clang-15 -O1 -S:
 
 # int foo(int x) { return x + 1; }
 # int bar(int x) { return x*100 + 42; }

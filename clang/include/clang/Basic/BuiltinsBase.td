@@ -49,6 +49,8 @@ def UnevaluatedArguments : Attribute<"u">;
 // is required for a builtin.
 def FunctionWithBuiltinPrefix : Attribute<"F">;
 
+def FunctionWithoutBuiltinPrefix : Attribute<"f">;
+
 // const, but only when -fno-math-errno and FP exceptions are ignored.
 def ConstIgnoringErrnoAndExceptions : Attribute<"e">;
 
@@ -87,7 +89,9 @@ class CustomEntry {
 }
 
 class AtomicBuiltin : Builtin;
-class TargetBuiltin : Builtin;
+class TargetBuiltin : Builtin {
+  string Features = "";
+}
 
 class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;

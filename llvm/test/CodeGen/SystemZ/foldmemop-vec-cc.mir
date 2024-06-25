@@ -4,7 +4,7 @@
 # Test that folding does not occur if it would introduce a clobbering of a live CC.
 
 --- |
-  define void @fun0(double %arg0, double %arg1, double* %Dst) { ret void }
+  define void @fun0(double %arg0, double %arg1, ptr %Dst) { ret void }
 
 ...
 

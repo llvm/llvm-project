@@ -3,7 +3,7 @@
 
 # Check we don't try to combine a load of < s8 as that will end up creating a illegal non-extending load.
 --- |
-  define i8 @test(i1* %ptr) {
+  define i8 @test(ptr %ptr) {
     ret i8 undef
   }
 

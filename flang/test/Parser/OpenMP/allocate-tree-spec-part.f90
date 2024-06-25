@@ -1,4 +1,6 @@
-! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s
+! REQUIRES: openmp_runtime
+
+! RUN: %flang_fc1 %openmp_flags -fdebug-dump-parse-tree %s | FileCheck %s
 ! Ensures associated declarative OMP allocations in the specification
 ! part are kept there
 

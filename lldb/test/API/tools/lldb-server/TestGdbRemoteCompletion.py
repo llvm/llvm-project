@@ -26,6 +26,7 @@ class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def generate_hex_path(self, target):
         return str(os.path.join(self.getBuildDir(), target)).encode().hex()
 
+    @skipIfRemote
     @add_test_categories(["llgs"])
     def test_autocomplete_path(self):
         self.build()

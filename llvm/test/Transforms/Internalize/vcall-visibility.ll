@@ -42,7 +42,7 @@ entry:
 define hidden noalias nonnull ptr @_Z6make_dv() {
 entry:
   %call = tail call ptr @_Znwm(i64 8) #3
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_11DE, i64 0, inrange i32 0, i64 2), ptr %call, align 8
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN12_GLOBAL__N_11DE, i64 0, i32 0, i64 2), ptr %call, align 8
   ret ptr %call
 }
 

@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_PIPELINES_PASSES_H
 #define MLIR_DIALECT_BUFFERIZATION_PIPELINES_PASSES_H
 
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Pass/PassOptions.h"
 
 namespace mlir {
@@ -24,10 +25,17 @@ struct BufferDeallocationPipelineOptions
   PassOptions::Option<bool> privateFunctionDynamicOwnership{
       *this, "private-function-dynamic-ownership",
       llvm::cl::desc(
-          "Allows to add additional arguments to private functions to "
-          "dynamically pass ownership of memrefs to callees. This can enable "
-          "earlier deallocations."),
+          "Allows to add additional results to private functions to return "
+          "ownership of returned memrefs to callers. This can avoid spurious "
+          "buffer clones in the callee."),
       llvm::cl::init(false)};
+
+  /// Implicit conversion to `DeallocationOptions`.
+  operator DeallocationOptions() const {
+    DeallocationOptions options;
+    options.privateFuncDynamicOwnership = privateFunctionDynamicOwnership;
+    return options;
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -31,7 +31,7 @@
   define void @indirect_call_x17(i32 %a, i32 %b) speculative_load_hardening {
    ret void
   }
-  @g = common dso_local local_unnamed_addr global i64 (...)* null, align 8
+  @g = common dso_local local_unnamed_addr global ptr null, align 8
   define void @indirect_tailcall_x17(i32 %a, i32 %b) speculative_load_hardening {
    ret void
   }

@@ -21,6 +21,8 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 #include <set>
@@ -60,6 +62,8 @@ struct CompilerContext {
   CompilerContextKind kind;
   ConstString name;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                              const CompilerContext &rhs);
 
 /// Match \p context_chain against \p pattern, which may contain "Any"
 /// kinds. The \p context_chain should *not* contain any "Any" kinds.
@@ -401,7 +405,9 @@ public:
     /// This type is the type whose UID is m_encoding_uid as an atomic type.
     eEncodingIsAtomicUID,
     /// This type is the synthetic type whose UID is m_encoding_uid.
-    eEncodingIsSyntheticUID
+    eEncodingIsSyntheticUID,
+    /// This type is a signed pointer.
+    eEncodingIsLLVMPtrAuthUID
   };
 
   enum class ResolveState : unsigned char {
@@ -440,7 +446,7 @@ public:
 
   std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes);
+  llvm::Expected<uint32_t> GetNumChildren(bool omit_empty_base_classes);
 
   bool IsAggregateType();
 
@@ -490,12 +496,37 @@ public:
 
   static int Compare(const Type &a, const Type &b);
 
+  // Represents a parsed type name coming out of GetTypeScopeAndBasename. The
+  // structure holds StringRefs pointing to portions of the original name, and
+  // so must not be used after the name is destroyed.
+  struct ParsedName {
+    lldb::TypeClass type_class = lldb::eTypeClassAny;
+
+    // Scopes of the type, starting with the outermost. Absolute type references
+    // have a "::" as the first scope.
+    llvm::SmallVector<llvm::StringRef> scope;
+
+    llvm::StringRef basename;
+
+    friend bool operator==(const ParsedName &lhs, const ParsedName &rhs) {
+      return lhs.type_class == rhs.type_class && lhs.scope == rhs.scope &&
+             lhs.basename == rhs.basename;
+    }
+
+    friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                         const ParsedName &name) {
+      return os << llvm::formatv(
+                 "Type::ParsedName({0:x}, [{1}], {2})",
+                 llvm::to_underlying(name.type_class),
+                 llvm::make_range(name.scope.begin(), name.scope.end()),
+                 name.basename);
+    }
+  };
   // From a fully qualified typename, split the type into the type basename and
   // the remaining type scope (namespaces/classes).
-  static bool GetTypeScopeAndBasename(llvm::StringRef name,
-                                      llvm::StringRef &scope,
-                                      llvm::StringRef &basename,
-                                      lldb::TypeClass &type_class);
+  static std::optional<ParsedName>
+  GetTypeScopeAndBasename(llvm::StringRef name);
+
   void SetEncodingType(Type *encoding_type) { m_encoding_type = encoding_type; }
 
   uint32_t GetEncodingMask();

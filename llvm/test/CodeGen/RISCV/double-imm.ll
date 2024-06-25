@@ -54,20 +54,10 @@ define double @double_imm_op(double %a) nounwind {
 ;
 ; CHECKRV32ZDINX-LABEL: double_imm_op:
 ; CHECKRV32ZDINX:       # %bb.0:
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, -16
-; CHECKRV32ZDINX-NEXT:    sw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
 ; CHECKRV32ZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
 ; CHECKRV32ZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
 ; CHECKRV32ZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
 ; CHECKRV32ZDINX-NEXT:    fadd.d a0, a0, a2
-; CHECKRV32ZDINX-NEXT:    sw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, 16
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: double_imm_op:
@@ -153,24 +143,18 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ;
 ; CHECKRV32ZDINX-LABEL: negzero_sel:
 ; CHECKRV32ZDINX:       # %bb.0: # %entry
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, -16
-; CHECKRV32ZDINX-NEXT:    sw a1, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a2, 12(sp)
-; CHECKRV32ZDINX-NEXT:    slli a2, a0, 16
-; CHECKRV32ZDINX-NEXT:    fcvt.d.w a0, zero
-; CHECKRV32ZDINX-NEXT:    beqz a2, .LBB4_2
+; CHECKRV32ZDINX-NEXT:    slli a0, a0, 16
+; CHECKRV32ZDINX-NEXT:    fcvt.d.w a4, zero
+; CHECKRV32ZDINX-NEXT:    beqz a0, .LBB4_2
 ; CHECKRV32ZDINX-NEXT:  # %bb.1: # %entry
-; CHECKRV32ZDINX-NEXT:    fneg.d a0, a0
+; CHECKRV32ZDINX-NEXT:    fneg.d a2, a4
 ; CHECKRV32ZDINX-NEXT:    j .LBB4_3
 ; CHECKRV32ZDINX-NEXT:  .LBB4_2:
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
+; CHECKRV32ZDINX-NEXT:    mv a3, a2
+; CHECKRV32ZDINX-NEXT:    mv a2, a1
 ; CHECKRV32ZDINX-NEXT:  .LBB4_3: # %entry
-; CHECKRV32ZDINX-NEXT:    sw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, 16
+; CHECKRV32ZDINX-NEXT:    mv a0, a2
+; CHECKRV32ZDINX-NEXT:    mv a1, a3
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: negzero_sel:

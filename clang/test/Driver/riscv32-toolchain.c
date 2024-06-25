@@ -195,9 +195,9 @@
 // RUN:   --target=riscv32-unknown-elf --rtlib=compiler-rt --unwindlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-COMPILERRT-ILP32 %s
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}crt0.o"
-// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtbegin-riscv32.o"
-// C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv32.a"
-// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend-riscv32.o"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtbegin.o"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins.a"
+// C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv32 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \

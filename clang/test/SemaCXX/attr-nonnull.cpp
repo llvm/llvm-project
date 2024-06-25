@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 struct S {
   S(const char *) __attribute__((nonnull(2)));
 

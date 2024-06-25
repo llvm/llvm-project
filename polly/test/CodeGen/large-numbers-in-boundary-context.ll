@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 ; XFAIL: *
 ;
 ; The boundary context contains a constant that does not fit in 64 bits. Hence,

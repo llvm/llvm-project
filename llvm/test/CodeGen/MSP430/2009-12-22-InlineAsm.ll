@@ -8,10 +8,10 @@ target triple = "msp430-unknown-unknown"
 
 define i16 @main() noreturn nounwind {
 entry:
-  %0 = tail call i8* asm "", "=r,0"(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @buf, i16 0, i16 0)) nounwind ; <i8*> [#uses=1]
-  %sub.ptr = getelementptr inbounds i8, i8* %0, i16 1 ; <i8*> [#uses=1]
-  %sub.ptr.lhs.cast = ptrtoint i8* %sub.ptr to i16 ; <i16> [#uses=1]
-  %sub.ptr.sub = sub i16 %sub.ptr.lhs.cast, ptrtoint ([10 x i8]* @buf to i16) ; <i16> [#uses=1]
+  %0 = tail call ptr asm "", "=r,0"(ptr @buf) nounwind ; <i8*> [#uses=1]
+  %sub.ptr = getelementptr inbounds i8, ptr %0, i16 1 ; <i8*> [#uses=1]
+  %sub.ptr.lhs.cast = ptrtoint ptr %sub.ptr to i16 ; <i16> [#uses=1]
+  %sub.ptr.sub = sub i16 %sub.ptr.lhs.cast, ptrtoint (ptr @buf to i16) ; <i16> [#uses=1]
   %cmp = icmp eq i16 %sub.ptr.sub, 1              ; <i1> [#uses=1]
   br i1 %cmp, label %bar.exit, label %if.then.i
 

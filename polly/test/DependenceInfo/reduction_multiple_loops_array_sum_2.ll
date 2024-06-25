@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -basic-aa -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -aa-pipeline=basic-aa -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

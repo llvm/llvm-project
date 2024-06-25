@@ -72,13 +72,13 @@ public:
     return simplifyUnOp(Opc, V, FMF, SQ);
   }
 
-  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
-    return simplifyICmpInst(P, LHS, RHS, SQ);
+  Value *FoldCmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return simplifyCmpInst(P, LHS, RHS, SQ);
   }
 
   Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 bool IsInBounds = false) const override {
-    return simplifyGEPInst(Ty, Ptr, IdxList, IsInBounds, SQ);
+                 GEPNoWrapFlags NW) const override {
+    return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
   Value *FoldSelect(Value *C, Value *True, Value *False) const override {
@@ -117,6 +117,12 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ,
+                                   dyn_cast_if_present<CallBase>(FMFSource));
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
@@ -132,15 +138,6 @@ public:
     if (C->getType() == DestTy)
       return C; // avoid calling Fold
     return ConstFolder.CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Compare Instructions
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
-                    Constant *RHS) const override {
-    return ConstFolder.CreateFCmp(P, LHS, RHS);
   }
 };
 

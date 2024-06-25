@@ -261,7 +261,7 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
     // Check to see if this storage represents a splat. If it doesn't then
     // combine the hash for the data starting with the first non splat element.
     for (size_t i = 1, e = data.size(); i != e; i++)
-      if (!firstElt.equals(data[i]))
+      if (firstElt != data[i])
         return KeyTy(ty, data, llvm::hash_combine(hashVal, data.drop_front(i)));
 
     // Otherwise, this is a splat so just return the hash of the first element.

@@ -33,13 +33,10 @@ def Znver3Model : SchedMachineModel {
   // The op cache is organized as an associative cache with 64 sets and 8 ways.
   // At each set-way intersection is an entry containing up to 8 macro ops.
   // The maximum capacity of the op cache is 4K ops.
-  // Agner, 22.5 µop cache
-  // The size of the µop cache is big enough for holding most critical loops.
-  // FIXME: PR50584: MachineScheduler/PostRAScheduler have quadradic complexity,
-  //        with large values here the compilation of certain loops
-  //        ends up taking way too long.
-  // let LoopMicroOpBufferSize = 4096;
-  let LoopMicroOpBufferSize = 512;
+  // Assuming a maximum dispatch of 8 ops/cy and a mispredict cost of 12cy from
+  // the op-cache, we limit the loop buffer to 8*12 = 96 to avoid loop unrolling
+  // leading to excessive filling of the op-cache from frontend.
+  let LoopMicroOpBufferSize = 96;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache
@@ -52,7 +49,7 @@ def Znver3Model : SchedMachineModel {
   int VecLoadLatency = 7;
   // Latency of a simple store operation.
   int StoreLatency = 1;
-  // FIXME
+  // FIXME:
   let HighLatency = 25; // FIXME: any better choice?
   // AMD SOG 19h, 2.8 Optimizing Branching
   // The branch misprediction penalty is in the range from 11 to 18 cycles,
@@ -193,11 +190,11 @@ def Zn3Int : ProcResGroup<[Zn3ALU0, Zn3AGU0, Zn3BRU0, // scheduler 0
 // <...>, and six FPU pipes.
 // Agner, 22.10 Floating point execution pipes
 // There are six floating point/vector execution pipes,
-def Zn3FPP0  : ProcResource<1>;
-def Zn3FPP1  : ProcResource<1>;
-def Zn3FPP2  : ProcResource<1>;
-def Zn3FPP3  : ProcResource<1>;
-def Zn3FPP45 : ProcResource<2>;
+def Zn3FP0  : ProcResource<1>;
+def Zn3FP1  : ProcResource<1>;
+def Zn3FP2  : ProcResource<1>;
+def Zn3FP3  : ProcResource<1>;
+def Zn3FP45 : ProcResource<2>;
 
 //
 // Execution Units
@@ -205,63 +202,63 @@ def Zn3FPP45 : ProcResource<2>;
 // AMD SOG 19h, 2.11.1 Floating Point Execution Resources
 
 // (v)FMUL*, (v)FMA*, Floating Point Compares, Blendv(DQ)
-defvar Zn3FPFMul0 = Zn3FPP0;
-defvar Zn3FPFMul1 = Zn3FPP1;
+defvar Zn3FPFMul0 = Zn3FP0;
+defvar Zn3FPFMul1 = Zn3FP1;
 
 // (v)FADD*
-defvar Zn3FPFAdd0 = Zn3FPP2;
-defvar Zn3FPFAdd1 = Zn3FPP3;
+defvar Zn3FPFAdd0 = Zn3FP2;
+defvar Zn3FPFAdd1 = Zn3FP3;
 
 // All convert operations except pack/unpack
-defvar Zn3FPFCvt0 = Zn3FPP2;
-defvar Zn3FPFCvt1 = Zn3FPP3;
+defvar Zn3FPFCvt0 = Zn3FP2;
+defvar Zn3FPFCvt1 = Zn3FP3;
 
 // All Divide and Square Root except Reciprocal Approximation
 // AMD SOG 19h, 2.11.1 Floating Point Execution Resources
 // FDIV unit can support 2 simultaneous operations in flight
 // even though it occupies a single pipe.
 // FIXME: BufferSize=2 ?
-defvar Zn3FPFDiv = Zn3FPP1;
+defvar Zn3FPFDiv = Zn3FP1;
 
 // Moves and Logical operations on Floating Point Data Types
-defvar Zn3FPFMisc0 = Zn3FPP0;
-defvar Zn3FPFMisc1 = Zn3FPP1;
-defvar Zn3FPFMisc2 = Zn3FPP2;
-defvar Zn3FPFMisc3 = Zn3FPP3;
+defvar Zn3FPFMisc0 = Zn3FP0;
+defvar Zn3FPFMisc1 = Zn3FP1;
+defvar Zn3FPFMisc2 = Zn3FP2;
+defvar Zn3FPFMisc3 = Zn3FP3;
 
 // Integer Adds, Subtracts, and Compares
 // Some complex VADD operations are not available in all pipes.
-defvar Zn3FPVAdd0 = Zn3FPP0;
-defvar Zn3FPVAdd1 = Zn3FPP1;
-defvar Zn3FPVAdd2 = Zn3FPP2;
-defvar Zn3FPVAdd3 = Zn3FPP3;
+defvar Zn3FPVAdd0 = Zn3FP0;
+defvar Zn3FPVAdd1 = Zn3FP1;
+defvar Zn3FPVAdd2 = Zn3FP2;
+defvar Zn3FPVAdd3 = Zn3FP3;
 
 // Integer Multiplies, SAD, Blendvb
-defvar Zn3FPVMul0 = Zn3FPP0;
-defvar Zn3FPVMul1 = Zn3FPP3;
+defvar Zn3FPVMul0 = Zn3FP0;
+defvar Zn3FPVMul1 = Zn3FP3;
 
 // Data Shuffles, Packs, Unpacks, Permute
 // Some complex shuffle operations are only available in pipe1.
-defvar Zn3FPVShuf = Zn3FPP1;
-defvar Zn3FPVShufAux = Zn3FPP2;
+defvar Zn3FPVShuf = Zn3FP1;
+defvar Zn3FPVShufAux = Zn3FP2;
 
 // Bit Shift Left/Right operations
-defvar Zn3FPVShift0 = Zn3FPP1;
-defvar Zn3FPVShift1 = Zn3FPP2;
+defvar Zn3FPVShift0 = Zn3FP1;
+defvar Zn3FPVShift1 = Zn3FP2;
 
 // Moves and Logical operations on Packed Integer Data Types
-defvar Zn3FPVMisc0 = Zn3FPP0;
-defvar Zn3FPVMisc1 = Zn3FPP1;
-defvar Zn3FPVMisc2 = Zn3FPP2;
-defvar Zn3FPVMisc3 = Zn3FPP3;
+defvar Zn3FPVMisc0 = Zn3FP0;
+defvar Zn3FPVMisc1 = Zn3FP1;
+defvar Zn3FPVMisc2 = Zn3FP2;
+defvar Zn3FPVMisc3 = Zn3FP3;
 
 // *AES*
-defvar Zn3FPAES0 = Zn3FPP0;
-defvar Zn3FPAES1 = Zn3FPP1;
+defvar Zn3FPAES0 = Zn3FP0;
+defvar Zn3FPAES1 = Zn3FP1;
 
 // *CLM*
-defvar Zn3FPCLM0 = Zn3FPP0;
-defvar Zn3FPCLM1 = Zn3FPP1;
+defvar Zn3FPCLM0 = Zn3FP0;
+defvar Zn3FPCLM1 = Zn3FP1;
 
 // Execution pipeline grouping
 //===----------------------------------------------------------------------===//
@@ -269,7 +266,7 @@ defvar Zn3FPCLM1 = Zn3FPP1;
 // AMD SOG 19h, 2.11 Floating-Point Unit
 // Stores and floating point to general purpose register transfer
 // have 2 dedicated pipelines (pipe 5 and 6).
-def Zn3FPU0123 : ProcResGroup<[Zn3FPP0, Zn3FPP1, Zn3FPP2, Zn3FPP3]>;
+def Zn3FPU0123 : ProcResGroup<[Zn3FP0, Zn3FP1, Zn3FP2, Zn3FP3]>;
 
 // (v)FMUL*, (v)FMA*, Floating Point Compares, Blendv(DQ)
 def Zn3FPFMul01 : ProcResGroup<[Zn3FPFMul0, Zn3FPFMul1]>;
@@ -293,12 +290,12 @@ def Zn3FPFMisc12 : ProcResGroup<[Zn3FPFMisc1, Zn3FPFMisc2]>;
 // AMD SOG 19h, 2.11 Floating-Point Unit
 // Stores and floating point to general purpose register transfer
 // have 2 dedicated pipelines (pipe 5 and 6).
-defvar Zn3FPLd01 = Zn3FPP45;
+defvar Zn3FPLd01 = Zn3FP45;
 
 // AMD SOG 19h, 2.11 Floating-Point Unit
 // Note that FP stores are supported on two pipelines,
 // but throughput is limited to one per cycle.
-let Super = Zn3FPP45 in
+let Super = Zn3FP45 in
 def Zn3FPSt : ProcResource<1>;
 
 // Integer Adds, Subtracts, and Compares
@@ -345,8 +342,8 @@ def Zn3FpPRF : RegisterFile<160, [VR64, VR128, VR256], [1, 1, 1], [0, 1, 1],
 // AMD SOG 19h, 2.11 Floating-Point Unit
 // <...> the scheduler can issue 1 micro op per cycle for each pipe.
 // FIXME: those are two separate schedulers, not a single big one.
-def Zn3FP : ProcResGroup<[Zn3FPP0, Zn3FPP2,          /*Zn3FPP4,*/ // scheduler 0
-                          Zn3FPP1, Zn3FPP3, Zn3FPP45 /*Zn3FPP5*/  // scheduler 1
+def Zn3FP : ProcResGroup<[Zn3FP0, Zn3FP2,          /*Zn3FP4,*/ // scheduler 0
+                          Zn3FP1, Zn3FP3, Zn3FP45 /*Zn3FP5*/  // scheduler 1
                          ]> {
   let BufferSize = !mul(2, 32);
 }
@@ -838,9 +835,9 @@ defm : Zn3WriteResInt<WriteZero, [Zn3ALU0123], 0, [0], 1>;
 defm : Zn3WriteResIntPair<WriteJump, [Zn3BRU01], 1, [1], 1>; // FIXME: not from llvm-exegesis
 
 // Floating point. This covers both scalar and vector operations.
-defm : Zn3WriteResInt<WriteFLD0, [Zn3FPLd01, Zn3Load, Zn3FPP1], !add(Znver3Model.LoadLatency, 4), [1, 1, 1], 1>;
-defm : Zn3WriteResInt<WriteFLD1, [Zn3FPLd01, Zn3Load, Zn3FPP1], !add(Znver3Model.LoadLatency, 7), [1, 1, 1], 1>;
-defm : Zn3WriteResInt<WriteFLDC, [Zn3FPLd01, Zn3Load, Zn3FPP1], !add(Znver3Model.LoadLatency, 7), [1, 1, 1], 1>;
+defm : Zn3WriteResInt<WriteFLD0, [Zn3FPLd01, Zn3Load, Zn3FP1], !add(Znver3Model.LoadLatency, 4), [1, 1, 1], 1>;
+defm : Zn3WriteResInt<WriteFLD1, [Zn3FPLd01, Zn3Load, Zn3FP1], !add(Znver3Model.LoadLatency, 7), [1, 1, 1], 1>;
+defm : Zn3WriteResInt<WriteFLDC, [Zn3FPLd01, Zn3Load, Zn3FP1], !add(Znver3Model.LoadLatency, 7), [1, 1, 1], 1>;
 defm : Zn3WriteResXMM<WriteFLoad, [Zn3FPLd01, Zn3Load], !add(Znver3Model.VecLoadLatency, 1), [1, 1], 1>;
 defm : Zn3WriteResXMM<WriteFLoadX, [Zn3FPLd01, Zn3Load], !add(Znver3Model.VecLoadLatency, 1), [1, 1], 1>;
 defm : Zn3WriteResYMM<WriteFLoadY, [Zn3FPLd01, Zn3Load], !add(Znver3Model.VecLoadLatency, 1), [1, 1], 1>;

@@ -23,7 +23,9 @@
 namespace llvm {
 class Error;
 namespace orc {
+class JITTargetMachineBuilder;
 class LLJIT;
+class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -44,8 +46,8 @@ class IncrementalExecutor {
 public:
   enum SymbolNameKind { IRName, LinkerName };
 
-  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
-                      const clang::TargetInfo &TI);
+  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
+                      llvm::orc::LLJITBuilder &JITBuilder, llvm::Error &Err);
   ~IncrementalExecutor();
 
   llvm::Error addModule(PartialTranslationUnit &PTU);
@@ -56,6 +58,9 @@ public:
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }
+
+  static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+  createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB);
 };
 
 } // end namespace clang

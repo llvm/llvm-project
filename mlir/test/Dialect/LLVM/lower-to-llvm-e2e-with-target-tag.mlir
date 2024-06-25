@@ -1,11 +1,11 @@
 // Note: We run CSE here to make the pattern matching more direct.
 
-// RUN: mlir-opt %s -test-lower-to-llvm -cse | FileCheck %s
+// RUN: mlir-opt %s -test-lower-to-llvm -cse -canonicalize | FileCheck %s
 
 // RUN: mlir-opt %s \
 // RUN:   -transform-preload-library="transform-library-paths=%p/lower-to-llvm-transform-symbol-def.mlir" \
 // RUN:   -transform-interpreter="debug-payload-root-tag=payload" \
-// RUN:   -test-transform-dialect-erase-schedule -cse \
+// RUN:   -test-transform-dialect-erase-schedule -cse -canonicalize \
 // RUN: | FileCheck %s
 
 module attributes {transform.target_tag="payload"} {

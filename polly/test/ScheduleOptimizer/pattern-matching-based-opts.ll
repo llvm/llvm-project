@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=false \
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-pattern-matching-based-opts=false \
 ; RUN: -debug -polly-tc-opt -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -debug -polly-tc-opt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -polly-ast-detect-parallel -polly-print-ast -disable-output  < %s | FileCheck %s --check-prefix=PARALLEL-AST
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -stats -disable-output < %s 2>&1 | FileCheck %s --check-prefix=STATS -match-full-lines
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-pattern-matching-based-opts=true -debug -polly-tc-opt -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
+; RUN: opt %loadNPMPolly '-passes=polly-opt-isl,print<polly-ast>' -polly-pattern-matching-based-opts=true -polly-ast-detect-parallel -disable-output  < %s | FileCheck %s --check-prefix=PARALLEL-AST
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-pattern-matching-based-opts=true -stats -disable-output < %s 2>&1 | FileCheck %s --check-prefix=STATS -match-full-lines
 ; REQUIRES: asserts
 ;
 ;    /* C := alpha*A*B + beta*C */

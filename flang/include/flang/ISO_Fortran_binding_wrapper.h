@@ -13,7 +13,7 @@
 /* A thin wrapper around flang/include/ISO_Fortran_binding.h
  * This header file must be included when ISO_Fortran_binding.h
  * definitions/declarations are needed in Flang compiler/runtime
- * sources. The inclusion of Runtime/api-attrs.h below sets up
+ * sources. The inclusion of Common/api-attrs.h below sets up
  * proper values for the macros used in ISO_Fortran_binding.h
  * for the device offload builds.
  * flang/include/ISO_Fortran_binding.h is made a standalone
@@ -23,7 +23,7 @@
 
 /* clang-format off */
 #include <stddef.h>
-#include "Runtime/api-attrs.h"
+#include "Common/api-attrs.h"
 #ifdef __cplusplus
 namespace Fortran {
 namespace ISO {

@@ -36,6 +36,7 @@ using namespace llvm;
 
 MCOPT_EXP(bool, RelaxAll)
 MCOPT(bool, IncrementalLinkerCompatible)
+MCOPT(bool, FDPIC)
 MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
@@ -45,6 +46,8 @@ MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
+MCOPT(bool, SaveTempLabels)
+MCOPT(bool, X86RelaxRelocations)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
 
@@ -65,6 +68,9 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
           "When used with filetype=obj, "
           "emit an object file which can be used with an incremental linker"));
   MCBINDOPT(IncrementalLinkerCompatible);
+
+  static cl::opt<bool> FDPIC("fdpic", cl::desc("Use the FDPIC ABI"));
+  MCBINDOPT(FDPIC);
 
   static cl::opt<int> DwarfVersion("dwarf-version", cl::desc("Dwarf version"),
                                    cl::init(0));
@@ -118,6 +124,17 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "no-type-check", cl::desc("Suppress type errors (Wasm)"));
   MCBINDOPT(NoTypeCheck);
 
+  static cl::opt<bool> SaveTempLabels(
+      "save-temp-labels", cl::desc("Don't discard temporary labels"));
+  MCBINDOPT(SaveTempLabels);
+
+  static cl::opt<bool> X86RelaxRelocations(
+      "x86-relax-relocations",
+      cl::desc(
+          "Emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL on x86-64 ELF"),
+      cl::init(true));
+  MCBINDOPT(X86RelaxRelocations);
+
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -135,6 +152,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   MCTargetOptions Options;
   Options.MCRelaxAll = getRelaxAll();
   Options.MCIncrementalLinkerCompatible = getIncrementalLinkerCompatible();
+  Options.FDPIC = getFDPIC();
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
@@ -143,6 +161,8 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoWarn = getNoWarn();
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
+  Options.MCSaveTempLabels = getSaveTempLabels();
+  Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.AsSecureLogFile = getAsSecureLogFile();

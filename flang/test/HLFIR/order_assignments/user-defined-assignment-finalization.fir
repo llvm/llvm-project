@@ -59,7 +59,7 @@ func.func @_QPtest1() {
       %7 = fir.call @_FortranADestroy(%6) fastmath<contract> : (!fir.box<none>) -> none
     }
   } to {
-    hlfir.yield %2#0 : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> 
+    hlfir.yield %2#0 : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
   } user_defined_assign  (%arg0: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) to (%arg1: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) {
     %3 = fir.embox %arg1 : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
     %4 = fir.convert %3 : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.class<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -119,7 +119,7 @@ func.func @_QPtest2() {
       fir.call @llvm.stackrestore.p0(%4) fastmath<contract> : (!fir.ref<i8>) -> ()
     }
   } to {
-    hlfir.yield %3#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> 
+    hlfir.yield %3#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
   } user_defined_assign  (%arg0: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) to (%arg1: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) {
     %4 = fir.embox %arg1 : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
     %5 = fir.convert %4 : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.class<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -193,18 +193,22 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
     }
   } do {
     hlfir.region_assign {
-      %5 = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
-      %6 = fir.call @_QPnew_obja() fastmath<contract> : () -> !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
-      fir.save_result %6 to %0(%2) : !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>
-      %7:2 = hlfir.declare %0(%2) {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)
-      hlfir.yield %7#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> cleanup {
-        %8 = fir.embox %0(%2) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
-        %9 = fir.convert %8 : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
-        %10 = fir.call @_FortranADestroy(%9) fastmath<contract> : (!fir.box<none>) -> none
-        fir.call @llvm.stackrestore.p0(%5) fastmath<contract> : (!fir.ref<i8>) -> ()
+      %5 = hlfir.exactly_once : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> {
+        %7 = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
+        %8 = fir.call @_QPnew_obja() fastmath<contract> : () -> !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
+        fir.save_result %8 to %0(%2) : !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>
+        %9:2 = hlfir.declare %0(%2) {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)
+        hlfir.yield %9#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> cleanup {
+          %10 = fir.embox %0(%2) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
+          %11 = fir.convert %10 : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
+          %12 = fir.call @_FortranADestroy(%11) fastmath<contract> : (!fir.box<none>) -> none
+          fir.call @llvm.stackrestore.p0(%7) fastmath<contract> : (!fir.ref<i8>) -> ()
+        }
       }
+      %6:2 = hlfir.declare %5(%2) {uniq_name = ".func.pointer.result"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)
+      hlfir.yield %6#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
     } to {
-      hlfir.yield %3#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> 
+      hlfir.yield %3#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
     } user_defined_assign  (%arg1: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) to (%arg2: !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) {
       %5 = fir.embox %arg2 : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
       %6 = fir.convert %5 : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.class<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -246,7 +250,8 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:             %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
 // CHECK:             fir.if %[[VAL_31]] {
-// CHECK:               %[[VAL_32:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_28]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
+// CHECK:               %[[VAL_20B:.*]]:2 = hlfir.declare %[[VAL_20]]#0(%[[VAL_7]]) {uniq_name = ".func.pointer.result"}
+// CHECK:               %[[VAL_32:.*]] = hlfir.designate %[[VAL_20B]]#0 (%[[VAL_28]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:               %[[VAL_33:.*]] = fir.embox %[[VAL_32]] : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:               %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<none>
 // CHECK:               %[[VAL_35:.*]] = fir.call @_FortranAPushValue(%[[VAL_27]], %[[VAL_34]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none

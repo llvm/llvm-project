@@ -1,0 +1,134 @@
+if(NOT LIBC_COMPILER_HAS_FIXED_POINT)
+  return()
+endif()
+
+add_custom_target(libc-stdfix-tests)
+
+foreach(suffix IN ITEMS hr r lr hk k lk)
+  add_libc_test(
+    abs${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      AbsTest.h
+    SRCS
+      abs${suffix}_test.cpp
+    COMPILE_OPTIONS
+      -O3
+    DEPENDS
+      libc.src.stdfix.abs${suffix}
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
+foreach(suffix IN ITEMS uhr ur ulr uhk uk)
+  add_libc_test(
+    sqrt${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      SqrtTest.h
+    SRCS
+      sqrt${suffix}_test.cpp
+    COMPILE_OPTIONS
+      -O3
+    DEPENDS
+      libc.src.stdfix.sqrt${suffix}
+      libc.src.__support.CPP.bit
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.fixed_point.sqrt
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.sqrt
+  )
+endforeach()
+
+foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
+  add_libc_test(
+    round${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      RoundTest.h
+    SRCS
+      round${suffix}_test.cpp
+    COMPILE_OPTIONS
+      -O3
+    DEPENDS
+      libc.src.stdfix.round${suffix}
+      libc.src.__support.fixed_point.fx_bits
+  )
+endforeach()
+
+add_libc_test(
+  uhksqrtus_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ISqrtTest.h
+  SRCS
+    uhksqrtus_test.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.stdfix.uhksqrtus
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.fixed_point.sqrt
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_libc_test(
+  uksqrtui_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ISqrtTest.h
+  SRCS
+    uksqrtui_test.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.stdfix.uksqrtui
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.fixed_point.sqrt
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_libc_test(
+  exphk_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ExpTest.h
+  SRCS
+    exphk_test.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.stdfix.exphk
+    libc.src.math.exp
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_libc_test(
+  expk_test
+  SUITE
+    libc-stdfix-tests
+  HDRS
+    ExpTest.h
+  SRCS
+    expk_test.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.stdfix.expk
+    libc.src.math.exp
+    libc.src.__support.CPP.bit
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.FPUtil.basic_operations
+)

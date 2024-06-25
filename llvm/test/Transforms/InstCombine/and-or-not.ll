@@ -761,11 +761,7 @@ define i4 @simplify_and_common_op_use1(i4 %x, i4 %y, i4 %z)  {
 define i4 @simplify_and_common_op_use2(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_use2(
 ; CHECK-NEXT:    call void @use(i4 [[Y:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = or i4 [[TMP1]], [[Y]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 0
 ;
   %xy = or i4 %y, %x
   call void @use(i4 %y)
@@ -779,12 +775,8 @@ define i4 @simplify_and_common_op_use2(i4 %x, i4 %y, i4 %z)  {
 
 define i4 @simplify_and_common_op_use3(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_use3(
-; CHECK-NEXT:    [[XY:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = or i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    call void @use(i4 [[Z]])
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    call void @use(i4 [[Z:%.*]])
+; CHECK-NEXT:    ret i4 0
 ;
   %xy = or i4 %x, %y
   %xyz = or i4 %xy, %z

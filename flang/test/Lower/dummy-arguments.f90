@@ -9,7 +9,7 @@ program test1
   call foo(10)
 contains
 
-! CHECK-LABEL: func @_QFPfoo
+! CHECK-LABEL: func private @_QFPfoo
 subroutine foo(avar1)
   integer :: avar1
 !  integer :: my_data, my_data2

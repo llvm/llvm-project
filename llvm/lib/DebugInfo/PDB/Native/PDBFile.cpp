@@ -86,8 +86,7 @@ uint32_t PDBFile::getNumStreams() const {
 }
 
 uint32_t PDBFile::getMaxStreamSize() const {
-  return *std::max_element(ContainerLayout.StreamSizes.begin(),
-                           ContainerLayout.StreamSizes.end());
+  return *llvm::max_element(ContainerLayout.StreamSizes);
 }
 
 uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {

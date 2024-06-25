@@ -34,8 +34,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@var.1 = internal unnamed_addr global i8* null, align 8, !dbg !0
-@var.3 = internal unnamed_addr global i8* null, align 8, !dbg !15
+@var.1 = internal unnamed_addr global ptr null, align 8, !dbg !0
+@var.3 = internal unnamed_addr global ptr null, align 8, !dbg !15
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!16, !17}

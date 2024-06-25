@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
@@ -39,6 +40,7 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::object;
 using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
@@ -577,16 +579,16 @@ Export LinkerDriver::parseExport(StringRef arg) {
     if (y.contains(".")) {
       e.name = x;
       e.forwardTo = y;
-      return e;
+    } else {
+      e.extName = x;
+      e.name = y;
+      if (e.name.empty())
+        goto err;
     }
-
-    e.extName = x;
-    e.name = y;
-    if (e.name.empty())
-      goto err;
   }
 
-  // If "<name>=<internalname>[,@ordinal[,NONAME]][,DATA][,PRIVATE]"
+  // Optional parameters
+  // "[,@ordinal[,NONAME]][,DATA][,PRIVATE][,EXPORTAS,exportname]"
   while (!rest.empty()) {
     StringRef tok;
     std::tie(tok, rest) = rest.split(",");
@@ -608,6 +610,13 @@ Export LinkerDriver::parseExport(StringRef arg) {
       e.isPrivate = true;
       continue;
     }
+    if (tok.equals_insensitive("exportas")) {
+      if (!rest.empty() && !rest.contains(','))
+        e.exportAs = rest;
+      else
+        error("invalid EXPORTAS value: " + rest);
+      break;
+    }
     if (tok.starts_with("@")) {
       int32_t ord;
       if (tok.substr(1).getAsInteger(0, ord))
@@ -623,18 +632,6 @@ Export LinkerDriver::parseExport(StringRef arg) {
 
 err:
   fatal("invalid /export: " + arg);
-}
-
-static StringRef undecorate(COFFLinkerContext &ctx, StringRef sym) {
-  if (ctx.config.machine != I386)
-    return sym;
-  // In MSVC mode, a fully decorated stdcall function is exported
-  // as-is with the leading underscore (with type IMPORT_NAME).
-  // In MinGW mode, a decorated stdcall function gets the underscore
-  // removed, just like normal cdecl functions.
-  if (sym.starts_with("_") && sym.contains('@') && !ctx.config.mingw)
-    return sym;
-  return sym.starts_with("_") ? sym.substr(1) : sym;
 }
 
 // Convert stdcall/fastcall style symbols into unsuffixed symbols,
@@ -684,11 +681,31 @@ void LinkerDriver::fixupExports() {
   }
 
   for (Export &e : ctx.config.exports) {
-    if (!e.forwardTo.empty()) {
-      e.exportName = undecorate(ctx, e.name);
-    } else {
-      e.exportName = undecorate(ctx, e.extName.empty() ? e.name : e.extName);
+    if (!e.exportAs.empty()) {
+      e.exportName = e.exportAs;
+      continue;
     }
+
+    StringRef sym =
+        !e.forwardTo.empty() || e.extName.empty() ? e.name : e.extName;
+    if (ctx.config.machine == I386 && sym.starts_with("_")) {
+      // In MSVC mode, a fully decorated stdcall function is exported
+      // as-is with the leading underscore (with type IMPORT_NAME).
+      // In MinGW mode, a decorated stdcall function gets the underscore
+      // removed, just like normal cdecl functions.
+      if (ctx.config.mingw || !sym.contains('@')) {
+        e.exportName = sym.substr(1);
+        continue;
+      }
+    }
+    if (isArm64EC(ctx.config.machine) && !e.data && !e.constant) {
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(sym)) {
+        e.exportName = saver().save(*demangledName);
+        continue;
+      }
+    }
+    e.exportName = sym;
   }
 
   if (ctx.config.killAt && ctx.config.machine == I386) {

@@ -27,6 +27,10 @@ Re-run with /DEBUG:GHASH
 RUN: lld-link a.obj b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib -summary -verbose
 RUN: llvm-pdbutil dump -symbols -types -ids -globals %t/t.pdb | FileCheck %s
 
+Re-run with pdb from outputpath
+RUN: mkdir -p libs
+RUN: cp a.obj libs/a.obj && cp b.obj libs/b.obj
+RUN: lld-link libs/a.obj libs/b.obj -entry:main -debug:ghash -out:t.exe -pdb:t.pdb -nodefaultlib -summary 2>&1 | FileCheck %s -check-prefix FAILURE-MISSING-PDBFILE
 
 CHECK-LABEL: Types (TPI Stream)
 CHECK: ============================================================
@@ -125,3 +129,6 @@ SUMMARY-NEXT:        index     total bytes   count     size
 SUMMARY-NEXT:       0x1006:            256 =     1 *    256
 SUMMARY: Run llvm-pdbutil to print details about a particular record:
 SUMMARY-NEXT: llvm-pdbutil dump -ids -id-index 0x1006 t.pdb
+
+FAILURE-MISSING-PDBFILE-NOT: Cannot use debug info for '{{.*}}.obj'
+FAILURE-MISSING-PDBFILE-NOT: failed to load reference '{{.*}}.pdb': no such file or directory

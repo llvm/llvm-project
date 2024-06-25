@@ -29,7 +29,7 @@ void test(Error *x) {
 // RUN:   -x objective-c -emit-module %S/Inputs/error/module.modulemap
 
 // Prebuilt modules
-// RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
+// RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fprebuilt-module-path=%t/prebuilt -fmodules-cache-path=%t \
 // RUN:   -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fsyntax-only -fmodules \
@@ -37,7 +37,7 @@ void test(Error *x) {
 // RUN:   -verify=pcherror %s
 
 // Explicit prebuilt modules (loaded when needed)
-// RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
+// RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fmodule-file=error=%t/prebuilt/error.pcm \
 // RUN:   -fmodule-file=use_error_a=%t/prebuilt/use_error_a.pcm \
 // RUN:   -fmodule-file=use_error_b=%t/prebuilt/use_error_b.pcm \
@@ -49,7 +49,7 @@ void test(Error *x) {
 // RUN:   -fmodules-cache-path=%t -verify=pcherror %s
 
 // Explicit prebuilt modules without name (always loaded)
-// RUN: %clang_cc1 -fsyntax-only -fmodules -fallow-pcm-with-compiler-errors \
+// RUN: %clang_cc1 -fmodules -fallow-pcm-with-compiler-errors \
 // RUN:   -fmodule-file=%t/prebuilt/error.pcm \
 // RUN:   -fmodule-file=%t/prebuilt/use_error_a.pcm \
 // RUN:   -fmodule-file=%t/prebuilt/use_error_b.pcm \
@@ -87,7 +87,7 @@ void test(Error *x) {
 // the verify would fail as it would be the PCH error instead)
 // RUN: %clang_cc1 -fsyntax-only -fmodules \
 // RUN:   -fmodules-cache-path=%t -fimplicit-module-maps -I %S/Inputs/error \
-// RUN:   -x objective-c  %s -verify=notallowerror
+// RUN:   -x objective-c %s -verify=notallowerror
 
 // allow-pcm-with-compiler-errors should also allow errors in PCH
 // RUN: %clang_cc1 -fallow-pcm-with-compiler-errors -x objective-c \

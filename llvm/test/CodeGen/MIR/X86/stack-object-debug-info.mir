@@ -8,20 +8,20 @@
   entry:
     %x.i = alloca i8, align 1
     %y.i = alloca [256 x i8], align 16
-    %0 = bitcast [256 x i8]* %y.i to i8*
+    %0 = bitcast ptr %y.i to ptr
     br label %for.body
 
   for.body:
-    %1 = bitcast [256 x i8]* %y.i to i8*
-    call void @llvm.lifetime.end(i64 -1, i8* %1) #3
-    call void @llvm.lifetime.start(i64 -1, i8* %0) #3
-    call void @llvm.dbg.declare(metadata i8* %0, metadata !4, metadata !DIExpression()) #3, !dbg !7
+    %1 = bitcast ptr %y.i to ptr
+    call void @llvm.lifetime.end(i64 -1, ptr %1) #3
+    call void @llvm.lifetime.start(i64 -1, ptr %0) #3
+    call void @llvm.dbg.declare(metadata ptr %0, metadata !4, metadata !DIExpression()) #3, !dbg !7
     br label %for.body
   }
 
-  declare void @llvm.lifetime.start(i64, i8* nocapture) #2
+  declare void @llvm.lifetime.start(i64, ptr nocapture) #2
 
-  declare void @llvm.lifetime.end(i64, i8* nocapture) #2
+  declare void @llvm.lifetime.end(i64, ptr nocapture) #2
 
   attributes #0 = { nounwind readnone }
   attributes #1 = { nounwind ssp uwtable }

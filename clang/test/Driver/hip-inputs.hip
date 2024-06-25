@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -ccc-print-phases --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 -c \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \

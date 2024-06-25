@@ -1,4 +1,5 @@
 # RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+# RUN: dsymutil -q -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s --check-prefix QUIET
 
 # RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
 
@@ -7,3 +8,4 @@ triple:          'thumbv7-apple-darwin'
 ...
 
 # CHECK: warning: no debug symbols in executable (-arch armv7)
+# QUIET-NOT: no debug symbols in executable

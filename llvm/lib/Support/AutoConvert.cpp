@@ -14,6 +14,7 @@
 #ifdef __MVS__
 
 #include "llvm/Support/AutoConvert.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -82,21 +83,21 @@ int enableAutoConversion(int FD) {
 
 std::error_code llvm::disableAutoConversion(int FD) {
   if (::disableAutoConversion(FD) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
 
 std::error_code llvm::enableAutoConversion(int FD) {
   if (::enableAutoConversion(FD) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
 
 std::error_code llvm::restoreStdHandleAutoConversion(int FD) {
   if (::restoreStdHandleAutoConversion(FD) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
   return std::error_code();
 }
@@ -111,7 +112,7 @@ std::error_code llvm::setFileTag(int FD, int CCSID, bool Text) {
   Tag.ft_rsvflags = 0;
 
   if (fcntl(FD, F_SETTAG, &Tag) == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 

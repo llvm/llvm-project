@@ -87,13 +87,26 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - Fixup + Addend : int64
+  ///   Fixup <- Target - Fixup + Addend : int32
   ///
   /// Errors:
   ///   - The result of the fixup expression must fit into an int32, otherwise
   ///     an out-of-range error will be returned.
   ///
   Delta32,
+
+  /// An 8-bit delta.
+  ///
+  /// Delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend : int8
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int8, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  Delta8,
 
   /// A 64-bit negative delta.
   ///
@@ -468,6 +481,15 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     if (LLVM_LIKELY(isInt<32>(Value)))
       *(little32_t *)FixupPtr = Value;
+    else
+      return makeTargetOutOfRangeError(G, B, E);
+    break;
+  }
+
+  case Delta8: {
+    int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
+    if (LLVM_LIKELY(isInt<8>(Value)))
+      *FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
     break;

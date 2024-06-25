@@ -56,15 +56,15 @@
 ; IR_AB-DAG: gv: (name: "__profc_foo", {{.*}} guid = [[PROFC:[0-9]+]]
 
 ;; Check extra attributes. b.bc:__profc_foo is prevailing, so it can be internalized.
-; IR_AB-DAG: gv: (guid: [[PROFD]], summaries: (variable: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0, constant: 0),
-; IR_AB-DAG: gv: (guid: [[PROFC]], summaries: (variable: (module: ^0, flags: (linkage: internal, visibility: hidden, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0, constant: 0))))
+; IR_AB-DAG: gv: (guid: [[PROFD]], summaries: (variable: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), varFlags: (readonly: 0, writeonly: 0, constant: 0),
+; IR_AB-DAG: gv: (guid: [[PROFC]], summaries: (variable: (module: ^0, flags: (linkage: internal, visibility: hidden, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0, importType: definition), varFlags: (readonly: 0, writeonly: 0, constant: 0))))
 
 ; IR_ABC-DAG: gv: (name: "__profd_foo", {{.*}} guid = [[PROFD:[0-9]+]]
 ; IR_ABC-DAG: gv: (name: "__profc_foo", {{.*}} guid = [[PROFC:[0-9]+]]
 
 ;; b.bc:__profc_foo prevails c.bc:__profc_foo, so it is exported and therefore not internalized.
-; IR_ABC-DAG: gv: (guid: [[PROFD]], summaries: (variable: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0, constant: 0),
-; IR_ABC-DAG: gv: (guid: [[PROFC]], summaries: (variable: (module: ^0, flags: (linkage: weak, visibility: hidden, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0, constant: 0))))
+; IR_ABC-DAG: gv: (guid: [[PROFD]], summaries: (variable: (module: ^0, flags: (linkage: private, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0, importType: definition), varFlags: (readonly: 0, writeonly: 0, constant: 0),
+; IR_ABC-DAG: gv: (guid: [[PROFC]], summaries: (variable: (module: ^0, flags: (linkage: weak, visibility: hidden, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0, importType: definition), varFlags: (readonly: 0, writeonly: 0, constant: 0))))
 
 ;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

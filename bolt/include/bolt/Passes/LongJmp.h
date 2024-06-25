@@ -131,14 +131,14 @@ class LongJmpPass : public BinaryFunctionPass {
                  uint64_t DotAddress) const;
 
   /// Expand the range of the stub in StubBB if necessary
-  bool relaxStub(BinaryBasicBlock &StubBB);
+  Error relaxStub(BinaryBasicBlock &StubBB, bool &Modified);
 
   /// Helper to resolve a symbol address according to our tentative layout
   uint64_t getSymbolAddress(const BinaryContext &BC, const MCSymbol *Target,
                             const BinaryBasicBlock *TgtBB) const;
 
   /// Relax function by adding necessary stubs or relaxing existing stubs
-  bool relax(BinaryFunction &BF);
+  Error relax(BinaryFunction &BF, bool &Modified);
 
 public:
   /// BinaryPass public interface
@@ -148,7 +148,7 @@ public:
 
   const char *getName() const override { return "long-jmp"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 } // namespace bolt
 } // namespace llvm

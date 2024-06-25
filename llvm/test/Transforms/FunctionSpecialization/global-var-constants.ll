@@ -49,10 +49,10 @@ entry:
 ; Check if specialisation on the address of a non-const global variable
 ; is not allowed, then it is not performed.
 
-; NO-GLOBALS-LABEL: define internal i32 @g()
+; NO-GLOBALS-LABEL: define internal range(i32 -2147483646, -2147483648) i32 @g()
 ; NO-GLOBALS: call i32 @f(ptr @G)
 
-; NO-GLOBALS-LABEL: define i32 @h0(ptr %p)
+; NO-GLOBALS-LABEL: define range(i32 -2147483646, -2147483648) i32 @h0(ptr %p)
 ; NO-GLOBALS:call i32 @g()
 
 ; NO-GLOBALS-LABEL: define i32 @h1()
@@ -64,10 +64,10 @@ entry:
 ; Check if specialisation on the address of a non-const global variable
 ; is allowed, then it is performed where possible.
 
-; GLOBALS-LABEL: define internal i32 @g()
+; GLOBALS-LABEL: define internal range(i32 -2147483646, -2147483648) i32 @g()
 ; GLOBALS: call i32 @f.specialized.2()
 
-; GLOBALS-LABEL: define i32 @h0(ptr %p)
+; GLOBALS-LABEL: define range(i32 -2147483646, -2147483648) i32 @h0(ptr %p)
 ; GLOBALS: call i32 @g()
 
 ; GLOBALS-LABEL: define i32 @h1()

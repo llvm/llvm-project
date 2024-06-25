@@ -14,7 +14,7 @@ float f0, f1, f2;
     ~aaaa();
     void b();
   };
-  
+
   template <class c>
   aaaa<c>::~aaaa() { try {
     b();
@@ -34,13 +34,13 @@ float f0, f1, f2;
     // CHECK: ret void
   }
   }
-  
+
   class d {
    public:
     d(const char *, int);
     aaaa<int> e;
   };
-  
+
 float foo() {
   d x("", 1);
   aaaa<int> a;

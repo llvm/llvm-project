@@ -13,9 +13,7 @@
 #   ninja
 #
 
-# Disable TERMINFO, ZLIB, and ZSTD for VE since there is no pre-compiled
-# libraries.
-set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
+# Disable ZLIB, and ZSTD for VE since there is no pre-compiled libraries.
 set(LLVM_ENABLE_ZLIB OFF CACHE BOOL "")
 set(LLVM_ENABLE_ZSTD OFF CACHE BOOL "")
 
@@ -40,6 +38,7 @@ set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_CRT OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_SANITIZERS OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
+set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_CTX_PROFILE OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_PROFILE OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_MEMPROF OFF CACHE BOOL "")
 set(RUNTIMES_x86_64-unknown-linux-gnu_COMPILER_RT_BUILD_ORC OFF CACHE BOOL "")
@@ -52,6 +51,7 @@ set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_SANITIZERS OFF CACHE BOOL ""
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_PROFILE ON CACHE BOOL "")
+set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_CTX_PROFILE OFF CACHE BOOL "")
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_MEMPROF OFF CACHE BOOL "")
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_ORC OFF CACHE BOOL "")
 set(RUNTIMES_ve-unknown-linux-gnu_COMPILER_RT_BUILD_GWP_ASAN OFF CACHE BOOL "")

@@ -3,7 +3,7 @@
 ; RUN: verify-uselistorder %s
 ;
 ; CHECK: top:
-; CHECK: call void @llvm.dbg.label(metadata [[LABEL_METADATA:![0-9]+]])
+; CHECK: #dbg_label([[LABEL_METADATA:![0-9]+]], 
 ; CHECK: distinct !DISubprogram(name: "foo", {{.*}}, retainedNodes: [[ELEMENTS:![0-9]+]])
 ; CHECK: [[ELEMENTS]] = !{[[LABEL_METADATA]]}
 ; CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 4)

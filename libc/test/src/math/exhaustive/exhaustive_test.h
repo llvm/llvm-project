@@ -35,15 +35,15 @@
 //   LlvmLibcUnaryOpExhaustiveMathTest<FloatType, Op, Func>.
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> using UnaryOp = T(T);
+template <typename OutType, typename InType = OutType>
+using UnaryOp = OutType(InType);
 
-template <typename T, mpfr::Operation Op, UnaryOp<T> Func>
+template <typename OutType, typename InType, mpfr::Operation Op,
+          UnaryOp<OutType, InType> Func>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
-  using FloatType = T;
+  using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
-
-  static constexpr UnaryOp<FloatType> *FUNC = Func;
 
   // Check in a range, return the number of failures.
   uint64_t check(StorageType start, StorageType stop,
@@ -57,11 +57,11 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       FPBits xbits(bits);
       FloatType x = xbits.get_val();
       bool correct =
-          TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, FUNC(x), 0.5, rounding);
+          TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, Func(x), 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
       // if (!correct) {
-      //   TEST_MPFR_MATCH(Op::Operation, x, Op::func(x), 0.5, rounding);
+      //   EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
       // }
     } while (bits++ < stop);
     return failed;
@@ -169,4 +169,9 @@ struct LlvmLibcExhaustiveMathTest
 
 template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func>
 using LlvmLibcUnaryOpExhaustiveMathTest =
-    LlvmLibcExhaustiveMathTest<UnaryOpChecker<FloatType, Op, Func>>;
+    LlvmLibcExhaustiveMathTest<UnaryOpChecker<FloatType, FloatType, Op, Func>>;
+
+template <typename OutType, typename InType, mpfr::Operation Op,
+          UnaryOp<OutType, InType> Func>
+using LlvmLibcUnaryNarrowingOpExhaustiveMathTest =
+    LlvmLibcExhaustiveMathTest<UnaryOpChecker<OutType, InType, Op, Func>>;

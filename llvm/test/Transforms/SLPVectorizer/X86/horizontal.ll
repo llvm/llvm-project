@@ -1135,7 +1135,7 @@ define float @fadd_v4f32_fmf(ptr %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
   %p2 = getelementptr inbounds float, ptr %p, i64 2
   %p3 = getelementptr inbounds float, ptr %p, i64 3
   %t0 = load float, ptr %p, align 4
@@ -1158,7 +1158,7 @@ define float @fadd_v4f32_fmf_intersect(ptr %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
-  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p1 = getelementptr inbounds float, ptr %p, i64 1
   %p2 = getelementptr inbounds float, ptr %p, i64 2
   %p3 = getelementptr inbounds float, ptr %p, i64 3
   %t0 = load float, ptr %p, align 4

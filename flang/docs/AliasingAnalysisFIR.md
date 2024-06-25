@@ -74,12 +74,12 @@ Because of block arguments, a memory reference may have multiple sources. If a b
 ### Pointer type
 A type `fir.box<fir.ptr<T>>` or `fir.ptr<T>`
 
-# Aliasing rules
+## Aliasing rules
 The goal is to match [Fortran’s rule for aliasing](Aliasing.md). However FIR is all we have at this stage so the hope is that we can define an algorithm using the information from FIR to properly model Fortran’s aliasing rules. Wherever there is a gap, we may have to refine the algorithm, add information in FIR or both. Though, with the introduction of the fir.declare operation, most of the source level information relevant to aliasing will be populated in FIR.
 
 The first attempt to determine aliasing will be at the coarsest level: the source level. The answer to the query will be ‘yes’, ‘no’, ‘maybe’. If the answer is ‘yes’ or ‘no’, the query is complete. If the answer is ‘maybe’ then further analysis is required until a definite answer is reached. If no finer analysis is available then 'maybe' is returned.
 
-## Coarse rules
+### Coarse rules
 Distinct sources are assumed to not alias except in the following cases:
 1. A pointer type source may alias with any other pointer type source.
 1. A source with the fir.target attribute may alias with any other pointer type source.

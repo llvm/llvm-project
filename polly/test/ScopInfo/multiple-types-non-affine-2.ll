@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-allow-differing-element-types -polly-print-scops -polly-allow-nonaffine -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-allow-differing-element-types -polly-codegen -polly-allow-nonaffine -disable-output
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-allow-differing-element-types '-passes=print<polly-function-scops>' -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-allow-differing-element-types -passes=polly-codegen -polly-allow-nonaffine -disable-output
 ;
 ;    // Check that accessing one array with different types works,
 ;    // even though some accesses are non-affine.

@@ -1,11 +1,11 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches \
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches \
 ; RUN:     -polly-invariant-load-hoisting=true \
 ; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -polly-allow-nonaffine \
+; RUN:     '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine \
 ; RUN:     -polly-invariant-load-hoisting=true \
 ; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     -polly-print-scops -disable-output < %s | FileCheck %s \
+; RUN:     '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s \
 ; RUN:     --check-prefix=ALL
 ;
 ; Negative test for INNERMOST.

@@ -269,4 +269,4 @@ attributes #0 = { "frame-pointer"="none" noinline }
 attributes #1 = { "frame-pointer"="all" noinline }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

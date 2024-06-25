@@ -120,7 +120,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallInst *KernArgSegment =
       Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
                               nullptr, F.getName() + ".kernarg.segment");
-
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
@@ -145,7 +144,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
         !Arg.getType()->isAggregateType())
       if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
                                            LastExplicitArgOffset))

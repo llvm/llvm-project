@@ -1,0 +1,28 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+[
+    cc_test(
+        name = "{}".format(file.split(".")[0]),
+        srcs = [file] + glob(["*.h"]),
+        deps = [
+            "//compiler-rt:orc_rt",
+            "//compiler-rt:orc_rt_common_headers",
+            "//third-party/unittest:gtest",
+            "//third-party/unittest:gtest_main",
+        ],
+    )
+    for file in glob(
+        ["*.cpp"],
+        # TODO: Broken with older libc++ versions, currently unused anyways
+        exclude = ["interval_set_test.cpp"],
+    )
+]

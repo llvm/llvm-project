@@ -39,6 +39,11 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         process.Kill()
         lldbutil.run_to_breakpoint_do_run(self, target, main_bkpt)
 
+        # The test fails during tear down because the module isn't cleared.
+        # Even though this test case is marked as xfail, a failure during
+        # tear down still counts as an error.
+        main_module.Clear()
+
         self.expect(
             "expr tl_local_int",
             error=True,

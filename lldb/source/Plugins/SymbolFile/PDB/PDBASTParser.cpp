@@ -1139,7 +1139,7 @@ PDBASTParser::FindNamespaceDecl(const clang::DeclContext *parent,
   assert(set);
 
   for (clang::NamespaceDecl *namespace_decl : *set)
-    if (namespace_decl->getName().equals(name))
+    if (namespace_decl->getName() == name)
       return namespace_decl;
 
   for (clang::NamespaceDecl *namespace_decl : *set)

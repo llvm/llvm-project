@@ -40,8 +40,8 @@ define float @sqrt_ieee_ninf(float %f) #0 {
   ; CHECK-NEXT:   [[VPBROADCASTDrm:%[0-9]+]]:vr128 = VPBROADCASTDrm $rip, 1, $noreg, %const.2, $noreg :: (load (s32) from constant-pool)
   ; CHECK-NEXT:   [[VPANDrr:%[0-9]+]]:vr128 = VPANDrr killed [[COPY2]], killed [[VPBROADCASTDrm]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fr32 = COPY [[VPANDrr]]
-  ; CHECK-NEXT:   [[VCMPSSrm:%[0-9]+]]:fr32 = nofpexcept VCMPSSrm killed [[COPY3]], $rip, 1, $noreg, %const.3, $noreg, 1, implicit $mxcsr :: (load (s32) from constant-pool)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vr128 = COPY [[VCMPSSrm]]
+  ; CHECK-NEXT:   [[VCMPSSrmi:%[0-9]+]]:fr32 = nofpexcept VCMPSSrmi killed [[COPY3]], $rip, 1, $noreg, %const.3, $noreg, 1, implicit $mxcsr :: (load (s32) from constant-pool)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vr128 = COPY [[VCMPSSrmi]]
   ; CHECK-NEXT:   [[VPANDNrr:%[0-9]+]]:vr128 = VPANDNrr killed [[COPY4]], killed [[COPY1]]
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:fr32 = COPY [[VPANDNrr]]
   ; CHECK-NEXT:   $xmm0 = COPY [[COPY5]]
@@ -84,8 +84,8 @@ define float @sqrt_daz_ninf(float %f) #1 {
   ; CHECK-NEXT:   [[VMULSSrr5:%[0-9]+]]:fr32 = ninf afn nofpexcept VMULSSrr killed [[VMULSSrr4]], killed [[VFMADD213SSr1]], implicit $mxcsr
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr128 = COPY [[VMULSSrr5]]
   ; CHECK-NEXT:   [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
-  ; CHECK-NEXT:   [[VCMPSSrr:%[0-9]+]]:fr32 = nofpexcept VCMPSSrr [[COPY]], killed [[FsFLD0SS]], 0, implicit $mxcsr
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vr128 = COPY [[VCMPSSrr]]
+  ; CHECK-NEXT:   [[VCMPSSrri:%[0-9]+]]:fr32 = nofpexcept VCMPSSrri [[COPY]], killed [[FsFLD0SS]], 0, implicit $mxcsr
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vr128 = COPY [[VCMPSSrri]]
   ; CHECK-NEXT:   [[VPANDNrr:%[0-9]+]]:vr128 = VPANDNrr killed [[COPY2]], killed [[COPY1]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fr32 = COPY [[VPANDNrr]]
   ; CHECK-NEXT:   $xmm0 = COPY [[COPY3]]

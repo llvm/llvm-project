@@ -5,7 +5,7 @@
 
 
 --- |
-  define i32 @fun(i32 %arg, i32 %arg1, i32 %arg2, i32* %arg3) { ret i32 0 }
+  define i32 @fun(i32 %arg, i32 %arg1, i32 %arg2, ptr %arg3) { ret i32 0 }
   declare void @foo(i32)
 ...
 # CHECK-LABEL: fun
@@ -30,6 +30,7 @@ registers:
   - { id: 11, class: gr32bit }
 frameInfo:
   maxAlignment:    1
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo: {}
 body:             |
@@ -39,16 +40,14 @@ body:             |
     %9:grx32bit = LHIMux 66
   
   bb.1:
-    %6:grx32bit = LLCMux undef %7:addr64bit, 0, $noreg :: (load (s8) from `i8* undef`)
+    %6:grx32bit = LLCMux undef %7:addr64bit, 0, $noreg :: (load (s8) from `ptr undef`)
     CHIMux %6, 1, implicit-def $cc
     %11:gr32bit = SELRMux %8, %9:grx32bit, 14, 6, implicit killed $cc
     CHIMux %6, 2, implicit-def $cc
     %0:gr32bit = SELRMux %11, %5, 14, 8, implicit killed $cc
-    ADJCALLSTACKDOWN 0, 0
     %10:gr64bit = LGFR %0
     $r2d = COPY %10
     CallBRASL @foo, killed $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
-    ADJCALLSTACKUP 0, 0
     J %bb.1
 
 ...

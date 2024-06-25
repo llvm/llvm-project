@@ -1,8 +1,6 @@
 ; RUN: opt -passes='devirt<0>(inline)' < %s -S | FileCheck %s
 
-; CHECK-NOT: internal
 ; CHECK: define void @e()
-; CHECK-NOT: internal
 
 define void @e() {
 entry:

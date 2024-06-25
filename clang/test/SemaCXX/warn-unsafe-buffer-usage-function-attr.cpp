@@ -85,3 +85,41 @@ void testInheritance() {
     BC->func();  // expected-warning{{function introduces unsafe buffer manipulation}}
     BC->func1();
 }
+
+class UnsafeMembers {
+public:
+    UnsafeMembers() {}
+
+    [[clang::unsafe_buffer_usage]]
+    UnsafeMembers(int) {}
+
+    [[clang::unsafe_buffer_usage]]
+    explicit operator int() { return 0; }
+
+    [[clang::unsafe_buffer_usage]]
+    void Method() {}
+
+    [[clang::unsafe_buffer_usage]]
+    void operator()() {}
+
+    [[clang::unsafe_buffer_usage]]
+    int operator+(UnsafeMembers) { return 0; }
+};
+
+template <class... Vs>
+int testFoldExpression(Vs&&... v) {
+    return (... + v);  // expected-warning{{function introduces unsafe buffer manipulation}}
+}
+
+// https://github.com/llvm/llvm-project/issues/80482
+void testClassMembers() {
+    UnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    (void)static_cast<int>(UnsafeMembers());  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    UnsafeMembers().Method();  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    UnsafeMembers()();  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    testFoldExpression(UnsafeMembers(), UnsafeMembers());
+}

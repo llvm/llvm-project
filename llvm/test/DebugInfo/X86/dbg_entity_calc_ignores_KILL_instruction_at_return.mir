@@ -8,10 +8,10 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-scei-ps4"
   
-  define hidden i32 @main(i32 %arg, i8** nocapture readnone %argv) local_unnamed_addr !dbg !8 {
+  define hidden i32 @main(i32 %arg, ptr nocapture readnone %argv) local_unnamed_addr !dbg !8 {
   entry:
     call void @llvm.dbg.value(metadata i32 %arg, metadata !19, metadata !DIExpression()), !dbg !22
-    call void @llvm.dbg.value(metadata i8** %argv, metadata !20, metadata !DIExpression()), !dbg !22
+    call void @llvm.dbg.value(metadata ptr %argv, metadata !20, metadata !DIExpression()), !dbg !22
     %add = shl nsw i32 %arg, 1, !dbg !23
     call void @llvm.dbg.value(metadata i32 %add, metadata !21, metadata !DIExpression()), !dbg !22
     ret i32 %add, !dbg !24

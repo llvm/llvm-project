@@ -226,8 +226,10 @@ protected:
   static ParseResult genericParseProperties(OpAsmParser &parser,
                                             Attribute &result);
 
-  /// Print the properties as a Attribute.
-  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties);
+  /// Print the properties as a Attribute with names not included within
+  /// 'elidedProps'
+  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties,
+                                     ArrayRef<StringRef> elidedProps = {});
 
   /// Print an operation name, eliding the dialect prefix if necessary.
   static void printOpName(Operation *op, OpAsmPrinter &p,
@@ -1729,8 +1731,7 @@ public:
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
     std::optional<RegisteredOperationName> info =
-        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
-                                        &context);
+        RegisteredOperationName::lookup(TypeID::get<ConcreteType>(), &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1806,10 +1807,13 @@ private:
   template <typename T>
   using detect_has_print = llvm::is_detected<has_print, T>;
 
-  /// Trait to check if printProperties(OpAsmPrinter, T) exist
+  /// Trait to check if printProperties(OpAsmPrinter, T, ArrayRef<StringRef>)
+  /// exist
   template <typename T, typename... Args>
-  using has_print_properties = decltype(printProperties(
-      std::declval<OpAsmPrinter &>(), std::declval<T>()));
+  using has_print_properties =
+      decltype(printProperties(std::declval<OpAsmPrinter &>(),
+                               std::declval<T>(),
+                               std::declval<ArrayRef<StringRef>>()));
   template <typename T>
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
@@ -1966,7 +1970,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorage()
+                ->getPropertiesStorageUnsafe()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -1975,20 +1979,24 @@ public:
   static void populateDefaultProperties(OperationName opName,
                                         InferredProperties<T> &properties) {}
 
-  /// Print the operation properties. Unless overridden, this method will try to
-  /// dispatch to a `printProperties` free-function if it exists, and otherwise
-  /// by converting the properties to an Attribute.
+  /// Print the operation properties with names not included within
+  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
+  /// `printProperties` free-function if it exists, and otherwise by converting
+  /// the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
-                              const T &properties) {
+                              const T &properties,
+                              ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
-      return printProperties(p, properties);
-    genericPrintProperties(p,
-                           ConcreteType::getPropertiesAsAttr(ctx, properties));
+      return printProperties(p, properties, elidedProps);
+    genericPrintProperties(
+        p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
-  /// Parser the properties. Unless overridden, this method will print by
-  /// converting the properties to an Attribute.
+  /// Parses 'prop-dict' for the operation. Unless overridden, the method will
+  /// parse the properties using the generic property dictionary using the
+  /// '<{ ... }>' syntax. The resulting properties are stored within the
+  /// property structure of 'result', accessible via 'getOrAddProperties'.
   template <typename T = ConcreteType>
   static ParseResult parseProperties(OpAsmParser &parser,
                                      OperationState &result) {
@@ -1996,7 +2004,31 @@ public:
       return parseProperties(
           parser, result.getOrAddProperties<InferredProperties<T>>());
     }
-    return genericParseProperties(parser, result.propertiesAttr);
+
+    Attribute propertyDictionary;
+    if (genericParseProperties(parser, propertyDictionary))
+      return failure();
+
+    // The generated 'setPropertiesFromParsedAttr', like
+    // 'setPropertiesFromAttr', expects a 'DictionaryAttr' that is not null.
+    // Use an empty dictionary in the case that the whole dictionary is
+    // optional.
+    if (!propertyDictionary)
+      propertyDictionary = DictionaryAttr::get(result.getContext());
+
+    auto emitError = [&]() {
+      return mlir::emitError(result.location, "invalid properties ")
+             << propertyDictionary << " for op " << result.name.getStringRef()
+             << ": ";
+    };
+
+    // Copy the data from the dictionary attribute into the property struct of
+    // the operation. This method is generated by ODS by default if there are
+    // any occurrences of 'prop-dict' in the assembly format and should set
+    // any properties that aren't parsed elsewhere.
+    return ConcreteOpType::setPropertiesFromParsedAttr(
+        result.getOrAddProperties<InferredProperties<T>>(), propertyDictionary,
+        emitError);
   }
 
 private:

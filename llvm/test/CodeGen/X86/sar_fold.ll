@@ -44,3 +44,44 @@ define i32 @shl24sar25(i32 %a) #0 {
   %2 = ashr exact i32 %1, 25
   ret i32 %2
 }
+
+define void @shl144sar48(ptr %p) #0 {
+; CHECK-LABEL: shl144sar48:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movswl (%eax), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    sarl $31, %edx
+; CHECK-NEXT:    shldl $2, %ecx, %edx
+; CHECK-NEXT:    shll $2, %ecx
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl %edx, 16(%eax)
+; CHECK-NEXT:    movl $0, 8(%eax)
+; CHECK-NEXT:    movl $0, 4(%eax)
+; CHECK-NEXT:    movl $0, (%eax)
+; CHECK-NEXT:    retl
+  %a = load i160, ptr %p
+  %1 = shl i160 %a, 144
+  %2 = ashr exact i160 %1, 46
+  store i160 %2, ptr %p
+  ret void
+}
+
+define void @shl144sar2(ptr %p) #0 {
+; CHECK-LABEL: shl144sar2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movswl (%eax), %ecx
+; CHECK-NEXT:    shll $14, %ecx
+; CHECK-NEXT:    movl %ecx, 16(%eax)
+; CHECK-NEXT:    movl $0, 8(%eax)
+; CHECK-NEXT:    movl $0, 12(%eax)
+; CHECK-NEXT:    movl $0, 4(%eax)
+; CHECK-NEXT:    movl $0, (%eax)
+; CHECK-NEXT:    retl
+  %a = load i160, ptr %p
+  %1 = shl i160 %a, 144
+  %2 = ashr exact i160 %1, 2
+  store i160 %2, ptr %p
+  ret void
+}

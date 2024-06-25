@@ -20,6 +20,7 @@ enum class DWARFLog : Log::MaskType {
   DebugMap = Log::ChannelFlag<2>,
   Lookups = Log::ChannelFlag<3>,
   TypeCompletion = Log::ChannelFlag<4>,
+  SplitDwarf = Log::ChannelFlag<5>,
   LLVM_MARK_AS_BITMASK_ENUM(TypeCompletion)
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();

@@ -26,7 +26,7 @@ body:             |
     ; CHECK-LABEL: name: foo
     ; CHECK: BRK 1
     ; CHECK: RET_ReallyLR
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
     RET_ReallyLR
 
 ...

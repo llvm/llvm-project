@@ -23,4 +23,4 @@ entry:
 }
 
 attributes #0 = { alwaysinline nounwind uwtable }
-; CHECK2: ^2 = gv: (guid: {{.*}}, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 1, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0))))
+; CHECK2: ^2 = gv: (guid: {{.*}}, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 1, canAutoHide: 0, importType: definition), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 1, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0, mustBeUnreachable: 0))))

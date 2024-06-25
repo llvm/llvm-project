@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 }
 
 define ptr @f() {
-  ret ptr getelementptr ({ [2 x ptr], [1 x ptr] }, ptr @global, i32 0, inrange i32 0, i32 0)
+  ret ptr getelementptr inrange(0, 16) ({ [2 x ptr], [1 x ptr] }, ptr @global, i32 0, i32 0, i32 0)
 }
 
 define ptr @g() {

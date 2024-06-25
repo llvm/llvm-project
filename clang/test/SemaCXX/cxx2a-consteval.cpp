@@ -54,7 +54,7 @@ struct C {
 
 struct D {
   C c;
-  consteval D() = default; // expected-error {{cannot be consteval}}
+  consteval D() = default; // expected-error {{cannot be marked consteval}}
   consteval ~D() = default; // expected-error {{destructor cannot be declared consteval}}
 };
 
@@ -258,6 +258,26 @@ auto l1 = [](int i) constexpr { // expected-error{{cannot take address of immedi
 
 int(*test)(int)  = l1;
 
+}
+
+namespace consteval_lambda_in_template {
+struct S {
+    int *value;
+    constexpr S(int v) : value(new int {v}) {}
+    constexpr ~S() { delete value; }
+};
+consteval S fn() { return S(5); }
+
+template <typename T>
+void fn2() {
+    (void)[]() consteval -> int {
+      return *(fn().value);  // OK, immediate context
+    };
+}
+
+void caller() {
+    fn2<int>();
+}
 }
 
 namespace std {
@@ -1048,6 +1068,14 @@ void test() {
   constexpr int (*f2)(void) = lstatic; // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
                                        // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
+  int (*f3)(void) = []() consteval { return 3; };  // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
+                                                   // expected-note {{declared here}}
+}
+
+consteval void consteval_test() {
+  constexpr auto l1 = []() consteval { return 3; };
+
+  int (*f1)(void) = l1;  // ok
 }
 }
 
@@ -1078,11 +1106,11 @@ int bad = 10; // expected-note 6{{declared here}}
 tester glob1(make_name("glob1"));
 tester glob2(make_name("glob2"));
 constexpr tester cglob(make_name("cglob"));
-tester paddedglob(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+tester paddedglob(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                         // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 
 constexpr tester glob3 = { make_name("glob3") };
-constexpr tester glob4 = { make_name(pad(bad)) }; // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+constexpr tester glob4 = { make_name(pad(bad)) }; // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                   // expected-error {{constexpr variable 'glob4' must be initialized by a constant expression}} \
                                                   // expected-note 2{{read of non-const variable 'bad' is not allowed in a constant expression}}
 
@@ -1094,12 +1122,12 @@ auto V1 = make_name(pad(bad)); // expected-error {{call to consteval function 'G
 void foo() {
   static tester loc1(make_name("loc1"));
   static constexpr tester loc2(make_name("loc2"));
-  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                 // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 }
 
 void bar() {
-  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                 // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 }
 }
@@ -1167,13 +1195,17 @@ namespace GH66562 {
 
 namespace ns
 {
-    consteval int foo(int x) { return 1; } // expected-note {{declared here}}
+    consteval int foo(int x) { return 1; } // expected-note {{declared here}}  \
+                                           // expected-note {{passing argument to parameter 'x' here}}
 }
 
 template <class A>
 struct T {
-    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}}
+    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}} \
+                                             // expected-error {{cannot initialize a parameter of type 'int' with an rvalue of type 'char *'}}
 };
+
+template class T<char*>; // expected-note {{in instantiation}}
 
 }
 

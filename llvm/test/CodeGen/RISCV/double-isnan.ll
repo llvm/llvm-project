@@ -17,14 +17,8 @@ define zeroext i1 @double_is_nan(double %a) nounwind {
 ;
 ; CHECKRV32ZDINX-LABEL: double_is_nan:
 ; CHECKRV32ZDINX:       # %bb.0:
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, -16
-; CHECKRV32ZDINX-NEXT:    sw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
 ; CHECKRV32ZDINX-NEXT:    feq.d a0, a0, a0
 ; CHECKRV32ZDINX-NEXT:    xori a0, a0, 1
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, 16
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: double_is_nan:
@@ -44,13 +38,7 @@ define zeroext i1 @double_not_nan(double %a) nounwind {
 ;
 ; CHECKRV32ZDINX-LABEL: double_not_nan:
 ; CHECKRV32ZDINX:       # %bb.0:
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, -16
-; CHECKRV32ZDINX-NEXT:    sw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    sw a1, 12(sp)
-; CHECKRV32ZDINX-NEXT:    lw a0, 8(sp)
-; CHECKRV32ZDINX-NEXT:    lw a1, 12(sp)
 ; CHECKRV32ZDINX-NEXT:    feq.d a0, a0, a0
-; CHECKRV32ZDINX-NEXT:    addi sp, sp, 16
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: double_not_nan:

@@ -10,4 +10,4 @@
 
 #include "src/math/frexpf.h"
 
-LIST_FREXP_TESTS(float, LIBC_NAMESPACE::frexpf)
+LIST_FREXP_TESTS(float, LIBC_NAMESPACE::frexpf);

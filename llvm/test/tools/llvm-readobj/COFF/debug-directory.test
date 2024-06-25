@@ -12,7 +12,7 @@ CHECK:     AddressOfRawData: 0x5B068
 CHECK:     PointerToRawData: 0x5A268
 CHECK:     PDBInfo {
 CHECK:       PDBSignature: 0x53445352
-CHECK:       PDBGUID: (96 83 40 42 81 07 9D 40 90 1B 4A 3C 0D 4F 56 32)
+CHECK:       PDBGUID: {42408396-0781-409D-901B-4A3C0D4F5632}
 CHECK:       PDBAge: 3
 CHECK:       PDBFileName: D:\src\llvm\build\has_pdb.pdb
 CHECK:     }

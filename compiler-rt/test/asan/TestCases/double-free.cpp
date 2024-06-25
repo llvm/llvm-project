@@ -19,10 +19,10 @@ int main(int argc, char **argv) {
   free(x + argc - 1);  // BOOM
   // CHECK: AddressSanitizer: attempting double-free{{.*}}in thread T0
   // CHECK: #0 0x{{.*}} in {{.*}}free
-  // CHECK: #1 0x{{.*}} in main {{.*}}double-free.cpp:[[@LINE-3]]
+  // CHECK: #{{[1-3]}} 0x{{.*}} in main {{.*}}double-free.cpp:[[@LINE-3]]
   // CHECK: freed by thread T0 here:
   // MALLOC-CTX: #0 0x{{.*}} in {{.*}}free
-  // MALLOC-CTX: #1 0x{{.*}} in main {{.*}}double-free.cpp:[[@LINE-7]]
+  // MALLOC-CTX: #{{[1-3]}} 0x{{.*}} in main {{.*}}double-free.cpp:[[@LINE-7]]
   // CHECK: allocated by thread T0 here:
   // MALLOC-CTX: double-free.cpp:[[@LINE-12]]
   // CHECK-RECOVER: AddressSanitizer: attempting double-free{{.*}}in thread T0

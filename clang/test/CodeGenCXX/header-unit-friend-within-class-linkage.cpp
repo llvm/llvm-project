@@ -4,7 +4,7 @@
 //
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -xc++-user-header -emit-header-unit %t/foo.h -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=%t/foo.pcm %t/user.cpp \
-// RUN:   -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/user.cpp
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %t/user.cpp
 
 //--- foo.h
 class foo {

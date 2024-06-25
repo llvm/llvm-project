@@ -38,6 +38,17 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                                  const SmallVectorImpl<Register> &Args,
                                  SPIRVGlobalRegistry *GR);
 
+/// Parses the provided \p ArgIdx argument base type in the \p DemangledCall
+/// skeleton. A base type is either a basic type (e.g. i32 for int), pointer
+/// element type (e.g. i8 for char*), or builtin type (TargetExtType).
+///
+/// \return LLVM Type or nullptr if unrecognized
+///
+/// \p DemangledCall is the skeleton of the lowered builtin function call.
+/// \p ArgIdx is the index of the argument to parse.
+Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
+                                       unsigned ArgIdx, LLVMContext &Ctx);
+
 /// Translates a string representing a SPIR-V or OpenCL builtin type to a
 /// TargetExtType that can be further lowered with lowerBuiltinType().
 ///
@@ -45,9 +56,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
 ///
 /// \p TypeName is the full string representation of the SPIR-V or OpenCL
 /// builtin type.
-const TargetExtType *
-parseBuiltinTypeNameToTargetExtType(std::string TypeName,
-                                    MachineIRBuilder &MIRBuilder);
+TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
+                                                   LLVMContext &Context);
 
 /// Handles the translation of the provided special opaque/builtin type \p Type
 /// to SPIR-V type. Generates the corresponding machine instructions for the

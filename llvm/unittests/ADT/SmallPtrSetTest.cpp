@@ -409,3 +409,36 @@ TEST(SmallPtrSetTest, InsertIterator) {
   for (const auto *Ptr : Buf)
     EXPECT_TRUE(Set.contains(Ptr));
 }
+
+TEST(SmallPtrSetTest, RemoveIf) {
+  SmallPtrSet<int *, 5> Set;
+  int Vals[6] = {0, 1, 2, 3, 4, 5};
+
+  // Stay in small regime.
+  Set.insert(&Vals[0]);
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[2]);
+  Set.insert(&Vals[3]);
+  Set.erase(&Vals[0]); // Leave a tombstone.
+
+  // Remove odd elements.
+  Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  // We should only have element 2 left now.
+  EXPECT_EQ(Set.size(), 1u);
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+
+  // Switch to big regime.
+  Set.insert(&Vals[0]);
+  Set.insert(&Vals[1]);
+  Set.insert(&Vals[3]);
+  Set.insert(&Vals[4]);
+  Set.insert(&Vals[5]);
+  Set.erase(&Vals[0]); // Leave a tombstone.
+
+  // Remove odd elements.
+  Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  // We should only have elements 2 and 4 left now.
+  EXPECT_EQ(Set.size(), 2u);
+  EXPECT_TRUE(Set.contains(&Vals[2]));
+  EXPECT_TRUE(Set.contains(&Vals[4]));
+}

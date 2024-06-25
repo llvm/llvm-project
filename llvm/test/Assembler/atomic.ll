@@ -72,3 +72,19 @@ define void @fp_atomics(ptr %x) {
 
   ret void
 }
+
+define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
+  ; CHECK: %atomic.fadd = atomicrmw fadd ptr %x, <2 x half> %val seq_cst
+  %atomic.fadd = atomicrmw fadd ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fsub = atomicrmw fsub ptr %x, <2 x half> %val seq_cst
+  %atomic.fsub = atomicrmw fsub ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fmax = atomicrmw fmax ptr %x, <2 x half> %val seq_cst
+  %atomic.fmax = atomicrmw fmax ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
+  %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
+
+  ret void
+}

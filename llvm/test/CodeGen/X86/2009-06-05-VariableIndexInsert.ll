@@ -9,11 +9,11 @@ define <2 x i64> @_mm_insert_epi16(<2 x i64> %a, i32 %b, i32 %imm) nounwind read
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    movzwl 8(%ebp), %eax
-; X86-NEXT:    movl 12(%ebp), %ecx
-; X86-NEXT:    andl $7, %ecx
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movzwl 8(%ebp), %ecx
+; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    movaps %xmm0, (%esp)
-; X86-NEXT:    movw %ax, (%esp,%ecx,2)
+; X86-NEXT:    movw %cx, (%esp,%eax,2)
 ; X86-NEXT:    movaps (%esp), %xmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp

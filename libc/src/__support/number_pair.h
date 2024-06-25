@@ -16,20 +16,9 @@
 namespace LIBC_NAMESPACE {
 
 template <typename T> struct NumberPair {
-  T lo;
-  T hi;
+  T lo = T(0);
+  T hi = T(0);
 };
-
-template <typename T>
-cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, NumberPair<T>>
-split(T a) {
-  constexpr size_t HALF_BIT_WIDTH = sizeof(T) * 4;
-  constexpr T LOWER_HALF_MASK = (T(1) << HALF_BIT_WIDTH) - T(1);
-  NumberPair<T> result;
-  result.lo = a & LOWER_HALF_MASK;
-  result.hi = a >> HALF_BIT_WIDTH;
-  return result;
-}
 
 } // namespace LIBC_NAMESPACE
 

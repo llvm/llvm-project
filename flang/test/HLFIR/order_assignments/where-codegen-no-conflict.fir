@@ -290,8 +290,6 @@ func.func @inside_forall(%arg0: !fir.ref<!fir.array<10x20xf32>>, %arg1: !fir.ref
 // CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_14]] {
 // CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
 // CHECK:             %[[VAL_17:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (i32) -> i64
-// CHECK:             %[[VAL_19:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_18]], %[[VAL_2]]:%[[VAL_7]]:%[[VAL_2]])  shape %[[VAL_10]] : (!fir.ref<!fir.array<10x20xf32>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<20xf32>>
 // CHECK:             fir.do_loop %[[VAL_20:.*]] = %[[VAL_17]] to %[[VAL_7]] step %[[VAL_17]] {
 // CHECK:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<20xf32>>, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<f32>
@@ -300,6 +298,8 @@ func.func @inside_forall(%arg0: !fir.ref<!fir.array<10x20xf32>>, %arg1: !fir.ref
 // CHECK:               %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.logical<4>) -> i1
 // CHECK:               fir.if %[[VAL_25]] {
 // CHECK:                 %[[VAL_26:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<20xf32>>, index) -> !fir.ref<f32>
+// CHECK:                 %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (i32) -> i64
+// CHECK:                 %[[VAL_19:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_18]], %[[VAL_2]]:%[[VAL_7]]:%[[VAL_2]])  shape %[[VAL_10]] : (!fir.ref<!fir.array<10x20xf32>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<20xf32>>
 // CHECK:                 %[[VAL_27:.*]] = hlfir.designate %[[VAL_19]] (%[[VAL_20]])  : (!fir.box<!fir.array<20xf32>>, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_27]] : !fir.ref<f32>, !fir.ref<f32>
 // CHECK:               }

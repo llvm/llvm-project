@@ -64,10 +64,7 @@ public:
 
   std::optional<uint64_t> GetByteSize() override;
 
-  size_t CalculateNumChildren(uint32_t max) override;
-
-  ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
-                                  int32_t synthetic_index) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 
@@ -94,6 +91,11 @@ protected:
 
 private:
   ValueObjectVTable(ValueObject &parent);
+
+  ValueObject *CreateChildAtIndex(size_t idx) override;
+  ValueObject *CreateSyntheticArrayMember(size_t idx) override {
+    return nullptr;
+  }
 
   // For ValueObject only
   ValueObjectVTable(const ValueObjectVTable &) = delete;

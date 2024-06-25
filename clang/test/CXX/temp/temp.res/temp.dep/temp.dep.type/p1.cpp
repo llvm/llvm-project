@@ -26,5 +26,5 @@ namespace Example2 {
     void g();
   };
   template<class T> using B = A<T>;
-  template<class T> void B<T>::g() {} // ok.
+  template<class T> void B<T>::g() {} // // expected-warning {{a declarative nested name specifier cannot name an alias template}}
 }

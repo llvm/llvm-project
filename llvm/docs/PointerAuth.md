@@ -10,9 +10,13 @@ Before the pointer is used, it needs to be authenticated, i.e., have its
 signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
+For more details, see the clang documentation page for
+[Pointer Authentication](https://clang.llvm.org/docs/PointerAuthentication.html).
+
 At the IR level, it is represented using:
 
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
+* a [signed pointer constant](#constant) (to sign globals)
 * a [call operand bundle](#operand-bundle) (to authenticate called pointers)
 
 The current implementation leverages the
@@ -221,6 +225,27 @@ The '`llvm.ptrauth.blend`' intrinsic combines a small integer discriminator
 with a pointer address discriminator, in a way that is specified by the target
 implementation.
 
+
+### Constant
+
+[Intrinsics](#intrinsics) can be used to produce signed pointers dynamically,
+in code, but not for signed pointers referenced by constants, in, e.g., global
+initializers.
+
+The latter are represented using a
+[``ptrauth`` constant](https://llvm.org/docs/LangRef.html#ptrauth-constant),
+which describes an authenticated relocation producing a signed pointer.
+
+```llvm
+ptrauth (ptr CST, i32 KEY, i64 DISC, ptr ADDRDISC)
+```
+
+is equivalent to:
+
+```llvm
+  %disc = call i64 @llvm.ptrauth.blend(i64 ptrtoint(ptr ADDRDISC to i64), i64 DISC)
+  %signedval = call i64 @llvm.ptrauth.sign(ptr CST, i32 KEY, i64 %disc)
+```
 
 ### Operand Bundle
 

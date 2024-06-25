@@ -41,6 +41,7 @@ set(UBSAN_HEADERS
 include_directories(..)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+append_list_if(MSVC /Zl UBSAN_CFLAGS)
 append_rtti_flag(OFF UBSAN_CFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CFLAGS)
 

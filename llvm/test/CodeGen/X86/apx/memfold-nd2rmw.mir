@@ -1,0 +1,225 @@
+# RUN: llc %s -o - -start-before=greedy -stop-after=virtregrewriter -mtriple x86_64 -mattr=+ndd | FileCheck %s
+#
+# This test is for stack spill folding -- the ADD32ri_ND near the end of the MIR
+# below show be morphed into an ADD32mi by the register allocator, making it
+# load-operate-store to %stack.2.
+#
+# CHECK: ADD32mi %stack.2
+--- |
+
+  define fastcc void @add32ri_nd_2_add32mi(i1 %arg, i1 %arg1, i1 %arg2, ptr %arg3, ptr %arg4, i1 %arg5, i8 %arg6) #0 {
+  bb:
+    br label %bb7
+
+  bb7:                                              ; preds = %bb21, %bb
+    br label %bb8
+
+  bb8:                                              ; preds = %bb21, %bb7
+    %lsr.iv = phi i32 [ %lsr.iv.next, %bb21 ], [ 0, %bb7 ]
+    br label %bb11
+
+  bb9:                                              ; preds = %bb14
+    %trunc = trunc i64 0 to i32
+    br label %bb10
+
+  bb10:                                             ; preds = %bb14, %bb9
+    br label %bb15
+
+  bb11:                                             ; preds = %bb13, %bb8
+    store double 0.000000e+00, ptr %arg3, align 8
+    store i8 0, ptr %arg4, align 1
+    br i1 %arg, label %bb13, label %bb12
+
+  bb12:                                             ; preds = %bb11
+    %call = tail call i32 (ptr, ptr, ...) null(ptr null, ptr null, i32 0, i32 0, i32 0, double 0.000000e+00, i32 0)
+    br label %bb13
+
+  bb13:                                             ; preds = %bb12, %bb11
+    br i1 %arg, label %bb14, label %bb11
+
+  bb14:                                             ; preds = %bb13
+    br i1 %arg1, label %bb9, label %bb10
+
+  bb15:                                             ; preds = %bb15, %bb10
+    %lsr.iv1 = phi i32 [ %lsr.iv.next2, %bb15 ], [ %lsr.iv, %bb10 ]
+    store i8 %arg6, ptr null, align 1
+    %or = or i32 %lsr.iv1, 1
+    %lsr.iv.next2 = add i32 %lsr.iv1, 1
+    br i1 %arg5, label %bb21, label %bb15
+
+  bb21:                                             ; preds = %bb15
+    %lsr.iv.next = add i32 %lsr.iv, 8
+    br i1 %arg2, label %bb8, label %bb7
+  }
+
+  attributes #0 = { "target-features"="+ndd" }
+
+...
+---
+name:            add32ri_nd_2_add32mi
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr32, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr32, preferred-register: '' }
+  - { id: 6, class: gr32, preferred-register: '' }
+  - { id: 7, class: gr64, preferred-register: '' }
+  - { id: 8, class: gr64, preferred-register: '' }
+  - { id: 9, class: gr32, preferred-register: '' }
+  - { id: 10, class: gr8, preferred-register: '' }
+  - { id: 11, class: gr8, preferred-register: '' }
+  - { id: 12, class: gr8, preferred-register: '' }
+  - { id: 13, class: gr8, preferred-register: '' }
+  - { id: 14, class: gr8, preferred-register: '' }
+  - { id: 15, class: gr32, preferred-register: '' }
+  - { id: 16, class: gr32, preferred-register: '' }
+  - { id: 17, class: gr64_with_sub_8bit, preferred-register: '' }
+  - { id: 18, class: fr64, preferred-register: '' }
+  - { id: 19, class: gr8, preferred-register: '' }
+  - { id: 20, class: gr32, preferred-register: '' }
+  - { id: 21, class: gr32, preferred-register: '' }
+  - { id: 22, class: gr32, preferred-register: '' }
+liveins:
+  - { reg: '$edi', virtual-reg: '%4' }
+  - { reg: '$esi', virtual-reg: '%5' }
+  - { reg: '$edx', virtual-reg: '%6' }
+  - { reg: '$rcx', virtual-reg: '%7' }
+  - { reg: '$r8', virtual-reg: '%8' }
+  - { reg: '$r9d', virtual-reg: '%9' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 1, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x80000000)
+    liveins: $edi, $esi, $edx, $rcx, $r8, $r9d
+
+    %9:gr32 = COPY $r9d
+    %8:gr64 = COPY $r8
+    %7:gr64 = COPY $rcx
+    %6:gr32 = COPY $edx
+    %5:gr32 = COPY $esi
+    %4:gr32 = COPY $edi
+    %14:gr8 = MOV8rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s8) from %fixed-stack.0, align 16)
+    undef %17.sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+
+  bb.1.bb7:
+    successors: %bb.2(0x80000000)
+
+    %21:gr32 = MOV32r0 implicit-def dead $eflags
+
+  bb.2.bb8:
+    successors: %bb.4(0x80000000)
+
+    JMP_1 %bb.4
+
+  bb.3.bb9:
+    successors: %bb.8(0x80000000)
+
+    %22:gr32 = COPY %21
+    JMP_1 %bb.8
+
+  bb.4.bb11:
+    successors: %bb.6(0x40000000), %bb.5(0x40000000)
+
+    MOV64mi32 %7, 1, $noreg, 0, $noreg, 0 :: (store (s64) into %ir.arg3)
+    MOV8mi %8, 1, $noreg, 0, $noreg, 0 :: (store (s8) into %ir.arg4)
+    TEST8ri %4.sub_8bit, 1, implicit-def $eflags
+    JCC_1 %bb.6, 5, implicit $eflags
+    JMP_1 %bb.5
+
+  bb.5.bb12:
+    successors: %bb.6(0x80000000)
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $xmm0 = FsFLD0SD
+    dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+    dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+    $edx = MOV32r0 implicit-def dead $eflags
+    $ecx = MOV32r0 implicit-def dead $eflags
+    $r8d = MOV32r0 implicit-def dead $eflags
+    $r9d = MOV32r0 implicit-def dead $eflags
+    $al = MOV8ri 1
+    CALL64r %17, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $edx, implicit $ecx, implicit $r8d, implicit killed $xmm0, implicit $r9d, implicit killed $al, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.6.bb13:
+    successors: %bb.7(0x04000000), %bb.4(0x7c000000)
+
+    TEST8ri %4.sub_8bit, 1, implicit-def $eflags
+    JCC_1 %bb.4, 4, implicit $eflags
+    JMP_1 %bb.7
+
+  bb.7.bb14:
+    successors: %bb.3(0x40000000), %bb.8(0x40000000)
+
+    TEST8ri %5.sub_8bit, 1, implicit-def $eflags
+    %22:gr32 = COPY %21
+    JCC_1 %bb.3, 5, implicit $eflags
+
+  bb.8.bb15:
+    successors: %bb.9(0x04000000), %bb.8(0x7c000000)
+
+    MOV8mr $noreg, 1, $noreg, 0, $noreg, %14 :: (store (s8) into `ptr null`)
+    %22:gr32 = INC32r_ND %22, implicit-def dead $eflags
+    TEST8ri %9.sub_8bit, 1, implicit-def $eflags
+    JCC_1 %bb.8, 4, implicit $eflags
+    JMP_1 %bb.9
+
+  bb.9.bb21:
+    successors: %bb.2(0x7c000000), %bb.1(0x04000000)
+
+    %21:gr32 = ADD32ri_ND %21, 8, implicit-def dead $eflags
+    TEST8ri %6.sub_8bit, 1, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+    JMP_1 %bb.1
+
+...

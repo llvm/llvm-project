@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; We want to make sure that RSRC2 is left untouched
-; GCN:       0x2e13 (COMPUTE_PGM_RSRC2): 0x78a
+; GCN:       '0x2e13 (COMPUTE_PGM_RSRC2)': 0x78a
 define amdgpu_cs half @cs_amdpal(half %arg0, half inreg %arg1) {
   %add = fadd half %arg0, 1.0
   ret half %add

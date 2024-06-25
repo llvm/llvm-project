@@ -1,0 +1,86 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+// "Apple" label has split options between the optionlist & command line. 
+; RUN: clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
+; RUN: -compatibility_version 1 \
+; RUN: -extra-public-header %t/usr/include/opts.h \
+; RUN: -optionlist %t/options.json -XApple -DCLI_OPT=1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include \
+; RUN: -I%t/usr/include -dynamiclib -o %t/output.tbd 2>&1 | FileCheck %s -allow-empty 
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+// Validate duplicated options give same result.
+; RUN: clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
+; RUN: -compatibility_version 1 \
+; RUN: -extra-public-header %t/usr/include/opts.h \
+; RUN: -optionlist %t/options.json -XApple -DCLI_OPT=1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include \
+; RUN: -XApple -DDarwin -XElf -DNONDarwin \
+; RUN: -I%t/usr/include -dynamiclib -o %t/output2.tbd 2>&1 | FileCheck %s -allow-empty 
+; RUN: llvm-readtapi --compare %t/output2.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+;--- usr/include/opts.h
+#ifndef OPTS_H
+#define OPTS_H
+#include <macro_defs.h>
+
+#if defined(CLI_OPT) && CLI_OPT 
+  #define SUFFIX "$final"
+#else 
+  #define SUFFIX 
+#endif 
+
+
+#define __STRING(x)     #x
+#define PLATFORM_ALIAS(sym)	__asm("_" __STRING(sym) DARWIN LINUX SUFFIX)
+extern int foo() PLATFORM_ALIAS(foo);
+
+#endif 
+
+;--- expected.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_foo$darwin$final",
+            "_foo$linux",
+            "_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "12",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- options.json
+{
+  "Apple" : ["-DDarwin=1"],
+  "Elf" : ["-DNONDarwin=1"]
+}

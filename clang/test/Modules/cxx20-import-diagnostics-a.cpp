@@ -36,6 +36,45 @@
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/import-diags-tu11.cpp \
 // RUN:  -fmodule-file=C=%t/C.pcm  -o %t/impl.o
 
+// Test again with reduced BMI.
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu1.cpp \
+// RUN:  -o %t/B.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu2.cpp \
+// RUN:  -o %t/C.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu3.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/AOK1.pcm
+
+// RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu4.cpp \
+// RUN:  -fmodule-file=AOK1=%t/AOK1.pcm -fmodule-file=B=%t/B.pcm \
+// RUN:  -fmodule-file=C=%t/C.pcm -o %t/tu_3.s -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu5.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/BC.pcm -verify
+
+// RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu6.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/tu_5.s -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu7.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/D.pcm -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu8.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/D.pcm -verify
+
+// RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu9.cpp \
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/tu_8.s -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/import-diags-tu10.cpp \
+// RUN:  -o %t/B.pcm -verify
+
+// RUN: %clang_cc1 -std=c++20 -emit-obj %t/import-diags-tu11.cpp \
+// RUN:  -fmodule-file=C=%t/C.pcm  -o %t/impl.o
+
 // Test diagnostics for incorrect module import sequences.
 
 //--- import-diags-tu1.cpp

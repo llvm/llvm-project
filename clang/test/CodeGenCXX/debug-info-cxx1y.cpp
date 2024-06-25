@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only -std=c++14 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple-only -std=c++14 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 // CHECK: imports: [[IMPS:![0-9]*]]
 

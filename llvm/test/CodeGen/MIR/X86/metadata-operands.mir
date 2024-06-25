@@ -7,9 +7,9 @@
   define i32 @test(i32 %x) #0 !dbg !4 {
   entry:
     %x.addr = alloca i32, align 4
-    store i32 %x, i32* %x.addr, align 4
-    call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !DIExpression()), !dbg !13
-    %0 = load i32, i32* %x.addr, align 4, !dbg !14
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !12, metadata !DIExpression()), !dbg !13
+    %0 = load i32, ptr %x.addr, align 4, !dbg !14
     ret i32 %0, !dbg !14
   }
 

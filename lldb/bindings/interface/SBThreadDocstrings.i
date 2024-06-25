@@ -55,24 +55,24 @@ See also :py:class:`SBFrame` ."
     eStopReasonPlanComplete  0"
 ) lldb::SBThread::GetStopReasonDataAtIndex;
 
-%feature("autodoc", "
+%feature("docstring", "
     Collects a thread's stop reason extended information dictionary and prints it
     into the SBStream in a JSON format. The format of this JSON dictionary depends
     on the stop reason and is currently used only for instrumentation plugins."
 ) lldb::SBThread::GetStopReasonExtendedInfoAsJSON;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns a collection of historical stack traces that are significant to the
     current stop reason. Used by ThreadSanitizer, where we provide various stack
     traces that were involved in a data race or other type of detected issue."
 ) lldb::SBThread::GetStopReasonExtendedBacktraces;
 
-%feature("autodoc", "
+%feature("docstring", "
     Pass only an (int)length and expect to get a Python string describing the
     stop reason."
 ) lldb::SBThread::GetStopDescription;
 
-%feature("autodoc", "
+%feature("docstring", "
     Returns a unique thread identifier (type lldb::tid_t, typically a 64-bit type)
     for the current SBThread that will remain constant throughout the thread's
     lifetime in this process and will not be reused by another thread during this
@@ -81,7 +81,7 @@ See also :py:class:`SBFrame` ."
     to associate data from those tools with lldb.  See related GetIndexID."
 ) lldb::SBThread::GetThreadID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Return the index number for this SBThread.  The index number is the same thing
     that a user gives as an argument to 'thread select' in the command line lldb.
     These numbers start at 1 (for the first thread lldb sees in a debug session)
@@ -91,12 +91,12 @@ See also :py:class:`SBFrame` ."
     This method returns a uint32_t index number, takes no arguments."
 ) lldb::SBThread::GetIndexID;
 
-%feature("autodoc", "
+%feature("docstring", "
     Return the queue name associated with this thread, if any, as a str.
     For example, with a libdispatch (aka Grand Central Dispatch) queue."
 ) lldb::SBThread::GetQueueName;
 
-%feature("autodoc", "
+%feature("docstring", "
     Return the dispatch_queue_id for this thread, if any, as a lldb::queue_id_t.
     For example, with a libdispatch (aka Grand Central Dispatch) queue."
 ) lldb::SBThread::GetQueueID;
@@ -109,7 +109,7 @@ See also :py:class:`SBFrame` ."
     anything was printed into the stream (true) or not (false)."
 ) lldb::SBThread::GetInfoItemByPathAsString;
 
-%feature("autodoc", "
+%feature("docstring", "
     Return the SBQueue for this thread.  If this thread is not currently associated
     with a libdispatch queue, the SBQueue object's IsValid() method will return false.
     If this SBThread is actually a HistoryThread, we may be able to provide QueueID
@@ -141,14 +141,14 @@ See also :py:class:`SBFrame` ."
     "Do an instruction level single step in the currently selected thread."
 ) lldb::SBThread::StepInstruction;
 
-%feature("autodoc", "
+%feature("docstring", "
     Force a return from the frame passed in (and any frames younger than it)
     without executing any more code in those frames.  If return_value contains
     a valid SBValue, that will be set as the return value from frame.  Note, at
     present only scalar return values are supported."
 ) lldb::SBThread::ReturnFromFrame;
 
-%feature("autodoc", "
+%feature("docstring", "
     Unwind the stack frames from the innermost expression evaluation.
     This API is equivalent to 'thread return -x'."
 ) lldb::SBThread::UnwindInnermostExpression;
@@ -181,7 +181,7 @@ See also :py:class:`SBFrame` ."
     or thread-stop-format (stop_format = true)."
 ) lldb::SBThread::GetDescription;
 
-%feature("autodoc","
+%feature("docstring","
     Given an argument of str to specify the type of thread-origin extended
     backtrace to retrieve, query whether the origin of this thread is
     available.  An SBThread is retured; SBThread.IsValid will return true
@@ -192,8 +192,7 @@ See also :py:class:`SBFrame` ."
     the returned thread's own thread origin in turn."
 ) lldb::SBThread::GetExtendedBacktraceThread;
 
-%feature("autodoc","
-    Takes no arguments, returns a uint32_t.
+%feature("docstring","
     If this SBThread is an ExtendedBacktrace thread, get the IndexID of the
     original thread that this ExtendedBacktrace thread represents, if
     available.  The thread that was running this backtrace in the past may
@@ -202,29 +201,28 @@ See also :py:class:`SBFrame` ."
     In that case, this ExtendedBacktrace thread's IndexID will be returned."
 ) lldb::SBThread::GetExtendedBacktraceOriginatingIndexID;
 
-%feature("autodoc","
+%feature("docstring","
     Returns an SBValue object represeting the current exception for the thread,
     if there is any. Currently, this works for Obj-C code and returns an SBValue
     representing the NSException object at the throw site or that's currently
     being processes."
 ) lldb::SBThread::GetCurrentException;
 
-%feature("autodoc","
+%feature("docstring","
     Returns a historical (fake) SBThread representing the stack trace of an
     exception, if there is one for the thread. Currently, this works for Obj-C
     code, and can retrieve the throw-site backtrace of an NSException object
     even when the program is no longer at the throw site."
 ) lldb::SBThread::GetCurrentExceptionBacktrace;
 
-%feature("autodoc","
-    Takes no arguments, returns a bool.
+%feature("docstring","
     lldb may be able to detect that function calls should not be executed
     on a given thread at a particular point in time.  It is recommended that
     this is checked before performing an inferior function call on a given
     thread."
 ) lldb::SBThread::SafeToCallFunctions;
 
-%feature("autodoc","
-    Retruns a SBValue object representing the siginfo for the current signal.
+%feature("docstring","
+    Returns a SBValue object representing the siginfo for the current signal.
     "
 ) lldb::SBThread::GetSiginfo;

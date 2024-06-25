@@ -1,5 +1,5 @@
-# This checks that shrink wrapping correctly drops moving push/pops when
-# there is an LEA instruction.
+## This checks that shrink wrapping correctly drops moving push/pops when
+## there is an LEA instruction.
 
 
 # REQUIRES: system-linux
@@ -58,7 +58,7 @@ JT:
 
 # CHECK:   BOLT-INFO: Shrink wrapping moved 2 spills inserting load/stores and 0 spills inserting push/pops
 
-# Checks that offsets of instructions accessing the stack were not changed
+## Checks that offsets of instructions accessing the stack were not changed
 # CHECK-OBJDUMP:     <_start>:
 # CHECK-OBJDUMP:         movq    %rbx, %rdi
 # CHECK-OBJDUMP-NEXT:    leaq    -0x20(%rbp), %r14

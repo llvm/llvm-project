@@ -26,5 +26,5 @@ add_lit_testsuite(check-lit "Running lit's tests"
 )
 
 # For IDEs
-set_target_properties(check-lit PROPERTIES FOLDER "Tests")
-set_target_properties(prepare-check-lit PROPERTIES FOLDER "Tests")
+set_target_properties(check-lit PROPERTIES FOLDER "LLVM/Tests")
+set_target_properties(prepare-check-lit PROPERTIES FOLDER "LLVM/Tests")

@@ -89,7 +89,6 @@ body: |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   bb.0:
     liveins: $sgpr0, $sgpr1

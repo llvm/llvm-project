@@ -1,4 +1,5 @@
-@ RUN: llvm-mc -triple=armv8 -show-encoding < %s | FileCheck %s
+@ RUN: not llvm-mc -triple=armv8 -show-encoding < %s 2> %t | FileCheck %s
+@ RUN: FileCheck %s < %t --check-prefix=CHECK-ERROR
 @ RUN: not llvm-mc -triple=armv7 -show-encoding < %s 2>&1 | FileCheck %s --check-prefix=CHECK-V7
         ldaexb  r3, [r4]
         ldaexh  r2, [r5]
@@ -14,6 +15,13 @@
 @ CHECK-V7: instruction requires: acquire/release
 @ CHECK-V7: instruction requires: acquire/release
 
+        ldaexd  r2, r4, [r8]
+@ CHECK-ERROR: error: destination operands must be sequential
+
+@ GNU alias
+        ldaexd  r6, [r8]
+@ CHECK:  ldaexd	r6, r7, [r8]            @ encoding: [0x9f,0x6e,0xb8,0xe1]
+
         stlexb  r1, r3, [r4]
         stlexh  r4, r2, [r5]
         stlex  r2, r1, [r7]
@@ -26,6 +34,13 @@
 @ CHECK-V7: instruction requires: acquire/release
 @ CHECK-V7: instruction requires: acquire/release
 @ CHECK-V7: instruction requires: acquire/release
+
+        stlexd  r6, r2, r4, [r8]
+@ CHECK-ERROR: error: source operands must be sequential
+
+@ GNU alias
+        stlexd  r6, r2, [r8]
+@ CHECK: stlexd r6, r2, r3, [r8]        @ encoding: [0x92,0x6e,0xa8,0xe1]
 
          lda r5, [r6]
          ldab r5, [r6]

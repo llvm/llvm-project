@@ -35,9 +35,28 @@ namespace {
 class InnerPointerChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
 
-  CallDescription AppendFn, AssignFn, AddressofFn, AddressofFn_, ClearFn,
-      CStrFn, DataFn, DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn,
-      ReplaceFn, ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
+  CallDescriptionSet InvalidatingMemberFunctions{
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "append"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "assign"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "clear"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "erase"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "insert"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "pop_back"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "push_back"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "replace"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "reserve"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "resize"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "shrink_to_fit"}),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "swap"})};
+
+  CallDescriptionSet AddressofFunctions{
+      CallDescription(CDM::SimpleFunc, {"std", "addressof"}),
+      CallDescription(CDM::SimpleFunc, {"std", "__addressof"})};
+
+  CallDescriptionSet InnerPointerAccessFunctions{
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "c_str"}),
+      CallDescription(CDM::SimpleFunc, {"std", "data"}, 1),
+      CallDescription(CDM::CXXMethod, {"std", "basic_string", "data"})};
 
 public:
   class InnerPointerBRVisitor : public BugReporterVisitor {
@@ -71,29 +90,9 @@ public:
     }
   };
 
-  InnerPointerChecker()
-      : AppendFn({"std", "basic_string", "append"}),
-        AssignFn({"std", "basic_string", "assign"}),
-        AddressofFn({"std", "addressof"}), AddressofFn_({"std", "__addressof"}),
-        ClearFn({"std", "basic_string", "clear"}),
-        CStrFn({"std", "basic_string", "c_str"}), DataFn({"std", "data"}, 1),
-        DataMemberFn({"std", "basic_string", "data"}),
-        EraseFn({"std", "basic_string", "erase"}),
-        InsertFn({"std", "basic_string", "insert"}),
-        PopBackFn({"std", "basic_string", "pop_back"}),
-        PushBackFn({"std", "basic_string", "push_back"}),
-        ReplaceFn({"std", "basic_string", "replace"}),
-        ReserveFn({"std", "basic_string", "reserve"}),
-        ResizeFn({"std", "basic_string", "resize"}),
-        ShrinkToFitFn({"std", "basic_string", "shrink_to_fit"}),
-        SwapFn({"std", "basic_string", "swap"}) {}
-
   /// Check whether the called member function potentially invalidates
   /// pointers referring to the container object's inner buffer.
   bool isInvalidatingMemberFunction(const CallEvent &Call) const;
-
-  /// Check whether the called function returns a raw inner pointer.
-  bool isInnerPointerAccessFunction(const CallEvent &Call) const;
 
   /// Mark pointer symbols associated with the given memory region released
   /// in the program state.
@@ -127,14 +126,7 @@ bool InnerPointerChecker::isInvalidatingMemberFunction(
     return false;
   }
   return isa<CXXDestructorCall>(Call) ||
-         matchesAny(Call, AppendFn, AssignFn, ClearFn, EraseFn, InsertFn,
-                    PopBackFn, PushBackFn, ReplaceFn, ReserveFn, ResizeFn,
-                    ShrinkToFitFn, SwapFn);
-}
-
-bool InnerPointerChecker::isInnerPointerAccessFunction(
-    const CallEvent &Call) const {
-  return matchesAny(Call, CStrFn, DataFn, DataMemberFn);
+         InvalidatingMemberFunctions.contains(Call);
 }
 
 void InnerPointerChecker::markPtrSymbolsReleased(const CallEvent &Call,
@@ -181,7 +173,7 @@ void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
 
       // std::addressof functions accepts a non-const reference as an argument,
       // but doesn't modify it.
-      if (matchesAny(Call, AddressofFn, AddressofFn_))
+      if (AddressofFunctions.contains(Call))
         continue;
 
       markPtrSymbolsReleased(Call, State, ArgRegion, C);
@@ -221,7 +213,7 @@ void InnerPointerChecker::checkPostCall(const CallEvent &Call,
     }
   }
 
-  if (isInnerPointerAccessFunction(Call)) {
+  if (InnerPointerAccessFunctions.contains(Call)) {
 
     if (isa<SimpleFunctionCall>(Call)) {
       // NOTE: As of now, we only have one free access function: std::data.

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme \
-// RUN:   -S -disable-O0-optnone -Werror -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +bf16 \
+// RUN:   -disable-O0-optnone -Werror -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | opt -S -passes=inline \
 // RUN: | FileCheck %s
@@ -284,20 +284,20 @@ int test_variadic_template() __arm_inout("za") {
 // CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_pstate_za_new" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_new_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_ENABLED_CALL]] = { "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[SM_COMPATIBLE_CALL]] = { "aarch64_pstate_sm_compatible" }
 // CHECK: attributes #[[SM_BODY_CALL]] = { "aarch64_pstate_sm_body" }
-// CHECK: attributes #[[ZA_SHARED_CALL]] = { "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" }
+// CHECK: attributes #[[ZA_SHARED_CALL]] = { "aarch64_inout_za" }
+// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_preserves_za" }
 // CHECK: attributes #[[NOUNWIND_CALL]] = { nounwind }
 // CHECK: attributes #[[NOUNWIND_SM_ENABLED_CALL]] = { nounwind "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[NOUNWIND_SM_COMPATIBLE_CALL]] = { nounwind "aarch64_pstate_sm_compatible" }
-// CHECK: attributes #[[NOUNWIND_ZA_SHARED_CALL]] = { nounwind "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_pstate_za_preserved" "aarch64_pstate_za_shared" }
+// CHECK: attributes #[[NOUNWIND_ZA_SHARED_CALL]] = { nounwind "aarch64_inout_za" }
+// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_preserves_za" }
 

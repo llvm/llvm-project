@@ -45,25 +45,25 @@ define i32 @foo(i32 noundef %0, i32 noundef %1, i32 noundef %2) #0 {
 
   %4 = alloca [100 x i8], align 16
   %5 = alloca [2 x i8], align 1
-  %6 = getelementptr inbounds [100 x i8], [100 x i8]* %4, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 100, i8* nonnull %6) #3
+  %6 = getelementptr inbounds [100 x i8], ptr %4, i64 0, i64 0
+  call void @llvm.lifetime.start.p0(i64 100, ptr nonnull %6) #3
   ; This memset must move.
-  call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(100) %6, i8 -86, i64 100, i1 false), !annotation !0
-  %7 = getelementptr inbounds [2 x i8], [2 x i8]* %5, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 2, i8* nonnull %7) #3
+  call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(100) %6, i8 -86, i64 100, i1 false), !annotation !0
+  %7 = getelementptr inbounds [2 x i8], ptr %5, i64 0, i64 0
+  call void @llvm.lifetime.start.p0(i64 2, ptr nonnull %7) #3
   ; This store must move.
-  store i8 -86, i8* %7, align 1, !annotation !0
-  %8 = getelementptr inbounds [2 x i8], [2 x i8]* %5, i64 0, i64 1
+  store i8 -86, ptr %7, align 1, !annotation !0
+  %8 = getelementptr inbounds [2 x i8], ptr %5, i64 0, i64 1
   ; This store must move.
-  store i8 -86, i8* %8, align 1, !annotation !0
+  store i8 -86, ptr %8, align 1, !annotation !0
   %9 = icmp eq i32 %1, 0
   br i1 %9, label %15, label %10
 
 10:
   %11 = sext i32 %0 to i64
-  %12 = getelementptr inbounds [100 x i8], [100 x i8]* %4, i64 0, i64 %11
-  store i8 12, i8* %12, align 1
-  %13 = load i8, i8* %6, align 16
+  %12 = getelementptr inbounds [100 x i8], ptr %4, i64 0, i64 %11
+  store i8 12, ptr %12, align 1
+  %13 = load i8, ptr %6, align 16
   %14 = sext i8 %13 to i32
   br label %22
 
@@ -73,24 +73,24 @@ define i32 @foo(i32 noundef %0, i32 noundef %1, i32 noundef %2) #0 {
 
 17:
   %18 = sext i32 %0 to i64
-  %19 = getelementptr inbounds [2 x i8], [2 x i8]* %5, i64 0, i64 %18
-  store i8 12, i8* %19, align 1
-  %20 = load i8, i8* %7, align 1
+  %19 = getelementptr inbounds [2 x i8], ptr %5, i64 0, i64 %18
+  store i8 12, ptr %19, align 1
+  %20 = load i8, ptr %7, align 1
   %21 = sext i8 %20 to i32
   br label %22
 
 22:
   %23 = phi i32 [ %14, %10 ], [ %21, %17 ], [ 0, %15 ]
-  call void @llvm.lifetime.end.p0i8(i64 2, i8* nonnull %7) #3
-  call void @llvm.lifetime.end.p0i8(i64 100, i8* nonnull %6) #3
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %7) #3
+  call void @llvm.lifetime.end.p0(i64 100, ptr nonnull %6) #3
   ret i32 %23
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { mustprogress nofree nosync nounwind readnone uwtable willreturn }
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

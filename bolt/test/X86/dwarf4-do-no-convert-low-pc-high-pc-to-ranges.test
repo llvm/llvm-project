@@ -6,8 +6,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that we do not convert low_pc/high_pc to ranges for DW_TAG_inlined_subroutine,
-# when there is only one output range entry.
+## This test checks that we do not convert low_pc/high_pc to ranges for DW_TAG_inlined_subroutine,
+## when there is only one output range entry.
 
 # PRECHECK: DW_TAG_inlined_subroutine
 # PRECHECK: DW_AT_abstract_origin

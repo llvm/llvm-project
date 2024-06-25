@@ -131,8 +131,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Program)
         continue;
       dxbc::ProgramHeader Header;
-      Header.MajorVersion = P.Program->MajorVersion;
-      Header.MinorVersion = P.Program->MinorVersion;
+      Header.Version = dxbc::ProgramHeader::getVersion(P.Program->MajorVersion,
+                                                       P.Program->MinorVersion);
       Header.Unused = 0;
       Header.ShaderKind = P.Program->ShaderKind;
       memcpy(Header.Bitcode.Magic, "DXIL", 4);
@@ -198,8 +198,9 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.Info.has_value())
         continue;
       mcdxbc::PSVRuntimeInfo PSV;
-      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
+      memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v3::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
+      PSV.EntryName = P.Info->EntryName;
 
       for (auto El : P.Info->SigInputElements)
         PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{

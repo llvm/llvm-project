@@ -39,9 +39,6 @@ namespace llvm::RISCVTuneInfoTable {
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
 
-static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(true), cl::Hidden);
-
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
     cl::desc("The maximum LMUL value to use for fixed length vectors. "
@@ -183,11 +180,7 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasVInstructions() && getMinRVVVectorSizeInBits() != 0;
 }
 
-bool RISCVSubtarget::enableSubRegLiveness() const {
-  // FIXME: Enable subregister liveness by default for RVV to better handle
-  // LMUL>1 and segment load/store.
-  return EnableSubRegLiveness;
-}
+bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {

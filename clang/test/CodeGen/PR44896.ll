@@ -1,6 +1,6 @@
 ; RUN: %clang -fdiscard-value-names -S %s -o /dev/null 2>&1 | FileCheck --check-prefix=WARNING %s
 ; RUN: %clang -S %s -o /dev/null 2>&1 | FileCheck --check-prefix=NOWARNING %s
-; RUN: %clang_cc1 -S -emit-llvm %s -discard-value-names -o /dev/null
+; RUN: %clang_cc1 -emit-llvm %s -discard-value-names -o /dev/null
 ; PR 44896
 
 ; WARNING: ignoring -fdiscard-value-names for LLVM Bitcode

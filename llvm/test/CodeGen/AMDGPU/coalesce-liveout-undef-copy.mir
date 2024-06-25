@@ -23,19 +23,19 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %2:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY]].sub0:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]].sub0:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %4:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V4 [[COPY]], undef %5:sgpr_32, 11, implicit-def $m0, implicit $m0, implicit $exec
+  ; CHECK-NEXT:   dead [[V_INDIRECT_REG_READ_GPR_IDX_B32_V4_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V4 [[COPY]], undef %5:sgpr_32, 11, implicit-def $m0, implicit $m0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:

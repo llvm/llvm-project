@@ -65,13 +65,15 @@ void test() {
   void *other_ptr = null_val;
 
   // Can it be used in all the places a scalar can be used?
-  if (null_val) {}
-  if (!null_val) {}
-  for (;null_val;) {}
-  while (nullptr) {}
-  null_val && nullptr;
-  nullptr || null_val;
-  null_val ? 0 : 1;
+  if (null_val) {}     // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  if (!null_val) {}    // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  for (;null_val;) {}  // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  while (nullptr) {}   // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  null_val && nullptr; // expected-warning {{implicit conversion of nullptr constant to 'bool'}} \
+                          expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  nullptr || null_val; // expected-warning {{implicit conversion of nullptr constant to 'bool'}} \
+                          expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  null_val ? 0 : 1;    // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
   sizeof(null_val);
   alignas(nullptr_t) int aligned;
 
@@ -95,12 +97,12 @@ void test() {
   // Can it be converted to bool with the result false (this relies on Clang
   // accepting additional kinds of constant expressions where an ICE is
   // required)?
-  static_assert(!nullptr);
-  static_assert(!null_val);
-  static_assert(nullptr);  // expected-error {{static assertion failed due to requirement 'nullptr'}} \
-                              expected-warning {{implicit conversion of nullptr constant to 'bool'}}
-  static_assert(null_val); // expected-error {{static assertion failed due to requirement 'null_val'}} \
-                              expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  static_assert(!nullptr);  // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  static_assert(!null_val); // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  static_assert(nullptr);   // expected-error {{static assertion failed due to requirement 'nullptr'}} \
+                               expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  static_assert(null_val);  // expected-error {{static assertion failed due to requirement 'null_val'}} \
+                               expected-warning {{implicit conversion of nullptr constant to 'bool'}}
 
   // Do equality operators work as expected with it?
   static_assert(nullptr == nullptr);
@@ -142,11 +144,11 @@ void test() {
   _Generic(1 ? typed_ptr : nullptr, typeof(typed_ptr) : 0);
 
   // Same for GNU conditional operators?
-  _Generic(nullptr ?: nullptr, nullptr_t : 0);
-  _Generic(null_val ?: null_val, nullptr_t : 0);
+  _Generic(nullptr ?: nullptr, nullptr_t : 0);            // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  _Generic(null_val ?: null_val, nullptr_t : 0);          // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
   _Generic(typed_ptr ?: null_val, typeof(typed_ptr) : 0);
-  _Generic(null_val ?: typed_ptr, typeof(typed_ptr) : 0);
-  _Generic(nullptr ?: typed_ptr, typeof(typed_ptr) : 0);
+  _Generic(null_val ?: typed_ptr, typeof(typed_ptr) : 0); // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  _Generic(nullptr ?: typed_ptr, typeof(typed_ptr) : 0);  // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
   _Generic(typed_ptr ?: nullptr, typeof(typed_ptr) : 0);
 
   // Do we correctly issue type incompatibility diagnostics?

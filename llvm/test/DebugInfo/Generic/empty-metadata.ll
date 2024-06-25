@@ -2,7 +2,7 @@
 
 ;; Check that DCE doesn't remove a dbg intrinsic that has an empty metadata
 ;; operand.
-; CHECK: call void @llvm.dbg.declare(metadata ![[EMPTY:[0-9]+]],
+; CHECK: #dbg_declare(![[EMPTY:[0-9]+]],
 ; CHECK: ![[EMPTY]] = !{}
 
 define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {

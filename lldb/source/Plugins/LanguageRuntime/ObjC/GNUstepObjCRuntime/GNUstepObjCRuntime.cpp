@@ -104,15 +104,17 @@ GNUstepObjCRuntime::GNUstepObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-bool GNUstepObjCRuntime::GetObjectDescription(Stream &str,
-                                              ValueObject &valobj) {
-  // TODO: ObjC has a generic way to do this
-  return false;
+llvm::Error GNUstepObjCRuntime::GetObjectDescription(Stream &str,
+                                                     ValueObject &valobj) {
+  return llvm::createStringError(
+      "LLDB's GNUStep runtime does not support object description");
 }
-bool GNUstepObjCRuntime::GetObjectDescription(
-    Stream &strm, Value &value, ExecutionContextScope *exe_scope) {
-  // TODO: ObjC has a generic way to do this
-  return false;
+
+llvm::Error
+GNUstepObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
+                                         ExecutionContextScope *exe_scope) {
+  return llvm::createStringError(
+      "LLDB's GNUStep runtime does not support object description");
 }
 
 bool GNUstepObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {

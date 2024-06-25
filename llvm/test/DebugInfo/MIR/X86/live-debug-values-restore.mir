@@ -41,10 +41,10 @@
 # CHECK-NEXT: DBG_VALUE $rdi,{{.*}}![[PVAR]], !DIExpression()
 
 --- |
-  define dso_local i32 @f(i32* readonly %p) local_unnamed_addr !dbg !7 {
+  define dso_local i32 @f(ptr readonly %p) local_unnamed_addr !dbg !7 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !13, metadata !DIExpression()), !dbg !14
-    %tobool = icmp eq i32* %p, null, !dbg !15
+    call void @llvm.dbg.value(metadata ptr %p, metadata !13, metadata !DIExpression()), !dbg !14
+    %tobool = icmp eq ptr %p, null, !dbg !15
     br i1 %tobool, label %if.end, label %if.then, !dbg !17
   
   if.then:                                          ; preds = %entry
@@ -52,15 +52,15 @@
     br label %if.end, !dbg !21
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !22
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !23, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !22
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !23, !tbaa !24
     ret i32 %0, !dbg !28
   }
   
-  define dso_local i32 @g(i32* readonly %p) local_unnamed_addr !dbg !107 {
+  define dso_local i32 @g(ptr readonly %p) local_unnamed_addr !dbg !107 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !113, metadata !DIExpression()), !dbg !114
-    %tobool = icmp eq i32* %p, null, !dbg !115
+    call void @llvm.dbg.value(metadata ptr %p, metadata !113, metadata !DIExpression()), !dbg !114
+    %tobool = icmp eq ptr %p, null, !dbg !115
     br i1 %tobool, label %if.end, label %if.then, !dbg !117
   
   if.then:                                          ; preds = %entry
@@ -68,15 +68,15 @@
     br label %if.end, !dbg !121
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !122
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !123, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !122
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !123, !tbaa !24
     ret i32 %0, !dbg !128
   }
  
-  define dso_local i32 @h(i32* readonly %p) local_unnamed_addr !dbg !207 {
+  define dso_local i32 @h(ptr readonly %p) local_unnamed_addr !dbg !207 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !213, metadata !DIExpression()), !dbg !214
-    %tobool = icmp eq i32* %p, null, !dbg !215
+    call void @llvm.dbg.value(metadata ptr %p, metadata !213, metadata !DIExpression()), !dbg !214
+    %tobool = icmp eq ptr %p, null, !dbg !215
     br i1 %tobool, label %if.end, label %if.then, !dbg !217
   
   if.then:                                          ; preds = %entry
@@ -84,18 +84,18 @@
     br label %if.end, !dbg !221
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !222
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !223, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !222
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !223, !tbaa !24
     ret i32 %0, !dbg !228
   }
 
-  define dso_local i32 @i(i32* readonly %p) local_unnamed_addr !dbg !307 {
+  define dso_local i32 @i(ptr readonly %p) local_unnamed_addr !dbg !307 {
   entry:
     br label %foo
 
   foo:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !313, metadata !DIExpression()), !dbg !314
-    %tobool = icmp eq i32* %p, null, !dbg !315
+    call void @llvm.dbg.value(metadata ptr %p, metadata !313, metadata !DIExpression()), !dbg !314
+    %tobool = icmp eq ptr %p, null, !dbg !315
     br i1 %tobool, label %if.end, label %if.then, !dbg !317
   
   if.then:                                          ; preds = %entry
@@ -103,18 +103,18 @@
     br label %if.end, !dbg !321
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !322
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !323, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !322
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !323, !tbaa !24
     ret i32 %0, !dbg !328
   }
 
-  define dso_local i32 @j(i32* readonly %p) local_unnamed_addr !dbg !402 {
+  define dso_local i32 @j(ptr readonly %p) local_unnamed_addr !dbg !402 {
   entry:
     br label %foo
 
   foo:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !404, metadata !DIExpression()), !dbg !405
-    %tobool = icmp eq i32* %p, null, !dbg !406
+    call void @llvm.dbg.value(metadata ptr %p, metadata !404, metadata !DIExpression()), !dbg !405
+    %tobool = icmp eq ptr %p, null, !dbg !406
     br i1 %tobool, label %if.end, label %if.then, !dbg !408
   
   if.then:                                          ; preds = %entry
@@ -122,15 +122,15 @@
     br label %if.end, !dbg !412
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !413
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !414, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !413
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !414, !tbaa !24
     ret i32 %0, !dbg !415
   }
  
-  define dso_local i32 @k(i32* readonly %p) local_unnamed_addr !dbg !507 {
+  define dso_local i32 @k(ptr readonly %p) local_unnamed_addr !dbg !507 {
   entry:
-    call void @llvm.dbg.value(metadata i32* %p, metadata !513, metadata !DIExpression()), !dbg !514
-    %tobool = icmp eq i32* %p, null, !dbg !515
+    call void @llvm.dbg.value(metadata ptr %p, metadata !513, metadata !DIExpression()), !dbg !514
+    %tobool = icmp eq ptr %p, null, !dbg !515
     br i1 %tobool, label %if.end, label %if.then, !dbg !517
   
   if.then:                                          ; preds = %entry
@@ -138,8 +138,8 @@
     br label %if.end, !dbg !521
   
   if.end:                                           ; preds = %entry, %if.then
-    %add.ptr = getelementptr inbounds i32, i32* %p, i64 1, !dbg !522
-    %0 = load i32, i32* %add.ptr, align 4, !dbg !523, !tbaa !24
+    %add.ptr = getelementptr inbounds i32, ptr %p, i64 1, !dbg !522
+    %0 = load i32, ptr %add.ptr, align 4, !dbg !523, !tbaa !24
     ret i32 %0, !dbg !528
   }
 

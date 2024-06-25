@@ -739,7 +739,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
           &(current_task->ompt_task_info.task_data),
           &(current_task->ompt_task_info.frame),
           &(new_taskdata->ompt_task_info.task_data),
-          ompt_task_explicit | TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
+          TASK_TYPE_DETAILS_FORMAT(new_taskdata), 1,
           OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid));
     }
 
@@ -1029,6 +1029,12 @@ void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
                        &thread_finished USE_ITT_BUILD_ARG(NULL),
                        __kmp_task_stealing_constraint);
   }
+
+  // Wait until the last __kmp_release_deps is finished before we free the
+  // current stack frame holding the "node" variable; once its nrefs count
+  // reaches 1, we're sure nobody else can try to reference it again.
+  while (node.dn.nrefs > 1)
+    KMP_YIELD(TRUE);
 
 #if OMPT_SUPPORT
   __ompt_taskwait_dep_finish(current_task, taskwait_task_data);

@@ -139,18 +139,14 @@ public:
 
     // Use hosted aligned storage members to allow for trivial move and init.
     // This also allows us to sidestep the potential-failing allocation issue.
-    typename std::aligned_storage<sizeof(NodeAllocatorType),
-                                  alignof(NodeAllocatorType)>::type
-        NodeAllocatorStorage;
-    typename std::aligned_storage<sizeof(RootAllocatorType),
-                                  alignof(RootAllocatorType)>::type
-        RootAllocatorStorage;
-    typename std::aligned_storage<sizeof(ShadowStackAllocatorType),
-                                  alignof(ShadowStackAllocatorType)>::type
-        ShadowStackAllocatorStorage;
-    typename std::aligned_storage<sizeof(NodeIdPairAllocatorType),
-                                  alignof(NodeIdPairAllocatorType)>::type
-        NodeIdPairAllocatorStorage;
+    alignas(NodeAllocatorType) std::byte
+        NodeAllocatorStorage[sizeof(NodeAllocatorType)];
+    alignas(RootAllocatorType) std::byte
+        RootAllocatorStorage[sizeof(RootAllocatorType)];
+    alignas(ShadowStackAllocatorType) std::byte
+        ShadowStackAllocatorStorage[sizeof(ShadowStackAllocatorType)];
+    alignas(NodeIdPairAllocatorType) std::byte
+        NodeIdPairAllocatorStorage[sizeof(NodeIdPairAllocatorType)];
 
     NodeAllocatorType *NodeAllocator = nullptr;
     RootAllocatorType *RootAllocator = nullptr;

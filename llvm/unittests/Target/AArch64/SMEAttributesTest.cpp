@@ -38,21 +38,21 @@ TEST(SMEAttributes, Constructors) {
               ->getFunction("foo"))
           .hasStreamingCompatibleInterface());
 
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_in_za\"")->getFunction("foo"))
+          .isInZA());
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_out_za\"")->getFunction("foo"))
+          .isOutZA());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_inout_za\"")
                       ->getFunction("foo"))
-                  .sharesZA());
-
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_shared\"")
+                  .isInOutZA());
+  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_preserves_za\"")
                       ->getFunction("foo"))
-                  .hasSharedZAInterface());
-
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_new\"")
-                      ->getFunction("foo"))
-                  .hasNewZABody());
-
-  ASSERT_TRUE(SA(*parseIR("declare void @foo() \"aarch64_pstate_za_preserved\"")
-                      ->getFunction("foo"))
-                  .preservesZA());
+                  .isPreservesZA());
+  ASSERT_TRUE(
+      SA(*parseIR("declare void @foo() \"aarch64_new_za\"")->getFunction("foo"))
+          .isNewZA());
 
   ASSERT_TRUE(
       SA(*parseIR("declare void @foo() \"aarch64_in_zt0\"")->getFunction("foo"))
@@ -73,10 +73,6 @@ TEST(SMEAttributes, Constructors) {
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),
                      "SM_Enabled and SM_Compatible are mutually exclusive");
-  EXPECT_DEBUG_DEATH(SA(SA::ZA_New | SA::ZA_Shared),
-                     "ZA_New and ZA_Shared are mutually exclusive");
-  EXPECT_DEBUG_DEATH(SA(SA::ZA_New | SA::ZA_Preserved),
-                     "ZA_New and ZA_Preserved are mutually exclusive");
 
   // Test that the set() methods equally check validity.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled).set(SA::SM_Compatible),
@@ -99,29 +95,69 @@ TEST(SMEAttributes, Basics) {
   ASSERT_TRUE(SA(SA::SM_Compatible | SA::SM_Body).hasStreamingBody());
   ASSERT_FALSE(SA(SA::SM_Compatible | SA::SM_Body).hasNonStreamingInterface());
 
-  // Test PSTATE.ZA interfaces.
-  ASSERT_FALSE(SA(SA::ZA_Shared).hasPrivateZAInterface());
-  ASSERT_TRUE(SA(SA::ZA_Shared).hasSharedZAInterface());
-  ASSERT_TRUE(SA(SA::ZA_Shared).sharesZA());
-  ASSERT_TRUE(SA(SA::ZA_Shared).hasZAState());
-  ASSERT_FALSE(SA(SA::ZA_Shared).preservesZA());
-  ASSERT_TRUE(SA(SA::ZA_Shared | SA::ZA_Preserved).preservesZA());
-  ASSERT_FALSE(SA(SA::ZA_Shared).sharesZT0());
-  ASSERT_FALSE(SA(SA::ZA_Shared).hasZT0State());
+  // Test ZA State interfaces
+  SA ZA_In = SA(SA::encodeZAState(SA::StateValue::In));
+  ASSERT_TRUE(ZA_In.isInZA());
+  ASSERT_FALSE(ZA_In.isOutZA());
+  ASSERT_FALSE(ZA_In.isInOutZA());
+  ASSERT_FALSE(ZA_In.isPreservesZA());
+  ASSERT_FALSE(ZA_In.isNewZA());
+  ASSERT_TRUE(ZA_In.sharesZA());
+  ASSERT_TRUE(ZA_In.hasZAState());
+  ASSERT_TRUE(ZA_In.hasSharedZAInterface());
+  ASSERT_FALSE(ZA_In.hasPrivateZAInterface());
 
-  ASSERT_TRUE(SA(SA::ZA_New).hasPrivateZAInterface());
-  ASSERT_FALSE(SA(SA::ZA_New).hasSharedZAInterface());
-  ASSERT_TRUE(SA(SA::ZA_New).hasNewZABody());
-  ASSERT_TRUE(SA(SA::ZA_New).hasZAState());
-  ASSERT_FALSE(SA(SA::ZA_New).preservesZA());
-  ASSERT_FALSE(SA(SA::ZA_New).sharesZT0());
-  ASSERT_FALSE(SA(SA::ZA_New).hasZT0State());
+  SA ZA_Out = SA(SA::encodeZAState(SA::StateValue::Out));
+  ASSERT_TRUE(ZA_Out.isOutZA());
+  ASSERT_FALSE(ZA_Out.isInZA());
+  ASSERT_FALSE(ZA_Out.isInOutZA());
+  ASSERT_FALSE(ZA_Out.isPreservesZA());
+  ASSERT_FALSE(ZA_Out.isNewZA());
+  ASSERT_TRUE(ZA_Out.sharesZA());
+  ASSERT_TRUE(ZA_Out.hasZAState());
+  ASSERT_TRUE(ZA_Out.hasSharedZAInterface());
+  ASSERT_FALSE(ZA_Out.hasPrivateZAInterface());
 
-  ASSERT_TRUE(SA(SA::Normal).hasPrivateZAInterface());
-  ASSERT_FALSE(SA(SA::Normal).hasSharedZAInterface());
-  ASSERT_FALSE(SA(SA::Normal).hasNewZABody());
+  SA ZA_InOut = SA(SA::encodeZAState(SA::StateValue::InOut));
+  ASSERT_TRUE(ZA_InOut.isInOutZA());
+  ASSERT_FALSE(ZA_InOut.isInZA());
+  ASSERT_FALSE(ZA_InOut.isOutZA());
+  ASSERT_FALSE(ZA_InOut.isPreservesZA());
+  ASSERT_FALSE(ZA_InOut.isNewZA());
+  ASSERT_TRUE(ZA_InOut.sharesZA());
+  ASSERT_TRUE(ZA_InOut.hasZAState());
+  ASSERT_TRUE(ZA_InOut.hasSharedZAInterface());
+  ASSERT_FALSE(ZA_InOut.hasPrivateZAInterface());
+
+  SA ZA_Preserved = SA(SA::encodeZAState(SA::StateValue::Preserved));
+  ASSERT_TRUE(ZA_Preserved.isPreservesZA());
+  ASSERT_FALSE(ZA_Preserved.isInZA());
+  ASSERT_FALSE(ZA_Preserved.isOutZA());
+  ASSERT_FALSE(ZA_Preserved.isInOutZA());
+  ASSERT_FALSE(ZA_Preserved.isNewZA());
+  ASSERT_TRUE(ZA_Preserved.sharesZA());
+  ASSERT_TRUE(ZA_Preserved.hasZAState());
+  ASSERT_TRUE(ZA_Preserved.hasSharedZAInterface());
+  ASSERT_FALSE(ZA_Preserved.hasPrivateZAInterface());
+
+  SA ZA_New = SA(SA::encodeZAState(SA::StateValue::New));
+  ASSERT_TRUE(ZA_New.isNewZA());
+  ASSERT_FALSE(ZA_New.isInZA());
+  ASSERT_FALSE(ZA_New.isOutZA());
+  ASSERT_FALSE(ZA_New.isInOutZA());
+  ASSERT_FALSE(ZA_New.isPreservesZA());
+  ASSERT_FALSE(ZA_New.sharesZA());
+  ASSERT_TRUE(ZA_New.hasZAState());
+  ASSERT_FALSE(ZA_New.hasSharedZAInterface());
+  ASSERT_TRUE(ZA_New.hasPrivateZAInterface());
+
+  ASSERT_FALSE(SA(SA::Normal).isInZA());
+  ASSERT_FALSE(SA(SA::Normal).isOutZA());
+  ASSERT_FALSE(SA(SA::Normal).isInOutZA());
+  ASSERT_FALSE(SA(SA::Normal).isPreservesZA());
+  ASSERT_FALSE(SA(SA::Normal).isNewZA());
+  ASSERT_FALSE(SA(SA::Normal).sharesZA());
   ASSERT_FALSE(SA(SA::Normal).hasZAState());
-  ASSERT_FALSE(SA(SA::Normal).preservesZA());
 
   // Test ZT0 State interfaces
   SA ZT0_In = SA(SA::encodeZT0State(SA::StateValue::In));
@@ -245,9 +281,10 @@ TEST(SMEAttributes, Transitions) {
                    .requiresSMChange(SA(SA::SM_Compatible | SA::SM_Body)));
 
   SA Private_ZA = SA(SA::Normal);
-  SA ZA_Shared = SA(SA::ZA_Shared);
+  SA ZA_Shared = SA(SA::encodeZAState(SA::StateValue::In));
   SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
-  SA ZA_ZT0_Shared = SA(SA::ZA_Shared | SA::encodeZT0State(SA::StateValue::In));
+  SA ZA_ZT0_Shared = SA(SA::encodeZAState(SA::StateValue::In) |
+                        SA::encodeZT0State(SA::StateValue::In));
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(ZA_Shared.requiresDisablingZABeforeCall(Private_ZA));

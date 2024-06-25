@@ -15,7 +15,7 @@
 
 namespace clang::dataflow {
 // Forward declarations so we can use Logger anywhere in the framework.
-class ControlFlowContext;
+class AdornedCFG;
 class TypeErasedDataflowAnalysis;
 struct TypeErasedDataflowAnalysisState;
 
@@ -40,8 +40,8 @@ public:
 
   /// Called by the framework as we start analyzing a new function or statement.
   /// Forms a pair with endAnalysis().
-  virtual void beginAnalysis(const ControlFlowContext &,
-                             TypeErasedDataflowAnalysis &) {}
+  virtual void beginAnalysis(const AdornedCFG &, TypeErasedDataflowAnalysis &) {
+  }
   virtual void endAnalysis() {}
 
   // At any time during the analysis, we're computing the state for some target

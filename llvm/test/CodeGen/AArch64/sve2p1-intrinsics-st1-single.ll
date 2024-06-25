@@ -13,27 +13,27 @@ define void @test_svst1wq_i32_ss(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred
   ret void
 }
 
-define void @test_svst1wq_i32_si(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x i32>* %base) {
+define void @test_svst1wq_i32_si(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1wq_i32_si:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1w { z0.q }, p0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1w { z0.q }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %gep1 = getelementptr inbounds <vscale x 1 x i32>, <vscale x 1 x i32>* %base, i64 -8
+  %gep1 = getelementptr inbounds <vscale x 1 x i32>, ptr %base, i64 -8
   call void @llvm.aarch64.sve.st1wq.nxv4i32(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %gep1)
 
-  %gep2 = getelementptr inbounds <vscale x 1 x i32>, <vscale x 1 x i32>* %base, i64 7
+  %gep2 = getelementptr inbounds <vscale x 1 x i32>, ptr %base, i64 7
   call void @llvm.aarch64.sve.st1wq.nxv4i32(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %gep2)
   ret void
 }
 
-define void @test_svst1wq_i32_out_of_bound(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x i32>* %base) {
+define void @test_svst1wq_i32_out_of_bound(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1wq_i32_out_of_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #2
 ; CHECK-NEXT:    st1w { z0.q }, p0, [x8]
 ; CHECK-NEXT:    ret
-  %gep = getelementptr inbounds <vscale x 1 x i32>, <vscale x 1 x i32>* %base, i64 8
+  %gep = getelementptr inbounds <vscale x 1 x i32>, ptr %base, i64 8
   call void @llvm.aarch64.sve.st1wq.nxv4i32(<vscale x 4 x i32> %zt, <vscale x 1 x i1> %pred, ptr %gep)
   ret void
 }
@@ -48,16 +48,16 @@ define void @test_svst1wq_f32_ss(<vscale x 4 x float> %zt, <vscale x 1 x i1> %pr
   ret void
 }
 
-define void @test_svst1wq_f32_si(<vscale x 4 x float> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x float>* %base) {
+define void @test_svst1wq_f32_si(<vscale x 4 x float> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1wq_f32_si:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1w { z0.q }, p0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1w { z0.q }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %gep1 = getelementptr inbounds <vscale x 1 x float>, <vscale x 1 x float>* %base, i64 -8
+  %gep1 = getelementptr inbounds <vscale x 1 x float>, ptr %base, i64 -8
   call void @llvm.aarch64.sve.st1wq.nxv4f32(<vscale x 4 x float> %zt, <vscale x 1 x i1> %pred, ptr %gep1)
 
-  %gep2 = getelementptr inbounds <vscale x 1 x float>, <vscale x 1 x float>* %base, i64 7
+  %gep2 = getelementptr inbounds <vscale x 1 x float>, ptr %base, i64 7
   call void @llvm.aarch64.sve.st1wq.nxv4f32(<vscale x 4 x float> %zt, <vscale x 1 x i1> %pred, ptr %gep2)
   ret void
 }
@@ -74,27 +74,27 @@ define void @test_svst1dq_i64_ss(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred
   ret void
 }
 
-define void @test_svst1dq_i64_si(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x i64>* %base) {
+define void @test_svst1dq_i64_si(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1dq_i64_si:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1d { z0.q }, p0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1d { z0.q }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %gep1 = getelementptr inbounds <vscale x 1 x i64>, <vscale x 1 x i64>* %base, i64 -8
+  %gep1 = getelementptr inbounds <vscale x 1 x i64>, ptr %base, i64 -8
   call void @llvm.aarch64.sve.st1dq.nxv2i64(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, ptr %gep1)
 
-  %gep2 = getelementptr inbounds <vscale x 1 x i64>, <vscale x 1 x i64>* %base, i64 7
+  %gep2 = getelementptr inbounds <vscale x 1 x i64>, ptr %base, i64 7
   call void @llvm.aarch64.sve.st1dq.nxv2i64(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, ptr %gep2)
   ret void
 }
 
-define void @test_svst1dq_i64_out_of_bound(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x i64>* %base) {
+define void @test_svst1dq_i64_out_of_bound(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1dq_i64_out_of_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-5
 ; CHECK-NEXT:    st1d { z0.q }, p0, [x8]
 ; CHECK-NEXT:    ret
-  %gep = getelementptr inbounds <vscale x 1 x i64>, <vscale x 1 x i64>* %base, i64 -10
+  %gep = getelementptr inbounds <vscale x 1 x i64>, ptr %base, i64 -10
   call void @llvm.aarch64.sve.st1dq.nxv2i64(<vscale x 2 x i64> %zt, <vscale x 1 x i1> %pred, ptr %gep)
   ret void
 }
@@ -109,16 +109,16 @@ define void @test_svst1dq_f64_ss(<vscale x 2 x double> %zt, <vscale x 1 x i1> %p
   ret void
 }
 
-define void @test_svst1dq_f64_si(<vscale x 2 x double> %zt, <vscale x 1 x i1> %pred, <vscale x 1 x double>* %base) {
+define void @test_svst1dq_f64_si(<vscale x 2 x double> %zt, <vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svst1dq_f64_si:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    st1d { z0.q }, p0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    st1d { z0.q }, p0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
-  %gep1 = getelementptr inbounds <vscale x 1 x double>, <vscale x 1 x double>* %base, i64 -8
+  %gep1 = getelementptr inbounds <vscale x 1 x double>, ptr %base, i64 -8
   call void @llvm.aarch64.sve.st1dq.nxv2f64(<vscale x 2 x double> %zt, <vscale x 1 x i1> %pred, ptr %gep1)
 
-  %gep2 = getelementptr inbounds <vscale x 1 x double>, <vscale x 1 x double>* %base, i64 7
+  %gep2 = getelementptr inbounds <vscale x 1 x double>, ptr %base, i64 7
   call void @llvm.aarch64.sve.st1dq.nxv2f64(<vscale x 2 x double> %zt, <vscale x 1 x i1> %pred, ptr %gep2)
   ret void
 }

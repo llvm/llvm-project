@@ -10,7 +10,6 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; CHECK-LABEL: name: split_unmerge_undef
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
-    ; CHECK-NEXT: {{  $}}
     %ptr1:_(p1) = COPY $vgpr0_vgpr1
     %ptr2:_(p1) = COPY $vgpr2_vgpr3
     %ptr3:_(p1) = COPY $vgpr4_vgpr5

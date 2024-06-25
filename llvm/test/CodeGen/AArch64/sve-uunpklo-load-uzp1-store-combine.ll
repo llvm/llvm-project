@@ -114,8 +114,8 @@ define void @uzp1_i8_valid(<vscale x 8 x i16> %a, ptr %b) #0 {
 define void @uzp1_i8_invalid(<vscale x 8 x i16> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i8_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 8 x i16> %a to <vscale x 16 x i8>
@@ -141,8 +141,8 @@ define void @uzp1_i16_valid(<vscale x 4 x i32> %a, ptr %b) #0 {
 define void @uzp1_i16_invalid(<vscale x 4 x i32> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i16_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 4 x i32> %a to <vscale x 8 x i16>
@@ -168,8 +168,8 @@ define void @uzp1_i32_valid(<vscale x 2 x i64> %a, ptr %b) #0 {
 define void @uzp1_i32_invalid(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_i32_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>
@@ -182,8 +182,8 @@ define void @uzp1_i32_invalid(<vscale x 2 x i64> %a, ptr %b) #0 {
 define void @uzp1_invalid_all(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_invalid_all:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>
@@ -205,12 +205,12 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.uzp1.nxv16i8(<vscale x 16 x i8>, <v
 declare <vscale x 8 x i16> @llvm.aarch64.sve.uzp1.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.uzp1.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
 
-declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(<vscale x 16 x i8>*, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(<vscale x 8 x i16>*, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
-declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(<vscale x 4 x i32>*, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 
-declare void @llvm.masked.store.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>*, i32, <vscale x 16 x i1>)
-declare void @llvm.masked.store.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>*, i32, <vscale x 8 x i1>)
-declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>*, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv16i8(<vscale x 16 x i8>, ptr, i32, <vscale x 16 x i1>)
+declare void @llvm.masked.store.nxv8i16(<vscale x 8 x i16>, ptr, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)
 
 attributes #0 = { "target-features"="+sve" vscale_range(8,0) }

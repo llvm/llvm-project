@@ -96,18 +96,22 @@ export namespace Fibonacci
   CIOpts.Diags = Diags;
   CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
-  std::string CacheBMIPath = llvm::Twine(TestDir + "/Cached.pcm").str();
-  const char *Args[] = {
-      "clang++",       "-std=c++20",  "--precompile", "-working-directory",
-      TestDir.c_str(), "Cached.cppm", "-o",           CacheBMIPath.c_str()};
+  const char *Args[] = {"clang++",       "-std=c++20",
+                        "--precompile",  "-working-directory",
+                        TestDir.c_str(), "Cached.cppm"};
   std::shared_ptr<CompilerInvocation> Invocation =
       createInvocation(Args, CIOpts);
   ASSERT_TRUE(Invocation);
+  Invocation->getFrontendOpts().DisableFree = false;
 
   CompilerInstance Instance;
   Instance.setDiagnostics(Diags.get());
   Instance.setInvocation(Invocation);
-  GenerateModuleInterfaceAction Action;
+
+  std::string CacheBMIPath = llvm::Twine(TestDir + "/Cached.pcm").str();
+  Instance.getFrontendOpts().OutputFile = CacheBMIPath;
+
+  GenerateReducedModuleInterfaceAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
 

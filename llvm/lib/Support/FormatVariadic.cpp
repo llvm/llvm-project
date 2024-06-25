@@ -77,8 +77,8 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
       assert(false && "Invalid replacement field layout specification!");
   }
   RepString = RepString.trim();
-  if (!RepString.empty() && RepString.front() == ':') {
-    Options = RepString.drop_front().trim();
+  if (RepString.consume_front(":")) {
+    Options = RepString.trim();
     RepString = StringRef();
   }
   RepString = RepString.trim();
@@ -152,4 +152,4 @@ formatv_object_base::parseFormatString(StringRef Fmt) {
   return Replacements;
 }
 
-void detail::format_adapter::anchor() { }
+void support::detail::format_adapter::anchor() {}

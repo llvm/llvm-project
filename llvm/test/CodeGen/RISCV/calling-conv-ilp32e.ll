@@ -151,20 +151,20 @@ define i32 @callee_float_on_stack(i64 %a, i64 %b, i64 %c, i64 %d, float %e) {
 ;
 ; ILP32E-WITHFP-LABEL: callee_float_on_stack:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a0, 8(s0)
 ; ILP32E-WITHFP-NEXT:    lw a1, 0(s0)
 ; ILP32E-WITHFP-NEXT:    add a0, a1, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_float_on_stack:
@@ -298,18 +298,18 @@ define float @callee_tiny_scalar_ret() {
 ;
 ; ILP32E-WITHFP-LABEL: callee_tiny_scalar_ret:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lui a0, 260096
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_tiny_scalar_ret:
@@ -543,13 +543,13 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ;
 ; ILP32E-WITHFP-LABEL: callee_aligned_stack:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a0, 0(a2)
 ; ILP32E-WITHFP-NEXT:    lw a1, 12(s0)
@@ -562,9 +562,9 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a1
 ; ILP32E-WITHFP-NEXT:    add a4, a5, a4
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a4
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_aligned_stack:
@@ -731,11 +731,11 @@ define void @caller_aligned_stack() {
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: caller_aligned_stack:
 ; ILP32E-FPELIM-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -48
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 64
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a0, 18
@@ -776,18 +776,18 @@ define void @caller_aligned_stack() {
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a4, 13
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a6, 32(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call callee_aligned_stack
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -56
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 48
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -64
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 56
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
 ;
 ; ILP32E-WITHFP-SAVE-RESTORE-LABEL: caller_aligned_stack:
 ; ILP32E-WITHFP-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -48
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 64
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 18
@@ -828,8 +828,8 @@ define void @caller_aligned_stack() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a4, 13
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a6, 32(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call callee_aligned_stack
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -56
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 48
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -64
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 56
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = call i32 @callee_aligned_stack(i32 1, i32 11,
     fp128 0xLEB851EB851EB851F400091EB851EB851, i32 12, i32 13,
@@ -847,19 +847,19 @@ define double @callee_small_scalar_ret() {
 ;
 ; ILP32E-WITHFP-LABEL: callee_small_scalar_ret:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lui a1, 261888
 ; ILP32E-WITHFP-NEXT:    li a0, 0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_small_scalar_ret:
@@ -944,18 +944,18 @@ define i32 @callee_i64_in_regs(i32 %a, i64 %b) {
 ;
 ; ILP32E-WITHFP-LABEL: callee_i64_in_regs:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a1
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_i64_in_regs:
@@ -1066,13 +1066,13 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ;
 ; ILP32E-WITHFP-LABEL: callee_many_scalars:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a6, 12(s0)
 ; ILP32E-WITHFP-NEXT:    lw a7, 0(s0)
@@ -1091,9 +1091,9 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a7
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a6
 ; ILP32E-WITHFP-NEXT:    add a0, a1, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_many_scalars:
@@ -1287,13 +1287,13 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) {
 ;
 ; ILP32E-WITHFP-LABEL: callee_large_scalars:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a2, 0(a1)
 ; ILP32E-WITHFP-NEXT:    lw a3, 0(a0)
@@ -1311,9 +1311,9 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) {
 ; ILP32E-WITHFP-NEXT:    or a0, a2, a0
 ; ILP32E-WITHFP-NEXT:    or a0, a0, a4
 ; ILP32E-WITHFP-NEXT:    seqz a0, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_large_scalars:
@@ -1431,11 +1431,11 @@ define i32 @caller_large_scalars() {
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: caller_large_scalars:
 ; ILP32E-FPELIM-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -32
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 40
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -40
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 48
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 40
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 48
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    lui a0, 524272
@@ -1443,26 +1443,26 @@ define i32 @caller_large_scalars() {
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 8(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 4(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 0(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 36(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 32(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 28(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 24(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 20(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a2, 1
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi a0, sp, 16
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi a0, sp, 24
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    mv a1, sp
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a2, 16(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a2, 24(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call callee_large_scalars
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -40
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -48
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 40
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
 ;
 ; ILP32E-WITHFP-SAVE-RESTORE-LABEL: caller_large_scalars:
 ; ILP32E-WITHFP-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -32
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 40
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -40
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 48
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 40
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 48
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lui a0, 524272
@@ -1470,16 +1470,16 @@ define i32 @caller_large_scalars() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 8(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 4(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 0(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 36(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 32(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 28(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 24(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 20(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a2, 1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 16
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 24
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    mv a1, sp
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a2, 16(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a2, 24(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call callee_large_scalars
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -40
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 32
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -48
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 40
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = call i32 @callee_large_scalars(i128 1, fp128 0xL00000000000000007FFF000000000000)
   ret i32 %1
@@ -1514,13 +1514,13 @@ define i32 @callee_large_scalars_exhausted_regs(i32 %a, i32 %b, i32 %c, i32 %d, 
 ;
 ; ILP32E-WITHFP-LABEL: callee_large_scalars_exhausted_regs:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a0, 12(s0)
 ; ILP32E-WITHFP-NEXT:    lw a1, 4(s0)
@@ -1540,9 +1540,9 @@ define i32 @callee_large_scalars_exhausted_regs(i32 %a, i32 %b, i32 %c, i32 %d, 
 ; ILP32E-WITHFP-NEXT:    or a0, a2, a0
 ; ILP32E-WITHFP-NEXT:    or a0, a0, a4
 ; ILP32E-WITHFP-NEXT:    seqz a0, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_large_scalars_exhausted_regs:
@@ -1688,18 +1688,18 @@ define i32 @caller_large_scalars_exhausted_regs() {
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: caller_large_scalars_exhausted_regs:
 ; ILP32E-FPELIM-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -48
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 56
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 64
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi a0, sp, 16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 12(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a0, 9
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 8(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi a0, sp, 32
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi a0, sp, 40
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 4(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a0, 7
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 0(sp)
@@ -1708,37 +1708,37 @@ define i32 @caller_large_scalars_exhausted_regs() {
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 24(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 20(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 16(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 44(sp)
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 40(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 52(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 48(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a0, 8
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 32(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw a0, 40(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a0, 1
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a1, 2
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a2, 3
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a3, 4
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a4, 5
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    li a5, 6
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 36(sp)
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    sw zero, 44(sp)
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call callee_large_scalars_exhausted_regs
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -56
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 48
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -64
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 56
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
 ;
 ; ILP32E-WITHFP-SAVE-RESTORE-LABEL: caller_large_scalars_exhausted_regs:
 ; ILP32E-WITHFP-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -48
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 64
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 56
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 64
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 12(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 9
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 8(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 32
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 40
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 4(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 7
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 0(sp)
@@ -1747,20 +1747,20 @@ define i32 @caller_large_scalars_exhausted_regs() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 24(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 20(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 16(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 44(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 40(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 52(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 48(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 8
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 32(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 40(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 1
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 2
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a2, 3
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a3, 4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a4, 5
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a5, 6
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 36(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw zero, 44(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call callee_large_scalars_exhausted_regs
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -56
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 48
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -64
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 56
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = call i32 @callee_large_scalars_exhausted_regs(
       i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i128 8, i32 9,
@@ -1861,7 +1861,7 @@ define i32 @caller_mixed_scalar_libcalls(i64 %a) {
 
 ; Check passing of coerced integer arrays
 
-%struct.small = type { i32, i32* }
+%struct.small = type { i32, ptr }
 
 define i32 @callee_small_coerced_struct([2 x i32] %a.coerce) {
 ; ILP32E-FPELIM-LABEL: callee_small_coerced_struct:
@@ -1872,19 +1872,19 @@ define i32 @callee_small_coerced_struct([2 x i32] %a.coerce) {
 ;
 ; ILP32E-WITHFP-LABEL: callee_small_coerced_struct:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    xor a0, a0, a1
 ; ILP32E-WITHFP-NEXT:    seqz a0, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_small_coerced_struct:
@@ -1973,7 +1973,7 @@ define i32 @caller_small_coerced_struct() {
 
 %struct.large = type { i32, i32, i32, i32 }
 
-define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) {
+define i32 @callee_large_struct(ptr byval(%struct.large) align 4 %a) {
 ; ILP32E-FPELIM-LABEL: callee_large_struct:
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    lw a1, 0(a0)
@@ -1983,20 +1983,20 @@ define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) 
 ;
 ; ILP32E-WITHFP-LABEL: callee_large_struct:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lw a1, 0(a0)
 ; ILP32E-WITHFP-NEXT:    lw a0, 12(a0)
 ; ILP32E-WITHFP-NEXT:    add a0, a1, a0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_large_struct:
@@ -2018,10 +2018,10 @@ define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) 
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a0, 12(a0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a1, a0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  %1 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 0
-  %2 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 3
-  %3 = load i32, i32* %1
-  %4 = load i32, i32* %2
+  %1 = getelementptr inbounds %struct.large, ptr %a, i32 0, i32 0
+  %2 = getelementptr inbounds %struct.large, ptr %a, i32 0, i32 3
+  %3 = load i32, ptr %1
+  %4 = load i32, ptr %2
   %5 = add i32 %3, %4
   ret i32 %5
 }
@@ -2129,16 +2129,16 @@ define i32 @caller_large_struct() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 32
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %ls = alloca %struct.large, align 4
-  %1 = bitcast %struct.large* %ls to i8*
-  %a = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 0
-  store i32 1, i32* %a
-  %b = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 1
-  store i32 2, i32* %b
-  %c = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 2
-  store i32 3, i32* %c
-  %d = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 3
-  store i32 4, i32* %d
-  %2 = call i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %ls)
+  %1 = bitcast ptr %ls to ptr
+  %a = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 0
+  store i32 1, ptr %a
+  %b = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 1
+  store i32 2, ptr %b
+  %c = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 2
+  store i32 3, ptr %c
+  %d = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 3
+  store i32 4, ptr %d
+  %2 = call i32 @callee_large_struct(ptr byval(%struct.large) align 4 %ls)
   ret i32 %2
 }
 
@@ -2153,19 +2153,19 @@ define %struct.small @callee_small_struct_ret() {
 ;
 ; ILP32E-WITHFP-LABEL: callee_small_struct_ret:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    li a0, 1
 ; ILP32E-WITHFP-NEXT:    li a1, 0
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_small_struct_ret:
@@ -2185,7 +2185,7 @@ define %struct.small @callee_small_struct_ret() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a0, 1
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  ret %struct.small { i32 1, i32* null }
+  ret %struct.small { i32 1, ptr null }
 }
 
 define i32 @caller_small_struct_ret() {
@@ -2241,7 +2241,7 @@ define i32 @caller_small_struct_ret() {
   %1 = call %struct.small @callee_small_struct_ret()
   %2 = extractvalue %struct.small %1, 0
   %3 = extractvalue %struct.small %1, 1
-  %4 = ptrtoint i32* %3 to i32
+  %4 = ptrtoint ptr %3 to i32
   %5 = add i32 %2, %4
   ret i32 %5
 }
@@ -2260,22 +2260,22 @@ define fp128 @callee_large_scalar_ret() {
 ;
 ; ILP32E-WITHFP-LABEL: callee_large_scalar_ret:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    lui a1, 524272
 ; ILP32E-WITHFP-NEXT:    sw a1, 12(a0)
 ; ILP32E-WITHFP-NEXT:    sw zero, 8(a0)
 ; ILP32E-WITHFP-NEXT:    sw zero, 4(a0)
 ; ILP32E-WITHFP-NEXT:    sw zero, 0(a0)
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_large_scalar_ret:
@@ -2346,33 +2346,33 @@ define void @caller_large_scalar_ret() {
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: caller_large_scalar_ret:
 ; ILP32E-FPELIM-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -16
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 24
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, -24
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 24
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi s0, sp, 32
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    mv a0, sp
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    call callee_large_scalar_ret
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -24
-; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, s0, -32
+; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    addi sp, sp, 24
 ; ILP32E-FPELIM-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
 ;
 ; ILP32E-WITHFP-SAVE-RESTORE-LABEL: caller_large_scalar_ret:
 ; ILP32E-WITHFP-SAVE-RESTORE:       # %bb.0:
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call t0, __riscv_save_1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 24
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, -24
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa_offset 32
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 24
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 32
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    andi sp, sp, -16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    mv a0, sp
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call callee_large_scalar_ret
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -24
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, s0, -32
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 24
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = call fp128 @callee_large_scalar_ret()
   ret void
@@ -2380,7 +2380,7 @@ define void @caller_large_scalar_ret() {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) {
+define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result) {
 ; ILP32E-FPELIM-LABEL: callee_large_struct_ret:
 ; ILP32E-FPELIM:       # %bb.0:
 ; ILP32E-FPELIM-NEXT:    li a1, 1
@@ -2395,13 +2395,13 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ;
 ; ILP32E-WITHFP-LABEL: callee_large_struct_ret:
 ; ILP32E-WITHFP:       # %bb.0:
-; ILP32E-WITHFP-NEXT:    addi sp, sp, -16
-; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 16
-; ILP32E-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; ILP32E-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    addi sp, sp, -8
+; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 8
+; ILP32E-WITHFP-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
+; ILP32E-WITHFP-NEXT:    sw s0, 0(sp) # 4-byte Folded Spill
 ; ILP32E-WITHFP-NEXT:    .cfi_offset ra, -4
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
-; ILP32E-WITHFP-NEXT:    addi s0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
 ; ILP32E-WITHFP-NEXT:    li a1, 1
 ; ILP32E-WITHFP-NEXT:    sw a1, 0(a0)
@@ -2411,9 +2411,9 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ; ILP32E-WITHFP-NEXT:    sw a1, 8(a0)
 ; ILP32E-WITHFP-NEXT:    li a1, 4
 ; ILP32E-WITHFP-NEXT:    sw a1, 12(a0)
-; ILP32E-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; ILP32E-WITHFP-NEXT:    addi sp, sp, 16
+; ILP32E-WITHFP-NEXT:    lw ra, 4(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    lw s0, 0(sp) # 4-byte Folded Reload
+; ILP32E-WITHFP-NEXT:    addi sp, sp, 8
 ; ILP32E-WITHFP-NEXT:    ret
 ;
 ; ILP32E-FPELIM-SAVE-RESTORE-LABEL: callee_large_struct_ret:
@@ -2445,14 +2445,14 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a1, 12(a0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
-  %a = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 0
-  store i32 1, i32* %a, align 4
-  %b = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 1
-  store i32 2, i32* %b, align 4
-  %c = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 2
-  store i32 3, i32* %c, align 4
-  %d = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 3
-  store i32 4, i32* %d, align 4
+  %a = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 0
+  store i32 1, ptr %a, align 4
+  %b = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 1
+  store i32 2, ptr %b, align 4
+  %c = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 2
+  store i32 3, ptr %c, align 4
+  %d = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 3
+  store i32 4, ptr %d, align 4
   ret void
 }
 
@@ -2539,11 +2539,11 @@ define i32 @caller_large_struct_ret() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    tail __riscv_restore_1
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
-  %2 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 0
-  %3 = load i32, i32* %2
-  %4 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 3
-  %5 = load i32, i32* %4
+  call void @callee_large_struct_ret(ptr sret(%struct.large) %1)
+  %2 = getelementptr inbounds %struct.large, ptr %1, i32 0, i32 0
+  %3 = load i32, ptr %2
+  %4 = getelementptr inbounds %struct.large, ptr %1, i32 0, i32 3
+  %5 = load i32, ptr %4
   %6 = add i32 %3, %5
   ret i32 %6
 }

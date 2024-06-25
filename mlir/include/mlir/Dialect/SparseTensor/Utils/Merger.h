@@ -144,6 +144,7 @@ enum class TensorExp::Kind {
   kExpm1C,
   kLog1pF,
   kLog1pC,
+  kRelu,
   kSinF,
   kSinC,
   kTanhF,
@@ -316,7 +317,7 @@ public:
   /// lattice point on an expression E is simply copied over, but with OP E
   /// as new expression. Returns the identifier of the new set.
   LatSetId mapSet(TensorExp::Kind kind, LatSetId s, Value v = Value(),
-                  Operation *op = nullptr);
+                  Operation *op = nullptr, Attribute attr = nullptr);
 
   /// Maps the binary operator to the same operation but with one of its operand
   /// set to zero, i.e. each lattice point on an expression E is simply copied
@@ -509,8 +510,7 @@ public:
   bool isSparseLvlWithNonTrivialIdxExp(TensorLoopId b) const {
     if (isLvlWithNonTrivialIdxExp(b)) {
       auto lt = getLoopDependentLevelType(b);
-      return isCompressedLT(lt) || isSingletonLT(lt) ||
-             isLooseCompressedLT(lt) || is2OutOf4LT(lt);
+      return lt.hasSparseSemantic();
     }
     return false;
   }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fsyntax-only -Wuninitialized -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -Wuninitialized -fsyntax-only %s -verify
 
 typedef int __v4si __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16)));

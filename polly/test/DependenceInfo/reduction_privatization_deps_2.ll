@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
 ;
 ; We have privatization dependences from a textually later statement to a
 ; textually earlier one, but the dependences still go forward in time.

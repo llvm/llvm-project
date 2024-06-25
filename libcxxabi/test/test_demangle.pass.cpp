@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 // The demangler does not pass all these tests with the system dylibs on macOS.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 
 // This test is too big for most embedded devices.
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // https://llvm.org/PR51407 was not fixed in some previously-released
 // demanglers, which causes them to run into the infinite loop.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx11.0
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-macosx11.0
 
 // Android's long double on x86[-64] is (64/128)-bits instead of Linux's usual
 // 80-bit format, and this demangling test is failing on it.
@@ -30222,9 +30222,8 @@ struct FPLiteralCase {
      }},
 #endif
 #if LDBL_FP128
-    // This was found by libFuzzer+HWASan on aarch64 Android.
-    {"1\006ILeeeEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
-     {"\x6<-0x1.cecececececececececececececep+11983L>"}},
+    // A 32-character FP literal of long double type
+    {"3FooILeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeEE", {"Foo<-0x1.eeeeeeeeeeeeeeeeeeeeeeeeeeeep+12015L>"}},
 #endif
 };
 const unsigned NF = sizeof(fp_literal_cases) / sizeof(fp_literal_cases[0]);
@@ -30238,6 +30237,8 @@ const char* invalid_cases[] =
     "NSoERj5E=Y1[uM:ga",
     "Aon_PmKVPDk7?fg4XP5smMUL6;<WsI_mgbf23cCgsHbT<l8EE\0uVRkNOoXDrgdA4[8IU>Vl<>IL8ayHpiVDDDXTY;^o9;i",
     "_ZNSt16allocator_traitsISaIN4llvm3sys2fs18directory_iteratorEEE9constructIS3_IS3_EEEDTcl12_S_constructfp_fp0_spcl7forwardIT0_Efp1_EEERS4_PT_DpOS7_",
+    "3FooILdaaaaaaaaaaAAAAaaEE",
+    "3FooILdaaaaaaaaaaaaaaEE",
 #if !LDBL_FP80
     "_ZN5test01hIfEEvRAcvjplstT_Le4001a000000000000000E_c",
 #endif

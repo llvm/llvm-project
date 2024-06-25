@@ -27,8 +27,8 @@
 #include <string>
 #include <type_traits>
 
-// Some environments, viz. clang on Darwin, allow the macro HUGE
-// to leak out of <math.h> even when it is never directly included.
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
+// to leak out of <math.h>.
 #undef HUGE
 
 namespace Fortran::evaluate::value {
@@ -50,9 +50,12 @@ namespace Fortran::evaluate::value {
 // named accordingly in ALL CAPS so that they can be referenced easily in
 // the language standard.
 template <int BITS, bool IS_LITTLE_ENDIAN = isHostLittleEndian,
-    int PARTBITS = BITS <= 32 ? BITS : 32,
+    int PARTBITS = BITS <= 32 ? BITS
+        : BITS % 32 == 0      ? 32
+        : BITS % 16 == 0      ? 16
+                              : 8,
     typename PART = HostUnsignedInt<PARTBITS>,
-    typename BIGPART = HostUnsignedInt<PARTBITS * 2>>
+    typename BIGPART = HostUnsignedInt<PARTBITS * 2>, int ALIGNMENT = BITS>
 class Integer {
 public:
   static constexpr int bits{BITS};
@@ -79,6 +82,8 @@ private:
   static_assert((parts - 1) * partBits + topPartBits == bits);
   static constexpr Part partMask{static_cast<Part>(~0) >> extraPartBits};
   static constexpr Part topPartMask{static_cast<Part>(~0) >> extraTopPartBits};
+  static constexpr int partsWithAlignment{
+      (ALIGNMENT + partBits - 1) / partBits};
 
 public:
   // Some types used for member function results
@@ -154,7 +159,10 @@ public:
           }
         }
       } else {
-        INT signExtension{-(n < 0)};
+        // Avoid left shifts of negative signed values (that's an undefined
+        // behavior in C++).
+        auto signExtension{std::make_unsigned_t<INT>(n < 0)};
+        signExtension = ~signExtension + 1;
         static_assert(nBits >= partBits);
         if constexpr (nBits > partBits) {
           signExtension <<= nBits - partBits;
@@ -307,7 +315,7 @@ public:
       }
       result.overflow = false;
     } else if constexpr (bits < FROM::bits) {
-      auto back{FROM::template ConvertSigned(result.value)};
+      auto back{FROM::template ConvertSigned<Integer>(result.value)};
       result.overflow = back.value.CompareUnsigned(that) != Ordering::Equal;
     }
     return result;
@@ -478,7 +486,12 @@ public:
     SINT n = ToUInt<UINT>();
     constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
     if constexpr (bits < maxBits) {
-      n |= -(n >> (bits - 1)) << bits;
+      // Avoid left shifts of negative signed values (that's an undefined
+      // behavior in C++).
+      auto u{std::make_unsigned_t<SINT>(ToUInt())};
+      u = (u >> (bits - 1)) << (bits - 1); // Get the sign bit only.
+      u = ~u + 1; // Negate top bits if not 0.
+      n |= static_cast<SINT>(u);
     }
     return n;
   }
@@ -1035,14 +1048,16 @@ private:
     }
   }
 
-  Part part_[parts]{};
+  Part part_[partsWithAlignment]{};
 };
 
 extern template class Integer<8>;
 extern template class Integer<16>;
 extern template class Integer<32>;
 extern template class Integer<64>;
-extern template class Integer<80>;
+using X87IntegerContainer =
+    Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
+extern template class Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
 extern template class Integer<128>;
 } // namespace Fortran::evaluate::value
 #endif // FORTRAN_EVALUATE_INTEGER_H_

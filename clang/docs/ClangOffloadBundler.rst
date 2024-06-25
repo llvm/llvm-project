@@ -245,7 +245,7 @@ Where:
                     object as a data section with the name ``.hip_fatbin``.
 
       hipv4         Offload code object for the HIP language. Used for AMD GPU
-                    code objects with at least ABI version V4 when the
+                    code objects with at least ABI version V4 and above when the
                     ``clang-offload-bundler`` is used to create a *fat binary*
                     to be loaded by the HIP runtime. The fat binary can be
                     loaded directly from a file, or be embedded in the host code
@@ -253,6 +253,14 @@ Where:
 
       openmp        Offload code object for the OpenMP language extension.
       ============= ==============================================================
+
+Note: The distinction between the `hip` and `hipv4` offload kinds is historically based.
+Originally, these designations might have indicated different versions of the
+code object ABI. However, as the system has evolved, the ABI version is now embedded
+directly within the code object itself, making these historical distinctions irrelevant
+during the unbundling process. Consequently, `hip` and `hipv4` are treated as compatible
+in current implementations, facilitating interchangeable handling of code objects
+without differentiation based on offload kind.
 
 **target-triple**
     The target triple of the code object. See `Target Triple
@@ -295,7 +303,7 @@ Compatibility Rules for Bundle Entry ID
   A code object, specified using its Bundle Entry ID, can be loaded and
   executed on a target processor, if:
 
-  * Their offload kinds are the same.
+  * Their offload kinds are the same or comptible.
   * Their target triples are compatible.
   * Their Target IDs are compatible as defined in :ref:`compatibility-target-id`.
 
@@ -518,10 +526,13 @@ The compressed offload bundle begins with a header followed by the compressed bi
     This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
 
 - **Version Number (16-bit unsigned int)**:
-    This denotes the version of the compressed offload bundle format. The current version is `1`.
+    This denotes the version of the compressed offload bundle format. The current version is `2`.
 
 - **Compression Method (16-bit unsigned int)**:
     This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
+
+- **Total File Size (32-bit unsigned int)**:
+    This is the total size (in bytes) of the file, including the header. Available in version 2 and above.
 
 - **Uncompressed Binary Size (32-bit unsigned int)**:
     This is the size (in bytes) of the binary data before it was compressed.

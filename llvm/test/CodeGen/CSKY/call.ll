@@ -3,11 +3,11 @@
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -relocation-model=pic -code-model=small -mattr=+2e3 | FileCheck %s --check-prefix=CHECK-PIC-SMALL
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -relocation-model=pic -code-model=large -mattr=+2e3 | FileCheck %s --check-prefix=CHECK-PIC-LARGE
 
-@p_fun = global void (i32, i32)* @bar, align 8
+@p_fun = global ptr @bar, align 8
 
 declare void @bar(i32, i32)
 
-define void @foo(i32 %a, i32* %ptr){
+define void @foo(i32 %a, ptr %ptr){
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subi16 sp, sp, 4
@@ -63,12 +63,12 @@ define void @foo(i32 %a, i32* %ptr){
 ; CHECK-PIC-NEXT:    ld32.w a1, a1, 0
 ; CHECK-PIC-NEXT:    br32 bar
 entry:
-  %0 = load i32, i32* %ptr
+  %0 = load i32, ptr %ptr
   tail call void (i32, i32) @bar(i32 %a, i32 %0)
   ret void
 }
 
-define void @foo_indirect(i32 %a, i32* %ptr) {
+define void @foo_indirect(i32 %a, ptr %ptr) {
 ; CHECK-LABEL: foo_indirect:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subi16 sp, sp, 4
@@ -132,8 +132,8 @@ define void @foo_indirect(i32 %a, i32* %ptr) {
 ; CHECK-PIC-NEXT:    ld32.w a1, a1, 0
 ; CHECK-PIC-NEXT:    jmp32 a2
 entry:
-  %0 = load void (i32, i32)*, void (i32, i32)** @p_fun, align 8
-  %1 = load i32, i32* %ptr
+  %0 = load ptr, ptr @p_fun, align 8
+  %1 = load i32, ptr %ptr
   tail call void (i32, i32) %0(i32 %a, i32 %1)
   ret void
 }

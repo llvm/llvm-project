@@ -67,6 +67,7 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_LOAD_V1_V2_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  ;
   ; GFX12-LABEL: name: vimage_move_to_valu
   ; GFX12: bb.0.bb:
   ; GFX12-NEXT:   successors: %bb.1(0x80000000)
@@ -200,6 +201,7 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  ;
   ; GFX12-LABEL: name: vsample_move_to_valu_rsrc
   ; GFX12: bb.0.main_body:
   ; GFX12-NEXT:   successors: %bb.1(0x80000000)
@@ -324,6 +326,7 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
+  ;
   ; GFX12-LABEL: name: vsample_move_to_valu_samp
   ; GFX12: bb.0.main_body:
   ; GFX12-NEXT:   successors: %bb.1(0x80000000)

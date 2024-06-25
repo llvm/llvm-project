@@ -34,6 +34,28 @@ entry:
   ret i32 %and
 }
 
+; and can be eliminated
+; CHECK-LABEL: {{^}}test_call_known_max_range_attr:
+; CHECK: bl foo
+; CHECK-NOT: and
+; CHECK: ret
+define i32 @test_call_known_max_range_attr() #0 {
+entry:
+  %id = tail call noundef range(i32 0, 1024) i32 @foo()
+  %and = and i32 %id, 1023
+  ret i32 %and
+}
+
+; CHECK-LABEL: {{^}}test_call_known_max_range_attr_no_noundef:
+; CHECK: bl foo
+; CHECK: and w{{[0-9]+}}, w0, #0x3ff
+; CHECK: ret
+define i32 @test_call_known_max_range_attr_no_noundef() #0 {
+entry:
+  %id = tail call range(i32 0, 1024) i32 @foo()
+  %and = and i32 %id, 1023
+  ret i32 %and
+}
 
 declare i32 @foo()
 

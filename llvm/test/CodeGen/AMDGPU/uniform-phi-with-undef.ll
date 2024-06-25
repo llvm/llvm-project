@@ -17,7 +17,7 @@ define amdgpu_ps float @uniform_phi_with_undef(float inreg %c, float %v, i32 %x,
 ; GCN-NEXT:    s_mov_b32 exec_lo, s2
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
-; GCN-NEXT:    s_mov_b32 s2, 2.0
+; GCN-NEXT:    s_mov_b32 s2, 0x40400000
 ; GCN-NEXT:    v_div_scale_f32 v1, s3, s2, s2, v0
 ; GCN-NEXT:    v_rcp_f32_e64 v2, v1
 ; GCN-NEXT:    s_mov_b32 s3, 1.0
@@ -39,7 +39,7 @@ entry:
   br i1 %cc, label %if, label %end
 
 if:
-  %v.if = fdiv float %v, 2.0
+  %v.if = fdiv float %v, 3.0
   br label %end
 
 end:

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -80,29 +81,40 @@ class FileRange:
     """Stores the coordinates of a span on a single line within a file.
 
     Attributes:
-      line:         the line number
-      start_column: the (inclusive) column where the span starts
-      end_column:   the (inclusive) column where the span ends
+      content:    line str
+      start_byte: the (inclusive) byte offset the span starts
+      end_byte:   the (inclusive) byte offset the span ends
     """
 
-    line: int
-    start_column: int
-    end_column: int
+    content: str
+    start_byte: int
+    end_byte: int
 
     def __init__(
         self, content: str, start_byte: int, end_byte: int
     ):  # pylint: disable=g-doc-args
-        """Derives a span's coordinates based on a string and start/end bytes.
+        """
+        Stores the coordinates of a span based on a string and start/end bytes.
 
         `start_byte` and `end_byte` are assumed to be on the same line.
         """
-        content_before_span = content[:start_byte]
-        self.line = content_before_span.count("\n") + 1
-        self.start_column = start_byte - content_before_span.rfind("\n")
-        self.end_column = self.start_column + (end_byte - start_byte - 1)
+        self.content = content
+        self.start_byte = start_byte
+        self.end_byte = end_byte
 
-    def __str__(self) -> str:
-        return f"{self.line}:{self.start_column}-{self.end_column}"
+    def as_str(self):
+        """
+        Derives span from line and coordinates.
+
+        start_column: the (inclusive) column where the span starts
+        end_column:   the (inclusive) column where the span ends
+        """
+        content_before_span = self.content[: self.start_byte]
+        line = content_before_span.count("\n") + 1
+        start_column = self.start_byte - content_before_span.rfind("\n")
+        end_column = start_column + (self.end_byte - self.start_byte - 1)
+
+        return f"{line}:{start_column}-{end_column}"
 
 
 class Diagnostic:
@@ -133,7 +145,7 @@ class Diagnostic:
         self.fix = fix
 
     def __str__(self) -> str:
-        return f"{self.filepath}:" + str(self.filerange) + f": {self.summary()}"
+        return f"{self.filepath}:" + self.filerange.as_str() + f": {self.summary()}"
 
     def summary(self) -> str:
         return (
@@ -227,7 +239,8 @@ def find_directive_typos(
         )
 
     potential_directives = find_potential_directives(content)
-
+    # Cache score and best_match to skip recalculating.
+    score_and_best_match_for_potential_directive = dict()
     for filerange, potential_directive in potential_directives:
         # TODO(bchetioui): match count directives more finely. We skip directives
         # starting with 'CHECK-COUNT-' for the moment as they require more complex
@@ -243,7 +256,16 @@ def find_directive_typos(
         if len(potential_directive) > max(map(len, all_directives)) + threshold:
             continue
 
-        score, best_match = find_best_match(potential_directive)
+        if potential_directive not in score_and_best_match_for_potential_directive:
+            score, best_match = find_best_match(potential_directive)
+            score_and_best_match_for_potential_directive[potential_directive] = (
+                score,
+                best_match,
+            )
+        else:
+            score, best_match = score_and_best_match_for_potential_directive[
+                potential_directive
+            ]
         if score == 0:  # This is an actual directive, ignore.
             continue
         elif score <= threshold and best_match not in _ignore:

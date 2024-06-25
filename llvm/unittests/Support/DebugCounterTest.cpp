@@ -13,28 +13,28 @@
 using namespace llvm;
 
 #ifndef NDEBUG
-TEST(DebugCounterTest, CounterCheck) {
+TEST(DebugCounterTest, Basic) {
   DEBUG_COUNTER(TestCounter, "test-counter", "Counter used for unit test");
 
   EXPECT_FALSE(DebugCounter::isCounterSet(TestCounter));
-
   auto DC = &DebugCounter::instance();
-  DC->push_back("test-counter-skip=1");
-  DC->push_back("test-counter-count=3");
+  DC->push_back("test-counter=1:3-5:78:79:89:100-102:150");
 
   EXPECT_TRUE(DebugCounter::isCounterSet(TestCounter));
 
-  EXPECT_EQ(0, DebugCounter::getCounterValue(TestCounter));
-  EXPECT_FALSE(DebugCounter::shouldExecute(TestCounter));
+  SmallVector<unsigned> Res;
+  for (unsigned Idx = 0; Idx < 200; Idx++) {
+    if (DebugCounter::shouldExecute(TestCounter))
+      Res.push_back(Idx);
+  }
 
-  EXPECT_EQ(1, DebugCounter::getCounterValue(TestCounter));
-  EXPECT_TRUE(DebugCounter::shouldExecute(TestCounter));
+  SmallVector<unsigned> Expected = {1, 3, 4, 5, 78, 79, 89, 100, 101, 102, 150};
+  EXPECT_EQ(Expected, Res);
 
-  DebugCounter::setCounterValue(TestCounter, 3);
-  EXPECT_TRUE(DebugCounter::shouldExecute(TestCounter));
-  EXPECT_FALSE(DebugCounter::shouldExecute(TestCounter));
-
-  DebugCounter::setCounterValue(TestCounter, 100);
-  EXPECT_FALSE(DebugCounter::shouldExecute(TestCounter));
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  DC->print(OS);
+  EXPECT_TRUE(StringRef(Str).contains("{200,1:3-5:78:79:89:100-102:150}"));
 }
+
 #endif

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
 ;
 ; Regression test that triggered a memory leak at some point (24947).
 ;

@@ -81,12 +81,12 @@ TEST(MangledTest, ResultForValidDLangName) {
   EXPECT_STREQ(expected_result.GetCString(), the_demangled.GetCString());
 }
 
-TEST(MangledTest, EmptyForInvalidDLangName) {
+TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   ConstString mangled_name("_DDD");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
 
-  EXPECT_STREQ("", the_demangled.GetCString());
+  EXPECT_STREQ("_DDD", the_demangled.GetCString());
 }
 
 TEST(MangledTest, RecognizeSwiftMangledNames) {

@@ -1,13 +1,13 @@
 // This test will test the correstness of generating DILabel and
 // llvm.dbg.label for labels.
 //
-// RUN: %clang_cc1 -emit-llvm %s -o - -emit-llvm -debug-info-kind=limited | FileCheck %s
+// RUN: %clang_cc1 %s -o - -emit-llvm -debug-info-kind=limited | FileCheck %s
 
 int f1(int a, int b) {
   int sum;
 
 top:
-  // CHECK: call void @llvm.dbg.label(metadata [[LABEL_METADATA:!.*]]), !dbg [[LABEL_LOCATION:!.*]]
+  // CHECK: #dbg_label([[LABEL_METADATA:!.*]],  [[LABEL_LOCATION:![0-9]+]]
   sum = a + b;
   return sum;
 }

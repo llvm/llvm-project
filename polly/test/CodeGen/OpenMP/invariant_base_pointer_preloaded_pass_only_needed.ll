@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -polly-parallel \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -polly-parallel \
 ; RUN: -polly-parallel-force -S < %s | FileCheck %s
 ;
 ; Test to verify that we hand down the preloaded A[0] to the OpenMP subfunction but

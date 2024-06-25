@@ -773,6 +773,10 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
 void StackColoring::calculateLocalLiveness() {
   unsigned NumIters = 0;
   bool changed = true;
+  // Create BitVector outside the loop and reuse them to avoid repeated heap
+  // allocations.
+  BitVector LocalLiveIn;
+  BitVector LocalLiveOut;
   while (changed) {
     changed = false;
     ++NumIters;
@@ -784,7 +788,7 @@ void StackColoring::calculateLocalLiveness() {
       BlockLifetimeInfo &BlockInfo = BI->second;
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
-      BitVector LocalLiveIn;
+      LocalLiveIn.clear();
       for (MachineBasicBlock *Pred : BB->predecessors()) {
         LivenessMap::const_iterator I = BlockLiveness.find(Pred);
         // PR37130: transformations prior to stack coloring can
@@ -801,7 +805,7 @@ void StackColoring::calculateLocalLiveness() {
       // because we already handle the case where the BEGIN comes
       // before the END when collecting the markers (and building the
       // BEGIN/END vectors).
-      BitVector LocalLiveOut = LocalLiveIn;
+      LocalLiveOut = LocalLiveIn;
       LocalLiveOut.reset(BlockInfo.End);
       LocalLiveOut |= BlockInfo.Begin;
 

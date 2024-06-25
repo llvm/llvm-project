@@ -55,7 +55,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    const uint8_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
-// CHECK-NEXT:    void runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
+// CHECK-NEXT:    bool runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -85,7 +85,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableModuleFeatures(const MyTargetSubtarget *Subtarget) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    if (!((Subtarget->has64())))
 // CHECK-NEXT:      Features.set(Feature_HwMode1Bit);
 // CHECK-NEXT:    if ((Subtarget->has64()))
@@ -95,7 +95,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableFunctionFeatures(const MyTargetSubtarget *Subtarget, const MachineFunction *MF) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 
@@ -134,14 +134,14 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s64,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src1
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src1)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
-// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 0,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -152,14 +152,14 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src1
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src1)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
-// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 1,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -176,14 +176,14 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_p0s64,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_p0s64,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i64] } GPR:{ *:[i64] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i64] } GPR:{ *:[i64] }:$src)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
-// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 2,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]
@@ -194,14 +194,14 @@ def LOAD : I<(outs GPR:$dst), (ins GPR:$src1),
 // CHECK-NEXT:    GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // CHECK-NEXT:    GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT:    // MIs[0] DstI[dst]
-// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_p0s32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_p0s32,
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // MIs[0] src
 // CHECK-NEXT:    GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
-// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT:    GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT:    // (ld:{ *:[i32] } GPR:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD:{ *:[i32] } GPR:{ *:[i32] }:$src)
 // CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD),
-// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:    // GIR_Coverage, 3,
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  // Label [[LABEL_NUM]]: @[[LABEL]]

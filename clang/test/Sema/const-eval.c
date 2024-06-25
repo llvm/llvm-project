@@ -134,8 +134,7 @@ void PR21945(void) { int i = (({}), 0l); }
 
 void PR24622(void);
 struct PR24622 {} pr24622;
-EVAL_EXPR(52, &pr24622 == (void *)&PR24622); // expected-error {{not an integer constant expression}}
-                                             // expected-note@-1 {{past the end}}
+EVAL_EXPR(52, &pr24622 == (void *)&PR24622);
 
 // We evaluate these by providing 2s' complement semantics in constant
 // expressions, like we do for integers.

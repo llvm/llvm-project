@@ -9,6 +9,9 @@
 # RUN: llvm-objdump --no-print-imm-hex -d %t3 | FileCheck %s
 # RUN: llvm-objdump --no-print-imm-hex -d %t4 | FileCheck --check-prefix=REVERT %s
 
+# RUN: ld.lld --noinhibit-exec %t2 %t1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
+# WARN: warning: duplicate symbol: _bar
+
 # RUN: ld.lld -z muldefs --fatal-warnings  %t1 %t2 -o %t3
 # RUN: ld.lld -z muldefs --fatal-warnings  %t2 %t1 -o %t4
 # RUN: llvm-objdump --no-print-imm-hex -d %t3 | FileCheck %s

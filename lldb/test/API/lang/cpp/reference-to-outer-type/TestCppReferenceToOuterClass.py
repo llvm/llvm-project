@@ -1,4 +1,4 @@
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -6,7 +6,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @unittest2.expectedFailure  # The fix for this was reverted due to llvm.org/PR52257
+    @unittest.expectedFailure  # The fix for this was reverted due to llvm.org/PR52257
     def test(self):
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures -polly-detect -disable-output 2>&1 < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output 2>&1 < %s | FileCheck %s -match-full-lines
 ;
 ; Derived from test-suite/MultiSource/Benchmarks/BitBench/uuencode/uuencode.c
 ;
-; CHECK: remark: uuencode.c:75:18: The following errors keep this region from being a Scop.
+; CHECK: remark: uuencode.c:76:13: The following errors keep this region from being a Scop.
 ; CHECK: remark: uuencode.c:83:3: Loop cannot be handled because it has multiple exits.
 ; CHECK: remark: uuencode.c:95:21: Invalid Scop candidate ends here.
 

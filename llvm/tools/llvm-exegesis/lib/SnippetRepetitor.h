@@ -29,7 +29,8 @@ namespace exegesis {
 class SnippetRepetitor {
 public:
   static std::unique_ptr<const SnippetRepetitor>
-  Create(Benchmark::RepetitionModeE Mode, const LLVMState &State);
+  Create(Benchmark::RepetitionModeE Mode, const LLVMState &State,
+         unsigned LoopRegister);
 
   virtual ~SnippetRepetitor();
 

@@ -53,7 +53,7 @@ define i64 @cttz(i64 %A) {
 ; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG12:![0-9]+]]
 ; DEBUGINFO:       cond.end:
 ; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG12]]
-; DEBUGINFO-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[CTZ]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG11]]
+; DEBUGINFO-NEXT:      #dbg_value(i64 [[CTZ]], [[META9:![0-9]+]], !DIExpression(), [[DBG11]])
 ; DEBUGINFO-NEXT:    ret i64 [[CTZ]], !dbg [[DBG12]]
 ;
 entry:
@@ -101,7 +101,7 @@ define i64 @ctlz(i64 %A) {
 ; DEBUGINFO-NEXT:    br label [[COND_END]], !dbg [[DBG17:![0-9]+]]
 ; DEBUGINFO:       cond.end:
 ; DEBUGINFO-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ], !dbg [[DBG17]]
-; DEBUGINFO-NEXT:    tail call void @llvm.dbg.value(metadata i64 [[CTZ]], metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG16]]
+; DEBUGINFO-NEXT:      #dbg_value(i64 [[CTZ]], [[META15:![0-9]+]], !DIExpression(), [[DBG16]])
 ; DEBUGINFO-NEXT:    ret i64 [[CTZ]], !dbg [[DBG17]]
 ;
 entry:

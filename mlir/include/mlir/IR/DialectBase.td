@@ -34,6 +34,11 @@ class Dialect {
   // pattern or interfaces.
   list<string> dependentDialects = [];
 
+  // A list of key/value pair representing an attribute type and a name.
+  // This will generate helper classes on the dialect to be able to
+  // manage discardable attributes on operations in a type safe way.
+  dag discardableAttrs = (ins);
+
   // The C++ namespace that ops of this dialect should be placed into.
   //
   // By default, uses the name of the dialect as the only namespace. To avoid

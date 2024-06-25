@@ -143,3 +143,31 @@ fir.global linkonce @_QQclXce30ef70ff16a711a97719fb946c0b3d constant : !fir.char
   fir.has_value %0 : !fir.char<1,1>
 }
 func.func private @_FortranAPushArrayConstructorValue(!fir.llvm_ptr<i8>, !fir.box<none>) -> none attributes {fir.runtime}
+
+// -----
+
+// Test that only a single freemem is generated.
+
+func.func @double_free(%arg0: !fir.boxchar<1>) {
+  %c5 = arith.constant 5 : index
+  %true = arith.constant true
+  %0 = hlfir.as_expr %arg0 move %true : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+  %1 = hlfir.no_reassoc %0 : !hlfir.expr<!fir.char<1,?>>
+  %2:3 = hlfir.associate %1 typeparams %c5 {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  fir.call @noop(%2#0) : (!fir.boxchar<1>) -> ()
+  hlfir.end_associate %2#1, %2#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.destroy %0 : !hlfir.expr<!fir.char<1,?>>
+  return
+} 
+func.func private @noop(!fir.boxchar<1>)
+
+// CHECK-LABEL: func.func @double_free(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.boxchar<1>) {
+// CHECK: %[[NO_REASSOC:.*]] = hlfir.no_reassoc %[[ARG0]] : !fir.boxchar<1>
+// CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[NO_REASSOC]] : (!fir.boxchar<1>) -> !fir.ref<!fir.char<1,?>>
+// CHECK: fir.call @noop
+// CHECK: %[[CONV:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.ref<!fir.char<1,?>>) -> !fir.heap<!fir.char<1,?>>
+// CHECK: fir.freemem %[[CONV]] : !fir.heap<!fir.char<1,?>>
+// CHECK-NOT: fir.freemem
+
+

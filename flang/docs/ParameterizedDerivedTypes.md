@@ -7,7 +7,7 @@ type parameters are of integer type.
 This document aims to give insights at the representation of PDTs in FIR and how
 PDTs related constructs and features are lowered to FIR.
 
-# Fortran standard
+## Fortran standard
 
 Here is a list of the sections and constraints of the Fortran standard involved
 for parameterized derived types.
@@ -22,9 +22,9 @@ for parameterized derived types.
 
 The constraints are implemented and tested in flang.
 
-## The two types of PDTs
+### The two types of PDTs
 
-### PDT with kind type parameter
+#### PDT with kind type parameter
 
 PDTs with kind type parameter are already implemented in flang. Since the kind
 type parameter shall be a constant expression, it can be determined at
@@ -48,7 +48,7 @@ Lowering makes the distinction between the two types by giving them different
 names `@_QFE.kp.t.1` and `@_QFE.kp.t.2`. More information about the unique names
 can be found here: `flang/docs/BijectiveInternalNameUniquing.md`
 
-### PDT with length type parameter
+#### PDT with length type parameter
 
 Two PDTs with the same derived type and the same kind type parameters but
 different length type parameters are not distinct types. Unlike the kind type
@@ -92,7 +92,7 @@ two possibilities.
 These solutions have pros and cons and more details are given in the next few
 sections.
 
-#### Implementing PDT with inlined components
+##### Implementing PDT with inlined components
 
 In case of `len_type1`, the size, offset, etc. of `fld1` and `fld2` depend on
 the runtime values of `i` and `j` when the components are inlined into the
@@ -114,7 +114,7 @@ type len_type1(i, j)
 end type
 ```
 
-#### Implementing PDT with outlined components
+##### Implementing PDT with outlined components
 
 A level of indirection can be used and `fld1` and `fld2` are then outlined
 as shown in `len_type2`. _compiler_allocatable_ is here only to show which
@@ -144,7 +144,7 @@ types as it could require temporaries depending how the memory is allocated.
 The outlined solution is also problematic for unformatted I/O as the
 indirections need to be followed correctly when reading or writing records.
 
-#### Example of nested PDTs
+##### Example of nested PDTs
 
 PDTs can be nested. Here are some example used later in the document.
 
@@ -165,7 +165,7 @@ type len_type4(i, j)
 end type
 ```
 
-#### Example with array slice
+##### Example with array slice
 
 Let's take an example with an array slice to see the advantages and
 disadvantages of the two solutions.
@@ -222,7 +222,7 @@ The size of the PDTs need to be computed at runtime. This is already the case
 for dynamic allocation sizes since it is possible for arrays to have dynamic
 shapes, etc.
 
-### Support of PDTs in other compilers
+#### Support of PDTs in other compilers
 
 1) Nested PDTs
 2) Array of PDTs
@@ -250,7 +250,7 @@ crash = compiler crash or runtime crash
 no = doesn't compile with no crash
 ```
 
-#### Field inlining in lowering
+##### Field inlining in lowering
 
 A PDT with length type parameters has a list of 1 or more type parameters that
 are runtime values. These length type parameter values can be present in
@@ -373,7 +373,7 @@ computation.
 %5 = fir.field_index i, !fir.type<_QMmod1Tt{l:i32,i:!fir.array<?xi32>}>(%n : i32)
 ```
 
-### Length type parameter with expression
+#### Length type parameter with expression
 
 The component of a PDT can be defined with expressions including the length
 type parameters.
@@ -405,7 +405,7 @@ At any place where the a PDT is initialized, the lowering would make the
 evaluation and their values saved in the addendum and pointed to by the
 descriptor.
 
-### `ALLOCATE`/`DEALLOCATE` statements
+#### `ALLOCATE`/`DEALLOCATE` statements
 
 The allocation and deallocation of PDTs are delegated to the runtime.
 
@@ -481,7 +481,7 @@ NULLIFY(p)
 %0 = fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, !fir.tdesc) -> ()
 ```
 
-### Formatted I/O
+#### Formatted I/O
 
 The I/O runtime internals are described in this file:
 `flang/docs/IORuntimeInternals.md`.
@@ -532,7 +532,7 @@ func.func @_QMpdtPprint_pdt() {
 }
 ```
 
-### Unformatted I/O
+#### Unformatted I/O
 
 The entry point in the runtime for unformatted I/O is similar than the one for
 formatted I/O. A call to `_FortranAioOutputDescriptor` with the correct
@@ -540,14 +540,14 @@ descriptor is also issued by the lowering. For unformatted I/O, the runtime is
 calling `UnformattedDescriptorIO` from `flang/runtime/descriptor-io.h`.
 This function will need to be updated to support the chosen solution for PDTs.
 
-### Default component initialization of local variables
+#### Default component initialization of local variables
 
 Default initializers for components with length type parameters need to be
 processed as the derived type instance is created.
 The length parameters block must also be created and attached to the addendum.
 See _New f18addendum_ section for more information.
 
-### Assignment
+#### Assignment
 
 As mentioned in 10.2.1.2 (8), for an assignment, each length type parameter of
 the variable shall have the same value as the corresponding type parameter
@@ -586,7 +586,7 @@ the lhs, it is deallocated first and allocated with the rhs length type
 parameters information (F'2018 10.2.1.3(3)). There is code in the runtime to
 handle this already. It will need to be updated for the new f18addendum.
 
-### Finalization
+#### Finalization
 
 A final subroutine is called for a PDT if the subroutine has the same kind type
 parameters and rank as the entity to be finalized. The final subroutine is
@@ -643,7 +643,7 @@ type(t(kind(0.0d0))) d(n,n)
 end subroutine
 ```
 
-### Type parameter inquiry
+#### Type parameter inquiry
 
 Type parameter inquiry is used to get the value of a type parameter in a PDT.
 
@@ -677,7 +677,7 @@ a compiler generated function is used to computed its value.
 The length type parameters are indexed in declaration order; i.e., 0 is the
 first length type parameter in the deepest base type.
 
-### PDTs and polymorphism
+#### PDTs and polymorphism
 
 In some cases with polymorphic entities, it is necessary to copy the length
 type parameters from a descriptor to another. With the current design this is
@@ -753,7 +753,7 @@ the callee. This includes array of PDTs and derived-type with PDT components.
 The example describe one of the corner case where the length type parameter
 would be lost if the descriptor is not passed.
 
-### Example that require a descriptor
+#### Example that require a descriptor
 
 Because of the length type parameters store in the addendum, it is required in
 some case to pass the PDT with a descriptor to preserve the length type
@@ -816,7 +816,7 @@ end
 Because of the use case described above, PDTs, array of PDTs or derived-type
 with PDT components will be passed by descriptor.
 
-## FIR operations with length type parameters
+### FIR operations with length type parameters
 
 Couple of operations have length type parameters as operands already in their
 design. For some operations, length type parameters are likely needed with
@@ -827,7 +827,7 @@ parameters are in it.
 The operations will be updated if needed during the implementation of the
 chosen solution.
 
-### `fir.alloca`
+#### `fir.alloca`
 
 This primitive operation is used to allocate an object on the stack. When
 allocating a PDT, the length type parameters are passed to the
@@ -840,7 +840,7 @@ operation so its size can be computed accordingly.
 // %i is the ssa value of the length type parameter
 ```
 
-### `fir.allocmem`
+#### `fir.allocmem`
 
 This operation is used to create a heap memory reference suitable for storing a
 value of the given type. When creating a PDT, the length type parameters are
@@ -854,7 +854,7 @@ passed so the size can be computed accordingly.
 fir.freemem %0 : !fir.type<_QMmod1Tpdt{i:i32,data:!fir.array<?xf32>}>
 ```
 
-### `fir.embox`
+#### `fir.embox`
 
 The `fir.embox` operation create a boxed reference value. In the case of PDTs
 the length type parameters can be passed as well to the operation.
@@ -887,7 +887,7 @@ func.func @_QMpdt_initPlocal() {
 }
 ```
 
-### `fir.field_index`
+#### `fir.field_index`
 
 The `fir.field_index` operation is used to generate a field offset value from
 a field identifier in a derived-type. The operation takes length type parameter
@@ -902,7 +902,7 @@ values with a PDT so it can compute a correct offset.
 return %3
 ```
 
-### `fir.len_param_index`
+#### `fir.len_param_index`
 
 This operation is used to get the length type parameter offset in from a PDT.
 
@@ -916,7 +916,7 @@ func.func @_QPpdt_len_value(%arg0: !fir.box<!fir.type<t1{l:i32,!fir.array<?xi32>
 }
 ```
 
-### `fir.save_result`
+#### `fir.save_result`
 
 Save the result of a function returning an array, box, or record type value into
 a memory location given the shape and LEN parameters of the result. Length type
@@ -933,7 +933,7 @@ func.func @return_pdt(%buffer: !fir.ref<!fir.type<t2(l1:i32,l2:i32){x:f32}>>) {
 }
 ```
 
-### `fir.array_*` operations
+##### `fir.array_*` operations
 
 The current design of the different `fir.array_*` operations include length type
 parameters operands. This is designed to use PDT without descriptor directly in
@@ -952,7 +952,7 @@ FIR.
 
 ---
 
-## Implementation choice
+### Implementation choice
 
 While both solutions have pros and cons, we want to implement the outlined
 solution.
@@ -961,7 +961,7 @@ solution.
 
 ---
 
-# Testing
+## Testing
 
 - Lowering part is tested with LIT tests in tree
 - PDTs involved a lot of runtime information so executable
@@ -969,7 +969,7 @@ solution.
 
 ---
 
-# Current TODOs
+## Current TODOs
 Current list of TODOs in lowering:
 - `flang/lib/Lower/Allocatable.cpp:461` not yet implement: derived type length parameters in allocate
 - `flang/lib/Lower/Allocatable.cpp:645` not yet implement: deferred length type parameters

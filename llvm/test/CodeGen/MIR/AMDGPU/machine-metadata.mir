@@ -6,26 +6,26 @@
   target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
   target triple = "amdgcn-amd-amdhsa"
 
-  define i32 @test_memcpy(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) #0 {
-    %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-    %add.ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 4
-    %p1 = bitcast i32 addrspace(1)* %add.ptr to i8 addrspace(1)*
-    tail call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !0, !noalias !3
-    %1 = bitcast i32 addrspace(1)* %q to <2 x i32> addrspace(1)*
-    %2 = load <2 x i32>, <2 x i32> addrspace(1)* %1, align 4, !alias.scope !3, !noalias !0
+  define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) #0 {
+    %p0 = bitcast ptr addrspace(1) %p to ptr addrspace(1)
+    %add.ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i64 4
+    %p1 = bitcast ptr addrspace(1) %add.ptr to ptr addrspace(1)
+    tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p0, ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !0, !noalias !3
+    %1 = bitcast ptr addrspace(1) %q to ptr addrspace(1)
+    %2 = load <2 x i32>, ptr addrspace(1) %1, align 4, !alias.scope !3, !noalias !0
     %v01 = extractelement <2 x i32> %2, i32 0
     %v12 = extractelement <2 x i32> %2, i32 1
     %add = add i32 %v01, %v12
     ret i32 %add
   }
 
-  define i32 @test_memcpy_inline(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) #0 {
-    %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-    %add.ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 4
-    %p1 = bitcast i32 addrspace(1)* %add.ptr to i8 addrspace(1)*
-    tail call void @llvm.memcpy.inline.p1i8.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !0, !noalias !3
-    %1 = bitcast i32 addrspace(1)* %q to <2 x i32> addrspace(1)*
-    %2 = load <2 x i32>, <2 x i32> addrspace(1)* %1, align 4, !alias.scope !3, !noalias !0
+  define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) #0 {
+    %p0 = bitcast ptr addrspace(1) %p to ptr addrspace(1)
+    %add.ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i64 4
+    %p1 = bitcast ptr addrspace(1) %add.ptr to ptr addrspace(1)
+    tail call void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p0, ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !0, !noalias !3
+    %1 = bitcast ptr addrspace(1) %q to ptr addrspace(1)
+    %2 = load <2 x i32>, ptr addrspace(1) %1, align 4, !alias.scope !3, !noalias !0
     %v01 = extractelement <2 x i32> %2, i32 0
     %v12 = extractelement <2 x i32> %2, i32 1
     %add = add i32 %v01, %v12
@@ -33,10 +33,10 @@
   }
 
   ; Function Attrs: argmemonly nofree nounwind willreturn
-  declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* noalias nocapture writeonly, i8 addrspace(1)* noalias nocapture readonly, i64, i1 immarg) #1
+  declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #1
 
   ; Function Attrs: argmemonly nofree nounwind willreturn
-  declare void @llvm.memcpy.inline.p1i8.p1i8.i64(i8 addrspace(1)* noalias nocapture writeonly, i8 addrspace(1)* noalias nocapture readonly, i64 immarg, i1 immarg) #1
+  declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64 immarg, i1 immarg) #1
 
   ; Function Attrs: convergent nounwind willreturn
   declare { i1, i32 } @llvm.amdgcn.if.i32(i1) #2

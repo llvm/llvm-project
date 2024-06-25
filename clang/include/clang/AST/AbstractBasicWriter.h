@@ -196,9 +196,9 @@ public:
   }
 
   void writeQualifiers(Qualifiers value) {
-    static_assert(sizeof(value.getAsOpaqueValue()) <= sizeof(uint32_t),
+    static_assert(sizeof(value.getAsOpaqueValue()) <= sizeof(uint64_t),
                   "update this if the value size changes");
-    asImpl().writeUInt32(value.getAsOpaqueValue());
+    asImpl().writeUInt64(value.getAsOpaqueValue());
   }
 
   void writeExceptionSpecInfo(
@@ -220,6 +220,14 @@ public:
     static_assert(sizeof(epi.getOpaqueValue()) <= sizeof(uint32_t),
                   "opaque value doesn't fit into uint32_t");
     asImpl().writeUInt32(epi.getOpaqueValue());
+  }
+
+  void writeFunctionEffect(FunctionEffect E) {
+    asImpl().writeUInt32(E.toOpaqueInt32());
+  }
+
+  void writeEffectConditionExpr(EffectConditionExpr CE) {
+    asImpl().writeExprRef(CE.getCondition());
   }
 
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {

@@ -4,6 +4,9 @@
 # RUN: %lld -lSystem --icf=all %t.o -o %t
 # RUN: dsymutil -s %t | FileCheck %s -DDIR=%t -DSRC_PATH=%t.o
 
+# RUN: %lld -lSystem --icf=all %t.o -o %t_icf_stabs --keep-icf-stabs
+# RUN: dsymutil -s %t_icf_stabs | FileCheck %s -DDIR=%t_icf_stabs -DSRC_PATH=%t.o --check-prefixes=ICF_STABS
+
 ## This should include no N_FUN entry for _baz (which is ICF'd into _bar),
 ## but it does include a SECT EXT entry.
 ## NOTE: We do not omit the N_FUN entry for _bar even though it is of size zero.
@@ -26,6 +29,30 @@
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0010   {{[0-9a-f]+}}      '__mh_execute_header'
 # CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0100   0000000000000000   'dyld_stub_binder'
 # CHECK-EMPTY:
+
+
+# ICF_STABS:      (N_SO         ) 00      0000   0000000000000000  '/tmp{{[/\\]}}test.cpp'
+# ICF_STABS-NEXT: (N_OSO        ) 03      0001   {{.*}} '[[SRC_PATH]]'
+# ICF_STABS-NEXT: (N_FUN        ) 01      0000   [[#%.16x,MAIN:]]  '_main'
+# ICF_STABS-NEXT: (N_FUN        ) 00      0000   000000000000000b{{$}}
+# ICF_STABS-NEXT: (N_FUN        ) 01      0000   [[#%.16x,BAR:]]   '_bar'
+# ICF_STABS-NEXT: (N_FUN        ) 00      0000   0000000000000000{{$}}
+# ICF_STABS-NEXT: (N_FUN        ) 01      0000   [[#BAR]]          '_bar2'
+# ICF_STABS-NEXT: (N_FUN        ) 00      0000   0000000000000001{{$}}
+# ICF_STABS-NEXT: (N_FUN        ) 01      0000   [[#BAR]]          '_baz'
+# ICF_STABS-NEXT: (N_FUN        ) 00      0000   0000000000000000{{$}}
+# ICF_STABS-NEXT: (N_FUN        ) 01      0000   [[#BAR]]          '_baz2'
+# ICF_STABS-NEXT: (N_FUN        ) 00      0000   0000000000000001{{$}}
+# ICF_STABS-NEXT: (N_SO         ) 01      0000   0000000000000000{{$}}
+# ICF_STABS-DAG:  (     SECT EXT) 01      0000   [[#MAIN]]         '_main'
+# ICF_STABS-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_bar'
+# ICF_STABS-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_bar2'
+# ICF_STABS-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_baz'
+# ICF_STABS-DAG:  (     SECT EXT) 01      0000   [[#BAR]]          '_baz2'
+# ICF_STABS-DAG:  (       {{.*}}) {{[0-9]+}}                 0010   {{[0-9a-f]+}}      '__mh_execute_header'
+# ICF_STABS-DAG:  (       {{.*}}) {{[0-9]+}}                 0100   0000000000000000   'dyld_stub_binder'
+# ICF_STABS-EMPTY:
+
 
 .text
 .globl _bar, _bar2, _baz, _baz2, _main

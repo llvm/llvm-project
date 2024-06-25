@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -float-abi=hard -mattr=+hard-float -mattr=+2e3 -mattr=+fpuv2_sf | FileCheck %s --check-prefix=CHECK-SF
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -float-abi=hard -mattr=+hard-float -mattr=+2e3 -mattr=+fpuv3_sf | FileCheck %s --check-prefix=CHECK-SF2
 
-define float @load_I_w(float* nocapture readonly %a) local_unnamed_addr #0 {
+define float @load_I_w(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ;
 ; CHECK-SF-LABEL: load_I_w:
 ; CHECK-SF:       # %bb.0: # %entry
@@ -15,12 +15,12 @@ define float @load_I_w(float* nocapture readonly %a) local_unnamed_addr #0 {
 ; CHECK-SF2-NEXT:    fld.32 vr0, (a0, 12)
 ; CHECK-SF2-NEXT:    rts16
 entry:
-  %arrayidx = getelementptr inbounds float, float* %a, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   ret float %0
 }
 
-define float @load_R_w(float* nocapture readonly %a, i32 %b) local_unnamed_addr #0 {
+define float @load_R_w(ptr nocapture readonly %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; CHECK-SF-LABEL: load_R_w:
 ; CHECK-SF:       # %bb.0: # %entry
@@ -33,13 +33,13 @@ define float @load_R_w(float* nocapture readonly %a, i32 %b) local_unnamed_addr 
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %idxprom = sext i32 %b to i64
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   ret float %0
 }
 
 
-define float @store_I_w(float*  %a, float %b) local_unnamed_addr #0 {
+define float @store_I_w(ptr  %a, float %b) local_unnamed_addr #0 {
 ;
 ; CHECK-SF-LABEL: store_I_w:
 ; CHECK-SF:       # %bb.0: # %entry
@@ -55,12 +55,12 @@ define float @store_I_w(float*  %a, float %b) local_unnamed_addr #0 {
 ; CHECK-SF2-NEXT:    fmtvr.32.1 vr0, a0
 ; CHECK-SF2-NEXT:    rts16
 entry:
-  %arrayidx = getelementptr inbounds float, float* %a, i64 3
-  store float %b, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 3
+  store float %b, ptr %arrayidx, align 4
   ret float 0.0
 }
 
-define float @store_R_w(float*  %a, i32 %b, float %c) local_unnamed_addr #0 {
+define float @store_R_w(ptr  %a, i32 %b, float %c) local_unnamed_addr #0 {
 ;
 ; CHECK-SF-LABEL: store_R_w:
 ; CHECK-SF:       # %bb.0: # %entry
@@ -77,7 +77,7 @@ define float @store_R_w(float*  %a, i32 %b, float %c) local_unnamed_addr #0 {
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %idxprom = sext i32 %b to i64
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %idxprom
-  store float %c, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
+  store float %c, ptr %arrayidx, align 4
   ret float 0.0
 }

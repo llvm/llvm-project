@@ -11,10 +11,10 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ;     }   
 ; }
 
-; CHECK: Loop 'for.i' has cost = 20600
-; CHECK-NEXT: Loop 'for.j' has cost = 800
+; CHECK: Loop 'for.i' has cost = 20800
+; CHECK-NEXT: Loop 'for.j' has cost = 1000
 
-define void @foo(i64 %n, i64 %m, i32* %A, i32* %B, i32* %C) {
+define void @foo(i64 %n, i64 %m, ptr %A, ptr %B, ptr %C) {
 entry:
   %cmp32 = icmp sgt i64 %n, 0
   %cmp230 = icmp sgt i64 %m, 0
@@ -41,41 +41,41 @@ for.j:                                            ; preds = %for.incj, %for.i
 
   ; B[i-1][j]
   %arrayidx1 = add i64 %j, %muliminusone
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %arrayidx1
-  %elem_B1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %arrayidx1
+  %elem_B1 = load i32, ptr %arrayidx2, align 4
 
   ; B[i-1][j+1]
   %addjone = add i64 %j, 1
   %arrayidx3 = add i64 %addjone, %muliminusone
-  %arrayidx4 = getelementptr inbounds i32, i32* %B, i64 %arrayidx3
-  %elem_B2 = load i32, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %B, i64 %arrayidx3
+  %elem_B2 = load i32, ptr %arrayidx4, align 4
 
   ; C[i]
-  %arrayidx6 = getelementptr inbounds i32, i32* %C, i64 %i
-  %elem_C = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %C, i64 %i
+  %elem_C = load i32, ptr %arrayidx6, align 4
 
   ; A[i][j+1]
   %arrayidx7 = add i64 %addjone, %muli
-  %arrayidx8 = getelementptr inbounds i32, i32* %A, i64 %arrayidx7
-  %elem_A = load i32, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %A, i64 %arrayidx7
+  %elem_A = load i32, ptr %arrayidx8, align 4
 
   ; A[i][j] = A[i][j+1] + B[i-1][j] + B[i-1][j+1] + C[i]
   %addB = add i32 %elem_B1, %elem_B2
   %addC = add i32 %addB, %elem_C
   %addA = add i32 %elem_A, %elem_C
   %arrayidx9 = add i64 %j, %muli
-  %arrayidx10 = getelementptr inbounds i32, i32* %A, i64 %arrayidx9
-  store i32 %addA, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %A, i64 %arrayidx9
+  store i32 %addA, ptr %arrayidx10, align 4
 
   ; A[i][j] += B[i][i];
   %arrayidx11 = add i64 %j, %muli
-  %arrayidx12 = getelementptr inbounds i32, i32* %A, i64 %arrayidx11
-  %elem_A1 = load i32, i32* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds i32, ptr %A, i64 %arrayidx11
+  %elem_A1 = load i32, ptr %arrayidx12, align 4
   %arrayidx13 = add i64 %i, %muli
-  %arrayidx14 = getelementptr inbounds i32, i32* %B, i64 %arrayidx13
-  %elem_B3 = load i32, i32* %arrayidx14, align 4
+  %arrayidx14 = getelementptr inbounds i32, ptr %B, i64 %arrayidx13
+  %elem_B3 = load i32, ptr %arrayidx14, align 4
   %addA1 = add i32 %elem_A1, %elem_B3
-  store i32 %addA1, i32* %arrayidx12, align 4
+  store i32 %addA1, ptr %arrayidx12, align 4
 
   br label %for.incj
 

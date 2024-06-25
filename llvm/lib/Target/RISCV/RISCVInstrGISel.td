@@ -24,3 +24,36 @@ def G_FCLASS : RISCVGenericInstruction {
   let hasSideEffects = false;
 }
 def : GINodeEquiv<G_FCLASS, riscv_fclass>;
+
+// Pseudo equivalent to a RISCVISD::READ_VLENB.
+def G_READ_VLENB : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_READ_VLENB, riscv_read_vlenb>;
+
+// Pseudo equivalent to a RISCVISD::VMCLR_VL
+def G_VMCLR_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMCLR_VL, riscv_vmclr_vl>;
+
+// Pseudo equivalent to a RISCVISD::VMSET_VL
+def G_VMSET_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$vl);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMSET_VL, riscv_vmset_vl>;
+
+// Pseudo equivalent to a RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL. There is no
+// record to mark as equivalent to using GINodeEquiv because it gets lowered
+// before instruction selection.
+def G_SPLAT_VECTOR_SPLIT_I64_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$passthru, type1:$hi, type1:$lo, type2:$vl);
+  let hasSideEffects = false;
+}

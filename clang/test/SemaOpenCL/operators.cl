@@ -118,6 +118,6 @@ kernel void pointer_ops(){
   bool b = !p;
   b = p==0;
   int i;
-  b = !&i;
+  b = !&i; // expected-warning {{address of 'i' will always evaluate to 'true'}}
   b = &i==(int *)1;
 }

@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_GPU_RPC_H
 #define LLVM_LIBC_GPU_RPC_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
-#include <llvm-libc-types/rpc_opcodes_t.h>
+#include "llvm-libc-types/rpc_opcodes_t.h"
 
 %%public_api()
 

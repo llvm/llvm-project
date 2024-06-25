@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SEARCH_H
 #define LLVM_LIBC_SEARCH_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 #define __need_size_t
 #include <stddef.h>
 

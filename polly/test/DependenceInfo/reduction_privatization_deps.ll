@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     { Stmt_S1[i0, i1] -> Stmt_S2[-1 + i0 + i1] : 0 <= i0 <= 1023 and i1 >= 0 and -i0 < i1 <= 1024 - i0 and i1 <= 1023; Stmt_S0[i0] -> Stmt_S1[o0, i0 - o0] : i0 <= 1023 and 0 <= o0 <= i0 }

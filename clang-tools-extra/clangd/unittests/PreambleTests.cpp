@@ -417,7 +417,7 @@ TEST(PreamblePatchTest, LocateMacroAtWorks) {
     ASSERT_TRUE(AST);
 
     const auto &SM = AST->getSourceManager();
-    auto *MacroTok = AST->getTokens().spelledTokenAt(
+    auto *MacroTok = AST->getTokens().spelledTokenContaining(
         SM.getComposedLoc(SM.getMainFileID(), Modified.point("use")));
     ASSERT_TRUE(MacroTok);
 
@@ -441,7 +441,7 @@ TEST(PreamblePatchTest, LocateMacroAtDeletion) {
     ASSERT_TRUE(AST);
 
     const auto &SM = AST->getSourceManager();
-    auto *MacroTok = AST->getTokens().spelledTokenAt(
+    auto *MacroTok = AST->getTokens().spelledTokenContaining(
         SM.getComposedLoc(SM.getMainFileID(), Modified.point()));
     ASSERT_TRUE(MacroTok);
 
@@ -512,9 +512,10 @@ TEST(PreamblePatchTest, RefsToMacros) {
       ExpectedLocations.push_back(referenceRangeIs(R));
 
     for (const auto &P : Modified.points()) {
-      auto *MacroTok = AST->getTokens().spelledTokenAt(SM.getComposedLoc(
-          SM.getMainFileID(),
-          llvm::cantFail(positionToOffset(Modified.code(), P))));
+      auto *MacroTok =
+          AST->getTokens().spelledTokenContaining(SM.getComposedLoc(
+              SM.getMainFileID(),
+              llvm::cantFail(positionToOffset(Modified.code(), P))));
       ASSERT_TRUE(MacroTok);
       EXPECT_THAT(findReferences(*AST, P, 0).References,
                   testing::ElementsAreArray(ExpectedLocations));

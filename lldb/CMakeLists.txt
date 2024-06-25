@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "LLDB")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -75,6 +76,14 @@ if (LLDB_ENABLE_PYTHON)
       endif()
     endif()
   endforeach()
+  # Make sure lldb extension has "_d" suffix on Windows in Debug mode.
+  if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+    string(SUBSTRING ${LLDB_PYTHON_EXT_SUFFIX} 0 2 FIRST_2_CHARS)
+    # Add "_d" manually if LLDB_PYTHON_EXT_SUFFIX lacks it due to release Python configuration.
+    if(NOT FIRST_2_CHARS STREQUAL "_d")
+      set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
+    endif()
+  endif()
 endif ()
 
 if (LLDB_ENABLE_LUA)

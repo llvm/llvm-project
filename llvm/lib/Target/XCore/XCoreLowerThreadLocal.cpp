@@ -79,7 +79,7 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
     SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
     llvm::sort(WUsers);
-    WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
+    WUsers.erase(llvm::unique(WUsers), WUsers.end());
     while (!WUsers.empty())
       if (WeakTrackingVH WU = WUsers.pop_back_val()) {
         if (PHINode *PN = dyn_cast<PHINode>(WU)) {
@@ -88,12 +88,15 @@ static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
               BasicBlock *PredBB = PN->getIncomingBlock(I);
               if (PredBB->getTerminator()->getNumSuccessors() > 1)
                 PredBB = SplitEdge(PredBB, PN->getParent());
-              Instruction *InsertPos = PredBB->getTerminator();
-              Instruction *NewInst = CE->getAsInstruction(InsertPos);
+              BasicBlock::iterator InsertPos =
+                  PredBB->getTerminator()->getIterator();
+              Instruction *NewInst = CE->getAsInstruction();
+              NewInst->insertBefore(*PredBB, InsertPos);
               PN->setOperand(I, NewInst);
             }
         } else if (Instruction *Instr = dyn_cast<Instruction>(WU)) {
-          Instruction *NewInst = CE->getAsInstruction(Instr);
+          Instruction *NewInst = CE->getAsInstruction();
+          NewInst->insertBefore(*Instr->getParent(), Instr->getIterator());
           Instr->replaceUsesOfWith(CE, NewInst);
         } else {
           ConstantExpr *CExpr = dyn_cast<ConstantExpr>(WU);

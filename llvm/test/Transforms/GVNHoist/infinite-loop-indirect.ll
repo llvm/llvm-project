@@ -3,14 +3,14 @@
 
 ; Checking gvn-hoist in case of indirect branches.
 
-%class.bar = type { i8*, %class.base* }
-%class.base = type { i32 (...)** }
+%class.bar = type { ptr, ptr }
+%class.base = type { ptr }
 
-@bar = local_unnamed_addr global i32 ()* null, align 8
-@bar1 = local_unnamed_addr global i32 ()* null, align 8
+@bar = local_unnamed_addr global ptr null, align 8
+@bar1 = local_unnamed_addr global ptr null, align 8
 
 ; Check that the bitcast is not hoisted because it is after an indirect call
-define i32 @foo(i32* nocapture readonly %i) {
+define i32 @foo(ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @foo
 ; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -36,25 +36,25 @@ define i32 @foo(i32* nocapture readonly %i) {
 ;
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %y = load %class.base*, %class.base** %x, align 8
-  %0 = load i32, i32* %i, align 4
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %y = load ptr, ptr %x, align 8
+  %0 = load i32, ptr %i, align 4
   %.off = add i32 %0, -1
   %switch = icmp ult i32 %.off, 2
   br i1 %switch, label %l1.preheader, label %sw.default
 
 l1.preheader:                                     ; preds = %sw.default, %entry
-  %b1 = bitcast %class.base* %y to void (%class.base*)***
+  %b1 = bitcast ptr %y to ptr
   br label %l1
 
 l1:                                               ; preds = %l1.preheader, %l1
-  %1 = load i32 ()*, i32 ()** @bar, align 8
+  %1 = load ptr, ptr @bar, align 8
   %call = tail call i32 %1()
-  %b2 = bitcast %class.base* %y to void (%class.base*)***
+  %b2 = bitcast ptr %y to ptr
   br label %l1
 
 sw.default:                                       ; preds = %entry
-  %2 = load i32 ()*, i32 ()** @bar1, align 8
+  %2 = load ptr, ptr @bar1, align 8
   %call2 = tail call i32 %2()
   br label %l1.preheader
 }
@@ -62,7 +62,7 @@ sw.default:                                       ; preds = %entry
 
 ; Any instruction inside an infinite loop will not be hoisted because
 ; there is no path to exit of the function.
-define i32 @foo1(i32* nocapture readonly %i) {
+define i32 @foo1(ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @foo1
 ; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -90,33 +90,33 @@ define i32 @foo1(i32* nocapture readonly %i) {
 ;
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %y = load %class.base*, %class.base** %x, align 8
-  %0 = load i32, i32* %i, align 4
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %y = load ptr, ptr %x, align 8
+  %0 = load i32, ptr %i, align 4
   %.off = add i32 %0, -1
   %switch = icmp ult i32 %.off, 2
   br i1 %switch, label %l1.preheader, label %sw.default
 
 l1.preheader:                                     ; preds = %sw.default, %entry
-  %b1 = bitcast %class.base* %y to void (%class.base*)***
-  %y1 = load %class.base*, %class.base** %x, align 8
+  %b1 = bitcast ptr %y to ptr
+  %y1 = load ptr, ptr %x, align 8
   br label %l1
 
 l1:                                               ; preds = %l1.preheader, %l1
-  %b2 = bitcast %class.base* %y to void (%class.base*)***
-  %1 = load i32 ()*, i32 ()** @bar, align 8
-  %y2 = load %class.base*, %class.base** %x, align 8
+  %b2 = bitcast ptr %y to ptr
+  %1 = load ptr, ptr @bar, align 8
+  %y2 = load ptr, ptr %x, align 8
   %call = tail call i32 %1()
   br label %l1
 
 sw.default:                                       ; preds = %entry
-  %2 = load i32 ()*, i32 ()** @bar1, align 8
+  %2 = load ptr, ptr @bar1, align 8
   %call2 = tail call i32 %2()
   br label %l1.preheader
 }
 
 ; Check that bitcast is hoisted even when one of them is partially redundant.
-define i32 @test13(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
+define i32 @test13(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test13
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -139,18 +139,18 @@ define i32 @test13(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
 ;
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %y = load %class.base*, %class.base** %x, align 8
-  indirectbr i8* %Ptr, [label %BrBlock, label %B2]
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %y = load ptr, ptr %x, align 8
+  indirectbr ptr %Ptr, [label %BrBlock, label %B2]
 
 B2:
-  %b1 = bitcast %class.base* %y to void (%class.base*)***
-  store i32 4, i32 *%P
+  %b1 = bitcast ptr %y to ptr
+  store i32 4, ptr %P
   br label %BrBlock
 
 BrBlock:
-  %b2 = bitcast %class.base* %y to void (%class.base*)***
-  %L = load i32, i32* %P
+  %b2 = bitcast ptr %y to ptr
+  %L = load i32, ptr %P
   %C = icmp eq i32 %L, 42
   br i1 %C, label %T, label %F
 
@@ -163,7 +163,7 @@ F:
 ; Check that the bitcast is not hoisted because anticipability
 ; cannot be guaranteed here as one of the indirect branch targets
 ; do not have the bitcast instruction.
-define i32 @test14(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
+define i32 @test14(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test14
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -189,33 +189,33 @@ define i32 @test14(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
 ;
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %y = load %class.base*, %class.base** %x, align 8
-  indirectbr i8* %Ptr, [label %BrBlock, label %B2, label %T]
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %y = load ptr, ptr %x, align 8
+  indirectbr ptr %Ptr, [label %BrBlock, label %B2, label %T]
 
 B2:
-  %b1 = bitcast %class.base* %y to void (%class.base*)***
-  store i32 4, i32 *%P
+  %b1 = bitcast ptr %y to ptr
+  store i32 4, ptr %P
   br label %BrBlock
 
 BrBlock:
-  %b2 = bitcast %class.base* %y to void (%class.base*)***
-  %L = load i32, i32* %P
+  %b2 = bitcast ptr %y to ptr
+  %L = load i32, ptr %P
   %C = icmp eq i32 %L, 42
   br i1 %C, label %T, label %F
 
 T:
-  %pi = load i32, i32* %i, align 4
+  %pi = load i32, ptr %i, align 4
   ret i32 %pi
 F:
-  %pl = load i32, i32* %P
+  %pl = load i32, ptr %P
   ret i32 %pl
 }
 
 
 ; Check that the bitcast is not hoisted because of a cycle
 ; due to indirect branches
-define i32 @test16(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
+define i32 @test16(ptr %P, ptr %Ptr, ptr nocapture readonly %i) {
 ; CHECK-LABEL: define i32 @test16
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[PTR:%.*]], ptr nocapture readonly [[I:%.*]]) {
 ; CHECK-NEXT:  entry:
@@ -240,31 +240,31 @@ define i32 @test16(i32* %P, i8* %Ptr, i32* nocapture readonly %i) {
 ;
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %y = load %class.base*, %class.base** %x, align 8
-  indirectbr i8* %Ptr, [label %BrBlock, label %B2]
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %y = load ptr, ptr %x, align 8
+  indirectbr ptr %Ptr, [label %BrBlock, label %B2]
 
 B2:
-  %b1 = bitcast %class.base* %y to void (%class.base*)***
-  %0 = load i32, i32* %i, align 4
-  store i32 %0, i32 *%P
+  %b1 = bitcast ptr %y to ptr
+  %0 = load i32, ptr %i, align 4
+  store i32 %0, ptr %P
   br label %BrBlock
 
 BrBlock:
-  %b2 = bitcast %class.base* %y to void (%class.base*)***
-  %L = load i32, i32* %P
+  %b2 = bitcast ptr %y to ptr
+  %L = load i32, ptr %P
   %C = icmp eq i32 %L, 42
   br i1 %C, label %T, label %F
 
 T:
-  indirectbr i32* %P, [label %BrBlock, label %B2]
+  indirectbr ptr %P, [label %BrBlock, label %B2]
 
 F:
-  indirectbr i8* %Ptr, [label %BrBlock, label %B2]
+  indirectbr ptr %Ptr, [label %BrBlock, label %B2]
 }
 
 
-@_ZTIi = external constant i8*
+@_ZTIi = external constant ptr
 
 ; Check that an instruction is not hoisted out of landing pad (%lpad4)
 ; Also within a landing pad no redundancies are removed by gvn-hoist,
@@ -272,7 +272,7 @@ F:
 ; landing pad has direct branches (e.g., %lpad to %catch1, %catch)
 ; This CFG has a cycle (%lpad -> %catch1 -> %lpad4 -> %lpad)
 
-define i32 @foo2(i32* nocapture readonly %i) local_unnamed_addr personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @foo2(ptr nocapture readonly %i) local_unnamed_addr personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define i32 @foo2
 ; CHECK-SAME: (ptr nocapture readonly [[I:%.*]]) local_unnamed_addr personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
@@ -292,7 +292,7 @@ define i32 @foo2(i32* nocapture readonly %i) local_unnamed_addr personality i8* 
 ; CHECK-NEXT:    [[BC1:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i32 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #[[ATTR1]]
 ; CHECK-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[BC7:%.*]] = add i32 [[TMP0]], 10
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[TMP3]]) #[[ATTR1]]
@@ -322,28 +322,28 @@ define i32 @foo2(i32* nocapture readonly %i) local_unnamed_addr personality i8* 
 ; CHECK-NEXT:    ret i32 [[BC2]]
 ;
 entry:
-  %0 = load i32, i32* %i, align 4
+  %0 = load i32, ptr %i, align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %try.cont, label %if.then
 
 if.then:
-  %exception = tail call i8* @__cxa_allocate_exception(i64 4) #2
-  %1 = bitcast i8* %exception to i32*
-  store i32 %0, i32* %1, align 16
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #3
+  %exception = tail call ptr @__cxa_allocate_exception(i64 4) #2
+  %1 = bitcast ptr %exception to ptr
+  store i32 %0, ptr %1, align 16
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
   to label %unreachable unwind label %lpad
 
 lpad:
-  %2 = landingpad { i8*, i32 }
-  catch i8* bitcast (i8** @_ZTIi to i8*)
-  catch i8* null
+  %2 = landingpad { ptr, i32 }
+  catch ptr @_ZTIi
+  catch ptr null
   %bc1 = add i32 %0, 10
-  %3 = extractvalue { i8*, i32 } %2, 0
-  %4 = extractvalue { i8*, i32 } %2, 1
-  %5 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #2
+  %3 = extractvalue { ptr, i32 } %2, 0
+  %4 = extractvalue { ptr, i32 } %2, 1
+  %5 = tail call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi) #2
   %matches = icmp eq i32 %4, %5
   %bc7 = add i32 %0, 10
-  %6 = tail call i8* @__cxa_begin_catch(i8* %3) #2
+  %6 = tail call ptr @__cxa_begin_catch(ptr %3) #2
   br i1 %matches, label %catch1, label %catch
 
 catch1:
@@ -353,17 +353,17 @@ catch1:
 
 catch:
   %bc4 = add i32 %0, 10
-  %7 = load i32, i32* %i, align 4
+  %7 = load i32, ptr %i, align 4
   %add = add nsw i32 %7, 1
   tail call void @__cxa_end_catch()
   br label %try.cont
 
 lpad4:
-  %8 = landingpad { i8*, i32 }
+  %8 = landingpad { ptr, i32 }
   cleanup
   %bc5 = add i32 %0, 10
   tail call void @__cxa_end_catch() #2
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #3
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
   to label %unreachable unwind label %lpad
 
 try.cont:
@@ -376,16 +376,16 @@ unreachable:
   ret i32 %bc2
 }
 
-declare i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+declare ptr @__cxa_allocate_exception(i64) local_unnamed_addr
 
-declare void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+declare void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #1
+declare i32 @llvm.eh.typeid.for.p0(ptr) #1
 
-declare i8* @__cxa_begin_catch(i8*) local_unnamed_addr
+declare ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 
 declare void @__cxa_end_catch() local_unnamed_addr
 

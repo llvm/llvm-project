@@ -10,33 +10,60 @@ Convergence And Uniformity
 Introduction
 ============
 
-Some parallel environments execute threads in groups that allow
-communication within the group using special primitives called
-*convergent* operations. The outcome of a convergent operation is
-sensitive to the set of threads that executes it "together", i.e.,
-convergently.
+In some environments, groups of threads execute the same program in parallel,
+where efficient communication within a group is established using special
+primitives called :ref:`convergent operations<convergent_operations>`. The
+outcome of a convergent operation is sensitive to the set of threads that
+participate in it.
 
-A value is said to be *uniform* across a set of threads if it is the
-same across those threads, and *divergent* otherwise. Correspondingly,
-a branch is said to be a uniform branch if its condition is uniform,
-and it is a divergent branch otherwise.
+The intuitive picture of *convergence* is built around threads executing in
+"lock step" --- a set of threads is thought of as *converged* if they are all
+executing "the same sequence of instructions together". Such threads may
+*diverge* at a *divergent branch*, and they may later *reconverge* at some
+common program point.
 
-Whether threads are *converged* or not depends on the paths they take
-through the control flow graph. Threads take different outgoing edges
-at a *divergent branch*. Divergent branches constrain
+In this intuitive picture, when converged threads execute an instruction, the
+resulting value is said to be *uniform* if it is the same in those threads, and
+*divergent* otherwise. Correspondingly, a branch is said to be a uniform branch
+if its condition is uniform, and it is a divergent branch otherwise.
+
+But the assumption of lock-step execution is not necessary for describing
+communication at convergent operations. It also constrains the implementation
+(compiler as well as hardware) by overspecifying how threads execute in such a
+parallel environment. To eliminate this assumption:
+
+- We define convergence as a relation between the execution of each instruction
+  by different threads and not as a relation between the threads themselves.
+  This definition is reasonable for known targets and is compatible with the
+  semantics of :ref:`convergent operations<convergent_operations>` in LLVM IR.
+- We also define uniformity in terms of this convergence. The output of an
+  instruction can be examined for uniformity across multiple threads only if the
+  corresponding executions of that instruction are converged.
+
+This document decribes a static analysis for determining convergence at each
+instruction in a function. The analysis extends previous work on divergence
+analysis [DivergenceSPMD]_ to cover irreducible control-flow. The described
+analysis is used in LLVM to implement a UniformityAnalysis that determines the
+uniformity of value(s) computed at each instruction in an LLVM IR or MIR
+function.
+
+.. [DivergenceSPMD] Julian Rosemann, Simon Moll, and Sebastian
+   Hack. 2021. An Abstract Interpretation for SPMD Divergence on
+   Reducible Control Flow Graphs. Proc. ACM Program. Lang. 5, POPL,
+   Article 31 (January 2021), 35 pages.
+   https://doi.org/10.1145/3434312
+
+Motivation
+==========
+
+Divergent branches constrain
 program transforms such as changing the CFG or moving a convergent
 operation to a different point of the CFG. Performing these
 transformations across a divergent branch can change the sets of
 threads that execute convergent operations convergently. While these
-constraints are out of scope for this document, the described
-*uniformity analysis* allows these transformations to identify
+constraints are out of scope for this document,
+uniformity analysis allows these transformations to identify
 uniform branches where these constraints do not hold.
-
-Convergence and
-uniformity are inter-dependent: When threads diverge at a divergent
-branch, they may later *reconverge* at a common program point.
-Subsequent operations are performed convergently, but the inputs may
-be non-uniform, thus producing divergent outputs.
 
 Uniformity is also useful by itself on targets that execute threads in
 groups with shared execution resources (e.g. waves, warps, or
@@ -49,18 +76,6 @@ subgroups):
   the same group. But linearization is unnecessary at uniform
   branches, since the whole group of threads follows either one side
   of the branch or the other.
-
-This document presents a definition of convergence that is reasonable
-for real targets and is compatible with the currently implicit
-semantics of convergent operations in LLVM IR. This is accompanied by
-a *uniformity analysis* that extends previous work on divergence analysis
-[DivergenceSPMD]_ to cover irreducible control-flow.
-
-.. [DivergenceSPMD] Julian Rosemann, Simon Moll, and Sebastian
-   Hack. 2021. An Abstract Interpretation for SPMD Divergence on
-   Reducible Control Flow Graphs. Proc. ACM Program. Lang. 5, POPL,
-   Article 31 (January 2021), 35 pages.
-   https://doi.org/10.1145/3434312
 
 Terminology
 ===========
@@ -133,12 +148,6 @@ meaning. Dynamic instances listed in the same column are converged.
 Convergence
 ===========
 
-*Converged-with* is a transitive symmetric relation over dynamic
-instances produced by *different threads* for the *same static
-instance*. Informally, two threads that produce converged dynamic
-instances are said to be *converged*, and they are said to execute
-that static instance *convergently*, at that point in the execution.
-
 *Convergence-before* is a strict partial order over dynamic instances
 that is defined as the transitive closure of:
 
@@ -171,11 +180,16 @@ to be converged (i.e., related to each other in the converged-with
 relation). The resulting convergence order includes the edges ``P ->
 Q2``, ``Q1 -> R``, ``P -> R``, ``P -> T``, etc.
 
-The fact that *convergence-before* is a strict partial order is a
-constraint on the *converged-with* relation. It is trivially satisfied
-if different dynamic instances are never converged. It is also
-trivially satisfied for all known implementations for which
-convergence plays some role.
+*Converged-with* is a transitive symmetric relation over dynamic instances
+produced by *different threads* for the *same static instance*.
+
+It is impractical to provide any one definition for the *converged-with*
+relation, since different environments may wish to relate dynamic instances in
+different ways. The fact that *convergence-before* is a strict partial order is
+a constraint on the *converged-with* relation. It is trivially satisfied if
+different dynamic instances are never converged. Below, we provide a relation
+called :ref:`maximal converged-with<convergence-maximal>`, which satisifies
+*convergence-before* and is suitable for known targets.
 
 .. _convergence-note-convergence:
 
@@ -217,14 +231,16 @@ iterations of parent cycles as well.
 
    Dynamic instances ``X1`` and ``X2`` produced by different threads
    for the same static instance ``X`` are converged in the maximal
-   converged-with relation if and only if for every cycle ``C`` with
-   header ``H`` that contains ``X``:
+   converged-with relation if and only if:
 
-   - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in
-     the respective thread is convergence-before ``X2``, and,
-   - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in
-     the respective thread is convergence-before ``X1``,
-   - without assuming that ``X1`` is converged with ``X2``.
+   - ``X`` is not contained in any cycle, or,
+   - For every cycle ``C`` with header ``H`` that contains ``X``:
+
+     - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in
+       the respective thread is convergence-before ``X2``, and,
+     - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in
+       the respective thread is convergence-before ``X1``,
+     - without assuming that ``X1`` is converged with ``X2``.
 
 .. note::
 

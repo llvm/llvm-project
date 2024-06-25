@@ -132,7 +132,7 @@ methods that are overridden by the `Model` that is templated on the concrete
 entity type. It is important to note that these classes should be pure, and
 should not contain non-static data members or other mutable data. To attach an
 interface to an object, the base interface classes provide a
-[`Trait`](Traits.md) class that can be appended to the trait list of that
+[`Trait`](Traits) class that can be appended to the trait list of that
 object.
 
 ```c++
@@ -299,6 +299,30 @@ owner of the dialect containing the object nor the owner of the interface are
 aware of an interface implementation, which can lead to duplicate or
 diverging implementations.
 
+Forgetting to register an external model can lead to bugs which are hard to
+track down. The `declarePromisedInterface` function can be used to declare that
+an external model implementation for an operation must eventually be provided.
+
+```
+  void MyDialect::initialize() {
+    declarePromisedInterface<SomeInterface, SomeOp>();
+     ...
+  }
+```
+
+Now attempting to use the interface, e.g in a cast, without a prior registration
+of the external model will lead to a runtime error that will look similar to
+this:
+
+```
+LLVM ERROR: checking for an interface (`SomeInterface`) that was promised by dialect 'mydialect' but never implemented. This is generally an indication that the dialect extension implementing the interface was never registered.
+```
+
+If you encounter this error for a dialect and an interface provided by MLIR, you
+may look for a method that will be named like
+`register<Dialect><Interface>ExternalModels(DialectRegistry &registry);` ; try
+to find it with `git grep 'register.*SomeInterface.*Model' mlir`.
+
 #### Dialect Fallback for OpInterface
 
 Some dialects have an open ecosystem and don't register all of the possible
@@ -420,7 +444,7 @@ comprised of the following components:
     -   A C++ code block containing additional verification applied to the
         operation that the interface is attached to.
     -   The structure of this code block corresponds 1-1 with the structure of a
-        [`Trait::verifyTrait`](Traits.md) method.
+        [`Trait::verifyTrait`](Traits) method.
 
 ##### Interface Methods
 
@@ -457,7 +481,7 @@ Interface methods are comprised of the following components:
     -   This implementation is placed within the `Trait` class that is attached
         to the IR entity, and does not directly affect any of the interface
         classes. As such, this method has the same characteristics as any other
-        [`Trait`](Traits.md) method.
+        [`Trait`](Traits) method.
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
         entity currently being operated on.
@@ -601,7 +625,7 @@ def MyInterface : OpInterface<"MyInterface"> {
       };
       ```
 
-      As detailed in [Traits](Traits.md), given that each operation implementing
+      As detailed in [Traits](Traits), given that each operation implementing
       this interface will also add the interface trait, the methods on this
       interface are inherited by the derived operation. This allows for
       injecting a default implementation of this method into each operation that

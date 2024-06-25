@@ -12,6 +12,7 @@
 
 #include "SPIRVSubtarget.h"
 #include "SPIRV.h"
+#include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
@@ -27,48 +28,61 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
-cl::list<SPIRV::Extension::Extension> Extensions(
-    "spirv-extensions", cl::desc("SPIR-V extensions"), cl::ZeroOrMore,
-    cl::Hidden,
-    cl::values(
-        clEnumValN(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers,
-                   "SPV_INTEL_arbitrary_precision_integers",
-                   "Allows generating arbitrary width integer types"),
-        clEnumValN(SPIRV::Extension::SPV_INTEL_optnone, "SPV_INTEL_optnone",
-                   "Adds OptNoneINTEL value for Function Control mask that "
-                   "indicates a request to not optimize the function"),
-        clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
-                   "SPV_KHR_no_integer_wrap_decoration",
-                   "Adds decorations to indicate that a given instruction does "
-                   "not cause integer wrapping"),
-        clEnumValN(SPIRV::Extension::SPV_KHR_expect_assume,
-                   "SPV_KHR_expect_assume",
-                   "Provides additional information to a compiler, similar to "
-                   "the llvm.assume and llvm.expect intrinsics."),
-        clEnumValN(SPIRV::Extension::SPV_KHR_bit_instructions,
-                   "SPV_KHR_bit_instructions",
-                   "This enables bit instructions to be used by SPIR-V modules "
-                   "without requiring the Shader capability")));
+static cl::opt<bool>
+    SPVTranslatorCompat("translator-compatibility-mode",
+                        cl::desc("SPIR-V Translator compatibility mode"),
+                        cl::Optional, cl::init(false));
+
+static cl::opt<std::set<SPIRV::Extension::Extension>, false,
+               SPIRVExtensionsParser>
+    Extensions("spirv-ext",
+               cl::desc("Specify list of enabled SPIR-V extensions"));
 
 // Compare version numbers, but allow 0 to mean unspecified.
-static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {
-  return Target == 0 || Target >= VerToCompareTo;
+static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
+  return Target.empty() || Target >= VerToCompareTo;
 }
 
 SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), SPIRVVersion(0),
-      OpenCLVersion(0), InstrInfo(),
+      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       TargetTriple(TT) {
+  switch (TT.getSubArch()) {
+  case Triple::SPIRVSubArch_v10:
+    SPIRVVersion = VersionTuple(1, 0);
+    break;
+  case Triple::SPIRVSubArch_v11:
+    SPIRVVersion = VersionTuple(1, 1);
+    break;
+  case Triple::SPIRVSubArch_v12:
+    SPIRVVersion = VersionTuple(1, 2);
+    break;
+  case Triple::SPIRVSubArch_v13:
+    SPIRVVersion = VersionTuple(1, 3);
+    break;
+  case Triple::SPIRVSubArch_v14:
+  default:
+    SPIRVVersion = VersionTuple(1, 4);
+    break;
+  case Triple::SPIRVSubArch_v15:
+    SPIRVVersion = VersionTuple(1, 5);
+    break;
+  case Triple::SPIRVSubArch_v16:
+    SPIRVVersion = VersionTuple(1, 6);
+    break;
+  }
+  OpenCLVersion = VersionTuple(2, 2);
+
   // The order of initialization is important.
   initAvailableExtensions();
   initAvailableExtInstSets();
 
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
+  InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
   InstSelector.reset(
@@ -78,10 +92,6 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
                                                           StringRef FS) {
   ParseSubtargetFeatures(CPU, /*TuneCPU=*/CPU, FS);
-  if (SPIRVVersion == 0)
-    SPIRVVersion = 14;
-  if (OpenCLVersion == 0)
-    OpenCLVersion = 22;
   return *this;
 }
 
@@ -94,19 +104,20 @@ bool SPIRVSubtarget::canUseExtInstSet(
   return AvailableExtInstSets.contains(E);
 }
 
-bool SPIRVSubtarget::isAtLeastSPIRVVer(uint32_t VerToCompareTo) const {
+bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
   return isAtLeastVer(SPIRVVersion, VerToCompareTo);
 }
 
-bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
+bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
   if (!isOpenCLEnv())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
 
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
+// In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return isAtLeastVer(SPIRVVersion, 14);
+  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
 void SPIRVSubtarget::initAvailableExtensions() {
@@ -114,8 +125,7 @@ void SPIRVSubtarget::initAvailableExtensions() {
   if (!isOpenCLEnv())
     return;
 
-  for (auto Extension : Extensions)
-    AvailableExtensions.insert(Extension);
+  AvailableExtensions.insert(Extensions.begin(), Extensions.end());
 }
 
 // TODO: use command line args for this rather than just defaults.

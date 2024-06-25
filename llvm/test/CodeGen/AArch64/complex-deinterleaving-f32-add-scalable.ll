@@ -12,15 +12,15 @@ define <vscale x 4 x float> @complex_add_v4f32(<vscale x 4 x float> %a, <vscale 
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.experimental.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %a)
+  %a.deinterleaved = tail call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %a)
   %a.real = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.experimental.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %b)
+  %b.deinterleaved = tail call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %b)
   %b.real = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %b.deinterleaved, 1
   %0 = fsub fast <vscale x 2 x float> %b.real, %a.imag
   %1 = fadd fast <vscale x 2 x float> %b.imag, %a.real
-  %interleaved.vec = tail call <vscale x 4 x float> @llvm.experimental.vector.interleave2.nxv4f32(<vscale x 2 x float> %0, <vscale x 2 x float> %1)
+  %interleaved.vec = tail call <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float> %0, <vscale x 2 x float> %1)
   ret <vscale x 4 x float> %interleaved.vec
 }
 
@@ -35,15 +35,15 @@ define <vscale x 8 x float> @complex_add_v8f32(<vscale x 8 x float> %a, <vscale 
 ; CHECK-NEXT:    mov z1.d, z3.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.experimental.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %a)
+  %a.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %a)
   %a.real = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.experimental.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %b)
+  %b.deinterleaved = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %b)
   %b.real = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %b.deinterleaved, 1
   %0 = fsub fast <vscale x 4 x float> %b.real, %a.imag
   %1 = fadd fast <vscale x 4 x float> %b.imag, %a.real
-  %interleaved.vec = tail call <vscale x 8 x float> @llvm.experimental.vector.interleave2.nxv8f32(<vscale x 4 x float> %0, <vscale x 4 x float> %1)
+  %interleaved.vec = tail call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> %0, <vscale x 4 x float> %1)
   ret <vscale x 8 x float> %interleaved.vec
 }
 ; Expected to transform
@@ -61,23 +61,23 @@ define <vscale x 16 x float> @complex_add_v16f32(<vscale x 16 x float> %a, <vsca
 ; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
 entry:
-  %a.deinterleaved = tail call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.experimental.vector.deinterleave2.nxv16f32(<vscale x 16 x float> %a)
+  %a.deinterleaved = tail call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave2.nxv16f32(<vscale x 16 x float> %a)
   %a.real = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } %a.deinterleaved, 0
   %a.imag = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } %a.deinterleaved, 1
-  %b.deinterleaved = tail call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.experimental.vector.deinterleave2.nxv16f32(<vscale x 16 x float> %b)
+  %b.deinterleaved = tail call { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave2.nxv16f32(<vscale x 16 x float> %b)
   %b.real = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } %b.deinterleaved, 0
   %b.imag = extractvalue { <vscale x 8 x float>, <vscale x 8 x float> } %b.deinterleaved, 1
   %0 = fsub fast <vscale x 8 x float> %b.real, %a.imag
   %1 = fadd fast <vscale x 8 x float> %b.imag, %a.real
-  %interleaved.vec = tail call <vscale x 16 x float> @llvm.experimental.vector.interleave2.nxv16f32(<vscale x 8 x float> %0, <vscale x 8 x float> %1)
+  %interleaved.vec = tail call <vscale x 16 x float> @llvm.vector.interleave2.nxv16f32(<vscale x 8 x float> %0, <vscale x 8 x float> %1)
   ret <vscale x 16 x float> %interleaved.vec
 }
 
-declare { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.experimental.vector.deinterleave2.nxv4f32(<vscale x 4 x float>)
-declare <vscale x 4 x float> @llvm.experimental.vector.interleave2.nxv4f32(<vscale x 2 x float>, <vscale x 2 x float>)
+declare { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float>, <vscale x 2 x float>)
 
-declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.experimental.vector.deinterleave2.nxv8f32(<vscale x 8 x float>)
-declare <vscale x 8 x float> @llvm.experimental.vector.interleave2.nxv8f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float>)
+declare <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float>, <vscale x 4 x float>)
 
-declare { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.experimental.vector.deinterleave2.nxv16f32(<vscale x 16 x float>)
-declare <vscale x 16 x float> @llvm.experimental.vector.interleave2.nxv16f32(<vscale x 8 x float>, <vscale x 8 x float>)
+declare { <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave2.nxv16f32(<vscale x 16 x float>)
+declare <vscale x 16 x float> @llvm.vector.interleave2.nxv16f32(<vscale x 8 x float>, <vscale x 8 x float>)

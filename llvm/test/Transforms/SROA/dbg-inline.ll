@@ -19,10 +19,10 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @_Z1g4pair(i64 %p.coerce0, i64 %p.coerce1) #0 !dbg !8 {
 ; CHECK-LABEL: @_Z1g4pair(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[P_COERCE0:%.*]], metadata [[META16:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[P_COERCE0]], metadata [[META18:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[P_COERCE1:%.*]], metadata [[META16]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg [[DBG17]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i64 [[P_COERCE1]], metadata [[META18]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg [[DBG20]]
+; CHECK-NEXT:      #dbg_value(i64 [[P_COERCE0:%.*]], [[META16:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), [[META17:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i64 [[P_COERCE0]], [[META18:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), [[META20:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i64 [[P_COERCE1:%.*]], [[META16]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), [[META17]])
+; CHECK-NEXT:      #dbg_value(i64 [[P_COERCE1]], [[META18]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), [[META20]])
 ; CHECK-NEXT:    ret i64 [[P_COERCE0]], !dbg [[DBG22:![0-9]+]]
 ;
 entry:
@@ -77,32 +77,31 @@ attributes #2 = { argmemonly nounwind willreturn }
 !26 = !DILocation(line: 10, column: 3, scope: !8)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline ssp uwtable }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0 (git@github.com:llvm/llvm-project 5110fd0343c2d06c8ae538741fbef13ece5e68de)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, sysroot: "/")
-; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: "/Volumes/Data/llvm-project")
-; CHECK: [[META2:![0-9]+]] = !{}
+; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], nameTableKind: None, sysroot: "/")
+; CHECK: [[META1]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: {{.*}})
+; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; CHECK: [[META4:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META5:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META6:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK: [[META7:![0-9]+]] = distinct !DISubprogram(name: "g", linkageName: "_Z1g4pair", scope: !8, file: !8, line: 9, type: !9, scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
-; CHECK: [[META8:![0-9]+]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: "")
-; CHECK: [[META9:![0-9]+]] = !DISubroutineType(types: !10)
-; CHECK: [[META10:![0-9]+]] = !{!11, !12}
-; CHECK: [[META11:![0-9]+]] = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
-; CHECK: [[META12:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair", file: !8, line: 1, size: 128, flags: DIFlagTypePassByValue, elements: !13, identifier: "_ZTS4pair")
-; CHECK: [[META13:![0-9]+]] = !{!14, !15}
-; CHECK: [[META14:![0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !12, file: !8, line: 1, baseType: !11, size: 64)
-; CHECK: [[META15:![0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !12, file: !8, line: 1, baseType: !11, size: 64, offset: 64)
-; CHECK: [[META16]] = !DILocalVariable(name: "p", arg: 1, scope: !7, file: !8, line: 9, type: !12)
-; CHECK: [[DBG17]] = !DILocation(line: 0, scope: !7)
-; CHECK: [[META18]] = !DILocalVariable(name: "p", arg: 1, scope: !19, file: !8, line: 5, type: !12)
-; CHECK: [[META19:![0-9]+]] = distinct !DISubprogram(name: "f", linkageName: "_ZL1f4pair", scope: !8, file: !8, line: 5, type: !9, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !2)
-; CHECK: [[DBG20]] = !DILocation(line: 0, scope: !19, inlinedAt: !21)
-; CHECK: [[META21:![0-9]+]] = distinct !DILocation(line: 10, column: 10, scope: !7)
-; CHECK: [[DBG22]] = !DILocation(line: 10, column: 3, scope: !7)
+; CHECK: [[META7:![0-9]+]] = distinct !DISubprogram(name: "g", linkageName: "_Z1g4pair", scope: [[META8:![0-9]+]], file: [[META8]], line: 9, type: [[META9:![0-9]+]], scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[META8]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: "")
+; CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
+; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]]}
+; CHECK: [[META11]] = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
+; CHECK: [[META12]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair", file: [[META8]], line: 1, size: 128, flags: DIFlagTypePassByValue, elements: [[META13:![0-9]+]], identifier: "_ZTS4pair")
+; CHECK: [[META13]] = !{[[META14:![0-9]+]], [[META15:![0-9]+]]}
+; CHECK: [[META14]] = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: [[META12]], file: [[META8]], line: 1, baseType: [[META11]], size: 64)
+; CHECK: [[META15]] = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: [[META12]], file: [[META8]], line: 1, baseType: [[META11]], size: 64, offset: 64)
+; CHECK: [[META16]] = !DILocalVariable(name: "p", arg: 1, scope: [[META7]], file: [[META8]], line: 9, type: [[META12]])
+; CHECK: [[META17]] = !DILocation(line: 0, scope: [[META7]])
+; CHECK: [[META18]] = !DILocalVariable(name: "p", arg: 1, scope: [[META19:![0-9]+]], file: [[META8]], line: 5, type: [[META12]])
+; CHECK: [[META19]] = distinct !DISubprogram(name: "f", linkageName: "_ZL1f4pair", scope: [[META8]], file: [[META8]], line: 5, type: [[META9]], scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[META20]] = !DILocation(line: 0, scope: [[META19]], inlinedAt: [[META21:![0-9]+]])
+; CHECK: [[META21]] = distinct !DILocation(line: 10, column: 10, scope: [[META7]])
+; CHECK: [[DBG22]] = !DILocation(line: 10, column: 3, scope: [[META7]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-MODIFY-CFG: {{.*}}

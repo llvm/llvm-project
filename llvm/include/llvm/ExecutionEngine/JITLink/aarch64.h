@@ -171,7 +171,14 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///
   /// Fixup expression:
   ///
-  ///   Fixup <- (Target - Fixup) >> 2 : int19
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int19
+  ///
+  /// Notes:
+  ///   The '19' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocation.
+  /// Since the low two bits must be zero (because of the 32-bit alignment of
+  /// the target) the operand is effectively a signed 21-bit number.
+  ///
   ///
   /// Errors:
   ///   - The result of the unshifted part of the fixup expression must be
@@ -377,6 +384,11 @@ inline bool isADR(uint32_t Instr) {
   return (Instr & ADRMask) == 0x10000000;
 }
 
+inline bool isLDRLiteral(uint32_t Instr) {
+  constexpr uint32_t LDRLitMask = 0x3b000000;
+  return (Instr & LDRLitMask) == 0x18000000;
+}
+
 // Returns the amount the address operand of LD/ST (imm12)
 // should be shifted right by.
 //
@@ -494,16 +506,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   }
   case LDRLiteral19: {
     assert((FixupAddress.getValue() & 0x3) == 0 && "LDR is not 32-bit aligned");
-    assert(E.getAddend() == 0 && "LDRLiteral19 with non-zero addend");
     uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    assert(RawInstr == 0x58000010 && "RawInstr isn't a 64-bit LDR literal");
-    int64_t Delta = E.getTarget().getAddress() - FixupAddress;
+    assert(isLDRLiteral(RawInstr) && "RawInstr is not an LDR Literal");
+    int64_t Delta = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
     if (Delta & 0x3)
       return make_error<JITLinkError>("LDR literal target is not 32-bit "
                                       "aligned");
-    if (Delta < -(1 << 20) || Delta > ((1 << 20) - 1))
+    if (!isInt<21>(Delta))
       return makeTargetOutOfRangeError(G, B, E);
-
     uint32_t EncodedImm = ((static_cast<uint32_t>(Delta) >> 2) & 0x7ffff) << 5;
     uint32_t FixedInstr = RawInstr | EncodedImm;
     *(ulittle32_t *)FixupPtr = FixedInstr;

@@ -47,6 +47,7 @@ enum Kind : unsigned {
   OperandPos,
   OperandGroupPos,
   AttributePos,
+  ConstraintResultPos,
   ResultPos,
   ResultGroupPos,
   TypePos,
@@ -280,6 +281,28 @@ struct OperationPosition : public PredicateBase<OperationPosition, Position,
 };
 
 //===----------------------------------------------------------------------===//
+// ConstraintPosition
+
+struct ConstraintQuestion;
+
+/// A position describing the result of a native constraint. It saves the
+/// corresponding ConstraintQuestion and result index to enable referring
+/// back to them
+struct ConstraintPosition
+    : public PredicateBase<ConstraintPosition, Position,
+                           std::pair<ConstraintQuestion *, unsigned>,
+                           Predicates::ConstraintResultPos> {
+  using PredicateBase::PredicateBase;
+
+  /// Returns the ConstraintQuestion to enable keeping track of the native
+  /// constraint this position stems from.
+  ConstraintQuestion *getQuestion() const { return key.first; }
+
+  // Returns the result index of this position
+  unsigned getIndex() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
 // ResultPosition
 
 /// A position describing a result of an operation.
@@ -447,11 +470,13 @@ struct AttributeQuestion
     : public PredicateBase<AttributeQuestion, Qualifier, void,
                            Predicates::AttributeQuestion> {};
 
-/// Apply a parameterized constraint to multiple position values.
+/// Apply a parameterized constraint to multiple position values and possibly
+/// produce results.
 struct ConstraintQuestion
-    : public PredicateBase<ConstraintQuestion, Qualifier,
-                           std::tuple<StringRef, ArrayRef<Position *>, bool>,
-                           Predicates::ConstraintQuestion> {
+    : public PredicateBase<
+          ConstraintQuestion, Qualifier,
+          std::tuple<StringRef, ArrayRef<Position *>, ArrayRef<Type>, bool>,
+          Predicates::ConstraintQuestion> {
   using Base::Base;
 
   /// Return the name of the constraint.
@@ -460,15 +485,19 @@ struct ConstraintQuestion
   /// Return the arguments of the constraint.
   ArrayRef<Position *> getArgs() const { return std::get<1>(key); }
 
+  /// Return the result types of the constraint.
+  ArrayRef<Type> getResultTypes() const { return std::get<2>(key); }
+
   /// Return the negation status of the constraint.
-  bool getIsNegated() const { return std::get<2>(key); }
+  bool getIsNegated() const { return std::get<3>(key); }
 
   /// Construct an instance with the given storage allocator.
   static ConstraintQuestion *construct(StorageUniquer::StorageAllocator &alloc,
                                        KeyTy key) {
     return Base::construct(alloc, KeyTy{alloc.copyInto(std::get<0>(key)),
                                         alloc.copyInto(std::get<1>(key)),
-                                        std::get<2>(key)});
+                                        alloc.copyInto(std::get<2>(key)),
+                                        std::get<3>(key)});
   }
 
   /// Returns a hash suitable for the given keytype.
@@ -526,6 +555,7 @@ public:
     // Register the types of Positions with the uniquer.
     registerParametricStorageType<AttributePosition>();
     registerParametricStorageType<AttributeLiteralPosition>();
+    registerParametricStorageType<ConstraintPosition>();
     registerParametricStorageType<ForEachPosition>();
     registerParametricStorageType<OperandPosition>();
     registerParametricStorageType<OperandGroupPosition>();
@@ -586,6 +616,12 @@ public:
   OperationPosition *getPassthroughOp(Position *p) {
     assert((isa<ForEachPosition>(p)) && "expected users position");
     return OperationPosition::get(uniquer, p);
+  }
+
+  // Returns a position for a new value created by a constraint.
+  ConstraintPosition *getConstraintPosition(ConstraintQuestion *q,
+                                            unsigned index) {
+    return ConstraintPosition::get(uniquer, std::make_pair(q, index));
   }
 
   /// Returns an attribute position for an attribute of the given operation.
@@ -673,11 +709,11 @@ public:
   }
 
   /// Create a predicate that applies a generic constraint.
-  Predicate getConstraint(StringRef name, ArrayRef<Position *> pos,
-                          bool isNegated) {
-    return {
-        ConstraintQuestion::get(uniquer, std::make_tuple(name, pos, isNegated)),
-        TrueAnswer::get(uniquer)};
+  Predicate getConstraint(StringRef name, ArrayRef<Position *> args,
+                          ArrayRef<Type> resultTypes, bool isNegated) {
+    return {ConstraintQuestion::get(
+                uniquer, std::make_tuple(name, args, resultTypes, isNegated)),
+            TrueAnswer::get(uniquer)};
   }
 
   /// Create a predicate comparing a value with null.

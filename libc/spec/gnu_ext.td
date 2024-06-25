@@ -33,8 +33,6 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             RetValSpec<VoidType>,
             [ArgSpec<FloatType>, ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]
         >,
-        FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
-        FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
 
@@ -101,8 +99,8 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         FunctionSpec<
             "hcreate_r",
             RetValSpec<IntType>,
-            [  
-                ArgSpec<SizeTType>, 
+            [
+                ArgSpec<SizeTType>,
                 ArgSpec<StructHsearchDataPtr>
             ]
         >,
@@ -117,7 +115,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             "hsearch_r",
             RetValSpec<IntType>,
             [
-                ArgSpec<EntryType>, 
+                ArgSpec<EntryType>,
                 ArgSpec<ActionType>,
                 ArgSpec<EntryTypePtrPtr>,
                 ArgSpec<StructHsearchDataPtr>
@@ -207,8 +205,8 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       [], // Enumerations
       [
           FunctionSpec<
-                "qsort_r", 
-                RetValSpec<VoidType>, 
+                "qsort_r",
+                RetValSpec<VoidType>,
                 [ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<SizeTType>, ArgSpec<QSortRCompareT>, ArgSpec<VoidPtr>]
           >,
       ]
@@ -238,7 +236,9 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      []  // Functions
+      [
+        //TODO: Add getauxval here
+      ]  // Functions
   >;
 
   HeaderSpec SendFile = HeaderSpec<

@@ -1846,6 +1846,42 @@ int main()
 // CHECK-NEXT:              "kind": "VarTemplateDecl",
 // CHECK-NEXT:              "name": "is_const_v"
 // CHECK-NEXT:             }
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "kind": "TemplateArgument",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "const _Ty"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "inner": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                "id": "0x{{.*}}",
+// CHECK-NEXT:                "kind": "QualType",
+// CHECK-NEXT:                "type": {
+// CHECK-NEXT:                 "qualType": "const _Ty"
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "qualifiers": "const",
+// CHECK-NEXT:                "inner": [
+// CHECK-NEXT:                 {
+// CHECK-NEXT:                  "id": "0x{{.*}}",
+// CHECK-NEXT:                  "kind": "TemplateTypeParmType",
+// CHECK-NEXT:                  "type": {
+// CHECK-NEXT:                   "qualType": "_Ty"
+// CHECK-NEXT:                  },
+// CHECK-NEXT:                  "isDependent": true,
+// CHECK-NEXT:                  "isInstantiationDependent": true,
+// CHECK-NEXT:                  "depth": 0,
+// CHECK-NEXT:                  "index": 0,
+// CHECK-NEXT:                  "decl": {
+// CHECK-NEXT:                   "id": "0x{{.*}}",
+// CHECK-NEXT:                   "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:                   "name": "_Ty"
+// CHECK-NEXT:                  }
+// CHECK-NEXT:                 }
+// CHECK-NEXT:                ]
+// CHECK-NEXT:               }
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
 // CHECK-NEXT:            ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -1899,6 +1935,32 @@ int main()
 // CHECK-NEXT:              "id": "0x{{.*}}",
 // CHECK-NEXT:              "kind": "VarTemplateDecl",
 // CHECK-NEXT:              "name": "is_reference_v"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ],
+// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "kind": "TemplateArgument",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "_Ty"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "inner": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                "id": "0x{{.*}}",
+// CHECK-NEXT:                "kind": "TemplateTypeParmType",
+// CHECK-NEXT:                "type": {
+// CHECK-NEXT:                 "qualType": "_Ty"
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "isDependent": true,
+// CHECK-NEXT:                "isInstantiationDependent": true,
+// CHECK-NEXT:                "depth": 0,
+// CHECK-NEXT:                "index": 0,
+// CHECK-NEXT:                "decl": {
+// CHECK-NEXT:                 "id": "0x{{.*}}",
+// CHECK-NEXT:                 "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:                 "name": "_Ty"
+// CHECK-NEXT:                }
+// CHECK-NEXT:               }
+// CHECK-NEXT:              ]
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
 // CHECK-NEXT:           }
@@ -2565,6 +2627,32 @@ int main()
 // CHECK-NEXT:            "kind": "VarTemplateDecl",
 // CHECK-NEXT:            "name": "is_function_v"
 // CHECK-NEXT:           }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "kind": "TemplateArgument",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "_Ty1"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "inner": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "id": "0x{{.*}}",
+// CHECK-NEXT:              "kind": "TemplateTypeParmType",
+// CHECK-NEXT:              "type": {
+// CHECK-NEXT:               "qualType": "_Ty1"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "isDependent": true,
+// CHECK-NEXT:              "isInstantiationDependent": true,
+// CHECK-NEXT:              "depth": 0,
+// CHECK-NEXT:              "index": 0,
+// CHECK-NEXT:              "decl": {
+// CHECK-NEXT:               "id": "0x{{.*}}",
+// CHECK-NEXT:               "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:               "name": "_Ty1"
+// CHECK-NEXT:              }
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
+// CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
@@ -2725,7 +2813,25 @@ int main()
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "prvalue"
+// CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "_Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true,
+// CHECK-NEXT:          "depth": 0,
+// CHECK-NEXT:          "index": 0,
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:           "name": "_Ty"
+// CHECK-NEXT:          }
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }
@@ -3003,7 +3109,25 @@ int main()
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "prvalue"
+// CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "_Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true,
+// CHECK-NEXT:          "depth": 0,
+// CHECK-NEXT:          "index": 0,
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:           "name": "_Ty"
+// CHECK-NEXT:          }
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }

@@ -16,6 +16,11 @@ namespace llvm {
 /// This implementation is used for RISC-V ELF targets.
 class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallDataSection;
+  MCSection *SmallRODataSection;
+  MCSection *SmallROData4Section;
+  MCSection *SmallROData8Section;
+  MCSection *SmallROData16Section;
+  MCSection *SmallROData32Section;
   MCSection *SmallBSSSection;
   unsigned SSThreshold = 8;
 

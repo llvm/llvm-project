@@ -244,3 +244,12 @@ module m18
   type(t1) x
   common x
 end
+
+subroutine s19
+  entry e19
+  !ERROR: 'e19' in equivalence set is not a data object
+  equivalence (e19, j)
+  !ERROR: 'e20' in equivalence set is not a data object
+  equivalence (e20, j)
+  entry e20
+end

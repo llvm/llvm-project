@@ -13,7 +13,7 @@ define void @test_dyn_alloca(i32 %n) sanitize_hwaddress !dbg !15 {
 ; CHECK-LABEL: @test_dyn_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 [[N:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META10:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(!DIArgList(ptr [[X]], ptr [[X]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref), [[META12:![0-9]+]])
 ; CHECK-NEXT:    call void @use32(ptr nonnull [[X]]), !dbg [[DBG13:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG14:![0-9]+]]
 ;

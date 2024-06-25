@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -debug-info-kind=standalone -fdebug-prefix-map=%p=./UNLIKELY_PATH/empty -S %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=standalone -fdebug-prefix-map=%p=./UNLIKELY_PATH/empty %s -emit-llvm -o - | FileCheck %s
 
 struct alignas(64) an {
   struct {

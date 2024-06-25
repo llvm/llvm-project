@@ -173,19 +173,19 @@ exit.1:
 ; SPARC64:       subxcc
 
 
-define void @test_adde_sube(i8* %a, i8* %b, i8* %sum, i8* %diff) {
+define void @test_adde_sube(ptr %a, ptr %b, ptr %sum, ptr %diff) {
 entry:
-   %0 = bitcast i8* %a to i128*
-   %1 = bitcast i8* %b to i128*
-   %2 = load i128, i128* %0
-   %3 = load i128, i128* %1
+   %0 = bitcast ptr %a to ptr
+   %1 = bitcast ptr %b to ptr
+   %2 = load i128, ptr %0
+   %3 = load i128, ptr %1
    %4 = add i128 %2, %3
-   %5 = bitcast i8* %sum to i128*
-   store i128 %4, i128* %5
-   tail call void asm sideeffect "", "=*m,*m"(i128* elementtype(i128) %0, i128* elementtype(i128) %5) nounwind
-   %6 = load i128, i128* %0
+   %5 = bitcast ptr %sum to ptr
+   store i128 %4, ptr %5
+   tail call void asm sideeffect "", "=*m,*m"(ptr elementtype(i128) %0, ptr elementtype(i128) %5) nounwind
+   %6 = load i128, ptr %0
    %7 = sub i128 %2, %6
-   %8 = bitcast i8* %diff to i128*
-   store i128 %7, i128* %8
+   %8 = bitcast ptr %diff to ptr
+   store i128 %7, ptr %8
    ret void
 }

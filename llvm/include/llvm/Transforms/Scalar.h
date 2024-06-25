@@ -63,12 +63,6 @@ Pass *createLoopUnrollPass(int OptLevel = 2, bool OnlyWhenForced = false,
 
 //===----------------------------------------------------------------------===//
 //
-// LoopRotate - This pass is a simple loop rotating pass.
-//
-Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
-
-//===----------------------------------------------------------------------===//
-//
 // Reassociate - This pass reassociates commutative expressions in an order that
 // is designed to promote better constant propagation, GCSE, LICM, PRE...
 //

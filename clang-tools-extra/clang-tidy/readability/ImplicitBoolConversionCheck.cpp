@@ -50,7 +50,9 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
-    return Context.getLangOpts().CPlusPlus11 ? "nullptr" : "0";
+    return (Context.getLangOpts().CPlusPlus11 || Context.getLangOpts().C23)
+               ? "nullptr"
+               : "0";
 
   default:
     llvm_unreachable("Unexpected cast kind");
@@ -81,8 +83,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens =
-      SubExpr != nullptr && utils::fixit::areParensNeededForStatement(*SubExpr);
+  bool NeedInnerParens = utils::fixit::areParensNeededForStatement(*SubExpr);
   bool NeedOuterParens =
       Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 
@@ -151,16 +152,35 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
   return {};
 }
 
+bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
+  SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
+  StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
+      CharSourceRange::getCharRange(PrefixRange), Context.getSourceManager(),
+      Context.getLangOpts(), nullptr);
+  if (SpaceBeforeStmtStr.empty())
+    return true;
+
+  const StringRef AllowedCharacters(" \t\n\v\f\r(){}[]<>;,+=-|&~!^*/");
+  return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
+}
+
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
                                 const ImplicitCastExpr *Cast,
                                 ASTContext &Context, StringRef OtherType) {
+  if (!Context.getLangOpts().CPlusPlus) {
+    Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(),
+                                       (Twine("(") + OtherType + ")").str());
+    return;
+  }
+
   const Expr *SubExpr = Cast->getSubExpr();
-  bool NeedParens = !isa<ParenExpr>(SubExpr);
+  const bool NeedParens = !isa<ParenExpr>(SubExpr->IgnoreImplicit());
+  const bool NeedSpace = needsSpacePrefix(Cast->getBeginLoc(), Context);
 
   Diag << FixItHint::CreateInsertion(
-      Cast->getBeginLoc(),
-      (Twine("static_cast<") + OtherType + ">" + (NeedParens ? "(" : ""))
-          .str());
+      Cast->getBeginLoc(), (Twine() + (NeedSpace ? " " : "") + "static_cast<" +
+                            OtherType + ">" + (NeedParens ? "(" : ""))
+                               .str());
 
   if (NeedParens) {
     SourceLocation EndLoc = Lexer::getLocForEndOfToken(
@@ -255,6 +275,13 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
+  auto ComparisonInCall = allOf(
+      hasParent(callExpr()),
+      hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
+
+  auto IsInCompilerGeneratedFunction = hasAncestor(namedDecl(anyOf(
+      isImplicit(), functionDecl(isDefaulted()), functionTemplateDecl())));
+
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
@@ -269,11 +296,13 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                        stmt(anyOf(ifStmt(), whileStmt()), has(declStmt())))),
                    // Exclude cases common to implicit cast to and from bool.
                    unless(ExceptionCases), unless(has(BoolXor)),
+                   // Exclude C23 cases common to implicit cast to bool.
+                   unless(ComparisonInCall),
                    // Retrieve also parent statement, to check if we need
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),
                    unless(isInTemplateInstantiation()),
-                   unless(hasAncestor(functionTemplateDecl())))
+                   unless(IsInCompilerGeneratedFunction))
                    .bind("implicitCastToBool")),
       this);
 
@@ -305,7 +334,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
                     anything()),
               unless(isInTemplateInstantiation()),
-              unless(hasAncestor(functionTemplateDecl())))),
+              unless(IsInCompilerGeneratedFunction))),
       this);
 }
 

@@ -104,14 +104,14 @@ define <4 x i32> @combine_vec_sub_add1(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_sub_constant_add(<4 x i32> %a) {
 ; SSE-LABEL: combine_vec_sub_constant_add:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; SSE-NEXT:    pmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant_add:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [3,1,4294967295,4294967293]
 ; AVX-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %a, <i32 0, i32 1, i32 2, i32 3>

@@ -1047,25 +1047,25 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -8
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 28
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 2
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -4
 ; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    srliw a2, a1, 30
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 1
 ; CHECK-NEXT:    sllw a1, a1, a3
-; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    negw a2, a2
 ; CHECK-NEXT:    andi a2, a2, -2
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    srai a1, a1, 31
 ; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    srli a1, a1, 31
 ; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:  .LBB18_4: # %cleanup
 ; CHECK-NEXT:    ret
@@ -1087,28 +1087,27 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 28
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 2
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
 ; NOREMOVAL-NEXT:    add a0, a0, a2
 ; NOREMOVAL-NEXT:    srliw a2, a1, 30
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 1
 ; NOREMOVAL-NEXT:    sllw a1, a1, a3
-; NOREMOVAL-NEXT:    neg a2, a2
+; NOREMOVAL-NEXT:    negw a2, a2
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
 ; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    srai a1, a1, 31
 ; NOREMOVAL-NEXT:    not a1, a1
-; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    srli a1, a1, 31
+; NOREMOVAL-NEXT:    addw a0, a0, a1
 ; NOREMOVAL-NEXT:  .LBB18_4: # %cleanup
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0

@@ -1,6 +1,25 @@
 # MLIR Bytecode Format
 
 This documents describes the MLIR bytecode format and its encoding.
+This format is versioned and stable: we don't plan to ever break
+compatibility, that is a dialect should be able to deserialize and
+older bytecode. Similarly, we support back-deployment we an older
+version of the format can be targetted.
+
+That said, it is important to realize that the promises of the
+bytecode format are made assuming immutable dialects: the format
+allows backward and forward compatibility, but only when nothing
+in a dialect changes (operations, types, attributes definitions).
+
+A dialect can opt-in to handle its own versioning through the
+`BytecodeDialectInterface`. Some hooks are exposed to the dialect
+to allow managing a version encoded into the bytecode file. The
+version is loaded lazily and allows to retrieve the version
+information while decoding the input IR, and gives an opportunity
+to each dialect for which a version is present to perform IR
+upgrades post-parsing through the `upgradeFromVersion` method.
+There is no restriction on what kind of information a dialect
+is allowed to encode to model its versioning
 
 [TOC]
 

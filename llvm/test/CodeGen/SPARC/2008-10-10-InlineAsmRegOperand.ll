@@ -7,8 +7,8 @@ module asm "\09.section\09.dtors,\22aw\22"
 
 define void @frame_dummy() nounwind {
 entry:
-	%asmtmp = tail call void (i8*)* (void (i8*)*) asm "", "=r,0"(void (i8*)* @_Jv_RegisterClasses) nounwind		; <void (i8*)*> [#uses=0]
+	%asmtmp = tail call ptr (ptr) asm "", "=r,0"(ptr @_Jv_RegisterClasses) nounwind		; <void (i8*)*> [#uses=0]
 	unreachable
 }
 
-declare void @_Jv_RegisterClasses(i8*)
+declare void @_Jv_RegisterClasses(ptr)

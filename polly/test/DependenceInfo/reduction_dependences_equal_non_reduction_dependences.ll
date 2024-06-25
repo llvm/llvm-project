@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
 ;
 ; This loopnest contains a reduction which imposes the same dependences as the
 ; accesses to the array A. We need to ensure we keep the dependences of A.

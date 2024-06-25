@@ -23,7 +23,6 @@ FileHeader:
   CreationTime:         [[CREATTIME=1]]
   EntriesInSymbolTable: [[SYMBOLCOUNT=1]]
   NumberOfSections:     1
-  OffsetToSymbolTable:  0x3C
   AuxiliaryHeaderSize:  0
   Flags:                0x12
 Sections:
@@ -42,7 +41,7 @@ Symbols:
 # FILEHEADER64-NEXT:  Magic: 0x1F7
 # FILEHEADER64-NEXT:  NumberOfSections: 1
 # FILEHEADER64-NEXT:  TimeStamp: None (0x0)
-# FILEHEADER64-NEXT:  SymbolTableOffset: 0x3C
+# FILEHEADER64-NEXT:  SymbolTableOffset: 0x60
 # FILEHEADER64-NEXT:  SymbolTableEntries: 1
 # FILEHEADER64-NEXT:  OptionalHeaderSize: 0x0
 # FILEHEADER64-NEXT:  Flags: 0x12

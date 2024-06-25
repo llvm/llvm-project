@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=SPV
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s -o - | FileCheck %s --check-prefixes=SPV
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s --spirv-ext=+SPV_KHR_float_controls -o - | FileCheck %s --check-prefixes=SPVEXT
 
 define dso_local dllexport spir_kernel void @k_float_controls_0(i32 %ibuf, i32 %obuf) local_unnamed_addr {
 entry:
@@ -29,6 +30,7 @@ entry:
 !spirv.ExecutionMode = !{!15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29}
 
 ; SPV-NOT: OpExtension "SPV_KHR_float_controls"
+; SPVEXT: OpExtension "SPV_KHR_float_controls"
 
 ; SPV-DAG: OpEntryPoint {{.*}} %[[#KERNEL0:]] "k_float_controls_0"
 ; SPV-DAG: OpEntryPoint {{.*}} %[[#KERNEL1:]] "k_float_controls_1"

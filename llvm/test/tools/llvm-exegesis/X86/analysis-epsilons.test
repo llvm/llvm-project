@@ -20,10 +20,12 @@
 # CHECK-CLUSTERS-ONE-NEXT: {{^}}0,
 # CHECK-CLUSTERS-ONE-SAME: ,100.00{{$}}
 
+# CHECK-INCONSISTENCIES-FAIL: Epsilon: <span class="mono">0.10</span>
 # CHECK-INCONSISTENCIES-FAIL: contains instructions whose performance characteristics do not match that of LLVM
 # CHECK-INCONSISTENCIES-FAIL: contains instructions whose performance characteristics do not match that of LLVM
 # CHECK-INCONSISTENCIES-FAIL-NOT: contains instructions whose performance characteristics do not match that of LLVM
 
+# CHECK-INCONSISTENCIES-PASS: Epsilon: <span class="mono">100.00</span>
 # CHECK-INCONSISTENCIES-PASS-NOT: contains instructions whose performance characteristics do not match that of LLVM
 
 ---

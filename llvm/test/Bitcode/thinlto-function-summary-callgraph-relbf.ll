@@ -39,5 +39,5 @@ declare void @func(...) #1
 
 ; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (name: "func") ; guid = 7289175272376759421
-; DIS: ^2 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 3, calls: ((callee: ^1, relbf: 256)), refs: (readonly ^3)))) ; guid = 15822663052811949562
+; DIS: ^2 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0, importType: definition), insts: 3, calls: ((callee: ^1, relbf: 256)), refs: (readonly ^3)))) ; guid = 15822663052811949562
 ; DIS: ^3 = gv: (name: "undefinedglob") ; guid = 18036901804029949403

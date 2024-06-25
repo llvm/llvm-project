@@ -19,7 +19,7 @@ unittest("TableGenTests") {
     ":AutomataTables",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
-    "//llvm/utils/TableGen/GlobalISel",
+    "//llvm/utils/TableGen/Common",
   ]
   include_dirs = [ "//llvm/utils/TableGen" ]
   sources = [

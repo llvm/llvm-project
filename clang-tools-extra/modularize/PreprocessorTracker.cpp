@@ -730,15 +730,14 @@ public:
   ~PreprocessorCallbacks() override {}
 
   // Overridden handlers.
-  void InclusionDirective(clang::SourceLocation HashLoc,
-                          const clang::Token &IncludeTok,
-                          llvm::StringRef FileName, bool IsAngled,
-                          clang::CharSourceRange FilenameRange,
-                          clang::OptionalFileEntryRef File,
-                          llvm::StringRef SearchPath,
-                          llvm::StringRef RelativePath,
-                          const clang::Module *Imported,
-                          clang::SrcMgr::CharacteristicKind FileType) override;
+  void
+  InclusionDirective(clang::SourceLocation HashLoc,
+                     const clang::Token &IncludeTok, llvm::StringRef FileName,
+                     bool IsAngled, clang::CharSourceRange FilenameRange,
+                     clang::OptionalFileEntryRef File,
+                     llvm::StringRef SearchPath, llvm::StringRef RelativePath,
+                     const clang::Module *SuggestedModule, bool ModuleImported,
+                     clang::SrcMgr::CharacteristicKind FileType) override;
   void FileChanged(clang::SourceLocation Loc,
                    clang::PPCallbacks::FileChangeReason Reason,
                    clang::SrcMgr::CharacteristicKind FileType,
@@ -1275,7 +1274,8 @@ void PreprocessorCallbacks::InclusionDirective(
     llvm::StringRef FileName, bool IsAngled,
     clang::CharSourceRange FilenameRange, clang::OptionalFileEntryRef File,
     llvm::StringRef SearchPath, llvm::StringRef RelativePath,
-    const clang::Module *Imported, clang::SrcMgr::CharacteristicKind FileType) {
+    const clang::Module *SuggestedModule, bool ModuleImported,
+    clang::SrcMgr::CharacteristicKind FileType) {
   int DirectiveLine, DirectiveColumn;
   std::string HeaderPath = getSourceLocationFile(PP, HashLoc);
   getSourceLocationLineAndColumn(PP, HashLoc, DirectiveLine, DirectiveColumn);

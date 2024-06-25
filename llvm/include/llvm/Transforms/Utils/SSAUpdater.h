@@ -23,7 +23,7 @@ class BasicBlock;
 class Instruction;
 class LoadInst;
 class PHINode;
-class DPValue;
+class DbgVariableRecord;
 template <typename T> class SmallVectorImpl;
 template <typename T> class SSAUpdaterTraits;
 class Type;
@@ -124,7 +124,8 @@ public:
   void UpdateDebugValues(Instruction *I);
   void UpdateDebugValues(Instruction *I,
                          SmallVectorImpl<DbgValueInst *> &DbgValues);
-  void UpdateDebugValues(Instruction *I, SmallVectorImpl<DPValue *> &DbgValues);
+  void UpdateDebugValues(Instruction *I,
+                         SmallVectorImpl<DbgVariableRecord *> &DbgValues);
 
   /// Rewrite a use like \c RewriteUse but handling in-block definitions.
   ///
@@ -136,7 +137,7 @@ public:
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
   void UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue);
-  void UpdateDebugValue(Instruction *I, DPValue *DbgValue);
+  void UpdateDebugValue(Instruction *I, DbgVariableRecord *DbgValue);
 };
 
 /// Helper class for promoting a collection of loads and stores into SSA

@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-eabi -target-feature +neon -emit-llvm -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -emit-llvm -O2 -o - %s | FileCheck %s
 #include <stdarg.h>
 #include <arm_neon.h>
 
@@ -59,7 +59,7 @@ struct non_packed_struct gs_non_packed_struct;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_NON_PACKED_STRUCT_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    store <8 x i16> [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_non_packed_struct, align 16, !tbaa.struct [[TBAA_STRUCT6:![0-9]+]]
+// CHECK-NEXT:    store <8 x i16> [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_non_packed_struct, align 16, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -73,7 +73,7 @@ __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1,
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
@@ -114,7 +114,7 @@ struct packed_struct gs_packed_struct;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PACKED_STRUCT_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_struct, align 1, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_struct, align 1, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -128,7 +128,7 @@ __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, dou
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_struct(double d0, double d1, double d2, double d3,
@@ -169,7 +169,7 @@ struct packed_member gs_packed_member;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PACKED_MEMBER_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_member, align 1, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_member, align 1, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -183,7 +183,7 @@ __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, dou
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_member(double d0, double d1, double d2, double d3,
@@ -224,7 +224,7 @@ struct aligned_struct_8 gs_aligned_struct_8;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_ALIGNED_STRUCT_8_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_struct_8, align 16, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_struct_8, align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -238,7 +238,7 @@ __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, 
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
@@ -279,7 +279,7 @@ struct aligned_member_8 gs_aligned_member_8;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_ALIGNED_MEMBER_8_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_member_8, align 16, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_member_8, align 16, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -293,7 +293,7 @@ __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, 
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
@@ -334,7 +334,7 @@ struct pragma_packed_struct_8 gs_pragma_packed_struct_8;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PRAGMA_PACKED_STRUCT_8_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_8, align 8, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_8, align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -348,7 +348,7 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, doubl
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
@@ -389,7 +389,7 @@ struct pragma_packed_struct_4 gs_pragma_packed_struct_4;
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PRAGMA_PACKED_STRUCT_4_COERCE]], 0
 // CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_4, align 4, !tbaa.struct [[TBAA_STRUCT6]]
+// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_4, align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    ret void
 __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -403,7 +403,7 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, doubl
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
-// CHECK-NEXT:    call void @llvm.va_start(ptr nonnull [[VL]])
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
@@ -436,3 +436,10 @@ void test_pragma_packed_struct_4() {
     named_arg_pragma_packed_struct_4(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_4);
     variadic_pragma_packed_struct_4(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_4);
 }
+//.
+// CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META3]] = !{!"double", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
+//.

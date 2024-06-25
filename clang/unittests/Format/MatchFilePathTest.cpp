@@ -13,7 +13,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class MatchFilePathTest : public ::testing::Test {
+class MatchFilePathTest : public testing::Test {
 protected:
   bool match(llvm::StringRef FilePath, llvm::StringRef Pattern) {
     return matchFilePath(Pattern, FilePath);

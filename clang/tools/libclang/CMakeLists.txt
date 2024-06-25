@@ -230,7 +230,7 @@ install(DIRECTORY ../../include/clang-c
 # component and an install-component target, so add a dummy libclang-headers
 # target to allow using it in LLVM_DISTRIBUTION_COMPONENTS.
 add_custom_target(libclang-headers)
-set_target_properties(libclang-headers PROPERTIES FOLDER "Misc")
+set_target_properties(libclang-headers PROPERTIES FOLDER "Clang/Resources")
 
 if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-libclang-headers

@@ -1,4 +1,4 @@
-# RUN: llc -mcpu=pwr10 -O3 -ppc-track-subreg-liveness -verify-machineinstrs \
+# RUN: llc -mcpu=pwr10 -O3 -enable-subreg-liveness -verify-machineinstrs \
 # RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
 # RUN:   -o - %s | FileCheck %s
 

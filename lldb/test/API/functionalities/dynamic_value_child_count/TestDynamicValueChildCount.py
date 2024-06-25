@@ -67,9 +67,9 @@ class DynamicValueChildCountTestCase(TestBase):
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         b = self.frame().FindVariable("b").GetDynamicValue(lldb.eDynamicCanRunTarget)
-        self.assertEquals(b.GetNumChildren(), 0, "b has 0 children")
+        self.assertEqual(b.GetNumChildren(), 0, "b has 0 children")
         self.runCmd("continue")
-        self.assertEquals(b.GetNumChildren(), 0, "b still has 0 children")
+        self.assertEqual(b.GetNumChildren(), 0, "b still has 0 children")
         self.runCmd("continue")
         self.assertNotEqual(b.GetNumChildren(), 0, "b now has 1 child")
         self.runCmd("continue")

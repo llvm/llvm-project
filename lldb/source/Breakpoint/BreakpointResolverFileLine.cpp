@@ -147,8 +147,9 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
     else
       continue;
 
-    if (file != sc.line_entry.file) {
-      LLDB_LOG(log, "unexpected symbol context file {0}", sc.line_entry.file);
+    if (file != sc.line_entry.GetFile()) {
+      LLDB_LOG(log, "unexpected symbol context file {0}",
+               sc.line_entry.GetFile());
       continue;
     }
 
@@ -197,16 +198,16 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     return;
 
   Log *log = GetLog(LLDBLog::Breakpoints);
-  const llvm::StringRef path_separator = llvm::sys::path::get_separator(
-      m_location_spec.GetFileSpec().GetPathStyle());
   // Check if "b" is a suffix of "a".
   // And return std::nullopt if not or the new path
   // of "a" after consuming "b" from the back.
   auto check_suffix =
-      [path_separator](llvm::StringRef a, llvm::StringRef b,
-                       bool case_sensitive) -> std::optional<llvm::StringRef> {
+      [](llvm::StringRef a, llvm::StringRef b,
+         bool case_sensitive) -> std::optional<llvm::StringRef> {
     if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b)) {
-      if (a.empty() || a.ends_with(path_separator)) {
+      // Note sc_file_dir and request_file_dir below are normalized
+      // and always contain the path separator '/'.
+      if (a.empty() || a.ends_with("/")) {
         return a;
       }
     }
@@ -223,7 +224,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
 
   const bool case_sensitive = request_file.IsCaseSensitive();
   for (const SymbolContext &sc : sc_list) {
-    FileSpec sc_file = sc.line_entry.file;
+    FileSpec sc_file = sc.line_entry.GetFile();
 
     if (FileSpec::Equal(sc_file, request_file, /*full*/ true))
       continue;

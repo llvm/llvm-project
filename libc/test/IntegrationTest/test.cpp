@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
 
 // Integration tests rely on the following memory functions. This is because the
 // compiler code generation can emit calls to them. We want to map the external
@@ -79,4 +84,12 @@ void *realloc(void *ptr, size_t s) {
 // Integration tests are linked with -nostdlib. BFD linker expects
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+// Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
+// defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
+unsigned long __getauxval(unsigned long id) {
+  return LIBC_NAMESPACE::getauxval(id);
+}
+#endif
 } // extern "C"

@@ -111,7 +111,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
             for key in self.DARWIN_REQUIRED_HOST_INFO_KEYS
             if key not in host_info_dict
         ]
-        self.assertEquals(
+        self.assertEqual(
             0,
             len(missing_keys),
             "qHostInfo is missing the following required " "keys: " + str(missing_keys),

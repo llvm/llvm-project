@@ -884,9 +884,9 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
         GetFrameAtIndex(GetSelectedFrameIndex(DoNoSelectMostRelevantFrame)));
     if (frame_sp) {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
-      if (sc.line_entry.file)
+      if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.file, sc.line_entry.line);
+            sc.line_entry.GetFile(), sc.line_entry.line);
     }
   }
 }

@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 ! Tests the generation of fir.type_info operations.
 

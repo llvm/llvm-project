@@ -22,7 +22,8 @@
 namespace llvm {
 
 class Constant;
-class DPValue;
+class DIBuilder;
+class DbgRecord;
 class Function;
 class GlobalVariable;
 class Instruction;
@@ -33,7 +34,7 @@ class Type;
 class Value;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
-using DPValueIterator = simple_ilist<DPValue>::iterator;
+using DbgRecordIterator = simple_ilist<DbgRecord>::iterator;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
@@ -179,8 +180,8 @@ public:
   Constant *mapConstant(const Constant &C);
 
   void remapInstruction(Instruction &I);
-  void remapDPValue(Module *M, DPValue &V);
-  void remapDPValueRange(Module *M, iterator_range<DPValueIterator> Range);
+  void remapDbgRecord(Module *M, DbgRecord &V);
+  void remapDbgRecordRange(Module *M, iterator_range<DbgRecordIterator> Range);
   void remapFunction(Function &F);
   void remapGlobalObjectMetadata(GlobalObject &GO);
 
@@ -266,20 +267,25 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapInstruction(*I);
 }
 
-/// Remap the Values used in the DPValue \a V using the value map \a VM.
-inline void RemapDPValue(Module *M, DPValue *V, ValueToValueMapTy &VM,
-                         RemapFlags Flags = RF_None,
-                         ValueMapTypeRemapper *TypeMapper = nullptr,
-                         ValueMaterializer *Materializer = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValue(M, *V);
+/// Remap the Values used in the DbgRecord \a DR using the value map \a
+/// VM.
+inline void RemapDbgRecord(Module *M, DbgRecord *DR, ValueToValueMapTy &VM,
+                           RemapFlags Flags = RF_None,
+                           ValueMapTypeRemapper *TypeMapper = nullptr,
+                           ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDbgRecord(M, *DR);
 }
 
-/// Remap the Values used in the DPValue \a V using the value map \a VM.
-inline void RemapDPValueRange(Module *M, iterator_range<DPValueIterator> Range,
-                              ValueToValueMapTy &VM, RemapFlags Flags = RF_None,
-                              ValueMapTypeRemapper *TypeMapper = nullptr,
-                              ValueMaterializer *Materializer = nullptr) {
-  ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValueRange(M, Range);
+/// Remap the Values used in the DbgRecords \a Range using the value map \a
+/// VM.
+inline void RemapDbgRecordRange(Module *M,
+                                iterator_range<DbgRecordIterator> Range,
+                                ValueToValueMapTy &VM,
+                                RemapFlags Flags = RF_None,
+                                ValueMapTypeRemapper *TypeMapper = nullptr,
+                                ValueMaterializer *Materializer = nullptr) {
+  ValueMapper(VM, Flags, TypeMapper, Materializer)
+      .remapDbgRecordRange(M, Range);
 }
 
 /// Remap the operands, metadata, arguments, and instructions of a function.

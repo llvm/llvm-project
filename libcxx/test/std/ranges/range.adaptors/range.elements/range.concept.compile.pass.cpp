@@ -52,7 +52,6 @@ static_assert(!std::ranges::input_range<Range<cpp20_output_iterator<std::tuple<i
 static_assert(!HasElementsView<Range<cpp20_output_iterator<std::tuple<int>*>>, 0>);
 
 // !tuple-like
-LIBCPP_STATIC_ASSERT(!std::__tuple_like<int>);
 static_assert(!HasElementsView<Range<int*>, 1>);
 
 // !(N < tuple_size_v<T>)

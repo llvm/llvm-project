@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_SRC_TIME_CLOCK_GETTIME_H
 #define LLVM_LIBC_SRC_TIME_CLOCK_GETTIME_H
 
-#include <time.h>
+#include "hdr/types/clockid_t.h"
+#include "hdr/types/struct_timespec.h"
 
 namespace LIBC_NAMESPACE {
 
-int clock_gettime(clockid_t clockid, struct timespec *tp);
+int clock_gettime(clockid_t clockid, timespec *tp);
 
 } // namespace LIBC_NAMESPACE
 

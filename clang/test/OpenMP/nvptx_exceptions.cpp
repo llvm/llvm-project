@@ -7,10 +7,10 @@
  * target region but emit a warning instead.
 */
 
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -emit-llvm -S -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -emit-llvm -S -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fexceptions %s -emit-llvm -S -verify=with -Wopenmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device %s -emit-llvm -S -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fexceptions %s -verify=with -Wopenmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device %s -verify=with -Wopenmp-target-exception -analyze
 
 /**
  * The following four lines test that no warning is emitted when providing 
@@ -18,17 +18,17 @@
  * -fcxx-exceptions.
 */
 
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -emit-llvm -S -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions %s -emit-llvm -S -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fexceptions %s -emit-llvm -S -verify=without -Wno-openmp-target-exception -analyze
-// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device %s -emit-llvm -S -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fcxx-exceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device -fexceptions %s -verify=without -Wno-openmp-target-exception -analyze
+// RUN: %clang_cc1 -fopenmp -triple nvptx64 -fopenmp-is-target-device %s -verify=without -Wno-openmp-target-exception -analyze
 
 /**
  * Finally we should test that we only ignore exceptions in the OpenMP 
  * offloading tool-chain
 */
 
-// RUN: %clang_cc1 -triple nvptx64 %s -emit-llvm -S -verify=noexceptions -o -
+// RUN: %clang_cc1 -triple nvptx64 %s -emit-llvm-only -verify=noexceptions
 
 // noexceptions-error@39 {{cannot use 'try' with exceptions disabled}}
 // noexceptions-error@40 {{cannot use 'throw' with exceptions disabled}}

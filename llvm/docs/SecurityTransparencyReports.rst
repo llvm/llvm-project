@@ -76,3 +76,42 @@ the time of writing this transparency report.
 
 No dedicated LLVM releases were made for any of the above issues.
 
+2023
+----
+
+In this section we report on the issues the group received in 2023, or on issues
+that were received earlier, but were disclosed in 2023.
+
+9 of these were judged to be security issues:
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=36 reports the presence of
+.git folder in https://llvm.org/.git.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=66 reports the presence of
+a GitHub Personal Access token in a DockerHub imaage.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=42 reports a potential gap
+in the Armv8.1-m BTI protection, involving a combination of large switch statements
+and __builtin_unreachable() in the default case.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=43 reports a dependency
+on an old version of xml2js with a CVE filed against it.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=45 reports a number of
+dependencies that have had vulnerabilities reported against them.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=46 is related to issue 43.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=48 reports a buffer overflow
+in std::format from -fexperimental-library.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=54 reports a memory leak in
+basic_string move assignment when built with libc++ versions <=6.0 and run against
+newer libc++ shared/dylibs.
+
+https://bugs.chromium.org/p/llvm/issues/detail?id=56 reports an out of bounds buffer
+store introduced by LLVM backends, that regressed due to a procedural oversight.
+
+No dedicated LLVM releases were made for any of the above issues.
+
+Over the course of 2023 we had one person join the LLVM Security Group.

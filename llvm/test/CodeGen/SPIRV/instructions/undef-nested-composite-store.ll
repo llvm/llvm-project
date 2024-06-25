@@ -7,12 +7,10 @@
 ; CHECK-DAG: %[[#UNDEF:]] = OpUndef %[[#NESTED_STRUCT]]
 
 ; CHECK: %[[#]] = OpFunction %[[#]] None %[[#]]
-; CHECK-NEXT: %[[#PTR:]] = OpFunctionParameter %[[#]]
-; CHECK-NEXT: %[[#]] = OpLabel
-; CHECK-NEXT: %[[#BC:]] = OpBitcast %[[#]] %[[#PTR]]
-; CHECK-NEXT: OpStore %[[#BC]] %[[#UNDEF]] Aligned 4
-; CHECK-NEXT: OpReturn
-; CHECK-NEXT: OpFunctionEnd
+; CHECK: %[[#]] = OpLabel
+; CHECK: OpStore %[[#]] %[[#UNDEF]] Aligned 4
+; CHECK: OpReturn
+; CHECK: OpFunctionEnd
 
 %struct = type {
   i32,

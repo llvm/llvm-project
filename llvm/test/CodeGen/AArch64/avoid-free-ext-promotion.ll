@@ -82,13 +82,12 @@ define void @avoid_promotion_2_and(ptr nocapture noundef %arg) {
 ; CHECK-NEXT:    eor w10, w10, w11
 ; CHECK-NEXT:    ldur w11, [x8, #-24]
 ; CHECK-NEXT:    and w10, w10, w14
-; CHECK-NEXT:    ldp x15, x14, [x8, #-16]
-; CHECK-NEXT:    ubfiz x13, x10, #1, #32
+; CHECK-NEXT:    ldp x14, x13, [x8, #-16]
 ; CHECK-NEXT:    str w10, [x8]
-; CHECK-NEXT:    and w10, w11, w12
-; CHECK-NEXT:    ldrh w11, [x14, x13]
-; CHECK-NEXT:    strh w11, [x15, w10, uxtw #1]
-; CHECK-NEXT:    strh w12, [x14, x13]
+; CHECK-NEXT:    and w11, w11, w12
+; CHECK-NEXT:    ldrh w15, [x13, w10, uxtw #1]
+; CHECK-NEXT:    strh w15, [x14, w11, uxtw #1]
+; CHECK-NEXT:    strh w12, [x13, w10, uxtw #1]
 ; CHECK-NEXT:    b LBB1_1
 ; CHECK-NEXT:  LBB1_4: ; %exit
 ; CHECK-NEXT:    ret

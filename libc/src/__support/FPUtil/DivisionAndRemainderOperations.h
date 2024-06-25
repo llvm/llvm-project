@@ -31,7 +31,7 @@ LIBC_INLINE T remquo(T x, T y, int &q) {
   if (ybits.is_nan())
     return y;
   if (xbits.is_inf() || ybits.is_zero())
-    return FPBits<T>::build_quiet_nan().get_val();
+    return FPBits<T>::quiet_nan().get_val();
 
   if (xbits.is_zero()) {
     q = 0;

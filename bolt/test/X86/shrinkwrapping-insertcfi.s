@@ -1,5 +1,5 @@
-# This test reproduces the issue with inserting updated CFI in shrink wrapping
-# into the first basic block.
+## This test reproduces the issue with inserting updated CFI in shrink wrapping
+## into the first basic block.
 
 # REQUIRES: system-linux
 
@@ -10,10 +10,10 @@
 # RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --frame-opt=all --lite=0 \
 # RUN:           --print-fop 2>&1 | FileCheck %s
 
-# Check shrink wrapping results:
+## Check shrink wrapping results:
 # CHECK: BOLT-INFO: Shrink wrapping moved 0 spills inserting load/stores and 1 spills inserting push/pops
 
-# Check that CFI is successfully inserted into the first basic block:
+## Check that CFI is successfully inserted into the first basic block:
 # CHECK:      Binary Function "_start" after frame-optimizer
 # CHECK:      .LBB00 (2 instructions, align : 1)
 # CHECK-NEXT: Entry Point
@@ -34,8 +34,8 @@ c:
     .cfi_offset 3, 4
     pop	%rbx
 
-# This basic block is treated as having 0 execution count.
-# push and pop will be sinked into this block.
+## This basic block is treated as having 0 execution count.
+## push and pop will be sinked into this block.
 a:
     ud2
     .cfi_endproc

@@ -1,4 +1,4 @@
-# This test checks that POPF will not crash our frame analysis pass
+## This test checks that POPF will not crash our frame analysis pass
 
 # REQUIRES: system-linux
 
@@ -26,7 +26,7 @@ c:
     pop   %rbx
     popf
 
-# This basic block is treated as having 0 execution count.
+## This basic block is treated as having 0 execution count.
 a:
     ud2
     .cfi_endproc

@@ -58,6 +58,9 @@ declare void @ext(ptr inalloca(<{ %struct.a }>))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR1]] = { nofree willreturn }
+;.
+; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR1]] = { nofree willreturn }
 ;.

@@ -119,7 +119,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
     LLVM_DEBUG(dbgs() << "externally used: " << Def->getName() << "\n");
     auto NewPhi =
         PHINode::Create(Def->getType(), Incoming.size(),
-                        Def->getName() + ".moved", &LoopExitBlock->front());
+                        Def->getName() + ".moved", LoopExitBlock->begin());
     for (auto *In : Incoming) {
       LLVM_DEBUG(dbgs() << "predecessor " << In->getName() << ": ");
       if (Def->getParent() == In || DT.dominates(Def, In)) {

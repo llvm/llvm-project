@@ -7,12 +7,12 @@
 
   define void @sub_small() {
   entry:
-    %val32 = load i32, i32* @var_i32
+    %val32 = load i32, ptr @var_i32
     %newval32 = sub i32 %val32, 4095
-    store i32 %newval32, i32* @var_i32
-    %val64 = load i64, i64* @var_i64
+    store i32 %newval32, ptr @var_i32
+    %val64 = load i64, ptr @var_i64
     %newval64 = sub i64 %val64, 52
-    store i64 %newval64, i64* @var_i64
+    store i64 %newval64, ptr @var_i64
     ret void
   }
 

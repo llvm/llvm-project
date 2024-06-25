@@ -21,7 +21,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
@@ -132,12 +132,25 @@ struct TypeErasedDataflowAnalysisState {
   }
 };
 
+/// A callback to be called with the state before or after visiting a CFG
+/// element.
+using CFGEltCallbackTypeErased = std::function<void(
+    const CFGElement &, const TypeErasedDataflowAnalysisState &)>;
+
+/// A pair of callbacks to be called with the state before and after visiting a
+/// CFG element.
+/// Either or both of the callbacks may be null.
+struct CFGEltCallbacksTypeErased {
+  CFGEltCallbackTypeErased Before;
+  CFGEltCallbackTypeErased After;
+};
+
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices of
 /// the returned vector correspond to basic block IDs. Returns an error if the
 /// dataflow analysis cannot be performed successfully. Otherwise, calls
-/// `PostVisitCFG` on each CFG element with the final analysis results at that
-/// program point.
+/// `PostAnalysisCallbacks` on each CFG element with the final analysis results
+/// before and after that program point.
 ///
 /// `MaxBlockVisits` caps the number of block visits during analysis. It doesn't
 /// distinguish between repeat visits to the same block and visits to distinct
@@ -146,11 +159,9 @@ struct TypeErasedDataflowAnalysisState {
 /// from converging.
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
-    const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
+    const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const CFGElement &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG,
+    const CFGEltCallbacksTypeErased &PostAnalysisCallbacks,
     std::int32_t MaxBlockVisits);
 
 } // namespace dataflow

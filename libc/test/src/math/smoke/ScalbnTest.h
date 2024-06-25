@@ -12,8 +12,8 @@
 #include "LdExpTest.h"
 #include "test/UnitTest/Test.h"
 
-#define LIST_SCALBN_TESTS(T, func)                                             \
-  using LlvmLibcScalbnTest = LdExpTestTemplate<T>;                             \
+#define LIST_SCALBN_TESTS(T, U, func)                                          \
+  using LlvmLibcScalbnTest = LdExpTestTemplate<T, U>;                          \
   TEST_F(LlvmLibcScalbnTest, SpecialNumbers) { testSpecialNumbers(&func); }    \
   TEST_F(LlvmLibcScalbnTest, PowersOfTwo) { testPowersOfTwo(&func); }          \
   TEST_F(LlvmLibcScalbnTest, OverFlow) { testOverflow(&func); }                \

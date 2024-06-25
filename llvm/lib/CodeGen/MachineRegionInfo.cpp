@@ -84,8 +84,9 @@ MachineRegionInfoPass::~MachineRegionInfoPass() = default;
 bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
   releaseMemory();
 
-  auto DT = &getAnalysis<MachineDominatorTree>();
-  auto PDT = &getAnalysis<MachinePostDominatorTree>();
+  auto DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   auto DF = &getAnalysis<MachineDominanceFrontier>();
 
   RI.recalculate(F, DT, PDT, DF);
@@ -109,8 +110,8 @@ void MachineRegionInfoPass::verifyAnalysis() const {
 
 void MachineRegionInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addRequired<MachinePostDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachinePostDominatorTreeWrapperPass>();
   AU.addRequired<MachineDominanceFrontier>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -130,8 +131,8 @@ char &MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(MachineRegionInfoPass, DEBUG_TYPE,
                     "Detect single entry single exit regions", true, true)

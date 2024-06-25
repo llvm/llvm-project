@@ -245,7 +245,7 @@ bb23:                                             ; preds = %bb4
 define i8 @irreducible_memoryphi(ptr noalias %arg, ptr noalias %arg2) {
 ; CHECK-LABEL: @irreducible_memoryphi(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store i8 0, ptr [[ARG:%.*]]
+; CHECK-NEXT:    store i8 0, ptr [[ARG:%.*]], align 1
 ; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]

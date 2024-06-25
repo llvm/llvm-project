@@ -156,7 +156,7 @@ func.func @allocmem_array_of_dynchar(%l: i32) -> !fir.heap<!fir.array<3x3x!fir.c
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_nonchar(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 1, %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
 // CHECK: alloca [3 x i32], i64 %[[prod1]]
 func.func @alloca_dynarray_of_nonchar(%e: index) -> !fir.ref<!fir.array<3x?xi32>> {
   %1 = fir.alloca !fir.array<3x?xi32>, %e
@@ -165,7 +165,7 @@ func.func @alloca_dynarray_of_nonchar(%e: index) -> !fir.ref<!fir.array<3x?xi32>
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_nonchar2(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 1, %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
 // CHECK: alloca i32, i64 %[[prod2]]
 func.func @alloca_dynarray_of_nonchar2(%e: index) -> !fir.ref<!fir.array<?x?xi32>> {
@@ -194,7 +194,7 @@ func.func @allocmem_dynarray_of_nonchar2(%e: index) -> !fir.heap<!fir.array<?x?x
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_char(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 1, %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
 // CHECK: alloca [3 x [10 x i16]], i64 %[[prod1]]
 func.func @alloca_dynarray_of_char(%e : index) -> !fir.ref<!fir.array<3x?x!fir.char<2,10>>> {
   %1 = fir.alloca !fir.array<3x?x!fir.char<2,10>>, %e
@@ -203,7 +203,7 @@ func.func @alloca_dynarray_of_char(%e : index) -> !fir.ref<!fir.array<3x?x!fir.c
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_char2(
 // CHECK-SAME: i64 %[[extent:.*]])
-// CHECK: %[[prod1:.*]] = mul i64 1, %[[extent]]
+// CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
 // CHECK: alloca [10 x i16], i64 %[[prod2]]
 func.func @alloca_dynarray_of_char2(%e : index) -> !fir.ref<!fir.array<?x?x!fir.char<2,10>>> {
@@ -334,10 +334,10 @@ func.func @allocmem_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir
 }
 
 // CHECK-LABEL: define void @alloca_unlimited_polymorphic_box
-// CHECK:    %[[VAL_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 // CHECK:    %[[VAL_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i64 1
-// CHECK:    %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
+// CHECK:    %[[VAL_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 // CHECK:    %[[VAL_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i64 1
+// CHECK:    %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
 
 func.func @alloca_unlimited_polymorphic_box() {
   %0 = fir.alloca !fir.class<none>

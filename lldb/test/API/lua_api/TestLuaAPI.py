@@ -186,4 +186,4 @@ class TestLuaAPI(TestBase):
             print(out)
             print(err, file=sys.stderr)
 
-            self.assertTrue(exitCode == 0, "Lua test '%s' failure." % lua_test)
+            self.assertEqual(exitCode, 0, "Lua test '%s' failure." % lua_test)

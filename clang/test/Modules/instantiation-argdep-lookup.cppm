@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -I%t -emit-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
 //
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -I%t -emit-reduced-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+//
 //--- foo.h
 
 namespace ns {

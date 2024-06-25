@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; The IR was generated from the following source:
 ;; #include <CL/sycl.hpp>
@@ -31,9 +32,9 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] Constant
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] Constant
 ; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] Constant
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] LinkageAttributes "__spirv_BuiltInGlobalOffset" Import 
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] LinkageAttributes "__spirv_BuiltInGlobalSize" Import 
-; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import 
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalOffset]] LinkageAttributes "__spirv_BuiltInGlobalOffset" Import
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalSize]] LinkageAttributes "__spirv_BuiltInGlobalSize" Import
+; CHECK-SPIRV-DAG: OpDecorate %[[#GlobalInvocationId]] LinkageAttributes "__spirv_BuiltInGlobalInvocationId" Import
 
 %"class._ZTSN2cl4sycl5rangeILi2EEE.cl::sycl::range" = type { %"class._ZTSN2cl4sycl6detail5arrayILi2EEE.cl::sycl::detail::array" }
 %"class._ZTSN2cl4sycl6detail5arrayILi2EEE.cl::sycl::detail::array" = type { [2 x i64] }

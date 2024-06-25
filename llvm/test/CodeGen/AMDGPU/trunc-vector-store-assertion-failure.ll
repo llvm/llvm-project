@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=r600 -mtriple=r600-- -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600-- -mcpu=redwood | FileCheck %s
 
 ; This tests for a bug in the SelectionDAG where custom lowered truncated
 ; vector stores at the end of a basic block were not being added to the

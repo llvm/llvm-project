@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H
-#define __LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H
+#ifndef LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H
+#define LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H
 
 #ifdef __linux__
 #include "linux/sys-socket-macros.h"
 #endif
 
-#endif // __LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H
+#endif // LLVM_LIBC_MACROS_SYS_SOCKET_MACROS_H

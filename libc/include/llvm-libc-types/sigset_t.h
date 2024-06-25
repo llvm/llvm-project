@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_SIGSET_T_H__
-#define __LLVM_LIBC_TYPES_SIGSET_T_H__
+#ifndef LLVM_LIBC_TYPES_SIGSET_T_H
+#define LLVM_LIBC_TYPES_SIGSET_T_H
 
-#include <llvm-libc-macros/signal-macros.h>
+#include "llvm-libc-macros/signal-macros.h"
 
 // This definition can be adjusted/specialized for different targets and
 // platforms as necessary. This definition works for Linux on most targets.
-typedef struct {
+struct sigset_t {
   unsigned long __signals[__NSIGSET_WORDS];
-} sigset_t;
+};
 
-#endif // __LLVM_LIBC_TYPES_SIGSET_T_H__
+#endif // LLVM_LIBC_TYPES_SIGSET_T_H

@@ -8,6 +8,7 @@ unittest("ScudoUnitTest") {
   cflags = test_cflags
   deps = [ "//compiler-rt/lib/scudo/standalone:sources" ]
   sources = [
+    "allocator_config_test.cpp",
     "atomic_test.cpp",
     "bytemap_test.cpp",
     "checksum_test.cpp",

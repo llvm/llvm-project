@@ -1,0 +1,19 @@
+add_entrypoint_object(
+  setjmp
+  SRCS
+    setjmp.cpp
+  HDRS
+    ../setjmp_impl.h
+  DEPENDS
+    libc.include.setjmp
+)
+
+add_entrypoint_object(
+  longjmp
+  SRCS
+    longjmp.cpp
+  HDRS
+    ../longjmp.h
+  DEPENDS
+    libc.include.setjmp
+)

@@ -13,11 +13,24 @@
 
 using namespace llvm;
 
+yaml::X86MachineFunctionInfo::X86MachineFunctionInfo(
+    const llvm::X86MachineFunctionInfo &MFI)
+    : AMXProgModel(MFI.getAMXProgModel()) {}
+
+void yaml::X86MachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
+  MappingTraits<X86MachineFunctionInfo>::mapping(YamlIO, *this);
+}
+
 MachineFunctionInfo *X86MachineFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
     const {
   return DestMF.cloneInfo<X86MachineFunctionInfo>(*this);
+}
+
+void X86MachineFunctionInfo::initializeBaseYamlFields(
+    const yaml::X86MachineFunctionInfo &YamlMFI) {
+  AMXProgModel = YamlMFI.AMXProgModel;
 }
 
 void X86MachineFunctionInfo::anchor() { }

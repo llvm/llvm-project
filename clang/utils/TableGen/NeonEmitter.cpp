@@ -2266,7 +2266,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       InIfdef = false;
     }
     if (!InIfdef && IsA64) {
-      OS << "#ifdef __aarch64__\n";
+      OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
       InIfdef = true;
     }
 
@@ -2299,7 +2299,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
         InIfdef = false;
       }
       if (!InIfdef && IsA64) {
-        OS << "#ifdef __aarch64__\n";
+        OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
         InIfdef = true;
       }
 
@@ -2381,7 +2381,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#include <arm_vector_types.h>\n";
 
   // For now, signedness of polynomial types depends on target
-  OS << "#ifdef __aarch64__\n";
+  OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
   OS << "typedef uint8_t poly8_t;\n";
   OS << "typedef uint16_t poly16_t;\n";
   OS << "typedef uint64_t poly64_t;\n";
@@ -2582,7 +2582,7 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "typedef float float32_t;\n";
   OS << "typedef __fp16 float16_t;\n";
 
-  OS << "#ifdef __aarch64__\n";
+  OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
   OS << "typedef double float64_t;\n";
   OS << "#endif\n\n";
 

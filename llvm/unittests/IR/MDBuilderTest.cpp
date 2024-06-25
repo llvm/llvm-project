@@ -127,4 +127,43 @@ TEST_F(MDBuilderTest, createPCSections) {
   EXPECT_EQ(mdconst::extract<ConstantInt>(Aux->getOperand(1))->getValue(),
             C2->getValue());
 }
+TEST_F(MDBuilderTest, createCallbackAndMerge) {
+  MDBuilder MDHelper(Context);
+  auto *CB1 = MDHelper.createCallbackEncoding(0, {1, -1}, false);
+  auto *CB2 = MDHelper.createCallbackEncoding(2, {-1}, false);
+  ASSERT_EQ(CB1->getNumOperands(), 4U);
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB1->getOperand(0)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB1->getOperand(1)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB1->getOperand(2)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB1->getOperand(3)));
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB1->getOperand(0))->getValue(), 0);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB1->getOperand(1))->getValue(), 1);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB1->getOperand(2))->getValue(), -1);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB1->getOperand(3))->getValue(),
+            false);
+  ASSERT_EQ(CB2->getNumOperands(), 3U);
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB2->getOperand(0)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB2->getOperand(1)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB2->getOperand(2)));
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB2->getOperand(0))->getValue(), 2);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB2->getOperand(1))->getValue(), -1);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB2->getOperand(2))->getValue(),
+            false);
+  auto *CBList = MDNode::get(Context, {CB1, CB2});
+  auto *CB3 = MDHelper.createCallbackEncoding(4, {5}, false);
+  auto *NewCBList = MDHelper.mergeCallbackEncodings(CBList, CB3);
+  ASSERT_EQ(NewCBList->getNumOperands(), 3U);
+  EXPECT_TRUE(NewCBList->getOperand(0) == CB1);
+  EXPECT_TRUE(NewCBList->getOperand(1) == CB2);
+  EXPECT_TRUE(NewCBList->getOperand(2) == CB3);
+
+  ASSERT_EQ(CB3->getNumOperands(), 3U);
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB3->getOperand(0)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB3->getOperand(1)));
+  ASSERT_TRUE(isa<ConstantAsMetadata>(CB3->getOperand(2)));
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB3->getOperand(0))->getValue(), 4);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB3->getOperand(1))->getValue(), 5);
+  EXPECT_EQ(mdconst::extract<ConstantInt>(CB3->getOperand(2))->getValue(),
+            false);
+}
 } // namespace

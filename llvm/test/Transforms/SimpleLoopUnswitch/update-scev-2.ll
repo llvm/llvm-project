@@ -17,7 +17,7 @@
 ; CHECK-SCEV-NEXT:   %0 = add i16 %j.0, 1
 ; CHECK-SCEV-NEXT:   -->  {1,+,1}<nuw><nsw><%lbl1> U: [1,4) S: [1,4)               Exits: 3                LoopDispositions: { %lbl1: Computable, %lbl2: Invariant }
 ; CHECK-SCEV-DAG: Loop %lbl2: Unpredictable backedge-taken count.
-; CHECK-SCEV-DAG: Loop %lbl1: backedge-taken count is 2
+; CHECK-SCEV-DAG: Loop %lbl1: backedge-taken count is i16 2
 ;
 ; After the unswitch:
 ;

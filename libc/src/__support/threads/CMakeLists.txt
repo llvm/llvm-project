@@ -4,6 +4,12 @@ add_header_library(
     mutex_common.h
 )
 
+add_header_library(
+  sleep
+  HDRS
+    sleep.h
+)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
@@ -25,6 +31,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
       fork_callbacks.h
     DEPENDS
       .mutex
+      libc.src.__support.CPP.mutex
   )
 endif()
 
@@ -51,6 +58,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
       libc.src.__support.common
       libc.src.__support.fixedvector
       libc.src.__support.CPP.array
+      libc.src.__support.CPP.mutex
       libc.src.__support.CPP.optional
   )
 endif()
@@ -61,5 +69,14 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
     ALIAS
     DEPENDS
       .${LIBC_TARGET_OS}.callonce
+  )
+endif()
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
+  add_object_library(
+    CndVar
+    ALIAS
+    DEPENDS
+    .${LIBC_TARGET_OS}.CndVar
   )
 endif()

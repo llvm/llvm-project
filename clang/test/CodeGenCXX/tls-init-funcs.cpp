@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.8 -std=c++1y -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -std=c++1y -S -emit-llvm %s -o - | FileCheck %s --check-prefix=MINGW
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.8 -std=c++1y -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-gnu -std=c++1y -emit-llvm %s -o - | FileCheck %s --check-prefix=MINGW
 
 // CHECK: @a = internal thread_local global
 // CHECK: @_Z2vtIiE = linkonce_odr thread_local global i32 5

@@ -33,7 +33,7 @@
 // Prefer C regex libraries when compiling w/o exceptions so that we can
 // correctly report errors.
 #if defined(BENCHMARK_HAS_NO_EXCEPTIONS) && \
-    defined(BENCHMARK_HAVE_STD_REGEX) && \
+    defined(HAVE_STD_REGEX) && \
     (defined(HAVE_GNU_POSIX_REGEX) || defined(HAVE_POSIX_REGEX))
   #undef HAVE_STD_REGEX
 #endif

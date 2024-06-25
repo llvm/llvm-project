@@ -77,7 +77,7 @@ TEST(ThreadSafeAllocatorTest, AllocWait) {
   // Get the allocation from the allocator first since this requires a lock.
   Alloc.applyLocked(
       [&](MockAllocator &Alloc) { C = &Alloc.getAllocCondition(); });
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
   // First allocation of 1 byte.
   Threads.async([&Alloc]() {
     char *P = (char *)Alloc.Allocate(1, alignof(char));
@@ -104,7 +104,7 @@ TEST(ThreadSafeAllocatorTest, AllocWait) {
 
 TEST(ThreadSafeAllocatorTest, AllocWithAlign) {
   ThreadSafeAllocator<BumpPtrAllocator> Alloc;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
 
   for (unsigned Index = 1; Index < 100; ++Index)
     Threads.async(
@@ -123,7 +123,7 @@ TEST(ThreadSafeAllocatorTest, AllocWithAlign) {
 
 TEST(ThreadSafeAllocatorTest, SpecificBumpPtrAllocator) {
   ThreadSafeAllocator<SpecificBumpPtrAllocator<int>> Alloc;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
 
   for (unsigned Index = 1; Index < 100; ++Index)
     Threads.async(

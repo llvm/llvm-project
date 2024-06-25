@@ -213,7 +213,7 @@ subroutine host(f)
   ! CHECK: fir.call @_QFhostPintern(%[[VAL_1]])
   call intern()
 contains
-! CHECK-LABEL: func @_QFhostPintern(
+! CHECK-LABEL: func private @_QFhostPintern(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc})
   subroutine intern()
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -242,7 +242,7 @@ subroutine host2(f)
   ! CHECK: fir.call @_QFhost2Pintern(%[[VAL_1]])
   call intern()
 contains
-! CHECK-LABEL: func @_QFhost2Pintern(
+! CHECK-LABEL: func private @_QFhost2Pintern(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<tuple<!fir.boxproc<() -> ()>, i64>>> {fir.host_assoc})
   subroutine intern()
     ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.char<1,42> {bindc_name = ".result"}

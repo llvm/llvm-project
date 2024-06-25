@@ -302,3 +302,19 @@ struct D7 {
 
 D7<int> d7i;
 D7<S> d7s;
+
+struct SS {
+  SS() = default;
+  SS(S s) : s(s) {}
+
+  S s;
+};
+
+struct D8 {
+  SS ss = S();
+};
+
+struct D9 {
+  D9() : ss(S()) {}
+  SS ss;
+};

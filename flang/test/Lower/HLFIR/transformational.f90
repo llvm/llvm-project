@@ -16,7 +16,7 @@ subroutine test_transformational_implemented_with_runtime_allocation(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_transformational_implemented_with_runtime_allocation(
 ! CHECK-SAME:                                                                          %[[ARG0:.*]]: !fir.ref<!fir.array<10x10xf32>> {fir.bindc_name = "x"}) {
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) {uniq_name = "_QFtest_transformational_implemented_with_runtime_allocationEx"}
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]](%{{.*}}) dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_transformational_implemented_with_runtime_allocationEx"}
 ! CHECK:  %[[VAL_2:.*]] = hlfir.minloc %[[VAL_1]]#0
 ! CHECK:  %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_2]]
 ! CHECK:  %[[VAL_4:.*]]:3 = hlfir.associate %[[VAL_2]](%[[VAL_3]]) {adapt.valuebyref}

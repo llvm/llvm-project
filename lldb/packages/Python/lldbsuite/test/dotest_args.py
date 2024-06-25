@@ -49,6 +49,15 @@ def create_parser():
             """Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times."""
         ),
     )
+    group.add_argument(
+        "--sysroot",
+        metavar="sysroot",
+        dest="sysroot",
+        default="",
+        help=textwrap.dedent(
+            """Specify the path to sysroot. This overrides apple_sdk sysroot."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
@@ -87,6 +96,12 @@ def create_parser():
         ),
     )
 
+    group.add_argument(
+        "--make",
+        metavar="make",
+        dest="make",
+        help=textwrap.dedent("Specify which make to use."),
+    )
     group.add_argument(
         "--dsymutil",
         metavar="dsymutil",
@@ -237,10 +252,16 @@ def create_parser():
         help="The clang module cache directory used in the Make files by Clang while building tests. Defaults to <test build directory>/module-cache-clang.",
     )
     group.add_argument(
+        "--lldb-obj-root",
+        dest="lldb_obj_root",
+        metavar="path",
+        help="The path to the LLDB object files.",
+    )
+    group.add_argument(
         "--lldb-libs-dir",
         dest="lldb_libs_dir",
         metavar="path",
-        help="The path to LLDB library directory (containing liblldb)",
+        help="The path to LLDB library directory (containing liblldb).",
     )
     group.add_argument(
         "--enable-plugin",

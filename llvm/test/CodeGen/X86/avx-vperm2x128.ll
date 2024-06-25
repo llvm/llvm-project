@@ -234,7 +234,7 @@ entry:
   ret <16 x i16> %shuffle
 }
 
-;;;; Cases with undef indicies mixed in the mask
+;;;; Cases with undef indices mixed in the mask
 
 define <8 x float> @shuffle_v8f32_uu67u9ub(<8 x float> %a, <8 x float> %b) nounwind uwtable readnone ssp {
 ; ALL-LABEL: shuffle_v8f32_uu67u9ub:
@@ -651,7 +651,7 @@ entry:
 define <8 x i32> @ld0_hi0_lo1_8i32(ptr %pa, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld0_hi0_lo1_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,3,4]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd 16(%rdi), %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
@@ -672,7 +672,7 @@ entry:
 define <8 x i32> @ld1_hi0_hi1_8i32(<8 x i32> %a, ptr %pb) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: ld1_hi0_hi1_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [1,2,3,4]
 ; AVX1-NEXT:    vpaddd 16(%rdi), %xmm1, %xmm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

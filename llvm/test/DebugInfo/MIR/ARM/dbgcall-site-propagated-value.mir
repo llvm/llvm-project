@@ -33,14 +33,14 @@
   }
 
   ; Function Attrs: noinline nounwind optsize
-  define internal arm_aapcs_vfpcc void @callee(i32* %p1) unnamed_addr #0 !dbg !29 {
+  define internal arm_aapcs_vfpcc void @callee(ptr %p1) unnamed_addr #0 !dbg !29 {
   entry:
     unreachable
   }
 
-  declare !dbg !4 arm_aapcs_vfpcc i32* @value()
-  declare !dbg !9 arm_aapcs_vfpcc i32 @interesting(i32*)
-  declare !dbg !12 arm_aapcs_vfpcc void @ext(i32*)
+  declare !dbg !4 arm_aapcs_vfpcc ptr @value()
+  declare !dbg !9 arm_aapcs_vfpcc i32 @interesting(ptr)
+  declare !dbg !12 arm_aapcs_vfpcc void @ext(ptr)
 
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1

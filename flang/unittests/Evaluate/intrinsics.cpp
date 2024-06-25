@@ -106,8 +106,8 @@ struct TestCall {
     auto messages{strings.Messages(buffer)};
     TargetCharacteristics targetCharacteristics;
     common::LanguageFeatureControl languageFeatures;
-    FoldingContext context{
-        messages, defaults, table, targetCharacteristics, languageFeatures};
+    FoldingContext context{messages, defaults, table, targetCharacteristics,
+        languageFeatures, tempNames};
     std::optional<SpecificCall> si{table.Probe(call, args, context)};
     if (resultType.has_value()) {
       TEST(si.has_value());
@@ -142,6 +142,7 @@ struct TestCall {
   ActualArguments args;
   std::string name;
   std::vector<std::string> keywords;
+  std::set<std::string> tempNames;
 };
 
 void TestIntrinsics() {
@@ -343,6 +344,7 @@ void TestIntrinsics() {
   TEST(table.GetGenericIntrinsicName("dcos") == "cos");
   TEST(table.GetGenericIntrinsicName("dcosh") == "cosh");
   TEST(table.GetGenericIntrinsicName("ddim") == "dim");
+  TEST(table.GetGenericIntrinsicName("derf") == "erf");
   TEST(table.GetGenericIntrinsicName("dexp") == "exp");
   TEST(table.GetGenericIntrinsicName("dint") == "aint");
   TEST(table.GetGenericIntrinsicName("dlog") == "log");

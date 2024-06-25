@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy -std=c++23 %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             { \
-// RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2', \
-// RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2' \
+// RUN:               modernize-use-std-print.PrintfLikeFunctions: 'unqualified_printf;::myprintf; mynamespace::myprintf2; bad_format_type_printf', \
+// RUN:               modernize-use-std-print.FprintfLikeFunctions: '::myfprintf; mynamespace::myfprintf2; bad_format_type_fprintf' \
 // RUN:             } \
 // RUN:            }" \
 // RUN:   -- -isystem %clang_tidy_headers
@@ -85,4 +85,26 @@ int fprintf_uses_return_value(int i) {
 void no_name(const std::string &in)
 {
   "A" + in;
+}
+
+int myprintf(const wchar_t *, ...);
+
+void wide_string_not_supported() {
+  myprintf(L"wide string %s", L"string");
+}
+
+// Issue #92896: Ensure that the check doesn't assert if the argument is
+// promoted to something that isn't a string.
+struct S {
+  S(...) {}
+};
+int bad_format_type_printf(const S &, ...);
+int bad_format_type_fprintf(FILE *, const S &, ...);
+
+void unsupported_format_parameter_type()
+{
+  // No fixes here because the format parameter of the function called is not a
+  // string.
+  bad_format_type_printf("Hello %s", "world");
+  bad_format_type_fprintf(stderr, "Hello %s", "world");
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -S -emit-llvm -o - -disable-llvm-passes -triple x86_64-apple-macos10.14 %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++2a -emit-llvm -o - -disable-llvm-passes -triple x86_64-apple-macos10.14 %s | FileCheck %s
 
 void test_scalar(int &oper) {
   // CHECK-LABEL: define{{.*}} void @_Z11test_scalarRi

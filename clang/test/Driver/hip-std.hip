@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -offload-arch=gfx906 %s \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEFAULT %s
 // DEFAULT: "-cc1"{{.*}}"-fcuda-is-device"{{.*}}

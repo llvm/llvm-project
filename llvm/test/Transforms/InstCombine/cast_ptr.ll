@@ -244,3 +244,154 @@ define <2 x i32> @insertelt_extra_use2(<2 x i32> %x, ptr %p) {
   %r = ptrtoint <2 x ptr> %i to <2 x i32>
   ret <2 x i32> %r
 }
+
+define i32 @ptr_add_in_int(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int(
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_2(
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[P2_IDX]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i32, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nneg(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nneg(
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 %z
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i64 @ptr_add_in_int_different_type_1(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i64
+  ret i64 %r
+}
+
+define i16 @ptr_add_in_int_different_type_2(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i16
+  ret i16 %r
+}
+
+define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i16 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_different_type_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i64 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_not_inbounds(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_not_inbounds(
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr i8, ptr %ptr, i32 %z
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_const(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_const(
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], 4096
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_const_negative(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_const_negative(
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], -4096
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 -4096
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+declare void @use_ptr(ptr)
+
+define i32 @ptr_add_in_int_extra_use1(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_extra_use1(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    call void @use_ptr(ptr [[PTR]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  call void @use_ptr(ptr %ptr)
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_extra_use2(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_extra_use2(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[P2]])
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  call void @use_ptr(ptr %p2)
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}

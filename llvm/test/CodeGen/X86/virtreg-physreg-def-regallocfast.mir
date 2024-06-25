@@ -1,4 +1,5 @@
 # RUN: llc -o - -mtriple=x86_64-- -run-pass=regallocfast %s | FileCheck %s
+# RUN: llc -o - -mtriple=x86_64-- -passes=regallocfast %s | FileCheck %s
 # Fast regalloc used to not collect physical register definitions
 # before walking and assigning the virtual definition.
 # Therefore it was possible for a virtual definition to end up

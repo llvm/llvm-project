@@ -40,6 +40,40 @@
 ; RUN: opt -debugify-each -passes=globalopt -S -o /dev/null < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS-ONE
 
+; Repeat the same checks with debug intrinsics enabled.
+; RUN: opt --experimental-debuginfo-iterators=false -debugify-each -O3 -S -o /dev/null < %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
+; RUN: opt --experimental-debuginfo-iterators=false -disable-output -debugify-each -passes='default<O3>' %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
+
+; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -debugify-each -O3 -S -o /dev/null < %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
+
+; RUN: opt --experimental-debuginfo-iterators=false -debugify-each -passes='instrprof,instrprof,sroa,sccp' -S -o /dev/null < %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
+
+; RUN: opt --experimental-debuginfo-iterators=false -debugify-each -O1 < %s | opt -O2 -o /dev/null
+
+; RUN: opt --experimental-debuginfo-iterators=false -disable-output -debugify-quiet -debugify-each -O1 < %s 2>&1 | count 0
+
+; RUN: opt --experimental-debuginfo-iterators=false -O1 < %s -S -o %t.before
+; RUN: opt --experimental-debuginfo-iterators=false -O1 -debugify-each < %s -S -o %t.after
+; RUN: diff %t.before %t.after
+
+; RUN: opt --experimental-debuginfo-iterators=false -O1 < %s | llvm-dis -o %t.before
+; RUN: opt --experimental-debuginfo-iterators=false -O1 -debugify-each < %s | llvm-dis -o %t.after
+; RUN: diff %t.before %t.after
+
+; RUN: opt --experimental-debuginfo-iterators=false -debugify-each -passes=instsimplify -S -o /dev/null < %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS-ONE
+
+; RUN: opt --experimental-debuginfo-iterators=false -debugify-each -passes=globalopt -S -o /dev/null < %s 2> %t
+; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS-ONE
+
 define void @foo(i32 %arg) {
   call i32 asm "bswap $0", "=r,r"(i32 %arg)
   ret void

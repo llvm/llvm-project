@@ -55,4 +55,4 @@ attributes #1 = { nounwind readnone }
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !DIExpression()
 !14 = !DILocation(line: 1, column: 42, scope: !4)
-!15 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!15 = !{i32 1, !"amdhsa_code_object_version", i32 500}

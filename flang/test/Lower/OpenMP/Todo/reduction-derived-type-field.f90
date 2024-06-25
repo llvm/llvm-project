@@ -1,7 +1,8 @@
 ! RUN: %not_todo_cmd bbc -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: %not_todo_cmd %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s
 
-! CHECK: not yet implemented: Reduction of some types is not supported
+! There's no definition of '+' for type(t)
+! CHECK: The type of 'mt' is incompatible with the reduction operator.
 subroutine reduction_allocatable
   type t
     integer :: x

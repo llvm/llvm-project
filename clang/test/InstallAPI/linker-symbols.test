@@ -1,0 +1,440 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+; RUN: yaml2obj %t/MagicSymbols.yaml -o %t/MagicSymbols
+
+; RUN: not clang-installapi -target x86_64-apple-macosx13 \
+; RUN: -install_name \
+; RUN: /System/Library/Frameworks/SpecialLinkerSymbols.framework/Versions/A/SpecialLinkerSymbols \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: %t/inputs.json -o %t/output.tbd \
+; RUN: --verify-mode=ErrorsOnly \
+; RUN: --verify-against=%t/MagicSymbols 2>&1 | FileCheck %s
+
+CHECK: warning: violations found for x86_64
+CHECK: error: no declaration found for exported symbol '$ld$add$os10.4$_symbol2' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$add$os10.5$_symbol2' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$hide$os10.6$_symbol1' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$hide$os10.7$_symbol1' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$weak$os10.5$_symbol3' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$weak$os10.4$_symbol3' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$install_name$os10.4$/System/Library/Frameworks/A.framework/Versions/A/A' in dynamic library
+CHECK: error: no declaration found for exported symbol '$ld$install_name$os10.5$/System/Library/Frameworks/B.framework/Versions/A/B' in dynamic library
+
+;--- MagicSymbols.h
+#ifndef SPECIAL_LINKER_SYMBOLS_H
+#define SPECIAL_LINKER_SYMBOLS_H
+
+extern const int SpecialLinkerSymbolsVersion;
+
+extern int symbol1;
+extern int symbol3;
+
+#endif // SPECIAL_LINKER_SYMBOLS_H
+
+;--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/MagicSymbols.h",
+    "type" : "project"
+  }
+  ],
+  "version": "3"
+}
+
+;--- MagicSymbols.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x6
+  ncmds:           12
+  sizeofcmds:      952
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0xBD8
+        size:            0
+        offset:          0xBD8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0xBD8
+        size:            4
+        offset:          0xBD8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '07000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA
+    vmaddr:          4096
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x1000
+        size:            8
+        offset:          0x1000
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         4D00000009030000
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x1008
+        size:            8
+        offset:          0x0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          8192
+    vmsize:          944
+    fileoff:         8192
+    filesize:        944
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      8192
+    export_size:     376
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8576
+    nsyms:           12
+    stroff:          8768
+    strsize:         368
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      11
+    iundefsym:       11
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         120
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/SpecialLinkerSymbols.framework/Versions/A/SpecialLinkerSymbols'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C4478-5555-3144-A106-356C3C9DACA3
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245184
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88539136
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         8568
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         8576
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      11
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    3
+            NodeOffset:      50
+            Name:            SpecialLinkerSymbolsVersion
+            Flags:           0x0
+            Address:         0xBD8
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      55
+            Name:            symbol
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      63
+                Name:            '3'
+                Flags:           0x0
+                Address:         0x1004
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      68
+                Name:            '1'
+                Flags:           0x0
+                Address:         0x1000
+                Other:           0x0
+                ImportName:      ''
+      - TerminalSize:    0
+        NodeOffset:      73
+        Name:            '$ld$'
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    0
+            NodeOffset:      134
+            Name:            'add$os10.'
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      162
+                Name:            '4$_symbol2'
+                Flags:           0x0
+                Address:         0x1008
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      167
+                Name:            '5$_symbol2'
+                Flags:           0x0
+                Address:         0x1009
+                Other:           0x0
+                ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      172
+            Name:            'hide$os10.'
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      200
+                Name:            '6$_symbol1'
+                Flags:           0x0
+                Address:         0x100A
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      205
+                Name:            '7$_symbol1'
+                Flags:           0x0
+                Address:         0x100B
+                Other:           0x0
+                ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      210
+            Name:            'weak$os10.'
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      238
+                Name:            '5$_symbol3'
+                Flags:           0x0
+                Address:         0x100F
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      243
+                Name:            '4$_symbol3'
+                Flags:           0x0
+                Address:         0x100E
+                Other:           0x0
+                ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      248
+            Name:            'install_name$os10.'
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    3
+                NodeOffset:      362
+                Name:            '4$/System/Library/Frameworks/A.framework/Versions/A/A'
+                Flags:           0x0
+                Address:         0x100C
+                Other:           0x0
+                ImportName:      ''
+              - TerminalSize:    3
+                NodeOffset:      367
+                Name:            '5$/System/Library/Frameworks/B.framework/Versions/A/B'
+                Flags:           0x0
+                Address:         0x100D
+                Other:           0x0
+                ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4104
+    - n_strx:          26
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4105
+    - n_strx:          50
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4106
+    - n_strx:          75
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4107
+    - n_strx:          100
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4108
+    - n_strx:          176
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4109
+    - n_strx:          252
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4110
+    - n_strx:          277
+      n_type:          0xF
+      n_sect:          4
+      n_desc:          0
+      n_value:         4111
+    - n_strx:          302
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         3032
+    - n_strx:          331
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         4096
+    - n_strx:          340
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         4100
+    - n_strx:          349
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - '$ld$add$os10.4$_symbol2'
+    - '$ld$add$os10.5$_symbol2'
+    - '$ld$hide$os10.6$_symbol1'
+    - '$ld$hide$os10.7$_symbol1'
+    - '$ld$install_name$os10.4$/System/Library/Frameworks/A.framework/Versions/A/A'
+    - '$ld$install_name$os10.5$/System/Library/Frameworks/B.framework/Versions/A/B'
+    - '$ld$weak$os10.4$_symbol3'
+    - '$ld$weak$os10.5$_symbol3'
+    - _SpecialLinkerSymbolsVersion
+    - _symbol1
+    - _symbol3
+    - dyld_stub_binder
+    - ''
+    - ''
+...

@@ -1,5 +1,5 @@
-; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -mattr=+multivalue 2>&1 | FileCheck %s --check-prefix=EH
-; RUN: not --crash llc < %s -enable-emscripten-sjlj -mattr=+multivalue 2>&1 | FileCheck %s --check-prefix=SJLJ
+; RUN: not --crash llc < %s -enable-emscripten-cxx-exceptions -mattr=+multivalue -target-abi=experimental-mv 2>&1 | FileCheck %s --check-prefix=EH
+; RUN: not --crash llc < %s -enable-emscripten-sjlj -mattr=+multivalue -target-abi=experimental-mv 2>&1 | FileCheck %s --check-prefix=SJLJ
 
 ; Currently multivalue returning functions are not supported in Emscripten EH /
 ; SjLj. Make sure they error out.

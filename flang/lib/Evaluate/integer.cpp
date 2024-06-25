@@ -14,7 +14,7 @@ template class Integer<8>;
 template class Integer<16>;
 template class Integer<32>;
 template class Integer<64>;
-template class Integer<80>;
+template class Integer<80, true, 16, std::uint16_t, std::uint32_t, 128>;
 template class Integer<128>;
 
 // Sanity checks against misconfiguration bugs

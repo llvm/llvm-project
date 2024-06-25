@@ -1,5 +1,5 @@
 // Test this without pch.
-// RUN: %clang_cc1 -fsyntax-only -emit-llvm-only %s
+// RUN: %clang_cc1 -emit-llvm-only %s
 
 // Test with pch.
 // RUN: touch %t.empty.cpp

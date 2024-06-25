@@ -17,6 +17,7 @@
 #include <ranges>
 
 #include "../types.h"
+#include "test_range.h"
 
 template <bool Const>
 struct Iter {
@@ -63,37 +64,33 @@ struct Range : TupleBufferView {
 using R                = Range<Sent>;
 using CrossComparableR = Range<CrossComparableSent>;
 
-// Test Constraint
-template <class I, class S>
-concept HasEqual = requires(const I i, const S s) { i == s; };
-
 using std::ranges::elements_view;
 using std::ranges::iterator_t;
 using std::ranges::sentinel_t;
 
-static_assert(HasEqual<iterator_t<elements_view<R, 0>>, //
-                       sentinel_t<elements_view<R, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<elements_view<R, 0>>, //
+                                              sentinel_t<elements_view<R, 0>>>);
 
-static_assert(!HasEqual<iterator_t<const elements_view<R, 0>>, //
-                        sentinel_t<elements_view<R, 0>>>);
+static_assert(!weakly_equality_comparable_with<iterator_t<const elements_view<R, 0>>, //
+                                               sentinel_t<elements_view<R, 0>>>);
 
-static_assert(!HasEqual<iterator_t<elements_view<R, 0>>, //
-                        sentinel_t<const elements_view<R, 0>>>);
+static_assert(!weakly_equality_comparable_with<iterator_t<elements_view<R, 0>>, //
+                                               sentinel_t<const elements_view<R, 0>>>);
 
-static_assert(HasEqual<iterator_t<const elements_view<R, 0>>, //
-                       sentinel_t<const elements_view<R, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<R, 0>>, //
+                                              sentinel_t<const elements_view<R, 0>>>);
 
-static_assert(HasEqual<iterator_t<elements_view<R, 0>>, //
-                       sentinel_t<elements_view<R, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<elements_view<CrossComparableR, 0>>, //
+                                              sentinel_t<elements_view<CrossComparableR, 0>>>);
 
-static_assert(HasEqual<iterator_t<const elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<elements_view<CrossComparableR, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<CrossComparableR, 0>>, //
+                                              sentinel_t<elements_view<CrossComparableR, 0>>>);
 
-static_assert(HasEqual<iterator_t<elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<const elements_view<CrossComparableR, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<elements_view<CrossComparableR, 0>>, //
+                                              sentinel_t<const elements_view<CrossComparableR, 0>>>);
 
-static_assert(HasEqual<iterator_t<const elements_view<CrossComparableR, 0>>, //
-                       sentinel_t<const elements_view<CrossComparableR, 0>>>);
+static_assert(weakly_equality_comparable_with<iterator_t<const elements_view<CrossComparableR, 0>>, //
+                                              sentinel_t<const elements_view<CrossComparableR, 0>>>);
 
 template <class R, bool ConstIter, bool ConstSent>
 constexpr void testOne() {

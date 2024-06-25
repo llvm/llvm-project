@@ -94,12 +94,6 @@ private:
 
   MapType m_map;
   ActiveCategoriesList m_active_categories;
-
-  MapType &map() { return m_map; }
-
-  ActiveCategoriesList &active_list() { return m_active_categories; }
-
-  std::recursive_mutex &mutex() { return m_map_mutex; }
 };
 } // namespace lldb_private
 

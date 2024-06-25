@@ -1,0 +1,232 @@
+## Check how obj2yaml produces YAML PGO Analysis Map in .llvm_bb_addr_map.
+
+## Check that obj2yaml uses the "Entries" tag to describe an .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=VALID
+
+# VALID:      --- !ELF
+# VALID-NEXT: FileHeader:
+# VALID-NEXT:   Class: ELFCLASS64
+# VALID-NEXT:   Data:  ELFDATA2LSB
+# VALID-NEXT:   Type:  ET_EXEC
+# VALID-NEXT: Sections:
+# VALID-NEXT:   - Name: .llvm_bb_addr_map
+# VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# VALID-NEXT:     Entries:
+# VALID-NEXT:       - Version: 2
+# VALID-NEXT:         Feature: 0x7
+## The 'BaseAddress' field is omitted when it's zero.
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BBEntries:
+# VALID-NEXT:             - ID:            0
+# VALID-NEXT:               AddressOffset: 0x1
+# VALID-NEXT:               Size:          0x2
+# VALID-NEXT:               Metadata:      0x3
+# VALID-NEXT:             - ID:            2
+# VALID-NEXT:               AddressOffset: 0x4
+# VALID-NEXT:               Size:          0x5
+# VALID-NEXT:               Metadata:      0x6
+# VALID-NEXT:             - ID:            4
+# VALID-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:       - Version: 2
+# VALID-NEXT:         Feature: 0xA
+# VALID-NEXT:         BBRanges:
+# VALID-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
+# VALID-NEXT:             BBEntries:
+# VALID-NEXT:               - ID:            6
+# VALID-NEXT:                 AddressOffset: 0xA
+# VALID-NEXT:                 Size:          0xB
+# VALID-NEXT:                 Metadata:      0xC
+# VALID-NEXT:     PGOAnalyses:
+# VALID-NEXT:       - FuncEntryCount: 100
+# VALID-NEXT:         PGOBBEntries:
+# VALID-NEXT:           - BBFreq:        100
+# VALID-NEXT:             Successors:
+# VALID-NEXT:               - ID:        2
+# VALID-NEXT:                 BrProb:    0x80000000
+# VALID-NEXT:               - ID:        4
+# VALID-NEXT:                 BrProb:    0x80000000
+# VALID-NEXT:           - BBFreq:        50
+# VALID-NEXT:             Successors:
+# VALID-NEXT:               - ID:        4
+# VALID-NEXT:                 BrProb:    0xFFFFFFFF
+# VALID-NEXT:           - BBFreq:        100
+# VALID-NEXT:             Successors:    []
+# VALID-NEXT:         PGOBBEntries:
+# VALID-NEXT:           - BBFreq:        20
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Entries:
+      - Version: 2
+        Feature: 0x7
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+              - ID:            2
+                AddressOffset: 0x4
+                Size:          0x5
+                Metadata:      0x6
+              - ID:            4
+                AddressOffset: 0xFFFFFFFFFFFFFFF7
+                Size:          0xFFFFFFFFFFFFFFF8
+                Metadata:      0xFFFFFFFFFFFFFFF9
+      - Version:   2
+        Feature:   0xA
+        BBRanges:
+          - BaseAddress:   0xFFFFFFFFFFFFFF20
+            BBEntries:
+             - ID:            6
+               AddressOffset: 0xA
+               Size:          0xB
+               Metadata:      0xC
+    PGOAnalyses:
+      - FuncEntryCount: 100
+        PGOBBEntries:
+          - BBFreq:        100
+            Successors:
+              - ID:        2
+                BrProb:    0x80000000
+              - ID:        4
+                BrProb:    0x80000000
+          - BBFreq:        50
+            Successors:
+              - ID:        4
+                BrProb:    0xFFFFFFFF
+          - BBFreq:        100
+            Successors: []
+      - PGOBBEntries:
+          - BBFreq:        20
+
+## Check obj2yaml can dump multiple .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      --- !ELF
+# MULTI-NEXT: FileHeader:
+# MULTI-NEXT:   Class: ELFCLASS64
+# MULTI-NEXT:   Data:  ELFDATA2LSB
+# MULTI-NEXT:   Type:  ET_EXEC
+# MULTI-NEXT: Sections:
+# MULTI-NEXT:   - Name: .llvm_bb_addr_map
+# MULTI-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# MULTI-NEXT:     Entries:
+## Fieldx 'BaseAddress' is omitted when it is zero.
+# MULTI-NEXT:       - Version: 0
+# MULTI-NEXT:         Feature: 0x3
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BBEntries:
+# MULTI-NEXT:              - ID:            0
+# MULTI-NEXT:                AddressOffset: 0x1
+# MULTI-NEXT:                Size:          0x2
+# MULTI-NEXT:                Metadata:      0x3
+# MULTI-NEXT:     PGOAnalyses:
+# MULTI-NEXT:       - FuncEntryCount: 0
+# MULTI-NEXT:         PGOBBEntries:
+# MULTI-NEXT:           - BBFreq: 0
+# MULTI-NEXT:   - Name: '.llvm_bb_addr_map (1)'
+# MULTI-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Version:   0
+# MULTI-NEXT:         Feature:   0x1
+# MULTI-NEXT:         BBRanges:
+# MULTI-NEXT:           - BaseAddress:   0x20
+# MULTI-NEXT:             BBEntries: []
+# MULTI-NEXT:     PGOAnalyses:
+# MULTI-NEXT:       - FuncEntryCount: 0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .llvm_bb_addr_map
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+## Check that obj2yaml does not emit the 'BaseAddress' and 'Feature' fields when
+## they are zero.
+      - Version: 0
+        Feature: 0x3
+        BBRanges:
+          - BaseAddress: 0x0
+            BBEntries:
+              - AddressOffset: 0x1
+                Size:          0x2
+                Metadata:      0x3
+    PGOAnalyses:
+      - FuncEntryCount: 0
+        PGOBBEntries:
+          - BBFreq:        0
+  - Name: '.llvm_bb_addr_map (1)'
+    Type:  SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 0
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress: 0x20
+    PGOAnalyses:
+      - FuncEntryCount: 0
+
+## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
+## when it can't extract the entries, for example, when the section is truncated.
+
+# RUN: yaml2obj --docnum=1 -DSIZE=0x1D %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
+
+# INVALID:           --- !ELF
+# INVALID-NEXT:      FileHeader:
+# INVALID-NEXT:        Class: ELFCLASS64
+# INVALID-NEXT:        Data:  ELFDATA2LSB
+# INVALID-NEXT:        Type:  ET_EXEC
+# INVALID-NEXT:      Sections:
+# INVALID-NEXT:        - Name:    .llvm_bb_addr_map
+# INVALID-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
+# TRUNCATED-NEXT:        Content: {{([[:xdigit:]]{58})}}{{$}}
+# TRUNCATED-NEXT:        Content: {{([[:xdigit:]]{58})}}{{$}}
+
+## Check that obj2yaml uses the "Content" tag when original YAML does not
+## provide a PGO field that was enabled in the feature byte
+
+# RUN: yaml2obj --docnum=3 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MISSING-FEC
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: '.llvm_bb_addr_map'
+    Type:  SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 0
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress: 0x20
+
+# MISSING-FEC:           --- !ELF
+# MISSING-FEC-NEXT:      FileHeader:
+# MISSING-FEC-NEXT:        Class: ELFCLASS64
+# MISSING-FEC-NEXT:        Data:  ELFDATA2LSB
+# MISSING-FEC-NEXT:        Type:  ET_EXEC
+# MISSING-FEC-NEXT:      Sections:
+# MISSING-FEC-NEXT:        - Name:    .llvm_bb_addr_map
+# MISSING-FEC-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
+# MISSING-FEC-NEXT:          Content: '{{([[:xdigit:]]+)}}'{{$}}
+

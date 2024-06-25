@@ -1,4 +1,4 @@
-; RUN: opt < %s -hexagon-vlcr | opt -passes=adce -S | FileCheck %s
+; RUN: opt -mtriple=hexagon-- -passes='loop(hexagon-vlcr),adce' -S %s | FileCheck %s
 
 ; CHECK-NOT: %.hexagon.vlcr
 ; ModuleID = 'hexagon_vector_loop_carried_reuse.c'

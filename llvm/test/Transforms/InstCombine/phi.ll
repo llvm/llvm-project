@@ -116,8 +116,8 @@ define i32 @test6(i16 %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = zext i16 [[A:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = zext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
 ;
 BB0:
   %X = zext i16 %A to i32
@@ -129,8 +129,8 @@ BB1:
 
 BB2:
   ;; Suck casts into phi
-  %B = phi i32 [ %X, %BB0 ], [ %Y, %BB1 ]
-  ret i32 %B
+  %c = phi i32 [ %X, %BB0 ], [ %Y, %BB1 ]
+  ret i32 %c
 }
 
 define i32 @test_dead_cycle(i32 %A, i1 %cond) {
@@ -232,8 +232,8 @@ define ptr @test8(ptr %A, i1 %b) {
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; CHECK-NEXT:    ret ptr [[B]]
+; CHECK-NEXT:    [[C:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    ret ptr [[C]]
 ;
 BB0:
   %X = getelementptr inbounds { i32, i32 }, ptr %A, i32 0, i32 1
@@ -245,8 +245,8 @@ BB1:
 
 BB2:
   ;; Suck GEPs into phi
-  %B = phi ptr [ %X, %BB0 ], [ %Y, %BB1 ]
-  ret ptr %B
+  %c = phi ptr [ %X, %BB0 ], [ %Y, %BB1 ]
+  ret ptr %c
 }
 
 define i32 @test9(ptr %A, ptr %B) {
@@ -489,9 +489,8 @@ define i64 @test15b(i64 %A, i1 %b) {
 ; CHECK-NEXT:    [[Y_OFF0:%.*]] = phi i64 [ [[A]], [[ENTRY]] ], [ [[C]], [[ONE]] ]
 ; CHECK-NEXT:    [[Y_OFF64]] = phi i64 [ [[A]], [[ENTRY]] ], [ 0, [[ONE]] ]
 ; CHECK-NEXT:    [[D:%.*]] = call i64 @test15a(i64 [[Y_OFF64]])
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[D]], 1
-; CHECK-NEXT:    [[D1_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[D1_NOT]], label [[END:%.*]], label [[ONE]]
+; CHECK-NEXT:    [[D1:%.*]] = trunc i64 [[D]] to i1
+; CHECK-NEXT:    br i1 [[D1]], label [[ONE]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i64 [[Y_OFF0]]
 ;

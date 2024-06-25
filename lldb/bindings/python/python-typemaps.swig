@@ -257,7 +257,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 }
 // For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
 %typemap(in) (const void *buf, size_t size),
-             (const void *data, size_t data_len) {
+             (const void *data, size_t data_len),
+             (const void *buf, uint64_t size) {
   if (PythonString::Check($input)) {
     PythonString str(PyRefType::Borrowed, $input);
     $1 = (void *)str.GetString().data();
@@ -427,7 +428,6 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   free($1);
 }
 
-
 // For Log::LogOutputCallback
 %typemap(in) (lldb::LogOutputCallback log_callback, void *baton) {
   if (!($input == Py_None ||
@@ -472,6 +472,23 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(typecheck) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
+
+%typemap(in) (lldb::CommandOverrideCallback callback, void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  // Don't lose the callback reference.
+  Py_INCREF($input);
+  $1 = LLDBSwigPythonCallPythonSBCommandInterpreterSetCommandOverrideCallback;
+  $2 = $input;
+}
+%typemap(typecheck) (lldb::CommandOverrideCallback callback, void *baton) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }

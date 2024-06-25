@@ -9,10 +9,10 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMOPS_SPARSETENSORTRANSFORMOPS_H
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMOPS_SPARSETENSORTRANSFORMOPS_H
 
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
 

@@ -25,7 +25,7 @@ LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (str_ptr == nullptr) {
-    str_ptr = "null";
+    str_ptr = "(null)";
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 

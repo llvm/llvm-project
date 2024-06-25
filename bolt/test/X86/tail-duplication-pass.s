@@ -16,7 +16,7 @@
 # CHECK: BOLT-INFO: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks (1 bytes) responsible for {{.*}} dynamic executions ({{.*}}% of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltail-dup0, .Ltmp0, .Ltmp1
 
-# Check that the successor of Ltail-dup0 is .LBB00, not itself.
+## Check that the successor of Ltail-dup0 is .LBB00, not itself.
 # CHECK-NOLOOP: .Ltail-dup0 (1 instructions, align : 1)
 # CHECK-NOLOOP: Predecessors: .LBB00
 # CHECK-NOLOOP: retq

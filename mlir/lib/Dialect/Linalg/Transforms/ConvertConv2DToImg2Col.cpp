@@ -349,7 +349,7 @@ rewriteInIm2Col(RewriterBase &rewriter,
   SmallVector<ReassociationIndices> batchMatVecReassociationIndice = {{0, 1},
                                                                       {2, 3}};
 
-  Value batchMatVecResultReshaped = rewriter.create<tensor::ExpandShapeOp>(
+  auto batchMatVecResultReshaped = rewriter.create<tensor::ExpandShapeOp>(
       loc, transposedOutputTensor.getType(), batchMatVecResult.getResult(0),
       batchMatVecReassociationIndice);
 

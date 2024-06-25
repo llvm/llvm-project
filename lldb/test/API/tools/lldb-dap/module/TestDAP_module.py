@@ -17,7 +17,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         functions = ["foo"]
         breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
@@ -58,7 +58,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("addressRange", program_module)
 
     @skipIfWindows
-    @skipIfRemote
     def test_modules(self):
         """
         Mac or linux.
@@ -74,7 +73,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipUnlessDarwin
-    @skipIfRemote
     def test_modules_dsym(self):
         """
         Darwin only test with dSYM file.
@@ -85,7 +83,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         return self.run_test("a.out.dSYM", expect_debug_info_size=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

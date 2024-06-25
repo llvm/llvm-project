@@ -22,9 +22,9 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %module
       : (!transform.any_op) -> !transform.any_op
-    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %0[64, 128, 256]
+    %tiled_linalg_op, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [64, 128, 256]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-    %tiled_linalg_op_0, %loops_1:3 = transform.structured.tile_using_for %tiled_linalg_op[8, 8, 8]
+    %tiled_linalg_op_0, %loops_1:3 = transform.structured.tile_using_for %tiled_linalg_op tile_sizes [8, 8, 8]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.structured.vectorize %tiled_linalg_op_0 vector_sizes [8, 8, 8]
       : !transform.any_op

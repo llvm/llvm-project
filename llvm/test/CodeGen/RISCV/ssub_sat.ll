@@ -27,19 +27,16 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a2, a1, -1
-; RV64I-NEXT:    bge a0, a2, .LBB0_3
+; RV64I-NEXT:    sub a2, a0, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    beq a0, a2, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bge a1, a0, .LBB0_4
+; RV64I-NEXT:    srli a0, a0, 31
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 31
+; RV64I-NEXT:    xor a2, a0, a1
 ; RV64I-NEXT:  .LBB0_2:
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB0_3:
-; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    blt a1, a2, .LBB0_2
-; RV64I-NEXT:  .LBB0_4:
-; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    sext.w a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func:

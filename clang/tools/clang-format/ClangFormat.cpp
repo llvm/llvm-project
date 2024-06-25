@@ -92,7 +92,7 @@ static cl::opt<std::string> AssumeFileName(
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
-             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  TextProto: .txtpb .textpb .pb.txt .textproto .asciipb\n"
              "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
@@ -204,6 +204,11 @@ static cl::opt<bool>
 static cl::list<std::string> FileNames(cl::Positional,
                                        cl::desc("[@<file>] [<file> ...]"),
                                        cl::cat(ClangFormatCategory));
+
+static cl::opt<bool> FailOnIncompleteFormat(
+    "fail-on-incomplete-format",
+    cl::desc("If set, fail with exit code 1 on incomplete format."),
+    cl::init(false), cl::cat(ClangFormatCategory));
 
 namespace clang {
 namespace format {
@@ -331,7 +336,8 @@ static void outputReplacementXML(StringRef Text) {
 
 static void outputReplacementsXML(const Replacements &Replaces) {
   for (const auto &R : Replaces) {
-    outs() << "<replacement " << "offset='" << R.getOffset() << "' "
+    outs() << "<replacement "
+           << "offset='" << R.getOffset() << "' "
            << "length='" << R.getLength() << "'>";
     outputReplacementXML(R.getReplacementText());
     outs() << "</replacement>\n";
@@ -346,7 +352,7 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
 
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
-    llvm::SourceMgr Mgr;
+    SourceMgr Mgr;
     const char *StartBuf = Code->getBufferStart();
 
     Mgr.AddNewSourceBuffer(
@@ -399,7 +405,8 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName, bool IsSTDIN) {
+static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
+  const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
     return false;
@@ -407,8 +414,9 @@ static bool format(StringRef FileName, bool IsSTDIN) {
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName)
-                            : MemoryBuffer::getFileOrSTDIN(FileName);
+      !OutputXML && Inplace
+          ? MemoryBuffer::getFileAsStream(FileName)
+          : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError()) {
     errs() << EC.message() << "\n";
     return true;
@@ -439,11 +447,11 @@ static bool format(StringRef FileName, bool IsSTDIN) {
     return true;
   }
 
-  llvm::Expected<FormatStyle> FormatStyle =
+  Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
                nullptr, WNoErrorList.isSet(WNoError::Unknown));
   if (!FormatStyle) {
-    llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+    llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return true;
   }
 
@@ -489,7 +497,7 @@ static bool format(StringRef FileName, bool IsSTDIN) {
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
   if (!ChangedCode) {
-    llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+    llvm::errs() << toString(ChangedCode.takeError()) << "\n";
     return true;
   }
   // Get new affected ranges after sorting `#includes`.
@@ -501,8 +509,7 @@ static bool format(StringRef FileName, bool IsSTDIN) {
   if (OutputXML || DryRun) {
     if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    else
-      outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
+    outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
@@ -534,7 +541,7 @@ static bool format(StringRef FileName, bool IsSTDIN) {
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
-  return false;
+  return ErrorOnIncompleteFormat && !Status.FormatComplete;
 }
 
 } // namespace format
@@ -545,27 +552,26 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 // Dump the configuration.
-static int dumpConfig(bool IsSTDIN) {
+static int dumpConfig() {
   std::unique_ptr<llvm::MemoryBuffer> Code;
-
-  // `FileNames` must have at least "-" in it even if no file was specified.
-  assert(!FileNames.empty());
-
-  // Read in the code in case the filename alone isn't enough to detect the
-  // language.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileNames[0]);
-  if (std::error_code EC = CodeOrErr.getError()) {
-    llvm::errs() << EC.message() << "\n";
-    return 1;
+  // We can't read the code to detect the language if there's no file name.
+  if (!FileNames.empty()) {
+    // Read in the code in case the filename alone isn't enough to detect the
+    // language.
+    ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+        MemoryBuffer::getFileOrSTDIN(FileNames[0], /*IsText=*/true);
+    if (std::error_code EC = CodeOrErr.getError()) {
+      llvm::errs() << EC.message() << "\n";
+      return 1;
+    }
+    Code = std::move(CodeOrErr.get());
   }
-  Code = std::move(CodeOrErr.get());
-
-  llvm::Expected<clang::format::FormatStyle> FormatStyle =
-      clang::format::getStyle(Style, IsSTDIN ? AssumeFileName : FileNames[0],
-                              FallbackStyle, Code ? Code->getBuffer() : "");
+  Expected<clang::format::FormatStyle> FormatStyle = clang::format::getStyle(
+      Style,
+      FileNames.empty() || FileNames[0] == "-" ? AssumeFileName : FileNames[0],
+      FallbackStyle, Code ? Code->getBuffer() : "");
   if (!FormatStyle) {
-    llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
+    llvm::errs() << toString(FormatStyle.takeError()) << "\n";
     return 1;
   }
   std::string Config = clang::format::configurationAsText(*FormatStyle);
@@ -662,7 +668,7 @@ static bool isIgnored(StringRef FilePath) {
 }
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  InitLLVM X(argc, argv);
 
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
@@ -682,11 +688,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (FileNames.empty())
-    FileNames.push_back("-");
-
   if (DumpConfig)
-    return dumpConfig(FileNames[0] == "-");
+    return dumpConfig();
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -699,7 +702,10 @@ int main(int argc, const char **argv) {
     errs() << "Clang-formating " << LineNo << " files\n";
   }
 
-  if (FileNames.size() != 1 &&
+  if (FileNames.empty())
+    return clang::format::format("-", FailOnIncompleteFormat);
+
+  if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
     errs() << "error: -offset, -length and -lines can only be used for "
               "single file.\n";
@@ -709,14 +715,13 @@ int main(int argc, const char **argv) {
   unsigned FileNo = 1;
   bool Error = false;
   for (const auto &FileName : FileNames) {
-    const bool IsSTDIN = FileName == "-";
-    if (!IsSTDIN && isIgnored(FileName))
+    if (isIgnored(FileName))
       continue;
     if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName, IsSTDIN);
+    Error |= clang::format::format(FileName, FailOnIncompleteFormat);
   }
   return Error ? 1 : 0;
 }

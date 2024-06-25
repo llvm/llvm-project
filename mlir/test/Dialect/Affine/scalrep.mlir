@@ -682,6 +682,24 @@ func.func @redundant_store_elim(%out : memref<512xf32>) {
 // CHECK-NEXT:   affine.store
 // CHECK-NEXT: }
 
+// CHECK-LABEL: func @redundant_store_elim_nonintervening
+
+func.func @redundant_store_elim_nonintervening(%in : memref<512xf32>) {
+  %cf1 = arith.constant 1.0 : f32
+  %out = memref.alloc() :  memref<512xf32>
+  affine.for %i = 0 to 16 {
+    affine.store %cf1, %out[32*%i] : memref<512xf32>
+    %0 = affine.load %in[32*%i] : memref<512xf32>
+    affine.store %0, %out[32*%i] : memref<512xf32>
+  }
+  return
+}
+
+// CHECK: affine.for
+// CHECK-NEXT:   affine.load
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT: }
+
 // CHECK-LABEL: func @redundant_store_elim_fail
 
 func.func @redundant_store_elim_fail(%out : memref<512xf32>) {

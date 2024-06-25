@@ -29,7 +29,7 @@ define i8 @return_zero() {
   ret i8 0
 }
 
-define i8 @atomic_load8(i8* %foo) {
+define i8 @atomic_load8(ptr %foo) {
 ; CHECK-MEGA-LABEL: atomic_load8:
 ; CHECK-MEGA:       ; %bb.0:
 ; CHECK-MEGA-NEXT:    movw r26, r24
@@ -48,7 +48,7 @@ define i8 @atomic_load8(i8* %foo) {
 ; CHECK-NEXT:    ld r24, X
 ; CHECK-NEXT:    out 63, r16
 ; CHECK-NEXT:    ret
-  %val = load atomic i8, i8* %foo unordered, align 1
+  %val = load atomic i8, ptr %foo unordered, align 1
   ret i8 %val
 }
 

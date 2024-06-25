@@ -16,7 +16,7 @@ define float @ret_arithmetic.fence(float %arg0) {
 define float @ret_arithmetic.fence_noinf(float nofpclass(inf) %arg0) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_arithmetic.fence_noinf
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -26,7 +26,7 @@ define float @ret_arithmetic.fence_noinf(float nofpclass(inf) %arg0) {
 define float @ret_arithmetic.fence_nopinf(float nofpclass(pinf) %arg0) {
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_arithmetic.fence_nopinf
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf) float @llvm.arithmetic.fence.f32(float nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -36,7 +36,7 @@ define float @ret_arithmetic.fence_nopinf(float nofpclass(pinf) %arg0) {
 define float @ret_arithmetic.fence_noninf(float nofpclass(ninf) %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_arithmetic.fence_noninf
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf) float @llvm.arithmetic.fence.f32(float nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -46,7 +46,7 @@ define float @ret_arithmetic.fence_noninf(float nofpclass(ninf) %arg0) {
 define float @ret_arithmetic.fence_nonan(float nofpclass(nan) %arg0) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_arithmetic.fence_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.arithmetic.fence.f32(float nofpclass(nan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -56,7 +56,7 @@ define float @ret_arithmetic.fence_nonan(float nofpclass(nan) %arg0) {
 define float @ret_arithmetic.fence_noqnan(float nofpclass(qnan) %arg0) {
 ; CHECK-LABEL: define nofpclass(qnan) float @ret_arithmetic.fence_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan) float @llvm.arithmetic.fence.f32(float nofpclass(qnan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -66,7 +66,7 @@ define float @ret_arithmetic.fence_noqnan(float nofpclass(qnan) %arg0) {
 define float @ret_arithmetic.fence_nosnan(float nofpclass(snan) %arg0) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_arithmetic.fence_nosnan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.arithmetic.fence.f32(float nofpclass(snan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -76,7 +76,7 @@ define float @ret_arithmetic.fence_nosnan(float nofpclass(snan) %arg0) {
 define float @ret_arithmetic.fence_nozero(float nofpclass(zero) %arg0) {
 ; CHECK-LABEL: define nofpclass(zero) float @ret_arithmetic.fence_nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero) float @llvm.arithmetic.fence.f32(float nofpclass(zero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -86,7 +86,7 @@ define float @ret_arithmetic.fence_nozero(float nofpclass(zero) %arg0) {
 define float @ret_arithmetic.fence_nopzero(float nofpclass(pzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(pzero) float @ret_arithmetic.fence_nopzero
 ; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pzero) float @llvm.arithmetic.fence.f32(float nofpclass(pzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -96,7 +96,7 @@ define float @ret_arithmetic.fence_nopzero(float nofpclass(pzero) %arg0) {
 define float @ret_arithmetic.fence_nonzero(float nofpclass(nzero) %arg0) {
 ; CHECK-LABEL: define nofpclass(nzero) float @ret_arithmetic.fence_nonzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.arithmetic.fence.f32(float nofpclass(nzero) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)
@@ -106,7 +106,7 @@ define float @ret_arithmetic.fence_nonzero(float nofpclass(nzero) %arg0) {
 define float @ret_arithmetic.fence_nonorm(float nofpclass(norm) %arg0) {
 ; CHECK-LABEL: define nofpclass(norm) float @ret_arithmetic.fence_nonorm
 ; CHECK-SAME: (float nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(norm) float @llvm.arithmetic.fence.f32(float [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(norm) float @llvm.arithmetic.fence.f32(float nofpclass(norm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.arithmetic.fence.f32(float %arg0)

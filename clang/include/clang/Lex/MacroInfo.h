@@ -515,7 +515,7 @@ class ModuleMacro : public llvm::FoldingSetNode {
   friend class Preprocessor;
 
   /// The name defined by the macro.
-  IdentifierInfo *II;
+  const IdentifierInfo *II;
 
   /// The body of the #define, or nullptr if this is a #undef.
   MacroInfo *Macro;
@@ -529,7 +529,7 @@ class ModuleMacro : public llvm::FoldingSetNode {
   /// The number of modules whose macros are directly overridden by this one.
   unsigned NumOverrides;
 
-  ModuleMacro(Module *OwningModule, IdentifierInfo *II, MacroInfo *Macro,
+  ModuleMacro(Module *OwningModule, const IdentifierInfo *II, MacroInfo *Macro,
               ArrayRef<ModuleMacro *> Overrides)
       : II(II), Macro(Macro), OwningModule(OwningModule),
         NumOverrides(Overrides.size()) {
@@ -539,7 +539,7 @@ class ModuleMacro : public llvm::FoldingSetNode {
 
 public:
   static ModuleMacro *create(Preprocessor &PP, Module *OwningModule,
-                             IdentifierInfo *II, MacroInfo *Macro,
+                             const IdentifierInfo *II, MacroInfo *Macro,
                              ArrayRef<ModuleMacro *> Overrides);
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -553,7 +553,7 @@ public:
   }
 
   /// Get the name of the macro.
-  IdentifierInfo *getName() const { return II; }
+  const IdentifierInfo *getName() const { return II; }
 
   /// Get the ID of the module that exports this macro.
   Module *getOwningModule() const { return OwningModule; }

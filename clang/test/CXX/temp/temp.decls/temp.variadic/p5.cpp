@@ -408,7 +408,7 @@ namespace Specializations {
     template<typename... Us>
     constexpr static int InnerVar = 0;
     template<>
-    constexpr static int InnerVar<Ts> = 0; // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
+    constexpr int InnerVar<Ts> = 0; // expected-error{{explicit specialization contains unexpanded parameter pack 'Ts'}}
     template<typename U>
     constexpr static int InnerVar<U, Ts> = 0; // expected-error{{partial specialization contains unexpanded parameter pack 'Ts'}}
 #endif

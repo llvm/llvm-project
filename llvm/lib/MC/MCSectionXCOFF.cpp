@@ -25,7 +25,7 @@ void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
 
 void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
-                                          const MCExpr *Subsection) const {
+                                          uint32_t Subsection) const {
   if (getKind().isText()) {
     if (getMappingClass() != XCOFF::XMC_PR)
       report_fatal_error("Unhandled storage-mapping class for .text csect");
@@ -82,8 +82,12 @@ void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (isCsect() && getMappingClass() == XCOFF::XMC_TD) {
-    assert((getKind().isBSSExtern() || getKind().isBSSLocal()) &&
-           "Unexepected section kind for toc-data");
+    // Common csect type (uninitialized storage) does not have to print csect
+    // directive for section switching unless it is local.
+    if (getKind().isCommon() && !getKind().isBSSLocal())
+      return;
+
+    assert(getKind().isBSS() && "Unexpected section kind for toc-data");
     printCsectDirective(OS);
     return;
   }
@@ -135,5 +139,7 @@ bool MCSectionXCOFF::isVirtualSection() const {
     return false;
   assert(isCsect() &&
          "Handling for isVirtualSection not implemented for this section!");
-  return XCOFF::XTY_CM == CsectProp->Type;
+  // XTY_CM sections are virtual except for toc-data symbols.
+  return (XCOFF::XTY_CM == CsectProp->Type) &&
+         (getMappingClass() != XCOFF::XMC_TD);
 }

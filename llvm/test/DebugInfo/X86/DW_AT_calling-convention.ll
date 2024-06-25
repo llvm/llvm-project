@@ -42,7 +42,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.0.23918"
 
-@"\01?fptr@@3P6IHHH@ZA" = global i32 (i32, i32)* @"\01?f@@YIHHH@Z", align 4, !dbg !0
+@"\01?fptr@@3P6IHHH@ZA" = global ptr @"\01?f@@YIHHH@Z", align 4, !dbg !0
 
 ; Function Attrs: nounwind readnone
 define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !13 {

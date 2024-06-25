@@ -37,6 +37,22 @@ constexpr auto end_impl(RangeT &&range)
   return end(std::forward<RangeT>(range));
 }
 
+using std::rbegin;
+
+template <typename RangeT>
+constexpr auto rbegin_impl(RangeT &&range)
+    -> decltype(rbegin(std::forward<RangeT>(range))) {
+  return rbegin(std::forward<RangeT>(range));
+}
+
+using std::rend;
+
+template <typename RangeT>
+constexpr auto rend_impl(RangeT &&range)
+    -> decltype(rend(std::forward<RangeT>(range))) {
+  return rend(std::forward<RangeT>(range));
+}
+
 using std::swap;
 
 template <typename T>
@@ -70,6 +86,22 @@ template <typename RangeT>
 constexpr auto adl_end(RangeT &&range)
     -> decltype(adl_detail::end_impl(std::forward<RangeT>(range))) {
   return adl_detail::end_impl(std::forward<RangeT>(range));
+}
+
+/// Returns the reverse-begin iterator to \p range using `std::rbegin` and
+/// function found through Argument-Dependent Lookup (ADL).
+template <typename RangeT>
+constexpr auto adl_rbegin(RangeT &&range)
+    -> decltype(adl_detail::rbegin_impl(std::forward<RangeT>(range))) {
+  return adl_detail::rbegin_impl(std::forward<RangeT>(range));
+}
+
+/// Returns the reverse-end iterator to \p range using `std::rend` and
+/// functions found through Argument-Dependent Lookup (ADL).
+template <typename RangeT>
+constexpr auto adl_rend(RangeT &&range)
+    -> decltype(adl_detail::rend_impl(std::forward<RangeT>(range))) {
+  return adl_detail::rend_impl(std::forward<RangeT>(range));
 }
 
 /// Swaps \p lhs with \p rhs using `std::swap` and functions found through

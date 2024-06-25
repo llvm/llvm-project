@@ -3,7 +3,7 @@
 
 ; Test the branch to return in BB4 is converted to return.
 
-define i32 @foo(i32* %x, i32 %n) {
+define i32 @foo(ptr %x, i32 %n) {
 ; CHECK-LABEL: foo:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r1, #1
@@ -47,7 +47,7 @@ for.body.preheader:                               ; preds = %entry
   br i1 %min.iters.check, label %for.body.preheader1, label %middle.block
 
 middle.block:
-  %x3 = load i32, i32* %x, align 4
+  %x3 = load i32, ptr %x, align 4
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -58,8 +58,8 @@ for.body.preheader1:                              ; preds = %middle.block, %for.
 for.body:                                         ; preds = %for.body.preheader1, %for.body
   %i.08 = phi i32 [ %inc, %for.body ], [ %n.vec, %for.body.preheader1 ]
   %r.07 = phi i32 [ %add, %for.body ], [ %r.07.ph, %for.body.preheader1 ]
-  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.08
-  %v5 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
+  %v5 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %v5, %r.07
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %n

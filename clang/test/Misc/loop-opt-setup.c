@@ -1,6 +1,6 @@
 // This tests loop unrolling and loop deletion (enabled under -O1)
-// RUN: %clang_cc1 -std=c11 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s
-// RUN: %clang_cc1 -std=c99 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s --check-prefix C99
+// RUN: %clang_cc1 -std=c11 -O1 -fno-unroll-loops -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -std=c99 -O1 -fno-unroll-loops -o - %s -emit-llvm | FileCheck %s --check-prefix C99
 
 extern int a[16];
 int b = 0;

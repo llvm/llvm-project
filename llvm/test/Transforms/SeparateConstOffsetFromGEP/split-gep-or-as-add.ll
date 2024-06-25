@@ -3,7 +3,7 @@
 
 ;; Check that or operations, either with operands with no bits in common or that
 ;; are disjoint are lowered into constant GEPs. Note that because this is a
-;; target-independent test, the GEP seperator will lower the seperated-off constant
+;; target-independent test, the GEP separator will lower the separated-off constant
 ;; part to ptrtoint-based arithmetic.
 
 define void @testOrDoesntSplit(ptr %p) {

@@ -127,9 +127,9 @@ for arch in ${architectures}; do
                 -DCMAKE_OSX_ARCHITECTURES="${arch}" \
                 -DLIBCXXABI_LIBRARY_VERSION="${version}" \
                 -DLIBCXX_LIBRARY_VERSION="${version}" \
-                -DLIBCXX_TEST_PARAMS="target_triple=${target}" \
-                -DLIBCXXABI_TEST_PARAMS="target_triple=${target}" \
-                -DLIBUNWIND_TEST_PARAMS="target_triple=${target}"
+                -DLIBCXX_TEST_PARAMS="target_triple=${target};stdlib=apple-libc++" \
+                -DLIBCXXABI_TEST_PARAMS="target_triple=${target};stdlib=apple-libc++" \
+                -DLIBUNWIND_TEST_PARAMS="target_triple=${target};stdlib=apple-libc++"
 
     if [ "$headers_only" = true ]; then
         xcrun cmake --build "${build_dir}/${arch}" --target install-cxx-headers install-cxxabi-headers -- -v

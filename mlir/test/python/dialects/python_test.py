@@ -167,7 +167,7 @@ def attrBuilder():
             x_f32arr=[2.0, 3.0],
             x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
             x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
-            # CHECK-DAG: x_f64elems = dense<[3.952530e-323, 7.905050e-323]> : tensor<2xf64>
+            # CHECK-DAG: x_f64elems = dense<[8.000000e+00, 1.600000e+01]> : tensor<2xf64>
             x_f64elems=[8.0, 16.0],
             # CHECK-DAG: x_flatsymrefarr = [@symbol1, @symbol2]
             x_flatsymrefarr=["symbol1", "symbol2"],

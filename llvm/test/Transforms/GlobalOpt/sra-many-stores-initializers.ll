@@ -35,7 +35,7 @@ define void @store_initializer() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 0), align 8
+  store ptr null, ptr @global.20ptr, align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 1), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 2), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 3), align 8
@@ -53,7 +53,7 @@ entry:
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 15), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 16), align 8
 
-  %l0 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 0), align 8
+  %l0 = load ptr, ptr @global.20ptr, align 8
   store volatile ptr %l0, ptr @c
   %l1 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr, i64 0, i32 1), align 8
   store volatile ptr %l1, ptr @c
@@ -119,7 +119,7 @@ define void @store_null_initializer_2() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 0), align 8
+  store ptr null, ptr @global.20ptr.2, align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 1), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 2), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 3), align 8
@@ -138,7 +138,7 @@ entry:
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 16), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 19), align 8
 
-  %l0 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 0), align 8
+  %l0 = load ptr, ptr @global.20ptr.2, align 8
   store volatile ptr %l0, ptr @c
   %l1 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.2, i64 0, i32 1), align 8
   store volatile ptr %l1, ptr @c
@@ -242,7 +242,7 @@ define void @store_mixed_initializer_negative() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 0), align 8
+  store ptr null, ptr @global.20ptr.3, align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 1), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 2), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 3), align 8
@@ -261,7 +261,7 @@ entry:
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 16), align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 19), align 8
 
-  %l0 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 0), align 8
+  %l0 = load ptr, ptr @global.20ptr.3, align 8
   store volatile ptr %l0, ptr @c
   %l1 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.3, i64 0, i32 1), align 8
   store volatile ptr %l1, ptr @c
@@ -330,7 +330,7 @@ define void @store_mixed_initializer() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  store ptr null, ptr @global.20ptr.4, align 8
   store ptr null, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
   store ptr @c, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 2), align 8
   store ptr @c, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 3), align 8
@@ -348,7 +348,7 @@ entry:
   store ptr @c, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 15), align 8
   store ptr @c, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 16), align 8
 
-  %l0 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  %l0 = load ptr, ptr @global.20ptr.4, align 8
   store volatile ptr %l0, ptr @c
   %l1 = load ptr, ptr getelementptr inbounds (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
   store volatile ptr %l1, ptr @c
@@ -413,7 +413,7 @@ define void @store_mixed_initializer_geps_without_inbounds() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr null, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  store ptr null, ptr @global.20ptr.4, align 8
   store ptr null, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
   store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 2), align 8
   store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 3), align 8
@@ -431,7 +431,7 @@ entry:
   store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 15), align 8
   store ptr @c, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 16), align 8
 
-  %l0 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 0), align 8
+  %l0 = load ptr, ptr @global.20ptr.4, align 8
   store volatile ptr %l0, ptr @c
   %l1 = load ptr, ptr getelementptr (%struct.20ptr, ptr @global.20ptr.4, i64 0, i32 1), align 8
   store volatile ptr %l1, ptr @c

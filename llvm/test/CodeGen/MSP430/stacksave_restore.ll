@@ -4,10 +4,10 @@ target triple = "msp430"
 
 define void @foo() {
 entry:
-  %0 = tail call i8* @llvm.stacksave()
-  tail call void @llvm.stackrestore(i8* %0)
+  %0 = tail call ptr @llvm.stacksave()
+  tail call void @llvm.stackrestore(ptr %0)
   ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)

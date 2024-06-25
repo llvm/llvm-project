@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! Test when constant argument are copied in memory
 ! and passed to polymorphic arguments.

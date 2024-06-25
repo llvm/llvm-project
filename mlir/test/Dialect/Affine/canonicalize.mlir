@@ -1452,3 +1452,17 @@ func.func @mod_of_mod(%lb: index, %ub: index, %step: index) -> (index, index) {
   %1 = affine.apply affine_map<()[s0, s1, s2] -> ((s0 - ((s0 - s2) mod s1) - s2) mod s1)> ()[%ub, %step, %lb]
   return %0, %1 : index, index
 }
+
+// -----
+
+// CHECK-LABEL:  func.func @prefetch_canonicalize
+// CHECK-SAME:   ([[PARAM_0_:%.+]]: memref<512xf32>) {
+func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
+  // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
+  affine.for %arg3 = 0 to 8  {
+    %1 = affine.apply affine_map<()[s0] -> (s0 * 64)>()[%arg3]
+    // CHECK: affine.prefetch [[PARAM_0_]][symbol([[I_0_]]) * 64], read, locality<3>, data : memref<512xf32>
+    affine.prefetch %arg0[%1], read, locality<3>, data : memref<512xf32>
+  }
+  return
+}

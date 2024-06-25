@@ -76,3 +76,19 @@ subroutine norm2_test_dim_3(a,r)
   ! CHECK-DAG:  %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
   ! CHECK-DAG:  fir.freemem %[[addr]]
 end subroutine norm2_test_dim_3
+
+! CHECK-LABEL: func @_QPnorm2_test_real16(
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x?x?xf128>>{{.*}}, %[[arg1:.*]]: !fir.box<!fir.array<?x?xf128>>{{.*}})
+subroutine norm2_test_real16(a,r)
+  real(16) :: a(:,:,:)
+  real(16) :: r(:,:)
+  ! CHECK-DAG:  %[[dim:.*]] = arith.constant 3 : i32
+  ! CHECK-DAG:  %[[r:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf128>>>
+  ! CHECK-DAG:  %[[res:.*]] = fir.convert %[[r]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf128>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK:  %[[arr:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x?x?xf128>>) -> !fir.box<none>
+  r = norm2(a,dim=3)
+  ! CHECK:  %{{.*}} = fir.call @_FortranANorm2DimReal16(%[[res]], %[[arr]], %[[dim]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> none
+  ! CHECK:  %[[box:.*]] = fir.load %[[r]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf128>>>>
+  ! CHECK-DAG:  %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.heap<!fir.array<?x?xf128>>>) -> !fir.heap<!fir.array<?x?xf128>>
+  ! CHECK-DAG:  fir.freemem %[[addr]]
+end subroutine norm2_test_real16

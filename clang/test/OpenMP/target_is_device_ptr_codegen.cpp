@@ -1827,7 +1827,7 @@ void bar() {
 // CK10-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK10-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK10-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK10-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK10-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1869,7 +1869,7 @@ void bar() {
 // CK10-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CK10-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CK10-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP27]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP27]], align 4
 // CK10-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP28]], align 4
 // CK10-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 2
@@ -1911,7 +1911,7 @@ void bar() {
 // CK10-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS7]], i32 0, i32 0
 // CK10-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS8]], i32 0, i32 0
 // CK10-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP48]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP48]], align 4
 // CK10-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP49]], align 4
 // CK10-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 2
@@ -1956,7 +1956,7 @@ void bar() {
 // CK10-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS13]], i32 0, i32 0
 // CK10-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS14]], i32 0, i32 0
 // CK10-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP71]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK10-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP72]], align 4
 // CK10-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 2
@@ -2001,7 +2001,7 @@ void bar() {
 // CK10-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS20]], i32 0, i32 0
 // CK10-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS21]], i32 0, i32 0
 // CK10-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP94]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP94]], align 4
 // CK10-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP95]], align 4
 // CK10-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -2046,7 +2046,7 @@ void bar() {
 // CK10-NEXT:    [[TMP115:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CK10-NEXT:    [[TMP116:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CK10-NEXT:    [[TMP117:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP117]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP117]], align 4
 // CK10-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CK10-NEXT:    store i32 1, ptr [[TMP118]], align 4
 // CK10-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -2101,7 +2101,7 @@ void bar() {
 // CK10-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS35]], i32 0, i32 0
 // CK10-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS36]], i32 0, i32 0
 // CK10-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 0
-// CK10-NEXT:    store i32 2, ptr [[TMP146]], align 4
+// CK10-NEXT:    store i32 3, ptr [[TMP146]], align 4
 // CK10-NEXT:    [[TMP147:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 1
 // CK10-NEXT:    store i32 2, ptr [[TMP147]], align 4
 // CK10-NEXT:    [[TMP148:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 2
@@ -2233,13 +2233,6 @@ void bar() {
 // CK10-NEXT:    ret void
 //
 //
-// CK10-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK10-SAME: () #[[ATTR3:[0-9]+]] {
-// CK10-NEXT:  entry:
-// CK10-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK10-NEXT:    ret void
-//
-//
 // CK11-LABEL: define {{[^@]+}}@_Z3barRPfRPi
 // CK11-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CK11-NEXT:  entry:
@@ -2305,7 +2298,7 @@ void bar() {
 // CK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2347,7 +2340,7 @@ void bar() {
 // CK11-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CK11-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CK11-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP27]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP27]], align 4
 // CK11-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP28]], align 4
 // CK11-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 2
@@ -2389,7 +2382,7 @@ void bar() {
 // CK11-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS7]], i32 0, i32 0
 // CK11-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS8]], i32 0, i32 0
 // CK11-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP48]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP48]], align 4
 // CK11-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP49]], align 4
 // CK11-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 2
@@ -2434,7 +2427,7 @@ void bar() {
 // CK11-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS13]], i32 0, i32 0
 // CK11-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS14]], i32 0, i32 0
 // CK11-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP71]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK11-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP72]], align 4
 // CK11-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 2
@@ -2479,7 +2472,7 @@ void bar() {
 // CK11-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS20]], i32 0, i32 0
 // CK11-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS21]], i32 0, i32 0
 // CK11-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP94]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP94]], align 4
 // CK11-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP95]], align 4
 // CK11-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -2524,7 +2517,7 @@ void bar() {
 // CK11-NEXT:    [[TMP115:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CK11-NEXT:    [[TMP116:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CK11-NEXT:    [[TMP117:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP117]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP117]], align 4
 // CK11-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CK11-NEXT:    store i32 1, ptr [[TMP118]], align 4
 // CK11-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -2579,7 +2572,7 @@ void bar() {
 // CK11-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS35]], i32 0, i32 0
 // CK11-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS36]], i32 0, i32 0
 // CK11-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 0
-// CK11-NEXT:    store i32 2, ptr [[TMP146]], align 4
+// CK11-NEXT:    store i32 3, ptr [[TMP146]], align 4
 // CK11-NEXT:    [[TMP147:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 1
 // CK11-NEXT:    store i32 2, ptr [[TMP147]], align 4
 // CK11-NEXT:    [[TMP148:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 2
@@ -2711,13 +2704,6 @@ void bar() {
 // CK11-NEXT:    ret void
 //
 //
-// CK11-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK11-SAME: () #[[ATTR3:[0-9]+]] {
-// CK11-NEXT:  entry:
-// CK11-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK11-NEXT:    ret void
-//
-//
 // CK12-LABEL: define {{[^@]+}}@_Z3barRPfRPi
 // CK12-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CK12-NEXT:  entry:
@@ -2783,7 +2769,7 @@ void bar() {
 // CK12-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK12-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK12-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK12-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK12-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2825,7 +2811,7 @@ void bar() {
 // CK12-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CK12-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CK12-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP27]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP27]], align 4
 // CK12-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP28]], align 4
 // CK12-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 2
@@ -2867,7 +2853,7 @@ void bar() {
 // CK12-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS7]], i32 0, i32 0
 // CK12-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS8]], i32 0, i32 0
 // CK12-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP48]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP48]], align 4
 // CK12-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP49]], align 4
 // CK12-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 2
@@ -2912,7 +2898,7 @@ void bar() {
 // CK12-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS13]], i32 0, i32 0
 // CK12-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS14]], i32 0, i32 0
 // CK12-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP71]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK12-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP72]], align 4
 // CK12-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 2
@@ -2957,7 +2943,7 @@ void bar() {
 // CK12-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS20]], i32 0, i32 0
 // CK12-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS21]], i32 0, i32 0
 // CK12-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP94]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP94]], align 4
 // CK12-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP95]], align 4
 // CK12-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -3002,7 +2988,7 @@ void bar() {
 // CK12-NEXT:    [[TMP115:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CK12-NEXT:    [[TMP116:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CK12-NEXT:    [[TMP117:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP117]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP117]], align 4
 // CK12-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CK12-NEXT:    store i32 1, ptr [[TMP118]], align 4
 // CK12-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -3057,7 +3043,7 @@ void bar() {
 // CK12-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS35]], i32 0, i32 0
 // CK12-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS36]], i32 0, i32 0
 // CK12-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 0
-// CK12-NEXT:    store i32 2, ptr [[TMP146]], align 4
+// CK12-NEXT:    store i32 3, ptr [[TMP146]], align 4
 // CK12-NEXT:    [[TMP147:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 1
 // CK12-NEXT:    store i32 2, ptr [[TMP147]], align 4
 // CK12-NEXT:    [[TMP148:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 2
@@ -3189,13 +3175,6 @@ void bar() {
 // CK12-NEXT:    ret void
 //
 //
-// CK12-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK12-SAME: () #[[ATTR3:[0-9]+]] {
-// CK12-NEXT:  entry:
-// CK12-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK12-NEXT:    ret void
-//
-//
 // CK13-LABEL: define {{[^@]+}}@_Z3barRPfRPi
 // CK13-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CK13-NEXT:  entry:
@@ -3261,7 +3240,7 @@ void bar() {
 // CK13-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK13-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK13-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK13-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK13-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -3303,7 +3282,7 @@ void bar() {
 // CK13-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS1]], i32 0, i32 0
 // CK13-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS2]], i32 0, i32 0
 // CK13-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP27]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP27]], align 4
 // CK13-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP28]], align 4
 // CK13-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS4]], i32 0, i32 2
@@ -3345,7 +3324,7 @@ void bar() {
 // CK13-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS7]], i32 0, i32 0
 // CK13-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS8]], i32 0, i32 0
 // CK13-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP48]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP48]], align 4
 // CK13-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP49]], align 4
 // CK13-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS10]], i32 0, i32 2
@@ -3390,7 +3369,7 @@ void bar() {
 // CK13-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS13]], i32 0, i32 0
 // CK13-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS14]], i32 0, i32 0
 // CK13-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP71]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK13-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP72]], align 4
 // CK13-NEXT:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS16]], i32 0, i32 2
@@ -3435,7 +3414,7 @@ void bar() {
 // CK13-NEXT:    [[TMP92:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS20]], i32 0, i32 0
 // CK13-NEXT:    [[TMP93:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS21]], i32 0, i32 0
 // CK13-NEXT:    [[TMP94:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP94]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP94]], align 4
 // CK13-NEXT:    [[TMP95:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP95]], align 4
 // CK13-NEXT:    [[TMP96:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS23]], i32 0, i32 2
@@ -3480,7 +3459,7 @@ void bar() {
 // CK13-NEXT:    [[TMP115:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS27]], i32 0, i32 0
 // CK13-NEXT:    [[TMP116:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS28]], i32 0, i32 0
 // CK13-NEXT:    [[TMP117:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP117]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP117]], align 4
 // CK13-NEXT:    [[TMP118:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 1
 // CK13-NEXT:    store i32 1, ptr [[TMP118]], align 4
 // CK13-NEXT:    [[TMP119:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS30]], i32 0, i32 2
@@ -3535,7 +3514,7 @@ void bar() {
 // CK13-NEXT:    [[TMP144:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS35]], i32 0, i32 0
 // CK13-NEXT:    [[TMP145:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS36]], i32 0, i32 0
 // CK13-NEXT:    [[TMP146:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 0
-// CK13-NEXT:    store i32 2, ptr [[TMP146]], align 4
+// CK13-NEXT:    store i32 3, ptr [[TMP146]], align 4
 // CK13-NEXT:    [[TMP147:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 1
 // CK13-NEXT:    store i32 2, ptr [[TMP147]], align 4
 // CK13-NEXT:    [[TMP148:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS38]], i32 0, i32 2
@@ -3664,13 +3643,6 @@ void bar() {
 // CK13-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
 // CK13-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP2]], align 4
-// CK13-NEXT:    ret void
-//
-//
-// CK13-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK13-SAME: () #[[ATTR3:[0-9]+]] {
-// CK13-NEXT:  entry:
-// CK13-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK13-NEXT:    ret void
 //
 //
@@ -3985,7 +3957,7 @@ void bar() {
 //
 //
 // CK20-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// CK20-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// CK20-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CK20-NEXT:  entry:
 // CK20-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK20-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -4031,7 +4003,7 @@ void bar() {
 // CK20-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK20-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK20-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK20-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CK20-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CK20-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK20-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CK20-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4060,7 +4032,7 @@ void bar() {
 // CK20-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CK20-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CK20:       omp_offload.failed:
-// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CK20-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CK20:       omp_offload.cont:
 // CK20-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
@@ -4089,7 +4061,7 @@ void bar() {
 // CK20-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CK20-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CK20-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CK20-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CK20-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CK20-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CK20-NEXT:    store i32 2, ptr [[TMP37]], align 4
 // CK20-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -4118,7 +4090,7 @@ void bar() {
 // CK20-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CK20-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CK20:       omp_offload.failed6:
-// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR3]]
+// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR2]]
 // CK20-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CK20:       omp_offload.cont7:
 // CK20-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
@@ -4154,7 +4126,7 @@ void bar() {
 // CK20-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
 // CK20-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES13]], i32 0, i32 0
 // CK20-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CK20-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CK20-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CK20-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CK20-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK20-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -4183,14 +4155,14 @@ void bar() {
 // CK20-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CK20-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED15:%.*]], label [[OMP_OFFLOAD_CONT16:%.*]]
 // CK20:       omp_offload.failed15:
-// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR3]]
+// CK20-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR2]]
 // CK20-NEXT:    br label [[OMP_OFFLOAD_CONT16]]
 // CK20:       omp_offload.cont16:
 // CK20-NEXT:    ret void
 //
 //
 // CK20-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// CK20-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CK20-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CK20-NEXT:  entry:
 // CK20-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK20-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -4206,7 +4178,7 @@ void bar() {
 //
 //
 // CK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112
-// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1:[0-9]+]] {
 // CK20-NEXT:  entry:
 // CK20-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK20-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4219,7 +4191,7 @@ void bar() {
 //
 //
 // CK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118
-// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK20-NEXT:  entry:
 // CK20-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK20-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4233,7 +4205,7 @@ void bar() {
 //
 //
 // CK20-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125
-// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK20-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK20-NEXT:  entry:
 // CK20-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK20-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4247,13 +4219,6 @@ void bar() {
 // CK20-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
 // CK20-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 8
-// CK20-NEXT:    ret void
-//
-//
-// CK20-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK20-SAME: () #[[ATTR5:[0-9]+]] {
-// CK20-NEXT:  entry:
-// CK20-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK20-NEXT:    ret void
 //
 //
@@ -4272,7 +4237,7 @@ void bar() {
 //
 //
 // CK21-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// CK21-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// CK21-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CK21-NEXT:  entry:
 // CK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK21-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -4318,7 +4283,7 @@ void bar() {
 // CK21-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK21-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK21-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK21-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CK21-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CK21-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK21-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CK21-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4347,7 +4312,7 @@ void bar() {
 // CK21-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CK21-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CK21:       omp_offload.failed:
-// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CK21-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CK21:       omp_offload.cont:
 // CK21-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
@@ -4376,7 +4341,7 @@ void bar() {
 // CK21-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CK21-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CK21-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CK21-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CK21-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CK21-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CK21-NEXT:    store i32 2, ptr [[TMP37]], align 4
 // CK21-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -4405,7 +4370,7 @@ void bar() {
 // CK21-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CK21-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CK21:       omp_offload.failed6:
-// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR3]]
+// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR2]]
 // CK21-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CK21:       omp_offload.cont7:
 // CK21-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
@@ -4441,7 +4406,7 @@ void bar() {
 // CK21-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
 // CK21-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES13]], i32 0, i32 0
 // CK21-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CK21-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CK21-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CK21-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CK21-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK21-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -4470,14 +4435,14 @@ void bar() {
 // CK21-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CK21-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED15:%.*]], label [[OMP_OFFLOAD_CONT16:%.*]]
 // CK21:       omp_offload.failed15:
-// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR3]]
+// CK21-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR2]]
 // CK21-NEXT:    br label [[OMP_OFFLOAD_CONT16]]
 // CK21:       omp_offload.cont16:
 // CK21-NEXT:    ret void
 //
 //
 // CK21-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// CK21-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CK21-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // CK21-NEXT:  entry:
 // CK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK21-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -4493,7 +4458,7 @@ void bar() {
 //
 //
 // CK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112
-// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1:[0-9]+]] {
 // CK21-NEXT:  entry:
 // CK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK21-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4506,7 +4471,7 @@ void bar() {
 //
 //
 // CK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118
-// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK21-NEXT:  entry:
 // CK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK21-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4520,7 +4485,7 @@ void bar() {
 //
 //
 // CK21-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125
-// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK21-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK21-NEXT:  entry:
 // CK21-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CK21-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -4534,13 +4499,6 @@ void bar() {
 // CK21-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
 // CK21-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 8
-// CK21-NEXT:    ret void
-//
-//
-// CK21-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK21-SAME: () #[[ATTR5:[0-9]+]] {
-// CK21-NEXT:  entry:
-// CK21-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK21-NEXT:    ret void
 //
 //
@@ -4559,7 +4517,7 @@ void bar() {
 //
 //
 // CK22-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// CK22-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CK22-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CK22-NEXT:  entry:
 // CK22-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK22-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -4605,7 +4563,7 @@ void bar() {
 // CK22-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK22-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK22-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK22-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CK22-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CK22-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK22-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CK22-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4634,7 +4592,7 @@ void bar() {
 // CK22-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CK22-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CK22:       omp_offload.failed:
-// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CK22-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CK22:       omp_offload.cont:
 // CK22-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
@@ -4663,7 +4621,7 @@ void bar() {
 // CK22-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CK22-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CK22-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CK22-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CK22-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CK22-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CK22-NEXT:    store i32 2, ptr [[TMP37]], align 4
 // CK22-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -4692,7 +4650,7 @@ void bar() {
 // CK22-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CK22-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CK22:       omp_offload.failed6:
-// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR3]]
+// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR2]]
 // CK22-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CK22:       omp_offload.cont7:
 // CK22-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
@@ -4728,7 +4686,7 @@ void bar() {
 // CK22-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
 // CK22-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES13]], i32 0, i32 0
 // CK22-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CK22-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CK22-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CK22-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CK22-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK22-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -4757,14 +4715,14 @@ void bar() {
 // CK22-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CK22-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED15:%.*]], label [[OMP_OFFLOAD_CONT16:%.*]]
 // CK22:       omp_offload.failed15:
-// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR3]]
+// CK22-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR2]]
 // CK22-NEXT:    br label [[OMP_OFFLOAD_CONT16]]
 // CK22:       omp_offload.cont16:
 // CK22-NEXT:    ret void
 //
 //
 // CK22-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// CK22-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CK22-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CK22-NEXT:  entry:
 // CK22-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK22-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -4780,7 +4738,7 @@ void bar() {
 //
 //
 // CK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112
-// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1:[0-9]+]] {
 // CK22-NEXT:  entry:
 // CK22-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK22-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -4793,7 +4751,7 @@ void bar() {
 //
 //
 // CK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118
-// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK22-NEXT:  entry:
 // CK22-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK22-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -4807,7 +4765,7 @@ void bar() {
 //
 //
 // CK22-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125
-// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK22-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK22-NEXT:  entry:
 // CK22-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK22-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -4821,13 +4779,6 @@ void bar() {
 // CK22-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
 // CK22-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 4
-// CK22-NEXT:    ret void
-//
-//
-// CK22-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK22-SAME: () #[[ATTR5:[0-9]+]] {
-// CK22-NEXT:  entry:
-// CK22-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK22-NEXT:    ret void
 //
 //
@@ -4846,7 +4797,7 @@ void bar() {
 //
 //
 // CK23-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// CK23-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// CK23-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CK23-NEXT:  entry:
 // CK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK23-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -4892,7 +4843,7 @@ void bar() {
 // CK23-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK23-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK23-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK23-NEXT:    store i32 2, ptr [[TMP5]], align 4
+// CK23-NEXT:    store i32 3, ptr [[TMP5]], align 4
 // CK23-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK23-NEXT:    store i32 1, ptr [[TMP6]], align 4
 // CK23-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4921,7 +4872,7 @@ void bar() {
 // CK23-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // CK23-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CK23:       omp_offload.failed:
-// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR3:[0-9]+]]
+// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112(ptr [[THIS1]]) #[[ATTR2:[0-9]+]]
 // CK23-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CK23:       omp_offload.cont:
 // CK23-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
@@ -4950,7 +4901,7 @@ void bar() {
 // CK23-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CK23-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CK23-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CK23-NEXT:    store i32 2, ptr [[TMP36]], align 4
+// CK23-NEXT:    store i32 3, ptr [[TMP36]], align 4
 // CK23-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CK23-NEXT:    store i32 2, ptr [[TMP37]], align 4
 // CK23-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -4979,7 +4930,7 @@ void bar() {
 // CK23-NEXT:    [[TMP50:%.*]] = icmp ne i32 [[TMP49]], 0
 // CK23-NEXT:    br i1 [[TMP50]], label [[OMP_OFFLOAD_FAILED6:%.*]], label [[OMP_OFFLOAD_CONT7:%.*]]
 // CK23:       omp_offload.failed6:
-// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR3]]
+// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118(ptr [[THIS1]]) #[[ATTR2]]
 // CK23-NEXT:    br label [[OMP_OFFLOAD_CONT7]]
 // CK23:       omp_offload.cont7:
 // CK23-NEXT:    [[A8:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
@@ -5015,7 +4966,7 @@ void bar() {
 // CK23-NEXT:    [[TMP68:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
 // CK23-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [3 x i64], ptr [[DOTOFFLOAD_SIZES13]], i32 0, i32 0
 // CK23-NEXT:    [[TMP70:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CK23-NEXT:    store i32 2, ptr [[TMP70]], align 4
+// CK23-NEXT:    store i32 3, ptr [[TMP70]], align 4
 // CK23-NEXT:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CK23-NEXT:    store i32 3, ptr [[TMP71]], align 4
 // CK23-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -5044,14 +4995,14 @@ void bar() {
 // CK23-NEXT:    [[TMP84:%.*]] = icmp ne i32 [[TMP83]], 0
 // CK23-NEXT:    br i1 [[TMP84]], label [[OMP_OFFLOAD_FAILED15:%.*]], label [[OMP_OFFLOAD_CONT16:%.*]]
 // CK23:       omp_offload.failed15:
-// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR3]]
+// CK23-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125(ptr [[THIS1]]) #[[ATTR2]]
 // CK23-NEXT:    br label [[OMP_OFFLOAD_CONT16]]
 // CK23:       omp_offload.cont16:
 // CK23-NEXT:    ret void
 //
 //
 // CK23-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// CK23-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CK23-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // CK23-NEXT:  entry:
 // CK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK23-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -5067,7 +5018,7 @@ void bar() {
 //
 //
 // CK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l112
-// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2:[0-9]+]] {
+// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1:[0-9]+]] {
 // CK23-NEXT:  entry:
 // CK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK23-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -5080,7 +5031,7 @@ void bar() {
 //
 //
 // CK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l118
-// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK23-NEXT:  entry:
 // CK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK23-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -5094,7 +5045,7 @@ void bar() {
 //
 //
 // CK23-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STIdE3fooERPd_l125
-// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
+// CK23-SAME: (ptr noundef [[THIS:%.*]]) #[[ATTR1]] {
 // CK23-NEXT:  entry:
 // CK23-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CK23-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
@@ -5108,13 +5059,6 @@ void bar() {
 // CK23-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
 // CK23-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 4
-// CK23-NEXT:    ret void
-//
-//
-// CK23-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK23-SAME: () #[[ATTR5:[0-9]+]] {
-// CK23-NEXT:  entry:
-// CK23-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK23-NEXT:    ret void
 //
 //
@@ -5133,7 +5077,7 @@ void bar() {
 //
 //
 // SIMD-ONLY10-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// SIMD-ONLY10-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// SIMD-ONLY10-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // SIMD-ONLY10-NEXT:  entry:
 // SIMD-ONLY10-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY10-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -5177,7 +5121,7 @@ void bar() {
 //
 //
 // SIMD-ONLY10-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// SIMD-ONLY10-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY10-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // SIMD-ONLY10-NEXT:  entry:
 // SIMD-ONLY10-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY10-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -5207,7 +5151,7 @@ void bar() {
 //
 //
 // SIMD-ONLY11-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat {
+// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // SIMD-ONLY11-NEXT:  entry:
 // SIMD-ONLY11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY11-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -5251,7 +5195,7 @@ void bar() {
 //
 //
 // SIMD-ONLY11-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat {
 // SIMD-ONLY11-NEXT:  entry:
 // SIMD-ONLY11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY11-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
@@ -5281,7 +5225,7 @@ void bar() {
 //
 //
 // SIMD-ONLY12-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY12-NEXT:  entry:
 // SIMD-ONLY12-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY12-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -5325,7 +5269,7 @@ void bar() {
 //
 //
 // SIMD-ONLY12-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD-ONLY12-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY12-NEXT:  entry:
 // SIMD-ONLY12-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY12-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -5355,7 +5299,7 @@ void bar() {
 //
 //
 // SIMD-ONLY13-LABEL: define {{[^@]+}}@_ZN2STIdEC1ERPd
-// SIMD-ONLY13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// SIMD-ONLY13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY13-NEXT:  entry:
 // SIMD-ONLY13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY13-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -5399,7 +5343,7 @@ void bar() {
 //
 //
 // SIMD-ONLY13-LABEL: define {{[^@]+}}@_ZN2STIdEC2ERPd
-// SIMD-ONLY13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD-ONLY13-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
 // SIMD-ONLY13-NEXT:  entry:
 // SIMD-ONLY13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // SIMD-ONLY13-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
@@ -5432,7 +5376,7 @@ void bar() {
 // CK30-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK30-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK30-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK30-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK30-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK30-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK30-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK30-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5477,13 +5421,6 @@ void bar() {
 // CK30-NEXT:    ret void
 //
 //
-// CK30-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK30-SAME: () #[[ATTR3:[0-9]+]] {
-// CK30-NEXT:  entry:
-// CK30-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK30-NEXT:    ret void
-//
-//
 // CK31-LABEL: define {{[^@]+}}@_Z3barv
 // CK31-SAME: () #[[ATTR0:[0-9]+]] {
 // CK31-NEXT:  entry:
@@ -5502,7 +5439,7 @@ void bar() {
 // CK31-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK31-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK31-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK31-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK31-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK31-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK31-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK31-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5547,13 +5484,6 @@ void bar() {
 // CK31-NEXT:    ret void
 //
 //
-// CK31-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK31-SAME: () #[[ATTR3:[0-9]+]] {
-// CK31-NEXT:  entry:
-// CK31-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK31-NEXT:    ret void
-//
-//
 // CK32-LABEL: define {{[^@]+}}@_Z3barv
 // CK32-SAME: () #[[ATTR0:[0-9]+]] {
 // CK32-NEXT:  entry:
@@ -5572,7 +5502,7 @@ void bar() {
 // CK32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK32-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK32-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK32-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5617,13 +5547,6 @@ void bar() {
 // CK32-NEXT:    ret void
 //
 //
-// CK32-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK32-SAME: () #[[ATTR3:[0-9]+]] {
-// CK32-NEXT:  entry:
-// CK32-NEXT:    call void @__tgt_register_requires(i64 1)
-// CK32-NEXT:    ret void
-//
-//
 // CK33-LABEL: define {{[^@]+}}@_Z3barv
 // CK33-SAME: () #[[ATTR0:[0-9]+]] {
 // CK33-NEXT:  entry:
@@ -5642,7 +5565,7 @@ void bar() {
 // CK33-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CK33-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CK33-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CK33-NEXT:    store i32 2, ptr [[TMP6]], align 4
+// CK33-NEXT:    store i32 3, ptr [[TMP6]], align 4
 // CK33-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CK33-NEXT:    store i32 1, ptr [[TMP7]], align 4
 // CK33-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -5684,13 +5607,6 @@ void bar() {
 // CK33-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 4
 // CK33-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 4
 // CK33-NEXT:    store double 0.000000e+00, ptr [[TMP0]], align 4
-// CK33-NEXT:    ret void
-//
-//
-// CK33-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CK33-SAME: () #[[ATTR3:[0-9]+]] {
-// CK33-NEXT:  entry:
-// CK33-NEXT:    call void @__tgt_register_requires(i64 1)
 // CK33-NEXT:    ret void
 //
 //

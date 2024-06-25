@@ -313,7 +313,7 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float> %vdata, i3
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 %vindex.1, i32 0, i32 0, i32 63, i32 0)
-  %data = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %0, i32 %vindex.2, i32 0, i1 0, i1 0)
+  %data = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %0, i32 %vindex.2, i32 0, i32 0, i32 0)
   %data.i = bitcast <4 x float> %data to <4 x i32>
   call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %data.i, <4 x i32> %0, i32 %vindex.3, i32 0, i32 0, i32 46, i32 0)
   ret void
@@ -620,7 +620,7 @@ declare void @llvm.amdgcn.struct.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32
 declare void @llvm.amdgcn.struct.tbuffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32, i32) #0
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #1
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

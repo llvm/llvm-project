@@ -92,7 +92,7 @@ class VTTBuilder {
   using AddressPointsMapTy = llvm::DenseMap<BaseSubobject, uint64_t>;
 
   /// The sub-VTT indices for the bases of the most derived class.
-  llvm::DenseMap<BaseSubobject, uint64_t> SubVTTIndicies;
+  llvm::DenseMap<BaseSubobject, uint64_t> SubVTTIndices;
 
   /// The secondary virtual pointer indices of all subobjects of
   /// the most derived class.
@@ -148,8 +148,8 @@ public:
   }
 
   /// Returns a reference to the sub-VTT indices.
-  const llvm::DenseMap<BaseSubobject, uint64_t> &getSubVTTIndicies() const {
-    return SubVTTIndicies;
+  const llvm::DenseMap<BaseSubobject, uint64_t> &getSubVTTIndices() const {
+    return SubVTTIndices;
   }
 
   /// Returns a reference to the secondary virtual pointer indices.

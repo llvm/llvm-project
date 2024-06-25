@@ -48,7 +48,7 @@ entry:
   %x9.addr = alloca i32, align 4
   store i32 %x0, ptr %x0.addr, align 4
   store i32 %x1, ptr %x1.addr, align 4
-  store <vscale x 16 x i32> %v0, <vscale x 16 x i32>* %v0.addr, align 4
+  store <vscale x 16 x i32> %v0, ptr %v0.addr, align 4
   store i32 %x2, ptr %x2.addr, align 4
   store i32 %x3, ptr %x3.addr, align 4
   store i32 %x4, ptr %x4.addr, align 4
@@ -156,8 +156,8 @@ entry:
   %0 = call i64 @llvm.riscv.vsetvli.i64(i64 4, i64 2, i64 3)
   store i64 %0, ptr %vl, align 8
   %1 = load i64, ptr %vl, align 8
-  %2 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* %input, i64 %1)
-  store <vscale x 16 x i32> %2, <vscale x 16 x i32>* %v0, align 4
+  %2 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, ptr %input, i64 %1)
+  store <vscale x 16 x i32> %2, ptr %v0, align 4
   store i32 1, ptr %x0, align 4
   store i32 1, ptr %x1, align 4
   store i32 1, ptr %x2, align 4
@@ -170,7 +170,7 @@ entry:
   store i32 1, ptr %x9, align 4
   %3 = load i32, ptr %x0, align 4
   %4 = load i32, ptr %x1, align 4
-  %5 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
+  %5 = load <vscale x 16 x i32>, ptr %v0, align 4
   %6 = load i32, ptr %x2, align 4
   %7 = load i32, ptr %x3, align 4
   %8 = load i32, ptr %x4, align 4
@@ -182,7 +182,7 @@ entry:
   call void @lots_args(i32 signext %3, i32 signext %4, <vscale x 16 x i32> %5, i32 signext %6, i32 signext %7, i32 signext %8, i32 signext %9, i32 signext %10, i32 %11, i32 %12, i32 %13)
   %14 = load i32, ptr %x0, align 4
   %15 = load i32, ptr %x1, align 4
-  %16 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
+  %16 = load <vscale x 16 x i32>, ptr %v0, align 4
   %17 = load i32, ptr %x2, align 4
   %18 = load i32, ptr %x3, align 4
   %19 = load i32, ptr %x4, align 4
@@ -199,6 +199,6 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
 
-declare <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>, <vscale x 16 x i32>* nocapture, i64)
+declare <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>, ptr nocapture, i64)
 
 attributes #0 = { noinline nounwind optnone "frame-pointer"="all" }

@@ -1,5 +1,5 @@
-# Make sure inlining from a unit with debug info into unit without
-# debug info does not cause a crash.
+## Make sure inlining from a unit with debug info into unit without
+## debug info does not cause a crash.
 
 RUN: %clangxx %cxxflags %S/Inputs/inlined.cpp -c -o %T/inlined.o
 RUN: %clangxx %cxxflags %S/Inputs/inlinee.cpp -c -o %T/inlinee.o -g

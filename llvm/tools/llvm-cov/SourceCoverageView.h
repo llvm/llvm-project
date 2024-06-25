@@ -262,8 +262,7 @@ protected:
   virtual void renderTitle(raw_ostream &OS, StringRef CellText) = 0;
 
   /// Render the table header for a given source file.
-  virtual void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
-                                 unsigned IndentLevel) = 0;
+  virtual void renderTableHeader(raw_ostream &OS, unsigned IndentLevel) = 0;
 
   /// @}
 

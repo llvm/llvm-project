@@ -502,3 +502,100 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
         FailedWithMessage("ESD record 1 has unknown Executable type 0x03"));
   }
 }
+
+TEST(GOFFObjectFileTest, TXTConstruct) {
+  char GOFFData[GOFF::RecordLength * 6] = {};
+
+  // HDR record.
+  GOFFData[0] = 0x03;
+  GOFFData[1] = 0xF0;
+  GOFFData[50] = 0x01;
+
+  // ESD record.
+  GOFFData[GOFF::RecordLength] = 0x03;
+  GOFFData[GOFF::RecordLength + 7] = 0x01;  // ESDID.
+  GOFFData[GOFF::RecordLength + 71] = 0x05; // Size of symbol name.
+  GOFFData[GOFF::RecordLength + 72] = 0xa5; // Symbol name is v.
+  GOFFData[GOFF::RecordLength + 73] = 0x81; // Symbol name is a.
+  GOFFData[GOFF::RecordLength + 74] = 0x99; // Symbol name is r.
+  GOFFData[GOFF::RecordLength + 75] = 0x7b; // Symbol name is #.
+  GOFFData[GOFF::RecordLength + 76] = 0x83; // Symbol name is c.
+
+  // ESD record.
+  GOFFData[GOFF::RecordLength * 2] = 0x03;
+  GOFFData[GOFF::RecordLength * 2 + 3] = 0x01;
+  GOFFData[GOFF::RecordLength * 2 + 7] = 0x02;  // ESDID.
+  GOFFData[GOFF::RecordLength * 2 + 11] = 0x01; // Parent ESDID.
+  GOFFData[GOFF::RecordLength * 2 + 27] = 0x08; // Length.
+  GOFFData[GOFF::RecordLength * 2 + 40] = 0x01; // Name Space ID.
+  GOFFData[GOFF::RecordLength * 2 + 41] = 0x80;
+  GOFFData[GOFF::RecordLength * 2 + 60] = 0x04; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 61] = 0x04; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 63] = 0x0a; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 66] = 0x03; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 71] = 0x08; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 72] = 0xc3; // Symbol name is c.
+  GOFFData[GOFF::RecordLength * 2 + 73] = 0x6d; // Symbol name is _.
+  GOFFData[GOFF::RecordLength * 2 + 74] = 0xc3; // Symbol name is c.
+  GOFFData[GOFF::RecordLength * 2 + 75] = 0xd6; // Symbol name is o.
+  GOFFData[GOFF::RecordLength * 2 + 76] = 0xc4; // Symbol name is D.
+  GOFFData[GOFF::RecordLength * 2 + 77] = 0xc5; // Symbol name is E.
+  GOFFData[GOFF::RecordLength * 2 + 78] = 0xf6; // Symbol name is 6.
+  GOFFData[GOFF::RecordLength * 2 + 79] = 0xf4; // Symbol name is 4.
+
+  // ESD record.
+  GOFFData[GOFF::RecordLength * 3] = 0x03;
+  GOFFData[GOFF::RecordLength * 3 + 3] = 0x02;
+  GOFFData[GOFF::RecordLength * 3 + 7] = 0x03;  // ESDID.
+  GOFFData[GOFF::RecordLength * 3 + 11] = 0x02; // Parent ESDID.
+  GOFFData[GOFF::RecordLength * 3 + 71] = 0x05; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 3 + 72] = 0xa5; // Symbol name is v.
+  GOFFData[GOFF::RecordLength * 3 + 73] = 0x81; // Symbol name is a.
+  GOFFData[GOFF::RecordLength * 3 + 74] = 0x99; // Symbol name is r.
+  GOFFData[GOFF::RecordLength * 3 + 75] = 0x7b; // Symbol name is #.
+  GOFFData[GOFF::RecordLength * 3 + 76] = 0x83; // Symbol name is c.
+
+  // TXT record.
+  GOFFData[GOFF::RecordLength * 4] = 0x03;
+  GOFFData[GOFF::RecordLength * 4 + 1] = 0x10;
+  GOFFData[GOFF::RecordLength * 4 + 7] = 0x02;
+  GOFFData[GOFF::RecordLength * 4 + 23] = 0x08; // Data Length.
+  GOFFData[GOFF::RecordLength * 4 + 24] = 0x12;
+  GOFFData[GOFF::RecordLength * 4 + 25] = 0x34;
+  GOFFData[GOFF::RecordLength * 4 + 26] = 0x56;
+  GOFFData[GOFF::RecordLength * 4 + 27] = 0x78;
+  GOFFData[GOFF::RecordLength * 4 + 28] = 0x9a;
+  GOFFData[GOFF::RecordLength * 4 + 29] = 0xbc;
+  GOFFData[GOFF::RecordLength * 4 + 30] = 0xde;
+  GOFFData[GOFF::RecordLength * 4 + 31] = 0xf0;
+
+  // END record.
+  GOFFData[GOFF::RecordLength * 5] = 0x03;
+  GOFFData[GOFF::RecordLength * 5 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 5 + 11] = 0x06;
+
+  StringRef Data(GOFFData, GOFF::RecordLength * 6);
+
+  Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
+      object::ObjectFile::createGOFFObjectFile(
+          MemoryBufferRef(Data, "dummyGOFF"));
+
+  ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
+
+  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  auto Symbols = GOFFObj->symbols();
+  ASSERT_EQ(std::distance(Symbols.begin(), Symbols.end()), 1);
+  SymbolRef Symbol = *Symbols.begin();
+  Expected<StringRef> SymbolNameOrErr = GOFFObj->getSymbolName(Symbol);
+  ASSERT_THAT_EXPECTED(SymbolNameOrErr, Succeeded());
+  StringRef SymbolName = SymbolNameOrErr.get();
+  EXPECT_EQ(SymbolName, "var#c");
+
+  auto Sections = GOFFObj->sections();
+  ASSERT_EQ(std::distance(Sections.begin(), Sections.end()), 1);
+  SectionRef Section = *Sections.begin();
+  Expected<StringRef> SectionContent = Section.getContents();
+  ASSERT_THAT_EXPECTED(SectionContent, Succeeded());
+  StringRef Contents = SectionContent.get();
+  EXPECT_EQ(Contents, "\x12\x34\x56\x78\x9a\xbc\xde\xf0");
+}

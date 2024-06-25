@@ -13,5 +13,3 @@ add_llvm_unittest_with_input_files(DebugInfoPDBTests
   )
 
 target_link_libraries(DebugInfoPDBTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET DebugInfoPDBTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

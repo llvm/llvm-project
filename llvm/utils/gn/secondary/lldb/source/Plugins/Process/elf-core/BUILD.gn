@@ -21,6 +21,7 @@ static_library("elf-core") {
     "RegisterContextPOSIXCore_mips64.cpp",
     "RegisterContextPOSIXCore_powerpc.cpp",
     "RegisterContextPOSIXCore_ppc64le.cpp",
+    "RegisterContextPOSIXCore_riscv64.cpp",
     "RegisterContextPOSIXCore_s390x.cpp",
     "RegisterContextPOSIXCore_x86_64.cpp",
     "RegisterUtilities.cpp",

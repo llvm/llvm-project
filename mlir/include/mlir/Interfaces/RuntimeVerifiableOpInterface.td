@@ -35,6 +35,12 @@ def RuntimeVerifiableOpInterface : OpInterface<"RuntimeVerifiableOpInterface"> {
                     "::mlir::Location":$loc)
     >,
   ];
+
+  let extraClassDeclaration = [{
+    /// Generate the error message that will be printed to the user when 
+    /// verification fails.
+    static std::string generateErrorMessage(Operation *op, const std::string &msg);
+  }];
 }
 
 #endif // MLIR_INTERFACES_RUNTIMEVERIFIABLEOPINTERFACE

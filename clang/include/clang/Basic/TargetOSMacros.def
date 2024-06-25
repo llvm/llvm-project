@@ -34,18 +34,19 @@ TARGET_OS(TARGET_OS_UNIX, Triple.isOSNetBSD() ||
 TARGET_OS(TARGET_OS_MAC, Triple.isOSDarwin())
 TARGET_OS(TARGET_OS_OSX, Triple.isMacOSX())
 TARGET_OS(TARGET_OS_IPHONE, Triple.isiOS() || Triple.isTvOS() ||
-                            Triple.isWatchOS())
+                            Triple.isWatchOS() || Triple.isXROS())
 // Triple::isiOS() also includes tvOS
 TARGET_OS(TARGET_OS_IOS, Triple.getOS() == llvm::Triple::IOS)
 TARGET_OS(TARGET_OS_TV, Triple.isTvOS())
 TARGET_OS(TARGET_OS_WATCH, Triple.isWatchOS())
+TARGET_OS(TARGET_OS_VISION, Triple.isXROS())
 TARGET_OS(TARGET_OS_DRIVERKIT, Triple.isDriverKit())
 TARGET_OS(TARGET_OS_MACCATALYST, Triple.isMacCatalystEnvironment())
 TARGET_OS(TARGET_OS_SIMULATOR, Triple.isSimulatorEnvironment())
 
 // Deprecated Apple target conditionals.
 TARGET_OS(TARGET_OS_EMBEDDED, (Triple.isiOS() || Triple.isTvOS() \
-                               || Triple.isWatchOS()) \
+                               || Triple.isWatchOS() || Triple.isXROS()) \
                                && !Triple.isMacCatalystEnvironment() \
                                && !Triple.isSimulatorEnvironment())
 TARGET_OS(TARGET_OS_NANO, Triple.isWatchOS())

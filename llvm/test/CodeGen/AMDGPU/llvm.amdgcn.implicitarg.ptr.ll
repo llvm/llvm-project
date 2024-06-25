@@ -1,3 +1,4 @@
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,HSA,COV5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,HSA,COV5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,HSA,COV4 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs | FileCheck -check-prefixes=GCN,MESA %s
@@ -315,4 +316,4 @@ attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

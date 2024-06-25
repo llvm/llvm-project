@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops \
-; RUN: -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' \
+; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
 
 ;   subroutine init_array(ni, nj, pi, pj, a)
 ;   implicit none

@@ -199,7 +199,7 @@ index::createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
 }
 
 static bool topLevelDeclVisitor(void *context, const Decl *D) {
-  IndexingContext &IndexCtx = *static_cast<IndexingContext*>(context);
+  IndexingContext &IndexCtx = *static_cast<IndexingContext *>(context);
   return IndexCtx.indexTopLevelDecl(D);
 }
 

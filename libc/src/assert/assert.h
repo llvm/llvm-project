@@ -1,3 +1,4 @@
+// NOLINT(llvm-header-guard) https://github.com/llvm/llvm-project/issues/83339
 //===-- Internal header for assert ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -21,4 +22,4 @@
   ((e) ? (void)0                                                               \
        : LIBC_NAMESPACE::__assert_fail(#e, __FILE__, __LINE__,                 \
                                        __PRETTY_FUNCTION__))
-#endif
+#endif // NDEBUG

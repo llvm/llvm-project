@@ -30,8 +30,8 @@
 ; NB: instruction referencing and DBG_VALUE modes produce debug insts in a
 ; different order.
 ;
-; CHECK:         ![[S4:.*]] = !DILocalVariable(name: "s4", 
-; CHECK:         ![[MYVAR:.*]] = !DILocalVariable(name: "myVar", 
+; CHECK:         ![[S4:.*]] = !DILocalVariable(name: "s4",
+; CHECK:         ![[MYVAR:.*]] = !DILocalVariable(name: "myVar",
 ; CHECK:         $rax = MOV64rm
 ; INSTRREF-SAME: debug-instr-number 2,
 ; INSTRREF-NEXT: DBG_INSTR_REF ![[S4]],

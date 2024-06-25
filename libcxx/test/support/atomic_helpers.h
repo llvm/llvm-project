@@ -116,13 +116,11 @@ template <template <class TestArg> class TestFunctor>
 struct TestEachAtomicType {
   void operator()() const {
     TestEachIntegralType<TestFunctor>()();
+    TestEachPointerType<TestFunctor>()();
     TestFunctor<UserAtomicType>()();
     /*
             Note: These aren't going to be lock-free,
-            so some libatomic.a is necessary. To handle
-            the case where the support functions are
-            missing, all tests that use this file should add:
-            XFAIL: !non-lockfree-atomics
+            so some libatomic.a is necessary.
         */
     TestFunctor<LargeUserAtomicType>()();
     /*
@@ -131,8 +129,6 @@ struct TestEachAtomicType {
         TestFunctor<PaddedUserAtomicType>()();
         TestFunctor<WeirdUserAtomicType>()();
 */
-    TestFunctor<int*>()();
-    TestFunctor<const int*>()();
     TestFunctor<float>()();
     TestFunctor<double>()();
   }

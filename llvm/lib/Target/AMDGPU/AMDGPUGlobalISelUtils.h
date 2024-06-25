@@ -26,8 +26,6 @@ std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           GISelKnownBits *KnownBits = nullptr,
                           bool CheckNUW = false);
-
-bool hasAtomicFaddRtnForTy(const GCNSubtarget &Subtarget, const LLT &Ty);
 }
 }
 

@@ -38,9 +38,9 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
-def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
-def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
 
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
@@ -229,6 +229,9 @@ def initial_memory: JJ<"initial-memory=">,
 
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
+
+def no_growable_memory: FF<"no-growable-memory">,
+  HelpText<"Set maximum size of the linear memory to its initial size">;
 
 def no_entry: FF<"no-entry">,
   HelpText<"Do not output any entry point">;

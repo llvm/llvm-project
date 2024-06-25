@@ -2,7 +2,7 @@
 
 template<typename T>
 struct test {
-  template<typename> using fun_diff = char; // expected-note 2{{class template declared here}}
+  template<typename> using fun_diff = char; // expected-note 2{{type alias template declared here}}
 };
 
 template<typename T, typename V>

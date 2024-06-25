@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-delicm -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-delicm -disable-output -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s -check-prefix=REMARKS
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-delicm>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-delicm' -polly-import-jscop-postfix=transformed -disable-output -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s -check-prefix=REMARKS
 ;
 ; ForwardOptree changes the SCoP and may already map some accesses.
 ; DeLICM must be prepared to encounter implicit reads

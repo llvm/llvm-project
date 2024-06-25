@@ -28,8 +28,8 @@ TEST(StatisticsTest, StdDev) {
 TEST(StatisticsTest, CV) {
   EXPECT_DOUBLE_EQ(benchmark::StatisticsCV({101, 101, 101, 101}), 0.0);
   EXPECT_DOUBLE_EQ(benchmark::StatisticsCV({1, 2, 3}), 1. / 2.);
-  EXPECT_DOUBLE_EQ(benchmark::StatisticsCV({2.5, 2.4, 3.3, 4.2, 5.1}),
-                   0.32888184094918121);
+  ASSERT_NEAR(benchmark::StatisticsCV({2.5, 2.4, 3.3, 4.2, 5.1}),
+              0.32888184094918121, 1e-15);
 }
 
 }  // end namespace

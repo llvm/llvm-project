@@ -12,3 +12,7 @@ test.array_of_attr_op
 // CHECK: test.array_of_attr_op
 // CHECK-SAME: a = [], b = [], c = []
 test.array_of_attr_op a = [], b = [], c = []
+
+// CHECK: "test.test_array_float"
+// CHECK-SAME: 1.000000e+00 : f32, 1.000000e+00, 0x7FF0000000000000 : f64
+"test.test_array_float"() {test.float_arr = [1.0 : f32, 1.0 : f64, 0x7FF0000000000000 : f64]} : () -> ()

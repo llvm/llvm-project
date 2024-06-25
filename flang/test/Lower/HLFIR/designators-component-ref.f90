@@ -1,5 +1,5 @@
 ! Test lowering of component reference to HLFIR
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 module comp_ref
 type t1
   integer :: scalar_i
@@ -340,7 +340,7 @@ subroutine test_scalar_array_complex_chain(a)
   type(t_complex) :: a
   print *, a%array_comp%im
 ! CHECK-LABEL:   func.func @_QPtest_scalar_array_complex_chain(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest_scalar_array_complex_chainEa"} : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>) -> (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_scalar_array_complex_chainEa"} : (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>, !fir.ref<!fir.type<_QMcomp_refTt_complex{array_comp:!fir.array<10x20x!fir.complex<4>>}>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 20 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 2 : index
@@ -379,13 +379,13 @@ end subroutine test_poly_array_vector_subscript
 ! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>> {fir.bindc_name = "p"},
 ! CHECK-SAME:      %[[VAL_1:.*]]: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "v"},
 ! CHECK-SAME:      %[[VAL_2:.*]]: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "r"}) {
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_poly_array_vector_subscriptEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_poly_array_vector_subscriptEp"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>, !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_5]]) {uniq_name = "_QFtest_poly_array_vector_subscriptEr"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_5]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_poly_array_vector_subscriptEr"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_8]]) {uniq_name = "_QFtest_poly_array_vector_subscriptEv"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFtest_poly_array_vector_subscriptEv"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<3xi32>>, !fir.ref<!fir.array<3xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMcomp_refTt1{scalar_i:i32,scalar_x:f32}>>>>>
 ! CHECK:           %[[VAL_11:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xi64> {
 ! CHECK:           ^bb0(%[[VAL_12:.*]]: index):

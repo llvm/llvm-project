@@ -390,7 +390,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-NEXT:    s_add_u32 s16, s16, s3
 ; GCN-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x40b00000
-; GCN-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:4
+; GCN-NEXT:    buffer_store_dword v0, off, s[16:19], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_brev_b32 s0, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -401,7 +401,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-NEXT:    v_mov_b32_e32 v1, s13
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v2, off, s[16:19], 0 offset:4
+; GCN-NEXT:    buffer_load_dword v2, off, s[16:19], 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    image_sample v0, v[0:1], s[4:11], s[0:3] dmask:0x1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -421,11 +421,11 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v0, 0x40b00000
 ; GCN-SCRATCH-NEXT:    s_brev_b32 s8, 1
 ; GCN-SCRATCH-NEXT:    s_mov_b32 s9, s8
-; GCN-SCRATCH-NEXT:    scratch_store_dword off, v0, off offset:4
+; GCN-SCRATCH-NEXT:    scratch_store_dword off, v0, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    ;;#ASMSTART
 ; GCN-SCRATCH-NEXT:    ;;#ASMEND
-; GCN-SCRATCH-NEXT:    scratch_load_dword v2, off, off offset:4
+; GCN-SCRATCH-NEXT:    scratch_load_dword v2, off, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v1, s11
@@ -460,15 +460,15 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
 ; GCN-NEXT:    s_add_u32 s4, s4, s3
 ; GCN-NEXT:    s_addc_u32 s5, s5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x40b00000
-; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x40d00000
-; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:8
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:4
-; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:8
+; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; GCN-NEXT:    buffer_load_dword v1, off, s[4:7], 0 offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GCN-NEXT:    exp mrt0 v0, off, off, off done vm
@@ -482,15 +482,15 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
 ; GCN-SCRATCH-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v0, 0x40b00000
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v1, 0x40d00000
-; GCN-SCRATCH-NEXT:    scratch_store_dword off, v0, off offset:4
+; GCN-SCRATCH-NEXT:    scratch_store_dword off, v0, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-SCRATCH-NEXT:    scratch_store_dword off, v1, off offset:8
+; GCN-SCRATCH-NEXT:    scratch_store_dword off, v1, off offset:4
 ; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    ;;#ASMSTART
 ; GCN-SCRATCH-NEXT:    ;;#ASMEND
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
-; GCN-SCRATCH-NEXT:    scratch_load_dword v0, off, off offset:4
-; GCN-SCRATCH-NEXT:    scratch_load_dword v1, off, off offset:8
+; GCN-SCRATCH-NEXT:    scratch_load_dword v0, off, off
+; GCN-SCRATCH-NEXT:    scratch_load_dword v1, off, off offset:4
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GCN-SCRATCH-NEXT:    exp mrt0 v0, off, off, off done vm

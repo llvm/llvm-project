@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
 
 // Wait flags
 #define WNOHANG 1    // Do not block
@@ -41,4 +41,4 @@
 #define P_PGID 2
 #define P_PIDFD 3
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H

@@ -66,7 +66,7 @@ body:             |
     ; REAL16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; REAL16-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; REAL16-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; REAL16-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[V_CVT_F32_U32_e64_]].lo16, 0, 0, implicit $mode, implicit $exec
+    ; REAL16-NEXT: [[V_CEIL_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_CEIL_F16_t16_e64 0, [[V_CVT_F32_U32_e64_]].lo16, 0, 0, 0, implicit $mode, implicit $exec
     ;
     ; FAKE16-LABEL: name: ceil_f16
     ; FAKE16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -87,7 +87,7 @@ body:             |
     ; REAL16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; REAL16-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; REAL16-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; REAL16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[V_CVT_F32_U32_e64_]].lo16, 0, 0, implicit $mode, implicit $exec
+    ; REAL16-NEXT: [[V_FLOOR_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_FLOOR_F16_t16_e64 0, [[V_CVT_F32_U32_e64_]].lo16, 0, 0, 0, implicit $mode, implicit $exec
     ;
     ; FAKE16-LABEL: name: floor_f16
     ; FAKE16: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF

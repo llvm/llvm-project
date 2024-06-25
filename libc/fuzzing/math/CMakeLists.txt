@@ -8,6 +8,7 @@ add_libc_fuzzer(
     SingleInputSingleOutputDiff.h
     TwoInputSingleOutputDiff.h
   DEPENDS
+    libc.hdr.math_macros
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill

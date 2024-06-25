@@ -20,10 +20,10 @@
   }
 
   ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
   ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
   ; Function Attrs: nounwind
   define dso_local i32 @main() local_unnamed_addr #2 {
@@ -31,16 +31,16 @@
     %a = alloca i32, align 4
     %b = alloca i32, align 4
     %c = alloca i32, align 4
-    %a.0.a.0.a.0.a.0..sroa_cast = bitcast i32* %a to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %a.0.a.0.a.0.a.0..sroa_cast)
-    store volatile i32 -16777235, i32* %a, align 4, !tbaa !3
-    %b.0.b.0.b.0.b.0..sroa_cast = bitcast i32* %b to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %b.0.b.0.b.0.b.0..sroa_cast)
-    store volatile i32 34, i32* %b, align 4, !tbaa !3
-    %c.0.c.0.c.0.c.0..sroa_cast = bitcast i32* %c to i8*
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %c.0.c.0.c.0.c.0..sroa_cast)
-    store volatile i32 34, i32* %c, align 4, !tbaa !3
-    %b.0.b.0.b.0.b.0.29 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %a.0.a.0.a.0.a.0..sroa_cast = bitcast ptr %a to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a.0.a.0.a.0.a.0..sroa_cast)
+    store volatile i32 -16777235, ptr %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0..sroa_cast = bitcast ptr %b to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b.0.b.0.b.0.b.0..sroa_cast)
+    store volatile i32 34, ptr %b, align 4, !tbaa !3
+    %c.0.c.0.c.0.c.0..sroa_cast = bitcast ptr %c to ptr
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %c.0.c.0.c.0.c.0..sroa_cast)
+    store volatile i32 34, ptr %c, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.29 = load volatile i32, ptr %b, align 4, !tbaa !3
     %cmp30 = icmp sgt i32 %b.0.b.0.b.0.b.0.29, 0
     br i1 %cmp30, label %for.body, label %if.end
 
@@ -52,44 +52,44 @@
 
   for.body:                                         ; preds = %entry, %for.body
     %i.031 = phi i32 [ %inc4, %for.body ], [ 0, %entry ]
-    %c.0.c.0.c.0.c.0. = load volatile i32, i32* %c, align 4, !tbaa !3
+    %c.0.c.0.c.0.c.0. = load volatile i32, ptr %c, align 4, !tbaa !3
     %inc = add nsw i32 %c.0.c.0.c.0.c.0., 1
-    store volatile i32 %inc, i32* %c, align 4, !tbaa !3
+    store volatile i32 %inc, ptr %c, align 4, !tbaa !3
     %call = tail call i32 @feclearexcept(i32 31) #5
-    %a.0.a.0.a.0.a.0. = load volatile i32, i32* %a, align 4, !tbaa !3
+    %a.0.a.0.a.0.a.0. = load volatile i32, ptr %a, align 4, !tbaa !3
     %call2 = tail call i32 @fetestexcept(i32 31) #5
-    %call3 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %call2) #5
+    %call3 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i32 %call2) #5
     %inc4 = add nuw nsw i32 %i.031, 1
-    %b.0.b.0.b.0.b.0. = load volatile i32, i32* %b, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0. = load volatile i32, ptr %b, align 4, !tbaa !3
     %cmp = icmp slt i32 %inc4, %b.0.b.0.b.0.b.0.
     br i1 %cmp, label %for.body, label %for.cond.for.cond.cleanup_crit_edge, !llvm.loop !7
 
   if.then:                                          ; preds = %for.cond.for.cond.cleanup_crit_edge
-    %a.0.a.0.a.0.a.0.23 = load volatile i32, i32* %a, align 4, !tbaa !3
-    %b.0.b.0.b.0.b.0.20 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %a.0.a.0.a.0.a.0.23 = load volatile i32, ptr %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.20 = load volatile i32, ptr %b, align 4, !tbaa !3
     %add = add nsw i32 %b.0.b.0.b.0.b.0.20, %a.0.a.0.a.0.a.0.23
-    %c.0.c.0.c.0.c.0.17 = load volatile i32, i32* %c, align 4, !tbaa !3
+    %c.0.c.0.c.0.c.0.17 = load volatile i32, ptr %c, align 4, !tbaa !3
     %add7 = add nsw i32 %add, %c.0.c.0.c.0.c.0.17
     br label %cleanup
 
   if.end:                                           ; preds = %entry, %for.cond.for.cond.cleanup_crit_edge
-    %a.0.a.0.a.0.a.0.24 = load volatile i32, i32* %a, align 4, !tbaa !3
-    %b.0.b.0.b.0.b.0.21 = load volatile i32, i32* %b, align 4, !tbaa !3
+    %a.0.a.0.a.0.a.0.24 = load volatile i32, ptr %a, align 4, !tbaa !3
+    %b.0.b.0.b.0.b.0.21 = load volatile i32, ptr %b, align 4, !tbaa !3
     %mul.neg = mul i32 %b.0.b.0.b.0.b.0.21, -6
     %sub = add i32 %mul.neg, %a.0.a.0.a.0.a.0.24
-    %c.0.c.0.c.0.c.0.18 = load volatile i32, i32* %c, align 4, !tbaa !3
+    %c.0.c.0.c.0.c.0.18 = load volatile i32, ptr %c, align 4, !tbaa !3
     %mul8 = mul nsw i32 %c.0.c.0.c.0.c.0.18, 3
     %add9 = add nsw i32 %sub, %mul8
     br label %cleanup
 
   cleanup:                                          ; preds = %if.end, %if.then
     %retval.0 = phi i32 [ %add7, %if.then ], [ %add9, %if.end ]
-    %1 = bitcast i32* %c to i8*
-    %2 = bitcast i32* %b to i8*
-    %3 = bitcast i32* %a to i8*
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1)
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %3)
+    %1 = bitcast ptr %c to ptr
+    %2 = bitcast ptr %b to ptr
+    %3 = bitcast ptr %a to ptr
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %1)
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2)
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %3)
     ret i32 %retval.0
   }
 
@@ -98,7 +98,7 @@
   declare dso_local i32 @fetestexcept(i32) local_unnamed_addr #3
 
   ; Function Attrs: nofree nounwind
-  declare dso_local noundef i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr #4
+  declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #4
 
   attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
   attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

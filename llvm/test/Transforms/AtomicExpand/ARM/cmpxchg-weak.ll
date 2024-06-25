@@ -1,4 +1,4 @@
-; RUN: opt -atomic-expand -codegen-opt-level=1 -S -mtriple=thumbv7s-apple-ios7.0 %s | FileCheck %s
+; RUN: opt -passes=atomic-expand -codegen-opt-level=1 -S -mtriple=thumbv7s-apple-ios7.0 %s | FileCheck %s
 
 define i32 @test_cmpxchg_seq_cst(ptr %addr, i32 %desired, i32 %new) {
 ; CHECK-LABEL: @test_cmpxchg_seq_cst

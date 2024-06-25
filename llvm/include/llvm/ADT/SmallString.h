@@ -89,7 +89,7 @@ public:
 
   /// Check for string equality.  This is more efficient than compare() when
   /// the relative ordering of inequal strings isn't needed.
-  [[nodiscard]] bool equals(StringRef RHS) const { return str().equals(RHS); }
+  [[nodiscard]] bool equals(StringRef RHS) const { return str() == RHS; }
 
   /// Check for string equality, ignoring case.
   [[nodiscard]] bool equals_insensitive(StringRef RHS) const {

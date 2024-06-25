@@ -246,6 +246,13 @@ depending on the situation.
 
     -   An argument materialization is used when converting the type of a block
         argument during a [signature conversion](#region-signature-conversion).
+        The new block argument types are specified in a `SignatureConversion`
+        object. An original block argument can be converted into multiple
+        block arguments, which is not supported everywhere in the dialect
+        conversion. (E.g., adaptors support only a single replacement value for
+        each original value.) Therefore, an argument materialization is used to
+        convert potentially multiple new block arguments back into a single SSA
+        value.
 
 *   Source Materialization
 
@@ -259,6 +266,9 @@ depending on the situation.
         *   When a block argument has been converted to a different type, but
             the original argument still has users that will remain live after
             the conversion process has finished.
+        *   When a block argument has been dropped, but the argument still has
+            users that will remain live after the conversion process has
+            finished.
         *   When the result type of an operation has been converted to a
             different type, but the original result still has users that will
             remain live after the conversion process is finished.
@@ -328,19 +338,22 @@ class TypeConverter {
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
-  /// Register a materialization function, which must be convertible to the
-  /// following form:
-  ///   `Optional<Value> (OpBuilder &, T, ValueRange, Location)`,
-  ///   where `T` is any subclass of `Type`.
-  /// This function is responsible for creating an operation, using the
-  /// OpBuilder and Location provided, that "converts" a range of values into a
-  /// single value of the given type `T`. It must return a Value of the
-  /// converted type on success, an `std::nullopt` if it failed but other
-  /// materialization can be attempted, and `nullptr` on unrecoverable failure.
-  /// It will only be called for (sub)types of `T`.
-  ///
+  /// All of the following materializations require function objects that are
+  /// convertible to the following form:
+  ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
+  /// where `T` is any subclass of `Type`. This function is responsible for
+  /// creating an operation, using the OpBuilder and Location provided, that
+  /// "casts" a range of values into a single value of the given type `T`. It
+  /// must return a Value of the converted type on success, an `std::nullopt` if
+  /// it failed but other materialization can be attempted, and `nullptr` on
+  /// unrecoverable failure. It will only be called for (sub)types of `T`.
+  /// Materialization functions must be provided when a type conversion may
+  /// persist after the conversion has finished.
+
   /// This method registers a materialization that will be called when
-  /// converting an illegal block argument type, to a legal type.
+  /// converting (potentially multiple) block arguments that were the result of
+  /// a signature conversion of a single block argument, to a single SSA value
+  /// of a legal type.
   template <typename FnT,
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
@@ -348,8 +361,9 @@ class TypeConverter {
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
-  /// converting a legal type to an illegal source type. This is used when
-  /// conversions to an illegal type must persist beyond the main conversion.
+  /// converting a legal replacement value back to an illegal source type.
+  /// This is used when some uses of the original, illegal value must persist
+  /// beyond the main conversion.
   template <typename FnT,
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
@@ -357,7 +371,7 @@ class TypeConverter {
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
-  /// converting type from an illegal, or source, type to a legal type.
+  /// converting an illegal (source) value to a legal (target) type.
   template <typename FnT,
             typename T = typename llvm::function_traits<FnT>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {
@@ -372,19 +386,23 @@ class TypeConverter {
 From the perspective of type conversion, the types of block arguments are a bit
 special. Throughout the conversion process, blocks may move between regions of
 different operations. Given this, the conversion of the types for blocks must be
-done explicitly via a conversion pattern. To convert the types of block
-arguments within a Region, a custom hook on the `ConversionPatternRewriter` must
-be invoked; `convertRegionTypes`. This hook uses a provided type converter to
-apply type conversions to all blocks within a given region, and all blocks that
-move into that region. As noted above, the conversions performed by this method
-use the argument materialization hook on the `TypeConverter`. This hook also
-takes an optional `TypeConverter::SignatureConversion` parameter that applies a
-custom conversion to the entry block of the region. The types of the entry block
-arguments are often tied semantically to details on the operation, e.g. func::FuncOp,
-AffineForOp, etc. To convert the signature of just the region entry block, and
-not any other blocks within the region, the `applySignatureConversion` hook may
-be used instead. A signature conversion, `TypeConverter::SignatureConversion`,
-can be built programmatically:
+done explicitly via a conversion pattern. 
+
+To convert the types of block arguments within a Region, a custom hook on the
+`ConversionPatternRewriter` must be invoked; `convertRegionTypes`. This hook
+uses a provided type converter to apply type conversions to all blocks of a
+given region. As noted above, the conversions performed by this method use the
+argument materialization hook on the `TypeConverter`. This hook also takes an
+optional `TypeConverter::SignatureConversion` parameter that applies a custom
+conversion to the entry block of the region. The types of the entry block
+arguments are often tied semantically to the operation, e.g.,
+`func::FuncOp`, `AffineForOp`, etc.
+
+To convert the signature of just one given block, the
+`applySignatureConversion` hook can be used.
+
+A signature conversion, `TypeConverter::SignatureConversion`, can be built
+programmatically:
 
 ```c++
 class SignatureConversion {

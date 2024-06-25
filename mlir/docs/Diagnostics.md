@@ -119,6 +119,14 @@ op->emitError() << anotherOp;
 op->emitRemark() << anotherOp;
 ```
 
+To make a custom type compatible with Diagnostics, one must implement the
+following friend function.
+
+```c++
+friend mlir::Diagnostic &operator<<(
+    mlir::Diagnostic &diagnostic, const MyType &foo);
+```
+
 ### Attaching notes
 
 Unlike many other compiler frameworks, notes in MLIR cannot be emitted directly.

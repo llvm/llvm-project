@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -analyze \
+// RUN: %clang_cc1 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection %s -verify
 
 // These test cases demonstrate lack of Static Analyzer features.

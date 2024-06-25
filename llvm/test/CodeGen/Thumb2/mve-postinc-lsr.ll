@@ -4,7 +4,7 @@
 ; Check some LSR loop postinc
 
 ; fma loop with a destination that is the same as one of the sources
-define void @fma(float* noalias nocapture readonly %A, float* noalias nocapture readonly %B, float* noalias nocapture %C, i32 %n) {
+define void @fma(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %n) {
 ; CHECK-LABEL: fma:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
@@ -70,19 +70,19 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds float, float* %A, i32 %index
-  %1 = bitcast float* %0 to <4 x float>*
-  %wide.load = load <4 x float>, <4 x float>* %1, align 4
-  %2 = getelementptr inbounds float, float* %B, i32 %index
-  %3 = bitcast float* %2 to <4 x float>*
-  %wide.load10 = load <4 x float>, <4 x float>* %3, align 4
+  %0 = getelementptr inbounds float, ptr %A, i32 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <4 x float>, ptr %1, align 4
+  %2 = getelementptr inbounds float, ptr %B, i32 %index
+  %3 = bitcast ptr %2 to ptr
+  %wide.load10 = load <4 x float>, ptr %3, align 4
   %4 = fmul fast <4 x float> %wide.load10, %wide.load
-  %5 = getelementptr inbounds float, float* %C, i32 %index
-  %6 = bitcast float* %5 to <4 x float>*
-  %wide.load11 = load <4 x float>, <4 x float>* %6, align 4
+  %5 = getelementptr inbounds float, ptr %C, i32 %index
+  %6 = bitcast ptr %5 to ptr
+  %wide.load11 = load <4 x float>, ptr %6, align 4
   %7 = fadd fast <4 x float> %wide.load11, %4
-  %8 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %7, <4 x float>* %8, align 4
+  %8 = bitcast ptr %5 to ptr
+  store <4 x float> %7, ptr %8, align 4
   %index.next = add i32 %index, 4
   %9 = icmp eq i32 %index.next, %n.vec
   br i1 %9, label %middle.block, label %vector.body
@@ -96,15 +96,15 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 
 for.body:                                         ; preds = %for.body.preheader12, %for.body
   %i.09 = phi i32 [ %inc, %for.body ], [ %i.09.ph, %for.body.preheader12 ]
-  %arrayidx = getelementptr inbounds float, float* %A, i32 %i.09
-  %10 = load float, float* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %B, i32 %i.09
-  %11 = load float, float* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.09
+  %10 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.09
+  %11 = load float, ptr %arrayidx1, align 4
   %mul = fmul fast float %11, %10
-  %arrayidx2 = getelementptr inbounds float, float* %C, i32 %i.09
-  %12 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %C, i32 %i.09
+  %12 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %12, %mul
-  store float %add, float* %arrayidx2, align 4
+  store float %add, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -113,7 +113,7 @@ for.body:                                         ; preds = %for.body.preheader1
 
 ; Same as above but tail predicated
 ; FIXME: The postinc here is put on the load, not the store. An extra mov is needed in the loop because of it.
-define void @fma_tailpred(float* noalias nocapture readonly %A, float* noalias nocapture readonly %B, float* noalias nocapture %C, i32 %n) {
+define void @fma_tailpred(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %n) {
 ; CHECK-LABEL: fma_tailpred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -173,20 +173,20 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %induction = or <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-  %0 = getelementptr inbounds float, float* %A, i32 %index
+  %0 = getelementptr inbounds float, ptr %A, i32 %index
   %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %2 = bitcast float* %0 to <4 x float>*
-  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
-  %3 = getelementptr inbounds float, float* %B, i32 %index
-  %4 = bitcast float* %3 to <4 x float>*
-  %wide.masked.load12 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %4, i32 4, <4 x i1> %1, <4 x float> undef)
+  %2 = bitcast ptr %0 to ptr
+  %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %2, i32 4, <4 x i1> %1, <4 x float> undef)
+  %3 = getelementptr inbounds float, ptr %B, i32 %index
+  %4 = bitcast ptr %3 to ptr
+  %wide.masked.load12 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %4, i32 4, <4 x i1> %1, <4 x float> undef)
   %5 = fmul fast <4 x float> %wide.masked.load12, %wide.masked.load
-  %6 = getelementptr inbounds float, float* %C, i32 %index
-  %7 = bitcast float* %6 to <4 x float>*
-  %wide.masked.load13 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %7, i32 4, <4 x i1> %1, <4 x float> undef)
+  %6 = getelementptr inbounds float, ptr %C, i32 %index
+  %7 = bitcast ptr %6 to ptr
+  %wide.masked.load13 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %7, i32 4, <4 x i1> %1, <4 x float> undef)
   %8 = fadd fast <4 x float> %wide.masked.load13, %5
-  %9 = bitcast float* %6 to <4 x float>*
-  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %8, <4 x float>* %9, i32 4, <4 x i1> %1)
+  %9 = bitcast ptr %6 to ptr
+  call void @llvm.masked.store.v4f32.p0(<4 x float> %8, ptr %9, i32 4, <4 x i1> %1)
   %index.next = add i32 %index, 4
   %10 = icmp eq i32 %index.next, %n.vec
   br i1 %10, label %for.cond.cleanup, label %vector.body
@@ -197,7 +197,7 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 
 
 ; Multiple loads of the loop with a common base
-define i8* @test(i8* nocapture readonly %input_row, i8* nocapture readonly %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32 %col_offset, i16 signext %activation_min, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) {
+define ptr @test(ptr nocapture readonly %input_row, ptr nocapture readonly %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32 %col_offset, i16 signext %activation_min, i16 zeroext %row_len, ptr nocapture readonly %bias, ptr returned %out) {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -291,11 +291,11 @@ for.cond.preheader:                               ; preds = %entry
 
 for.body.lr.ph:                                   ; preds = %for.cond.preheader
   %conv5 = zext i16 %row_len to i32
-  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %add.ptr9 = getelementptr inbounds i8, ptr %input_col, i32 %conv5
   %mul11 = shl nuw nsw i32 %conv5, 1
-  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %add.ptr12 = getelementptr inbounds i8, ptr %input_col, i32 %mul11
   %mul14 = mul nuw nsw i32 %conv5, 3
-  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add.ptr15 = getelementptr inbounds i8, ptr %input_col, i32 %mul14
   %add = add nuw nsw i32 %conv5, 7
   %div = lshr i32 %add, 3
   %conv25 = trunc i32 %col_offset to i16
@@ -306,14 +306,14 @@ for.body.lr.ph:                                   ; preds = %for.cond.preheader
 for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
   %i_out_ch.0116 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
   %i_row_loop.0115 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
-  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0116
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %bias, i32 %i_out_ch.0116
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp2199 = icmp slt i32 %i_row_loop.0115, %div
   br i1 %cmp2199, label %for.body24.preheader, label %for.cond.cleanup23
 
 for.body24.preheader:                             ; preds = %for.body
   %mul = mul nuw nsw i32 %i_out_ch.0116, %conv5
-  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  %add.ptr = getelementptr inbounds i8, ptr %input_row, i32 %mul
   br label %for.body24
 
 for.cond.cleanup23:                               ; preds = %for.body24, %for.body
@@ -326,46 +326,46 @@ for.cond.cleanup23:                               ; preds = %for.body24, %for.bo
   %add32 = add nsw i32 %add31, %acc_2.0.lcssa
   %add33 = add nsw i32 %add32, %acc_3.0.lcssa
   %conv34 = trunc i32 %add33 to i8
-  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0116
-  store i8 %conv34, i8* %arrayidx35, align 1
+  %arrayidx35 = getelementptr inbounds i8, ptr %out, i32 %i_out_ch.0116
+  store i8 %conv34, ptr %arrayidx35, align 1
   %inc37 = add nuw nsw i32 %i_out_ch.0116, 1
   %exitcond120 = icmp eq i32 %inc37, %conv2
   br i1 %exitcond120, label %if.end, label %for.body
 
 for.body24:                                       ; preds = %for.body24, %for.body24.preheader
-  %ip_r0.0109 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
-  %ip_c0.0108 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
-  %ip_c1.0107 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
-  %ip_c2.0106 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %ip_r0.0109 = phi ptr [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0108 = phi ptr [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0107 = phi ptr [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0106 = phi ptr [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
   %i_row_loop.1105 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0115, %for.body24.preheader ]
-  %ip_c3.0104 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %ip_c3.0104 = phi ptr [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
   %acc_3.0103 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_2.0102 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_1.0101 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_0.0100 = phi i32 [ %20, %for.body24 ], [ %0, %for.body24.preheader ]
-  %1 = bitcast i8* %ip_r0.0109 to <8 x i8>*
-  %2 = load <8 x i8>, <8 x i8>* %1, align 1
+  %1 = bitcast ptr %ip_r0.0109 to ptr
+  %2 = load <8 x i8>, ptr %1, align 1
   %3 = sext <8 x i8> %2 to <8 x i16>
-  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0109, i32 8
-  %4 = bitcast i8* %ip_c0.0108 to <8 x i8>*
-  %5 = load <8 x i8>, <8 x i8>* %4, align 1
+  %add.ptr26 = getelementptr inbounds i8, ptr %ip_r0.0109, i32 8
+  %4 = bitcast ptr %ip_c0.0108 to ptr
+  %5 = load <8 x i8>, ptr %4, align 1
   %6 = sext <8 x i8> %5 to <8 x i16>
-  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0108, i32 8
+  %add.ptr27 = getelementptr inbounds i8, ptr %ip_c0.0108, i32 8
   %7 = add <8 x i16> %.splat, %6
-  %8 = bitcast i8* %ip_c1.0107 to <8 x i8>*
-  %9 = load <8 x i8>, <8 x i8>* %8, align 1
+  %8 = bitcast ptr %ip_c1.0107 to ptr
+  %9 = load <8 x i8>, ptr %8, align 1
   %10 = sext <8 x i8> %9 to <8 x i16>
-  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0107, i32 8
+  %add.ptr28 = getelementptr inbounds i8, ptr %ip_c1.0107, i32 8
   %11 = add <8 x i16> %.splat, %10
-  %12 = bitcast i8* %ip_c2.0106 to <8 x i8>*
-  %13 = load <8 x i8>, <8 x i8>* %12, align 1
+  %12 = bitcast ptr %ip_c2.0106 to ptr
+  %13 = load <8 x i8>, ptr %12, align 1
   %14 = sext <8 x i8> %13 to <8 x i16>
-  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0106, i32 8
+  %add.ptr29 = getelementptr inbounds i8, ptr %ip_c2.0106, i32 8
   %15 = add <8 x i16> %.splat, %14
-  %16 = bitcast i8* %ip_c3.0104 to <8 x i8>*
-  %17 = load <8 x i8>, <8 x i8>* %16, align 1
+  %16 = bitcast ptr %ip_c3.0104 to ptr
+  %17 = load <8 x i8>, ptr %16, align 1
   %18 = sext <8 x i8> %17 to <8 x i16>
-  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0104, i32 8
+  %add.ptr30 = getelementptr inbounds i8, ptr %ip_c3.0104, i32 8
   %19 = add <8 x i16> %.splat, %18
   %20 = tail call i32 @llvm.arm.mve.vmldava.v8i16(i32 0, i32 0, i32 0, i32 %acc_0.0100, <8 x i16> %3, <8 x i16> %7)
   %21 = tail call i32 @llvm.arm.mve.vmldava.v8i16(i32 0, i32 0, i32 0, i32 %acc_1.0101, <8 x i16> %3, <8 x i16> %11)
@@ -376,11 +376,11 @@ for.body24:                                       ; preds = %for.body24, %for.bo
   br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
 
 if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
-  ret i8* %out
+  ret ptr %out
 }
 
 ; Same as above with optsize
-define i8* @test_optsize(i8* nocapture readonly %input_row, i8* nocapture readonly %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32 %col_offset, i16 signext %activation_min, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) optsize {
+define ptr @test_optsize(ptr nocapture readonly %input_row, ptr nocapture readonly %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32 %col_offset, i16 signext %activation_min, i16 zeroext %row_len, ptr nocapture readonly %bias, ptr returned %out) optsize {
 ; CHECK-LABEL: test_optsize:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -473,11 +473,11 @@ for.cond.preheader:                               ; preds = %entry
 
 for.body.lr.ph:                                   ; preds = %for.cond.preheader
   %conv5 = zext i16 %row_len to i32
-  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %add.ptr9 = getelementptr inbounds i8, ptr %input_col, i32 %conv5
   %mul11 = shl nuw nsw i32 %conv5, 1
-  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %add.ptr12 = getelementptr inbounds i8, ptr %input_col, i32 %mul11
   %mul14 = mul nuw nsw i32 %conv5, 3
-  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add.ptr15 = getelementptr inbounds i8, ptr %input_col, i32 %mul14
   %add = add nuw nsw i32 %conv5, 7
   %div = lshr i32 %add, 3
   %conv25 = trunc i32 %col_offset to i16
@@ -488,14 +488,14 @@ for.body.lr.ph:                                   ; preds = %for.cond.preheader
 for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
   %i_out_ch.0116 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
   %i_row_loop.0115 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
-  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0116
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %bias, i32 %i_out_ch.0116
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp2199 = icmp slt i32 %i_row_loop.0115, %div
   br i1 %cmp2199, label %for.body24.preheader, label %for.cond.cleanup23
 
 for.body24.preheader:                             ; preds = %for.body
   %mul = mul nuw nsw i32 %i_out_ch.0116, %conv5
-  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  %add.ptr = getelementptr inbounds i8, ptr %input_row, i32 %mul
   br label %for.body24
 
 for.cond.cleanup23:                               ; preds = %for.body24, %for.body
@@ -508,46 +508,46 @@ for.cond.cleanup23:                               ; preds = %for.body24, %for.bo
   %add32 = add nsw i32 %add31, %acc_2.0.lcssa
   %add33 = add nsw i32 %add32, %acc_3.0.lcssa
   %conv34 = trunc i32 %add33 to i8
-  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0116
-  store i8 %conv34, i8* %arrayidx35, align 1
+  %arrayidx35 = getelementptr inbounds i8, ptr %out, i32 %i_out_ch.0116
+  store i8 %conv34, ptr %arrayidx35, align 1
   %inc37 = add nuw nsw i32 %i_out_ch.0116, 1
   %exitcond120 = icmp eq i32 %inc37, %conv2
   br i1 %exitcond120, label %if.end, label %for.body
 
 for.body24:                                       ; preds = %for.body24, %for.body24.preheader
-  %ip_r0.0109 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
-  %ip_c0.0108 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
-  %ip_c1.0107 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
-  %ip_c2.0106 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %ip_r0.0109 = phi ptr [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0108 = phi ptr [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0107 = phi ptr [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0106 = phi ptr [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
   %i_row_loop.1105 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0115, %for.body24.preheader ]
-  %ip_c3.0104 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %ip_c3.0104 = phi ptr [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
   %acc_3.0103 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_2.0102 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_1.0101 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_0.0100 = phi i32 [ %20, %for.body24 ], [ %0, %for.body24.preheader ]
-  %1 = bitcast i8* %ip_r0.0109 to <8 x i8>*
-  %2 = load <8 x i8>, <8 x i8>* %1, align 1
+  %1 = bitcast ptr %ip_r0.0109 to ptr
+  %2 = load <8 x i8>, ptr %1, align 1
   %3 = sext <8 x i8> %2 to <8 x i16>
-  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0109, i32 8
-  %4 = bitcast i8* %ip_c0.0108 to <8 x i8>*
-  %5 = load <8 x i8>, <8 x i8>* %4, align 1
+  %add.ptr26 = getelementptr inbounds i8, ptr %ip_r0.0109, i32 8
+  %4 = bitcast ptr %ip_c0.0108 to ptr
+  %5 = load <8 x i8>, ptr %4, align 1
   %6 = sext <8 x i8> %5 to <8 x i16>
-  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0108, i32 8
+  %add.ptr27 = getelementptr inbounds i8, ptr %ip_c0.0108, i32 8
   %7 = add <8 x i16> %.splat, %6
-  %8 = bitcast i8* %ip_c1.0107 to <8 x i8>*
-  %9 = load <8 x i8>, <8 x i8>* %8, align 1
+  %8 = bitcast ptr %ip_c1.0107 to ptr
+  %9 = load <8 x i8>, ptr %8, align 1
   %10 = sext <8 x i8> %9 to <8 x i16>
-  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0107, i32 8
+  %add.ptr28 = getelementptr inbounds i8, ptr %ip_c1.0107, i32 8
   %11 = add <8 x i16> %.splat, %10
-  %12 = bitcast i8* %ip_c2.0106 to <8 x i8>*
-  %13 = load <8 x i8>, <8 x i8>* %12, align 1
+  %12 = bitcast ptr %ip_c2.0106 to ptr
+  %13 = load <8 x i8>, ptr %12, align 1
   %14 = sext <8 x i8> %13 to <8 x i16>
-  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0106, i32 8
+  %add.ptr29 = getelementptr inbounds i8, ptr %ip_c2.0106, i32 8
   %15 = add <8 x i16> %.splat, %14
-  %16 = bitcast i8* %ip_c3.0104 to <8 x i8>*
-  %17 = load <8 x i8>, <8 x i8>* %16, align 1
+  %16 = bitcast ptr %ip_c3.0104 to ptr
+  %17 = load <8 x i8>, ptr %16, align 1
   %18 = sext <8 x i8> %17 to <8 x i16>
-  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0104, i32 8
+  %add.ptr30 = getelementptr inbounds i8, ptr %ip_c3.0104, i32 8
   %19 = add <8 x i16> %.splat, %18
   %20 = tail call i32 @llvm.arm.mve.vmldava.v8i16(i32 0, i32 0, i32 0, i32 %acc_0.0100, <8 x i16> %3, <8 x i16> %7)
   %21 = tail call i32 @llvm.arm.mve.vmldava.v8i16(i32 0, i32 0, i32 0, i32 %acc_1.0101, <8 x i16> %3, <8 x i16> %11)
@@ -558,12 +558,12 @@ for.body24:                                       ; preds = %for.body24, %for.bo
   br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
 
 if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
-  ret i8* %out
+  ret ptr %out
 }
 
 
 ; Similar but predicated
-define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, i8* %row_base, i8* %col_base, i32* nocapture readnone %sum_col, i32* nocapture %output) {
+define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, ptr %row_base, ptr %col_base, ptr nocapture readnone %sum_col, ptr nocapture %output) {
 ; CHECK-LABEL: arm_nn_mat_mul_core_4x_s8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r10, lr}
@@ -612,10 +612,10 @@ entry:
 
 for.body.preheader:                               ; preds = %entry
   %mul2 = mul nsw i32 %offset, 3
-  %add.ptr3 = getelementptr inbounds i8, i8* %row_base, i32 %mul2
+  %add.ptr3 = getelementptr inbounds i8, ptr %row_base, i32 %mul2
   %mul = shl nsw i32 %offset, 1
-  %add.ptr1 = getelementptr inbounds i8, i8* %row_base, i32 %mul
-  %add.ptr = getelementptr inbounds i8, i8* %row_base, i32 %offset
+  %add.ptr1 = getelementptr inbounds i8, ptr %row_base, i32 %mul
+  %add.ptr = getelementptr inbounds i8, ptr %row_base, i32 %offset
   %0 = icmp sgt i32 %div, 1
   %smax = select i1 %0, i32 %div, i32 1
   br label %for.body
@@ -625,54 +625,54 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   %acc_n.sroa.9.0.lcssa = phi i32 [ 0, %entry ], [ %12, %for.body ]
   %acc_n.sroa.6.0.lcssa = phi i32 [ 0, %entry ], [ %9, %for.body ]
   %acc_n.sroa.0.0.lcssa = phi i32 [ 0, %entry ], [ %6, %for.body ]
-  store i32 %acc_n.sroa.0.0.lcssa, i32* %output, align 4
-  %arrayidx19 = getelementptr inbounds i32, i32* %output, i32 1
-  store i32 %acc_n.sroa.6.0.lcssa, i32* %arrayidx19, align 4
-  %arrayidx21 = getelementptr inbounds i32, i32* %output, i32 2
-  store i32 %acc_n.sroa.9.0.lcssa, i32* %arrayidx21, align 4
-  %arrayidx23 = getelementptr inbounds i32, i32* %output, i32 3
-  store i32 %acc_n.sroa.12.0.lcssa, i32* %arrayidx23, align 4
+  store i32 %acc_n.sroa.0.0.lcssa, ptr %output, align 4
+  %arrayidx19 = getelementptr inbounds i32, ptr %output, i32 1
+  store i32 %acc_n.sroa.6.0.lcssa, ptr %arrayidx19, align 4
+  %arrayidx21 = getelementptr inbounds i32, ptr %output, i32 2
+  store i32 %acc_n.sroa.9.0.lcssa, ptr %arrayidx21, align 4
+  %arrayidx23 = getelementptr inbounds i32, ptr %output, i32 3
+  store i32 %acc_n.sroa.12.0.lcssa, ptr %arrayidx23, align 4
   ret i32 0
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
-  %col_base.addr.095 = phi i8* [ %add.ptr4, %for.body ], [ %col_base, %for.body.preheader ]
+  %col_base.addr.095 = phi ptr [ %add.ptr4, %for.body ], [ %col_base, %for.body.preheader ]
   %acc_n.sroa.0.094 = phi i32 [ %6, %for.body ], [ 0, %for.body.preheader ]
   %acc_n.sroa.6.093 = phi i32 [ %9, %for.body ], [ 0, %for.body.preheader ]
   %acc_n.sroa.9.092 = phi i32 [ %12, %for.body ], [ 0, %for.body.preheader ]
   %i.091 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %row_elem.090 = phi i32 [ %sub, %for.body ], [ %row_elements, %for.body.preheader ]
   %acc_n.sroa.12.089 = phi i32 [ %15, %for.body ], [ 0, %for.body.preheader ]
-  %ip_row_3.088 = phi i8* [ %add.ptr15, %for.body ], [ %add.ptr3, %for.body.preheader ]
-  %ip_row_2.087 = phi i8* [ %add.ptr14, %for.body ], [ %add.ptr1, %for.body.preheader ]
-  %ip_row_1.086 = phi i8* [ %add.ptr13, %for.body ], [ %add.ptr, %for.body.preheader ]
-  %ip_row_0.085 = phi i8* [ %add.ptr12, %for.body ], [ %row_base, %for.body.preheader ]
+  %ip_row_3.088 = phi ptr [ %add.ptr15, %for.body ], [ %add.ptr3, %for.body.preheader ]
+  %ip_row_2.087 = phi ptr [ %add.ptr14, %for.body ], [ %add.ptr1, %for.body.preheader ]
+  %ip_row_1.086 = phi ptr [ %add.ptr13, %for.body ], [ %add.ptr, %for.body.preheader ]
+  %ip_row_0.085 = phi ptr [ %add.ptr12, %for.body ], [ %row_base, %for.body.preheader ]
   %1 = tail call <16 x i1> @llvm.arm.mve.vctp8(i32 %row_elem.090)
   %sub = add nsw i32 %row_elem.090, -16
-  %2 = bitcast i8* %col_base.addr.095 to <16 x i8>*
-  %3 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %2, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
-  %add.ptr4 = getelementptr inbounds i8, i8* %col_base.addr.095, i32 16
-  %4 = bitcast i8* %ip_row_0.085 to <16 x i8>*
-  %5 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %4, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
+  %2 = bitcast ptr %col_base.addr.095 to ptr
+  %3 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %2, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
+  %add.ptr4 = getelementptr inbounds i8, ptr %col_base.addr.095, i32 16
+  %4 = bitcast ptr %ip_row_0.085 to ptr
+  %5 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %4, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
   %6 = tail call i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32 0, i32 0, i32 0, i32 %acc_n.sroa.0.094, <16 x i8> %5, <16 x i8> %3, <16 x i1> %1)
-  %7 = bitcast i8* %ip_row_1.086 to <16 x i8>*
-  %8 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %7, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
+  %7 = bitcast ptr %ip_row_1.086 to ptr
+  %8 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %7, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
   %9 = tail call i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32 0, i32 0, i32 0, i32 %acc_n.sroa.6.093, <16 x i8> %8, <16 x i8> %3, <16 x i1> %1)
-  %10 = bitcast i8* %ip_row_2.087 to <16 x i8>*
-  %11 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %10, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
+  %10 = bitcast ptr %ip_row_2.087 to ptr
+  %11 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %10, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
   %12 = tail call i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32 0, i32 0, i32 0, i32 %acc_n.sroa.9.092, <16 x i8> %11, <16 x i8> %3, <16 x i1> %1)
-  %13 = bitcast i8* %ip_row_3.088 to <16 x i8>*
-  %14 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %13, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
+  %13 = bitcast ptr %ip_row_3.088 to ptr
+  %14 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %13, i32 1, <16 x i1> %1, <16 x i8> zeroinitializer)
   %15 = tail call i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32 0, i32 0, i32 0, i32 %acc_n.sroa.12.089, <16 x i8> %14, <16 x i8> %3, <16 x i1> %1)
-  %add.ptr12 = getelementptr inbounds i8, i8* %ip_row_0.085, i32 16
-  %add.ptr13 = getelementptr inbounds i8, i8* %ip_row_1.086, i32 16
-  %add.ptr14 = getelementptr inbounds i8, i8* %ip_row_2.087, i32 16
-  %add.ptr15 = getelementptr inbounds i8, i8* %ip_row_3.088, i32 16
+  %add.ptr12 = getelementptr inbounds i8, ptr %ip_row_0.085, i32 16
+  %add.ptr13 = getelementptr inbounds i8, ptr %ip_row_1.086, i32 16
+  %add.ptr14 = getelementptr inbounds i8, ptr %ip_row_2.087, i32 16
+  %add.ptr15 = getelementptr inbounds i8, ptr %ip_row_3.088, i32 16
   %inc = add nuw nsw i32 %i.091, 1
   %exitcond = icmp eq i32 %inc, %smax
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32* nocapture readnone %output_shift, i32* nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) {
+define ptr @signext(ptr %input_row, ptr %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, ptr nocapture readnone %output_shift, ptr nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, ptr nocapture readonly %bias, ptr returned %out) {
 ; CHECK-LABEL: signext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -770,11 +770,11 @@ for.cond.preheader:                               ; preds = %entry
 
 for.body.lr.ph:                                   ; preds = %for.cond.preheader
   %conv5 = zext i16 %row_len to i32
-  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %add.ptr9 = getelementptr inbounds i8, ptr %input_col, i32 %conv5
   %mul11 = shl nuw nsw i32 %conv5, 1
-  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %add.ptr12 = getelementptr inbounds i8, ptr %input_col, i32 %mul11
   %mul14 = mul nuw nsw i32 %conv5, 3
-  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add.ptr15 = getelementptr inbounds i8, ptr %input_col, i32 %mul14
   %add = add nuw nsw i32 %conv5, 7
   %div = lshr i32 %add, 3
   %conv25 = trunc i32 %col_offset to i16
@@ -785,14 +785,14 @@ for.body.lr.ph:                                   ; preds = %for.cond.preheader
 for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
   %i_out_ch.0129 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
   %i_row_loop.0128 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
-  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0129
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %bias, i32 %i_out_ch.0129
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp21111 = icmp slt i32 %i_row_loop.0128, %div
   br i1 %cmp21111, label %for.body24.preheader, label %for.cond.cleanup23
 
 for.body24.preheader:                             ; preds = %for.body
   %mul = mul nuw nsw i32 %i_out_ch.0129, %conv5
-  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  %add.ptr = getelementptr inbounds i8, ptr %input_row, i32 %mul
   br label %for.body24
 
 for.cond.cleanup23:                               ; preds = %for.body24, %for.body
@@ -805,49 +805,49 @@ for.cond.cleanup23:                               ; preds = %for.body24, %for.bo
   %add32 = add nsw i32 %add31, %acc_2.0.lcssa
   %add33 = add nsw i32 %add32, %acc_3.0.lcssa
   %conv34 = trunc i32 %add33 to i8
-  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0129
-  store i8 %conv34, i8* %arrayidx35, align 1
+  %arrayidx35 = getelementptr inbounds i8, ptr %out, i32 %i_out_ch.0129
+  store i8 %conv34, ptr %arrayidx35, align 1
   %inc37 = add nuw nsw i32 %i_out_ch.0129, 1
   %exitcond133 = icmp eq i32 %inc37, %conv2
   br i1 %exitcond133, label %if.end, label %for.body
 
 for.body24:                                       ; preds = %for.body24, %for.body24.preheader
   %row_len_tmp.0122 = phi i32 [ %sub, %for.body24 ], [ %conv5, %for.body24.preheader ]
-  %ip_r0.0121 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
-  %ip_c0.0120 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
-  %ip_c1.0119 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
-  %ip_c2.0118 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %ip_r0.0121 = phi ptr [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0120 = phi ptr [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0119 = phi ptr [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0118 = phi ptr [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
   %i_row_loop.1117 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0128, %for.body24.preheader ]
-  %ip_c3.0116 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %ip_c3.0116 = phi ptr [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
   %acc_3.0115 = phi i32 [ %24, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_2.0114 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_1.0113 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_0.0112 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
   %1 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %row_len_tmp.0122)
   %sub = add nsw i32 %row_len_tmp.0122, -8
-  %2 = bitcast i8* %ip_r0.0121 to <8 x i8>*
-  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %2 = bitcast ptr %ip_r0.0121 to ptr
+  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %4 = sext <8 x i8> %3 to <8 x i16>
-  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0121, i32 8
-  %5 = bitcast i8* %ip_c0.0120 to <8 x i8>*
-  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %add.ptr26 = getelementptr inbounds i8, ptr %ip_r0.0121, i32 8
+  %5 = bitcast ptr %ip_c0.0120 to ptr
+  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %7 = sext <8 x i8> %6 to <8 x i16>
-  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0120, i32 8
+  %add.ptr27 = getelementptr inbounds i8, ptr %ip_c0.0120, i32 8
   %8 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %7, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %9 = bitcast i8* %ip_c1.0119 to <8 x i8>*
-  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %9 = bitcast ptr %ip_c1.0119 to ptr
+  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %11 = sext <8 x i8> %10 to <8 x i16>
-  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0119, i32 8
+  %add.ptr28 = getelementptr inbounds i8, ptr %ip_c1.0119, i32 8
   %12 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %11, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %13 = bitcast i8* %ip_c2.0118 to <8 x i8>*
-  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %13 = bitcast ptr %ip_c2.0118 to ptr
+  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %15 = sext <8 x i8> %14 to <8 x i16>
-  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0118, i32 8
+  %add.ptr29 = getelementptr inbounds i8, ptr %ip_c2.0118, i32 8
   %16 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %15, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %17 = bitcast i8* %ip_c3.0116 to <8 x i8>*
-  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %17 = bitcast ptr %ip_c3.0116 to ptr
+  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %19 = sext <8 x i8> %18 to <8 x i16>
-  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0116, i32 8
+  %add.ptr30 = getelementptr inbounds i8, ptr %ip_c3.0116, i32 8
   %20 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %19, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
   %21 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_0.0112, <8 x i16> %4, <8 x i16> %8, <8 x i1> %1)
   %22 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_1.0113, <8 x i16> %4, <8 x i16> %12, <8 x i1> %1)
@@ -858,10 +858,10 @@ for.body24:                                       ; preds = %for.body24, %for.bo
   br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
 
 if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
-  ret i8* %out
+  ret ptr %out
 }
 
-define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32* nocapture readnone %output_shift, i32* nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) optsize {
+define ptr @signext_optsize(ptr %input_row, ptr %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, ptr nocapture readnone %output_shift, ptr nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, ptr nocapture readonly %bias, ptr returned %out) optsize {
 ; CHECK-LABEL: signext_optsize:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -958,11 +958,11 @@ for.cond.preheader:                               ; preds = %entry
 
 for.body.lr.ph:                                   ; preds = %for.cond.preheader
   %conv5 = zext i16 %row_len to i32
-  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %add.ptr9 = getelementptr inbounds i8, ptr %input_col, i32 %conv5
   %mul11 = shl nuw nsw i32 %conv5, 1
-  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %add.ptr12 = getelementptr inbounds i8, ptr %input_col, i32 %mul11
   %mul14 = mul nuw nsw i32 %conv5, 3
-  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add.ptr15 = getelementptr inbounds i8, ptr %input_col, i32 %mul14
   %add = add nuw nsw i32 %conv5, 7
   %div = lshr i32 %add, 3
   %conv25 = trunc i32 %col_offset to i16
@@ -973,14 +973,14 @@ for.body.lr.ph:                                   ; preds = %for.cond.preheader
 for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
   %i_out_ch.0129 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
   %i_row_loop.0128 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
-  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0129
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %bias, i32 %i_out_ch.0129
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp21111 = icmp slt i32 %i_row_loop.0128, %div
   br i1 %cmp21111, label %for.body24.preheader, label %for.cond.cleanup23
 
 for.body24.preheader:                             ; preds = %for.body
   %mul = mul nuw nsw i32 %i_out_ch.0129, %conv5
-  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  %add.ptr = getelementptr inbounds i8, ptr %input_row, i32 %mul
   br label %for.body24
 
 for.cond.cleanup23:                               ; preds = %for.body24, %for.body
@@ -993,49 +993,49 @@ for.cond.cleanup23:                               ; preds = %for.body24, %for.bo
   %add32 = add nsw i32 %add31, %acc_2.0.lcssa
   %add33 = add nsw i32 %add32, %acc_3.0.lcssa
   %conv34 = trunc i32 %add33 to i8
-  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0129
-  store i8 %conv34, i8* %arrayidx35, align 1
+  %arrayidx35 = getelementptr inbounds i8, ptr %out, i32 %i_out_ch.0129
+  store i8 %conv34, ptr %arrayidx35, align 1
   %inc37 = add nuw nsw i32 %i_out_ch.0129, 1
   %exitcond133 = icmp eq i32 %inc37, %conv2
   br i1 %exitcond133, label %if.end, label %for.body
 
 for.body24:                                       ; preds = %for.body24, %for.body24.preheader
   %row_len_tmp.0122 = phi i32 [ %sub, %for.body24 ], [ %conv5, %for.body24.preheader ]
-  %ip_r0.0121 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
-  %ip_c0.0120 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
-  %ip_c1.0119 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
-  %ip_c2.0118 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %ip_r0.0121 = phi ptr [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0120 = phi ptr [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0119 = phi ptr [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0118 = phi ptr [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
   %i_row_loop.1117 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0128, %for.body24.preheader ]
-  %ip_c3.0116 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %ip_c3.0116 = phi ptr [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
   %acc_3.0115 = phi i32 [ %24, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_2.0114 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_1.0113 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
   %acc_0.0112 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
   %1 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %row_len_tmp.0122)
   %sub = add nsw i32 %row_len_tmp.0122, -8
-  %2 = bitcast i8* %ip_r0.0121 to <8 x i8>*
-  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %2 = bitcast ptr %ip_r0.0121 to ptr
+  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %4 = sext <8 x i8> %3 to <8 x i16>
-  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0121, i32 8
-  %5 = bitcast i8* %ip_c0.0120 to <8 x i8>*
-  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %add.ptr26 = getelementptr inbounds i8, ptr %ip_r0.0121, i32 8
+  %5 = bitcast ptr %ip_c0.0120 to ptr
+  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %7 = sext <8 x i8> %6 to <8 x i16>
-  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0120, i32 8
+  %add.ptr27 = getelementptr inbounds i8, ptr %ip_c0.0120, i32 8
   %8 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %7, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %9 = bitcast i8* %ip_c1.0119 to <8 x i8>*
-  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %9 = bitcast ptr %ip_c1.0119 to ptr
+  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %11 = sext <8 x i8> %10 to <8 x i16>
-  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0119, i32 8
+  %add.ptr28 = getelementptr inbounds i8, ptr %ip_c1.0119, i32 8
   %12 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %11, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %13 = bitcast i8* %ip_c2.0118 to <8 x i8>*
-  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %13 = bitcast ptr %ip_c2.0118 to ptr
+  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %15 = sext <8 x i8> %14 to <8 x i16>
-  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0118, i32 8
+  %add.ptr29 = getelementptr inbounds i8, ptr %ip_c2.0118, i32 8
   %16 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %15, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
-  %17 = bitcast i8* %ip_c3.0116 to <8 x i8>*
-  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %17 = bitcast ptr %ip_c3.0116 to ptr
+  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
   %19 = sext <8 x i8> %18 to <8 x i16>
-  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0116, i32 8
+  %add.ptr30 = getelementptr inbounds i8, ptr %ip_c3.0116, i32 8
   %20 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %19, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
   %21 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_0.0112, <8 x i16> %4, <8 x i16> %8, <8 x i1> %1)
   %22 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_1.0113, <8 x i16> %4, <8 x i16> %12, <8 x i1> %1)
@@ -1046,11 +1046,11 @@ for.body24:                                       ; preds = %for.body24, %for.bo
   br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
 
 if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
-  ret i8* %out
+  ret ptr %out
 }
 
-%struct.arm_cfft_instance_f32 = type { i16, float*, i16*, i16, i32*, i32*, i32*, float*, float*, float* }
-define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cfft_instance_f32Pfjf(%struct.arm_cfft_instance_f32* nocapture readonly %0, float* %1, i32 %2, float %3) {
+%struct.arm_cfft_instance_f32 = type { i16, ptr, ptr, i16, ptr, ptr, ptr, ptr, ptr, ptr }
+define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cfft_instance_f32Pfjf(ptr nocapture readonly %0, ptr %1, i32 %2, float %3) {
 ; CHECK-LABEL: _Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cfft_instance_f32Pfjf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -1062,9 +1062,8 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, #40
 ; CHECK-NEXT:    cmp r2, #8
-; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    vstr s0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    blo .LBB7_9
 ; CHECK-NEXT:  @ %bb.1:
@@ -1210,12 +1209,12 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 
 6: ; preds = %4
   %7 = lshr i32 %2, 2
-  %8 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 7
-  %9 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 4
-  %10 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 8
-  %11 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 5
-  %12 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 9
-  %13 = getelementptr inbounds %struct.arm_cfft_instance_f32, %struct.arm_cfft_instance_f32* %0, i32 0, i32 6
+  %8 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 7
+  %9 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 4
+  %10 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 8
+  %11 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 5
+  %12 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 9
+  %13 = getelementptr inbounds %struct.arm_cfft_instance_f32, ptr %0, i32 0, i32 6
   br label %14
 
 14: ; preds = %6, %40
@@ -1235,7 +1234,7 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
   br i1 %25, label %40, label %45
 
 26: ; preds = %40, %4
-  %27 = ptrtoint float* %1 to i32
+  %27 = ptrtoint ptr %1 to i32
   %28 = insertelement <4 x i32> undef, i32 %27, i32 0
   %29 = shufflevector <4 x i32> %28, <4 x i32> undef, <4 x i32> zeroinitializer
   %30 = add <4 x i32> %29, <i32 -64, i32 -60, i32 -32, i32 -28>
@@ -1261,76 +1260,76 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 
 45: ; preds = %21, %113
   %46 = phi i32 [ %114, %113 ], [ 0, %21 ]
-  %47 = load float*, float** %8, align 4
-  %48 = load i32*, i32** %9, align 4
-  %49 = getelementptr inbounds i32, i32* %48, i32 %18
-  %50 = load i32, i32* %49, align 4
-  %51 = getelementptr inbounds float, float* %47, i32 %50
-  %52 = load float*, float** %10, align 4
-  %53 = load i32*, i32** %11, align 4
-  %54 = getelementptr inbounds i32, i32* %53, i32 %18
-  %55 = load i32, i32* %54, align 4
-  %56 = getelementptr inbounds float, float* %52, i32 %55
-  %57 = load float*, float** %12, align 4
-  %58 = load i32*, i32** %13, align 4
-  %59 = getelementptr inbounds i32, i32* %58, i32 %18
-  %60 = load i32, i32* %59, align 4
-  %61 = getelementptr inbounds float, float* %57, i32 %60
+  %47 = load ptr, ptr %8, align 4
+  %48 = load ptr, ptr %9, align 4
+  %49 = getelementptr inbounds i32, ptr %48, i32 %18
+  %50 = load i32, ptr %49, align 4
+  %51 = getelementptr inbounds float, ptr %47, i32 %50
+  %52 = load ptr, ptr %10, align 4
+  %53 = load ptr, ptr %11, align 4
+  %54 = getelementptr inbounds i32, ptr %53, i32 %18
+  %55 = load i32, ptr %54, align 4
+  %56 = getelementptr inbounds float, ptr %52, i32 %55
+  %57 = load ptr, ptr %12, align 4
+  %58 = load ptr, ptr %13, align 4
+  %59 = getelementptr inbounds i32, ptr %58, i32 %18
+  %60 = load i32, ptr %59, align 4
+  %61 = getelementptr inbounds float, ptr %57, i32 %60
   %62 = mul i32 %22, %46
-  %63 = getelementptr inbounds float, float* %1, i32 %62
-  %64 = getelementptr inbounds float, float* %63, i32 %23
-  %65 = getelementptr inbounds float, float* %64, i32 %23
-  %66 = getelementptr inbounds float, float* %65, i32 %23
+  %63 = getelementptr inbounds float, ptr %1, i32 %62
+  %64 = getelementptr inbounds float, ptr %63, i32 %23
+  %65 = getelementptr inbounds float, ptr %64, i32 %23
+  %66 = getelementptr inbounds float, ptr %65, i32 %23
   br label %67
 
 67: ; preds = %45, %67
-  %68 = phi float* [ %63, %45 ], [ %89, %67 ]
-  %69 = phi float* [ %65, %45 ], [ %103, %67 ]
-  %70 = phi float* [ %66, %45 ], [ %110, %67 ]
-  %71 = phi float* [ %64, %45 ], [ %96, %67 ]
-  %72 = phi float* [ %61, %45 ], [ %107, %67 ]
-  %73 = phi float* [ %56, %45 ], [ %93, %67 ]
-  %74 = phi float* [ %51, %45 ], [ %100, %67 ]
+  %68 = phi ptr [ %63, %45 ], [ %89, %67 ]
+  %69 = phi ptr [ %65, %45 ], [ %103, %67 ]
+  %70 = phi ptr [ %66, %45 ], [ %110, %67 ]
+  %71 = phi ptr [ %64, %45 ], [ %96, %67 ]
+  %72 = phi ptr [ %61, %45 ], [ %107, %67 ]
+  %73 = phi ptr [ %56, %45 ], [ %93, %67 ]
+  %74 = phi ptr [ %51, %45 ], [ %100, %67 ]
   %75 = phi i32 [ %24, %45 ], [ %111, %67 ]
-  %76 = bitcast float* %69 to <4 x float>*
-  %77 = bitcast float* %68 to <4 x float>*
-  %78 = load <4 x float>, <4 x float>* %76, align 4
-  %79 = load <4 x float>, <4 x float>* %77, align 4
-  %80 = bitcast float* %71 to <4 x float>*
-  %81 = load <4 x float>, <4 x float>* %80, align 4
-  %82 = bitcast float* %70 to <4 x float>*
-  %83 = load <4 x float>, <4 x float>* %82, align 4
+  %76 = bitcast ptr %69 to ptr
+  %77 = bitcast ptr %68 to ptr
+  %78 = load <4 x float>, ptr %76, align 4
+  %79 = load <4 x float>, ptr %77, align 4
+  %80 = bitcast ptr %71 to ptr
+  %81 = load <4 x float>, ptr %80, align 4
+  %82 = bitcast ptr %70 to ptr
+  %83 = load <4 x float>, ptr %82, align 4
   %84 = fadd <4 x float> %78, %79
   %85 = fsub <4 x float> %79, %78
   %86 = fadd <4 x float> %81, %83
   %87 = fsub <4 x float> %81, %83
   %88 = fadd <4 x float> %84, %86
-  store <4 x float> %88, <4 x float>* %77, align 4
-  %89 = getelementptr inbounds float, float* %68, i32 4
+  store <4 x float> %88, ptr %77, align 4
+  %89 = getelementptr inbounds float, ptr %68, i32 4
   %90 = fsub <4 x float> %84, %86
-  %91 = bitcast float* %73 to <4 x float>*
-  %92 = load <4 x float>, <4 x float>* %91, align 4
-  %93 = getelementptr inbounds float, float* %73, i32 4
+  %91 = bitcast ptr %73 to ptr
+  %92 = load <4 x float>, ptr %91, align 4
+  %93 = getelementptr inbounds float, ptr %73, i32 4
   %94 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %92, <4 x float> %90)
   %95 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %94, <4 x float> %92, <4 x float> %90)
-  store <4 x float> %95, <4 x float>* %80, align 4
-  %96 = getelementptr inbounds float, float* %71, i32 4
+  store <4 x float> %95, ptr %80, align 4
+  %96 = getelementptr inbounds float, ptr %71, i32 4
   %97 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 0, <4 x float> %85, <4 x float> %87)
-  %98 = bitcast float* %74 to <4 x float>*
-  %99 = load <4 x float>, <4 x float>* %98, align 4
-  %100 = getelementptr inbounds float, float* %74, i32 4
+  %98 = bitcast ptr %74 to ptr
+  %99 = load <4 x float>, ptr %98, align 4
+  %100 = getelementptr inbounds float, ptr %74, i32 4
   %101 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %99, <4 x float> %97)
   %102 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %101, <4 x float> %99, <4 x float> %97)
-  store <4 x float> %102, <4 x float>* %76, align 4
-  %103 = getelementptr inbounds float, float* %69, i32 4
+  store <4 x float> %102, ptr %76, align 4
+  %103 = getelementptr inbounds float, ptr %69, i32 4
   %104 = tail call <4 x float> @llvm.arm.mve.vcaddq.v4f32(i32 1, i32 1, <4 x float> %85, <4 x float> %87)
-  %105 = bitcast float* %72 to <4 x float>*
-  %106 = load <4 x float>, <4 x float>* %105, align 4
-  %107 = getelementptr inbounds float, float* %72, i32 4
+  %105 = bitcast ptr %72 to ptr
+  %106 = load <4 x float>, ptr %105, align 4
+  %107 = getelementptr inbounds float, ptr %72, i32 4
   %108 = tail call <4 x float> @llvm.arm.mve.vcmulq.v4f32(i32 0, <4 x float> %106, <4 x float> %104)
   %109 = tail call <4 x float> @llvm.arm.mve.vcmlaq.v4f32(i32 1, <4 x float> %108, <4 x float> %106, <4 x float> %104)
-  store <4 x float> %109, <4 x float>* %82, align 4
-  %110 = getelementptr inbounds float, float* %70, i32 4
+  store <4 x float> %109, ptr %82, align 4
+  %110 = getelementptr inbounds float, ptr %70, i32 4
   %111 = add nsw i32 %75, -1
   %112 = icmp eq i32 %111, 0
   br i1 %112, label %113, label %67
@@ -1378,10 +1377,10 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
 declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)
-declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
-declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 immarg, <4 x i1>)
+declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32 immarg, <4 x i1>, <4 x float>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32, <8 x i1>, <8 x i8>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32 immarg, <16 x i1>, <16 x i8>)
+declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32 immarg, <4 x i1>)
 declare i32 @llvm.vector.reduce.add.v16i8(<16 x i32> %ext4)
 declare i32 @llvm.arm.mve.vmldava.v8i16(i32, i32, i32, i32, <8 x i16>, <8 x i16>)
 declare i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32, i32, i32, i32, <16 x i8>, <16 x i8>, <16 x i1>)

@@ -12,15 +12,15 @@
 ; FRAMES-NEXT: DW_CFA_nop:
 
 ; FRAMES: 00000014 00000010 00000000 FDE cie=00000000 pc=00000000...00000022
-; FRAMES:      DW_CFA_advance_loc: 3
+; FRAMES:      DW_CFA_advance_loc: 3 to 0x3
 ; FRAMES-NEXT: DW_CFA_def_cfa_offset: +12
 ; FRAMES-NEXT: DW_CFA_nop:
 
 ; FRAMES: 00000028 00000014 00000000 FDE cie=00000000 pc=00000030...00000080
-; FRAMES:      DW_CFA_advance_loc: 1
+; FRAMES:      DW_CFA_advance_loc: 1 to 0x31
 ; FRAMES-NEXT: DW_CFA_def_cfa_offset: +8
 ; FRAMES-NEXT: DW_CFA_offset: {{reg5|EBP}} -8
-; FRAMES-NEXT: DW_CFA_advance_loc: 2
+; FRAMES-NEXT: DW_CFA_advance_loc: 2 to 0x33
 ; FRAMES-NEXT: DW_CFA_def_cfa_register: {{reg5|EBP}}
 
 ; FRAMES-NOT: CIE

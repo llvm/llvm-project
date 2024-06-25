@@ -21,11 +21,14 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(int, chmod, (const char *path, mode_t mode)) {
 #ifdef SYS_chmod
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_chmod, path, mode);
+#elif defined(SYS_fchmodat2)
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat2, AT_FDCWD, path,
+                                              mode, 0, AT_SYMLINK_NOFOLLOW);
 #elif defined(SYS_fchmodat)
   int ret =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode);
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_fchmodat, AT_FDCWD, path, mode, 0);
 #else
-#error "chmod and fchmodat syscalls not available."
+#error "chmod, fchmodat and fchmodat2 syscalls not available."
 #endif
 
   if (ret < 0) {

@@ -51,7 +51,7 @@ define ptr @fold_memchr_a12345_4_3() {
 
 define ptr @fold_memchr_a12345_3_3() {
 ; CHECK-LABEL: @fold_memchr_a12345_3_3(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ;
 
   %res = call ptr @memchr(ptr @a12345, i32 3, i64 3)
@@ -63,7 +63,7 @@ define ptr @fold_memchr_a12345_3_3() {
 
 define ptr @fold_memchr_a12345_3_9() {
 ; CHECK-LABEL: @fold_memchr_a12345_3_9(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ;
 
   %res = call ptr @memchr(ptr @a12345, i32 3, i64 9)
@@ -76,7 +76,7 @@ define ptr @fold_memchr_a12345_3_9() {
 
 define ptr @fold_memchr_a123f45_500_9() {
 ; CHECK-LABEL: @fold_memchr_a123f45_500_9(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a123f45, i64 0, i64 3)
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @a123f45, i64 3)
 ;
 
   %res = call ptr @memchr(ptr @a123f45, i32 500, i64 9)
@@ -89,7 +89,7 @@ define ptr @fold_memchr_a123f45_500_9() {
 define ptr @fold_a12345_3_n(i64 %n) {
 ; CHECK-LABEL: @fold_a12345_3_n(
 ; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 
@@ -104,7 +104,7 @@ define ptr @fold_a12345_3_n(i64 %n) {
 define ptr @fold_a12345_259_n(i64 %n) {
 ; CHECK-LABEL: @fold_a12345_259_n(
 ; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp ult i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr getelementptr inbounds ([5 x i8], ptr @a12345, i64 0, i64 2)
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr getelementptr inbounds (i8, ptr @a12345, i64 2)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 

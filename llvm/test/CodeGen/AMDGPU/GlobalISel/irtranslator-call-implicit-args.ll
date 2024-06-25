@@ -1228,4 +1228,4 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 !3 = !{i32 32, i32 2, i32 1}
 !4 = !{i32 1, i32 32, i32 2}
 !5 = !{i32 32, i32 1, i32 2}
-!6 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!6 = !{i32 1, !"amdhsa_code_object_version", i32 500}

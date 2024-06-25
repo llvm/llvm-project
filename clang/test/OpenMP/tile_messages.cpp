@@ -43,13 +43,7 @@ void func() {
 
   // expected-error@+1 {{argument to 'sizes' clause must be a strictly positive integer value}}
   #pragma omp tile sizes(0)
-    ;
-
-  // expected-error@+4 {{expression is not an integral constant expression}}
-  // expected-note@+3 {{read of non-const variable 'a' is not allowed in a constant expression}}
-  // expected-note@+1 {{declared here}}
-  int a;
-  #pragma omp tile sizes(a)
+  for (int i = 0; i < 7; ++i)
     ;
 
   // expected-warning@+2 {{extra tokens at the end of '#pragma omp tile' are ignored}}
@@ -124,4 +118,46 @@ void func() {
   #pragma omp tile sizes(5)
   for (int i = 0; i/3<7; ++i)
     ;
+
+  // expected-error@+2 {{expression must have integral or unscoped enumeration type, not 'struct S'}}
+  struct S{} s;
+  #pragma omp tile sizes(s)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+
+template <typename T>
+static void templated_func() {
+  // In a template context, but expression itself not instantiation-dependent
+
+  // expected-error@+1 {{argument to 'sizes' clause must be a strictly positive integer value}}
+  #pragma omp tile sizes(0)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+template <int S>
+static void templated_func_value_dependent() {
+  // expected-error@+1 {{argument to 'sizes' clause must be a strictly positive integer value}}
+  #pragma omp tile sizes(S)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+template <typename T>
+static void templated_func_type_dependent() {
+  constexpr T s = 0;
+  // expected-error@+1 {{argument to 'sizes' clause must be a strictly positive integer value}}
+  #pragma omp tile sizes(s)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void template_inst() {
+  templated_func<int>();
+  // expected-note@+1 {{in instantiation of function template specialization 'templated_func_value_dependent<0>' requested here}}
+  templated_func_value_dependent<0>();
+  // expected-note@+1 {{in instantiation of function template specialization 'templated_func_type_dependent<int>' requested here}}
+  templated_func_type_dependent<int>();
 }

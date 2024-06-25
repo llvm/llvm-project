@@ -12,9 +12,11 @@
 
 #include "bolt/Passes/MCF.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <vector>
@@ -29,19 +31,10 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-extern cl::opt<bool> TimeOpts;
-
 static cl::opt<bool> IterativeGuess(
     "iterative-guess",
     cl::desc("in non-LBR mode, guess edge counts using iterative technique"),
     cl::Hidden, cl::cat(BoltOptCategory));
-
-static cl::opt<bool> UseRArcs(
-    "mcf-use-rarcs",
-    cl::desc("in MCF, consider the possibility of cancelling flow to balance "
-             "edges"),
-    cl::Hidden, cl::cat(BoltOptCategory));
-
 } // namespace opts
 
 namespace llvm {
@@ -441,7 +434,7 @@ void equalizeBBCounts(DataflowInfoManager &Info, BinaryFunction &BF) {
   }
 }
 
-void estimateEdgeCounts(BinaryFunction &BF) {
+void EstimateEdgeCounts::runOnFunction(BinaryFunction &BF) {
   EdgeWeightMap PredEdgeWeights;
   EdgeWeightMap SuccEdgeWeights;
   if (!opts::IterativeGuess) {
@@ -462,8 +455,24 @@ void estimateEdgeCounts(BinaryFunction &BF) {
   recalculateBBCounts(BF, /*AllEdges=*/false);
 }
 
-void solveMCF(BinaryFunction &BF, MCFCostFunction CostFunction) {
-  llvm_unreachable("not implemented");
+Error EstimateEdgeCounts::runOnFunctions(BinaryContext &BC) {
+  if (llvm::none_of(llvm::make_second_range(BC.getBinaryFunctions()),
+                    [](const BinaryFunction &BF) {
+                      return BF.getProfileFlags() == BinaryFunction::PF_SAMPLE;
+                    }))
+    return Error::success();
+
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    runOnFunction(BF);
+  };
+  ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
+    return BF.getProfileFlags() != BinaryFunction::PF_SAMPLE;
+  };
+
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_BB_QUADRATIC, WorkFun,
+      SkipFunc, "EstimateEdgeCounts");
+  return Error::success();
 }
 
 } // namespace bolt

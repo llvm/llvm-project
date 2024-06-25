@@ -22,6 +22,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -29,6 +30,8 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include <charconv>
+#include <regex>
 
 using namespace llvm;
 
@@ -152,6 +155,132 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
   return true;
 }
 
+static std::string getAnnotation(Value *AnnoVal, Value *OptAnnoVal) {
+  if (auto *Ref = dyn_cast_or_null<GetElementPtrInst>(AnnoVal))
+    AnnoVal = Ref->getOperand(0);
+  if (auto *Ref = dyn_cast_or_null<BitCastInst>(OptAnnoVal))
+    OptAnnoVal = Ref->getOperand(0);
+
+  std::string Anno;
+  if (auto *C = dyn_cast_or_null<Constant>(AnnoVal)) {
+    StringRef Str;
+    if (getConstantStringInfo(C, Str))
+      Anno = Str;
+  }
+  // handle optional annotation parameter in a way that Khronos Translator do
+  // (collect integers wrapped in a struct)
+  if (auto *C = dyn_cast_or_null<Constant>(OptAnnoVal);
+      C && C->getNumOperands()) {
+    Value *MaybeStruct = C->getOperand(0);
+    if (auto *Struct = dyn_cast<ConstantStruct>(MaybeStruct)) {
+      for (unsigned I = 0, E = Struct->getNumOperands(); I != E; ++I) {
+        if (auto *CInt = dyn_cast<ConstantInt>(Struct->getOperand(I)))
+          Anno += (I == 0 ? ": " : ", ") +
+                  std::to_string(CInt->getType()->getIntegerBitWidth() == 1
+                                     ? CInt->getZExtValue()
+                                     : CInt->getSExtValue());
+      }
+    } else if (auto *Struct = dyn_cast<ConstantAggregateZero>(MaybeStruct)) {
+      // { i32 i32 ... } zeroinitializer
+      for (unsigned I = 0, E = Struct->getType()->getStructNumElements();
+           I != E; ++I)
+        Anno += I == 0 ? ": 0" : ", 0";
+    }
+  }
+  return Anno;
+}
+
+static SmallVector<Metadata *> parseAnnotation(Value *I,
+                                               const std::string &Anno,
+                                               LLVMContext &Ctx,
+                                               Type *Int32Ty) {
+  // Try to parse the annotation string according to the following rules:
+  // annotation := ({kind} | {kind:value,value,...})+
+  // kind := number
+  // value := number | string
+  static const std::regex R(
+      "\\{(\\d+)(?:[:,](\\d+|\"[^\"]*\")(?:,(\\d+|\"[^\"]*\"))*)?\\}");
+  SmallVector<Metadata *> MDs;
+  int Pos = 0;
+  for (std::sregex_iterator
+           It = std::sregex_iterator(Anno.begin(), Anno.end(), R),
+           ItEnd = std::sregex_iterator();
+       It != ItEnd; ++It) {
+    if (It->position() != Pos)
+      return SmallVector<Metadata *>{};
+    Pos = It->position() + It->length();
+    std::smatch Match = *It;
+    SmallVector<Metadata *> MDsItem;
+    for (std::size_t i = 1; i < Match.size(); ++i) {
+      std::ssub_match SMatch = Match[i];
+      std::string Item = SMatch.str();
+      if (Item.length() == 0)
+        break;
+      if (Item[0] == '"') {
+        Item = Item.substr(1, Item.length() - 2);
+        // Acceptable format of the string snippet is:
+        static const std::regex RStr("^(\\d+)(?:,(\\d+))*$");
+        if (std::smatch MatchStr; std::regex_match(Item, MatchStr, RStr)) {
+          for (std::size_t SubIdx = 1; SubIdx < MatchStr.size(); ++SubIdx)
+            if (std::string SubStr = MatchStr[SubIdx].str(); SubStr.length())
+              MDsItem.push_back(ConstantAsMetadata::get(
+                  ConstantInt::get(Int32Ty, std::stoi(SubStr))));
+        } else {
+          MDsItem.push_back(MDString::get(Ctx, Item));
+        }
+      } else if (int32_t Num;
+                 std::from_chars(Item.data(), Item.data() + Item.size(), Num)
+                     .ec == std::errc{}) {
+        MDsItem.push_back(
+            ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Num)));
+      } else {
+        MDsItem.push_back(MDString::get(Ctx, Item));
+      }
+    }
+    if (MDsItem.size() == 0)
+      return SmallVector<Metadata *>{};
+    MDs.push_back(MDNode::get(Ctx, MDsItem));
+  }
+  return Pos == static_cast<int>(Anno.length()) ? MDs
+                                                : SmallVector<Metadata *>{};
+}
+
+static void lowerPtrAnnotation(IntrinsicInst *II) {
+  LLVMContext &Ctx = II->getContext();
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+
+  // Retrieve an annotation string from arguments.
+  Value *PtrArg = nullptr;
+  if (auto *BI = dyn_cast<BitCastInst>(II->getArgOperand(0)))
+    PtrArg = BI->getOperand(0);
+  else
+    PtrArg = II->getOperand(0);
+  std::string Anno =
+      getAnnotation(II->getArgOperand(1),
+                    4 < II->arg_size() ? II->getArgOperand(4) : nullptr);
+
+  // Parse the annotation.
+  SmallVector<Metadata *> MDs = parseAnnotation(II, Anno, Ctx, Int32Ty);
+
+  // If the annotation string is not parsed successfully we don't know the
+  // format used and output it as a general UserSemantic decoration.
+  // Otherwise MDs is a Metadata tuple (a decoration list) in the format
+  // expected by `spirv.Decorations`.
+  if (MDs.size() == 0) {
+    auto UserSemantic = ConstantAsMetadata::get(ConstantInt::get(
+        Int32Ty, static_cast<uint32_t>(SPIRV::Decoration::UserSemantic)));
+    MDs.push_back(MDNode::get(Ctx, {UserSemantic, MDString::get(Ctx, Anno)}));
+  }
+
+  // Build the internal intrinsic function.
+  IRBuilder<> IRB(II->getParent());
+  IRB.SetInsertPoint(II);
+  IRB.CreateIntrinsic(
+      Intrinsic::spv_assign_decoration, {PtrArg->getType()},
+      {PtrArg, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
+  II->replaceAllUsesWith(II->getOperand(0));
+}
+
 static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
   // current one. Then simply replace the intrinsic uses with a call to the new
@@ -263,6 +392,21 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   return;
 }
 
+static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
+                                     ArrayRef<unsigned> OpNos) {
+  Function *F = nullptr;
+  if (OpNos.empty()) {
+    F = Intrinsic::getDeclaration(II->getModule(), NewID);
+  } else {
+    SmallVector<Type *, 4> Tys;
+    for (unsigned OpNo : OpNos)
+      Tys.push_back(II->getOperand(OpNo)->getType());
+    F = Intrinsic::getDeclaration(II->getModule(), NewID, Tys);
+  }
+  II->setCalledFunction(F);
+  return true;
+}
+
 static void lowerUMulWithOverflow(IntrinsicInst *UMulIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
   // current one. Then simply replace the intrinsic uses with a call to the new
@@ -290,22 +434,39 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
-      if (II->getIntrinsicID() == Intrinsic::memset ||
-          II->getIntrinsicID() == Intrinsic::bswap)
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::memset:
+      case Intrinsic::bswap:
         Changed |= lowerIntrinsicToFunction(II);
-      else if (II->getIntrinsicID() == Intrinsic::fshl ||
-               II->getIntrinsicID() == Intrinsic::fshr) {
+        break;
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
         lowerFunnelShifts(II);
         Changed = true;
-      } else if (II->getIntrinsicID() == Intrinsic::umul_with_overflow) {
+        break;
+      case Intrinsic::umul_with_overflow:
         lowerUMulWithOverflow(II);
         Changed = true;
-      } else if (II->getIntrinsicID() == Intrinsic::assume ||
-                 II->getIntrinsicID() == Intrinsic::expect) {
+        break;
+      case Intrinsic::assume:
+      case Intrinsic::expect: {
         const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
+      } break;
+      case Intrinsic::lifetime_start:
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        break;
+      case Intrinsic::lifetime_end:
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        break;
+      case Intrinsic::ptr_annotation:
+        lowerPtrAnnotation(II);
+        Changed = true;
+        break;
       }
     }
   }

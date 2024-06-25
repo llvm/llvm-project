@@ -26,7 +26,7 @@ define i32 @bar() {
 entry:
 ; This load uses the split global, but cannot be constant-propagated away.
 ; CHECK: %0 = load i32, ptr @b.0
-  %0 = load i32, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 0), align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 }
 
@@ -42,7 +42,7 @@ entry:
 
 ; This store uses the split global, but cannot be constant-propagated away.
 ; CHECK: store i32 3, ptr @b.0
-  store i32 3, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 0), align 4
+  store i32 3, ptr @b, align 4
 ; This store can be removed, because the second element of @b is never read.
 ; CHECK-NOT: store i32 4, ptr @b.1
   store i32 4, ptr getelementptr inbounds ({i32, i32}, ptr @b, i32 0, i32 1), align 4

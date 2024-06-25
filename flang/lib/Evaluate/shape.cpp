@@ -885,8 +885,12 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        return Shape{
-            MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        if (IsAssumedRank(*call.arguments().front())) {
+          return Shape{MaybeExtentExpr{}};
+        } else {
+          return Shape{
+              MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        }
       }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
@@ -973,9 +977,14 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               }
             }
           } else {
-            // Non-scalar MASK= -> [COUNT(mask)]
-            ActualArguments toCount{ActualArgument{common::Clone(
-                DEREF(call.arguments().at(1).value().UnwrapExpr()))}};
+            // Non-scalar MASK= -> [COUNT(mask, KIND=extent_kind)]
+            ActualArgument kindArg{
+                AsGenericExpr(Constant<ExtentType>{ExtentType::kind})};
+            kindArg.set_keyword(context_->SaveTempName("kind"));
+            ActualArguments toCount{
+                ActualArgument{common::Clone(
+                    DEREF(call.arguments().at(1).value().UnwrapExpr()))},
+                std::move(kindArg)};
             auto specific{context_->intrinsics().Probe(
                 CallCharacteristics{"count"}, toCount, *context_)};
             CHECK(specific);
@@ -1028,7 +1037,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(
                 call.arguments().at(1), *context_)}) {
-          if (GetRank(moldTypeAndShape->shape()) == 0) {
+          if (moldTypeAndShape->Rank() == 0) {
             // SIZE= is absent and MOLD= is scalar: result is scalar
             return ScalarShape();
           } else {

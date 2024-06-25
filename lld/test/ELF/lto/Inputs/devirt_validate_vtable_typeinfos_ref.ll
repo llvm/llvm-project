@@ -36,7 +36,7 @@ entry:
   store ptr %this, ptr %this.addr
   %this1 = load ptr, ptr %this.addr
   call void @_ZN1AC2Ev(ptr noundef nonnull align 8 dereferenceable(8) %this1)
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, inrange i32 0, i32 2), ptr %this1
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2), ptr %this1
   ret void
 }
 
@@ -47,7 +47,7 @@ entry:
   %this.addr = alloca ptr
   store ptr %this, ptr %this.addr
   %this1 = load ptr, ptr %this.addr
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, inrange i32 0, i32 2), ptr %this1
+  store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2), ptr %this1
   ret void
 }
 

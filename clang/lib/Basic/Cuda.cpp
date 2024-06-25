@@ -14,7 +14,7 @@ struct CudaVersionMapEntry {
 };
 #define CUDA_ENTRY(major, minor)                                               \
   {                                                                            \
-#major "." #minor, CudaVersion::CUDA_##major##minor,                       \
+    #major "." #minor, CudaVersion::CUDA_##major##minor,                       \
         llvm::VersionTuple(major, minor)                                       \
   }
 
@@ -41,6 +41,8 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 1),
     CUDA_ENTRY(12, 2),
     CUDA_ENTRY(12, 3),
+    CUDA_ENTRY(12, 4),
+    CUDA_ENTRY(12, 5),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -86,7 +88,7 @@ static const CudaArchToStringMap arch_names[] = {
     // clang-format off
     {CudaArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
-    SM(30), SM(32), SM(35), SM(37),  // Kepler
+    SM(30), {CudaArch::SM_32_, "sm_32", "compute_32"}, SM(35), SM(37),  // Kepler
     SM(50), SM(52), SM(53),          // Maxwell
     SM(60), SM(61), SM(62),          // Pascal
     SM(70), SM(72),                  // Volta
@@ -110,6 +112,7 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(803),  // gfx803
     GFX(805),  // gfx805
     GFX(810),  // gfx810
+    {CudaArch::GFX9_GENERIC, "gfx9-generic", "compute_amdgcn"},
     GFX(900),  // gfx900
     GFX(902),  // gfx902
     GFX(904),  // gfx903
@@ -121,10 +124,12 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(940),  // gfx940
     GFX(941),  // gfx941
     GFX(942),  // gfx942
+    {CudaArch::GFX10_1_GENERIC, "gfx10-1-generic", "compute_amdgcn"},
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
     GFX(1012), // gfx1012
     GFX(1013), // gfx1013
+    {CudaArch::GFX10_3_GENERIC, "gfx10-3-generic", "compute_amdgcn"},
     GFX(1030), // gfx1030
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
@@ -132,12 +137,15 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1034), // gfx1034
     GFX(1035), // gfx1035
     GFX(1036), // gfx1036
+    {CudaArch::GFX11_GENERIC, "gfx11-generic", "compute_amdgcn"},
     GFX(1100), // gfx1100
     GFX(1101), // gfx1101
     GFX(1102), // gfx1102
     GFX(1103), // gfx1103
     GFX(1150), // gfx1150
     GFX(1151), // gfx1151
+    GFX(1152), // gfx1152
+    {CudaArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
     {CudaArch::Generic, "generic", ""},
@@ -186,7 +194,7 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_20:
   case CudaArch::SM_21:
   case CudaArch::SM_30:
-  case CudaArch::SM_32:
+  case CudaArch::SM_32_:
   case CudaArch::SM_35:
   case CudaArch::SM_37:
   case CudaArch::SM_50:
@@ -231,7 +239,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   case CudaArch::SM_21:
     return CudaVersion::CUDA_80;
   case CudaArch::SM_30:
-  case CudaArch::SM_32:
+  case CudaArch::SM_32_:
     return CudaVersion::CUDA_102;
   case CudaArch::SM_35:
   case CudaArch::SM_37:
@@ -241,7 +249,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   }
 }
 
-bool CudaFeatureEnabled(llvm::VersionTuple  Version, CudaFeature Feature) {
+bool CudaFeatureEnabled(llvm::VersionTuple Version, CudaFeature Feature) {
   return CudaFeatureEnabled(ToCudaVersion(Version), Feature);
 }
 

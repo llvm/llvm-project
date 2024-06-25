@@ -2,6 +2,7 @@
 // RUN: mkdir -p %t
 
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -verify -std=c++2a -fmodules -fmodules-cache-path=%t.mcp -I%S/Inputs %s -fno-modules-error-recovery -fmodule-map-file=%S/Inputs/compare.modulemap
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fcxx-exceptions -verify -std=c++2a -fmodules -fmodules-cache-path=%t.mcp -I%S/Inputs %s -fno-modules-error-recovery -fmodule-map-file=%S/Inputs/compare.modulemap -fexperimental-new-constant-interpreter
 
 struct CC { CC(...); };
 

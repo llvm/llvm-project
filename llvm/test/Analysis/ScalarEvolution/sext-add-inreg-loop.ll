@@ -23,11 +23,9 @@ define dso_local i32 @test_loop(ptr nocapture noundef readonly %x) {
 ; CHECK-NEXT:    %inc = add nuw nsw i64 %i.03, 1
 ; CHECK-NEXT:    --> {2,+,1}<nuw><nsw><%for.body> U: [2,11) S: [2,11) Exits: 10 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_loop
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is 8
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 8
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is 8
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is 8
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is i64 8
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i64 8
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i64 8
 ; CHECK-NEXT:  Loop %for.body: Trip multiple is 9
 ;
 entry:

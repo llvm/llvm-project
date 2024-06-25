@@ -12,7 +12,7 @@
 
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
-  AMDGPUInst<outs, ins, asm, pattern>, GCNPredicateControl {
+  AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
   // Low bits - basic encoding information.
   field bit SALU = 0;
   field bit VALU = 0;
@@ -46,9 +46,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit FLAT = 0;
   field bit DS = 0;
 
-  // Pseudo instruction formats.
-  field bit VGPRSpill = 0;
-  field bit SGPRSpill = 0;
+  // Combined SGPR/VGPR spill bit
+  field bit Spill = 0;
 
   // LDSDIR instruction format.
   field bit LDSDIR = 0;
@@ -69,10 +68,6 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
-  // Most sopk treat the immediate as a signed 16-bit, however some
-  // use it as unsigned.
-  field bit SOPKZext = 0;
-
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -81,10 +76,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Whether the operands can be ignored when computing the
   // instruction size.
   field bit FixedSize = 0;
-
-  // This bit tells the assembler to use the 32-bit encoding in case it
-  // is unable to infer the encoding from the operands.
-  field bit VOPAsmPrefer32Bit = 0;
 
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
@@ -195,8 +186,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{24} = FLAT;
   let TSFlags{25} = DS;
 
-  let TSFlags{26} = VGPRSpill;
-  let TSFlags{27} = SGPRSpill;
+  let TSFlags{26} = Spill;
+
+  // Reserved, must be 0
+  let TSFlags{27} = 0;
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
@@ -209,10 +202,15 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-  let TSFlags{38} = SOPKZext;
+  // Reserved, must be 0.
+  let TSFlags{38} = 0;
+
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
-  let TSFlags{41} = VOPAsmPrefer32Bit;
+
+  // Reserved, must be 0.
+  let TSFlags{41} = 0;
+
   let TSFlags{42} = VOP3_OPSEL;
 
   let TSFlags{43} = maybeAtomic;

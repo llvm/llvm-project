@@ -51,7 +51,7 @@ struct TestElementsAttrInterface
     InFlightDiagnostic diag = op->emitError()
                               << "Test iterating `" << type << "`: ";
 
-    if (!attr.getElementType().isa<mlir::IntegerType>()) {
+    if (!isa<mlir::IntegerType>(attr.getElementType())) {
       diag << "expected element type to be an integer type";
       return;
     }

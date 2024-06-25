@@ -10,8 +10,8 @@ define void @add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
-  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> splat (i32 32) to <vscale x 8 x i16>)
+  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> splat (i32 6) to <vscale x 8 x i16>)
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
   store <vscale x 8 x i8> %3, ptr %4, align 1
@@ -28,8 +28,8 @@ define void @neg_add_lshr_rshrnb_b_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
-  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> splat (i32 1) to <vscale x 8 x i16>)
+  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> splat (i32 6) to <vscale x 8 x i16>)
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
   store <vscale x 8 x i8> %3, ptr %4, align 1
@@ -45,8 +45,8 @@ define void @add_lshr_rshrnb_h_7(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
-  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 64, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 7, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> splat (i32 64) to <vscale x 8 x i16>)
+  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> splat (i32 7) to <vscale x 8 x i16>)
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
   store <vscale x 8 x i8> %3, ptr %4, align 1
@@ -62,8 +62,8 @@ define void @add_lshr_rshrn_h_6(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i32>, ptr %ptr, align 2
-  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 32, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
-  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 6, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> splat (i64 32) to <vscale x 4 x i32>)
+  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> splat (i64 6) to <vscale x 4 x i32>)
   %3 = trunc <vscale x 4 x i32> %2 to <vscale x 4 x i16>
   %4 = getelementptr inbounds i16, ptr %dst, i64 %index
   store <vscale x 4 x i16> %3, ptr %4, align 1
@@ -79,8 +79,8 @@ define void @add_lshr_rshrnb_h_2(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i32>, ptr %ptr, align 2
-  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 2, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
-  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 2, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> splat (i64 2) to <vscale x 4 x i32>)
+  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> splat (i64 2) to <vscale x 4 x i32>)
   %3 = trunc <vscale x 4 x i32> %2 to <vscale x 4 x i16>
   %4 = getelementptr inbounds i16, ptr %dst, i64 %index
   store <vscale x 4 x i16> %3, ptr %4, align 1
@@ -92,8 +92,8 @@ define void @neg_add_lshr_rshrnb_h_0(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i32>, ptr %ptr, align 2
-  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
-  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 -1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> splat (i64 1) to <vscale x 4 x i32>)
+  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> splat (i64 -1) to <vscale x 4 x i32>)
   %3 = trunc <vscale x 4 x i32> %2 to <vscale x 4 x i16>
   %4 = getelementptr inbounds i16, ptr %dst, i64 %index
   store <vscale x 4 x i16> %3, ptr %4, align 1
@@ -109,8 +109,8 @@ define void @neg_zero_shift(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i32>, ptr %ptr, align 2
-  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
-  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> splat (i64 1) to <vscale x 4 x i32>)
+  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> splat (i64 0) to <vscale x 4 x i32>)
   %3 = trunc <vscale x 4 x i32> %2 to <vscale x 4 x i16>
   %4 = getelementptr inbounds i16, ptr %dst, i64 %index
   store <vscale x 4 x i16> %3, ptr %4, align 1
@@ -120,16 +120,16 @@ define void @neg_zero_shift(ptr %ptr, ptr %dst, i64 %index){
 define void @wide_add_shift_add_rshrnb_b(ptr %dest, i64 %index, <vscale x 16 x i16> %arg1){
 ; CHECK-LABEL: wide_add_shift_add_rshrnb_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rshrnb z1.b, z1.h, #6
 ; CHECK-NEXT:    rshrnb z0.b, z0.h, #6
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z2.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0, x1]
-; CHECK-NEXT:    add z0.b, z1.b, z0.b
+; CHECK-NEXT:    add z0.b, z2.b, z0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x1]
 ; CHECK-NEXT:    ret
-  %1 = add <vscale x 16 x i16> %arg1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 32, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
-  %2 = lshr <vscale x 16 x i16> %1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 6, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %1 = add <vscale x 16 x i16> %arg1, splat (i16 32)
+  %2 = lshr <vscale x 16 x i16> %1, splat (i16 6)
   %3 = getelementptr inbounds i8, ptr %dest, i64 %index
   %load = load <vscale x 16 x i8>, ptr %3, align 2
   %4 = trunc <vscale x 16 x i16> %2 to <vscale x 16 x i8>
@@ -141,16 +141,16 @@ define void @wide_add_shift_add_rshrnb_b(ptr %dest, i64 %index, <vscale x 16 x i
 define void @wide_add_shift_add_rshrnb_h(ptr %dest, i64 %index, <vscale x 8 x i32> %arg1){
 ; CHECK-LABEL: wide_add_shift_add_rshrnb_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    rshrnb z1.h, z1.s, #6
 ; CHECK-NEXT:    rshrnb z0.h, z0.s, #6
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x1, lsl #1]
-; CHECK-NEXT:    add z0.h, z1.h, z0.h
+; CHECK-NEXT:    add z0.h, z2.h, z0.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %1 = add <vscale x 8 x i32> %arg1, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-  %2 = lshr <vscale x 8 x i32> %1, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %1 = add <vscale x 8 x i32> %arg1, splat (i32 32)
+  %2 = lshr <vscale x 8 x i32> %1, splat (i32 6)
   %3 = getelementptr inbounds i16, ptr %dest, i64 %index
   %load = load <vscale x 8 x i16>, ptr %3, align 2
   %4 = trunc <vscale x 8 x i32> %2 to <vscale x 8 x i16>
@@ -162,16 +162,16 @@ define void @wide_add_shift_add_rshrnb_h(ptr %dest, i64 %index, <vscale x 8 x i3
 define void @wide_add_shift_add_rshrnb_d(ptr %dest, i64 %index, <vscale x 4 x i64> %arg1){
 ; CHECK-LABEL: wide_add_shift_add_rshrnb_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    rshrnb z1.s, z1.d, #32
 ; CHECK-NEXT:    rshrnb z0.s, z0.d, #32
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x1, lsl #2]
-; CHECK-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEXT:    add z0.s, z2.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %1 = add <vscale x 4 x i64> %arg1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 2147483648, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-  %2 = lshr <vscale x 4 x i64> %1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 32, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %1 = add <vscale x 4 x i64> %arg1, splat (i64 2147483648)
+  %2 = lshr <vscale x 4 x i64> %1, splat (i64 32)
   %3 = getelementptr inbounds i32, ptr %dest, i64 %index
   %load = load <vscale x 4 x i32>, ptr %3, align 4
   %4 = trunc <vscale x 4 x i64> %2 to <vscale x 4 x i32>
@@ -188,15 +188,15 @@ define void @neg_wide_add_shift_add_rshrnb_d(ptr %dest, i64 %index, <vscale x 4 
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    add z0.d, z0.d, z2.d
 ; CHECK-NEXT:    add z1.d, z1.d, z2.d
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    lsr z1.d, z1.d, #48
 ; CHECK-NEXT:    lsr z0.d, z0.d, #48
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x1, lsl #2]
-; CHECK-NEXT:    add z0.s, z1.s, z0.s
+; CHECK-NEXT:    add z0.s, z2.s, z0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %1 = add <vscale x 4 x i64> %arg1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 140737488355328, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
-  %2 = lshr <vscale x 4 x i64> %1, shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 48, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
+  %1 = add <vscale x 4 x i64> %arg1, splat (i64 140737488355328)
+  %2 = lshr <vscale x 4 x i64> %1, splat (i64 48)
   %3 = getelementptr inbounds i32, ptr %dest, i64 %index
   %load = load <vscale x 4 x i32>, ptr %3, align 4
   %4 = trunc <vscale x 4 x i64> %2 to <vscale x 4 x i32>
@@ -216,7 +216,7 @@ define void @neg_trunc_lsr_add_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vs
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
   %1 = add <vscale x 8 x i16> %load, %add_op1
-  %2 = lshr <vscale x 8 x i16> %1, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 6, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %2 = lshr <vscale x 8 x i16> %1, splat (i16 6)
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
   store <vscale x 8 x i8> %3, ptr %4, align 1
@@ -233,7 +233,7 @@ define void @neg_trunc_lsr_op1_not_splat(ptr %ptr, ptr %dst, i64 %index, <vscale
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
-  %1 = add <vscale x 8 x i16> %load, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 32, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %1 = add <vscale x 8 x i16> %load, splat (i16 32)
   %2 = lshr <vscale x 8 x i16> %1, %lshr_op1
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
@@ -253,8 +253,8 @@ define void @neg_add_has_two_uses(ptr %ptr, ptr %dst, ptr %dst2, i64 %index){
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x3]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x i16>, ptr %ptr, align 2
-  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %1 = add <vscale x 8 x i16> %load, trunc (<vscale x 8 x i32> splat (i32 32) to <vscale x 8 x i16>)
+  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> splat (i32 6) to <vscale x 8 x i16>)
   %3 = add <vscale x 8 x i16> %1, %1
   %4 = getelementptr inbounds i16, ptr %dst2, i64 %index
   %5 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
@@ -273,8 +273,8 @@ define void @add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x1, x2, lsl #2]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i64>, ptr %ptr, align 2
-  %1 = add <vscale x 2 x i64> %load, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 32, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-  %2 = lshr <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 6, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %1 = add <vscale x 2 x i64> %load, splat (i64 32)
+  %2 = lshr <vscale x 2 x i64> %1, splat (i64 6)
   %3 = trunc <vscale x 2 x i64> %2 to <vscale x 2 x i32>
   %4 = getelementptr inbounds i32, ptr %dst, i64 %index
   store <vscale x 2 x i32> %3, ptr %4, align 1
@@ -291,8 +291,8 @@ define void @neg_add_lshr_rshrnb_s(ptr %ptr, ptr %dst, i64 %index){
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i64>, ptr %ptr, align 2
-  %1 = add <vscale x 2 x i64> %load, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 32, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
-  %2 = lshr <vscale x 2 x i64> %1, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 6, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %1 = add <vscale x 2 x i64> %load, splat (i64 32)
+  %2 = lshr <vscale x 2 x i64> %1, splat (i64 6)
   %3 = trunc <vscale x 2 x i64> %2 to <vscale x 2 x i16>
   %4 = getelementptr inbounds i16, ptr %dst, i64 %index
   store <vscale x 2 x i16> %3, ptr %4, align 1
@@ -307,8 +307,8 @@ define void @masked_store_rshrnb(ptr %ptr, ptr %dst, i64 %index, <vscale x 8 x i
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x1, x2]
 ; CHECK-NEXT:    ret
   %wide.masked.load = tail call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> poison)
-  %1 = add <vscale x 8 x i16> %wide.masked.load, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 32, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
-  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 6, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer) to <vscale x 8 x i16>)
+  %1 = add <vscale x 8 x i16> %wide.masked.load, trunc (<vscale x 8 x i32> splat (i32 32) to <vscale x 8 x i16>)
+  %2 = lshr <vscale x 8 x i16> %1, trunc (<vscale x 8 x i32> splat (i32 6) to <vscale x 8 x i16>)
   %3 = trunc <vscale x 8 x i16> %2 to <vscale x 8 x i8>
   %4 = getelementptr inbounds i8, ptr %dst, i64 %index
   tail call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> %3, ptr %4, i32 1, <vscale x 8 x i1> %mask)

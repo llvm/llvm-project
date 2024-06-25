@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=loop-vectorize -S -mcpu=pwr9 -interleave-small-loop-scalar-reduction=true 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='loop-vectorize' -S -mcpu=pwr9 -interleave-small-loop-scalar-reduction=true 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S -mcpu=pwr9 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='loop-vectorize' -S -mcpu=pwr9 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: vector.body
 ; CHECK: load double, ptr

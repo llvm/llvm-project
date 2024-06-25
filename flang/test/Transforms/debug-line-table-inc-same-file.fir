@@ -1,10 +1,10 @@
 
-// RUN: fir-opt --add-debug-foundation --mlir-print-debuginfo %s | FileCheck %s
+// RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 // REQUIRES: system-linux
 
 // Test that there is only one FileAttribute generated for multiple functions
 // in the same file.
-module attributes {} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QPs1() {
     return loc(#loc2)
   } loc(#loc1)

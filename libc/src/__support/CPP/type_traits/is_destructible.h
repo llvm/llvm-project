@@ -16,12 +16,11 @@
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
 // is_destructible
-#if LIBC_HAS_BUILTIN(__is_destructible)
+#if __has_builtin(__is_destructible)
 template <typename T>
 struct is_destructible : bool_constant<__is_destructible(T)> {};
 #else

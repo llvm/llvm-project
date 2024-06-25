@@ -44,7 +44,7 @@ class TestGdbRemoteExpeditedRegisters(gdbremote_testcase.GdbRemoteTestCaseBase):
         # notification.
         expedited_registers = self.gather_expedited_registers()
         self.assertIsNotNone(expedited_registers)
-        self.assertTrue(len(expedited_registers) > 0)
+        self.assertGreater(len(expedited_registers), 0)
 
         # Gather target register infos.
         reg_infos = self.gather_register_infos()
@@ -67,7 +67,7 @@ class TestGdbRemoteExpeditedRegisters(gdbremote_testcase.GdbRemoteTestCaseBase):
         # notification.
         expedited_registers = self.gather_expedited_registers()
         # Verify we have at least one expedited register.
-        self.assertTrue(len(expedited_registers) > 0)
+        self.assertGreater(len(expedited_registers), 0)
 
     def test_stop_notification_contains_no_duplicate_registers(self):
         self.build()
@@ -113,7 +113,7 @@ class TestGdbRemoteExpeditedRegisters(gdbremote_testcase.GdbRemoteTestCaseBase):
         # notification.
         expedited_registers = self.gather_expedited_registers()
         self.assertIsNotNone(expedited_registers)
-        self.assertTrue(len(expedited_registers) > 0)
+        self.assertGreater(len(expedited_registers), 0)
 
         # Gather target register infos.
         reg_infos = self.gather_register_infos()

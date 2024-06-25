@@ -13,10 +13,13 @@ func.func @test_elsewhere_impure_mask(%x: !fir.ref<!fir.array<10xi32>>, %y: !fir
     hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
   } do {
     hlfir.elsewhere mask {
-      %mask2 = fir.call @impure() : () -> !fir.heap<!fir.array<10x!fir.logical<4>>>
-      hlfir.yield %mask2 : !fir.heap<!fir.array<10x!fir.logical<4>>> cleanup {
-        fir.freemem %mask2 : !fir.heap<!fir.array<10x!fir.logical<4>>>
+      %mask2 = hlfir.exactly_once : !fir.heap<!fir.array<10x!fir.logical<4>>> {
+        %imp = fir.call @impure() : () -> !fir.heap<!fir.array<10x!fir.logical<4>>>
+        hlfir.yield %imp : !fir.heap<!fir.array<10x!fir.logical<4>>> cleanup {
+          fir.freemem %imp : !fir.heap<!fir.array<10x!fir.logical<4>>>
+        }
       }
+      hlfir.yield %mask2 : !fir.heap<!fir.array<10x!fir.logical<4>>>
     } do {
       hlfir.region_assign {
         hlfir.yield %y : !fir.ref<!fir.array<10xi32>>

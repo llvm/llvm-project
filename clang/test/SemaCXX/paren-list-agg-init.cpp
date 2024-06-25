@@ -313,3 +313,24 @@ namespace GH63903 {
   constexpr S s(0); // beforecxx20-warning {{aggregate initialization of type 'const S' from a parenthesized list of values is a C++20 extension}} \
                     // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
 }
+
+
+namespace gh62863 {
+int (&&arr)[] = static_cast<int[]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr1)[1] = static_cast<int[]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr2)[2] = static_cast<int[]>(42); // expected-error {{reference to type 'int[2]' could not bind to an rvalue of type 'int[1]'}}
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr3)[3] = static_cast<int[3]>(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[3]' from a parenthesized list of values is a C++20 extension}}
+
+int (&&arr4)[] = (int[])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr5)[1] = (int[])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr6)[2] = (int[])(42); // expected-error {{reference to type 'int[2]' could not bind to an rvalue of type 'int[1]'}}
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[1]' from a parenthesized list of values is a C++20 extension}}
+int (&&arr7)[3] = (int[3])(42);
+// beforecxx20-warning@-1 {{aggregate initialization of type 'int[3]' from a parenthesized list of values is a C++20 extension}}
+}

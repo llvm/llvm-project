@@ -450,3 +450,50 @@ define <4 x i8> @bitcast(i32 %0) {
   %2 = bitcast i32 %0 to <4 x i8>
   ret <4 x i8> %2
 }
+
+define <4 x i8> @strict_align_aligned(ptr %v4i8_ptr) "target-features"="+strict-align" {
+; CHECK-LE-LABEL: strict_align_aligned:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldr s0, [x0]
+; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: strict_align_aligned:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldr s0, [x0]
+; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %v4i8 = load <4 x i8>, ptr %v4i8_ptr, align 4
+  ret <4 x i8> %v4i8
+}
+
+define <4 x i8> @strict_align_unaligned(ptr %v4i8_ptr) "target-features"="+strict-align" {
+; CHECK-LE-LABEL: strict_align_unaligned:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-LE-NEXT:    add x8, x0, #1
+; CHECK-LE-NEXT:    ld1 { v0.b }[2], [x8]
+; CHECK-LE-NEXT:    add x8, x0, #2
+; CHECK-LE-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-LE-NEXT:    add x8, x0, #3
+; CHECK-LE-NEXT:    ld1 { v0.b }[6], [x8]
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: strict_align_unaligned:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-BE-NEXT:    add x8, x0, #1
+; CHECK-BE-NEXT:    ld1 { v0.b }[2], [x8]
+; CHECK-BE-NEXT:    add x8, x0, #2
+; CHECK-BE-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-BE-NEXT:    add x8, x0, #3
+; CHECK-BE-NEXT:    ld1 { v0.b }[6], [x8]
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %v4i8 = load <4 x i8>, ptr %v4i8_ptr, align 1
+  ret <4 x i8> %v4i8
+}

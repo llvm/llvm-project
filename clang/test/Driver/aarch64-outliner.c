@@ -1,4 +1,3 @@
-// REQUIRES: aarch64-registered-target
 // RUN: %clang --target=aarch64 -moutline -S %s -### 2>&1 | FileCheck %s -check-prefix=ON
 // RUN: %clang --target=aarch64_be -moutline -S %s -### 2>&1 | FileCheck %s -check-prefix=ON
 // ON: "-mllvm" "-enable-machine-outliner"

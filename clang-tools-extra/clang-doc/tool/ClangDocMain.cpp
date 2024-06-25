@@ -238,7 +238,7 @@ Example usage for a project using a compile commands database:
   Error = false;
   llvm::sys::Mutex IndexMutex;
   // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
+  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       std::vector<std::unique_ptr<doc::Info>> Infos;
@@ -299,8 +299,7 @@ Example usage for a project using a compile commands database:
   llvm::outs() << "Generating assets for docs...\n";
   Err = G->get()->createResources(CDCtx);
   if (Err) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
+    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
 
   return 0;

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-eabi
+; RUN: llc < %s -mtriple=aarch64
 
 define i8 @test_minsize_uu8(i8 %x) minsize optsize {
 entry:

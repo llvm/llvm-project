@@ -41,6 +41,12 @@ inferred a = 0;
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/Inferred.framework/Headers/Inferred.h",
 // CHECK-NEXT:         "[[PREFIX]]/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "isFramework": true,
+// CHECK-NEXT:           "link-name": "Inferred"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "Inferred"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

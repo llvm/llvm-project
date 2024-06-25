@@ -131,8 +131,7 @@ public:
     /// Compares two keys.
     bool operator==(const Key &other) const {
       if (isIdentified())
-        return other.isIdentified() &&
-               other.getIdentifier().equals(getIdentifier());
+        return other.isIdentified() && other.getIdentifier() == getIdentifier();
 
       return !other.isIdentified() && other.isPacked() == isPacked() &&
              other.getTypeList() == getTypeList();

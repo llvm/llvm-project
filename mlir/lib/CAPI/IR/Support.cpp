@@ -25,7 +25,7 @@ bool mlirStringRefEqual(MlirStringRef string, MlirStringRef other) {
 // LLVM ThreadPool API.
 //===----------------------------------------------------------------------===//
 MlirLlvmThreadPool mlirLlvmThreadPoolCreate() {
-  return wrap(new llvm::ThreadPool());
+  return wrap(new llvm::DefaultThreadPool());
 }
 
 void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool threadPool) {

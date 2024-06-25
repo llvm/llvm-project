@@ -155,6 +155,22 @@ TEST(TypePrinter, TemplateIdWithNTTP) {
       }));
 }
 
+TEST(TypePrinter, TemplateArgumentsSubstitution) {
+  constexpr char Code[] = R"cpp(
+       template <typename Y> class X {};
+       typedef X<int> A;
+       int foo() {
+          return sizeof(A);
+       }
+  )cpp";
+  auto Matcher = typedefNameDecl(hasName("A"), hasType(qualType().bind("id")));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "X<int>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.SuppressTagKeyword = false;
+                                   Policy.SuppressScope = true;
+                                 }));
+}
+
 TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
   /// Tests clang::isSubstitutedDefaultArgument on TemplateArguments
   /// that are of kind TemplateArgument::Expression

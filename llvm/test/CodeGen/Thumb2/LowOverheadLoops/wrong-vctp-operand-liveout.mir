@@ -4,7 +4,7 @@
 # The VCTP uses r2, which is redefined in the loop.
 
 --- |
-  define dso_local i32 @wrong_vctp_liveout(i16* nocapture readonly %a, i16* nocapture readonly %b, i32 %N) local_unnamed_addr #0 {
+  define dso_local i32 @wrong_vctp_liveout(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N) local_unnamed_addr #0 {
   entry:
     %cmp9 = icmp eq i32 %N, 0
     %0 = add i32 %N, 3
@@ -21,22 +21,22 @@
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
-    %lsr.iv18 = phi i16* [ %scevgep19, %vector.body ], [ %b, %vector.ph ]
-    %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
+    %lsr.iv18 = phi ptr [ %scevgep19, %vector.body ], [ %b, %vector.ph ]
+    %lsr.iv = phi ptr [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
     %6 = phi i32 [ %N, %vector.ph ], [ %8, %vector.body ]
-    %lsr.iv17 = bitcast i16* %lsr.iv to <4 x i16>*
-    %lsr.iv1820 = bitcast i16* %lsr.iv18 to <4 x i16>*
+    %lsr.iv17 = bitcast ptr %lsr.iv to ptr
+    %lsr.iv1820 = bitcast ptr %lsr.iv18 to ptr
     %7 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %6)
     %8 = sub i32 %6, 4
-    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv17, i32 2, <4 x i1> %7, <4 x i16> undef)
+    %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv17, i32 2, <4 x i1> %7, <4 x i16> undef)
     %9 = sext <4 x i16> %wide.masked.load to <4 x i32>
-    %wide.masked.load14 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv1820, i32 2, <4 x i1> %7, <4 x i16> undef)
+    %wide.masked.load14 = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %lsr.iv1820, i32 2, <4 x i1> %7, <4 x i16> undef)
     %10 = sext <4 x i16> %wide.masked.load14 to <4 x i32>
     %11 = mul nsw <4 x i32> %10, %9
     %12 = add <4 x i32> %11, %vec.phi
-    %scevgep = getelementptr i16, i16* %lsr.iv, i32 4
-    %scevgep19 = getelementptr i16, i16* %lsr.iv18, i32 4
+    %scevgep = getelementptr i16, ptr %lsr.iv, i32 4
+    %scevgep19 = getelementptr i16, ptr %lsr.iv18, i32 4
     %13 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv1, i32 1)
     %14 = icmp ne i32 %13, 0
     %lsr.iv.next = add nsw i32 %lsr.iv1, -1
@@ -52,7 +52,7 @@
     %res.0.lcssa = phi i32 [ 0, %entry ], [ %17, %middle.block ]
     ret i32 %res.0.lcssa
   }
-  declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>) #1
+  declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32 immarg, <4 x i1>, <4 x i16>) #1
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) #2
   declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3

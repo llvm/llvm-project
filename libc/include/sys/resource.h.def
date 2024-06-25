@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SYS_RESOURCE_H
 #define LLVM_LIBC_SYS_RESOURCE_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
-#include <llvm-libc-macros/sys-resource-macros.h>
+#include "llvm-libc-macros/sys-resource-macros.h"
 
 %%public_api()
 

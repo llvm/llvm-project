@@ -12,7 +12,8 @@
 // with origin in deque::__add_back_capacity.
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
-// UNSUPPORTED: c++03, !has-unix-headers, no-localization
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: c++03, no-localization
 
 #include <deque>
 #include <cstdio>
@@ -25,7 +26,7 @@ void test1() {
 
   for (int i = 0; i < 1100; i += 1) {
     test.insert(test.begin(), buff, buff + 320);
-    test.erase(test.end(), test.end() - 320);
+    test.erase(test.end() - 320, test.end());
   }
 
   test.insert(test.begin(), buff, buff + 32000);

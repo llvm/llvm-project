@@ -12,22 +12,6 @@ body:             |
 
    liveins: $x0, $x1, $x2, $x3, $x4
 
-    ; CHECK-LABEL: name: compare_swap_128
-    ; CHECK: liveins: $x0_x1, $x1, $x0, $x1, $x2, $x3, $x4
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
-    ; CHECK: [[COPY5:%[0-9]+]]:gpr64(s64) = COPY [[COPY1]](s64)
-    ; CHECK: [[COPY6:%[0-9]+]]:gpr64(s64) = COPY [[COPY2]](s64)
-    ; CHECK: [[COPY7:%[0-9]+]]:gpr64(s64) = COPY [[COPY3]](s64)
-    ; CHECK: [[COPY8:%[0-9]+]]:gpr64(s64) = COPY [[COPY4]](s64)
-    ; CHECK: early-clobber %13:gpr64(s64), early-clobber %14:gpr64(s64), early-clobber %16:gpr32common = CMP_SWAP_128_ACQUIRE [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire 16)
-    ; CHECK: [[COPY9:%[0-9]+]]:gpr64 = COPY %16
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES %13(s64), %14(s64)
-    ; CHECK: G_STORE [[MV]](s128), [[COPY]](p0) :: (store 16)
-    ; CHECK: RET_ReallyLR
     ; CHECK-NOLSE-LABEL: name: compare_swap_128
     ; CHECK-NOLSE: liveins: $x0_x1, $x1, $x0, $x1, $x2, $x3, $x4
     ; CHECK-NOLSE-NEXT: {{  $}}
@@ -40,11 +24,13 @@ body:             |
     ; CHECK-NOLSE-NEXT: [[COPY6:%[0-9]+]]:gpr64(s64) = COPY [[COPY2]](s64)
     ; CHECK-NOLSE-NEXT: [[COPY7:%[0-9]+]]:gpr64(s64) = COPY [[COPY3]](s64)
     ; CHECK-NOLSE-NEXT: [[COPY8:%[0-9]+]]:gpr64(s64) = COPY [[COPY4]](s64)
-    ; CHECK-NOLSE-NEXT: early-clobber %13:gpr64common(s64), early-clobber %14:gpr64common(s64), early-clobber %16:gpr32common = CMP_SWAP_128_ACQUIRE [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire (s128))
-    ; CHECK-NOLSE-NEXT: [[COPY9:%[0-9]+]]:gpr64 = COPY %16
-    ; CHECK-NOLSE-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES %13(s64), %14(s64)
-    ; CHECK-NOLSE-NEXT: G_STORE [[MV]](s128), [[COPY]](p0) :: (store (s128))
+    ; CHECK-NOLSE-NEXT: early-clobber %14:gpr64common(s64), early-clobber %15:gpr64common(s64), early-clobber %17:gpr32common = CMP_SWAP_128_ACQUIRE [[COPY]](p0), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64) :: (load store acquire acquire (s128))
+    ; CHECK-NOLSE-NEXT: [[COPY9:%[0-9]+]]:gpr64 = COPY %17
+    ; CHECK-NOLSE-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES %14(s64), %15(s64)
+    ; CHECK-NOLSE-NEXT: [[COPY10:%[0-9]+]]:_(s128) = COPY [[MV]](s128)
+    ; CHECK-NOLSE-NEXT: G_STORE [[COPY10]](s128), [[COPY]](p0) :: (store (s128))
     ; CHECK-NOLSE-NEXT: RET_ReallyLR
+    ;
     ; CHECK-LSE-LABEL: name: compare_swap_128
     ; CHECK-LSE: liveins: $x0_x1, $x1, $x0, $x1, $x2, $x3, $x4
     ; CHECK-LSE-NEXT: {{  $}}
@@ -59,7 +45,8 @@ body:             |
     ; CHECK-LSE-NEXT: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[CASPAX]](s128), 0
     ; CHECK-LSE-NEXT: [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[CASPAX]](s128), 64
     ; CHECK-LSE-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[EXTRACT]](s64), [[EXTRACT1]](s64)
-    ; CHECK-LSE-NEXT: G_STORE [[MV]](s128), [[COPY]](p0) :: (store (s128))
+    ; CHECK-LSE-NEXT: [[COPY5:%[0-9]+]]:_(s128) = COPY [[MV]](s128)
+    ; CHECK-LSE-NEXT: G_STORE [[COPY5]](s128), [[COPY]](p0) :: (store (s128))
     ; CHECK-LSE-NEXT: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %3:_(s64) = COPY $x1

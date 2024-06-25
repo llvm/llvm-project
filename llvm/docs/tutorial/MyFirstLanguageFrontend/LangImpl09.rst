@@ -416,7 +416,7 @@ argument allocas in ``FunctionAST::codegen``.
 
 Here we're first creating the variable, giving it the scope (``SP``),
 the name, source location, type, and since it's an argument, the argument
-index. Next, we create an ``lvm.dbg.declare`` call to indicate at the IR
+index. Next, we create a ``#dbg_declare`` record to indicate at the IR
 level that we've got a variable in an alloca (and it gives a starting
 location for the variable), and setting a source location for the
 beginning of the scope on the declare.

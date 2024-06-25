@@ -13,11 +13,13 @@ using namespace llvm;
 namespace {
 
 struct AddrMode : public TargetLowering::AddrMode {
-  constexpr AddrMode(GlobalValue *GV, int64_t Offs, bool HasBase, int64_t S) {
+  constexpr AddrMode(GlobalValue *GV, int64_t Offs, bool HasBase, int64_t S,
+                     int64_t SOffs = 0) {
     BaseGV = GV;
     BaseOffs = Offs;
     HasBaseReg = HasBase;
     Scale = S;
+    ScalableOffset = SOffs;
   }
 };
 struct TestCase {
@@ -153,6 +155,45 @@ const std::initializer_list<TestCase> Tests = {
     {{nullptr, 4096 + 1, true, 0}, 8, false},
 
 };
+
+struct SVETestCase {
+  AddrMode AM;
+  unsigned TypeBits;
+  unsigned NumElts;
+  bool Result;
+};
+
+const std::initializer_list<SVETestCase> SVETests = {
+    // {BaseGV, BaseOffs, HasBaseReg, Scale, SOffs}, EltBits, Count, Result
+    // Test immediate range -- [-8,7] vector's worth.
+    // <vscale x 16 x i8>, increment by one vector
+    {{nullptr, 0, true, 0, 16}, 8, 16, true},
+    // <vscale x 4 x i32>, increment by eight vectors
+    {{nullptr, 0, true, 0, 128}, 32, 4, false},
+    // <vscale x 8 x i16>, increment by seven vectors
+    {{nullptr, 0, true, 0, 112}, 16, 8, true},
+    // <vscale x 2 x i64>, decrement by eight vectors
+    {{nullptr, 0, true, 0, -128}, 64, 2, true},
+    // <vscale x 16 x i8>, decrement by nine vectors
+    {{nullptr, 0, true, 0, -144}, 8, 16, false},
+
+    // Half the size of a vector register, but allowable with extending
+    // loads and truncating stores
+    // <vscale x 8 x i8>, increment by three vectors
+    {{nullptr, 0, true, 0, 24}, 8, 8, true},
+
+    // Test invalid types or offsets
+    // <vscale x 5 x i32>, increment by one vector (base size > 16B)
+    {{nullptr, 0, true, 0, 20}, 32, 5, false},
+    // <vscale x 8 x i16>, increment by half a vector
+    {{nullptr, 0, true, 0, 8}, 16, 8, false},
+    // <vscale x 3 x i8>, increment by 3 vectors (non-power-of-two)
+    {{nullptr, 0, true, 0, 9}, 8, 3, false},
+
+    // Scalable and fixed offsets
+    // <vscale x 16 x i8>, increment by 32 then decrement by vscale x 16
+    {{nullptr, 32, true, 0, -16}, 8, 16, false},
+};
 } // namespace
 
 TEST(AddressingModes, AddressingModes) {
@@ -178,5 +219,12 @@ TEST(AddressingModes, AddressingModes) {
   for (const auto &Test : Tests) {
     Type *Typ = Type::getIntNTy(Ctx, Test.TypeBits);
     ASSERT_EQ(TLI->isLegalAddressingMode(DL, Test.AM, Typ, 0), Test.Result);
+  }
+
+  for (const auto &SVETest : SVETests) {
+    Type *Ty = VectorType::get(Type::getIntNTy(Ctx, SVETest.TypeBits),
+                               ElementCount::getScalable(SVETest.NumElts));
+    ASSERT_EQ(TLI->isLegalAddressingMode(DL, SVETest.AM, Ty, 0),
+              SVETest.Result);
   }
 }

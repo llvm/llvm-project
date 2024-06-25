@@ -32,6 +32,8 @@ endif()
 add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
+  OBJECT
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
@@ -47,7 +49,7 @@ add_mlir_dialect_library(MLIRNVVMTarget
   MLIRNVVMToLLVMIRTranslation
   )
 
-if(MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   # Find the CUDA toolkit.
   find_package(CUDAToolkit)
 
@@ -93,7 +95,6 @@ if(MLIR_ENABLE_CUDA_CONVERSIONS)
   # Define the `CUDAToolkit` path.
   target_compile_definitions(obj.MLIRNVVMTarget
     PRIVATE
-    MLIR_NVPTXCOMPILER_ENABLED=${MLIR_ENABLE_NVPTXCOMPILER}
     __DEFAULT_CUDATOOLKIT_PATH__="${MLIR_CUDAToolkit_ROOT}"
   )
 endif()
@@ -109,6 +110,8 @@ endif()
 
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
+
+  OBJECT
 
   LINK_COMPONENTS
   MCParser

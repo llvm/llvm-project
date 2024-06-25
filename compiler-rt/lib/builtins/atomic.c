@@ -12,7 +12,7 @@
 //
 //  1) This code must work with C programs that do not link to anything
 //     (including pthreads) and so it should not depend on any pthread
-//     functions.
+//     functions. If the user wishes to opt into using pthreads, they may do so.
 //  2) Atomic operations, rather than explicit mutexes, are most commonly used
 //     on code where contended operations are rate.
 //
@@ -56,7 +56,17 @@ static const long SPINLOCK_MASK = SPINLOCK_COUNT - 1;
 // defined.  Each platform should define the Lock type, and corresponding
 // lock() and unlock() functions.
 ////////////////////////////////////////////////////////////////////////////////
-#if defined(__FreeBSD__) || defined(__DragonFly__)
+#if defined(_LIBATOMIC_USE_PTHREAD)
+#include <pthread.h>
+typedef pthread_mutex_t Lock;
+/// Unlock a lock.  This is a release operation.
+__inline static void unlock(Lock *l) { pthread_mutex_unlock(l); }
+/// Locks a lock.
+__inline static void lock(Lock *l) { pthread_mutex_lock(l); }
+/// locks for atomic operations
+static Lock locks[SPINLOCK_COUNT];
+
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
 #include <errno.h>
 // clang-format off
 #include <sys/types.h>

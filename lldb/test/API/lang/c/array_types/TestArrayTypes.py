@@ -175,7 +175,7 @@ class ArrayTypesTestCase(TestBase):
             substrs=["%s" % variable.GetName()],
         )
         self.DebugSBValue(variable)
-        self.assertEquals(
+        self.assertEqual(
             variable.GetNumChildren(), 4, "Variable 'strings' should have 4 children"
         )
         byte_size = variable.GetByteSize()
@@ -183,14 +183,14 @@ class ArrayTypesTestCase(TestBase):
 
         child3 = variable.GetChildAtIndex(3)
         self.DebugSBValue(child3)
-        self.assertEquals(
+        self.assertEqual(
             child3.GetSummary(), '"Guten Tag"', 'strings[3] == "Guten Tag"'
         )
 
         # Lookup the "char_16" char array variable.
         variable = frame.FindVariable("char_16")
         self.DebugSBValue(variable)
-        self.assertEquals(
+        self.assertEqual(
             variable.GetNumChildren(), 16, "Variable 'char_16' should have 16 children"
         )
 
@@ -200,31 +200,31 @@ class ArrayTypesTestCase(TestBase):
         # of the string.  Same applies to long().
         variable = frame.FindVariable("ushort_matrix")
         self.DebugSBValue(variable)
-        self.assertEquals(
+        self.assertEqual(
             variable.GetNumChildren(),
             2,
             "Variable 'ushort_matrix' should have 2 children",
         )
         child0 = variable.GetChildAtIndex(0)
         self.DebugSBValue(child0)
-        self.assertEquals(
+        self.assertEqual(
             child0.GetNumChildren(),
             3,
             "Variable 'ushort_matrix[0]' should have 3 children",
         )
         child0_2 = child0.GetChildAtIndex(2)
         self.DebugSBValue(child0_2)
-        self.assertEquals(int(child0_2.GetValue(), 0), 3, "ushort_matrix[0][2] == 3")
+        self.assertEqual(int(child0_2.GetValue(), 0), 3, "ushort_matrix[0][2] == 3")
 
         # Lookup the "long_6" char array variable.
         variable = frame.FindVariable("long_6")
         self.DebugSBValue(variable)
-        self.assertEquals(
+        self.assertEqual(
             variable.GetNumChildren(), 6, "Variable 'long_6' should have 6 children"
         )
         child5 = variable.GetChildAtIndex(5)
         self.DebugSBValue(child5)
-        self.assertEquals(int(child5.GetValue(), 0), 6, "long_6[5] == 6")
+        self.assertEqual(int(child5.GetValue(), 0), 6, "long_6[5] == 6")
 
         # Last, check that "long_6" has a value type of eValueTypeVariableLocal
         # and "argc" has eValueTypeVariableArgument.
@@ -238,7 +238,7 @@ class ArrayTypesTestCase(TestBase):
         )
         argc = frame.FindVariable("argc")
         self.DebugSBValue(argc)
-        self.assertEquals(
+        self.assertEqual(
             argc.GetValueType(),
             lldb.eValueTypeVariableArgument,
             "Variable 'argc' should have '%s' value type."

@@ -1,4 +1,4 @@
-//===--- FunctionPointer.h - Types for the constexpr VM ----------*- C++ -*-===//
+//===--- FunctionPointer.h - Types for the constexpr VM ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,17 +20,35 @@ namespace interp {
 class FunctionPointer final {
 private:
   const Function *Func;
+  bool Valid;
 
 public:
-  FunctionPointer() : Func(nullptr) {}
-  FunctionPointer(const Function *Func) : Func(Func) { assert(Func); }
+  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {
+    assert(Func);
+  }
+
+  FunctionPointer(uintptr_t IntVal = 0, const Descriptor *Desc = nullptr)
+      : Func(reinterpret_cast<const Function *>(IntVal)), Valid(false) {}
 
   const Function *getFunction() const { return Func; }
+  bool isZero() const { return !Func; }
+  bool isValid() const { return Valid; }
+  bool isWeak() const {
+    if (!Func || !Valid)
+      return false;
+
+    return Func->getDecl()->isWeak();
+  }
 
   APValue toAPValue() const {
     if (!Func)
       return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/true);
+
+    if (!Valid)
+      return APValue(static_cast<Expr *>(nullptr),
+                     CharUnits::fromQuantity(getIntegerRepresentation()), {},
+                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
 
     return APValue(Func->getDecl(), CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
@@ -38,8 +56,10 @@ public:
 
   void print(llvm::raw_ostream &OS) const {
     OS << "FnPtr(";
-    if (Func)
+    if (Func && Valid)
       OS << Func->getName();
+    else if (Func)
+      OS << reinterpret_cast<uintptr_t>(Func);
     else
       OS << "nullptr";
     OS << ")";
@@ -50,6 +70,10 @@ public:
       return "nullptr";
 
     return toAPValue().getAsString(Ctx, Func->getDecl()->getType());
+  }
+
+  uint64_t getIntegerRepresentation() const {
+    return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Func));
   }
 
   ComparisonCategoryResult compare(const FunctionPointer &RHS) const {

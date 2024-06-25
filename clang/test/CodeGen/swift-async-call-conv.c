@@ -182,3 +182,19 @@ SWIFTASYNCCALL void async_struct_field_and_methods(int i, S &sref, S *sptr) {
 // CPPONLY-LABEL: define{{.*}} swifttailcc void @{{.*}}async_nonleaf_method2
 // CPPONLY: musttail call swifttailcc void @{{.*}}async_leaf_method
 #endif
+
+// Passing this as an argument requires a coerce-and-expand operation,
+// which requires a temporary.  Make sure that cleaning up that temporary
+// doesn't mess around with the musttail handling.
+struct coerce_and_expand {
+  char a,b,c,d;
+};
+struct coerce_and_expand return_coerced(void);
+SWIFTASYNCCALL void take_coerced_async(struct coerce_and_expand);
+
+// CHECK-LABEL: swifttailcc void @{{.*}}test_coerced
+SWIFTASYNCCALL void test_coerced() {
+  // CHECK:      musttail call swifttailcc void @{{.*}}take_coerced_async
+  // CHECK-NEXT: ret void
+  return take_coerced_async(return_coerced());
+}

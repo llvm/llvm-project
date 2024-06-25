@@ -96,6 +96,6 @@ TEST_F(ComplexTest, verifyConvertWithSemantics) {
 
   // Convert complex to integer
   mlir::Value v2 = firBuilder->convertWithSemantics(loc, integerTy1, v1);
-  EXPECT_TRUE(v2.getType().isa<mlir::IntegerType>());
+  EXPECT_TRUE(mlir::isa<mlir::IntegerType>(v2.getType()));
   EXPECT_TRUE(mlir::dyn_cast<fir::ConvertOp>(v2.getDefiningOp()));
 }

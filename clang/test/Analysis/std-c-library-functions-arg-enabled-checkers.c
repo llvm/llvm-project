@@ -6,7 +6,7 @@
 // RUN:   -Xclang -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -Xclang -analyzer-config \
 // RUN:      -Xclang unix.StdCLibraryFunctions:ModelPOSIX=true \
-// RUN:   -Xclang -analyzer-checker=alpha.unix.Stream \
+// RUN:   -Xclang -analyzer-checker=unix.Stream \
 // RUN:   -Xclang -analyzer-list-enabled-checkers \
 // RUN:   -Xclang -analyzer-display-progress \
 // RUN:   2>&1 | FileCheck %s --implicit-check-not=ANALYZE \
@@ -14,8 +14,6 @@
 
 // CHECK:      OVERVIEW: Clang Static Analyzer Enabled Checkers List
 // CHECK-EMPTY:
-// CHECK-NEXT: core.NonNullParamChecker
-// CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.Errno
 // CHECK-NEXT: apiModeling.TrustNonnull
 // CHECK-NEXT: apiModeling.TrustReturnsNonnull
@@ -26,6 +24,7 @@
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
 // CHECK-NEXT: core.StackAddrEscapeBase
@@ -51,12 +50,14 @@
 // CHECK-NEXT: security.insecureAPI.mktemp
 // CHECK-NEXT: security.insecureAPI.vfork
 // CHECK-NEXT: unix.API
+// CHECK-NEXT: unix.BlockInCriticalSection
 // CHECK-NEXT: unix.cstring.CStringModeling
 // CHECK-NEXT: unix.DynamicMemoryModeling
 // CHECK-NEXT: unix.Errno
 // CHECK-NEXT: unix.Malloc
 // CHECK-NEXT: unix.MallocSizeof
 // CHECK-NEXT: unix.MismatchedDeallocator
+// CHECK-NEXT: unix.Stream
 // CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg

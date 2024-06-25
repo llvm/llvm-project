@@ -55,12 +55,14 @@ void genDeallocateStmt(AbstractConverter &converter,
 
 void genDeallocateBox(AbstractConverter &converter,
                       const fir::MutableBoxValue &box, mlir::Location loc,
+                      const Fortran::semantics::Symbol *sym = nullptr,
                       mlir::Value declaredTypeDesc = {});
 
 /// Deallocate an allocatable if it is allocated at the end of its lifetime.
 void genDeallocateIfAllocated(AbstractConverter &converter,
                               const fir::MutableBoxValue &box,
-                              mlir::Location loc);
+                              mlir::Location loc,
+                              const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be

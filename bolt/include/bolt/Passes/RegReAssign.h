@@ -55,7 +55,7 @@ public:
     return BinaryFunctionPass::shouldPrint(BF) && FuncsChanged.count(&BF) > 0;
   }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 } // namespace bolt
 } // namespace llvm

@@ -33,40 +33,40 @@
   entry:
     %condition = alloca i32, align 4
     call void @llvm.dbg.value(metadata i32 %argument, metadata !12, metadata !DIExpression()), !dbg !17
-    %0 = bitcast i32* %condition to i8*, !dbg !18
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !18
-    call void @llvm.dbg.value(metadata i32* %condition, metadata !13, metadata !DIExpression()), !dbg !19
-    call void @set_cond(i32 signext %argument, i32* nonnull %condition), !dbg !20
-    %1 = load i32, i32* %condition, align 4, !dbg !21, !tbaa !23
+    %0 = bitcast ptr %condition to ptr, !dbg !18
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0), !dbg !18
+    call void @llvm.dbg.value(metadata ptr %condition, metadata !13, metadata !DIExpression()), !dbg !19
+    call void @set_cond(i32 signext %argument, ptr nonnull %condition), !dbg !20
+    %1 = load i32, ptr %condition, align 4, !dbg !21, !tbaa !23
     call void @llvm.dbg.value(metadata i32 %1, metadata !13, metadata !DIExpression()), !dbg !19
     %tobool = icmp eq i32 %1, 0, !dbg !21
     br i1 %tobool, label %if.end, label %if.then, !dbg !27
 
   if.then:                                          ; preds = %entry
-    call void @do_something(i8* undef, i32 signext %argument), !dbg !28
+    call void @do_something(ptr undef, i32 signext %argument), !dbg !28
     br label %if.end, !dbg !28
 
   if.end:                                           ; preds = %if.then, %entry
-    %2 = bitcast i32* %condition to i8*
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2), !dbg !29
+    %2 = bitcast ptr %condition to ptr
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %2), !dbg !29
     ret void, !dbg !29
   }
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+  declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
-  declare void @set_cond(i32 signext, i32*) local_unnamed_addr
+  declare void @set_cond(i32 signext, ptr) local_unnamed_addr
 
-  declare void @do_something(i8*, i32 signext) local_unnamed_addr
+  declare void @do_something(ptr, i32 signext) local_unnamed_addr
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+  declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { argmemonly nounwind }
   attributes #1 = { nounwind readnone speculatable }

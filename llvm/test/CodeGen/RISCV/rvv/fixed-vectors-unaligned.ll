@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=SLOW,RV32-SLOW
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=SLOW,RV64-SLOW
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+unaligned-vector-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=FAST,RV32-FAST
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+unaligned-vector-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=FAST,RV64-FAST
 
 define <4 x i32> @load_v4i32_align1(ptr %ptr) {
@@ -94,7 +94,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV32-SLOW-NEXT:    lbu a1, 0(a1)
 ; RV32-SLOW-NEXT:    slli a2, a2, 8
 ; RV32-SLOW-NEXT:    or a1, a2, a1
-; RV32-SLOW-NEXT:    vsetivli zero, 2, e16, m2, tu, ma
+; RV32-SLOW-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV32-SLOW-NEXT:    vmv.s.x v9, a1
 ; RV32-SLOW-NEXT:    andi a0, a0, 2
 ; RV32-SLOW-NEXT:    beqz a0, .LBB4_2
@@ -131,7 +131,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
 ; RV64-SLOW-NEXT:    lbu a1, 0(a1)
 ; RV64-SLOW-NEXT:    slli a2, a2, 8
 ; RV64-SLOW-NEXT:    or a1, a2, a1
-; RV64-SLOW-NEXT:    vsetivli zero, 2, e16, m2, tu, ma
+; RV64-SLOW-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; RV64-SLOW-NEXT:    vmv.s.x v9, a1
 ; RV64-SLOW-NEXT:    andi a0, a0, 2
 ; RV64-SLOW-NEXT:    beqz a0, .LBB4_2
@@ -217,7 +217,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV64-SLOW-NEXT:    ret
 ; RV64-SLOW-NEXT:  .LBB5_3: # %cond.load
-; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m8, tu, ma
+; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV64-SLOW-NEXT:    lwu a2, 4(a1)
 ; RV64-SLOW-NEXT:    lwu a1, 0(a1)
@@ -227,7 +227,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    andi a0, a0, 2
 ; RV64-SLOW-NEXT:    beqz a0, .LBB5_2
 ; RV64-SLOW-NEXT:  .LBB5_4: # %cond.load1
-; RV64-SLOW-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a0, v8
 ; RV64-SLOW-NEXT:    lwu a1, 4(a0)
@@ -235,7 +235,6 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    slli a1, a1, 32
 ; RV64-SLOW-NEXT:    or a0, a1, a0
 ; RV64-SLOW-NEXT:    vmv.s.x v8, a0
-; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-SLOW-NEXT:    vmv1r.v v8, v9
 ; RV64-SLOW-NEXT:    ret
@@ -612,7 +611,7 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, ptr %a, <2 x i32> %m) nou
 ; SLOW-NEXT:    andi a1, a1, 2
 ; SLOW-NEXT:    beqz a1, .LBB9_2
 ; SLOW-NEXT:  .LBB9_4: # %cond.store1
-; SLOW-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; SLOW-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; SLOW-NEXT:    vslidedown.vi v8, v8, 1
 ; SLOW-NEXT:    vmv.x.s a1, v8
 ; SLOW-NEXT:    sh a1, 4(a0)

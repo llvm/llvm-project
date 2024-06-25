@@ -155,12 +155,12 @@ define <3 x i32> @t4_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
   ret <3 x i32> %t5
 }
 
-define <3 x i32> @t5_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
-; CHECK-LABEL: @t5_vec_undef(
-; CHECK-NEXT:    [[T1:%.*]] = shl <3 x i32> <i32 -1, i32 undef, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = xor <3 x i32> [[T1]], <i32 -1, i32 undef, i32 -1>
+define <3 x i32> @t5_vec_poison(<3 x i32> %x, <3 x i32> %nbits) {
+; CHECK-LABEL: @t5_vec_poison(
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw <3 x i32> <i32 -1, i32 poison, i32 -1>, [[NBITS:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = xor <3 x i32> [[T1]], <i32 -1, i32 poison, i32 -1>
 ; CHECK-NEXT:    [[T3:%.*]] = and <3 x i32> [[T2]], [[X:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = sub <3 x i32> <i32 32, i32 undef, i32 32>, [[NBITS]]
+; CHECK-NEXT:    [[T4:%.*]] = sub <3 x i32> <i32 32, i32 poison, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[NBITS]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
@@ -169,11 +169,11 @@ define <3 x i32> @t5_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i32> [[X]], [[T4]]
 ; CHECK-NEXT:    ret <3 x i32> [[T5]]
 ;
-  %t0 = add <3 x i32> %nbits, <i32 0, i32 undef, i32 0>
-  %t1 = shl <3 x i32> <i32 -1, i32 undef, i32 -1>, %t0
-  %t2 = xor <3 x i32> %t1, <i32 -1, i32 undef, i32 -1>
+  %t0 = add <3 x i32> %nbits, <i32 0, i32 poison, i32 0>
+  %t1 = shl <3 x i32> <i32 -1, i32 poison, i32 -1>, %t0
+  %t2 = xor <3 x i32> %t1, <i32 -1, i32 poison, i32 -1>
   %t3 = and <3 x i32> %t2, %x
-  %t4 = sub <3 x i32> <i32 32, i32 undef, i32 32>, %nbits
+  %t4 = sub <3 x i32> <i32 32, i32 poison, i32 32>, %nbits
   call void @use3xi32(<3 x i32> %t0)
   call void @use3xi32(<3 x i32> %t1)
   call void @use3xi32(<3 x i32> %t2)

@@ -135,6 +135,10 @@ TARGET_BUILTIN(__builtin_wasm_min_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_pmin_f64x2, "V2dV2dV2d", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_pmax_f64x2, "V2dV2dV2d", "nc", "simd128")
+TARGET_BUILTIN(__builtin_wasm_min_f16x8, "V8hV8hV8h", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_max_f16x8, "V8hV8hV8h", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_pmin_f16x8, "V8hV8hV8h", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_pmax_f16x8, "V8hV8hV8h", "nc", "half-precision")
 
 TARGET_BUILTIN(__builtin_wasm_ceil_f32x4, "V4fV4f", "nc", "simd128")
 TARGET_BUILTIN(__builtin_wasm_floor_f32x4, "V4fV4f", "nc", "simd128")
@@ -166,6 +170,8 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_madd_f32x4, "V4fV4fV4fV4f", "nc", "relaxed
 TARGET_BUILTIN(__builtin_wasm_relaxed_nmadd_f32x4, "V4fV4fV4fV4f", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_madd_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_nmadd_f64x2, "V2dV2dV2dV2d", "nc", "relaxed-simd")
+TARGET_BUILTIN(__builtin_wasm_relaxed_madd_f16x8, "V8hV8hV8hV8h", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_relaxed_nmadd_f16x8, "V8hV8hV8hV8h", "nc", "half-precision")
 
 TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i8x16, "V16ScV16ScV16ScV16Sc", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_laneselect_i16x8, "V8sV8sV8sV8s", "nc", "relaxed-simd")
@@ -189,6 +195,12 @@ TARGET_BUILTIN(__builtin_wasm_relaxed_q15mulr_s_i16x8, "V8sV8sV8s", "nc", "relax
 TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_s_i16x8, "V8sV16ScV16Sc", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_dot_i8x16_i7x16_add_s_i32x4, "V4iV16ScV16ScV4i", "nc", "relaxed-simd")
 TARGET_BUILTIN(__builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4, "V4fV8UsV8UsV4f", "nc", "relaxed-simd")
+
+// Half-Precision (fp16)
+TARGET_BUILTIN(__builtin_wasm_loadf16_f32, "fh*", "nU", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_storef16_f32, "vfh*", "n", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_splat_f16x8, "V8hf", "nc", "half-precision")
+TARGET_BUILTIN(__builtin_wasm_extract_lane_f16x8, "fV8hi", "nc", "half-precision")
 
 // Reference Types builtins
 // Some builtins are custom type-checked - see 't' as part of the third argument,

@@ -54,9 +54,7 @@ define <2 x i8> @vp_bitreverse_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i8> @llvm.vp.bitreverse.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i8> @llvm.vp.bitreverse.v2i8(<2 x i8> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i8> %v
 }
 
@@ -110,9 +108,7 @@ define <4 x i8> @vp_bitreverse_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i8> @llvm.vp.bitreverse.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i8> @llvm.vp.bitreverse.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i8> %v
 }
 
@@ -166,9 +162,7 @@ define <8 x i8> @vp_bitreverse_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i8> @llvm.vp.bitreverse.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i8> @llvm.vp.bitreverse.v8i8(<8 x i8> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i8> %v
 }
 
@@ -222,9 +216,7 @@ define <16 x i8> @vp_bitreverse_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i8> @llvm.vp.bitreverse.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i8> @llvm.vp.bitreverse.v16i8(<16 x i8> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i8> %v
 }
 
@@ -292,9 +284,7 @@ define <2 x i16> @vp_bitreverse_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i16> @llvm.vp.bitreverse.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i16> @llvm.vp.bitreverse.v2i16(<2 x i16> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i16> %v
 }
 
@@ -362,9 +352,7 @@ define <4 x i16> @vp_bitreverse_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i16> @llvm.vp.bitreverse.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i16> @llvm.vp.bitreverse.v4i16(<4 x i16> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -432,9 +420,7 @@ define <8 x i16> @vp_bitreverse_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i16> @llvm.vp.bitreverse.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i16> @llvm.vp.bitreverse.v8i16(<8 x i16> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i16> %v
 }
 
@@ -502,9 +488,7 @@ define <16 x i16> @vp_bitreverse_v16i16_unmasked(<16 x i16> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v10, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i16> @llvm.vp.bitreverse.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i16> @llvm.vp.bitreverse.v16i16(<16 x i16> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i16> %v
 }
 
@@ -588,9 +572,7 @@ define <2 x i32> @vp_bitreverse_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i32> @llvm.vp.bitreverse.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i32> @llvm.vp.bitreverse.v2i32(<2 x i32> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i32> %v
 }
 
@@ -674,9 +656,7 @@ define <4 x i32> @vp_bitreverse_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.vp.bitreverse.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i32> @llvm.vp.bitreverse.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -760,9 +740,7 @@ define <8 x i32> @vp_bitreverse_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v10, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i32> @llvm.vp.bitreverse.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i32> @llvm.vp.bitreverse.v8i32(<8 x i32> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i32> %v
 }
 
@@ -846,9 +824,7 @@ define <16 x i32> @vp_bitreverse_v16i32_unmasked(<16 x i32> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v12, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i32> @llvm.vp.bitreverse.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i32> @llvm.vp.bitreverse.v16i32(<16 x i32> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i32> %v
 }
 
@@ -871,32 +847,32 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v10, v10, a3, v0.t
 ; RV32-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v10, v8, a4, v0.t
-; RV32-NEXT:    vsll.vi v10, v10, 24, v0.t
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v11, (a5), zero
+; RV32-NEXT:    vlse64.v v10, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vand.vv v12, v8, v11, v0.t
+; RV32-NEXT:    vand.vx v11, v8, a4, v0.t
+; RV32-NEXT:    vsll.vi v11, v11, 24, v0.t
+; RV32-NEXT:    vand.vv v12, v8, v10, v0.t
 ; RV32-NEXT:    vsll.vi v12, v12, 8, v0.t
-; RV32-NEXT:    vor.vv v10, v10, v12, v0.t
-; RV32-NEXT:    vor.vv v9, v9, v10, v0.t
-; RV32-NEXT:    vsrl.vx v10, v8, a1, v0.t
+; RV32-NEXT:    vor.vv v11, v11, v12, v0.t
+; RV32-NEXT:    vor.vv v9, v9, v11, v0.t
+; RV32-NEXT:    vsrl.vx v11, v8, a1, v0.t
 ; RV32-NEXT:    vsrl.vx v12, v8, a3, v0.t
 ; RV32-NEXT:    vand.vx v12, v12, a2, v0.t
-; RV32-NEXT:    vor.vv v10, v12, v10, v0.t
+; RV32-NEXT:    vor.vv v11, v12, v11, v0.t
 ; RV32-NEXT:    vsrl.vi v12, v8, 24, v0.t
 ; RV32-NEXT:    vand.vx v12, v12, a4, v0.t
 ; RV32-NEXT:    vsrl.vi v8, v8, 8, v0.t
-; RV32-NEXT:    vand.vv v8, v8, v11, v0.t
+; RV32-NEXT:    vand.vv v8, v8, v10, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v10, v0.t
+; RV32-NEXT:    vor.vv v8, v8, v11, v0.t
 ; RV32-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV32-NEXT:    vsrl.vi v9, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -906,7 +882,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v9, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -916,7 +892,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v9, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -1006,32 +982,32 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v10, v10, a3
 ; RV32-NEXT:    vor.vv v9, v9, v10
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v10, v8, a4
-; RV32-NEXT:    vsll.vi v10, v10, 24
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v11, (a5), zero
+; RV32-NEXT:    vlse64.v v10, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; RV32-NEXT:    vand.vv v12, v8, v11
+; RV32-NEXT:    vand.vx v11, v8, a4
+; RV32-NEXT:    vsll.vi v11, v11, 24
+; RV32-NEXT:    vand.vv v12, v8, v10
 ; RV32-NEXT:    vsll.vi v12, v12, 8
-; RV32-NEXT:    vor.vv v10, v10, v12
-; RV32-NEXT:    vor.vv v9, v9, v10
-; RV32-NEXT:    vsrl.vx v10, v8, a1
+; RV32-NEXT:    vor.vv v11, v11, v12
+; RV32-NEXT:    vor.vv v9, v9, v11
+; RV32-NEXT:    vsrl.vx v11, v8, a1
 ; RV32-NEXT:    vsrl.vx v12, v8, a3
 ; RV32-NEXT:    vand.vx v12, v12, a2
-; RV32-NEXT:    vor.vv v10, v12, v10
+; RV32-NEXT:    vor.vv v11, v12, v11
 ; RV32-NEXT:    vsrl.vi v12, v8, 24
 ; RV32-NEXT:    vand.vx v12, v12, a4
 ; RV32-NEXT:    vsrl.vi v8, v8, 8
-; RV32-NEXT:    vand.vv v8, v8, v11
+; RV32-NEXT:    vand.vv v8, v8, v10
 ; RV32-NEXT:    vor.vv v8, v8, v12
-; RV32-NEXT:    vor.vv v8, v8, v10
+; RV32-NEXT:    vor.vv v8, v8, v11
 ; RV32-NEXT:    vor.vv v8, v9, v8
 ; RV32-NEXT:    vsrl.vi v9, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1041,7 +1017,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v9, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1051,7 +1027,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v9, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1120,9 +1096,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i64> @llvm.vp.bitreverse.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i64> @llvm.vp.bitreverse.v2i64(<2 x i64> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i64> %v
 }
 
@@ -1145,32 +1119,32 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v12, v12, a3, v0.t
 ; RV32-NEXT:    vor.vv v10, v10, v12, v0.t
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v12, v8, a4, v0.t
-; RV32-NEXT:    vsll.vi v12, v12, 24, v0.t
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v14, (a5), zero
+; RV32-NEXT:    vlse64.v v12, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vand.vv v16, v8, v14, v0.t
+; RV32-NEXT:    vand.vx v14, v8, a4, v0.t
+; RV32-NEXT:    vsll.vi v14, v14, 24, v0.t
+; RV32-NEXT:    vand.vv v16, v8, v12, v0.t
 ; RV32-NEXT:    vsll.vi v16, v16, 8, v0.t
-; RV32-NEXT:    vor.vv v12, v12, v16, v0.t
-; RV32-NEXT:    vor.vv v10, v10, v12, v0.t
-; RV32-NEXT:    vsrl.vx v12, v8, a1, v0.t
+; RV32-NEXT:    vor.vv v14, v14, v16, v0.t
+; RV32-NEXT:    vor.vv v10, v10, v14, v0.t
+; RV32-NEXT:    vsrl.vx v14, v8, a1, v0.t
 ; RV32-NEXT:    vsrl.vx v16, v8, a3, v0.t
 ; RV32-NEXT:    vand.vx v16, v16, a2, v0.t
-; RV32-NEXT:    vor.vv v12, v16, v12, v0.t
+; RV32-NEXT:    vor.vv v14, v16, v14, v0.t
 ; RV32-NEXT:    vsrl.vi v16, v8, 24, v0.t
 ; RV32-NEXT:    vand.vx v16, v16, a4, v0.t
 ; RV32-NEXT:    vsrl.vi v8, v8, 8, v0.t
-; RV32-NEXT:    vand.vv v8, v8, v14, v0.t
+; RV32-NEXT:    vand.vv v8, v8, v12, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
-; RV32-NEXT:    vor.vv v8, v8, v12, v0.t
+; RV32-NEXT:    vor.vv v8, v8, v14, v0.t
 ; RV32-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV32-NEXT:    vsrl.vi v10, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1180,7 +1154,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v10, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1190,7 +1164,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v10, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1280,32 +1254,32 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v12, v12, a3
 ; RV32-NEXT:    vor.vv v10, v10, v12
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v12, v8, a4
-; RV32-NEXT:    vsll.vi v12, v12, 24
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vlse64.v v14, (a5), zero
+; RV32-NEXT:    vlse64.v v12, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; RV32-NEXT:    vand.vv v16, v8, v14
+; RV32-NEXT:    vand.vx v14, v8, a4
+; RV32-NEXT:    vsll.vi v14, v14, 24
+; RV32-NEXT:    vand.vv v16, v8, v12
 ; RV32-NEXT:    vsll.vi v16, v16, 8
-; RV32-NEXT:    vor.vv v12, v12, v16
-; RV32-NEXT:    vor.vv v10, v10, v12
-; RV32-NEXT:    vsrl.vx v12, v8, a1
+; RV32-NEXT:    vor.vv v14, v14, v16
+; RV32-NEXT:    vor.vv v10, v10, v14
+; RV32-NEXT:    vsrl.vx v14, v8, a1
 ; RV32-NEXT:    vsrl.vx v16, v8, a3
 ; RV32-NEXT:    vand.vx v16, v16, a2
-; RV32-NEXT:    vor.vv v12, v16, v12
+; RV32-NEXT:    vor.vv v14, v16, v14
 ; RV32-NEXT:    vsrl.vi v16, v8, 24
 ; RV32-NEXT:    vand.vx v16, v16, a4
 ; RV32-NEXT:    vsrl.vi v8, v8, 8
-; RV32-NEXT:    vand.vv v8, v8, v14
+; RV32-NEXT:    vand.vv v8, v8, v12
 ; RV32-NEXT:    vor.vv v8, v8, v16
-; RV32-NEXT:    vor.vv v8, v8, v12
+; RV32-NEXT:    vor.vv v8, v8, v14
 ; RV32-NEXT:    vor.vv v8, v10, v8
 ; RV32-NEXT:    vsrl.vi v10, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1315,7 +1289,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v10, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1325,7 +1299,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v10, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1394,9 +1368,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i64> @llvm.vp.bitreverse.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i64> @llvm.vp.bitreverse.v4i64(<4 x i64> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -1419,13 +1391,13 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v16, v16, a3, v0.t
 ; RV32-NEXT:    vor.vv v16, v12, v16, v0.t
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v12, v8, a4, v0.t
-; RV32-NEXT:    vsll.vi v20, v12, 24, v0.t
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v12, (a5), zero
+; RV32-NEXT:    vlse64.v v12, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; RV32-NEXT:    vand.vx v20, v8, a4, v0.t
+; RV32-NEXT:    vsll.vi v20, v20, 24, v0.t
 ; RV32-NEXT:    vand.vv v24, v8, v12, v0.t
 ; RV32-NEXT:    vsll.vi v24, v24, 8, v0.t
 ; RV32-NEXT:    vor.vv v20, v20, v24, v0.t
@@ -1444,7 +1416,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1454,7 +1426,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1464,7 +1436,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1554,32 +1526,32 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsll.vx v16, v16, a3
 ; RV32-NEXT:    vor.vv v12, v12, v16
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v16, v8, a4
-; RV32-NEXT:    vsll.vi v16, v16, 24
-; RV32-NEXT:    addi a5, sp, 8
+; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV32-NEXT:    vlse64.v v20, (a5), zero
+; RV32-NEXT:    vlse64.v v16, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; RV32-NEXT:    vand.vv v24, v8, v20
+; RV32-NEXT:    vand.vx v20, v8, a4
+; RV32-NEXT:    vsll.vi v20, v20, 24
+; RV32-NEXT:    vand.vv v24, v8, v16
 ; RV32-NEXT:    vsll.vi v24, v24, 8
-; RV32-NEXT:    vor.vv v16, v16, v24
-; RV32-NEXT:    vor.vv v12, v12, v16
-; RV32-NEXT:    vsrl.vx v16, v8, a1
+; RV32-NEXT:    vor.vv v20, v20, v24
+; RV32-NEXT:    vor.vv v12, v12, v20
+; RV32-NEXT:    vsrl.vx v20, v8, a1
 ; RV32-NEXT:    vsrl.vx v24, v8, a3
 ; RV32-NEXT:    vand.vx v24, v24, a2
-; RV32-NEXT:    vor.vv v16, v24, v16
+; RV32-NEXT:    vor.vv v20, v24, v20
 ; RV32-NEXT:    vsrl.vi v24, v8, 24
 ; RV32-NEXT:    vand.vx v24, v24, a4
 ; RV32-NEXT:    vsrl.vi v8, v8, 8
-; RV32-NEXT:    vand.vv v8, v8, v20
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    vor.vv v8, v8, v24
-; RV32-NEXT:    vor.vv v8, v8, v16
+; RV32-NEXT:    vor.vv v8, v8, v20
 ; RV32-NEXT:    vor.vv v8, v12, v8
 ; RV32-NEXT:    vsrl.vi v12, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1589,7 +1561,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v12, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1599,7 +1571,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v12, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1668,9 +1640,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i64> @llvm.vp.bitreverse.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i64> @llvm.vp.bitreverse.v8i64(<8 x i64> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -1715,20 +1685,23 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 48
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v16, v8, a4, v0.t
-; RV32-NEXT:    vsll.vi v24, v16, 24, v0.t
-; RV32-NEXT:    addi a5, sp, 16
+; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a5), zero
-; RV32-NEXT:    csrr a5, vlenb
-; RV32-NEXT:    slli a5, a5, 3
-; RV32-NEXT:    add a5, sp, a5
-; RV32-NEXT:    addi a5, a5, 48
-; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vlse64.v v16, (a4), zero
+; RV32-NEXT:    csrr a4, vlenb
+; RV32-NEXT:    slli a4, a4, 3
+; RV32-NEXT:    add a4, sp, a4
+; RV32-NEXT:    addi a4, a4, 48
+; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v8, v16, v0.t
-; RV32-NEXT:    vsll.vi v16, v16, 8, v0.t
+; RV32-NEXT:    vand.vx v24, v8, a4, v0.t
+; RV32-NEXT:    vsll.vi v24, v24, 24, v0.t
+; RV32-NEXT:    addi a5, sp, 48
+; RV32-NEXT:    vs8r.v v24, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vand.vv v24, v8, v16, v0.t
+; RV32-NEXT:    vsll.vi v16, v24, 8, v0.t
+; RV32-NEXT:    vl8r.v v24, (a5) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    csrr a5, vlenb
 ; RV32-NEXT:    slli a5, a5, 4
@@ -1741,10 +1714,10 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    add a5, sp, a5
 ; RV32-NEXT:    addi a5, a5, 48
 ; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
-; RV32-NEXT:    vsrl.vx v24, v8, a1, v0.t
-; RV32-NEXT:    vsrl.vx v16, v8, a3, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a2, v0.t
-; RV32-NEXT:    vor.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vsrl.vx v16, v8, a1, v0.t
+; RV32-NEXT:    vsrl.vx v24, v8, a3, v0.t
+; RV32-NEXT:    vand.vx v24, v24, a2, v0.t
+; RV32-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    addi a1, sp, 48
 ; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV32-NEXT:    vsrl.vi v24, v8, 24, v0.t
@@ -1757,38 +1730,38 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV32-NEXT:    vand.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v24, v0.t
+; RV32-NEXT:    addi a1, sp, 40
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    addi a1, sp, 48
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 48
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 4, v0.t
-; RV32-NEXT:    addi a1, sp, 40
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
-; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vor.vv v16, v16, v8, v0.t
+; RV32-NEXT:    vsrl.vi v8, v16, 4, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 4, v0.t
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 2, v0.t
+; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    addi a1, sp, 32
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vsll.vi v16, v16, 4, v0.t
+; RV32-NEXT:    vor.vv v16, v8, v16, v0.t
+; RV32-NEXT:    vsrl.vi v8, v16, 2, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 2, v0.t
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 1, v0.t
+; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vsll.vi v16, v16, 2, v0.t
+; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
+; RV32-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
 ; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
@@ -1915,60 +1888,60 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    vor.vv v16, v16, v24
 ; RV32-NEXT:    addi a4, sp, 48
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v16, v8, a4
-; RV32-NEXT:    vsll.vi v0, v16, 24
-; RV32-NEXT:    addi a5, sp, 16
+; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a5), zero
+; RV32-NEXT:    vlse64.v v24, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v24, v8, v16
-; RV32-NEXT:    vsll.vi v24, v24, 8
-; RV32-NEXT:    vor.vv v24, v0, v24
+; RV32-NEXT:    vand.vx v0, v8, a4
+; RV32-NEXT:    vsll.vi v0, v0, 24
+; RV32-NEXT:    vand.vv v16, v8, v24
+; RV32-NEXT:    vsll.vi v16, v16, 8
+; RV32-NEXT:    vor.vv v16, v0, v16
 ; RV32-NEXT:    addi a5, sp, 48
 ; RV32-NEXT:    vl8r.v v0, (a5) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v24, v0, v24
-; RV32-NEXT:    vs8r.v v24, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vor.vv v16, v0, v16
+; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
 ; RV32-NEXT:    vsrl.vx v0, v8, a3
 ; RV32-NEXT:    vand.vx v0, v0, a2
-; RV32-NEXT:    vsrl.vx v24, v8, a1
-; RV32-NEXT:    vor.vv v24, v0, v24
-; RV32-NEXT:    vsrl.vi v0, v8, 8
-; RV32-NEXT:    vand.vv v16, v0, v16
+; RV32-NEXT:    vsrl.vx v16, v8, a1
+; RV32-NEXT:    vor.vv v0, v0, v16
+; RV32-NEXT:    vsrl.vi v16, v8, 8
+; RV32-NEXT:    vand.vv v16, v16, v24
 ; RV32-NEXT:    vsrl.vi v8, v8, 24
 ; RV32-NEXT:    vand.vx v8, v8, a4
 ; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vor.vv v8, v8, v24
-; RV32-NEXT:    addi a1, sp, 48
-; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 4
 ; RV32-NEXT:    addi a1, sp, 40
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
-; RV32-NEXT:    vsll.vi v8, v8, 4
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 2
+; RV32-NEXT:    vor.vv v8, v8, v0
+; RV32-NEXT:    addi a1, sp, 48
+; RV32-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 4
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    addi a1, sp, 32
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
-; RV32-NEXT:    vsll.vi v8, v8, 2
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 1
+; RV32-NEXT:    vsll.vi v8, v8, 4
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 2
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
+; RV32-NEXT:    vsll.vi v8, v8, 2
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 1
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    vor.vv v8, v16, v8
+; RV32-NEXT:    vor.vv v8, v24, v8
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
@@ -2034,9 +2007,7 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <15 x i1> poison, i1 true, i32 0
-  %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
-  %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl)
+  %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> splat (i1 true), i32 %evl)
   ret <15 x i64> %v
 }
 
@@ -2081,20 +2052,23 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 48
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v16, v8, a4, v0.t
-; RV32-NEXT:    vsll.vi v24, v16, 24, v0.t
-; RV32-NEXT:    addi a5, sp, 16
+; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a5), zero
-; RV32-NEXT:    csrr a5, vlenb
-; RV32-NEXT:    slli a5, a5, 3
-; RV32-NEXT:    add a5, sp, a5
-; RV32-NEXT:    addi a5, a5, 48
-; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vlse64.v v16, (a4), zero
+; RV32-NEXT:    csrr a4, vlenb
+; RV32-NEXT:    slli a4, a4, 3
+; RV32-NEXT:    add a4, sp, a4
+; RV32-NEXT:    addi a4, a4, 48
+; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v8, v16, v0.t
-; RV32-NEXT:    vsll.vi v16, v16, 8, v0.t
+; RV32-NEXT:    vand.vx v24, v8, a4, v0.t
+; RV32-NEXT:    vsll.vi v24, v24, 24, v0.t
+; RV32-NEXT:    addi a5, sp, 48
+; RV32-NEXT:    vs8r.v v24, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vand.vv v24, v8, v16, v0.t
+; RV32-NEXT:    vsll.vi v16, v24, 8, v0.t
+; RV32-NEXT:    vl8r.v v24, (a5) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    csrr a5, vlenb
 ; RV32-NEXT:    slli a5, a5, 4
@@ -2107,10 +2081,10 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    add a5, sp, a5
 ; RV32-NEXT:    addi a5, a5, 48
 ; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
-; RV32-NEXT:    vsrl.vx v24, v8, a1, v0.t
-; RV32-NEXT:    vsrl.vx v16, v8, a3, v0.t
-; RV32-NEXT:    vand.vx v16, v16, a2, v0.t
-; RV32-NEXT:    vor.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vsrl.vx v16, v8, a1, v0.t
+; RV32-NEXT:    vsrl.vx v24, v8, a3, v0.t
+; RV32-NEXT:    vand.vx v24, v24, a2, v0.t
+; RV32-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV32-NEXT:    addi a1, sp, 48
 ; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV32-NEXT:    vsrl.vi v24, v8, 24, v0.t
@@ -2123,38 +2097,38 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
 ; RV32-NEXT:    vand.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    vor.vv v8, v8, v24, v0.t
+; RV32-NEXT:    addi a1, sp, 40
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    addi a1, sp, 48
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 4
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    addi a1, a1, 48
 ; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 4, v0.t
-; RV32-NEXT:    addi a1, sp, 40
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
-; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vor.vv v16, v16, v8, v0.t
+; RV32-NEXT:    vsrl.vi v8, v16, 4, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 4, v0.t
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 2, v0.t
+; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    addi a1, sp, 32
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vsll.vi v16, v16, 4, v0.t
+; RV32-NEXT:    vor.vv v16, v8, v16, v0.t
+; RV32-NEXT:    vsrl.vi v8, v16, 2, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
-; RV32-NEXT:    vsll.vi v8, v8, 2, v0.t
-; RV32-NEXT:    vor.vv v8, v16, v8, v0.t
-; RV32-NEXT:    vsrl.vi v16, v8, 1, v0.t
+; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vsll.vi v16, v16, 2, v0.t
+; RV32-NEXT:    vor.vv v8, v8, v16, v0.t
+; RV32-NEXT:    vsrl.vi v16, v8, 1, v0.t
 ; RV32-NEXT:    vand.vv v16, v16, v24, v0.t
 ; RV32-NEXT:    vand.vv v8, v8, v24, v0.t
 ; RV32-NEXT:    vsll.vi v8, v8, 1, v0.t
@@ -2281,60 +2255,60 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV32-NEXT:    vor.vv v16, v16, v24
 ; RV32-NEXT:    addi a4, sp, 48
 ; RV32-NEXT:    vs8r.v v16, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    lui a4, 4080
-; RV32-NEXT:    vand.vx v16, v8, a4
-; RV32-NEXT:    vsll.vi v0, v16, 24
-; RV32-NEXT:    addi a5, sp, 16
+; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v16, (a5), zero
+; RV32-NEXT:    vlse64.v v24, (a4), zero
+; RV32-NEXT:    lui a4, 4080
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v24, v8, v16
-; RV32-NEXT:    vsll.vi v24, v24, 8
-; RV32-NEXT:    vor.vv v24, v0, v24
+; RV32-NEXT:    vand.vx v0, v8, a4
+; RV32-NEXT:    vsll.vi v0, v0, 24
+; RV32-NEXT:    vand.vv v16, v8, v24
+; RV32-NEXT:    vsll.vi v16, v16, 8
+; RV32-NEXT:    vor.vv v16, v0, v16
 ; RV32-NEXT:    addi a5, sp, 48
 ; RV32-NEXT:    vl8r.v v0, (a5) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v24, v0, v24
-; RV32-NEXT:    vs8r.v v24, (a5) # Unknown-size Folded Spill
+; RV32-NEXT:    vor.vv v16, v0, v16
+; RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
 ; RV32-NEXT:    vsrl.vx v0, v8, a3
 ; RV32-NEXT:    vand.vx v0, v0, a2
-; RV32-NEXT:    vsrl.vx v24, v8, a1
-; RV32-NEXT:    vor.vv v24, v0, v24
-; RV32-NEXT:    vsrl.vi v0, v8, 8
-; RV32-NEXT:    vand.vv v16, v0, v16
+; RV32-NEXT:    vsrl.vx v16, v8, a1
+; RV32-NEXT:    vor.vv v0, v0, v16
+; RV32-NEXT:    vsrl.vi v16, v8, 8
+; RV32-NEXT:    vand.vv v16, v16, v24
 ; RV32-NEXT:    vsrl.vi v8, v8, 24
 ; RV32-NEXT:    vand.vx v8, v8, a4
 ; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vor.vv v8, v8, v24
-; RV32-NEXT:    addi a1, sp, 48
-; RV32-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 4
 ; RV32-NEXT:    addi a1, sp, 40
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
-; RV32-NEXT:    vsll.vi v8, v8, 4
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 2
+; RV32-NEXT:    vor.vv v8, v8, v0
+; RV32-NEXT:    addi a1, sp, 48
+; RV32-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 4
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    addi a1, sp, 32
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
-; RV32-NEXT:    vsll.vi v8, v8, 2
-; RV32-NEXT:    vor.vv v8, v16, v8
-; RV32-NEXT:    vsrl.vi v16, v8, 1
+; RV32-NEXT:    vsll.vi v8, v8, 4
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 2
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    addi a1, sp, 24
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vlse64.v v24, (a1), zero
+; RV32-NEXT:    vlse64.v v16, (a1), zero
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vand.vv v16, v16, v24
-; RV32-NEXT:    vand.vv v8, v8, v24
+; RV32-NEXT:    vsll.vi v8, v8, 2
+; RV32-NEXT:    vor.vv v8, v24, v8
+; RV32-NEXT:    vsrl.vi v24, v8, 1
+; RV32-NEXT:    vand.vv v24, v24, v16
+; RV32-NEXT:    vand.vv v8, v8, v16
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    vor.vv v8, v16, v8
+; RV32-NEXT:    vor.vv v8, v24, v8
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add sp, sp, a0
@@ -2400,9 +2374,7 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
 }
 
@@ -2422,8 +2394,8 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 8
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB34_2
@@ -2461,13 +2433,13 @@ define <128 x i16> @vp_bitreverse_v128i16(<128 x i16> %va, <128 x i1> %m, i32 ze
 ; CHECK-NEXT:    sltu a0, a0, a4
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a4
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    csrr a4, vlenb
+; CHECK-NEXT:    slli a4, a4, 3
+; CHECK-NEXT:    add a4, sp, a4
+; CHECK-NEXT:    addi a4, a4, 16
+; CHECK-NEXT:    vl8r.v v8, (a4) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 8, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
@@ -2555,8 +2527,6 @@ define <128 x i16> @vp_bitreverse_v128i16_unmasked(<128 x i16> %va, i32 zeroext 
 ; CHECK-NEXT:    vadd.vv v16, v16, v16
 ; CHECK-NEXT:    vor.vv v16, v24, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <128 x i1> poison, i1 true, i32 0
-  %m = shufflevector <128 x i1> %head, <128 x i1> poison, <128 x i32> zeroinitializer
-  %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> %m, i32 %evl)
+  %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> splat (i1 true), i32 %evl)
   ret <128 x i16> %v
 }

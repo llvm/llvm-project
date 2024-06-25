@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-tables-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLT %s
-// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-directives-only -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLI %s
-// RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone -S -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-NOLIMIT %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-tables-only -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLT %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=line-directives-only -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-GMLI %s
+// RUN: %clang_cc1 -std=c++11 -debug-info-kind=standalone -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-NOLIMIT %s
 
 namespace A {
 #line 1 "foo.cpp"

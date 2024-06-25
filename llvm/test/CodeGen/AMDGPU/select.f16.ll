@@ -2941,7 +2941,7 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; GFX11-LABEL: v_vselect_v32f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x20
+; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32 offset:120
 ; GFX11-NEXT:    scratch_load_b32 v32, off, s32 offset:112
 ; GFX11-NEXT:    scratch_load_b32 v33, off, s32

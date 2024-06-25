@@ -130,6 +130,14 @@ struct cont_with_ptr_iterator {
   T* erase(T*);
 };
 
+void invalidated_access_via_end_iterator_after_push_back() {
+  cont_with_ptr_iterator<int> C;
+  C.push_back(1);
+  auto i = C.end();
+  C.push_back(2);
+  auto j = i[-1]; // expected-warning{{Invalidated iterator accessed}}
+}
+
 void invalidated_dereference_end_ptr_iterator(cont_with_ptr_iterator<int> &C) {
   auto i = C.begin();
   C.erase(i);

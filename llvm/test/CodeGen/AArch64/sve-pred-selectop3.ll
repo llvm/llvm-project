@@ -122,7 +122,7 @@ define <vscale x 2 x i64> @mul_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %y, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %y, <vscale x 2 x i64> splat (i64 1)
   %b = mul <vscale x 2 x i64> %a, %x
   ret <vscale x 2 x i64> %b
 }
@@ -136,7 +136,7 @@ define <vscale x 4 x i32> @mul_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> splat (i32 1)
   %b = mul <vscale x 4 x i32> %a, %x
   ret <vscale x 4 x i32> %b
 }
@@ -150,7 +150,7 @@ define <vscale x 8 x i16> @mul_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %y, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %y, <vscale x 8 x i16> splat (i16 1)
   %b = mul <vscale x 8 x i16> %a, %x
   ret <vscale x 8 x i16> %b
 }
@@ -164,7 +164,7 @@ define <vscale x 16 x i8> @mul_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
-  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %y, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %y, <vscale x 16 x i8> splat (i8 1)
   %b = mul <vscale x 16 x i8> %a, %x
   ret <vscale x 16 x i8> %b
 }
@@ -178,7 +178,7 @@ define <vscale x 2 x i64> @and_nxv2i64_x(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %y, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %y, <vscale x 2 x i64> splat (i64 -1)
   %b = and <vscale x 2 x i64> %a, %x
   ret <vscale x 2 x i64> %b
 }
@@ -192,7 +192,7 @@ define <vscale x 4 x i32> @and_nxv4i32_x(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> splat (i32 -1)
   %b = and <vscale x 4 x i32> %a, %x
   ret <vscale x 4 x i32> %b
 }
@@ -206,7 +206,7 @@ define <vscale x 8 x i16> @and_nxv8i16_x(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %y, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %y, <vscale x 8 x i16> splat (i16 -1)
   %b = and <vscale x 8 x i16> %a, %x
   ret <vscale x 8 x i16> %b
 }
@@ -220,7 +220,7 @@ define <vscale x 16 x i8> @and_nxv16i8_x(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
-  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %y, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %y, <vscale x 16 x i8> splat (i8 -1)
   %b = and <vscale x 16 x i8> %a, %x
   ret <vscale x 16 x i8> %b
 }
@@ -647,7 +647,7 @@ define <vscale x 4 x float> @fadd_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> splat (float -0.000000e+00)
   %b = fadd <vscale x 4 x float> %a, %x
   ret <vscale x 4 x float> %b
 }
@@ -662,7 +662,7 @@ define <vscale x 8 x half> @fadd_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH8000, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> splat (half 0xH8000)
   %b = fadd <vscale x 8 x half> %a, %x
   ret <vscale x 8 x half> %b
 }
@@ -677,7 +677,7 @@ define <vscale x 2 x double> @fadd_nxv2f64_x(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> splat (double -0.000000e+00)
   %b = fadd <vscale x 2 x double> %a, %x
   ret <vscale x 2 x double> %b
 }
@@ -737,7 +737,7 @@ define <vscale x 4 x float> @fmul_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> splat (float 1.000000e+00)
   %b = fmul <vscale x 4 x float> %a, %x
   ret <vscale x 4 x float> %b
 }
@@ -752,7 +752,7 @@ define <vscale x 8 x half> @fmul_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH3C00, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> splat (half 0xH3C00)
   %b = fmul <vscale x 8 x half> %a, %x
   ret <vscale x 8 x half> %b
 }
@@ -767,7 +767,7 @@ define <vscale x 2 x double> @fmul_nxv2f64_x(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> splat (double 1.000000e+00)
   %b = fmul <vscale x 2 x double> %a, %x
   ret <vscale x 2 x double> %b
 }
@@ -783,7 +783,7 @@ define <vscale x 4 x float> @fdiv_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %y, <vscale x 4 x float> splat (float 1.000000e+00)
   %b = fdiv <vscale x 4 x float> %x, %a
   ret <vscale x 4 x float> %b
 }
@@ -792,14 +792,14 @@ define <vscale x 8 x half> @fdiv_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-LABEL: fdiv_nxv8f16_x:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    fdivr z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH3C00, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %y, <vscale x 8 x half> splat (half 0xH3C00)
   %b = fdiv <vscale x 8 x half> %x, %a
   ret <vscale x 8 x half> %b
 }
@@ -815,7 +815,7 @@ define <vscale x 2 x double> @fdiv_nxv2f64_x(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %y, <vscale x 2 x double> splat (double 1.000000e+00)
   %b = fdiv <vscale x 2 x double> %x, %a
   ret <vscale x 2 x double> %b
 }
@@ -831,7 +831,7 @@ define <vscale x 4 x float> @fma_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
   %m = fmul fast <vscale x 4 x float> %y, %z
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %m, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %m, <vscale x 4 x float> splat (float -0.000000e+00)
   %b = fadd fast <vscale x 4 x float> %a, %x
   ret <vscale x 4 x float> %b
 }
@@ -847,7 +847,7 @@ define <vscale x 8 x half> @fma_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x 
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
   %m = fmul fast <vscale x 8 x half> %y, %z
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %m, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH8000, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %m, <vscale x 8 x half> splat (half 0xH8000)
   %b = fadd fast <vscale x 8 x half> %a, %x
   ret <vscale x 8 x half> %b
 }
@@ -863,7 +863,7 @@ define <vscale x 2 x double> @fma_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
   %m = fmul fast <vscale x 2 x double> %y, %z
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %m, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %m, <vscale x 2 x double> splat (double -0.000000e+00)
   %b = fadd fast <vscale x 2 x double> %a, %x
   ret <vscale x 2 x double> %b
 }
@@ -998,7 +998,7 @@ define <vscale x 2 x i64> @mul_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> splat (i64 1)
   %b = mul <vscale x 2 x i64> %a, %y
   ret <vscale x 2 x i64> %b
 }
@@ -1013,7 +1013,7 @@ define <vscale x 4 x i32> @mul_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat (i32 1)
   %b = mul <vscale x 4 x i32> %a, %y
   ret <vscale x 4 x i32> %b
 }
@@ -1028,7 +1028,7 @@ define <vscale x 8 x i16> @mul_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %x, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %x, <vscale x 8 x i16> splat (i16 1)
   %b = mul <vscale x 8 x i16> %a, %y
   ret <vscale x 8 x i16> %b
 }
@@ -1043,7 +1043,7 @@ define <vscale x 16 x i8> @mul_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
-  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %x, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %x, <vscale x 16 x i8> splat (i8 1)
   %b = mul <vscale x 16 x i8> %a, %y
   ret <vscale x 16 x i8> %b
 }
@@ -1058,7 +1058,7 @@ define <vscale x 2 x i64> @and_nxv2i64_y(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 2 x i64> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 -1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> splat (i64 -1)
   %b = and <vscale x 2 x i64> %a, %y
   ret <vscale x 2 x i64> %b
 }
@@ -1073,7 +1073,7 @@ define <vscale x 4 x i32> @and_nxv4i32_y(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat (i32 -1)
   %b = and <vscale x 4 x i32> %a, %y
   ret <vscale x 4 x i32> %b
 }
@@ -1088,7 +1088,7 @@ define <vscale x 8 x i16> @and_nxv8i16_y(<vscale x 8 x i16> %x, <vscale x 8 x i1
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 8 x i16> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %x, <vscale x 8 x i16> shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> poison, i16 -1, i64 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x i16> %x, <vscale x 8 x i16> splat (i16 -1)
   %b = and <vscale x 8 x i16> %a, %y
   ret <vscale x 8 x i16> %b
 }
@@ -1103,7 +1103,7 @@ define <vscale x 16 x i8> @and_nxv16i8_y(<vscale x 16 x i8> %x, <vscale x 16 x i
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 16 x i8> %n, zeroinitializer
-  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %x, <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 -1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %a = select <vscale x 16 x i1> %c, <vscale x 16 x i8> %x, <vscale x 16 x i8> splat (i8 -1)
   %b = and <vscale x 16 x i8> %a, %y
   ret <vscale x 16 x i8> %b
 }
@@ -1547,7 +1547,7 @@ define <vscale x 4 x float> @fadd_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %x, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float -0.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %x, <vscale x 4 x float> splat (float -0.000000e+00)
   %b = fadd <vscale x 4 x float> %a, %y
   ret <vscale x 4 x float> %b
 }
@@ -1563,7 +1563,7 @@ define <vscale x 8 x half> @fadd_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %x, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH8000, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %x, <vscale x 8 x half> splat (half 0xH8000)
   %b = fadd <vscale x 8 x half> %a, %y
   ret <vscale x 8 x half> %b
 }
@@ -1579,7 +1579,7 @@ define <vscale x 2 x double> @fadd_nxv2f64_y(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %x, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double -0.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %x, <vscale x 2 x double> splat (double -0.000000e+00)
   %b = fadd <vscale x 2 x double> %a, %y
   ret <vscale x 2 x double> %b
 }
@@ -1643,7 +1643,7 @@ define <vscale x 4 x float> @fmul_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %x, <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x float> %x, <vscale x 4 x float> splat (float 1.000000e+00)
   %b = fmul <vscale x 4 x float> %a, %y
   ret <vscale x 4 x float> %b
 }
@@ -1659,7 +1659,7 @@ define <vscale x 8 x half> @fmul_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
-  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %x, <vscale x 8 x half> shufflevector (<vscale x 8 x half> insertelement (<vscale x 8 x half> poison, half 0xH3C00, i64 0), <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer)
+  %a = select <vscale x 8 x i1> %c, <vscale x 8 x half> %x, <vscale x 8 x half> splat (half 0xH3C00)
   %b = fmul <vscale x 8 x half> %a, %y
   ret <vscale x 8 x half> %b
 }
@@ -1675,7 +1675,7 @@ define <vscale x 2 x double> @fmul_nxv2f64_y(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
-  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %x, <vscale x 2 x double> shufflevector (<vscale x 2 x double> insertelement (<vscale x 2 x double> poison, double 1.000000e+00, i64 0), <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer)
+  %a = select <vscale x 2 x i1> %c, <vscale x 2 x double> %x, <vscale x 2 x double> splat (double 1.000000e+00)
   %b = fmul <vscale x 2 x double> %a, %y
   ret <vscale x 2 x double> %b
 }
@@ -1700,8 +1700,8 @@ define <vscale x 8 x half> @fdiv_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-LABEL: fdiv_nxv8f16_y:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    fdiv z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
 ; CHECK-NEXT:    not p0.b, p0/z, p1.b
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -1734,8 +1734,8 @@ define <vscale x 4 x float> @fmai_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z3.s, #0.0
 ; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -1750,8 +1750,8 @@ define <vscale x 8 x half> @fmai_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z3.h, #0.0
 ; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -1766,8 +1766,8 @@ define <vscale x 2 x double> @fmai_nxv2f64_y(<vscale x 2 x double> %x, <vscale x
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z3.d, #0.0
 ; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -1782,8 +1782,8 @@ define <vscale x 4 x float> @fma_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcmle p1.s, p0/z, z3.s, #0.0
 ; CHECK-NEXT:    fmla z0.s, p0/m, z1.s, z2.s
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
@@ -1799,8 +1799,8 @@ define <vscale x 8 x half> @fma_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x 
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fcmle p1.h, p0/z, z3.h, #0.0
 ; CHECK-NEXT:    fmla z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
@@ -1816,8 +1816,8 @@ define <vscale x 2 x double> @fma_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcmle p1.d, p0/z, z3.d, #0.0
 ; CHECK-NEXT:    fmla z0.d, p0/m, z1.d, z2.d
-; CHECK-NEXT:    not p1.b, p0/z, p1.b
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
   %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
@@ -1840,7 +1840,7 @@ define <vscale x 4 x i32> @mul_nxv4i32_multiuse_x(<vscale x 4 x i32> %x, <vscale
 ; CHECK-NEXT:    ret
 entry:
   %c = icmp sgt <vscale x 4 x i32> %n, zeroinitializer
-  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %a = select <vscale x 4 x i1> %c, <vscale x 4 x i32> %y, <vscale x 4 x i32> splat (i32 1)
   store <vscale x 4 x i32> %a, ptr %p
   %b = mul <vscale x 4 x i32> %a, %x
   ret <vscale x 4 x i32> %b

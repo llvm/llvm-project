@@ -33,6 +33,6 @@ template<int Value> struct count_ints_2 {
 template<typename ...Types> // expected-note{{parameter pack 'Types' declared here}}
 struct count_types_2 {
   static const unsigned value = sizeof... Type; // expected-error{{missing parentheses around the size of parameter pack 'Type'}} \
-  // expected-error{{Type' does not refer to the name of a parameter pack; did you mean 'Types'?}}
+  // expected-error{{'Type' does not refer to the name of a parameter pack; did you mean 'Types'?}}
 };
 

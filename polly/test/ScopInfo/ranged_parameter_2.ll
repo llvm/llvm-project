@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output -polly-allow-nonaffine -polly-invariant-load-hoisting=true < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output -polly-allow-nonaffine -polly-invariant-load-hoisting=true < %s \
 ; RUN:  -debug 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts

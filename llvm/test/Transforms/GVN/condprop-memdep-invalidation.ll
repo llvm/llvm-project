@@ -60,7 +60,7 @@ loop.1.header:
 then.1:
   %_tmp18 = add i16 %iv.1, -1
   %gep.1 = getelementptr [4 x i16], ptr %ub.16, i16 1, i16 %_tmp18
-  %l.1 = load i16, i16* %gep.1, align 2
+  %l.1 = load i16, ptr %gep.1, align 2
   br label %cont.1
 
 cont.1:

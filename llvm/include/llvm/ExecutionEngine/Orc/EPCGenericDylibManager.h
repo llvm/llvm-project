@@ -51,11 +51,32 @@ public:
 
   /// Looks up symbols within the given dylib.
   Expected<std::vector<ExecutorSymbolDef>>
-  lookup(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup);
+  lookup(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup) {
+    std::promise<MSVCPExpected<std::vector<ExecutorSymbolDef>>> RP;
+    auto RF = RP.get_future();
+    lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
+    return RF.get();
+  }
 
   /// Looks up symbols within the given dylib.
   Expected<std::vector<ExecutorSymbolDef>>
-  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup);
+  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup) {
+    std::promise<MSVCPExpected<std::vector<ExecutorSymbolDef>>> RP;
+    auto RF = RP.get_future();
+    lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
+    return RF.get();
+  }
+
+  using SymbolLookupCompleteFn =
+      unique_function<void(Expected<std::vector<ExecutorSymbolDef>>)>;
+
+  /// Looks up symbols within the given dylib.
+  void lookupAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup,
+                   SymbolLookupCompleteFn Complete);
+
+  /// Looks up symbols within the given dylib.
+  void lookupAsync(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &Lookup,
+                   SymbolLookupCompleteFn Complete);
 
 private:
   ExecutorProcessControl &EPC;

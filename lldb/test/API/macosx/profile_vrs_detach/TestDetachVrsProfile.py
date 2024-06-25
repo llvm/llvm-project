@@ -49,7 +49,7 @@ class TestDetachVrsProfile(TestBase):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Hit our breakpoint again.")
         str = process.GetAsyncProfileData(1000)
-        self.assertTrue(len(str) > 0, "Got some profile data")
+        self.assertGreater(len(str), 0, "Got some profile data")
 
         # Now make the profiling interval very long and try to detach.
         interp.HandleCommand(

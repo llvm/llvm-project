@@ -1,6 +1,6 @@
 ; RUN: llc -relocation-model=pic < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
-@ptr = external global void (...)*, align 8
+@ptr = external global ptr, align 8
 
 define void @func() {
 ; CHECK-LABEL: func:
@@ -22,9 +22,9 @@ define void @func() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s11, 0, %s9
 
-  store void (...)* @function, void (...)** @ptr, align 8
-  %1 = load void (...)*, void (...)** @ptr, align 8
-  %2 = bitcast void (...)* %1 to void ()*
+  store ptr @function, ptr @ptr, align 8
+  %1 = load ptr, ptr @ptr, align 8
+  %2 = bitcast ptr %1 to ptr
   call void %2()
   ret void
 }

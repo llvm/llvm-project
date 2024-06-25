@@ -51,7 +51,7 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 
 ; Extra use tests
 
-define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind {
+define i32 @t3_extrause0(i32 %ptr, i32 %alignment, ptr %mask_storage) nounwind {
 ; CHECK-LABEL: t3_extrause0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg w8, w1
@@ -60,12 +60,12 @@ define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind 
 ; CHECK-NEXT:    str w9, [x2]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
-  store i32 %mask, i32* %mask_storage
+  store i32 %mask, ptr %mask_storage
   %bias = and i32 %ptr, %mask
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
-define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind {
+define i32 @n4_extrause1(i32 %ptr, i32 %alignment, ptr %bias_storage) nounwind {
 ; CHECK-LABEL: n4_extrause1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, #1
@@ -75,11 +75,11 @@ define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind 
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
   %bias = and i32 %ptr, %mask ; has extra uses, can't fold
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }
-define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bias_storage) nounwind {
+define i32 @n5_extrause2(i32 %ptr, i32 %alignment, ptr %mask_storage, ptr %bias_storage) nounwind {
 ; CHECK-LABEL: n5_extrause2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, #1
@@ -89,9 +89,9 @@ define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bia
 ; CHECK-NEXT:    str w9, [x3]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
-  store i32 %mask, i32* %mask_storage
+  store i32 %mask, ptr %mask_storage
   %bias = and i32 %ptr, %mask ; has extra uses, can't fold
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }

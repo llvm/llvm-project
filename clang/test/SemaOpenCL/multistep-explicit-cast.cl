@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ast-dump %s | FileCheck %s
 // expected-no-diagnostics
 
 typedef __attribute__((ext_vector_type(2)))  char char2;

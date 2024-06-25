@@ -85,6 +85,11 @@ define void @func(double %a, double %b, double %c, i32 %i) strictfp {
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict")
 
+  %tan = call double @llvm.experimental.constrained.tan.f64(
+                                               double %a,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict")
+
   %pow = call double @llvm.experimental.constrained.pow.f64(
                                                double %a, double %b,
                                                metadata !"round.dynamic",
@@ -243,6 +248,9 @@ declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata
 
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.cos.f64({{.*}}) #[[ATTR1]]
+
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+; CHECK: @llvm.experimental.constrained.tan.f64({{.*}}) #[[ATTR1]]
 
 declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, metadata)
 ; CHECK: @llvm.experimental.constrained.pow.f64({{.*}}) #[[ATTR1]]

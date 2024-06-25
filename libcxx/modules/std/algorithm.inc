@@ -46,9 +46,7 @@ export namespace std {
   // [alg.contains], contains
   namespace ranges {
     using std::ranges::contains;
-#if 0
     using std::ranges::contains_subrange;
-#endif
   } // namespace ranges
 #endif // _LIBCPP_STD_VER >= 23
 

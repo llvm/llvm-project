@@ -58,8 +58,8 @@ define void @sext_v4i3_v4i64(<4 x i3> %a, ptr %out) vscale_range(2,0) #0 {
 define void @sext_v16i8_v16i16(<16 x i8> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sext_v16i8_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -308,8 +308,8 @@ define void @sext_v32i8_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @sext_v8i16_v8i32(<8 x i16> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sext_v8i16_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -472,8 +472,8 @@ define void @sext_v32i16_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @sext_v4i32_v4i64(<4 x i32> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sext_v4i32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -554,8 +554,8 @@ define void @sext_v32i32_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @zext_v16i8_v16i16(<16 x i8> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: zext_v16i8_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -804,8 +804,8 @@ define void @zext_v32i8_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @zext_v8i16_v8i32(<8 x i16> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: zext_v8i16_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -968,8 +968,8 @@ define void @zext_v32i16_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 define void @zext_v4i32_v4i64(<4 x i32> %a, ptr %out) vscale_range(2,0) #0 {
 ; CHECK-LABEL: zext_v4i32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret

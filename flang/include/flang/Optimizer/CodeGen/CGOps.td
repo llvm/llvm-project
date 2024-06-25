@@ -16,6 +16,8 @@
 
 include "mlir/IR/SymbolInterfaces.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
+include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";
@@ -199,6 +201,38 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
       return subcomponentOffset() + getSubcomponent().size();
     }
     unsigned lenParamsOffset() { return indicesOffset() + getIndices().size(); }
+  }];
+}
+
+// Extended Declare operation.
+def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
+  let summary = "for internal conversion only";
+
+  let description = [{
+    Prior to lowering to LLVM IR dialect, a DeclareOp will
+    be converted to an extended DeclareOp.
+  }];
+
+  let arguments = (ins
+    AnyRefOrBox:$memref,
+    Variadic<AnyIntegerType>:$shape,
+    Variadic<AnyIntegerType>:$shift,
+    Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_DummyScopeType>:$dummy_scope,
+    Builtin_StringAttr:$uniq_name
+  );
+  let results = (outs AnyRefOrBox);
+
+  let assemblyFormat = [{
+    $memref (`(` $shape^ `)`)? (`origin` $shift^)? (`typeparams` $typeparams^)?
+    (`dummy_scope` $dummy_scope^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    // Shape is optional, but if it exists, it will be at offset 1.
+    unsigned shapeOffset() { return 1; }
+    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
   }];
 }
 

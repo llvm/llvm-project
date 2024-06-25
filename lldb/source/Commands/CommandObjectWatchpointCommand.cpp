@@ -162,19 +162,7 @@ initialized:"
         "Final Note: A warning that no watchpoint command was generated when there \
 are no syntax errors may indicate that a function was declared but never called.");
 
-    CommandArgumentEntry arg;
-    CommandArgumentData wp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    wp_id_arg.arg_type = eArgTypeWatchpointID;
-    wp_id_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(wp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeWatchpointID);
   }
 
   ~CommandObjectWatchpointCommandAdd() override = default;
@@ -455,19 +443,7 @@ public:
       : CommandObjectParsed(interpreter, "delete",
                             "Delete the set of commands from a watchpoint.",
                             nullptr, eCommandRequiresTarget) {
-    CommandArgumentEntry arg;
-    CommandArgumentData wp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    wp_id_arg.arg_type = eArgTypeWatchpointID;
-    wp_id_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(wp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeWatchpointID);
   }
 
   ~CommandObjectWatchpointCommandDelete() override = default;
@@ -522,19 +498,7 @@ public:
                             "List the script or set of commands to be executed "
                             "when the watchpoint is hit.",
                             nullptr, eCommandRequiresTarget) {
-    CommandArgumentEntry arg;
-    CommandArgumentData wp_id_arg;
-
-    // Define the first (and only) variant of this arg.
-    wp_id_arg.arg_type = eArgTypeWatchpointID;
-    wp_id_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(wp_id_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeWatchpointID);
   }
 
   ~CommandObjectWatchpointCommandList() override = default;

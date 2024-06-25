@@ -12,6 +12,8 @@
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/Support.h"
+
 #include <optional>
 
 namespace py = pybind11;
@@ -107,8 +109,22 @@ public:
   }
 };
 
+class PyFloatType : public PyConcreteType<PyFloatType> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat;
+  static constexpr const char *pyClassName = "FloatType";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly(
+        "width", [](PyFloatType &self) { return mlirFloatTypeGetWidth(self); },
+        "Returns the width of the floating-point type");
+  }
+};
+
 /// Floating Point Type subclass - Float8E4M3FNType.
-class PyFloat8E4M3FNType : public PyConcreteType<PyFloat8E4M3FNType> {
+class PyFloat8E4M3FNType
+    : public PyConcreteType<PyFloat8E4M3FNType, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E4M3FN;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -128,7 +144,7 @@ public:
 };
 
 /// Floating Point Type subclass - Float8M5E2Type.
-class PyFloat8E5M2Type : public PyConcreteType<PyFloat8E5M2Type> {
+class PyFloat8E5M2Type : public PyConcreteType<PyFloat8E5M2Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E5M2;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -148,7 +164,8 @@ public:
 };
 
 /// Floating Point Type subclass - Float8E4M3FNUZ.
-class PyFloat8E4M3FNUZType : public PyConcreteType<PyFloat8E4M3FNUZType> {
+class PyFloat8E4M3FNUZType
+    : public PyConcreteType<PyFloat8E4M3FNUZType, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E4M3FNUZ;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -168,7 +185,8 @@ public:
 };
 
 /// Floating Point Type subclass - Float8E4M3B11FNUZ.
-class PyFloat8E4M3B11FNUZType : public PyConcreteType<PyFloat8E4M3B11FNUZType> {
+class PyFloat8E4M3B11FNUZType
+    : public PyConcreteType<PyFloat8E4M3B11FNUZType, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E4M3B11FNUZ;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -188,7 +206,8 @@ public:
 };
 
 /// Floating Point Type subclass - Float8E5M2FNUZ.
-class PyFloat8E5M2FNUZType : public PyConcreteType<PyFloat8E5M2FNUZType> {
+class PyFloat8E5M2FNUZType
+    : public PyConcreteType<PyFloat8E5M2FNUZType, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAFloat8E5M2FNUZ;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -208,7 +227,7 @@ public:
 };
 
 /// Floating Point Type subclass - BF16Type.
-class PyBF16Type : public PyConcreteType<PyBF16Type> {
+class PyBF16Type : public PyConcreteType<PyBF16Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsABF16;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -228,7 +247,7 @@ public:
 };
 
 /// Floating Point Type subclass - F16Type.
-class PyF16Type : public PyConcreteType<PyF16Type> {
+class PyF16Type : public PyConcreteType<PyF16Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAF16;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -248,7 +267,7 @@ public:
 };
 
 /// Floating Point Type subclass - TF32Type.
-class PyTF32Type : public PyConcreteType<PyTF32Type> {
+class PyTF32Type : public PyConcreteType<PyTF32Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsATF32;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -268,7 +287,7 @@ public:
 };
 
 /// Floating Point Type subclass - F32Type.
-class PyF32Type : public PyConcreteType<PyF32Type> {
+class PyF32Type : public PyConcreteType<PyF32Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAF32;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -288,7 +307,7 @@ public:
 };
 
 /// Floating Point Type subclass - F64Type.
-class PyF64Type : public PyConcreteType<PyF64Type> {
+class PyF64Type : public PyConcreteType<PyF64Type, PyFloatType> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirTypeIsAF64;
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
@@ -618,6 +637,18 @@ public:
               return mlirMemRefTypeGetLayout(self);
             },
             "The layout of the MemRef type.")
+        .def(
+            "get_strides_and_offset",
+            [](PyMemRefType &self) -> std::pair<std::vector<int64_t>, int64_t> {
+              std::vector<int64_t> strides(mlirShapedTypeGetRank(self));
+              int64_t offset;
+              if (mlirLogicalResultIsFailure(mlirMemRefTypeGetStridesAndOffset(
+                      self, strides.data(), &offset)))
+                throw std::runtime_error(
+                    "Failed to extract strides and offset from memref.");
+              return {strides, offset};
+            },
+            "The strides and offset of the MemRef type.")
         .def_property_readonly(
             "affine_map",
             [](PyMemRefType &self) -> PyAffineMap {
@@ -805,6 +836,7 @@ public:
 
 void mlir::python::populateIRTypes(py::module &m) {
   PyIntegerType::bind(m);
+  PyFloatType::bind(m);
   PyIndexType::bind(m);
   PyFloat8E4M3FNType::bind(m);
   PyFloat8E5M2Type::bind(m);

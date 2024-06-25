@@ -74,22 +74,8 @@ static cl::opt<std::string> PreloadFile(
 
 bool runCommandsInFile(const char *ExeName, std::string const &FileName,
                        QuerySession &QS) {
-  auto Buffer = llvm::MemoryBuffer::getFile(FileName);
-  if (!Buffer) {
-    llvm::errs() << ExeName << ": cannot open " << FileName << ": "
-                 << Buffer.getError().message() << "\n";
-    return true;
-  }
-
-  StringRef FileContentRef(Buffer.get()->getBuffer());
-
-  while (!FileContentRef.empty()) {
-    QueryRef Q = QueryParser::parse(FileContentRef, QS);
-    if (!Q->run(llvm::outs(), QS))
-      return true;
-    FileContentRef = Q->RemainingContent;
-  }
-  return false;
+  FileQuery Query(FileName, ExeName);
+  return !Query.run(llvm::errs(), QS);
 }
 
 int main(int argc, const char **argv) {

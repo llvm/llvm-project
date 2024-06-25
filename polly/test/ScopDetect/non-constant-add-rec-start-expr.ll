@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: Valid Region for Scop: bb11 => bb25
 

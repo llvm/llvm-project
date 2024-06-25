@@ -151,6 +151,7 @@ public:
 
   void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
+  const SourceFile *OpenPath(std::string path, llvm::raw_ostream &error);
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
@@ -256,6 +257,10 @@ public:
     provenanceMap_.Put(pm);
   }
 
+  void MarkPossibleFixedFormContinuation() {
+    possibleFixedFormContinuations_.push_back(BufferedBytes());
+  }
+
   std::size_t BufferedBytes() const;
   void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
@@ -268,6 +273,7 @@ private:
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
+  std::list<std::size_t> possibleFixedFormContinuations_;
 };
 
 class AllCookedSources {

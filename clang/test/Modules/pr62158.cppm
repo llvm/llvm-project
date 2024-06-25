@@ -6,6 +6,15 @@
 // RUN: %clang_cc1 -std=c++20 %t/main.cpp -fmodule-file=lib=%t/lib.pcm \
 // RUN:     -verify -fsyntax-only
 
+// Test again with reduced BMI
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/lib.cppm -o %t/lib.pcm
+// RUN: %clang_cc1 -std=c++20 %t/main.cpp -fmodule-file=lib=%t/lib.pcm \
+// RUN:     -verify -fsyntax-only
+
 //--- header.h
 namespace lib::inline __1 {
 template <class>

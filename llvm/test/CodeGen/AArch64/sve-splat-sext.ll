@@ -8,8 +8,8 @@ define <vscale x 8 x i16> @sext_splat_v8i16_128() {
 ; CHECK-NEXT:    ret
   %i = insertelement <vscale x 8 x i16> poison, i16 128, i32 0
   %s = shufflevector <vscale x 8 x i16> %i, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %a = shl <vscale x 8 x i16> %s, shufflevector (<vscale x 8 x i16> insertelement(<vscale x 8 x i16> undef, i16 8, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
-  %b = ashr <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement(<vscale x 8 x i16> undef, i16 8, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
+  %a = shl <vscale x 8 x i16> %s, splat (i16 8)
+  %b = ashr <vscale x 8 x i16> %a, splat (i16 8)
   ret <vscale x 8 x i16> %b
 }
 

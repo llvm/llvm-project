@@ -33,7 +33,6 @@
   adc	pc, r5, r6, ror #2
   adc	r4, r5, r6, ror #31
   adc	r6, r7, r8, lsl r9
-  adc	pc, r7, r8, lsl r9
   adc	r6, r7, r8, lsr r9
   adc	r6, r7, r8, asr r9
   adc	r6, r7, r8, ror r9
@@ -1023,7 +1022,7 @@
 # CHECK-NEXT:  2      2     1.00                        blxne	r2
 # CHECK-NEXT:  2      1     1.00                  U     blx	#32424576
 # CHECK-NEXT:  2      1     1.00                  U     blx	#16212288
-# CHECK-NEXT:  1      1     1.00                  U     bx	r2
+# CHECK-NEXT:  1      1     1.00                        bx	r2
 # CHECK-NEXT:  1      1     1.00                  U     bxne	r2
 # CHECK-NEXT:  1      1     1.00                  U     bxj	r2
 # CHECK-NEXT:  1      1     1.00                  U     bxjne	r2

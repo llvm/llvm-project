@@ -111,6 +111,18 @@ constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
   return static_cast<typename remove_reference<_Tp>::type &&>(__t);
 }
 
+template <class _Tp>
+constexpr _Tp&&
+forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
+  return static_cast<_Tp&&>(__t);
+}
+
+template <class _Tp>
+constexpr _Tp&&
+forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
+  return static_cast<_Tp&&>(__t);
+}
+
 } // namespace std
 
 class A {
@@ -1525,3 +1537,28 @@ public:
 private:
   std::string val_;
 };
+
+namespace issue82023
+{
+
+struct S {
+  S();
+  S(S&&);
+};
+
+void consume(S s);
+
+template <typename T>
+void forward(T&& t) {
+  consume(std::forward<T>(t));
+  consume(std::forward<T>(t));
+  // CHECK-NOTES: [[@LINE-1]]:27: warning: 't' used after it was forwarded
+  // CHECK-NOTES: [[@LINE-3]]:11: note: forward occurred here
+}
+
+void create() {
+  S s;
+  forward(std::move(s));
+}
+
+} // namespace issue82023

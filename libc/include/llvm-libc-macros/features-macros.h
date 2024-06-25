@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FEATURES_MACROS_H
-#define __LLVM_LIBC_MACROS_FEATURES_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FEATURES_MACROS_H
+#define LLVM_LIBC_MACROS_FEATURES_MACROS_H
 
 #define __LLVM_LIBC__ 1
 
-#endif // __LLVM_LIBC_MACROS_FEATURES_MACROS_H
+#endif // LLVM_LIBC_MACROS_FEATURES_MACROS_H

@@ -334,11 +334,6 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
     }
   }
 
-  if (auto *F = dyn_cast<Function>(GO)) {
-    if (F->hasFnAttribute("implicit-section-name"))
-      return getExplicitSectionGlobal(GO, Kind, TM);
-  }
-
   // Use default section depending on the 'type' of global
   return SelectSectionForGlobal(GO, Kind, TM);
 }

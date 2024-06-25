@@ -1,4 +1,5 @@
 // RUN: %libomp-compile
+// RUN: %libomp-run
 // RUN: env KMP_AFFINITY=none %libomp-run
 // REQUIRES: linux
 

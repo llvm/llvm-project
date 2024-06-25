@@ -15,9 +15,9 @@
 namespace llvm {
 
 /// Implementations of list algorithms using ilist_node_base.
-template <bool EnableSentinelTracking> class ilist_base {
+template <bool EnableSentinelTracking, class ParentTy> class ilist_base {
 public:
-  using node_base_type = ilist_node_base<EnableSentinelTracking>;
+  using node_base_type = ilist_node_base<EnableSentinelTracking, ParentTy>;
 
   static void insertBeforeImpl(node_base_type &Next, node_base_type &N) {
     node_base_type &Prev = *Next.getPrev();

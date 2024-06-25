@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s --check-prefix=CHECK
+; RUN: llc < %s -mtriple=x86_64-linux -verify-machineinstrs | FileCheck %s --check-prefix=CHECK
 
 ; Test how we handle pathologically large stack frames when RAX is live through
 ; the prologue and epilogue.

@@ -147,7 +147,7 @@ entry:
 
 ; DIS64:      Disassembly of section .text:
 ; DIS64-EMPTY:
-; DIS64-NEXT: 0000000000000000 (idx: 3) .foo:
+; DIS64-NEXT: 0000000000000000 (idx: {{[0-9]+}}) .foo:
 ; DIS64-NEXT:        0: 3c 62 00 00  	addis 3, 2, 0
 ; DIS64-NEXT: 		0000000000000002:  R_TOCU	(idx: [[#INDX:]]) a[TE]
 ; DIS64-NEXT:        4: 3c 82 00 00  	addis 4, 2, 0

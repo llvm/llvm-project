@@ -657,6 +657,14 @@ CALL CO_REDUCE
 CALL CO_SUM
 ```
 
+### Inquiry Functions
+ACCESS (GNU extension) is not supported on Windows. Otherwise:
+```
+CHARACTER(LEN=*) :: path = 'path/to/file'
+IF (ACCESS(path, 'rwx')) &
+  ...
+```
+
 ## Non-standard intrinsics
 ### PGI
 ```
@@ -753,11 +761,11 @@ This phase currently supports all the intrinsic procedures listed above but the 
 
 | Intrinsic Category | Intrinsic Procedures Lacking Support |
 | --- | --- |
-| Coarray intrinsic functions | IMAGE_INDEX, COSHAPE |
+| Coarray intrinsic functions | COSHAPE |
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
 | Non-standard intrinsic functions | AND, OR, XOR, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, GETPID, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
-| Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM_CLOCK |
+| Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
 | Library subroutines | FDATE, GETLOG |
@@ -908,3 +916,86 @@ used in constant expressions have currently no folding support at all.
   - If a condition occurs that would assign a nonzero value to `CMDSTAT` but the `CMDSTAT` variable is not present, error termination is initiated.
     - On POSIX-compatible systems, the child process (async process) will be terminated with no effect on the parent process (continues).
     - On Windows, error termination is not initiated.
+
+### Non-Standard Intrinsics: ETIME
+
+#### Description
+`ETIME(VALUES, TIME)` returns the number of seconds of runtime since the start of the process’s execution in *TIME*. *VALUES* returns the user and system components of this time in `VALUES(1)` and `VALUES(2)` respectively. *TIME* is equal to `VALUES(1) + VALUES(2)`.
+
+On some systems, the underlying timings are represented using types with sufficiently small limits that overflows (wrap around) are possible, such as 32-bit types. Therefore, the values returned by this intrinsic might be, or become, negative, or numerically less than previous values, during a single run of the compiled program.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*VALUES* and *TIME* are `INTENT(OUT)` and provide the following:
+
+
+|               |                                   |
+|---------------|-----------------------------------|
+| `VALUES(1)`   | User time in seconds.             |
+| `VALUES(2)`   | System time in seconds.           |
+| `TIME`        | Run time since start in seconds.  |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL ETIME(VALUES, TIME)`
+- **Arguments:**
+- **Return value** Elapsed time in seconds since the start of program execution.
+
+| Argument   | Description                                                           |
+|------------|-----------------------------------------------------------------------|
+| `VALUES`   | The type shall be REAL(4), DIMENSION(2).                              |
+| `TIME`     | The type shall be REAL(4).                                            |
+
+#### Example
+Here is an example usage from [Gfortran ETIME](https://gcc.gnu.org/onlinedocs/gfortran/ETIME.html)
+```Fortran
+program test_etime
+    integer(8) :: i, j
+    real, dimension(2) :: tarray
+    real :: result
+    call ETIME(tarray, result)
+    print *, result
+    print *, tarray(1)
+    print *, tarray(2)   
+    do i=1,100000000    ! Just a delay
+        j = i * i - i
+    end do
+    call ETIME(tarray, result)
+    print *, result
+    print *, tarray(1)
+    print *, tarray(2)
+end program test_etime
+```
+
+### Non-Standard Intrinsics: GETCWD
+
+#### Description
+`GETCWD(C, STATUS)` returns current working directory.
+
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
+
+*C* and *STATUS* are `INTENT(OUT)` and provide the following:
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `C`        | Current work directory. The type shall be `CHARACTER` and of default kind.       |
+| `STATUS`   | (Optional) Status flag. Returns 0 on success, a system specific and nonzero error code otherwise. The type shall be `INTEGER` and of a kind greater or equal to 4. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL GETCWD(C, STATUS)`, `STATUS = GETCWD(C)`
+
+#### Example
+```Fortran
+PROGRAM example_getcwd
+  CHARACTER(len=255) :: cwd
+  INTEGER :: status
+  CALL getcwd(cwd, status)
+  PRINT *, cwd
+  PRINT *, status
+END PROGRAM
+```

@@ -53,9 +53,9 @@ static MCStreamer *
 createSPIRVMCStreamer(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&MAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+                      std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createSPIRVStreamer(Ctx, std::move(MAB), std::move(OW),
-                             std::move(Emitter), RelaxAll);
+                             std::move(Emitter));
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,

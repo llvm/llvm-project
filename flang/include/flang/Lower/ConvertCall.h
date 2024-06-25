@@ -30,7 +30,9 @@ namespace Fortran::lower {
 /// link to internal procedures.
 /// \p isElemental must be set to true if elemental call is being produced.
 /// It is only used for HLFIR.
-fir::ExtendedValue genCallOpAndResult(
+/// The returned boolean indicates if finalization has been emitted in
+/// \p stmtCtx for the result.
+std::pair<fir::ExtendedValue, bool> genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,

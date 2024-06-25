@@ -30,7 +30,7 @@ body:             |
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
-    %2:ppr = PTRUE_B 31
+    %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILEHI_PWW_B %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
@@ -63,7 +63,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_B 31
+    %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILEHI_PXX_B %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
@@ -98,7 +98,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
-    %2:ppr = PTRUE_H 31
+    %2:ppr = PTRUE_H 31, implicit $vg
     %4:ppr = WHILEHI_PWW_H %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -133,7 +133,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_H 31
+    %2:ppr = PTRUE_H 31, implicit $vg
     %4:ppr = WHILEHI_PXX_H %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -168,7 +168,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
-    %2:ppr = PTRUE_S 31
+    %2:ppr = PTRUE_S 31, implicit $vg
     %4:ppr = WHILEHI_PWW_S %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -203,7 +203,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_S 31
+    %2:ppr = PTRUE_S 31, implicit $vg
     %4:ppr = WHILEHI_PXX_S %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -238,7 +238,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
-    %2:ppr = PTRUE_D 31
+    %2:ppr = PTRUE_D 31, implicit $vg
     %4:ppr = WHILEHI_PWW_D %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -273,7 +273,7 @@ body:             |
     ; CHECK-NOT: PTEST
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_D 31
+    %2:ppr = PTRUE_D 31, implicit $vg
     %4:ppr = WHILEHI_PXX_D %0, %1, implicit-def dead $nzcv
     PTEST_PP %2, %4, implicit-def $nzcv
     %6:gpr32 = COPY $wzr
@@ -313,7 +313,7 @@ body:             |
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_S 29
+    %2:ppr = PTRUE_S 29, implicit $vg
     %3:ppr = WHILEHI_PXX_S %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
@@ -353,7 +353,7 @@ body:             |
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_B 31
+    %2:ppr = PTRUE_B 31, implicit $vg
     %3:ppr = WHILEHI_PXX_S %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
@@ -393,7 +393,7 @@ body:             |
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_H 31
+    %2:ppr = PTRUE_H 31, implicit $vg
     %3:ppr = WHILEHI_PXX_S %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr
@@ -433,7 +433,7 @@ body:             |
     ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
-    %2:ppr = PTRUE_D 31
+    %2:ppr = PTRUE_D 31, implicit $vg
     %3:ppr = WHILEHI_PXX_S %0, %1, implicit-def dead $nzcv
     PTEST_PP killed %2, killed %3, implicit-def $nzcv
     %4:gpr32 = COPY $wzr

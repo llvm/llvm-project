@@ -109,7 +109,7 @@ subroutine inquire_test(ch, i, b)
   ! PENDING with ID
   ! CHECK-DAG: %[[chip:.*]] = fir.call {{.*}}BeginInquireUnit
   ! CHECK-DAG: fir.call @_QPid_func
-  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i64, !fir.ref<i1>) -> i1
+  ! CHECK: call @_FortranAioInquirePendingId(%[[chip]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, i32, !fir.ref<i1>) -> i1
   ! CHECK: call {{.*}}EndIoStatement
   inquire(91, id=id_func(), pending=b)
 end subroutine inquire_test

@@ -20,7 +20,7 @@
 #include "llvm/ADT/SparseMultiSet.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/identity.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -191,7 +191,19 @@ namespace llvm {
     /// applicable).
     using SUList = std::list<SUnit *>;
 
+    /// The direction that should be used to dump the scheduled Sequence.
+    enum DumpDirection {
+      TopDown,
+      BottomUp,
+      Bidirectional,
+      NotSet,
+    };
+
+    void setDumpDirection(DumpDirection D) { DumpDir = D; }
+
   protected:
+    DumpDirection DumpDir = NotSet;
+
     /// A map from ValueType to SUList, used during DAG construction, as
     /// a means of remembering which SUs depend on which memory locations.
     class Value2SUsMap;
@@ -251,7 +263,7 @@ namespace llvm {
     MachineInstr *FirstDbgValue = nullptr;
 
     /// Set of live physical registers for updating kill flags.
-    LivePhysRegs LiveRegs;
+    LiveRegUnits LiveRegs;
 
   public:
     explicit ScheduleDAGInstrs(MachineFunction &mf,

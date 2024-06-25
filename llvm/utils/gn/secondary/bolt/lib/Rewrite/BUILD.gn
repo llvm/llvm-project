@@ -24,6 +24,7 @@ static_library("Rewrite") {
   sources = [
     "BinaryPassManager.cpp",
     "BoltDiff.cpp",
+    "BuildIDRewriter.cpp",
     "DWARFRewriter.cpp",
     "ExecutableFileMemoryManager.cpp",
     "JITLinkLinker.cpp",

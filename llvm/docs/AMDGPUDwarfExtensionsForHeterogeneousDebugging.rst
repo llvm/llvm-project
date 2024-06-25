@@ -2487,7 +2487,7 @@ type.
     .. note::
 
       Could also consider adding ``DW_OP_LLVM_aspace_breg0,
-      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_bref31`` which would save
+      DW_OP_LLVM_aspace_breg1, ..., DW_OP_LLVM_aspace_breg31`` which would save
       encoding size.
 
 .. _amdgpu-dwarf-register-location-description-operations:

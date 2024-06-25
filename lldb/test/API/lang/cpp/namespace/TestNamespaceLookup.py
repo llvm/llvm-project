@@ -3,7 +3,7 @@ Test the printing of anonymous and named namespace variables.
 """
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -41,7 +41,7 @@ class NamespaceLookupTestCase(TestBase):
         )
 
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
-    @unittest2.expectedFailure  # CU-local objects incorrectly scoped
+    @unittest.expectedFailure  # CU-local objects incorrectly scoped
     def test_scope_lookup_with_run_command_globals(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -211,7 +211,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate B::func() - should call B::func()
         self.expect_expr("B::func()", result_type="int", result_value="4")
 
-    @unittest2.expectedFailure  # lldb scope lookup of functions bugs
+    @unittest.expectedFailure  # lldb scope lookup of functions bugs
     def test_function_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -272,7 +272,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate func2() - should call A::func2()
         self.expect_expr("func2()", result_type="int", result_value="3")
 
-    @unittest2.expectedFailure  # lldb scope lookup after using declaration bugs
+    @unittest.expectedFailure  # lldb scope lookup after using declaration bugs
     # NOTE: this test may fail on older systems that don't emit import
     # emtries in DWARF - may need to add checks for compiler versions here.
     def test_scope_after_using_declaration_lookup_with_run_command(self):
@@ -294,7 +294,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate func() - should call A::func()
         self.expect_expr("func()", result_type="int", result_value="3")
 
-    @unittest2.expectedFailure  # lldb scope lookup ambiguity after using bugs
+    @unittest.expectedFailure  # lldb scope lookup ambiguity after using bugs
     def test_scope_ambiguity_after_using_lookup_with_run_command(self):
         """Test scope lookup ambiguity after using in lldb."""
         self.build()

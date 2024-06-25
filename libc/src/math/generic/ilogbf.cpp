@@ -12,6 +12,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, ilogbf, (float x)) { return fputil::ilogb(x); }
+LLVM_LIBC_FUNCTION(int, ilogbf, (float x)) { return fputil::intlogb<int>(x); }
 
 } // namespace LIBC_NAMESPACE

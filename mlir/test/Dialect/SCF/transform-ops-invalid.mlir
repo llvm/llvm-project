@@ -41,6 +41,105 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @loop_unroll_and_jam_unsupported_trip_count_not_multiple_of_factor() {
+  %c0 = arith.constant 0 : index
+  %c40 = arith.constant 40 : index
+  %c2 = arith.constant 2 : index
+  scf.for %i = %c0 to %c40 step %c2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to unroll and jam}}
+    transform.loop.unroll_and_jam %1 { factor = 3 } : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @loop_unroll_and_jam_unsupported_loop_with_results() -> index {
+  %c0 = arith.constant 0 : index
+  %c40 = arith.constant 40 : index
+  %c2 = arith.constant 2 : index
+  %sum = scf.for %i = %c0 to %c40 step %c2 iter_args(%does_not_alias_aggregated = %c0) -> (index) {
+    %sum = arith.addi %i, %i : index
+    scf.yield %sum : index
+  }
+  return %sum : index
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to unroll and jam}}
+    transform.loop.unroll_and_jam %1 { factor = 4 } : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
+func.func private @loop_unroll_and_jam_unsupported_dynamic_trip_count(%arg0: memref<96x128xi8, 3>, %arg1: memref<128xi8, 3>) {
+  %c96 = arith.constant 96 : index
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  scf.for %arg4 = %c0 to %c4 step %c1 {
+    scf.for %arg2 = %c0 to %c128 step %arg4 {
+      %3 = memref.load %arg1[%arg2] : memref<128xi8, 3>
+      %sum = scf.for %arg3 = %c0 to %c96 step %c1 iter_args(%does_not_alias_aggregated = %3) -> (i8) {
+      %2 = memref.load %arg0[%arg3, %arg2] : memref<96x128xi8, 3>
+      %4 = arith.addi %2, %3 : i8
+      scf.yield %4 : i8
+      }
+      memref.store %sum, %arg1[%arg2] : memref<128xi8, 3>
+    }
+    scf.yield
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["memref.store"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to unroll and jam}}
+    transform.loop.unroll_and_jam %1 { factor = 4 } : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @loop_unroll_and_jam_unsupported_dynamic_trip_count(%upper_bound: index) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  scf.for %i = %c0 to %upper_bound step %c2 {
+    arith.addi %i, %i : index
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    // expected-error @below {{failed to unroll and jam}}
+    transform.loop.unroll_and_jam %1 { factor = 2 } : !transform.op<"scf.for">
+    transform.yield
+  }
+}
+
+// -----
+
 func.func private @cond() -> i1
 func.func private @body()
 

@@ -68,74 +68,74 @@ body:             |
     ; GCN64-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 16, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 28, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 44, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
@@ -145,12 +145,12 @@ body:             |
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 64, 0, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
@@ -168,12 +168,12 @@ body:             |
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 96, 0, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
@@ -207,16 +207,16 @@ body:             |
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 160, 0, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 262144, implicit-def dead $scc
     ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, killed $sgpr2, 0, 0, 0, implicit $exec :: (store (s32) into %stack.8, align 4096, addrspace 5)
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ;
     ; GCN32-MUBUF-LABEL: name: check_spill
@@ -232,74 +232,74 @@ body:             |
     ; GCN32-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 7, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 16, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 15, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 28, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 31, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 44, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 255, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
@@ -309,12 +309,12 @@ body:             |
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 64, 0, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 65535, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
@@ -332,12 +332,12 @@ body:             |
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 96, 0, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 4294967295, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
@@ -371,16 +371,16 @@ body:             |
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 160, 0, 0, implicit $exec :: (store (s32) into %stack.7, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr1 = S_ADD_I32 $sgpr33, 131072, implicit-def dead $scc
     ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, killed $sgpr1, 0, 0, 0, implicit $exec :: (store (s32) into %stack.8, align 4096, addrspace 5)
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ;
     ; GCN64-FLATSCR-LABEL: name: check_spill
@@ -392,74 +392,74 @@ body:             |
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit killed $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13_sgpr14 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 28, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr15, 3, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr16, 4, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 44, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.4, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
@@ -469,12 +469,12 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr18, 6, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr19, 7, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 64, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.5, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr13, 1, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr14, 2, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
@@ -492,12 +492,12 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr26, 14, $vgpr0, implicit $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr27, 15, $vgpr0, implicit killed $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 96, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.6, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr64, 0, undef $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr65, 1, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr66, 2, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
@@ -531,16 +531,16 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr94, 30, $vgpr0, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr95, 31, $vgpr0, implicit killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 160, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.7, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: renamable $sgpr12 = IMPLICIT_DEF
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr12, 0, undef $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 4096, implicit-def dead $scc
     ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, killed $sgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.8, align 4096, addrspace 5)
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     renamable $sgpr12 = IMPLICIT_DEF
     SI_SPILL_S32_SAVE killed $sgpr12, %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
@@ -626,52 +626,52 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr29 = S_ADDC_U32 $sgpr29, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr28_sgpr29_sgpr30_sgpr31
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 8, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 16, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 28, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 44, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN64-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
     ; GCN64-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 64, 0, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -681,11 +681,11 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
     ; GCN64-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
     ; GCN64-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 96, 0, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -703,11 +703,11 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
     ; GCN64-MUBUF-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
     ; GCN64-MUBUF-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 160, 0, 0, implicit $exec :: (load (s32) from %stack.7, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-MUBUF-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -741,15 +741,15 @@ body:             |
     ; GCN64-MUBUF-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
     ; GCN64-MUBUF-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
     ; GCN64-MUBUF-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-MUBUF-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 262144, implicit-def dead $scc
     ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, killed $sgpr2, 0, 0, 0, implicit $exec :: (load (s32) from %stack.8, align 4096, addrspace 5)
     ; GCN64-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr28_sgpr29_sgpr30_sgpr31, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-MUBUF-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ;
     ; GCN32-MUBUF-LABEL: name: check_reload
@@ -764,52 +764,52 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 3, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 8, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 7, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 16, 0, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 15, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 28, 0, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 31, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 44, 0, 0, implicit $exec :: (load (s32) from %stack.4, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN32-MUBUF-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN32-MUBUF-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
     ; GCN32-MUBUF-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 255, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 64, 0, 0, implicit $exec :: (load (s32) from %stack.5, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -819,11 +819,11 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
     ; GCN32-MUBUF-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
     ; GCN32-MUBUF-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 65535, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 96, 0, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN32-MUBUF-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -841,11 +841,11 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
     ; GCN32-MUBUF-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
     ; GCN32-MUBUF-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 4294967295, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 160, 0, 0, implicit $exec :: (load (s32) from %stack.7, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN32-MUBUF-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -879,15 +879,15 @@ body:             |
     ; GCN32-MUBUF-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
     ; GCN32-MUBUF-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
     ; GCN32-MUBUF-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ; GCN32-MUBUF-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 1, implicit-def $vgpr0
-    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr1 = S_ADD_I32 $sgpr33, 131072, implicit-def dead $scc
     ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, killed $sgpr1, 0, 0, 0, implicit $exec :: (load (s32) from %stack.8, align 4096, addrspace 5)
     ; GCN32-MUBUF-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN32-MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.9, addrspace 5)
     ; GCN32-MUBUF-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0, implicit killed $vgpr0
     ;
     ; GCN64-FLATSCR-LABEL: name: check_reload
@@ -898,52 +898,52 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $flat_scr_hi = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 1
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 7, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.2, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 2
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 15, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 3
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 31, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.4, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
     ; GCN64-FLATSCR-NEXT: $sgpr14 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 2
     ; GCN64-FLATSCR-NEXT: $sgpr15 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 3
     ; GCN64-FLATSCR-NEXT: $sgpr16 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 4
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 255, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 64, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.5, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -953,11 +953,11 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr17 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 5
     ; GCN64-FLATSCR-NEXT: $sgpr18 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 6
     ; GCN64-FLATSCR-NEXT: $sgpr19 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 7
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 65535, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 96, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.6, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27
     ; GCN64-FLATSCR-NEXT: $sgpr13 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -975,11 +975,11 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr25 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 13
     ; GCN64-FLATSCR-NEXT: $sgpr26 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 14
     ; GCN64-FLATSCR-NEXT: $sgpr27 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 15
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 4294967295, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 160, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.7, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr64 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN64-FLATSCR-NEXT: $sgpr65 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
@@ -1013,15 +1013,15 @@ body:             |
     ; GCN64-FLATSCR-NEXT: $sgpr93 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 29
     ; GCN64-FLATSCR-NEXT: $sgpr94 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 30
     ; GCN64-FLATSCR-NEXT: $sgpr95 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 31
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     ; GCN64-FLATSCR-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 1, implicit-def $vgpr0
-    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr2 = S_ADD_I32 $sgpr33, 4096, implicit-def dead $scc
     ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.8, align 4096, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $sgpr12 = SI_RESTORE_S32_FROM_VGPR killed $vgpr0, 0
-    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GCN64-FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.9, addrspace 5)
     ; GCN64-FLATSCR-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
     renamable $sgpr12 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr96_sgpr97_sgpr98_sgpr99, implicit $sgpr32
 

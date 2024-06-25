@@ -32,6 +32,9 @@ StringRef MachOObjCImageInfoSectionName = "__DATA,__objc_imageinfo";
 StringRef MachOObjCMethNameSectionName = "__TEXT,__objc_methname";
 StringRef MachOObjCMethTypeSectionName = "__TEXT,__objc_methtype";
 StringRef MachOObjCNLCatListSectionName = "__DATA,__objc_nlcatlist";
+StringRef MachOObjCNLClassListSectionName = "__DATA,__objc_nlclslist";
+StringRef MachOObjCProtoListSectionName = "__DATA,__objc_protolist";
+StringRef MachOObjCProtoRefsSectionName = "__DATA,__objc_protorefs";
 StringRef MachOObjCSelRefsSectionName = "__DATA,__objc_selrefs";
 StringRef MachOSwift5ProtoSectionName = "__TEXT,__swift5_proto";
 StringRef MachOSwift5ProtosSectionName = "__TEXT,__swift5_protos";
@@ -43,17 +46,18 @@ StringRef MachOThreadBSSSectionName = "__DATA,__thread_bss";
 StringRef MachOThreadDataSectionName = "__DATA,__thread_data";
 StringRef MachOThreadVarsSectionName = "__DATA,__thread_vars";
 
-StringRef MachOInitSectionNames[19] = {
-    MachOModInitFuncSectionName,   MachOObjCCatListSectionName,
-    MachOObjCCatList2SectionName,  MachOObjCClassListSectionName,
-    MachOObjCClassNameSectionName, MachOObjCClassRefsSectionName,
-    MachOObjCConstSectionName,     MachOObjCDataSectionName,
-    MachOObjCImageInfoSectionName, MachOObjCMethNameSectionName,
-    MachOObjCMethTypeSectionName,  MachOObjCNLCatListSectionName,
-    MachOObjCSelRefsSectionName,   MachOSwift5ProtoSectionName,
-    MachOSwift5ProtosSectionName,  MachOSwift5TypesSectionName,
-    MachOSwift5TypeRefSectionName, MachOSwift5FieldMetadataSectionName,
-    MachOSwift5EntrySectionName,
+StringRef MachOInitSectionNames[22] = {
+    MachOModInitFuncSectionName,         MachOObjCCatListSectionName,
+    MachOObjCCatList2SectionName,        MachOObjCClassListSectionName,
+    MachOObjCClassNameSectionName,       MachOObjCClassRefsSectionName,
+    MachOObjCConstSectionName,           MachOObjCDataSectionName,
+    MachOObjCImageInfoSectionName,       MachOObjCMethNameSectionName,
+    MachOObjCMethTypeSectionName,        MachOObjCNLCatListSectionName,
+    MachOObjCNLClassListSectionName,     MachOObjCProtoListSectionName,
+    MachOObjCProtoRefsSectionName,       MachOObjCSelRefsSectionName,
+    MachOSwift5ProtoSectionName,         MachOSwift5ProtosSectionName,
+    MachOSwift5TypesSectionName,         MachOSwift5TypeRefSectionName,
+    MachOSwift5FieldMetadataSectionName, MachOSwift5EntrySectionName,
 };
 
 StringRef ELFEHFrameSectionName = ".eh_frame";

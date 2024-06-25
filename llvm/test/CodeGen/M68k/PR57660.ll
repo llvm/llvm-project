@@ -7,7 +7,7 @@ define dso_local void @foo1() {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #2, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -6
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    move.b %d0, (0,%sp) ; 1-byte Folded Spill
 ; CHECK-NEXT:  .LBB0_1: ; %do.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

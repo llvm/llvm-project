@@ -1,0 +1,48 @@
+// Check that (1) the default input split marker used if no custom marker is
+// specified and (2) the output file is merged using the default marker.
+// RUN: mlir-pdll %s -split-input-file \
+// RUN: | FileCheck -check-prefix=CHECK-DEFAULT %s
+
+// Check that the custom (3) input and (output) split markers are used if
+// provided.
+// RUN: mlir-pdll %s \
+// RUN:   -split-input-file="// ""=====" -output-split-marker "// #####" \
+// RUN: | FileCheck -check-prefix=CHECK-CUSTOM %s
+
+// Check that (5) the input is not split if `-split-input-file` is not given.
+// RUN: mlir-pdll %s \
+// RUN: | FileCheck -check-prefix=CHECK-NOSPLIT %s
+
+// CHECK-DEFAULT:      Module
+// CHECK-DEFAULT-NEXT: PatternDecl
+// CHECK-DEFAULT-NOT:  PatternDecl
+// CHECK-DEFAULT:      //{{ }}-----
+// CHECK-DEFAULT-NEXT: Module
+// CHECK-DEFAULT-NEXT: PatternDecl
+// CHECK-DEFAULT:      PatternDecl
+
+// CHECK-CUSTOM:      Module
+// CHECK-CUSTOM-NEXT: PatternDecl
+// CHECK-CUSTOM:      PatternDecl
+// CHECK-CUSTOM:      // #####
+// CHECK-CUSTOM-NEXT: Module
+// CHECK-CUSTOM-NEXT: PatternDecl
+// CHECK-CUSTOM-NOT:  PatternDecl
+
+// CHECK-NOSPLIT:      Module
+// CHECK-NOSPLIT-NEXT: PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
+// CHECK-NOSPLIT:      PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
+// CHECK-NOSPLIT:      PatternDecl
+// CHECK-NOSPLIT-NOT:  Module
+
+Pattern => erase op<test.op>;
+
+// -----
+
+Pattern => erase op<test.op2>;
+
+// =====
+
+Pattern => erase op<test.op3>;

@@ -16,16 +16,16 @@ define i32 @foo() uwtable ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    jsr _Z1fv@PLT
+; CHECK-NEXT:    jsr _Z1fv
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  ; %bb.1: ; %try.cont
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_2: ; %lpad
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    move.l %d0, (%sp)
-; CHECK-NEXT:    jsr _Unwind_Resume@PLT
+; CHECK-NEXT:    jsr _Unwind_Resume
 entry:
   invoke void @_Z1fv() optsize
           to label %try.cont unwind label %lpad

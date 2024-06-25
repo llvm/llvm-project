@@ -316,6 +316,12 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     if (auto load = cast.getDefiningOp<arith::AddIOp>()) {
       Value inv = load.getOperand(0);
       Value idx = load.getOperand(1);
+      // Swap non-invariant.
+      if (!isInvariantValue(inv, block)) {
+        inv = idx;
+        idx = load.getOperand(0);
+      }
+      // Inspect.
       if (isInvariantValue(inv, block)) {
         if (auto arg = llvm::dyn_cast<BlockArgument>(idx)) {
           if (isInvariantArg(arg, block) || !innermost)

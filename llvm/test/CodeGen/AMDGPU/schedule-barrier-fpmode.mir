@@ -63,7 +63,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK-NEXT: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: dead [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
     ; CHECK-NEXT: S_DENORM_MODE 0, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec
@@ -89,7 +89,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK-NEXT: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: dead [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
     ; CHECK-NEXT: S_ROUND_MODE 0, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec

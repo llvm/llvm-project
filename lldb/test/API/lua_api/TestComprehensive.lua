@@ -43,7 +43,7 @@ function _T:Test3_BreakpointFindVariables()
     assertTrue(var_argc:IsValid())
     local var_argc_value = var_argc:GetValueAsSigned(error, 0)
     assertTrue(error:Success())
-    assertEquals(var_argc_value, 2)
+    assertEqual(var_argc_value, 2)
 
     -- checking "inited" value
     local continue = self.process:Continue()
@@ -59,7 +59,7 @@ function _T:Test3_BreakpointFindVariables()
     self.var_inited = var_inited
     local var_inited_value = var_inited:GetValueAsUnsigned(error, 0)
     assertTrue(error:Success())
-    assertEquals(var_inited_value, 0xDEADBEEF)
+    assertEqual(var_inited_value, 0xDEADBEEF)
 end
 
 function _T:Test3_RawData()
@@ -84,7 +84,7 @@ end
 
 function _T:Test5_FileOutput()
     local f = io.open(self.output, 'r')
-    assertEquals(
+    assertEqual(
         read_file_non_empty_lines(f),
         {
             self.exe,

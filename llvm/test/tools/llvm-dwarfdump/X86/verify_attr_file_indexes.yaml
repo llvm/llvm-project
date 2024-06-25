@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | not llvm-dwarfdump --verify - | FileCheck %s --implicit-check-not=error:
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
 
 # CHECK:      error: DIE has DW_AT_decl_file with an invalid file index 2 (valid values are [1-1]){{[[:space:]]}}
 # CHECK-NEXT: 0x0000001e: DW_TAG_subprogram

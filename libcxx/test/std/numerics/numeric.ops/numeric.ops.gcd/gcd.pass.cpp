@@ -17,6 +17,8 @@
 #include <cassert>
 #include <climits>
 #include <cstdint>
+#include <limits>
+#include <random>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -48,6 +50,78 @@ constexpr bool test0(int in1, int in2, int out)
     return true;
 }
 
+template <typename T>
+T basic_gcd_(T m, T n) {
+  return n == 0 ? m : basic_gcd_<T>(n, m % n);
+}
+
+template <typename T>
+T basic_gcd(T m, T n) {
+  using Tp = std::make_unsigned_t<T>;
+  if constexpr (std::is_signed_v<T>) {
+    if (m < 0 && m != std::numeric_limits<T>::min())
+      m = -m;
+    if (n < 0 && n != std::numeric_limits<T>::min())
+      n = -n;
+  }
+  return basic_gcd_(static_cast<Tp>(m), static_cast<Tp>(n));
+}
+
+template <typename Input>
+void do_fuzzy_tests() {
+  std::mt19937 gen(1938);
+  using DistIntType         = std::conditional_t<sizeof(Input) == 1, int, Input>; // See N4981 [rand.req.genl]/1.5
+  constexpr Input max_input = std::numeric_limits<Input>::max();
+  std::uniform_int_distribution<DistIntType> distrib(0, max_input);
+
+  constexpr int nb_rounds = 10000;
+  for (int i = 0; i < nb_rounds; ++i) {
+    Input n = static_cast<Input>(distrib(gen));
+    Input m = static_cast<Input>(distrib(gen));
+    assert(std::gcd(n, m) == basic_gcd(n, m));
+  }
+}
+
+template <typename Input>
+void do_limit_tests() {
+  Input inputs[] = {
+      // The behavior of std::gcd is undefined if the absolute value of one of its
+      // operand is not representable in the result type.
+      std::numeric_limits<Input>::min() + (std::is_signed<Input>::value ? 3 : 0),
+      std::numeric_limits<Input>::min() + 1,
+      std::numeric_limits<Input>::min() + 2,
+      std::numeric_limits<Input>::max(),
+      std::numeric_limits<Input>::max() - 1,
+      std::numeric_limits<Input>::max() - 2,
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      (Input)-1,
+      (Input)-2,
+      (Input)-3,
+      (Input)-4,
+      (Input)-5,
+      (Input)-6,
+      (Input)-7,
+      (Input)-8,
+      (Input)-9,
+      (Input)-10,
+  };
+
+  for (auto n : inputs) {
+    for (auto m : inputs) {
+      assert(std::gcd(n, m) == basic_gcd(n, m));
+    }
+  }
+}
 
 template <typename Input1, typename Input2 = Input1>
 constexpr bool do_test(int = 0)
@@ -143,5 +217,23 @@ int main(int argc, char**)
     assert(res == 2);
     }
 
-  return 0;
+    do_fuzzy_tests<std::int8_t>();
+    do_fuzzy_tests<std::int16_t>();
+    do_fuzzy_tests<std::int32_t>();
+    do_fuzzy_tests<std::int64_t>();
+    do_fuzzy_tests<std::uint8_t>();
+    do_fuzzy_tests<std::uint16_t>();
+    do_fuzzy_tests<std::uint32_t>();
+    do_fuzzy_tests<std::uint64_t>();
+
+    do_limit_tests<std::int8_t>();
+    do_limit_tests<std::int16_t>();
+    do_limit_tests<std::int32_t>();
+    do_limit_tests<std::int64_t>();
+    do_limit_tests<std::uint8_t>();
+    do_limit_tests<std::uint16_t>();
+    do_limit_tests<std::uint32_t>();
+    do_limit_tests<std::uint64_t>();
+
+    return 0;
 }

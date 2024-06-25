@@ -554,6 +554,40 @@ define <16 x i8> @umaxmin_v16i8_com1(<16 x i8> %0, <16 x i8> %1) {
   ret <16 x i8> %sub
 }
 
+; (abds x, y) upper bits are known zero if x and y have extra sign bits
+define <4 x i16> @combine_sabd_4h_zerosign(<4 x i16> %a, <4 x i16> %b) #0 {
+; CHECK-LABEL: combine_sabd_4h_zerosign:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+  %a.ext = ashr <4 x i16> %a, <i16 7, i16 8, i16 9, i16 10>
+  %b.ext = ashr <4 x i16> %b, <i16 11, i16 12, i16 13, i16 14>
+  %max = tail call <4 x i16> @llvm.smax.v4i16(<4 x i16> %a.ext, <4 x i16> %b.ext)
+  %min = tail call <4 x i16> @llvm.smin.v4i16(<4 x i16> %a.ext, <4 x i16> %b.ext)
+  %sub = sub <4 x i16> %max, %min
+  %mask = and <4 x i16> %sub, <i16 32768, i16 32768, i16 32768, i16 32768>
+  ret <4 x i16> %mask
+}
+
+; negative test - mask extends beyond known zero bits
+define <2 x i32> @combine_sabd_2s_zerosign_negative(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: combine_sabd_2s_zerosign_negative:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #3
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #15
+; CHECK-NEXT:    mvni v2.2s, #7, msl #16
+; CHECK-NEXT:    sabd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    ret
+  %a.ext = ashr <2 x i32> %a, <i32 3, i32 3>
+  %b.ext = ashr <2 x i32> %b, <i32 15, i32 15>
+  %max = tail call <2 x i32> @llvm.smax.v2i32(<2 x i32> %a.ext, <2 x i32> %b.ext)
+  %min = tail call <2 x i32> @llvm.smin.v2i32(<2 x i32> %a.ext, <2 x i32> %b.ext)
+  %sub = sub <2 x i32> %max, %min
+  %mask = and <2 x i32> %sub, <i32 -524288, i32 -524288> ; 0xFFF80000
+  ret <2 x i32> %mask
+}
+
 declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 

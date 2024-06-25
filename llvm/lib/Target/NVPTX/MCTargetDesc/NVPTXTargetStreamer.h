@@ -43,7 +43,7 @@ public:
   /// functions.
   void emitDwarfFileDirective(StringRef Directive) override;
   void changeSection(const MCSection *CurSection, MCSection *Section,
-                     const MCExpr *SubSection, raw_ostream &OS) override;
+                     uint32_t SubSection, raw_ostream &OS) override;
   /// Emit the bytes in \p Data into the output.
   ///
   /// This is used to emit bytes in \p Data as sequence of .byte directives.

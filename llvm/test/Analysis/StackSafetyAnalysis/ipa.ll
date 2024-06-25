@@ -1,5 +1,4 @@
 ; REQUIRES: aarch64-registered-target
-; REQUIRES: shell
 
 ; RUN: llvm-as %s -o %t0.bc
 ; RUN: llvm-as %S/Inputs/ipa.ll -o %t1.bc
@@ -17,78 +16,79 @@
 ; RUN: llvm-dis %t.summ0.bc -o - > %t.ids.txt
 ; RUN: llvm-dis %t.summ1.bc -o - >> %t.ids.txt
 
-; RUN: echo > %t.res.txt \
-; RUN:  -r %t.summ0.bc,ExternalCall, \
-; RUN:  -r %t.summ0.bc,f1,px \
-; RUN:  -r %t.summ0.bc,f2,px \
-; RUN:  -r %t.summ0.bc,f3,px \
-; RUN:  -r %t.summ0.bc,f4,px \
-; RUN:  -r %t.summ0.bc,f5,px \
-; RUN:  -r %t.summ0.bc,f6,px \
-; RUN:  -r %t.summ0.bc,f7,px \
-; RUN:  -r %t.summ0.bc,f8left,px \
-; RUN:  -r %t.summ0.bc,f8oobleft,px \
-; RUN:  -r %t.summ0.bc,f8oobright,px \
-; RUN:  -r %t.summ0.bc,f8right,px \
-; RUN:  -r %t.summ0.bc,InterposableCall,px \
-; RUN:  -r %t.summ0.bc,InterposableWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableCall,px \
-; RUN:  -r %t.summ0.bc,PreemptableWrite1, \
-; RUN:  -r %t.summ0.bc,PrivateCall,px \
-; RUN:  -r %t.summ0.bc,Rec2, \
-; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
-; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
-; RUN:  -r %t.summ0.bc,ReturnDependent, \
-; RUN:  -r %t.summ0.bc,TestCrossModuleConflict,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleOnce,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleTwice,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleWeak,px \
-; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
-; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
-; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
-; RUN:  -r %t.summ0.bc,TwoArguments,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
-; RUN:  -r %t.summ0.bc,Weak,x \
-; RUN:  -r %t.summ0.bc,Write1, \
-; RUN:  -r %t.summ0.bc,Write1DiffModule,x \
-; RUN:  -r %t.summ0.bc,Write1Module0,px \
-; RUN:  -r %t.summ0.bc,Write1Private,x \
-; RUN:  -r %t.summ0.bc,Write1SameModule,x \
-; RUN:  -r %t.summ0.bc,Write1Weak,x \
-; RUN:  -r %t.summ0.bc,Write4_2, \
-; RUN:  -r %t.summ0.bc,Write4, \
-; RUN:  -r %t.summ0.bc,Write8, \
-; RUN:  -r %t.summ0.bc,WriteAndReturn8, \
-; RUN:  -r %t.summ1.bc,ExternalCall,px \
-; RUN:  -r %t.summ1.bc,InterposableWrite1,px \
-; RUN:  -r %t.summ1.bc,PreemptableWrite1,px \
-; RUN:  -r %t.summ1.bc,Rec0,px \
-; RUN:  -r %t.summ1.bc,Rec1,px \
-; RUN:  -r %t.summ1.bc,Rec2,px \
-; RUN:  -r %t.summ1.bc,RecursiveNoOffset,px \
-; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
-; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
-; RUN:  -r %t.summ1.bc,ReturnDependent,px \
-; RUN:  -r %t.summ1.bc,Weak,x \
-; RUN:  -r %t.summ1.bc,Write1,px \
-; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
-; RUN:  -r %t.summ1.bc,Write1Module0,x \
-; RUN:  -r %t.summ1.bc,Write1Private,px \
-; RUN:  -r %t.summ1.bc,Write1SameModule,px \
-; RUN:  -r %t.summ1.bc,Write1Weak,px \
-; RUN:  -r %t.summ1.bc,Write4_2,px \
-; RUN:  -r %t.summ1.bc,Write4,px \
-; RUN:  -r %t.summ1.bc,Write8,px \
-; RUN:  -r %t.summ1.bc,WriteAndReturn8,px
+; DEFINE: %{res} = \
+; DEFINE:  -r %t.summ0.bc,ExternalCall, \
+; DEFINE:  -r %t.summ0.bc,f1,px \
+; DEFINE:  -r %t.summ0.bc,f2,px \
+; DEFINE:  -r %t.summ0.bc,f3,px \
+; DEFINE:  -r %t.summ0.bc,f4,px \
+; DEFINE:  -r %t.summ0.bc,f5,px \
+; DEFINE:  -r %t.summ0.bc,f6,px \
+; DEFINE:  -r %t.summ0.bc,f7,px \
+; DEFINE:  -r %t.summ0.bc,f8left,px \
+; DEFINE:  -r %t.summ0.bc,f8oobleft,px \
+; DEFINE:  -r %t.summ0.bc,f8oobright,px \
+; DEFINE:  -r %t.summ0.bc,f8right,px \
+; DEFINE:  -r %t.summ0.bc,InterposableCall,px \
+; DEFINE:  -r %t.summ0.bc,InterposableWrite1, \
+; DEFINE:  -r %t.summ0.bc,PreemptableCall,px \
+; DEFINE:  -r %t.summ0.bc,PreemptableWrite1, \
+; DEFINE:  -r %t.summ0.bc,PrivateCall,px \
+; DEFINE:  -r %t.summ0.bc,Rec2, \
+; DEFINE:  -r %t.summ0.bc,RecursiveNoOffset, \
+; DEFINE:  -r %t.summ0.bc,RecursiveWithOffset, \
+; DEFINE:  -r %t.summ0.bc,ReturnDependent, \
+; DEFINE:  -r %t.summ0.bc,TestCrossModuleConflict,px \
+; DEFINE:  -r %t.summ0.bc,TestCrossModuleOnce,px \
+; DEFINE:  -r %t.summ0.bc,TestCrossModuleTwice,px \
+; DEFINE:  -r %t.summ0.bc,TestCrossModuleWeak,px \
+; DEFINE:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
+; DEFINE:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
+; DEFINE:  -r %t.summ0.bc,TestUpdateArg,px \
+; DEFINE:  -r %t.summ0.bc,TwoArguments,px \
+; DEFINE:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
+; DEFINE:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
+; DEFINE:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
+; DEFINE:  -r %t.summ0.bc,Weak,x \
+; DEFINE:  -r %t.summ0.bc,Write1, \
+; DEFINE:  -r %t.summ0.bc,Write1DiffModule,x \
+; DEFINE:  -r %t.summ0.bc,Write1Module0,px \
+; DEFINE:  -r %t.summ0.bc,Write1Private,x \
+; DEFINE:  -r %t.summ0.bc,Write1SameModule,x \
+; DEFINE:  -r %t.summ0.bc,Write1Weak,x \
+; DEFINE:  -r %t.summ0.bc,Write4_2, \
+; DEFINE:  -r %t.summ0.bc,Write4, \
+; DEFINE:  -r %t.summ0.bc,Write8, \
+; DEFINE:  -r %t.summ0.bc,WriteAndReturn8, \
+; DEFINE:  -r %t.summ1.bc,ExternalCall,px \
+; DEFINE:  -r %t.summ1.bc,InterposableWrite1,px \
+; DEFINE:  -r %t.summ1.bc,PreemptableWrite1,px \
+; DEFINE:  -r %t.summ1.bc,Rec0,px \
+; DEFINE:  -r %t.summ1.bc,Rec1,px \
+; DEFINE:  -r %t.summ1.bc,Rec2,px \
+; DEFINE:  -r %t.summ1.bc,RecursiveNoOffset,px \
+; DEFINE:  -r %t.summ1.bc,RecursiveWithOffset,px \
+; DEFINE:  -r %t.summ1.bc,ReturnAlloca,px \
+; DEFINE:  -r %t.summ1.bc,ReturnDependent,px \
+; DEFINE:  -r %t.summ1.bc,Weak,x \
+; DEFINE:  -r %t.summ1.bc,Write1,px \
+; DEFINE:  -r %t.summ1.bc,Write1DiffModule,px \
+; DEFINE:  -r %t.summ1.bc,Write1Module0,x \
+; DEFINE:  -r %t.summ1.bc,Write1Private,px \
+; DEFINE:  -r %t.summ1.bc,Write1SameModule,px \
+; DEFINE:  -r %t.summ1.bc,Write1Weak,px \
+; DEFINE:  -r %t.summ1.bc,Write4_2,px \
+; DEFINE:  -r %t.summ1.bc,Write4,px \
+; DEFINE:  -r %t.summ1.bc,Write8,px \
+; DEFINE:  -r %t.summ1.bc,WriteAndReturn8,px
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  $(cat %t.res.txt) \
+; RUN:  %{res} \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 $(cat %t.res.txt)
-; RUN: (cat %t.ids.txt ; llvm-dis %t.summ1.bc.thinlto.bc -o -) | FileCheck --check-prefixes=INDEX %s
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 %{res}
+; RUN: llvm-dis %t.summ1.bc.thinlto.bc -o - >> %t.ids.txt
+; RUN: FileCheck --check-prefixes=INDEX %s < %t.ids.txt
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"

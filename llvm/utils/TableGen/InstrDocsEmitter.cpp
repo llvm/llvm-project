@@ -18,9 +18,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <string>
@@ -44,11 +44,18 @@ static std::string escapeForRST(StringRef Str) {
   for (char C : Str) {
     switch (C) {
     // We want special characters to be shown as their C escape codes.
-    case '\n': Result += "\\n"; break;
-    case '\t': Result += "\\t"; break;
+    case '\n':
+      Result += "\\n";
+      break;
+    case '\t':
+      Result += "\\t";
+      break;
     // Underscore at the end of a line has a special meaning in rst.
-    case '_': Result += "\\_"; break;
-    default: Result += C;
+    case '_':
+      Result += "\\_";
+      break;
+    default:
+      Result += C;
     }
   }
   return Result;
@@ -96,7 +103,10 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     std::vector<const char *> FlagStrings;
 #define xstr(s) str(s)
 #define str(s) #s
-#define FLAG(f) if (II->f) { FlagStrings.push_back(str(f)); }
+#define FLAG(f)                                                                \
+  if (II->f) {                                                                 \
+    FlagStrings.push_back(str(f));                                             \
+  }
     FLAG(isReturn)
     FLAG(isEHScopeReturn)
     FLAG(isBranch)
@@ -111,9 +121,9 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     FLAG(isTrap)
     FLAG(canFoldAsLoad)
     FLAG(mayLoad)
-    //FLAG(mayLoad_Unset) // Deliberately omitted.
+    // FLAG(mayLoad_Unset) // Deliberately omitted.
     FLAG(mayStore)
-    //FLAG(mayStore_Unset) // Deliberately omitted.
+    // FLAG(mayStore_Unset) // Deliberately omitted.
     FLAG(isPredicable)
     FLAG(isConvertibleToThreeAddress)
     FLAG(isCommutable)
@@ -125,7 +135,7 @@ static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
     FLAG(hasCtrlDep)
     FLAG(isNotDuplicable)
     FLAG(hasSideEffects)
-    //FLAG(hasSideEffects_Unset) // Deliberately omitted.
+    // FLAG(hasSideEffects_Unset) // Deliberately omitted.
     FLAG(isAsCheapAsAMove)
     FLAG(hasExtraSrcRegAllocReq)
     FLAG(hasExtraDefRegAllocReq)

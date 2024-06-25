@@ -44,18 +44,18 @@ entry:
   %local2 = alloca i32, align 4
   call void @llvm.dbg.declare(metadata !2, metadata !32, metadata !DIExpression()), !dbg !14
   %0 = bitcast ptr %local to ptr, !dbg !15
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0), !dbg !15
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0), !dbg !15
   call void @_Z12maybe_writesPi(ptr nonnull %local), !dbg !16
   call void @_Z3extiiiiiiiiii(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9), !dbg !17
   %1 = load i32, ptr %local, align 4, !dbg !18
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0), !dbg !23
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0), !dbg !23
   ret i32 %1, !dbg !24
 }
 
 declare !dbg !25 dso_local void @_Z12maybe_writesPi(ptr) local_unnamed_addr
 declare !dbg !29 dso_local void @_Z3extiiiiiiiiii(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) local_unnamed_addr
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

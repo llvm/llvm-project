@@ -60,3 +60,14 @@ void top() {
   s.c();
   s.c(11);
 }
+
+
+struct S2 {
+  bool operator==(this auto, S2) {
+    return true;
+  }
+};
+void use_deducing_this() {
+  int result = S2{} == S2{}; // no-crash
+  clang_analyzer_dump(result); // expected-warning {{1 S32b}}
+}

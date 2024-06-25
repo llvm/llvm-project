@@ -42,39 +42,39 @@ declare i64 @strtoll(ptr, ptr, i32)
 
 define void @fold_strtol(ptr %ps) {
 ; CHECK-LABEL: @fold_strtol(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_im123, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @ws_im123, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    store i32 -123, ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_ip234, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @ws_ip234, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 4
 ; CHECK-NEXT:    store i32 234, ptr [[PS1]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([3 x i8], ptr @i0, i64 0, i64 2), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i0, i64 2), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[PS2]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([3 x i8], ptr @i9, i64 0, i64 2), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i9, i64 2), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    store i32 9, ptr [[PS3]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([3 x i8], ptr @ia, i64 0, i64 2), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @ia, i64 2), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS4:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i32 10, ptr [[PS4]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([7 x i8], ptr @i19azAZ, i64 0, i64 6), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i19azAZ, i64 6), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS5:%.*]] = getelementptr i8, ptr [[PS]], i64 20
 ; CHECK-NEXT:    store i32 76095035, ptr [[PS5]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @i32min, i64 0, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i32min, i64 12), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS6:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS6]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([15 x i8], ptr @mo32min, i64 0, i64 14), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @mo32min, i64 14), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS7:%.*]] = getelementptr i8, ptr [[PS]], i64 28
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS7]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @mx32min, i64 0, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @mx32min, i64 12), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS8:%.*]] = getelementptr i8, ptr [[PS]], i64 32
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS8]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([13 x i8], ptr @mx32min, i64 0, i64 12), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @mx32min, i64 12), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS9:%.*]] = getelementptr i8, ptr [[PS]], i64 36
 ; CHECK-NEXT:    store i32 -2147483648, ptr [[PS9]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([12 x i8], ptr @i32max, i64 0, i64 11), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i32max, i64 11), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS10:%.*]] = getelementptr i8, ptr [[PS]], i64 40
 ; CHECK-NEXT:    store i32 2147483647, ptr [[PS10]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([12 x i8], ptr @x32max, i64 0, i64 11), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @x32max, i64 11), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS11:%.*]] = getelementptr i8, ptr [[PS]], i64 44
 ; CHECK-NEXT:    store i32 2147483647, ptr [[PS11]], align 4
 ; CHECK-NEXT:    ret void
@@ -181,7 +181,7 @@ define void @call_strtol(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i32 @strtol(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS11:%.*]] = getelementptr i8, ptr [[PS]], i64 44
 ; CHECK-NEXT:    store i32 [[NWS]], ptr [[PS11]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds (i8, ptr @ws, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS12:%.*]] = getelementptr i8, ptr [[PS]], i64 48
 ; CHECK-NEXT:    store i32 [[NWSP6]], ptr [[PS12]], align 4
 ; CHECK-NEXT:    [[I0B1:%.*]] = call i32 @strtol(ptr nonnull @i0, ptr nonnull @endptr, i32 1)
@@ -287,15 +287,15 @@ define void @call_strtol(ptr %ps) {
 
 define void @fold_strtoll(ptr %ps) {
 ; CHECK-LABEL: @fold_strtoll(
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_im123, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @ws_im123, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    store i64 -123, ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([11 x i8], ptr @ws_ip234, i64 0, i64 10), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @ws_ip234, i64 10), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i64 234, ptr [[PS1]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([22 x i8], ptr @i64min, i64 0, i64 21), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i64min, i64 21), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 -9223372036854775808, ptr [[PS2]], align 4
-; CHECK-NEXT:    store ptr getelementptr inbounds ([21 x i8], ptr @i64max, i64 0, i64 20), ptr @endptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @i64max, i64 20), ptr @endptr, align 8
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 9223372036854775807, ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
@@ -335,7 +335,7 @@ define void @call_strtoll(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i64 @strtoll(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoll(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoll(ptr nonnull getelementptr inbounds (i8, ptr @ws, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
@@ -375,10 +375,10 @@ define void @call_strtol_trailing_space(ptr %ps) {
 ; CHECK-NEXT:    [[N1:%.*]] = call i32 @strtol(ptr nonnull @i_1_2_3_, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i8, ptr [[PS:%.*]], i64 4
 ; CHECK-NEXT:    store i32 [[N1]], ptr [[PS1]], align 4
-; CHECK-NEXT:    [[N2:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 2), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[N2:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds (i8, ptr @i_1_2_3_, i64 2), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i32 [[N2]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[N3:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 4), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[N3:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds (i8, ptr @i_1_2_3_, i64 4), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i8, ptr [[PS]], i64 12
 ; CHECK-NEXT:    store i32 [[N3]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void

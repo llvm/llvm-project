@@ -79,6 +79,7 @@ struct Section {
   llvm::yaml::Hex16 NumberOfRelocations;
   llvm::yaml::Hex16 NumberOfLineNumbers; // Line number counts. Not supported yet.
   uint32_t Flags;
+  std::optional<XCOFF::DwarfSectionSubtypeFlags> SectionSubtype;
   yaml::BinaryRef SectionData;
   std::vector<Relocation> Relocations;
 };
@@ -121,6 +122,9 @@ struct CsectAuxEnt : AuxSymbolEnt {
   // Common fields for both XCOFF32 and XCOFF64.
   std::optional<uint32_t> ParameterHashIndex;
   std::optional<uint16_t> TypeChkSectNum;
+  std::optional<XCOFF::SymbolType> SymbolType;
+  std::optional<uint8_t> SymbolAlignment;
+  // The two previous values can be encoded as a single value.
   std::optional<uint8_t> SymbolAlignmentAndType;
   std::optional<XCOFF::StorageMappingClass> StorageMappingClass;
 
@@ -229,12 +233,20 @@ template <> struct ScalarBitSetTraits<XCOFF::SectionTypeFlags> {
   static void bitset(IO &IO, XCOFF::SectionTypeFlags &Value);
 };
 
+template <> struct ScalarEnumerationTraits<XCOFF::DwarfSectionSubtypeFlags> {
+  static void enumeration(IO &IO, XCOFF::DwarfSectionSubtypeFlags &Value);
+};
+
 template <> struct ScalarEnumerationTraits<XCOFF::StorageClass> {
   static void enumeration(IO &IO, XCOFF::StorageClass &Value);
 };
 
 template <> struct ScalarEnumerationTraits<XCOFF::StorageMappingClass> {
   static void enumeration(IO &IO, XCOFF::StorageMappingClass &Value);
+};
+
+template <> struct ScalarEnumerationTraits<XCOFF::SymbolType> {
+  static void enumeration(IO &IO, XCOFF::SymbolType &Value);
 };
 
 template <> struct ScalarEnumerationTraits<XCOFF::CFileStringType> {

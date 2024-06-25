@@ -45,12 +45,12 @@ class DataflowValues {
   //===--------------------------------------------------------------------===//
 
 public:
-  typedef typename ValueTypes::ValTy               ValTy;
-  typedef typename ValueTypes::AnalysisDataTy      AnalysisDataTy;
-  typedef _AnalysisDirTag                          AnalysisDirTag;
-  typedef llvm::DenseMap<ProgramPoint, ValTy>      EdgeDataMapTy;
-  typedef llvm::DenseMap<const CFGBlock*, ValTy>   BlockDataMapTy;
-  typedef llvm::DenseMap<const Stmt*, ValTy>       StmtDataMapTy;
+  using ValTy = typename ValueTypes::ValTy;
+  using AnalysisDataTy = typename ValueTypes::AnalysisDataTy;
+  using AnalysisDirTag = _AnalysisDirTag;
+  using EdgeDataMapTy = llvm::DenseMap<ProgramPoint, ValTy>;
+  using BlockDataMapTy = llvm::DenseMap<const CFGBlock *, ValTy>;
+  using StmtDataMapTy = llvm::DenseMap<const Stmt *, ValTy>;
 
   //===--------------------------------------------------------------------===//
   // Predicates.

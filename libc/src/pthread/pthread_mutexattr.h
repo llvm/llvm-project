@@ -43,6 +43,11 @@ LIBC_INLINE int get_mutexattr_robust(pthread_mutexattr_t attr) {
          unsigned(PThreadMutexAttrPos::ROBUST_SHIFT);
 }
 
+LIBC_INLINE int get_mutexattr_pshared(pthread_mutexattr_t attr) {
+  return (attr & unsigned(PThreadMutexAttrPos::PSHARED_MASK)) >>
+         unsigned(PThreadMutexAttrPos::PSHARED_SHIFT);
+}
+
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_H

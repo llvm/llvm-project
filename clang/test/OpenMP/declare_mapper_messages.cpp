@@ -46,7 +46,7 @@ public:
 };
 
 #pragma omp declare mapper(default : N1::stack s) map(s.len)            // precxx17-error {{use of class template 'N1::stack' requires template arguments}} \
-                                                                           cxx17-error {{use of class template 'stack' requires template arguments; argument deduction not allowed in function prototype}}
+                                                                           cxx17-error {{use of class template 'N1::stack' requires template arguments; argument deduction not allowed in function prototype}}
 #pragma omp declare mapper(id1: N1::stack<int> s) map(s.data)
 #pragma omp declare mapper(default : S<int> s) map(s.len)               // expected-error {{no template named 'S'}}
 

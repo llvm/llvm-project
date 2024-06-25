@@ -1,11 +1,9 @@
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   return()
 endif()
 
-foreach(target nvptx amdgpu generic)
-  add_subdirectory(${target})
-  list(APPEND target_gpu_utils libc.src.__support.GPU.${target}.${target}_utils)
-endforeach()
+add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+set(target_gpu_utils libc.src.__support.GPU.${LIBC_TARGET_ARCHITECTURE}.${LIBC_TARGET_ARCHITECTURE}_utils)
 
 add_header_library(
   utils
@@ -13,4 +11,16 @@ add_header_library(
     utils.h
   DEPENDS
     ${target_gpu_utils}
+)
+
+add_object_library(
+  allocator
+  SRCS
+    allocator.cpp
+  HDRS
+    allocator.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.GPU.utils
+    libc.src.__support.RPC.rpc_client
 )

@@ -12,7 +12,7 @@
 target var a
 # CHECK-LABEL: target var a
 # FIXME: This should also produce some kind of an error.
-# CHECK: (A) a = {}
+# CHECK: (A) a = <incomplete type "A">
 expr a
 # CHECK-LABEL: expr a
 # CHECK: incomplete type 'A' where a complete type is required

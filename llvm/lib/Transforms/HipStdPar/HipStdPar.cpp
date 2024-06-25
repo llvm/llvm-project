@@ -133,6 +133,7 @@ static inline void maybeHandleGlobals(Module &M) {
       continue;
 
     G.setLinkage(GlobalVariable::ExternalWeakLinkage);
+    G.setInitializer(nullptr);
     G.setExternallyInitialized(true);
   }
 }

@@ -234,6 +234,35 @@ constexpr int check_macro_consteval_if_skipped(int i) {   // CHECK-NEXT: [[@LINE
   return i;
 }
 
+struct false_value {
+  constexpr operator bool() {
+    return false;
+  }
+};
+
+template <typename> struct dependable_false_value {
+  constexpr operator bool() {
+    return false;
+  }
+};
+
+// GH-80285
+void should_not_crash() {
+  if constexpr (false_value{}) { };
+}
+
+template <typename> void should_not_crash_dependable() {
+  if constexpr (dependable_false_value<int>{}) { };
+}
+
+void should_not_crash_with_template_instance() {
+  should_not_crash_dependable<int>();
+}
+
+void should_not_crash_with_requires_expr() {
+  if constexpr (requires {42;}) { };
+}
+
 int instantiate_consteval(int i) {
   i *= check_consteval_with_else_discarded_then(i);
   i *= check_notconsteval_with_else_discarded_else(i);

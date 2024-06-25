@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -60,11 +60,11 @@ void h(int *hp, int *hp2, int *hq, int *lin)
 
 class VV {
   // CHECK: #pragma omp declare simd uniform(this, a) linear(val(b): a)
-  // CHECK-NEXT:  __attribute__((cold)) int add(int a, int b)     {
+  // CHECK-NEXT: int add(int a, int b) __attribute__((cold))    {
   // CHECK-NEXT: return a + b;
   // CHECK-NEXT: }
   #pragma omp declare simd uniform(this, a) linear(val(b): a)
-  __attribute__((cold)) int add(int a, int b) { return a + b; }
+  int add(int a, int b) __attribute__((cold)) { return a + b; }
 
   // CHECK: #pragma omp declare simd aligned(b: 4) aligned(a) linear(ref(b): 4) linear(val(this)) linear(val(a))
   // CHECK-NEXT: float taddpf(float *a, float *&b)     {

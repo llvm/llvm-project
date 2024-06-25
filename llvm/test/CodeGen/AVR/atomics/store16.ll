@@ -6,8 +6,8 @@
 ; CHECK-NEXT: std [[RD:(X|Y|Z)]]+1, [[RR:r[0-9]+]]
 ; CHECK-NEXT: st [[RD:(X|Y|Z)]], [[RR:r[0-9]+]]
 ; CHECK-NEXT: out 63, r0
-define void @atomic_store16(i16* %foo) {
-  store atomic i16 1, i16* %foo unordered, align 2
+define void @atomic_store16(ptr %foo) {
+  store atomic i16 1, ptr %foo unordered, align 2
   ret void
 }
 
@@ -19,7 +19,7 @@ define void @atomic_store16(i16* %foo) {
 ; CHECK-NEXT: out 63, r0
 define void @monotonic(i16) {
 entry-block:
-  store atomic i16 %0, i16* undef monotonic, align 2
+  store atomic i16 %0, ptr undef monotonic, align 2
   ret void
 }
 

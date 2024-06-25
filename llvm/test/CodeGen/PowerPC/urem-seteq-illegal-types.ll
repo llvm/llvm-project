@@ -7,12 +7,11 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    mulli 3, 3, 3277
 ; PPC-NEXT:    clrlwi 3, 3, 19
-; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:    cmplwi 3, 1639
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bclr 12, 0, 0
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 3, 4, 0
+; PPC-NEXT:    li 3, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_odd:
@@ -40,12 +39,10 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; PPC-NEXT:    lis 3, 146
 ; PPC-NEXT:    ori 3, 3, 18725
 ; PPC-NEXT:    cmplw 4, 3
+; PPC-NEXT:    li 3, 1
+; PPC-NEXT:    bclr 12, 0, 0
+; PPC-NEXT:  # %bb.1:
 ; PPC-NEXT:    li 3, 0
-; PPC-NEXT:    li 4, 1
-; PPC-NEXT:    bc 12, 0, .LBB1_1
-; PPC-NEXT:    blr
-; PPC-NEXT:  .LBB1_1:
-; PPC-NEXT:    addi 3, 4, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_even:
@@ -72,12 +69,11 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    mulli 3, 3, 13
 ; PPC-NEXT:    clrlwi 3, 3, 28
-; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:    cmplwi 3, 3
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bclr 12, 1, 0
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 3, 4, 0
+; PPC-NEXT:    li 3, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_odd_setne:
@@ -101,12 +97,11 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    mulli 3, 3, 307
 ; PPC-NEXT:    clrlwi 3, 3, 23
-; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:    cmplwi 3, 1
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bclr 12, 1, 0
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 3, 4, 0
+; PPC-NEXT:    li 3, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_negative_odd:
@@ -126,37 +121,33 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; PPC-LABEL: test_urem_vec:
 ; PPC:       # %bb.0:
-; PPC-NEXT:    mulli 3, 3, 683
-; PPC-NEXT:    rlwinm 7, 3, 31, 22, 31
-; PPC-NEXT:    rlwimi 7, 3, 10, 21, 21
+; PPC-NEXT:    mr 6, 3
+; PPC-NEXT:    mulli 6, 6, 683
+; PPC-NEXT:    rlwinm 7, 6, 31, 22, 31
+; PPC-NEXT:    rlwimi 7, 6, 10, 21, 21
 ; PPC-NEXT:    mulli 5, 5, 819
-; PPC-NEXT:    li 6, 0
-; PPC-NEXT:    cmplwi 7, 341
-; PPC-NEXT:    mulli 3, 4, 1463
-; PPC-NEXT:    addi 4, 5, -1638
-; PPC-NEXT:    addi 3, 3, -1463
+; PPC-NEXT:    addi 5, 5, -1638
+; PPC-NEXT:    clrlwi 5, 5, 21
+; PPC-NEXT:    mulli 4, 4, 1463
+; PPC-NEXT:    addi 4, 4, -1463
 ; PPC-NEXT:    clrlwi 4, 4, 21
-; PPC-NEXT:    clrlwi 3, 3, 21
-; PPC-NEXT:    cmplwi 1, 4, 1
-; PPC-NEXT:    cmplwi 5, 3, 292
 ; PPC-NEXT:    li 3, 1
+; PPC-NEXT:    cmplwi 7, 341
+; PPC-NEXT:    cmplwi 1, 5, 1
+; PPC-NEXT:    cmplwi 5, 4, 292
+; PPC-NEXT:    li 4, 1
 ; PPC-NEXT:    bc 12, 21, .LBB4_2
 ; PPC-NEXT:  # %bb.1:
-; PPC-NEXT:    ori 4, 6, 0
-; PPC-NEXT:    b .LBB4_3
+; PPC-NEXT:    li 4, 0
 ; PPC-NEXT:  .LBB4_2:
-; PPC-NEXT:    addi 4, 3, 0
-; PPC-NEXT:  .LBB4_3:
-; PPC-NEXT:    bc 12, 5, .LBB4_5
-; PPC-NEXT:  # %bb.4:
-; PPC-NEXT:    ori 5, 6, 0
-; PPC-NEXT:    b .LBB4_6
-; PPC-NEXT:  .LBB4_5:
-; PPC-NEXT:    addi 5, 3, 0
-; PPC-NEXT:  .LBB4_6:
+; PPC-NEXT:    li 5, 1
+; PPC-NEXT:    bc 12, 5, .LBB4_4
+; PPC-NEXT:  # %bb.3:
+; PPC-NEXT:    li 5, 0
+; PPC-NEXT:  .LBB4_4:
 ; PPC-NEXT:    bclr 12, 1, 0
-; PPC-NEXT:  # %bb.7:
-; PPC-NEXT:    ori 3, 6, 0
+; PPC-NEXT:  # %bb.5:
+; PPC-NEXT:    li 3, 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_vec:
@@ -244,16 +235,15 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-NEXT:    cmplw 5, 11
 ; PPC-NEXT:    cmplwi 1, 10, 13
 ; PPC-NEXT:    rlwinm 3, 3, 31, 31, 31
-; PPC-NEXT:    crand 20, 6, 0
-; PPC-NEXT:    crandc 21, 4, 6
+; PPC-NEXT:    crandc 20, 4, 6
+; PPC-NEXT:    crand 21, 6, 0
 ; PPC-NEXT:    rlwimi. 3, 6, 1, 30, 30
-; PPC-NEXT:    cror 20, 20, 21
+; PPC-NEXT:    cror 20, 21, 20
 ; PPC-NEXT:    crnand 20, 2, 20
-; PPC-NEXT:    li 3, 1
-; PPC-NEXT:    bc 12, 20, .LBB5_1
-; PPC-NEXT:    blr
-; PPC-NEXT:  .LBB5_1:
 ; PPC-NEXT:    li 3, 0
+; PPC-NEXT:    bclr 12, 20, 0
+; PPC-NEXT:  # %bb.1:
+; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_oversized:

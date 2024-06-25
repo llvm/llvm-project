@@ -369,7 +369,7 @@ class EventAPITestCase(TestBase):
         # Now create a breakpoint on main.c by name 'c'.
         bkpt1 = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", bkpt1)
-        self.assertTrue(bkpt1.GetNumLocations() == 1, VALID_BREAKPOINT)
+        self.assertEqual(bkpt1.GetNumLocations(), 1, VALID_BREAKPOINT)
 
         self.primary_listener = lldb.SBListener("my listener")
         self.shadow_listener = lldb.SBListener("shadow listener")
@@ -431,11 +431,11 @@ class EventAPITestCase(TestBase):
 
         main_spec = lldb.SBFileSpec("main.c")
         bkpt2 = target.BreakpointCreateBySourceRegex("b.2. returns %d", main_spec)
-        self.assertTrue(bkpt2.GetNumLocations() > 0, "BP2 worked")
+        self.assertGreater(bkpt2.GetNumLocations(), 0, "BP2 worked")
         bkpt2.SetAutoContinue(True)
 
         bkpt3 = target.BreakpointCreateBySourceRegex("a.3. returns %d", main_spec)
-        self.assertTrue(bkpt3.GetNumLocations() > 0, "BP3 worked")
+        self.assertGreater(bkpt3.GetNumLocations(), 0, "BP3 worked")
 
         state = lldb.eStateStopped
         restarted = False

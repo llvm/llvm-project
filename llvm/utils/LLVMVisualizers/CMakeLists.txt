@@ -3,5 +3,5 @@
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   set(LLVM_VISUALIZERS llvm.natvis)
   add_custom_target(LLVMVisualizers SOURCES ${LLVM_VISUALIZERS})
-  set_target_properties(LLVMVisualizers PROPERTIES FOLDER "Utils")
+  set_target_properties(LLVMVisualizers PROPERTIES FOLDER "LLVM/Misc")
 endif()

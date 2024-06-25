@@ -8,3 +8,12 @@ def MatchInterfaceEnum : I32EnumAttr<"MatchInterfaceEnum", "An interface to matc
     ]>{
   let cppNamespace = "mlir::transform";
 }
+
+def TransposeMatmulInput : I32EnumAttr<"TransposeMatmulInput",
+    "Input to transpose when converting matmul ops to transposed variants",
+    [
+      I32EnumAttrCase<"lhs", 0>,
+      I32EnumAttrCase<"rhs", 1>,
+    ]>{
+  let cppNamespace = "mlir::transform";
+}

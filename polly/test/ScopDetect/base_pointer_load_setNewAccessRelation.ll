@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true -polly-scops -polly-print-import-jscop -polly-codegen -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-ignore-aliasing -polly-invariant-load-hoisting=true '-passes=print<polly-function-scops>,scop(polly-import-jscop,polly-codegen)' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; This violated an assertion in setNewAccessRelation that assumed base pointers
 ; to be load-hoisted. Without this assertion, it codegen would generate invalid

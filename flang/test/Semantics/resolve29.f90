@@ -3,6 +3,7 @@ module m1
   type t1
   end type
   type t3
+    integer t3c
   end type
   interface
     subroutine s1(x)
@@ -63,6 +64,17 @@ contains
       integer n(2)
     end type
     type(t2) x
+  end
+  subroutine s10()
+    !Forward shadowing derived type in IMPLICIT
+    !(supported by all other compilers)
+    implicit type(t1) (c) ! forward shadow
+    implicit type(t3) (d) ! host associated
+    type t1
+      integer a
+    end type
+    c%a = 1
+    d%t3c = 2
   end
 end module
 module m2

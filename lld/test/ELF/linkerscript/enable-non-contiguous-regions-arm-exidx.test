@@ -1,0 +1,55 @@
+## When spilling reorders input sections, the .ARM.exidx table is rebuilt using
+## the new order.
+
+# REQUIRES: arm
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi test.s -o test.o
+# RUN: ld.lld -T test.ld test.o -o test --enable-non-contiguous-regions
+# RUN: llvm-readobj -x .ARM.exidx test | FileCheck %s
+
+# CHECK:      20000000 08849780 1c000000 10849880
+# CHECK-NEXT: 1c000000 01000000
+
+#--- test.ld
+MEMORY {
+  exidx : ORIGIN = 0, LENGTH = 32
+  a : ORIGIN = 32, LENGTH = 4
+  b : ORIGIN = 36, LENGTH = 4
+  c : ORIGIN = 40, LENGTH = 4
+}
+
+SECTIONS {
+  .ARM.exidx : { *(.ARM.exidx) } >exidx
+  .first_chance : { *(.text .text.f2) } >a
+  .text.f1 : { *(.text.f1) } >b
+  .last_chance : { *(.text.f2) } >c
+}
+
+#--- test.s
+ .syntax unified
+ .section .text, "ax",%progbits
+ .globl _start
+_start:
+ .fnstart
+ bx lr
+ .save {r7, lr}
+ .setfp r7, sp, #0
+ .fnend
+
+ .section .text.f1, "ax", %progbits
+ .globl f1
+f1:
+ .fnstart
+ bx lr
+ .save {r8, lr}
+ .setfp r8, sp, #0
+ .fnend
+
+ .section .text.f2, "ax", %progbits
+ .globl f2
+f2:
+ .fnstart
+ bx lr
+ .save {r8, lr}
+ .setfp r8, sp, #0
+ .fnend

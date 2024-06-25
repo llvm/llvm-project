@@ -460,9 +460,7 @@ define void @strided_vpstore_nxv1i8_allones_mask(<vscale x 1 x i8> %val, ptr %pt
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv1i8.p0.i32(<vscale x 1 x i8> %val, ptr %ptr, i32 %strided, <vscale x 1 x i1> %b, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv1i8.p0.i32(<vscale x 1 x i8> %val, ptr %ptr, i32 %strided, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -483,9 +481,7 @@ define void @strided_vpstore_nxv3f32_allones_mask(<vscale x 3 x float> %v, ptr %
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vsse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 3 x i1> %one, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv3f32.p0.i32(<vscale x 3 x float> %v, ptr %ptr, i32 %stride, <vscale x 3 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv3f32.p0.i32(<vscale x 3 x float> %v, ptr %ptr, i32 %stride, <vscale x 3 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -508,10 +504,10 @@ define void @strided_store_nxv16f64(<vscale x 16 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a5
 ; CHECK-NEXT:    mul a4, a4, a1
-; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    srli a3, a3, 3
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a3
+; CHECK-NEXT:    add a0, a0, a4
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
@@ -539,9 +535,7 @@ define void @strided_store_nxv16f64_allones_mask(<vscale x 16 x double> %v, ptr 
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %one, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  call void @llvm.experimental.vp.strided.store.nxv16f64.p0.i32(<vscale x 16 x double> %v, ptr %ptr, i32 %stride, <vscale x 16 x i1> %allones, i32 %evl)
+  call void @llvm.experimental.vp.strided.store.nxv16f64.p0.i32(<vscale x 16 x double> %v, ptr %ptr, i32 %stride, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret void
 }
 
@@ -573,36 +567,36 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, ptr %ptr, i32 sig
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v8, (a1), a2, v0.t
 ; CHECK-NEXT:    sub a0, a5, a4
 ; CHECK-NEXT:    sltu t0, a5, a0
 ; CHECK-NEXT:    addi t0, t0, -1
-; CHECK-NEXT:    and a0, t0, a0
-; CHECK-NEXT:    mul a7, a7, a2
-; CHECK-NEXT:    add a7, a1, a7
-; CHECK-NEXT:    srli t0, a4, 3
+; CHECK-NEXT:    and t0, t0, a0
+; CHECK-NEXT:    mul a0, a7, a2
+; CHECK-NEXT:    add a7, a1, a0
+; CHECK-NEXT:    srli a0, a4, 3
 ; CHECK-NEXT:    vsetvli t1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v24, t0
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v24, a0
 ; CHECK-NEXT:    sub a0, a3, a6
 ; CHECK-NEXT:    sltu a3, a3, a0
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a0, a3, a0
+; CHECK-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
 ; CHECK-NEXT:    vsse64.v v16, (a7), a2, v0.t
 ; CHECK-NEXT:    bltu a0, a4, .LBB43_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a0, a4
 ; CHECK-NEXT:  .LBB43_6:
 ; CHECK-NEXT:    mul a3, a5, a2
-; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    srli a4, a4, 2
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v24, a4
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsse64.v v8, (a1), a2, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3

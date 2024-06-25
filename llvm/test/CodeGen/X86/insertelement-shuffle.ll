@@ -47,7 +47,7 @@ define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind 
 ; X86_AVX512-LABEL: insert_subvector_512:
 ; X86_AVX512:       # %bb.0:
 ; X86_AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X86_AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,0,1,0,8,0,3,0,4,0,5,0,6,0,7,0]
+; X86_AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,3,4,5,6,7]
 ; X86_AVX512-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
 ; X86_AVX512-NEXT:    retl
 ;
@@ -55,7 +55,7 @@ define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind 
 ; X64_AVX512:       # %bb.0:
 ; X64_AVX512-NEXT:    vmovd %edi, %xmm1
 ; X64_AVX512-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; X64_AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,8,3,4,5,6,7]
+; X64_AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,3,4,5,6,7]
 ; X64_AVX512-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
 ; X64_AVX512-NEXT:    retq
   %ins1 = insertelement <2 x i32> undef, i32 %x0, i32 0

@@ -13,17 +13,17 @@
 %struct.quux.1 = type { [0 x i8], %struct.wombat, [0 x i8], i64, [0 x i8], i64, [0 x i8], i16, [0 x i8], %struct.quux, [0 x i8], i64, [0 x i8], i16, [0 x i8] }
 %struct.wombat = type {}
 
-declare zeroext i1 @zot(%struct.quux*, %struct.foo*)
+declare zeroext i1 @zot(ptr, ptr)
 
 declare void @wibble(i16, i16)
 
 ; CHECK-LABEL: main
-define zeroext i1 @main(%struct.quux.1* %arg, %struct.foo* %arg62) {
+define zeroext i1 @main(ptr %arg, ptr %arg62) {
 bb:
   %tmp63 = alloca [128 x i8], align 1
-  %tmp = getelementptr inbounds %struct.quux.1, %struct.quux.1* %arg, i16 0, i32 5
-  %tmp64 = getelementptr inbounds %struct.quux.1, %struct.quux.1* %arg, i16 0, i32 13
-  %tmp65 = bitcast %struct.foo* %arg62 to i32*
+  %tmp = getelementptr inbounds %struct.quux.1, ptr %arg, i16 0, i32 5
+  %tmp64 = getelementptr inbounds %struct.quux.1, ptr %arg, i16 0, i32 13
+  %tmp65 = bitcast ptr %arg62 to ptr
   %tmp66 = icmp eq i32 undef, 0
   br i1 undef, label %bb92, label %bb67
 
@@ -31,21 +31,21 @@ bb67:
   br i1 %tmp66, label %bb83, label %bb68
 
 bb68:
-  %tmp69 = load i64, i64* null, align 1
+  %tmp69 = load i64, ptr null, align 1
   br label %bb70
 
 bb70:
   %tmp71 = phi i16 [ 128, %bb68 ], [ %tmp79, %bb70 ]
   %tmp72 = phi i64 [ %tmp69, %bb68 ], [ %tmp74, %bb70 ]
-  %tmp73 = getelementptr inbounds i8, i8* null, i16 -1
+  %tmp73 = getelementptr inbounds i8, ptr null, i16 -1
   %tmp74 = lshr i64 %tmp72, 4
   %tmp75 = trunc i64 %tmp72 to i8
   %tmp76 = and i8 %tmp75, 15
   %tmp77 = add nuw nsw i8 %tmp76, 87
   %tmp78 = select i1 undef, i8 undef, i8 %tmp77
-  store i8 %tmp78, i8* %tmp73, align 1
+  store i8 %tmp78, ptr %tmp73, align 1
   %tmp79 = add nsw i16 %tmp71, -1
-  %tmp80 = icmp eq i8* %tmp73, null
+  %tmp80 = icmp eq ptr %tmp73, null
   %tmp81 = or i1 undef, %tmp80
   br i1 %tmp81, label %bb82, label %bb70
 
@@ -55,7 +55,7 @@ bb82:
 
 bb83:
   %tmp84 = icmp eq i32 undef, 0
-  %tmp85 = load i64, i64* null, align 1
+  %tmp85 = load i64, ptr null, align 1
   br i1 %tmp84, label %bb87, label %bb86
 
 bb86:
@@ -105,12 +105,12 @@ bb105:
 bb106:
   %tmp107 = phi i16 [ 128, %bb105 ], [ %tmp113, %bb106 ]
   %tmp108 = phi i64 [ undef, %bb105 ], [ %tmp111, %bb106 ]
-  %tmp109 = phi i8* [ undef, %bb105 ], [ %tmp110, %bb106 ]
-  %tmp110 = getelementptr inbounds i8, i8* %tmp109, i16 -1
+  %tmp109 = phi ptr [ undef, %bb105 ], [ %tmp110, %bb106 ]
+  %tmp110 = getelementptr inbounds i8, ptr %tmp109, i16 -1
   %tmp111 = lshr i64 %tmp108, 4
   %tmp112 = trunc i64 %tmp108 to i8
   %tmp113 = add nsw i16 %tmp107, -1
-  %tmp114 = icmp eq i8* %tmp110, null
+  %tmp114 = icmp eq ptr %tmp110, null
   %tmp115 = or i1 undef, %tmp114
   br i1 %tmp115, label %bb116, label %bb106
 
@@ -119,7 +119,7 @@ bb116:
   unreachable
 
 bb117:
-  %tmp118 = load i64, i64* %tmp, align 1
+  %tmp118 = load i64, ptr %tmp, align 1
   br i1 undef, label %bb120, label %bb119
 
 bb119:
@@ -139,7 +139,7 @@ bb123:
   br label %bb123
 
 bb127:
-  %tmp128 = load i32, i32* %tmp65, align 1
+  %tmp128 = load i32, ptr %tmp65, align 1
   %tmp129 = icmp eq i32 undef, 0
   br label %bb162
 
@@ -156,8 +156,8 @@ bb132:
   %tmp136 = and i8 %tmp135, 15
   %tmp137 = add nuw nsw i8 %tmp136, 87
   %tmp138 = select i1 undef, i8 undef, i8 %tmp137
-  store i8 %tmp138, i8* undef, align 1
-  %tmp139 = icmp eq i8* undef, null
+  store i8 %tmp138, ptr undef, align 1
+  %tmp139 = icmp eq ptr undef, null
   %tmp140 = or i1 undef, %tmp139
   br i1 %tmp140, label %bb141, label %bb132
 
@@ -166,7 +166,7 @@ bb141:
 
 bb142:
   %tmp143 = icmp eq i32 undef, 0
-  %tmp144 = load i64, i64* %tmp, align 1
+  %tmp144 = load i64, ptr %tmp, align 1
   br i1 %tmp143, label %bb156, label %bb145
 
 bb145:
@@ -175,11 +175,11 @@ bb145:
 bb146:
   %tmp147 = phi i16 [ 128, %bb145 ], [ %tmp151, %bb146 ]
   %tmp148 = phi i64 [ %tmp144, %bb145 ], [ %tmp150, %bb146 ]
-  %tmp149 = getelementptr inbounds i8, i8* null, i16 -1
+  %tmp149 = getelementptr inbounds i8, ptr null, i16 -1
   %tmp150 = lshr i64 %tmp148, 4
   %tmp151 = add nsw i16 %tmp147, -1
   %tmp152 = icmp eq i64 %tmp150, 0
-  %tmp153 = icmp eq i8* %tmp149, null
+  %tmp153 = icmp eq ptr %tmp149, null
   %tmp154 = or i1 %tmp152, %tmp153
   br i1 %tmp154, label %bb155, label %bb146
 
@@ -223,17 +223,17 @@ bb170:
   br i1 undef, label %bb172, label %bb171
 
 bb171:
-  store i32 0, i32* undef, align 1
-  call void @llvm.memcpy.p0i8.p0i8.i16(i8* align 1 undef, i8* align 1 null, i16 3, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i16(i8* align 1 undef, i8* align 1 null, i16 3, i1 false)
+  store i32 0, ptr undef, align 1
+  call void @llvm.memcpy.p0.p0.i16(ptr align 1 undef, ptr align 1 null, i16 3, i1 false)
+  call void @llvm.memcpy.p0.p0.i16(ptr align 1 undef, ptr align 1 null, i16 3, i1 false)
   br label %bb214
 
 bb172:
-  %tmp173 = call zeroext i1 @zot(%struct.quux* noalias nonnull readonly dereferenceable(32) undef, %struct.foo* nonnull dereferenceable(15) %arg62)
+  %tmp173 = call zeroext i1 @zot(ptr noalias nonnull readonly dereferenceable(32) undef, ptr nonnull dereferenceable(15) %arg62)
   br i1 %tmp173, label %bb214, label %bb174
 
 bb174:
-  %tmp175 = load i32, i32* %tmp65, align 1
+  %tmp175 = load i32, ptr %tmp65, align 1
   %tmp176 = icmp eq i32 undef, 0
   br label %bb177
 
@@ -241,7 +241,7 @@ bb177:
   br i1 %tmp176, label %bb190, label %bb178
 
 bb178:
-  %tmp179 = getelementptr inbounds [128 x i8], [128 x i8]* %tmp63, i16 0, i16 0
+  %tmp179 = getelementptr inbounds [128 x i8], ptr %tmp63, i16 0, i16 0
   br label %bb180
 
 bb180:
@@ -251,8 +251,8 @@ bb180:
   %tmp184 = and i8 %tmp183, 15
   %tmp185 = add nuw nsw i8 %tmp184, 87
   %tmp186 = select i1 false, i8 0, i8 %tmp185
-  store i8 %tmp186, i8* null, align 1
-  %tmp187 = icmp eq i8* null, %tmp179
+  store i8 %tmp186, ptr null, align 1
+  %tmp187 = icmp eq ptr null, %tmp179
   %tmp188 = or i1 undef, %tmp187
   br i1 %tmp188, label %bb189, label %bb180
 
@@ -296,8 +296,8 @@ bb207:
   br label %bb208
 
 bb208:
-  store i16* %tmp64, i16** undef, align 1
-  %tmp209 = load i32, i32* %tmp65, align 1
+  store ptr %tmp64, ptr undef, align 1
+  %tmp209 = load i32, ptr %tmp65, align 1
   %tmp210 = icmp eq i32 undef, 0
   %tmp211 = and i32 %tmp209, 16
   %tmp212 = icmp eq i32 %tmp211, 0
@@ -328,9 +328,9 @@ bb220:
   unreachable
 
 bb221:
-  store %struct.quux.1* %arg, %struct.quux.1** undef, align 1
+  store ptr %arg, ptr undef, align 1
   ret i1 undef
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i16(i8* nocapture writeonly, i8* nocapture readonly, i16, i1)
+declare void @llvm.memcpy.p0.p0.i16(ptr nocapture writeonly, ptr nocapture readonly, i16, i1)
 

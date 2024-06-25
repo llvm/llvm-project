@@ -44,12 +44,12 @@ end module
 function foo2()
   real(4) :: foo2
 contains
-  ! CHECK-LABEL: func @_QFfoo2Psub() {
+  ! CHECK-LABEL: func private @_QFfoo2Psub() {{.*}} {
   subroutine sub()
   ! CHECK: }
   end subroutine
 
-  ! CHECK-LABEL: func @_QFfoo2Pfoo() {
+  ! CHECK-LABEL: func private @_QFfoo2Pfoo() {{.*}} {
   subroutine foo()
   ! CHECK: }
   end subroutine
@@ -58,12 +58,12 @@ end function
 ! CHECK-LABEL: func @_QPsub2()
 subroutine sUb2()
 contains
-  ! CHECK-LABEL: func @_QFsub2Psub() {
+  ! CHECK-LABEL: func private @_QFsub2Psub() {{.*}} {
   subroutine sub()
   ! CHECK: }
   end subroutine
 
-  ! CHECK-LABEL: func @_QFsub2Pfoo() {
+  ! CHECK-LABEL: func private @_QFsub2Pfoo() {{.*}} {
   subroutine Foo()
   ! CHECK: }
   end subroutine
@@ -74,7 +74,7 @@ contains
   ! CHECK-LABEL: func @_QMtestmod2Psub()
   subroutine sub()
   contains
-    ! CHECK-LABEL: func @_QMtestmod2FsubPsubsub() {
+    ! CHECK-LABEL: func private @_QMtestmod2FsubPsubsub() {{.*}} {
     subroutine subSub()
     ! CHECK: }
     end subroutine
@@ -105,7 +105,7 @@ contains
   ! CHECK-LABEL: func @_QMcolor_pointsScolor_points_aSimplPfoo()
   subroutine foo
     contains
-    ! CHECK-LABEL: func @_QMcolor_pointsScolor_points_aSimplFfooPbar() {
+    ! CHECK-LABEL: func private @_QMcolor_pointsScolor_points_aSimplFfooPbar() {{.*}} {
     subroutine bar
     ! CHECK: }
     end subroutine
@@ -128,7 +128,7 @@ end subroutine
 program test
 ! CHECK: }
 contains
-! CHECK-LABEL: func @_QFPshould_not_collide() {
+! CHECK-LABEL: func private @_QFPshould_not_collide() {{.*}} {
 subroutine should_not_collide()
 ! CHECK: }
 end subroutine
@@ -226,7 +226,7 @@ subroutine nest1
   ! CHECK:   fir.call @_QFnest1Pinner()
   call inner
 contains
-  ! CHECK-LABEL: func @_QFnest1Pinner
+  ! CHECK-LABEL: func private @_QFnest1Pinner
   subroutine inner
     ! CHECK:   %[[V_0:[0-9]+]] = fir.address_of(@_QFnest1FinnerEkk) : !fir.ref<i32>
     integer, save :: kk = 1
@@ -239,7 +239,7 @@ subroutine nest2
   ! CHECK:   fir.call @_QFnest2Pinner()
   call inner
 contains
-  ! CHECK-LABEL: func @_QFnest2Pinner
+  ! CHECK-LABEL: func private @_QFnest2Pinner
   subroutine inner
     ! CHECK:   %[[V_0:[0-9]+]] = fir.address_of(@_QFnest2FinnerEkk) : !fir.ref<i32>
     integer, save :: kk = 77

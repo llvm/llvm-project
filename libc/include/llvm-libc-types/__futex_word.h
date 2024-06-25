@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_FUTEX_WORD_H__
-#define __LLVM_LIBC_TYPES_FUTEX_WORD_H__
+#ifndef LLVM_LIBC_TYPES___FUTEX_WORD_H
+#define LLVM_LIBC_TYPES___FUTEX_WORD_H
 
 typedef struct {
   // Futex word should be aligned appropriately to allow target atomic
@@ -17,4 +17,4 @@ typedef struct {
                : _Alignof(__UINT32_TYPE__)) __UINT32_TYPE__ __word;
 } __futex_word;
 
-#endif // __LLVM_LIBC_TYPES_FUTEX_WORD_H__
+#endif // LLVM_LIBC_TYPES___FUTEX_WORD_H

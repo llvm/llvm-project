@@ -144,7 +144,7 @@ void CanonicalizeFreezeInLoopsImpl::InsertFreezeAndForgetFromSCEV(Use &U) {
   LLVM_DEBUG(dbgs() << "\tOperand: " << *U.get() << "\n");
 
   U.set(new FreezeInst(ValueToFr, ValueToFr->getName() + ".frozen",
-                       PH->getTerminator()));
+                       PH->getTerminator()->getIterator()));
 
   SE.forgetValue(UserI);
 }

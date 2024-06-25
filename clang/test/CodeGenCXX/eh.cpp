@@ -81,7 +81,7 @@ namespace test5 {
 // CHECK:      invoke void @__cxa_throw(ptr [[EXNOBJ]], ptr @_ZTIN5test51AE, ptr @_ZN5test51AD1Ev) [[NR]]
 // CHECK-NEXT:   to label {{%.*}} unwind label %[[HANDLER:[^ ]*]]
 //      :    [[HANDLER]]:  (can't check this in Release-Asserts builds)
-// CHECK:      {{%.*}} = call i32 @llvm.eh.typeid.for(ptr @_ZTIN5test51AE)
+// CHECK:      {{%.*}} = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIN5test51AE)
 }
 
 namespace test6 {
@@ -96,7 +96,7 @@ namespace test6 {
 
 // PR7127
 namespace test7 {
-// CHECK-LABEL:      define{{.*}} i32 @_ZN5test73fooEv() 
+// CHECK-LABEL:      define{{.*}} i32 @_ZN5test73fooEv()
 // CHECK-SAME:  personality ptr @__gxx_personality_v0
   int foo() {
 // CHECK:      [[CAUGHTEXNVAR:%.*]] = alloca ptr
@@ -119,7 +119,7 @@ namespace test7 {
 // CHECK-NEXT: store i32 [[SELECTOR]], ptr [[SELECTORVAR]]
 // CHECK-NEXT: br label
 // CHECK:      [[SELECTOR:%.*]] = load i32, ptr [[SELECTORVAR]]
-// CHECK-NEXT: [[T0:%.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+// CHECK-NEXT: [[T0:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
 // CHECK-NEXT: icmp eq i32 [[SELECTOR]], [[T0]]
 // CHECK-NEXT: br i1
 // CHECK:      [[T0:%.*]] = load ptr, ptr [[CAUGHTEXNVAR]]

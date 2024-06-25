@@ -1,13 +1,17 @@
 # RUN: llvm-profdata merge --temporal-profile-max-trace-length=0 %s -o %t.profdata
 # RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefix=NONE
 
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s %s %s -o %t.profdata
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 --temporal-profile-max-trace-length=0 %t.profdata -o %t.profdata
+# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefix=NONE
+
 # RUN: llvm-profdata merge --temporal-profile-max-trace-length=2 %s -o %t.profdata
 # RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=CHECK,SOME
 
 # RUN: llvm-profdata merge --temporal-profile-max-trace-length=1000 %s -o %t.profdata
 # RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=CHECK,ALL
 
-# NONE: Temporal Profile Traces (samples=0 seen=0):
+# NONE: Temporal Profile Traces (samples=0
 # CHECK: Temporal Profile Traces (samples=1 seen=1):
 # SOME:   Trace 0 (weight=1 count=2):
 # ALL:    Trace 0 (weight=1 count=3):

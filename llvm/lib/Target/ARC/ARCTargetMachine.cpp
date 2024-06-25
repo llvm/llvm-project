@@ -70,7 +70,7 @@ TargetPassConfig *ARCTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void ARCPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -97,7 +97,7 @@ MachineFunctionInfo *ARCTargetMachine::createMachineFunctionInfo(
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
   RegisterTargetMachine<ARCTargetMachine> X(getTheARCTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeARCDAGToDAGISelPass(PR);
+  initializeARCDAGToDAGISelLegacyPass(PR);
 }
 
 TargetTransformInfo

@@ -1,6 +1,6 @@
-# This checks that frame optimizer does not try to optimize away caller-saved
-# regs when we do not have complete aliasing info (when there is an LEA
-# instruction and the function does arithmetic with stack addresses).
+## This checks that frame optimizer does not try to optimize away caller-saved
+## regs when we do not have complete aliasing info (when there is an LEA
+## instruction and the function does arithmetic with stack addresses).
 
 
 # REQUIRES: system-linux

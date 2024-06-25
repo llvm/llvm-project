@@ -4,6 +4,9 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/func_ret.cppm -emit-module-interface -o %t/func_ret.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+
+// RUN: %clang_cc1 -std=c++20 %t/func_ret.cppm -emit-reduced-module-interface -o %t/func_ret.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
 //
 //--- func_ret.cppm
 export module func_ret;

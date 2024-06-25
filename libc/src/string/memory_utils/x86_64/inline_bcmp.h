@@ -58,7 +58,7 @@ inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_x86(CPtr p1, CPtr p2,
                                                             size_t count) {
   if (count == 0)
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   if (count == 1)
     return generic::Bcmp<uint8_t>::block(p1, p2);
   if (count == 2)

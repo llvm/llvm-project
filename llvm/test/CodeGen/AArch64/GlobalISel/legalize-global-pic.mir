@@ -5,8 +5,8 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
   @var = external global i8
-  define i8* @test_global() { ret i8* undef }
-  define i8* @test_global_with_offset() { ret i8* undef }
+  define ptr @test_global() { ret ptr undef }
+  define ptr @test_global_with_offset() { ret ptr undef }
 ...
 ---
 name:            test_global

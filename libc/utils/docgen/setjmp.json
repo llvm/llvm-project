@@ -1,0 +1,15 @@
+{
+  "macros": {
+    "__STDC_VERSION_SETJMP_H__": {
+      "defined": "7.13.2"
+    },
+    "setjmp": {
+      "defined": "7.13.1.1"
+    }
+  },
+  "functions": {
+    "longjmp": {
+      "defined": "7.13.2.1"
+    }
+  }
+}

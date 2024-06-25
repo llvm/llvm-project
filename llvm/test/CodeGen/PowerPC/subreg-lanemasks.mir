@@ -1,0 +1,67 @@
+# RUN: llc -mcpu=pwr10 -enable-subreg-liveness -filetype=null  \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
+# RUN:   -debug-only=regalloc -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Keep track of all of the lanemasks for various subregsiters.
+#
+# TODO: The mask for %6.sub_vsx1:accrc is the same as the mask for %10.sub_vsx1_then_sub_64:accrc.
+#       Ideally on PowerPC these masks should be different. To be addressed in a later patch.
+#
+# CHECK: %3 [80r,80d:0) 0@80r  L0000000000000004 [80r,80d:0) 0@80r  weight:0.000000e+00
+# CHECK: %4 [96r,96d:0) 0@96r  L0000000000000800 [96r,96d:0) 0@96r  weight:0.000000e+00
+# CHECK: %5 [112r,112d:0) 0@112r  L0000000000000004 [112r,112d:0) 0@112r  weight:0.000000e+00
+# CHECK: %6 [128r,128d:0) 0@128r  L0000000000000800 [128r,128d:0) 0@128r  weight:0.000000e+00
+# CHECK: %7 [144r,144d:0) 0@144r  L0000000000000004 [144r,144d:0) 0@144r  weight:0.000000e+00
+# CHECK: %8 [160r,160d:0) 0@160r  L0000000000000800 [160r,160d:0) 0@160r  weight:0.000000e+00
+# CHECK: %9 [176r,176d:0) 0@176r  L0000000000000004 [176r,176d:0) 0@176r  weight:0.000000e+00
+# CHECK: %10 [192r,192d:0) 0@192r  L0000000000000800 [192r,192d:0) 0@192r  weight:0.000000e+00
+# CHECK: %11 [208r,208d:0) 0@208r  L0000000000001000 [208r,208d:0) 0@208r  weight:0.000000e+00
+# CHECK: %12 [224r,224d:0) 0@224r  L0000000000002000 [224r,224d:0) 0@224r  weight:0.000000e+00
+# CHECK: %13 [240r,240d:0) 0@240r  L0000000000000804 [240r,240d:0) 0@240r  weight:0.000000e+00
+# CHECK: %14 [256r,256d:0) 0@256r  L0000000000003000 [256r,256d:0) 0@256r  weight:0.000000e+00
+
+
+# CHECK:       0B bb.0
+# CHECK-NEXT:    liveins
+# CHECK-NEXT:  16B  %0:vsrc = COPY $v2
+# CHECK-NEXT:  32B  %float:fprc = COPY %0.sub_64:vsrc
+# CHECK-NEXT:  48B  dead undef %pair.sub_vsx0:vsrprc = COPY $v2
+# CHECK-NEXT:  64B  undef %15.sub_vsx1:vsrprc = COPY $v3
+# CHECK-NEXT:  80B  dead undef %3.sub_vsx0:vsrprc = COPY %0:vsrc
+# CHECK-NEXT:  96B  dead undef %4.sub_vsx1:vsrprc = COPY %0:vsrc
+# CHECK-NEXT:  112B  dead undef %5.sub_vsx0:accrc = COPY %0:vsrc
+# CHECK-NEXT:  128B  dead undef %6.sub_vsx1:accrc = COPY %0:vsrc
+# CHECK-NEXT:  144B  dead undef %7.sub_64:vsrprc = COPY %float:fprc
+# CHECK-NEXT:  160B  dead undef %8.sub_vsx1_then_sub_64:vsrprc = COPY %float:fprc
+# CHECK-NEXT:  176B  dead undef %9.sub_64:accrc = COPY %float:fprc
+# CHECK-NEXT:  192B  dead undef %10.sub_vsx1_then_sub_64:accrc = COPY %float:fprc
+# CHECK-NEXT:  208B  dead undef %11.sub_pair1_then_sub_64:accrc = COPY %float:fprc
+# CHECK-NEXT:  224B  dead undef %12.sub_pair1_then_sub_vsx1_then_sub_64:accrc = COPY %float:fprc
+# CHECK-NEXT:  240B  dead undef %13.sub_pair0:accrc = COPY %15:vsrprc
+# CHECK-NEXT:  256B  dead undef %14.sub_pair1:accrc = COPY %15:vsrprc
+
+
+---
+name:            test
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $v2, $v3
+    %0:vsrc = COPY $v2
+    %float:fprc = COPY %0.sub_64
+    undef %pair.sub_vsx0:vsrprc = COPY $v2
+    undef %pair.sub_vsx1:vsrprc = COPY $v3
+    undef %1.sub_vsx0:vsrprc = COPY %0
+    undef %2.sub_vsx1:vsrprc = COPY %0
+    undef %3.sub_vsx0:accrc = COPY %0
+    undef %4.sub_vsx1:accrc = COPY %0
+    undef %5.sub_64:vsrprc = COPY %float
+    undef %6.sub_vsx1_then_sub_64:vsrprc = COPY %float
+    undef %7.sub_64:accrc = COPY %float
+    undef %8.sub_vsx1_then_sub_64:accrc = COPY %float
+    undef %9.sub_pair1_then_sub_64:accrc = COPY %float
+    undef %10.sub_pair1_then_sub_vsx1_then_sub_64:accrc = COPY %float
+    undef %11.sub_pair0:accrc = COPY %pair
+    undef %12.sub_pair1:accrc = COPY %pair
+...

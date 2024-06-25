@@ -29,19 +29,19 @@ bb1:
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    call void @outlined_ir_func_0()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
 ;
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    call void @outlined_ir_func_0()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
 ;
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    call void @outlined_ir_func_0()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
 ;
 ; CHECK-LABEL: define internal void @outlined_ir_func_0(

@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_library(DynamicLibraryLib STATIC
   ExportedFuncs.cpp
   )
-set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "Tests")
+set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "LLVM/Tests/Support")
 
 # extract_symbols.py relies on all its library arguments being in the same
 # directory, so we must set the output directory in the same way as if
@@ -25,7 +25,7 @@ function(dynlib_add_module NAME)
   add_library(${NAME} MODULE
     PipSqueak.cpp
     )
-  set_target_properties(${NAME} PROPERTIES FOLDER "Tests")
+  set_target_properties(${NAME} PROPERTIES FOLDER "LLVM/Tests/Support")
 
   set_output_directory(${NAME}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}

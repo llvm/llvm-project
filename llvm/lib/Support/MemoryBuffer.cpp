@@ -79,8 +79,16 @@ void *operator new(size_t N, const NamedBufferAlloc &Alloc) {
   SmallString<256> NameBuf;
   StringRef NameRef = Alloc.Name.toStringRef(NameBuf);
 
-  char *Mem = static_cast<char *>(operator new(N + sizeof(size_t) +
-                                               NameRef.size() + 1));
+  // We use malloc() and manually handle it returning null instead of calling
+  // operator new because we need all uses of NamedBufferAlloc to be
+  // deallocated with a call to free() due to needing to use malloc() in
+  // WritableMemoryBuffer::getNewUninitMemBuffer() to work around the out-of-
+  // memory handler installed by default in LLVM. See operator delete() member
+  // functions within this file for the paired call to free().
+  char *Mem =
+      static_cast<char *>(std::malloc(N + sizeof(size_t) + NameRef.size() + 1));
+  if (!Mem)
+    llvm::report_bad_alloc_error("Allocation failed");
   *reinterpret_cast<size_t *>(Mem + N) = NameRef.size();
   CopyStringRef(Mem + N + sizeof(size_t), NameRef);
   return Mem;
@@ -98,7 +106,7 @@ public:
 
   /// Disable sized deallocation for MemoryBufferMem, because it has
   /// tail-allocated data.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *p) { std::free(p); }
 
   StringRef getBufferIdentifier() const override {
     // The name is stored after the class itself.
@@ -225,7 +233,7 @@ public:
 
   /// Disable sized deallocation for MemoryBufferMMapFile, because it has
   /// tail-allocated data.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *p) { std::free(p); }
 
   StringRef getBufferIdentifier() const override {
     // The name is stored after the class itself.
@@ -315,7 +323,14 @@ WritableMemoryBuffer::getNewUninitMemBuffer(size_t Size,
   size_t RealLen = StringLen + Size + 1 + BufAlign.value();
   if (RealLen <= Size) // Check for rollover.
     return nullptr;
-  char *Mem = static_cast<char*>(operator new(RealLen, std::nothrow));
+  // We use a call to malloc() rather than a call to a non-throwing operator
+  // new() because LLVM unconditionally installs an out of memory new handler
+  // when exceptions are disabled. This new handler intentionally crashes to
+  // aid with debugging, but that makes non-throwing new calls unhelpful.
+  // See MemoryBufferMem::operator delete() for the paired call to free(), and
+  // llvm::install_out_of_memory_new_handler() for the installation of the
+  // custom new handler.
+  char *Mem = static_cast<char *>(std::malloc(RealLen));
   if (!Mem)
     return nullptr;
 

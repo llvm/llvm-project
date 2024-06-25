@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c23 %s -verify
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 
 // Ensure that thread_local and _Thread_local are synonyms in C23 and both
 // restrict local variables to be explicitly static or extern.

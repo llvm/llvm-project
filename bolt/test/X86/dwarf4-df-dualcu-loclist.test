@@ -12,7 +12,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo | FileCheck -check-prefix=PRE-BOLT-DWO-HELPER %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-HELPER %s
 
-; Testing dwarf4 split dwarf for two CUs. Making sure DW_AT_location [DW_FORM_sec_offset] is updated correctly.
+;; Testing dwarf4 split dwarf for two CUs. Making sure DW_AT_location [DW_FORM_sec_offset] is updated correctly.
 
 ; PRE-BOLT-DWO-MAIN: version = 0x0004
 ; PRE-BOLT-DWO-MAIN: DW_TAG_formal_parameter [10]

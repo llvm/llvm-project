@@ -58,12 +58,12 @@ namespace subobject {
   struct A {
     ~A();
   };
-  struct B : A { // expected-note {{here}}
-    constexpr ~B() {} // expected-error {{destructor cannot be declared constexpr because base class 'A' does not have a constexpr destructor}}
+  struct B : A { // cxx2a-note {{here}}
+    constexpr ~B() {} // cxx2a-error {{destructor cannot be declared constexpr because base class 'A' does not have a constexpr destructor}}
   };
   struct C {
-    A a; // expected-note {{here}}
-    constexpr ~C() {} // expected-error {{destructor cannot be declared constexpr because data member 'a' does not have a constexpr destructor}}
+    A a; // cxx2a-note {{here}}
+    constexpr ~C() {} // cxx2a-error {{destructor cannot be declared constexpr because data member 'a' does not have a constexpr destructor}}
   };
   struct D : A {
     A a;

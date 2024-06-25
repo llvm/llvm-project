@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIROpenMPDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenMP
 
   DEPENDS
+  omp_gen
   MLIROpenMPOpsIncGen
   MLIROpenMPOpsInterfacesIncGen
   MLIROpenMPTypeInterfacesIncGen

@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 
 ;; Creating read-only directories with `chmod 400` isn't supported on Windows
 ; UNSUPPORTED: system-windows

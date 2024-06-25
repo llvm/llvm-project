@@ -2,7 +2,7 @@
 
 // Some bad declarations
 hlsl::vector ShouldWorkSomeday; // expected-error{{use of alias template 'hlsl::vector' requires template arguments}}
-// expected-note@*:* {{template declaration from hidden source: template <class element = float, int element_count = 4> using vector = element __attribute__((ext_vector_type(element_count)))}}
+// expected-note@*:* {{template declaration from hidden source: template <class element = float, int element_count = 4> using vector = vector<element, element_count>}}
 
 hlsl::vector<1> BadVec; // expected-error{{template argument for template type parameter must be a type}}
 // expected-note@*:* {{template parameter from hidden source: class element = float}}
@@ -11,7 +11,7 @@ hlsl::vector<int, float> AnotherBadVec; // expected-error{{template argument for
 // expected-note@*:* {{template parameter from hidden source: int element_count = 4}}
 
 hlsl::vector<int, 2, 3> YABV; // expected-error{{too many template arguments for alias template 'vector'}}
-// expected-note@*:* {{template declaration from hidden source: template <class element = float, int element_count = 4> using vector = element __attribute__((ext_vector_type(element_count)))}}
+// expected-note@*:* {{template declaration from hidden source: template <class element = float, int element_count = 4> using vector = vector<element, element_count>}}
 
 // This code is rejected by clang because clang puts the HLSL built-in types
 // into the HLSL namespace.

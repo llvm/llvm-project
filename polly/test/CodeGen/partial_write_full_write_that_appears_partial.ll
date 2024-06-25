@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 
 ; CHECK:      polly.stmt.if.then81:                             ; preds = %polly.stmt.if.end75
 ; CHECK-NEXT:   store float undef, ptr %fX64, align 4, !alias.scope !0, !noalias !3

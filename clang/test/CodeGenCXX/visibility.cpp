@@ -207,7 +207,7 @@ namespace test27 {
 // CHECK-HIDDEN: @_ZGVZN6test681fC1EvE4test = linkonce_odr hidden global
 
 // CHECK-HIDDEN: @_ZTVN6test701DE = linkonce_odr hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZTIN6test701DE] }, align 8
-// CHECK-HIDDEN: @_ZTTN6test701DE = linkonce_odr hidden unnamed_addr constant [1 x ptr] [ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN6test701DE, i32 0, inrange i32 0, i32 3)], align 8
+// CHECK-HIDDEN: @_ZTTN6test701DE = linkonce_odr hidden unnamed_addr constant [1 x ptr] [ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTVN6test701DE, i32 0, i32 0, i32 3)], align 8
 
 // CHECK: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr global
 // CHECK-HIDDEN: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr hidden global

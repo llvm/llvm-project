@@ -28,16 +28,6 @@
 # CHECK-NEXT: ]
 # CHECK-NOT:  Primary GOT
 
-# SO:      Relocations [
-# SO-NEXT: ]
-# SO:      Primary GOT {
-# SO:        Local entries [
-# SO-NEXT:   ]
-# SO-NEXT:   Global entries [
-# SO-NEXT:   ]
-# SO-NEXT:   Number of TLS and multi-GOT entries: 0
-# SO-NEXT: }
-
   .text
   .globl  __start
   .type __start,@function

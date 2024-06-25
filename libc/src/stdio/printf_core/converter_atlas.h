@@ -31,6 +31,11 @@
 #include "src/stdio/printf_core/float_hex_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 
+#ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+// defines convert_fixed
+#include "src/stdio/printf_core/fixed_converter.h"
+#endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
+
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 #include "src/stdio/printf_core/write_int_converter.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT

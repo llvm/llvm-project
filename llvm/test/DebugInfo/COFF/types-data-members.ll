@@ -755,7 +755,7 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 %struct.Struct = type { i32, i32, i32 }
 %union.Union = type { i32 }
 %class.Class = type { i32, i32, i32 }
-%struct.DerivedClass = type { %struct.Struct, i32*, i32, [4 x i8], %class.Class }
+%struct.DerivedClass = type { %struct.Struct, ptr, i32, [4 x i8], %class.Class }
 %"struct.Class::Nested" = type { i32 }
 
 $"\01??0DerivedClass@@QEAA@XZ" = comdat any
@@ -772,12 +772,12 @@ entry:
   %c = alloca %class.Class, align 4
   %dc = alloca %struct.DerivedClass, align 8
   %n = alloca %"struct.Class::Nested", align 4
-  call void @llvm.dbg.declare(metadata %struct.Struct* %s, metadata !10, metadata !19), !dbg !20
-  call void @llvm.dbg.declare(metadata %union.Union* %u, metadata !21, metadata !19), !dbg !27
-  call void @llvm.dbg.declare(metadata %class.Class* %c, metadata !28, metadata !19), !dbg !34
-  call void @llvm.dbg.declare(metadata %struct.DerivedClass* %dc, metadata !35, metadata !19), !dbg !46
-  %call = call %struct.DerivedClass* @"\01??0DerivedClass@@QEAA@XZ"(%struct.DerivedClass* %dc, i32 1) #3, !dbg !46
-  call void @llvm.dbg.declare(metadata %"struct.Class::Nested"* %n, metadata !47, metadata !19), !dbg !51
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !10, metadata !19), !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %u, metadata !21, metadata !19), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !28, metadata !19), !dbg !34
+  call void @llvm.dbg.declare(metadata ptr %dc, metadata !35, metadata !19), !dbg !46
+  %call = call ptr @"\01??0DerivedClass@@QEAA@XZ"(ptr %dc, i32 1) #3, !dbg !46
+  call void @llvm.dbg.declare(metadata ptr %n, metadata !47, metadata !19), !dbg !51
   ret void, !dbg !52
 }
 
@@ -785,35 +785,35 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr %struct.DerivedClass* @"\01??0DerivedClass@@QEAA@XZ"(%struct.DerivedClass* returned %this, i32 %is_most_derived) unnamed_addr #2 comdat align 2 !dbg !53 {
+define linkonce_odr ptr @"\01??0DerivedClass@@QEAA@XZ"(ptr returned %this, i32 %is_most_derived) unnamed_addr #2 comdat align 2 !dbg !53 {
 entry:
-  %retval = alloca %struct.DerivedClass*, align 8
+  %retval = alloca ptr, align 8
   %is_most_derived.addr = alloca i32, align 4
-  %this.addr = alloca %struct.DerivedClass*, align 8
-  store i32 %is_most_derived, i32* %is_most_derived.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %is_most_derived.addr, metadata !58, metadata !19), !dbg !59
-  store %struct.DerivedClass* %this, %struct.DerivedClass** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.DerivedClass** %this.addr, metadata !60, metadata !19), !dbg !59
-  %this1 = load %struct.DerivedClass*, %struct.DerivedClass** %this.addr, align 8
-  store %struct.DerivedClass* %this1, %struct.DerivedClass** %retval, align 8
-  %is_most_derived2 = load i32, i32* %is_most_derived.addr, align 4
+  %this.addr = alloca ptr, align 8
+  store i32 %is_most_derived, ptr %is_most_derived.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %is_most_derived.addr, metadata !58, metadata !19), !dbg !59
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !60, metadata !19), !dbg !59
+  %this1 = load ptr, ptr %this.addr, align 8
+  store ptr %this1, ptr %retval, align 8
+  %is_most_derived2 = load i32, ptr %is_most_derived.addr, align 4
   %is_complete_object = icmp ne i32 %is_most_derived2, 0, !dbg !62
   br i1 %is_complete_object, label %ctor.init_vbases, label %ctor.skip_vbases, !dbg !62
 
 ctor.init_vbases:                                 ; preds = %entry
-  %this.int8 = bitcast %struct.DerivedClass* %this1 to i8*, !dbg !62
-  %0 = getelementptr inbounds i8, i8* %this.int8, i64 16, !dbg !62
-  %vbptr.DerivedClass = bitcast i8* %0 to i32**, !dbg !62
-  store i32* getelementptr inbounds ([2 x i32], [2 x i32]* @"\01??_8DerivedClass@@7B@", i32 0, i32 0), i32** %vbptr.DerivedClass, align 8, !dbg !62
-  %1 = bitcast %struct.DerivedClass* %this1 to i8*, !dbg !62
-  %2 = getelementptr inbounds i8, i8* %1, i64 32, !dbg !62
-  %3 = bitcast i8* %2 to %class.Class*, !dbg !62
+  %this.int8 = bitcast ptr %this1 to ptr, !dbg !62
+  %0 = getelementptr inbounds i8, ptr %this.int8, i64 16, !dbg !62
+  %vbptr.DerivedClass = bitcast ptr %0 to ptr, !dbg !62
+  store ptr @"\01??_8DerivedClass@@7B@", ptr %vbptr.DerivedClass, align 8, !dbg !62
+  %1 = bitcast ptr %this1 to ptr, !dbg !62
+  %2 = getelementptr inbounds i8, ptr %1, i64 32, !dbg !62
+  %3 = bitcast ptr %2 to ptr, !dbg !62
   br label %ctor.skip_vbases, !dbg !62
 
 ctor.skip_vbases:                                 ; preds = %ctor.init_vbases, %entry
-  %4 = bitcast %struct.DerivedClass* %this1 to %struct.Struct*, !dbg !62
-  %5 = load %struct.DerivedClass*, %struct.DerivedClass** %retval, align 8, !dbg !62
-  ret %struct.DerivedClass* %5, !dbg !62
+  %4 = bitcast ptr %this1 to ptr, !dbg !62
+  %5 = load ptr, ptr %retval, align 8, !dbg !62
+  ret ptr %5, !dbg !62
 }
 
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -9,10 +9,10 @@
 }
 
 - (void)testIntegerOverflows {
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (void)[self add:0 with:4608 * 1024 * 1024];
 
-// expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
+// expected-warning@+1 {{overflow in expression; result is 536'870'912 with type 'int'}}
   (void)[self add:0 with:[self add:4608 * 1024 * 1024 with:0]];
 }
 @end

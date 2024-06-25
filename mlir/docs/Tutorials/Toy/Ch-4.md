@@ -383,7 +383,7 @@ void MulOp::inferShapes() { getResult().setType(getLhs().getType()); }
 At this point, each of the necessary Toy operations provide a mechanism by which
 to infer their output shapes. The ShapeInferencePass will operate on functions:
 it will run on each function in isolation. MLIR also supports general
-[OperationPasses](../../PassManagement.md#operation-pass) that run on any
+[OperationPasses](../../PassManagement.md/#operation-pass) that run on any
 isolated operation, but here our module only contains functions, so there is no
 need to generalize to all operations.
 

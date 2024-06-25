@@ -72,30 +72,23 @@ bool Symbol::operator==(const Symbol &O) const {
          std::tie(O.Name, O.Kind, O.Targets, RHSFlags);
 }
 
-SimpleSymbol parseSymbol(StringRef SymName, const SymbolFlags Flags) {
+SimpleSymbol parseSymbol(StringRef SymName) {
   if (SymName.starts_with(ObjC1ClassNamePrefix))
     return {SymName.drop_front(ObjC1ClassNamePrefix.size()),
-            EncodeKind::ObjectiveCClass};
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::Class};
   if (SymName.starts_with(ObjC2ClassNamePrefix))
     return {SymName.drop_front(ObjC2ClassNamePrefix.size()),
-            EncodeKind::ObjectiveCClass};
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::Class};
   if (SymName.starts_with(ObjC2MetaClassNamePrefix))
     return {SymName.drop_front(ObjC2MetaClassNamePrefix.size()),
-            EncodeKind::ObjectiveCClass};
-  if (SymName.starts_with(ObjC2EHTypePrefix)) {
-    // When classes without ehtype are used in try/catch blocks
-    // a weak-defined symbol is exported. In those cases, treat these as a
-    // global instead.
-    if ((Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined)
-      return {SymName, EncodeKind::GlobalSymbol};
+            EncodeKind::ObjectiveCClass, ObjCIFSymbolKind::MetaClass};
+  if (SymName.starts_with(ObjC2EHTypePrefix))
     return {SymName.drop_front(ObjC2EHTypePrefix.size()),
-            EncodeKind::ObjectiveCClassEHType};
-  }
-
+            EncodeKind::ObjectiveCClassEHType, ObjCIFSymbolKind::EHType};
   if (SymName.starts_with(ObjC2IVarPrefix))
     return {SymName.drop_front(ObjC2IVarPrefix.size()),
-            EncodeKind::ObjectiveCInstanceVariable};
-  return {SymName, EncodeKind::GlobalSymbol};
+            EncodeKind::ObjectiveCInstanceVariable, ObjCIFSymbolKind::None};
+  return {SymName, EncodeKind::GlobalSymbol, ObjCIFSymbolKind::None};
 }
 
 } // end namespace MachO.

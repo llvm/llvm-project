@@ -41,7 +41,6 @@ struct NameSearchContext {
 
   bool m_found_variable = false;
   bool m_found_function_with_type_info = false;
-  bool m_found_function = false;
   bool m_found_local_vars_nsp = false;
   bool m_found_type = false;
 

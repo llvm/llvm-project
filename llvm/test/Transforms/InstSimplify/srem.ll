@@ -39,11 +39,11 @@ define <2 x i32> @knownnegation_commute_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %rem
 }
 
-define <3 x i32> @negated_operand_vec_undef(<3 x i32> %x) {
-; CHECK-LABEL: @negated_operand_vec_undef(
+define <3 x i32> @negated_operand_vec_poison(<3 x i32> %x) {
+; CHECK-LABEL: @negated_operand_vec_poison(
 ; CHECK-NEXT:    ret <3 x i32> zeroinitializer
 ;
-  %negx = sub <3 x i32> <i32 0, i32 undef, i32 0>, %x
+  %negx = sub <3 x i32> <i32 0, i32 poison, i32 0>, %x
   %rem = srem <3 x i32> %negx, %x
   ret <3 x i32> %rem
 }

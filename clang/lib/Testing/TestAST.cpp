@@ -13,6 +13,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include "gtest/gtest.h"
@@ -106,6 +107,8 @@ TestAST::TestAST(const TestInputs &In) {
 
   // Set up a VFS with only the virtual file visible.
   auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  if (auto Err = VFS->setCurrentWorkingDirectory(In.WorkingDir))
+    ADD_FAILURE() << "Failed to setWD: " << Err.message();
   VFS->addFile(Filename, /*ModificationTime=*/0,
                llvm::MemoryBuffer::getMemBufferCopy(In.Code, Filename));
   for (const auto &Extra : In.ExtraFiles)

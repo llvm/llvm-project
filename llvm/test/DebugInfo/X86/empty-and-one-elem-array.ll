@@ -9,16 +9,16 @@ define i32 @func() nounwind uwtable ssp !dbg !5 {
 entry:
   %my_foo = alloca %struct.foo, align 4
   %my_bar = alloca %struct.bar, align 4
-  call void @llvm.dbg.declare(metadata %struct.foo* %my_foo, metadata !10, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.declare(metadata %struct.bar* %my_bar, metadata !20, metadata !DIExpression()), !dbg !28
-  %a = getelementptr inbounds %struct.foo, %struct.foo* %my_foo, i32 0, i32 0, !dbg !29
-  store i32 3, i32* %a, align 4, !dbg !29
-  %a1 = getelementptr inbounds %struct.bar, %struct.bar* %my_bar, i32 0, i32 0, !dbg !30
-  store i32 5, i32* %a1, align 4, !dbg !30
-  %a2 = getelementptr inbounds %struct.foo, %struct.foo* %my_foo, i32 0, i32 0, !dbg !31
-  %0 = load i32, i32* %a2, align 4, !dbg !31
-  %a3 = getelementptr inbounds %struct.bar, %struct.bar* %my_bar, i32 0, i32 0, !dbg !31
-  %1 = load i32, i32* %a3, align 4, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %my_foo, metadata !10, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %my_bar, metadata !20, metadata !DIExpression()), !dbg !28
+  %a = getelementptr inbounds %struct.foo, ptr %my_foo, i32 0, i32 0, !dbg !29
+  store i32 3, ptr %a, align 4, !dbg !29
+  %a1 = getelementptr inbounds %struct.bar, ptr %my_bar, i32 0, i32 0, !dbg !30
+  store i32 5, ptr %a1, align 4, !dbg !30
+  %a2 = getelementptr inbounds %struct.foo, ptr %my_foo, i32 0, i32 0, !dbg !31
+  %0 = load i32, ptr %a2, align 4, !dbg !31
+  %a3 = getelementptr inbounds %struct.bar, ptr %my_bar, i32 0, i32 0, !dbg !31
+  %1 = load i32, ptr %a3, align 4, !dbg !31
   %add = add nsw i32 %0, %1, !dbg !31
   ret i32 %add, !dbg !31
 }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; The entry of this scop's simple region (entry.split => for.end) has an trivial
 ; PHI node that is used in a different of the scop region. LCSSA may create such

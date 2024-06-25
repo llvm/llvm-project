@@ -537,8 +537,8 @@ define internal void @.omp_outlined..6(ptr noalias %.global_tid., ptr noalias %.
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_reduce_nowait(ptr noundef nonnull @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 noundef 1, i64 noundef 8, ptr noundef nonnull align 8 [[DOTOMP_REDUCTION_RED_LIST]], ptr noundef nonnull @.omp.reduction.reduction_func, ptr noundef nonnull @.gomp_critical_user_.reduction.var)
 ; CHECK-NEXT:    switch i32 [[TMP4]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-; CHECK-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+; CHECK-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       .omp.reduction.case1:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4

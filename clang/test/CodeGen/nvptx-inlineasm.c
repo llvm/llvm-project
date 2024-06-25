@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -O3 -S -o - %s -emit-llvm | FileCheck %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -O3 -S -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -triple nvptx-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s
 
 int bar(int a) {
   int result;

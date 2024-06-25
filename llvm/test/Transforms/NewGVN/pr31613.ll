@@ -74,7 +74,7 @@ declare void @c.d.p(i64, ptr)
 define void @e(i32 %a0, i32 %a1, ptr %p2) {
 ; CHECK-LABEL: @e(
 ; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[A0:%.*]], ptr [[F]], align 4, !g !0
+; CHECK-NEXT:    store i32 [[A0:%.*]], ptr [[F]], align 4, !g [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[H:%.*]]
 ; CHECK:       h:
 ; CHECK-NEXT:    call void @c.d.p(i64 8, ptr undef)
@@ -88,10 +88,10 @@ define void @e(i32 %a0, i32 %a1, ptr %p2) {
 ; CHECK-NEXT:    br label [[R]]
 ; CHECK:       r:
 ; CHECK-NEXT:    switch i32 undef, label [[N:%.*]] [
-; CHECK-NEXT:    i32 0, label [[S:%.*]]
+; CHECK-NEXT:      i32 0, label [[S:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       s:
-; CHECK-NEXT:    store i32 [[A1:%.*]], ptr [[F]], align 4, !g !0
+; CHECK-NEXT:    store i32 [[A1:%.*]], ptr [[F]], align 4, !g [[META0]]
 ; CHECK-NEXT:    br label [[H]]
 ; CHECK:       n:
 ; CHECK-NEXT:    ret void

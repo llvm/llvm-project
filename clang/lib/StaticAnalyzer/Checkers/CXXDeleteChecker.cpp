@@ -220,11 +220,11 @@ CXXDeleteChecker::PtrCastVisitor::VisitNode(const ExplodedNode *N,
                                                     /*addPosRange=*/true);
 }
 
-void ento::registerCXXArrayDeleteChecker(CheckerManager &mgr) {
+void ento::registerArrayDeleteChecker(CheckerManager &mgr) {
   mgr.registerChecker<CXXArrayDeleteChecker>();
 }
 
-bool ento::shouldRegisterCXXArrayDeleteChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterArrayDeleteChecker(const CheckerManager &mgr) {
   return true;
 }
 

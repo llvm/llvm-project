@@ -3,6 +3,7 @@
 #===============================================================================
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "LLVM libgcc")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -61,13 +62,14 @@ endif()
 #===============================================================================
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-  set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
-      "Path where built llvm-libgcc libraries should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LLVM_LIBGCC_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
-    string(APPEND LLVM_LIBGCC_INSTALL_LIBRARY_DIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
+  set(TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LLVM_LIBGCC_LIBDIR_SUBDIR)
+    string(APPEND TARGET_SUBDIR /${LLVM_LIBGCC_LIBDIR_SUBDIR})
   endif()
+  set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${TARGET_SUBDIR})
+  set(LLVM_LIBGCC_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${TARGET_SUBDIR} CACHE PATH
+      "Path where built llvm-libgcc libraries should be installed.")
+  unset(TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LLVM_LIBGCC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -triple %itanium_abi_triple -std=c++11 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -emit-llvm %s -o - | FileCheck %s
 
 namespace pr8852 {
 void foo();

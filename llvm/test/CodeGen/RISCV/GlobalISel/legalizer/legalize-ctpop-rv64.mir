@@ -205,8 +205,8 @@ body:             |
     ; RV64I-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 1085102592571150095
     ; RV64I-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[ADD1]], [[C5]]
     ; RV64I-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 72340172838076673
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND3]], [[C6]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
+    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND3]], [[C6]]
     ; RV64I-NEXT: [[LSHR3:%[0-9]+]]:_(s64) = G_LSHR [[MUL]], [[C7]](s64)
     ; RV64I-NEXT: $x10 = COPY [[LSHR3]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10

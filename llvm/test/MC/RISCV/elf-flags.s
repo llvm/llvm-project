@@ -2,6 +2,8 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-RVI %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+c -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-RVIC %s
 # RUN: llvm-mc -triple=riscv64 -mattr=+c -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-RVIC %s
+# RUN: llvm-mc -triple=riscv32 -mattr=+zca -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-RVIC %s
+# RUN: llvm-mc -triple=riscv64 -mattr=+zca -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-RVIC %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e -filetype=obj < %s \
 # RUN:   | llvm-readobj --file-headers - \
 # RUN:   | FileCheck -check-prefix=CHECK-RVE %s

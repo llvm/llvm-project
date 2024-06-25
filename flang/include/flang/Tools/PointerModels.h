@@ -20,7 +20,7 @@ struct OpenMPPointerLikeModel
     : public mlir::omp::PointerLikeType::ExternalModel<
           OpenMPPointerLikeModel<T>, T> {
   mlir::Type getElementType(mlir::Type pointer) const {
-    return pointer.cast<T>().getElementType();
+    return mlir::cast<T>(pointer).getElementType();
   }
 };
 
@@ -29,7 +29,7 @@ struct OpenACCPointerLikeModel
     : public mlir::acc::PointerLikeType::ExternalModel<
           OpenACCPointerLikeModel<T>, T> {
   mlir::Type getElementType(mlir::Type pointer) const {
-    return pointer.cast<T>().getElementType();
+    return mlir::cast<T>(pointer).getElementType();
   }
 };
 

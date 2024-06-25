@@ -319,10 +319,14 @@ public:
   }
 
   /// Render only the last argument match \p Id0, if present.
-  template<typename ...OptSpecifiers>
-  void AddLastArg(ArgStringList &Output, OptSpecifiers ...Ids) const {
+  template <typename... OptSpecifiers>
+  void addLastArg(ArgStringList &Output, OptSpecifiers... Ids) const {
     if (Arg *A = getLastArg(Ids...)) // Calls claim() on all Ids's Args.
       A->render(*this, Output);
+  }
+  template <typename... OptSpecifiers>
+  void AddLastArg(ArgStringList &Output, OptSpecifiers... Ids) const {
+    addLastArg(Output, Ids...);
   }
 
   /// AddAllArgsExcept - Render all arguments matching any of the given ids

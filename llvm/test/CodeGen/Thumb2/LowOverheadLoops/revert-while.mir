@@ -34,13 +34,10 @@
     ret void
   }
 
-  ; Function Attrs: nounwind
   declare i32 @llvm.arm.space(i32 immarg, i32) #1
 
-  ; Function Attrs: noduplicate nounwind
   declare i1 @llvm.test.set.loop.iterations.i32(i32) #2
 
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
 
   attributes #0 = { "target-features"="+lob" }
@@ -96,32 +93,38 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: ne_trip_count
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   liveins: $lr, $r1, $r2, $r3, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   dead $lr = t2SUBri $r3, 0, 14 /* CC::al */, $noreg, def $cpsr
-  ; CHECK:   t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
-  ; CHECK:   tB %bb.1, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1.do.body.preheader:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r1, $r2, $r3
-  ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = tMOVr killed $r3, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2.do.body:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $r0, $r1
-  ; CHECK:   dead renamable $r2 = SPACE 4096, undef renamable $r0
-  ; CHECK:   renamable $r2, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep)
-  ; CHECK:   early-clobber renamable $r1 = t2STR_PRE killed renamable $r2, killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep1)
-  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
-  ; CHECK:   tB %bb.3, 14 /* CC::al */, $noreg
-  ; CHECK: bb.3.if.end:
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $lr, $r1, $r2, $r3, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   dead $lr = t2SUBri $r3, 0, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
+  ; CHECK-NEXT:   tB %bb.1, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.do.body.preheader:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r1, $r2, $r3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $lr = tMOVr killed $r3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.do.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead renamable $r2 = SPACE 4096, undef renamable $r0
+  ; CHECK-NEXT:   renamable $r2, renamable $r0 = t2LDR_PRE killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep)
+  ; CHECK-NEXT:   early-clobber renamable $r1 = t2STR_PRE killed renamable $r2, killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep1)
+  ; CHECK-NEXT:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
+  ; CHECK-NEXT:   tB %bb.3, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)
     liveins: $r1, $r2, $r3, $r7, $lr

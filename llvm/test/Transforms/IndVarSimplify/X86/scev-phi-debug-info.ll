@@ -14,7 +14,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   ; CHECK: %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  ; CHECK: call void @llvm.dbg.value(metadata i64 %indvars.iv, metadata !23, metadata !DIExpression()), !dbg !24
+  ; CHECK: #dbg_value(i64 %indvars.iv, !23, !DIExpression(), !24
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   tail call void @llvm.dbg.value(metadata i32 %i.0, metadata !23, metadata !DIExpression()), !dbg !24
   %cmp = icmp slt i32 %i.0, 32, !dbg !24

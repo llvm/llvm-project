@@ -52,13 +52,12 @@ TEST(PresburgerSpaceTest, removeIdRange) {
 
 TEST(PresburgerSpaceTest, insertVarIdentifier) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 1, 0);
-  space.resetIds();
 
   int identifiers[2] = {0, 1};
 
   // Attach identifiers to domain ids.
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
 
   // Try inserting 2 domain ids.
   space.insertVar(VarKind::Domain, 0, 2);
@@ -75,21 +74,20 @@ TEST(PresburgerSpaceTest, insertVarIdentifier) {
 
 TEST(PresburgerSpaceTest, removeVarRangeIdentifier) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3, 0);
-  space.resetIds();
 
   int identifiers[6] = {0, 1, 2, 3, 4, 5};
 
   // Attach identifiers to domain identifiers.
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
 
   // Attach identifiers to range identifiers.
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
 
   // Attach identifiers to symbol identifiers.
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
-  space.getId(VarKind::Symbol, 2) = Identifier(&identifiers[5]);
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[3]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 2, Identifier(&identifiers[5]));
 
   // Remove 1 domain identifier.
   space.removeVarRange(VarKind::Domain, 0, 1);
@@ -112,12 +110,11 @@ TEST(PresburgerSpaceTest, removeVarRangeIdentifier) {
 
 TEST(PresburgerSpaceTest, IdentifierIsEqual) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(1, 2, 0, 0);
-  space.resetIds();
 
   int identifiers[2] = {0, 1};
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[1]));
 
   EXPECT_EQ(space.getId(VarKind::Domain, 0), space.getId(VarKind::Range, 0));
   EXPECT_FALSE(
@@ -126,14 +123,13 @@ TEST(PresburgerSpaceTest, IdentifierIsEqual) {
 
 TEST(PresburgerSpaceTest, convertVarKind) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 0, 0);
-  space.resetIds();
 
   // Attach identifiers.
   int identifiers[4] = {0, 1, 2, 3};
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[3]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[3]));
 
   // Convert Range variables to symbols.
   space.convertVarKind(VarKind::Range, 0, 2, VarKind::Symbol, 0);
@@ -151,12 +147,11 @@ TEST(PresburgerSpaceTest, convertVarKind) {
 
 TEST(PresburgerSpaceTest, convertVarKindLocals) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 0, 0);
-  space.resetIds();
 
   // Attach identifiers to range variables.
   int identifiers[4] = {0, 1};
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[1]));
 
   // Convert Range variables to locals i.e. project them out.
   space.convertVarKind(VarKind::Range, 0, 2, VarKind::Local, 0);
@@ -175,14 +170,13 @@ TEST(PresburgerSpaceTest, convertVarKindLocals) {
 
 TEST(PresburgerSpaceTest, convertVarKind2) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(0, 2, 2, 0);
-  space.resetIds();
 
   // Attach identifiers.
   int identifiers[4] = {0, 1, 2, 3};
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[1]);
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[3]);
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[1]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[3]));
 
   // Convert Range variables to symbols.
   space.convertVarKind(VarKind::Range, 0, 2, VarKind::Symbol, 1);
@@ -196,34 +190,32 @@ TEST(PresburgerSpaceTest, convertVarKind2) {
 
 TEST(PresburgerSpaceTest, mergeAndAlignSymbols) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(3, 3, 2, 0);
-  space.resetIds();
 
   PresburgerSpace otherSpace = PresburgerSpace::getRelationSpace(3, 2, 3, 0);
-  otherSpace.resetIds();
 
   // Attach identifiers.
   int identifiers[7] = {0, 1, 2, 3, 4, 5, 6};
   int otherIdentifiers[8] = {10, 11, 12, 13, 14, 15, 16, 17};
 
-  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
-  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+  space.setId(VarKind::Domain, 0, Identifier(&identifiers[0]));
+  space.setId(VarKind::Domain, 1, Identifier(&identifiers[1]));
   // Note the common identifier.
-  space.getId(VarKind::Domain, 2) = Identifier(&otherIdentifiers[2]);
-  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
-  space.getId(VarKind::Range, 1) = Identifier(&identifiers[3]);
-  space.getId(VarKind::Range, 2) = Identifier(&identifiers[4]);
-  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[5]);
-  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[6]);
+  space.setId(VarKind::Domain, 2, Identifier(&otherIdentifiers[2]));
+  space.setId(VarKind::Range, 0, Identifier(&identifiers[2]));
+  space.setId(VarKind::Range, 1, Identifier(&identifiers[3]));
+  space.setId(VarKind::Range, 2, Identifier(&identifiers[4]));
+  space.setId(VarKind::Symbol, 0, Identifier(&identifiers[5]));
+  space.setId(VarKind::Symbol, 1, Identifier(&identifiers[6]));
 
-  otherSpace.getId(VarKind::Domain, 0) = Identifier(&otherIdentifiers[0]);
-  otherSpace.getId(VarKind::Domain, 1) = Identifier(&otherIdentifiers[1]);
-  otherSpace.getId(VarKind::Domain, 2) = Identifier(&otherIdentifiers[2]);
-  otherSpace.getId(VarKind::Range, 0) = Identifier(&otherIdentifiers[3]);
-  otherSpace.getId(VarKind::Range, 1) = Identifier(&otherIdentifiers[4]);
+  otherSpace.setId(VarKind::Domain, 0, Identifier(&otherIdentifiers[0]));
+  otherSpace.setId(VarKind::Domain, 1, Identifier(&otherIdentifiers[1]));
+  otherSpace.setId(VarKind::Domain, 2, Identifier(&otherIdentifiers[2]));
+  otherSpace.setId(VarKind::Range, 0, Identifier(&otherIdentifiers[3]));
+  otherSpace.setId(VarKind::Range, 1, Identifier(&otherIdentifiers[4]));
   // Note the common identifier.
-  otherSpace.getId(VarKind::Symbol, 0) = Identifier(&identifiers[6]);
-  otherSpace.getId(VarKind::Symbol, 1) = Identifier(&otherIdentifiers[5]);
-  otherSpace.getId(VarKind::Symbol, 2) = Identifier(&otherIdentifiers[7]);
+  otherSpace.setId(VarKind::Symbol, 0, Identifier(&identifiers[6]));
+  otherSpace.setId(VarKind::Symbol, 1, Identifier(&otherIdentifiers[5]));
+  otherSpace.setId(VarKind::Symbol, 2, Identifier(&otherIdentifiers[7]));
 
   space.mergeAndAlignSymbols(otherSpace);
 

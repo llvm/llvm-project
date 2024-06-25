@@ -11,6 +11,7 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
+  DEPENDS lldb-sbapi-dwarf-enums
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
       -I${CMAKE_CURRENT_SOURCE_DIR}
@@ -96,13 +97,15 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     ${lldb_python_target_dir}
     "utils"
     FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
-          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py"
+  )
 
   create_python_package(
     ${swig_target}
     ${lldb_python_target_dir}
     "plugins"
     FILES
+    "${LLDB_SOURCE_DIR}/examples/python/templates/parsed_cmd.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py")

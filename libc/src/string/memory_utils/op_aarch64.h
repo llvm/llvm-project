@@ -108,7 +108,7 @@ template <size_t Size> struct Bcmp {
     } else {
       static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
@@ -154,7 +154,7 @@ template <size_t Size> struct Bcmp {
     } else {
       static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
@@ -217,7 +217,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
   const auto b = load_be<uint64_t>(p2, offset);
   if (a != b)
     return a > b ? 1 : -1;
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -245,7 +245,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16_t>(CPtr p1, CPtr p2, size_t offset) {
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -262,7 +262,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 } // namespace LIBC_NAMESPACE::generic
 

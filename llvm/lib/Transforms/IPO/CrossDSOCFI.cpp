@@ -139,8 +139,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
 }
 
 bool CrossDSOCFI::runOnModule(Module &M) {
-  VeryLikelyWeights =
-    MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
+  VeryLikelyWeights = MDBuilder(M.getContext()).createLikelyBranchWeights();
   if (M.getModuleFlag("Cross-DSO CFI") == nullptr)
     return false;
   buildCFICheck(M);

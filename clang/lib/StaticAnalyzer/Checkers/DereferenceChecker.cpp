@@ -31,10 +31,12 @@ class DereferenceChecker
     : public Checker< check::Location,
                       check::Bind,
                       EventDispatcher<ImplicitNullDerefEvent> > {
-  enum DerefKind { NullPointer, UndefinedPointerValue };
+  enum DerefKind { NullPointer, UndefinedPointerValue, AddressOfLabel };
 
   BugType BT_Null{this, "Dereference of null pointer", categories::LogicError};
   BugType BT_Undef{this, "Dereference of undefined pointer value",
+                   categories::LogicError};
+  BugType BT_Label{this, "Dereference of the address of a label",
                    categories::LogicError};
 
   void reportBug(DerefKind K, ProgramStateRef State, const Stmt *S,
@@ -167,6 +169,11 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
     DerefStr1 = " results in an undefined pointer dereference";
     DerefStr2 = " results in a dereference of an undefined pointer value";
     break;
+  case DerefKind::AddressOfLabel:
+    BT = &BT_Label;
+    DerefStr1 = " results in an undefined pointer dereference";
+    DerefStr2 = " results in a dereference of an address of a label";
+    break;
   };
 
   // Generate an error node.
@@ -188,9 +195,9 @@ void DereferenceChecker::reportBug(DerefKind K, ProgramStateRef State,
     os << DerefStr1;
     break;
   }
-  case Stmt::OMPArraySectionExprClass: {
+  case Stmt::ArraySectionExprClass: {
     os << "Array access";
-    const OMPArraySectionExpr *AE = cast<OMPArraySectionExpr>(S);
+    const ArraySectionExpr *AE = cast<ArraySectionExpr>(S);
     AddDerefSource(os, Ranges, AE->getBase()->IgnoreParenCasts(),
                    State.get(), N->getLocationContext());
     os << DerefStr1;
@@ -286,6 +293,12 @@ void DereferenceChecker::checkBind(SVal L, SVal V, const Stmt *S,
   // If we're binding to a reference, check if the value is known to be null.
   if (V.isUndef())
     return;
+
+  // One should never write to label addresses.
+  if (auto Label = L.getAs<loc::GotoLabel>()) {
+    reportBug(DerefKind::AddressOfLabel, C.getState(), S, C);
+    return;
+  }
 
   const MemRegion *MR = L.getAsRegion();
   const TypedValueRegion *TVR = dyn_cast_or_null<TypedValueRegion>(MR);

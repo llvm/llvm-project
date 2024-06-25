@@ -77,7 +77,6 @@ protected:
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
-  void finalizeCGProfile();
 
 private:
   void Error(const Twine &Msg) const;

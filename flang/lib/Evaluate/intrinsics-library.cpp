@@ -299,8 +299,8 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
-// Remove float bessel functions for AIX as they are not supported
-#ifndef _AIX
+// Remove float bessel functions for AIX and Darwin as they are not supported
+#if !defined(_AIX) && !defined(__APPLE__)
 template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<float, float>;
   using FN = FuncPointer<float, int, float>;

@@ -98,12 +98,13 @@ body: |
     %2:_(s32) = IMPLICIT_DEF
     %3:_(<4 x s32>) = COPY $sgpr4_sgpr5_sgpr6_sgpr7
     %4:_(s32) = G_CONSTANT i32 0
+    %ptr_lds:_(p3) = G_IMPLICIT_DEF
 
-    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_ATOMIC_FMIN
-    %5:_(s32) = G_AMDGPU_ATOMIC_FMIN %0, %3
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FMIN
+    %5:_(s32) = G_ATOMICRMW_FMIN %ptr_lds, %4
 
-    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_ATOMIC_FMAX
-    %6:_(s32) = G_AMDGPU_ATOMIC_FMAX %0, %3
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FMAX
+    %6:_(s32) = G_ATOMICRMW_FMAX %ptr_lds, %4
 
     ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SWAP
     %7:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SWAP %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)

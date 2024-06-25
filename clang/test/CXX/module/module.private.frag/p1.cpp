@@ -2,9 +2,9 @@
 // RUN: mkdir %t
 // RUN: split-file %s %t
 
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/parta.cppm -o %t/mod-parta.pcm -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/impl.cppm -o %t/mod-impl.pcm -fsyntax-only -verify
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/primary.cppm -o %t/mod.pcm -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/parta.cppm -o %t/mod-parta.pcm -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/impl.cppm -o %t/mod-impl.pcm -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/primary.cppm -o %t/mod.pcm -fsyntax-only -verify
 
 //--- parta.cppm
 export module mod:parta;

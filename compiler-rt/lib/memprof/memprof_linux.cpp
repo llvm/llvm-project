@@ -38,8 +38,6 @@
 #include <unistd.h>
 #include <unwind.h>
 
-extern ElfW(Dyn) _DYNAMIC[];
-
 typedef enum {
   MEMPROF_RT_VERSION_UNDEFINED = 0,
   MEMPROF_RT_VERSION_DYNAMIC,
@@ -57,15 +55,11 @@ namespace __memprof {
 void InitializePlatformInterceptors() {}
 void InitializePlatformExceptionHandlers() {}
 
-void *MemprofDoesNotSupportStaticLinkage() {
-  // This will fail to link with -static.
-  return &_DYNAMIC;
-}
-
 uptr FindDynamicShadowStart() {
   uptr shadow_size_bytes = MemToShadowSize(kHighMemEnd);
   return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
+                          GetMmapGranularity());
 }
 
 void *MemprofDlSymNext(const char *sym) { return dlsym(RTLD_NEXT, sym); }

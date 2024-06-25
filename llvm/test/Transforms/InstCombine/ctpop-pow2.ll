@@ -60,7 +60,7 @@ define i8 @ctpop_imin_plus1_lshr_nz(i8 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[V:%.*]] = lshr i8 -127, [[X]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[V]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i8 0, 9) i8 @llvm.ctpop.i8(i8 [[V]])
 ; CHECK-NEXT:    ret i8 [[CNT]]
 ;
   %cmp = icmp ne i8 %x, 0
@@ -104,7 +104,7 @@ define <2 x i32> @ctpop_lshr_intmin_intmin_plus1_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_lshr_intmin_intmin_plus1_vec_nz(
 ; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483647>, [[X1]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHR]]), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHR]])
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
 ;
   %x1 = or <2 x i32> %x, <i32 1 ,i32 1>

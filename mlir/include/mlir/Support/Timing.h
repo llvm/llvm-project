@@ -321,6 +321,53 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// OutputStrategy
+//===----------------------------------------------------------------------===//
+
+/// Simple record class to record timing information.
+struct TimeRecord {
+  TimeRecord(double wall = 0.0, double user = 0.0) : wall(wall), user(user) {}
+
+  TimeRecord &operator+=(const TimeRecord &other) {
+    wall += other.wall;
+    user += other.user;
+    return *this;
+  }
+
+  TimeRecord &operator-=(const TimeRecord &other) {
+    wall -= other.wall;
+    user -= other.user;
+    return *this;
+  }
+
+  double wall, user;
+};
+
+/// Facilities for printing timing reports to various output formats.
+///
+/// This is an abstract class that serves as the foundation for printing.
+/// Users can implement additional output formats by extending this abstract
+/// class.
+class OutputStrategy {
+public:
+  OutputStrategy(raw_ostream &os) : os(os) {}
+  virtual ~OutputStrategy() = default;
+
+  virtual void printHeader(const TimeRecord &total) = 0;
+  virtual void printFooter() = 0;
+  virtual void printTime(const TimeRecord &time, const TimeRecord &total) = 0;
+  virtual void printListEntry(StringRef name, const TimeRecord &time,
+                              const TimeRecord &total,
+                              bool lastEntry = false) = 0;
+  virtual void printTreeEntry(unsigned indent, StringRef name,
+                              const TimeRecord &time,
+                              const TimeRecord &total) = 0;
+  virtual void printTreeEntryEnd(unsigned indent, bool lastEntry = false) = 0;
+
+  raw_ostream &os;
+};
+
+//===----------------------------------------------------------------------===//
 // DefaultTimingManager
 //===----------------------------------------------------------------------===//
 
@@ -351,6 +398,15 @@ public:
     Tree,
   };
 
+  /// The different output formats for printing the timers.
+  enum class OutputFormat {
+    /// In this format the results are displayed in text format.
+    Text,
+
+    /// In this format the results are displayed in JSON format.
+    Json,
+  };
+
   DefaultTimingManager();
   DefaultTimingManager(DefaultTimingManager &&rhs);
   ~DefaultTimingManager() override;
@@ -372,10 +428,7 @@ public:
   DisplayMode getDisplayMode() const;
 
   /// Change the stream where the output will be printed to.
-  void setOutput(raw_ostream &os);
-
-  /// Return the current output stream where the output will be printed to.
-  raw_ostream &getOutput() const;
+  void setOutput(std::unique_ptr<OutputStrategy> output);
 
   /// Print and clear the timing results. Only call this when there are no more
   /// references to nested timers around, as printing post-processes and clears
@@ -408,6 +461,7 @@ protected:
 
 private:
   const std::unique_ptr<detail::DefaultTimingManagerImpl> impl;
+  std::unique_ptr<OutputStrategy> out;
 };
 
 /// Register a set of useful command-line options that can be used to configure

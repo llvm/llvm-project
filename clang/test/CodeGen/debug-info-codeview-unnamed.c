@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -debug-info-kind=limited -S -emit-llvm -o - %s | FileCheck --check-prefix LINUX %s
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -S -emit-llvm -o - %s | FileCheck --check-prefix MSVC %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -debug-info-kind=limited -emit-llvm -o - %s | FileCheck --check-prefix LINUX %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited -gcodeview -emit-llvm -o - %s | FileCheck --check-prefix MSVC %s
 
 int main(int argc, char* argv[], char* arge[]) {
 

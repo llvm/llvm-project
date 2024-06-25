@@ -8,8 +8,8 @@
 
 #include "mlir/Transforms/Passes.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/RegionKindInterface.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_TOPOLOGICALSORT

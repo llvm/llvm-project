@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-  #pragma omp distribute firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-warning {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} expected-warning {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}} expected-error {{incomplete type 'S1' where a complete type is required}} expected-error {{no matching constructor for initialization of 'S3'}}
+  #pragma omp distribute firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-warning {{type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} expected-warning {{type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}} expected-error {{incomplete type 'S1' where a complete type is required}} expected-error {{no matching constructor for initialization of 'S3'}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
@@ -103,11 +103,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-  #pragma omp distribute firstprivate(ba) // expected-warning {{Type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+  #pragma omp distribute firstprivate(ba) // expected-warning {{type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams
-  #pragma omp distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}} expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+  #pragma omp distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}} expected-warning {{type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target
   #pragma omp teams

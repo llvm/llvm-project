@@ -298,14 +298,14 @@ define i32 @not_shl_one_i32(i32 %x) {
 define i64 @not_shl_one_i64(i64 %x) {
 ; CHECK-LABEL: not_shl_one_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    sll a1, a1, a0
-; CHECK-NEXT:    addi a0, a0, -32
-; CHECK-NEXT:    slti a0, a0, 0
-; CHECK-NEXT:    neg a2, a0
-; CHECK-NEXT:    and a2, a2, a1
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a1, a0, a1
+; CHECK-NEXT:    addi a1, a0, -32
+; CHECK-NEXT:    slti a1, a1, 0
+; CHECK-NEXT:    neg a2, a1
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    sll a0, a3, a0
+; CHECK-NEXT:    and a2, a2, a0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a1, a1, a0
 ; CHECK-NEXT:    not a0, a2
 ; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    ret

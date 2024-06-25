@@ -92,7 +92,7 @@ exit:
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -73x + -146, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -73x + -146, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 75
-; CHECK: Loop %loop: backedge-taken count is 75
+; CHECK: Loop %loop: backedge-taken count is i32 75
 define signext i32 @test02() {
 entry:
   br label %loop
@@ -124,7 +124,7 @@ exit:
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 2x^2 + -4x + 2, rw:5
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 2x^2 + -4x + 2, rw:5
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (root): 1
-; CHECK: Loop %loop: backedge-taken count is 1
+; CHECK: Loop %loop: backedge-taken count is i4 1
 define signext i32 @test03() {
 entry:
   br label %loop
@@ -243,7 +243,7 @@ exit:
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -1x^2 + -1x + -2, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + 1x + -8589934590, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 92682
-; CHECK: Loop %loop: backedge-taken count is 2
+; CHECK: Loop %loop: backedge-taken count is i32 2
 
 define signext i32 @test05() {
 entry:
@@ -287,7 +287,7 @@ exit:
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -199999x + -12, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -199999x + 8589934580, rw:33
 ; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 62450
-; CHECK: Loop %loop: backedge-taken count is 24469
+; CHECK: Loop %loop: backedge-taken count is i32 24469
 define signext i32 @test06() {
 entry:
   br label %loop

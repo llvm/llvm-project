@@ -59,9 +59,9 @@ struct CheckSimdLoadCtor {
   void operator()() {
     constexpr std::size_t array_size = ex::simd_size_v<T, SimdAbi>;
 
-    types::for_each(arithmetic_no_bool_types(), ElementAlignedLoadCtorHelper<T, SimdAbi, array_size>());
-    types::for_each(arithmetic_no_bool_types(), VectorAlignedLoadCtorHelper<T, SimdAbi, array_size>());
-    types::for_each(arithmetic_no_bool_types(), OveralignedLoadCtorHelper<T, SimdAbi, array_size>());
+    types::for_each(simd_test_types(), ElementAlignedLoadCtorHelper<T, SimdAbi, array_size>());
+    types::for_each(simd_test_types(), VectorAlignedLoadCtorHelper<T, SimdAbi, array_size>());
+    types::for_each(simd_test_types(), OveralignedLoadCtorHelper<T, SimdAbi, array_size>());
   }
 };
 

@@ -270,6 +270,11 @@ fun:strtoul=custom
 fun:strtoull=custom
 fun:strcat=custom
 fun:strncat=custom
+fun:__isoc23_strtod=custom
+fun:__isoc23_strtol=custom
+fun:__isoc23_strtoll=custom
+fun:__isoc23_strtoul=custom
+fun:__isoc23_strtoull=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
@@ -311,6 +316,7 @@ fun:snprintf=custom
 # scanf-like
 fun:sscanf=custom
 fun:__isoc99_sscanf=custom
+fun:__isoc23_sscanf=custom
 
 # TODO: custom
 fun:asprintf=discard

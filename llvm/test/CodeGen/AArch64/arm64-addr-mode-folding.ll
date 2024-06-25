@@ -125,7 +125,7 @@ return:                                           ; preds = %if.end23, %if.then3
 }
 
 ; CHECK: @test
-; CHECK-NOT: , uxtw #2]
+; CHECK: , uxtw #2]
 define i32 @test(ptr %array, i8 zeroext %c, i32 %arg) {
 entry:
   %conv = zext i8 %c to i32

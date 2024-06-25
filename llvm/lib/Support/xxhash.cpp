@@ -1,42 +1,45 @@
 /*
-*  xxHash - Fast Hash algorithm
-*  Copyright (C) 2012-2021, Yann Collet
-*
-*  BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
-*
-*  Redistribution and use in source and binary forms, with or without
-*  modification, are permitted provided that the following conditions are
-*  met:
-*
-*  * Redistributions of source code must retain the above copyright
-*  notice, this list of conditions and the following disclaimer.
-*  * Redistributions in binary form must reproduce the above
-*  copyright notice, this list of conditions and the following disclaimer
-*  in the documentation and/or other materials provided with the
-*  distribution.
-*
-*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-*  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-*  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-*  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*
-*  You can contact the author at :
-*  - xxHash homepage: http://www.xxhash.com
-*  - xxHash source repository : https://github.com/Cyan4973/xxHash
-*/
+ *  xxHash - Extremely Fast Hash algorithm
+ *  Copyright (C) 2012-2023, Yann Collet
+ *
+ *  BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *  notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above
+ *  copyright notice, this list of conditions and the following disclaimer
+ *  in the documentation and/or other materials provided with the
+ *  distribution.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  You can contact the author at :
+ *  - xxHash homepage: http://www.xxhash.com
+ *  - xxHash source repository : https://github.com/Cyan4973/xxHash
+ */
 
 // xxhash64 is based on commit d2df04efcbef7d7f6886d345861e5dfda4edacc1. Removed
 // everything but a simple interface for computing xxh64.
 
 // xxh3_64bits is based on commit d5891596637d21366b9b1dcf2c0007a3edb26a9e (July
 // 2023).
+
+// xxh3_128bits is based on commit b0adcc54188c3130b1793e7b19c62eb1e669f7df
+// (June 2024).
 
 #include "llvm/Support/xxhash.h"
 #include "llvm/Support/Compiler.h"
@@ -297,12 +300,12 @@ static uint64_t XXH3_len_17to128_64b(const uint8_t *input, size_t len,
 }
 
 constexpr size_t XXH3_MIDSIZE_MAX = 240;
+constexpr size_t XXH3_MIDSIZE_STARTOFFSET = 3;
+constexpr size_t XXH3_MIDSIZE_LASTOFFSET = 17;
 
 LLVM_ATTRIBUTE_NOINLINE
 static uint64_t XXH3_len_129to240_64b(const uint8_t *input, size_t len,
                                       const uint8_t *secret, uint64_t seed) {
-  constexpr size_t XXH3_MIDSIZE_STARTOFFSET = 3;
-  constexpr size_t XXH3_MIDSIZE_LASTOFFSET = 17;
   uint64_t acc = (uint64_t)len * PRIME64_1;
   const unsigned nbRounds = len / 16;
   for (unsigned i = 0; i < 8; ++i)
@@ -404,4 +407,495 @@ uint64_t llvm::xxh3_64bits(ArrayRef<uint8_t> data) {
   if (len <= XXH3_MIDSIZE_MAX)
     return XXH3_len_129to240_64b(in, len, kSecret, 0);
   return XXH3_hashLong_64b(in, len, kSecret, sizeof(kSecret));
+}
+
+/* ==========================================
+ * XXH3 128 bits (a.k.a XXH128)
+ * ==========================================
+ * XXH3's 128-bit variant has better mixing and strength than the 64-bit
+ * variant, even without counting the significantly larger output size.
+ *
+ * For example, extra steps are taken to avoid the seed-dependent collisions
+ * in 17-240 byte inputs (See XXH3_mix16B and XXH128_mix32B).
+ *
+ * This strength naturally comes at the cost of some speed, especially on short
+ * lengths. Note that longer hashes are about as fast as the 64-bit version
+ * due to it using only a slight modification of the 64-bit loop.
+ *
+ * XXH128 is also more oriented towards 64-bit machines. It is still extremely
+ * fast for a _128-bit_ hash on 32-bit (it usually clears XXH64).
+ */
+
+/*!
+ * @internal
+ * @def XXH_rotl32(x,r)
+ * @brief 32-bit rotate left.
+ *
+ * @param x The 32-bit integer to be rotated.
+ * @param r The number of bits to rotate.
+ * @pre
+ *   @p r > 0 && @p r < 32
+ * @note
+ *   @p x and @p r may be evaluated multiple times.
+ * @return The rotated result.
+ */
+#if __has_builtin(__builtin_rotateleft32) &&                                   \
+    __has_builtin(__builtin_rotateleft64)
+#define XXH_rotl32 __builtin_rotateleft32
+#define XXH_rotl64 __builtin_rotateleft64
+/* Note: although _rotl exists for minGW (GCC under windows), performance seems
+ * poor */
+#elif defined(_MSC_VER)
+#define XXH_rotl32(x, r) _rotl(x, r)
+#define XXH_rotl64(x, r) _rotl64(x, r)
+#else
+#define XXH_rotl32(x, r) (((x) << (r)) | ((x) >> (32 - (r))))
+#define XXH_rotl64(x, r) (((x) << (r)) | ((x) >> (64 - (r))))
+#endif
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define XXH_mult32to64(x, y) __emulu((unsigned)(x), (unsigned)(y))
+#else
+/*
+ * Downcast + upcast is usually better than masking on older compilers like
+ * GCC 4.2 (especially 32-bit ones), all without affecting newer compilers.
+ *
+ * The other method, (x & 0xFFFFFFFF) * (y & 0xFFFFFFFF), will AND both operands
+ * and perform a full 64x64 multiply -- entirely redundant on 32-bit.
+ */
+#define XXH_mult32to64(x, y) ((uint64_t)(uint32_t)(x) * (uint64_t)(uint32_t)(y))
+#endif
+
+/*!
+ * @brief Calculates a 64->128-bit long multiply.
+ *
+ * Uses `__uint128_t` and `_umul128` if available, otherwise uses a scalar
+ * version.
+ *
+ * @param lhs , rhs The 64-bit integers to be multiplied
+ * @return The 128-bit result represented in an @ref XXH128_hash_t.
+ */
+static XXH128_hash_t XXH_mult64to128(uint64_t lhs, uint64_t rhs) {
+  /*
+   * GCC/Clang __uint128_t method.
+   *
+   * On most 64-bit targets, GCC and Clang define a __uint128_t type.
+   * This is usually the best way as it usually uses a native long 64-bit
+   * multiply, such as MULQ on x86_64 or MUL + UMULH on aarch64.
+   *
+   * Usually.
+   *
+   * Despite being a 32-bit platform, Clang (and emscripten) define this type
+   * despite not having the arithmetic for it. This results in a laggy
+   * compiler builtin call which calculates a full 128-bit multiply.
+   * In that case it is best to use the portable one.
+   * https://github.com/Cyan4973/xxHash/issues/211#issuecomment-515575677
+   */
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__wasm__) &&         \
+        defined(__SIZEOF_INT128__) ||                                          \
+    (defined(_INTEGRAL_MAX_BITS) && _INTEGRAL_MAX_BITS >= 128)
+
+  __uint128_t const product = (__uint128_t)lhs * (__uint128_t)rhs;
+  XXH128_hash_t r128;
+  r128.low64 = (uint64_t)(product);
+  r128.high64 = (uint64_t)(product >> 64);
+  return r128;
+
+  /*
+   * MSVC for x64's _umul128 method.
+   *
+   * uint64_t _umul128(uint64_t Multiplier, uint64_t Multiplicand, uint64_t
+   * *HighProduct);
+   *
+   * This compiles to single operand MUL on x64.
+   */
+#elif (defined(_M_X64) || defined(_M_IA64)) && !defined(_M_ARM64EC)
+
+#ifndef _MSC_VER
+#pragma intrinsic(_umul128)
+#endif
+  uint64_t product_high;
+  uint64_t const product_low = _umul128(lhs, rhs, &product_high);
+  XXH128_hash_t r128;
+  r128.low64 = product_low;
+  r128.high64 = product_high;
+  return r128;
+
+  /*
+   * MSVC for ARM64's __umulh method.
+   *
+   * This compiles to the same MUL + UMULH as GCC/Clang's __uint128_t method.
+   */
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+
+#ifndef _MSC_VER
+#pragma intrinsic(__umulh)
+#endif
+  XXH128_hash_t r128;
+  r128.low64 = lhs * rhs;
+  r128.high64 = __umulh(lhs, rhs);
+  return r128;
+
+#else
+  /*
+   * Portable scalar method. Optimized for 32-bit and 64-bit ALUs.
+   *
+   * This is a fast and simple grade school multiply, which is shown below
+   * with base 10 arithmetic instead of base 0x100000000.
+   *
+   *           9 3 // D2 lhs = 93
+   *         x 7 5 // D2 rhs = 75
+   *     ----------
+   *           1 5 // D2 lo_lo = (93 % 10) * (75 % 10) = 15
+   *         4 5 | // D2 hi_lo = (93 / 10) * (75 % 10) = 45
+   *         2 1 | // D2 lo_hi = (93 % 10) * (75 / 10) = 21
+   *     + 6 3 | | // D2 hi_hi = (93 / 10) * (75 / 10) = 63
+   *     ---------
+   *         2 7 | // D2 cross = (15 / 10) + (45 % 10) + 21 = 27
+   *     + 6 7 | | // D2 upper = (27 / 10) + (45 / 10) + 63 = 67
+   *     ---------
+   *       6 9 7 5 // D4 res = (27 * 10) + (15 % 10) + (67 * 100) = 6975
+   *
+   * The reasons for adding the products like this are:
+   *  1. It avoids manual carry tracking. Just like how
+   *     (9 * 9) + 9 + 9 = 99, the same applies with this for UINT64_MAX.
+   *     This avoids a lot of complexity.
+   *
+   *  2. It hints for, and on Clang, compiles to, the powerful UMAAL
+   *     instruction available in ARM's Digital Signal Processing extension
+   *     in 32-bit ARMv6 and later, which is shown below:
+   *
+   *         void UMAAL(xxh_u32 *RdLo, xxh_u32 *RdHi, xxh_u32 Rn, xxh_u32 Rm)
+   *         {
+   *             uint64_t product = (uint64_t)*RdLo * (uint64_t)*RdHi + Rn + Rm;
+   *             *RdLo = (xxh_u32)(product & 0xFFFFFFFF);
+   *             *RdHi = (xxh_u32)(product >> 32);
+   *         }
+   *
+   *     This instruction was designed for efficient long multiplication, and
+   *     allows this to be calculated in only 4 instructions at speeds
+   *     comparable to some 64-bit ALUs.
+   *
+   *  3. It isn't terrible on other platforms. Usually this will be a couple
+   *     of 32-bit ADD/ADCs.
+   */
+
+  /* First calculate all of the cross products. */
+  uint64_t const lo_lo = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs & 0xFFFFFFFF);
+  uint64_t const hi_lo = XXH_mult32to64(lhs >> 32, rhs & 0xFFFFFFFF);
+  uint64_t const lo_hi = XXH_mult32to64(lhs & 0xFFFFFFFF, rhs >> 32);
+  uint64_t const hi_hi = XXH_mult32to64(lhs >> 32, rhs >> 32);
+
+  /* Now add the products together. These will never overflow. */
+  uint64_t const cross = (lo_lo >> 32) + (hi_lo & 0xFFFFFFFF) + lo_hi;
+  uint64_t const upper = (hi_lo >> 32) + (cross >> 32) + hi_hi;
+  uint64_t const lower = (cross << 32) | (lo_lo & 0xFFFFFFFF);
+
+  XXH128_hash_t r128;
+  r128.low64 = lower;
+  r128.high64 = upper;
+  return r128;
+#endif
+}
+
+/*! Seems to produce slightly better code on GCC for some reason. */
+LLVM_ATTRIBUTE_ALWAYS_INLINE constexpr uint64_t XXH_xorshift64(uint64_t v64,
+                                                               int shift) {
+  return v64 ^ (v64 >> shift);
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH3_len_1to3_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                   uint64_t seed) {
+  /* A doubled version of 1to3_64b with different constants. */
+  /*
+   * len = 1: combinedl = { input[0], 0x01, input[0], input[0] }
+   * len = 2: combinedl = { input[1], 0x02, input[0], input[1] }
+   * len = 3: combinedl = { input[2], 0x03, input[0], input[1] }
+   */
+  uint8_t const c1 = input[0];
+  uint8_t const c2 = input[len >> 1];
+  uint8_t const c3 = input[len - 1];
+  uint32_t const combinedl = ((uint32_t)c1 << 16) | ((uint32_t)c2 << 24) |
+                             ((uint32_t)c3 << 0) | ((uint32_t)len << 8);
+  uint32_t const combinedh = XXH_rotl32(byteswap(combinedl), 13);
+  uint64_t const bitflipl =
+      (endian::read32le(secret) ^ endian::read32le(secret + 4)) + seed;
+  uint64_t const bitfliph =
+      (endian::read32le(secret + 8) ^ endian::read32le(secret + 12)) - seed;
+  uint64_t const keyed_lo = (uint64_t)combinedl ^ bitflipl;
+  uint64_t const keyed_hi = (uint64_t)combinedh ^ bitfliph;
+  XXH128_hash_t h128;
+  h128.low64 = XXH64_avalanche(keyed_lo);
+  h128.high64 = XXH64_avalanche(keyed_hi);
+  return h128;
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH3_len_4to8_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                   uint64_t seed) {
+  seed ^= (uint64_t)byteswap((uint32_t)seed) << 32;
+  uint32_t const input_lo = endian::read32le(input);
+  uint32_t const input_hi = endian::read32le(input + len - 4);
+  uint64_t const input_64 = input_lo + ((uint64_t)input_hi << 32);
+  uint64_t const bitflip =
+      (endian::read64le(secret + 16) ^ endian::read64le(secret + 24)) + seed;
+  uint64_t const keyed = input_64 ^ bitflip;
+
+  /* Shift len to the left to ensure it is even, this avoids even multiplies.
+   */
+  XXH128_hash_t m128 = XXH_mult64to128(keyed, PRIME64_1 + (len << 2));
+
+  m128.high64 += (m128.low64 << 1);
+  m128.low64 ^= (m128.high64 >> 3);
+
+  m128.low64 = XXH_xorshift64(m128.low64, 35);
+  m128.low64 *= PRIME_MX2;
+  m128.low64 = XXH_xorshift64(m128.low64, 28);
+  m128.high64 = XXH3_avalanche(m128.high64);
+  return m128;
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH3_len_9to16_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                    uint64_t seed) {
+  uint64_t const bitflipl =
+      (endian::read64le(secret + 32) ^ endian::read64le(secret + 40)) - seed;
+  uint64_t const bitfliph =
+      (endian::read64le(secret + 48) ^ endian::read64le(secret + 56)) + seed;
+  uint64_t const input_lo = endian::read64le(input);
+  uint64_t input_hi = endian::read64le(input + len - 8);
+  XXH128_hash_t m128 =
+      XXH_mult64to128(input_lo ^ input_hi ^ bitflipl, PRIME64_1);
+  /*
+   * Put len in the middle of m128 to ensure that the length gets mixed to
+   * both the low and high bits in the 128x64 multiply below.
+   */
+  m128.low64 += (uint64_t)(len - 1) << 54;
+  input_hi ^= bitfliph;
+  /*
+   * Add the high 32 bits of input_hi to the high 32 bits of m128, then
+   * add the long product of the low 32 bits of input_hi and PRIME32_2 to
+   * the high 64 bits of m128.
+   *
+   * The best approach to this operation is different on 32-bit and 64-bit.
+   */
+  if (sizeof(void *) < sizeof(uint64_t)) { /* 32-bit */
+    /*
+     * 32-bit optimized version, which is more readable.
+     *
+     * On 32-bit, it removes an ADC and delays a dependency between the two
+     * halves of m128.high64, but it generates an extra mask on 64-bit.
+     */
+    m128.high64 += (input_hi & 0xFFFFFFFF00000000ULL) +
+                   XXH_mult32to64((uint32_t)input_hi, PRIME32_2);
+  } else {
+    /*
+     * 64-bit optimized (albeit more confusing) version.
+     *
+     * Uses some properties of addition and multiplication to remove the mask:
+     *
+     * Let:
+     *    a = input_hi.lo = (input_hi & 0x00000000FFFFFFFF)
+     *    b = input_hi.hi = (input_hi & 0xFFFFFFFF00000000)
+     *    c = PRIME32_2
+     *
+     *    a + (b * c)
+     * Inverse Property: x + y - x == y
+     *    a + (b * (1 + c - 1))
+     * Distributive Property: x * (y + z) == (x * y) + (x * z)
+     *    a + (b * 1) + (b * (c - 1))
+     * Identity Property: x * 1 == x
+     *    a + b + (b * (c - 1))
+     *
+     * Substitute a, b, and c:
+     *    input_hi.hi + input_hi.lo + ((uint64_t)input_hi.lo * (PRIME32_2
+     * - 1))
+     *
+     * Since input_hi.hi + input_hi.lo == input_hi, we get this:
+     *    input_hi + ((uint64_t)input_hi.lo * (PRIME32_2 - 1))
+     */
+    m128.high64 += input_hi + XXH_mult32to64((uint32_t)input_hi, PRIME32_2 - 1);
+  }
+  /* m128 ^= XXH_swap64(m128 >> 64); */
+  m128.low64 ^= byteswap(m128.high64);
+
+  /* 128x64 multiply: h128 = m128 * PRIME64_2; */
+  XXH128_hash_t h128 = XXH_mult64to128(m128.low64, PRIME64_2);
+  h128.high64 += m128.high64 * PRIME64_2;
+
+  h128.low64 = XXH3_avalanche(h128.low64);
+  h128.high64 = XXH3_avalanche(h128.high64);
+  return h128;
+}
+
+/*
+ * Assumption: `secret` size is >= XXH3_SECRET_SIZE_MIN
+ */
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH3_len_0to16_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                    uint64_t seed) {
+  if (len > 8)
+    return XXH3_len_9to16_128b(input, len, secret, seed);
+  if (len >= 4)
+    return XXH3_len_4to8_128b(input, len, secret, seed);
+  if (len)
+    return XXH3_len_1to3_128b(input, len, secret, seed);
+  XXH128_hash_t h128;
+  uint64_t const bitflipl =
+      endian::read64le(secret + 64) ^ endian::read64le(secret + 72);
+  uint64_t const bitfliph =
+      endian::read64le(secret + 80) ^ endian::read64le(secret + 88);
+  h128.low64 = XXH64_avalanche(seed ^ bitflipl);
+  h128.high64 = XXH64_avalanche(seed ^ bitfliph);
+  return h128;
+}
+
+/*
+ * A bit slower than XXH3_mix16B, but handles multiply by zero better.
+ */
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH128_mix32B(XXH128_hash_t acc, const uint8_t *input_1, const uint8_t *input_2,
+              const uint8_t *secret, uint64_t seed) {
+  acc.low64 += XXH3_mix16B(input_1, secret + 0, seed);
+  acc.low64 ^= endian::read64le(input_2) + endian::read64le(input_2 + 8);
+  acc.high64 += XXH3_mix16B(input_2, secret + 16, seed);
+  acc.high64 ^= endian::read64le(input_1) + endian::read64le(input_1 + 8);
+  return acc;
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static XXH128_hash_t
+XXH3_len_17to128_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                      size_t secretSize, uint64_t seed) {
+  (void)secretSize;
+
+  XXH128_hash_t acc;
+  acc.low64 = len * PRIME64_1;
+  acc.high64 = 0;
+
+  if (len > 32) {
+    if (len > 64) {
+      if (len > 96) {
+        acc =
+            XXH128_mix32B(acc, input + 48, input + len - 64, secret + 96, seed);
+      }
+      acc = XXH128_mix32B(acc, input + 32, input + len - 48, secret + 64, seed);
+    }
+    acc = XXH128_mix32B(acc, input + 16, input + len - 32, secret + 32, seed);
+  }
+  acc = XXH128_mix32B(acc, input, input + len - 16, secret, seed);
+  XXH128_hash_t h128;
+  h128.low64 = acc.low64 + acc.high64;
+  h128.high64 = (acc.low64 * PRIME64_1) + (acc.high64 * PRIME64_4) +
+                ((len - seed) * PRIME64_2);
+  h128.low64 = XXH3_avalanche(h128.low64);
+  h128.high64 = (uint64_t)0 - XXH3_avalanche(h128.high64);
+  return h128;
+}
+
+LLVM_ATTRIBUTE_NOINLINE static XXH128_hash_t
+XXH3_len_129to240_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                       size_t secretSize, uint64_t seed) {
+  (void)secretSize;
+
+  XXH128_hash_t acc;
+  unsigned i;
+  acc.low64 = len * PRIME64_1;
+  acc.high64 = 0;
+  /*
+   *  We set as `i` as offset + 32. We do this so that unchanged
+   * `len` can be used as upper bound. This reaches a sweet spot
+   * where both x86 and aarch64 get simple agen and good codegen
+   * for the loop.
+   */
+  for (i = 32; i < 160; i += 32) {
+    acc = XXH128_mix32B(acc, input + i - 32, input + i - 16, secret + i - 32,
+                        seed);
+  }
+  acc.low64 = XXH3_avalanche(acc.low64);
+  acc.high64 = XXH3_avalanche(acc.high64);
+  /*
+   * NB: `i <= len` will duplicate the last 32-bytes if
+   * len % 32 was zero. This is an unfortunate necessity to keep
+   * the hash result stable.
+   */
+  for (i = 160; i <= len; i += 32) {
+    acc = XXH128_mix32B(acc, input + i - 32, input + i - 16,
+                        secret + XXH3_MIDSIZE_STARTOFFSET + i - 160, seed);
+  }
+  /* last bytes */
+  acc =
+      XXH128_mix32B(acc, input + len - 16, input + len - 32,
+                    secret + XXH3_SECRETSIZE_MIN - XXH3_MIDSIZE_LASTOFFSET - 16,
+                    (uint64_t)0 - seed);
+
+  XXH128_hash_t h128;
+  h128.low64 = acc.low64 + acc.high64;
+  h128.high64 = (acc.low64 * PRIME64_1) + (acc.high64 * PRIME64_4) +
+                ((len - seed) * PRIME64_2);
+  h128.low64 = XXH3_avalanche(h128.low64);
+  h128.high64 = (uint64_t)0 - XXH3_avalanche(h128.high64);
+  return h128;
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE XXH128_hash_t
+XXH3_hashLong_128b(const uint8_t *input, size_t len, const uint8_t *secret,
+                   size_t secretSize) {
+  const size_t nbStripesPerBlock =
+      (secretSize - XXH_STRIPE_LEN) / XXH_SECRET_CONSUME_RATE;
+  const size_t block_len = XXH_STRIPE_LEN * nbStripesPerBlock;
+  const size_t nb_blocks = (len - 1) / block_len;
+  alignas(16) uint64_t acc[XXH_ACC_NB] = {
+      PRIME32_3, PRIME64_1, PRIME64_2, PRIME64_3,
+      PRIME64_4, PRIME32_2, PRIME64_5, PRIME32_1,
+  };
+
+  for (size_t n = 0; n < nb_blocks; ++n) {
+    XXH3_accumulate_scalar(acc, input + n * block_len, secret,
+                           nbStripesPerBlock);
+    XXH3_scrambleAcc(acc, secret + secretSize - XXH_STRIPE_LEN);
+  }
+
+  /* last partial block */
+  const size_t nbStripes = (len - 1 - (block_len * nb_blocks)) / XXH_STRIPE_LEN;
+  assert(nbStripes <= secretSize / XXH_SECRET_CONSUME_RATE);
+  XXH3_accumulate_scalar(acc, input + nb_blocks * block_len, secret, nbStripes);
+
+  /* last stripe */
+  constexpr size_t XXH_SECRET_LASTACC_START = 7;
+  XXH3_accumulate_512_scalar(acc, input + len - XXH_STRIPE_LEN,
+                             secret + secretSize - XXH_STRIPE_LEN -
+                                 XXH_SECRET_LASTACC_START);
+
+  /* converge into final hash */
+  static_assert(sizeof(acc) == 64);
+  XXH128_hash_t h128;
+  constexpr size_t XXH_SECRET_MERGEACCS_START = 11;
+  h128.low64 = XXH3_mergeAccs(acc, secret + XXH_SECRET_MERGEACCS_START,
+                              (uint64_t)len * PRIME64_1);
+  h128.high64 = XXH3_mergeAccs(
+      acc, secret + secretSize - sizeof(acc) - XXH_SECRET_MERGEACCS_START,
+      ~((uint64_t)len * PRIME64_2));
+  return h128;
+}
+
+llvm::XXH128_hash_t llvm::xxh3_128bits(ArrayRef<uint8_t> data) {
+  size_t len = data.size();
+  const uint8_t *input = data.data();
+
+  /*
+   * If an action is to be taken if `secret` conditions are not respected,
+   * it should be done here.
+   * For now, it's a contract pre-condition.
+   * Adding a check and a branch here would cost performance at every hash.
+   */
+  if (len <= 16)
+    return XXH3_len_0to16_128b(input, len, kSecret, /*seed64=*/0);
+  if (len <= 128)
+    return XXH3_len_17to128_128b(input, len, kSecret, sizeof(kSecret),
+                                 /*seed64=*/0);
+  if (len <= XXH3_MIDSIZE_MAX)
+    return XXH3_len_129to240_128b(input, len, kSecret, sizeof(kSecret),
+                                  /*seed64=*/0);
+  return XXH3_hashLong_128b(input, len, kSecret, sizeof(kSecret));
 }

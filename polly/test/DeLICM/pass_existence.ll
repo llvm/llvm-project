@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-delicm -disable-output < %s
-; RUN: opt %loadPolly -polly-print-delicm -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly "-passes=scop(print<polly-delicm>)" -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-delicm -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-delicm>' -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=scop(print<polly-delicm>)' -disable-output < %s | FileCheck %s
 ;
 ; Simple test for the existence of the DeLICM pass.
 ;

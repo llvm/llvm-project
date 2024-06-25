@@ -19,8 +19,8 @@
 ;          sign-extended and used later.
 ;
 ; CHECK: define{{.*}}test
-; CHECK: call{{.*}}dbg.value(metadata i32 %p
-; CHECK: call{{.*}}dbg.value(metadata i32 %add
+; CHECK: #dbg_value(i32 %p
+; CHECK: #dbg_value(i32 %add
 ;
 define dso_local void @_Z4testi(i32 %p) local_unnamed_addr !dbg !7 {
 entry:

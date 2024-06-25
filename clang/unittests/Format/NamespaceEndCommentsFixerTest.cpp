@@ -17,16 +17,16 @@ namespace clang {
 namespace format {
 namespace {
 
-class NamespaceEndCommentsFixerTest : public ::testing::Test {
+class NamespaceEndCommentsFixerTest : public testing::Test {
 protected:
   std::string
-  fixNamespaceEndComments(llvm::StringRef Code,
+  fixNamespaceEndComments(StringRef Code,
                           const std::vector<tooling::Range> &Ranges,
                           const FormatStyle &Style = getLLVMStyle()) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
     tooling::Replacements Replaces =
-        clang::format::fixNamespaceEndComments(Style, Code, Ranges, "<stdin>");
+        format::fixNamespaceEndComments(Style, Code, Ranges, "<stdin>");
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
     LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
@@ -34,7 +34,7 @@ protected:
   }
 
   std::string
-  fixNamespaceEndComments(llvm::StringRef Code,
+  fixNamespaceEndComments(StringRef Code,
                           const FormatStyle &Style = getLLVMStyle()) {
     return fixNamespaceEndComments(
         Code,
@@ -43,8 +43,7 @@ protected:
 
   bool isFormatted(StringRef Code, const std::vector<tooling::Range> &Ranges,
                    const FormatStyle &Style = getLLVMStyle()) const {
-    return clang::format::fixNamespaceEndComments(Style, Code, Ranges,
-                                                  "<stdin>")
+    return format::fixNamespaceEndComments(Style, Code, Ranges, "<stdin>")
         .empty();
   }
 

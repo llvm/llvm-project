@@ -37,9 +37,9 @@ define void @srhadd_i8_sext_i16_scalable(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 16 x i8>, ptr %b
   %ext1 = sext <vscale x 16 x i8> %ld1 to <vscale x 16 x i16>
   %ext2 = sext <vscale x 16 x i8> %ld2 to <vscale x 16 x i16>
-  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, splat (i16 1)
   %add2 = add nuw nsw <vscale x 16 x i16> %add1, %ext2
-  %shr = lshr <vscale x 16 x i16> %add2, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %shr = lshr <vscale x 16 x i16> %add2, splat (i16 1)
   %trunc = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
   store <vscale x 16 x i8> %trunc, ptr %a
   ret void
@@ -58,9 +58,9 @@ define void @srhadd_i16_sext_i64_scalable(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 8 x i16>, ptr %b
   %ext1 = sext <vscale x 8 x i16> %ld1 to <vscale x 8 x i64>
   %ext2 = sext <vscale x 8 x i16> %ld2 to <vscale x 8 x i64>
-  %add1 = add nuw nsw <vscale x 8 x i64> %ext1, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 8 x i64> %ext1, splat (i64 1)
   %add2 = add nuw nsw <vscale x 8 x i64> %add1, %ext2
-  %shr = lshr <vscale x 8 x i64> %add2, shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = lshr <vscale x 8 x i64> %add2, splat (i64 1)
   %trunc = trunc <vscale x 8 x i64> %shr to <vscale x 8 x i16>
   store <vscale x 8 x i16> %trunc, ptr %a
   ret void
@@ -102,9 +102,9 @@ define void @urhadd_i8_zext_i64(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 16 x i8>, ptr %b
   %ext1 = zext <vscale x 16 x i8> %ld1 to <vscale x 16 x i64>
   %ext2 = zext <vscale x 16 x i8> %ld2 to <vscale x 16 x i64>
-  %add1 = add nuw nsw <vscale x 16 x i64> %ext1, shufflevector (<vscale x 16 x i64> insertelement (<vscale x 16 x i64> poison, i64 1, i64 0), <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 16 x i64> %ext1, splat (i64 1)
   %add2 = add nuw nsw <vscale x 16 x i64> %add1, %ext2
-  %shr = lshr <vscale x 16 x i64> %add2, shufflevector (<vscale x 16 x i64> insertelement (<vscale x 16 x i64> poison, i64 1, i64 0), <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer)
+  %shr = lshr <vscale x 16 x i64> %add2, splat (i64 1)
   %trunc = trunc <vscale x 16 x i64> %shr to <vscale x 16 x i8>
   store <vscale x 16 x i8> %trunc, ptr %a
   ret void
@@ -123,9 +123,9 @@ define void @urhadd_i16_zext_i32(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 8 x i16>, ptr %b
   %ext1 = zext <vscale x 8 x i16> %ld1 to <vscale x 8 x i32>
   %ext2 = zext <vscale x 8 x i16> %ld2 to <vscale x 8 x i32>
-  %add1 = add nuw nsw <vscale x 8 x i32> %ext1, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 8 x i32> %ext1, splat (i32 1)
   %add2 = add nuw nsw <vscale x 8 x i32> %add1, %ext2
-  %shr = lshr <vscale x 8 x i32> %add2, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = lshr <vscale x 8 x i32> %add2, splat (i32 1)
   %trunc = trunc <vscale x 8 x i32> %shr to <vscale x 8 x i16>
   store <vscale x 8 x i16> %trunc, ptr %a
   ret void
@@ -146,9 +146,9 @@ define void @ext_operand_mismatch(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 16 x i8>, ptr %b
   %ext1 = sext <vscale x 16 x i8> %ld1 to <vscale x 16 x i16>
   %ext2 = zext <vscale x 16 x i8> %ld2 to <vscale x 16 x i16>
-  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, splat (i16 1)
   %add2 = add nuw nsw <vscale x 16 x i16> %add1, %ext2
-  %shr = lshr <vscale x 16 x i16> %add2, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %shr = lshr <vscale x 16 x i16> %add2, splat (i16 1)
   %trunc = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
   store <vscale x 16 x i8> %trunc, ptr %a
   ret void
@@ -167,9 +167,9 @@ define void @add_multiple_uses(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 8 x i16>, ptr %b
   %ext1 = sext <vscale x 8 x i16> %ld1 to <vscale x 8 x i32>
   %ext2 = sext <vscale x 8 x i16> %ld2 to <vscale x 8 x i32>
-  %add1 = add nuw nsw <vscale x 8 x i32> %ext1, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 8 x i32> %ext1, splat (i32 1)
   %add2 = add nuw nsw <vscale x 8 x i32> %add1, %ext2
-  %shr = lshr <vscale x 8 x i32> %add2, shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 1, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = lshr <vscale x 8 x i32> %add2, splat (i32 1)
   %trunc = trunc <vscale x 8 x i32> %shr to <vscale x 8 x i16>
   %add.res = add nuw nsw <vscale x 8 x i32> %add1, %add2
   %res = trunc <vscale x 8 x i32> %add.res to <vscale x 8 x i16>
@@ -190,9 +190,9 @@ define void @shift_multiple_uses(ptr %a, ptr %b, ptr %dst) {
   %ld2 = load <vscale x 16 x i8>, ptr %b
   %ext1 = zext <vscale x 16 x i8> %ld1 to <vscale x 16 x i16>
   %ext2 = zext <vscale x 16 x i8> %ld2 to <vscale x 16 x i16>
-  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %add1 = add nuw nsw <vscale x 16 x i16> %ext1, splat (i16 1)
   %add2 = add nuw nsw <vscale x 16 x i16> %add1, %ext2
-  %shr = lshr <vscale x 16 x i16> %add2, shufflevector (<vscale x 16 x i16> insertelement (<vscale x 16 x i16> poison, i16 1, i64 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer)
+  %shr = lshr <vscale x 16 x i16> %add2, splat (i16 1)
   %trunc = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
   %add3 = add nuw nsw <vscale x 16 x i16> %shr, %add2
   %res = trunc <vscale x 16 x i16> %add3 to <vscale x 16 x i8>

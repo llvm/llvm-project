@@ -1,0 +1,33 @@
+# UNSUPPORTED: zlib
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -z -p .a -x .b %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK:      String dump of section '.a':
+# CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
+# CHECK-NEXT: [     0] .
+# CHECK-NEXT: [     8] .
+# CHECK-NEXT: [    10] .
+# CHECK-NEXT: [    18] x.c.
+# CHECK-NEXT: [    1e] .
+# CHECK-NEXT: [    20] .
+# CHECK-EMPTY:
+# CHECK-NEXT: Hex dump of section '.b':
+# CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
+# CHECK-NEXT: 0x00000000 01000000 00000000 01000000 00000000 ................
+# CHECK-NEXT: 0x00000010 01000000 00000000 789c6304 00000200 ........x.c.....
+# CHECK-NEXT: 0x00000020 02                                  .
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .a
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 010000000000000001000000000000000100000000000000789c63040000020002
+  - Name: .b
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 010000000000000001000000000000000100000000000000789c63040000020002

@@ -31,3 +31,9 @@ contains
     print *, storage_size(return_pdt(k))
   end subroutine
 end module
+
+subroutine test_assumed_rank(x)
+  real :: x(..)
+  !CHECK: PRINT *, sizeof(x)
+  print *, sizeof(x)
+end subroutine

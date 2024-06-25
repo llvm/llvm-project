@@ -68,3 +68,13 @@ bool doubleCheck(Container<int> x) {
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: decrementing and referencing a variable in a complex condition can cause unintended side-effects due to C++'s order of evaluation, consider moving the modification outside of the condition to avoid misunderstandings [bugprone-inc-dec-in-conditions]
   // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: incrementing and referencing a variable in a complex condition can cause unintended side-effects due to C++'s order of evaluation, consider moving the modification outside of the condition to avoid misunderstandings [bugprone-inc-dec-in-conditions]
 }
+
+namespace PR85838 {
+  void test()
+  {
+    auto foo = 0;
+    auto bar = 0;
+    if (++foo < static_cast<decltype(foo)>(bar)) {}
+    if (static_cast<decltype(++foo)>(bar) < foo) {}
+  }
+}

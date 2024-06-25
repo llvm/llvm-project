@@ -17,7 +17,7 @@
 #include <vector>
 
 namespace llvm {
-class ThreadPool;
+class ThreadPoolInterface;
 } // namespace llvm
 
 namespace mlir {
@@ -50,7 +50,7 @@ class IRUnit;
 /// To control better thread spawning, an externally owned ThreadPool can be
 /// injected in the context. For example:
 ///
-///  llvm::ThreadPool myThreadPool;
+///  llvm::DefaultThreadPool myThreadPool;
 ///  while (auto *request = nextCompilationRequests()) {
 ///    MLIRContext ctx(registry, MLIRContext::Threading::DISABLED);
 ///    ctx.setThreadPool(myThreadPool);
@@ -162,7 +162,7 @@ public:
   /// The command line debugging flag `--mlir-disable-threading` will still
   /// prevent threading from being enabled and threading won't be enabled after
   /// this call in this case.
-  void setThreadPool(llvm::ThreadPool &pool);
+  void setThreadPool(llvm::ThreadPoolInterface &pool);
 
   /// Return the number of threads used by the thread pool in this context. The
   /// number of computed hardware threads can change over the lifetime of a
@@ -175,7 +175,7 @@ public:
   /// multithreading be enabled within the context, and should generally not be
   /// used directly. Users should instead prefer the threading utilities within
   /// Threading.h.
-  llvm::ThreadPool &getThreadPool();
+  llvm::ThreadPoolInterface &getThreadPool();
 
   /// Return true if we should attach the operation to diagnostics emitted via
   /// Operation::emit.

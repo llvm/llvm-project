@@ -1,4 +1,4 @@
-// RUN: %clang -g -std=c++11 -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -g -gno-template-alias -std=c++11 -S -emit-llvm %s -o - | FileCheck %s
 
 template<typename T>
 struct foo {

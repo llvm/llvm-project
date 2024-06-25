@@ -182,4 +182,14 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @atomicrmw_add_global_to_flat_preserve_amdgpu_md(
+; CHECK-NEXT: %ret = atomicrmw add ptr addrspace(1) %global.ptr, i32 %y seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+define i32 @atomicrmw_add_global_to_flat_preserve_amdgpu_md(ptr addrspace(1) %global.ptr, i32 %y) #0 {
+  %cast = addrspacecast ptr addrspace(1) %global.ptr to ptr
+  %ret = atomicrmw add ptr %cast, i32 %y seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+  ret i32 %ret
+}
+
 attributes #0 = { nounwind }
+
+!0 = !{}

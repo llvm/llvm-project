@@ -228,34 +228,12 @@ define void @widen_broadcast_unaligned(ptr %p0, i32 %v) {
 }
 
 define i128 @load_i128(ptr %ptr) {
-; CHECK-O0-LABEL: load_i128:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rbx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O0-NEXT:    xorl %eax, %eax
-; CHECK-O0-NEXT:    movl %eax, %ebx
-; CHECK-O0-NEXT:    movq %rbx, %rax
-; CHECK-O0-NEXT:    movq %rbx, %rdx
-; CHECK-O0-NEXT:    movq %rbx, %rcx
-; CHECK-O0-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-O0-NEXT:    popq %rbx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: load_i128:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rbx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O3-NEXT:    xorl %eax, %eax
-; CHECK-O3-NEXT:    xorl %edx, %edx
-; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    xorl %ebx, %ebx
-; CHECK-O3-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-O3-NEXT:    popq %rbx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: load_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    vpextrq $1, %xmm0, %rdx
+; CHECK-NEXT:    retq
   %v = load atomic i128, ptr %ptr unordered, align 16
   ret i128 %v
 }
@@ -263,51 +241,18 @@ define i128 @load_i128(ptr %ptr) {
 define void @store_i128(ptr %ptr, i128 %v) {
 ; CHECK-O0-LABEL: store_i128:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rbx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq (%rdi), %rax
-; CHECK-O0-NEXT:    movq 8(%rdi), %rdx
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    jmp .LBB16_1
-; CHECK-O0-NEXT:  .LBB16_1: # %atomicrmw.start
-; CHECK-O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-O0-NEXT:    lock cmpxchg16b (%rsi)
-; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    jne .LBB16_1
-; CHECK-O0-NEXT:    jmp .LBB16_2
-; CHECK-O0-NEXT:  .LBB16_2: # %atomicrmw.end
-; CHECK-O0-NEXT:    popq %rbx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    vmovq %rsi, %xmm0
+; CHECK-O0-NEXT:    vmovq %rdx, %xmm1
+; CHECK-O0-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-O0-NEXT:    vmovdqa %xmm0, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i128:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rbx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    .cfi_offset %rbx, -16
-; CHECK-O3-NEXT:    movq %rdx, %rcx
-; CHECK-O3-NEXT:    movq %rsi, %rbx
-; CHECK-O3-NEXT:    movq (%rdi), %rax
-; CHECK-O3-NEXT:    movq 8(%rdi), %rdx
-; CHECK-O3-NEXT:    .p2align 4, 0x90
-; CHECK-O3-NEXT:  .LBB16_1: # %atomicrmw.start
-; CHECK-O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-O3-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-O3-NEXT:    jne .LBB16_1
-; CHECK-O3-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-O3-NEXT:    popq %rbx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    vmovq %rdx, %xmm0
+; CHECK-O3-NEXT:    vmovq %rsi, %xmm1
+; CHECK-O3-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-O3-NEXT:    vmovdqa %xmm0, (%rdi)
 ; CHECK-O3-NEXT:    retq
   store atomic i128 %v, ptr %ptr unordered, align 16
   ret void

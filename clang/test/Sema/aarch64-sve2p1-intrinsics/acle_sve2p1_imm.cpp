@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2p1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -fsyntax-only -verify %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -187,4 +187,33 @@ void test_svget_svset_b(uint64_t idx, svboolx2_t tuple2, svboolx4_t tuple4, svbo
   svset4_b(tuple4, idx, res); // expected-error {{argument to 'svset4_b' must be a constant integer}}
   svget2_b(tuple2, idx); // expected-error {{argument to 'svget2_b' must be a constant integer}}
   svget4_b(tuple4, idx); // expected-error {{argument to 'svget4_b' must be a constant integer}}
+}
+
+__attribute__((target("+sve2p1")))
+void test_svdup_laneq(){  
+  svuint8_t zn_u8;
+  svuint16_t zn_u16;
+  svuint32_t zn_u32;
+  svuint64_t zn_u64;
+  svint8_t zn_s8;
+  svint16_t zn_s16;
+  svint32_t zn_s32;
+  svint64_t zn_s64;
+  svfloat16_t zn_f16;
+  svfloat32_t zn_f32;
+  svfloat64_t zn_f64;
+  svbfloat16_t zn_bf16;
+
+  svdup_laneq_u8(zn_u8,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
+  svdup_laneq_u16(zn_u16,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svdup_laneq_u32(zn_u32,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svdup_laneq_u64(zn_u64,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svdup_laneq_s8(zn_s8,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
+  svdup_laneq_s16(zn_s16,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svdup_laneq_s32(zn_s32,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svdup_laneq_s64(zn_s64,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svdup_laneq_f16(zn_f16,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svdup_laneq_f32(zn_f32,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  svdup_laneq_f64(zn_f64,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
+  svdup_laneq_bf16(zn_bf16,-1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
 }

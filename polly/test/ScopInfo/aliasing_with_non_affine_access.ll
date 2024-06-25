@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -polly-process-unprofitable -polly-allow-nonaffine -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -polly-process-unprofitable -polly-allow-nonaffine -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; @test1
 ; Make sure we generate the correct aliasing check for a fixed-size memset operation.

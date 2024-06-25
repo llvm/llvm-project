@@ -121,8 +121,8 @@ class TestThreadPlanCommands(TestBase):
         call_me_bkpt = target.BreakpointCreateBySourceRegex(
             "Set another here", self.main_source_file
         )
-        self.assertTrue(
-            call_me_bkpt.GetNumLocations() > 0, "Set the breakpoint successfully"
+        self.assertGreater(
+            call_me_bkpt.GetNumLocations(), 0, "Set the breakpoint successfully"
         )
         thread.StepUsingScriptedThreadPlan("wrap_step_over.WrapStepOver")
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, call_me_bkpt)
@@ -170,14 +170,14 @@ class TestThreadPlanCommands(TestBase):
         second_step_bkpt = target.BreakpointCreateBySourceRegex(
             "Run here to step over again", self.main_source_file
         )
-        self.assertTrue(
-            second_step_bkpt.GetNumLocations() > 0, "Set the breakpoint successfully"
+        self.assertGreater(
+            second_step_bkpt.GetNumLocations(), 0, "Set the breakpoint successfully"
         )
         final_bkpt = target.BreakpointCreateBySourceRegex(
             "Make sure we get here on last continue", self.main_source_file
         )
-        self.assertTrue(
-            final_bkpt.GetNumLocations() > 0, "Set the breakpoint successfully"
+        self.assertGreater(
+            final_bkpt.GetNumLocations(), 0, "Set the breakpoint successfully"
         )
 
         threads = lldbutil.continue_to_breakpoint(process, second_step_bkpt)

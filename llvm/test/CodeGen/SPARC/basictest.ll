@@ -28,11 +28,11 @@ define i32 @test2(i32 %X, i32 %Y) {
 ; CHECK-LABEL: store_zero:
 ; CHECK: st   %g0, [%o0]
 ; CHECK: st   %g0, [%o1+4]
-define i32 @store_zero(i32* %a, i32* %b) {
+define i32 @store_zero(ptr %a, ptr %b) {
 entry:
-  store i32 0, i32* %a, align 4
-  %0 = getelementptr inbounds i32, i32* %b, i32 1
-  store i32 0, i32* %0, align 4
+  store i32 0, ptr %a, align 4
+  %0 = getelementptr inbounds i32, ptr %b, i32 1
+  store i32 0, ptr %0, align 4
   ret i32 0
 }
 
@@ -88,10 +88,10 @@ define i64 @unsigned_multiply_32x32_64(i32 %a, i32 %b) {
 ; CHECK: addxcc %o2, 0, %o4
 ; CHECK: retl
 ; CHECK: std %o4, [%o1]
-define void @load_store_64bit(i64* %x, i64* %y) {
+define void @load_store_64bit(ptr %x, ptr %y) {
 entry:
-  %0 = load i64, i64* %x
+  %0 = load i64, ptr %x
   %add = add nsw i64 %0, 3
-  store i64 %add, i64* %y
+  store i64 %add, ptr %y
   ret void
 }

@@ -79,6 +79,7 @@ add_llvm_target(MipsCodeGen
   Support
   Target
   TargetParser
+  TransformUtils
 
   ADD_TO_COMPONENT
   Mips

@@ -1,4 +1,5 @@
 ; RUN: opt -disable-output -debugify-each -passes=gvn < %s 2>&1 | FileCheck %s
+; RUN: opt --experimental-debuginfo-iterators=false -disable-output -debugify-each -passes=gvn < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: ERROR: Instruction with empty DebugLoc in function _Z3bazv --  {{%.*}} = phi
 ; CHECK: CheckFunctionDebugify [GVNPass]: PASS

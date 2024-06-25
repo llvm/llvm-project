@@ -13,7 +13,6 @@
 #include "src/unistd/close.h"
 
 #include "src/errno/libc_errno.h"
-#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM

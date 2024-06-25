@@ -64,6 +64,13 @@
 
 # WATCHOS-4-0: cmd LC_VERSION_MIN_WATCHOS
 
+# RUN: %no-arg-lld -arch x86_64 -platform_version xros 1.0 1.1 -o %t.xros-1-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.xros-1-0 | FileCheck %s --check-prefix=XROS-1-0
+# RUN: %no-arg-lld -arch x86_64 -platform_version xros-simulator 1.0 1.1 -o %t.xros-sim-1-0 %t.o
+# RUN: llvm-objdump --macho --all-headers %t.xros-sim-1-0 | FileCheck %s --check-prefix=XROS-1-0
+
+# XROS-1-0: cmd LC_BUILD_VERSION
+
 .text
 .global _main
 _main:

@@ -130,3 +130,95 @@ body: |
     %freeze:_(s2) = G_FREEZE %x
     %ext:_(s64) = G_ZEXT %freeze
     $x0 = COPY %ext(s64)
+...
+---
+name:            test_freeze_v4s1
+body: |
+  bb.0.entry:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_freeze_v4s1
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[DEF]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[FREEZE]](<4 x s16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: %ext:_(<4 x s32>) = G_AND [[ANYEXT]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY %ext(<4 x s32>)
+    %x:_(<4 x s1>) = G_IMPLICIT_DEF
+    %freeze:_(<4 x s1>) = G_FREEZE %x
+    %ext:_(<4 x s32>) = G_ZEXT %freeze
+    $q0 = COPY %ext(<4 x s32>)
+...
+---
+name:            test_freeze_v3s8
+body: |
+  bb.0.entry:
+    liveins: $q0
+    ; CHECK-LABEL: name: test_freeze_v3s8
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s16)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s16)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[UV2]](s16)
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR [[TRUNC]](s8), [[TRUNC1]](s8), [[TRUNC2]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8), [[DEF1]](s8)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<8 x s16>) = G_ANYEXT [[BUILD_VECTOR]](<8 x s8>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(<4 x s16>), [[UV5:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[ANYEXT]](<8 x s16>)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[UV4]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16), [[UV8:%[0-9]+]]:_(s16), [[UV9:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[FREEZE]](<4 x s16>)
+    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV6]](s16)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %ext0:_(s32) = G_AND [[ANYEXT1]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV7]](s16)
+    ; CHECK-NEXT: %ext1:_(s32) = G_AND [[ANYEXT2]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV8]](s16)
+    ; CHECK-NEXT: %ext2:_(s32) = G_AND [[ANYEXT3]], [[C]]
+    ; CHECK-NEXT: %res:_(<4 x s32>) = G_BUILD_VECTOR %ext0(s32), %ext1(s32), %ext2(s32), %undef(s32)
+    ; CHECK-NEXT: $q0 = COPY %res(<4 x s32>)
+    %x:_(<3 x s8>) = G_IMPLICIT_DEF
+    %freeze:_(<3 x s8>) = G_FREEZE %x
+    %ext:_(<3 x s32>) = G_ZEXT %freeze
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %ext0:_(s32), %ext1:_(s32), %ext2:_(s32) = G_UNMERGE_VALUES %ext
+    %res:_(<4 x s32>) = G_BUILD_VECTOR %ext0, %ext1, %ext2, %undef
+    $q0 = COPY %res(<4 x s32>)
+...
+---
+name:            test_freeze_v4s1_select
+body: |
+  bb.0.entry:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: test_freeze_v4s1_select
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(<4 x s32>) = nnan ninf nsz arcp contract afn reassoc G_FCMP floatpred(olt), [[COPY]](<4 x s32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[FCMP1:%[0-9]+]]:_(<4 x s32>) = nnan ninf nsz arcp contract afn reassoc G_FCMP floatpred(ogt), [[COPY1]](<4 x s32>), [[COPY]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP1]](<4 x s32>)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[TRUNC]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<4 x s16>) = G_AND [[TRUNC1]], [[FREEZE]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[AND]](<4 x s16>)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[ANYEXT]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: $q0 = COPY [[AND1]](<4 x s32>)
+    %1:_(<4 x s32>) = COPY $q0
+    %2:_(<4 x s32>) = COPY $q1
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(<4 x s32>) = G_BUILD_VECTOR %3, %3, %3, %3
+    %5:_(s1) = G_CONSTANT i1 false
+    %6:_(<4 x s1>) = nnan ninf nsz arcp contract afn reassoc G_FCMP floatpred(olt), %1:_(<4 x s32>), %4:_
+    %7:_(<4 x s1>) = nnan ninf nsz arcp contract afn reassoc G_FCMP floatpred(ogt), %2:_(<4 x s32>), %1:_
+    %8:_(<4 x s1>) = G_FREEZE %7
+    %9:_(<4 x s1>) = G_AND %6, %8
+    %10:_(<4 x s32>) = G_ZEXT %9
+    $q0 = COPY %10

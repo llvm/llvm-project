@@ -88,7 +88,7 @@ public:
                               lldb::pid_t pid);
 
   /// Emit the given message to the operating system log.
-  static void SystemLog(llvm::StringRef message);
+  static void SystemLog(lldb::Severity severity, llvm::StringRef message);
 
   /// Get the process ID for the calling process.
   ///

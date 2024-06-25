@@ -1,4 +1,5 @@
 ; RUN: opt -march=hexagon -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -march=hexagon -p hexagon-loop-idiom -S < %s | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Check for sane output, this used to crash.

@@ -301,7 +301,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD:       omp.loop.exit:
 // CHECK-AMD-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP17]], align 4
-// CHECK-AMD-NEXT:    call void @__kmpc_distribute_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP18]])
+// CHECK-AMD-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB3]] to ptr), i32 [[TMP18]])
 // CHECK-AMD-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK-AMD:       omp.precond.end:
 // CHECK-AMD-NEXT:    ret void

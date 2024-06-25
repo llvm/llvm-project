@@ -319,16 +319,16 @@ define dso_local signext i32 @array0() local_unnamed_addr #0 {
 ; AIX32-NEXT:    mflr r0
 ; AIX32-NEXT:    stwu r1, -96(r1)
 ; AIX32-NEXT:    lis r6, 0
-; AIX32-NEXT:    lwz r4, L..C0(r2) # @__ModuleStringPool
-; AIX32-NEXT:    li r5, 12
+; AIX32-NEXT:    lwz r5, L..C0(r2) # @__ModuleStringPool
+; AIX32-NEXT:    li r4, 12
 ; AIX32-NEXT:    addi r3, r1, 64
 ; AIX32-NEXT:    stw r0, 104(r1)
 ; AIX32-NEXT:    ori r7, r6, 35596
-; AIX32-NEXT:    rlwimi r5, r3, 0, 30, 27
-; AIX32-NEXT:    lxvw4x vs0, r4, r7
-; AIX32-NEXT:    stxvw4x vs0, 0, r5
-; AIX32-NEXT:    ori r5, r6, 35584
-; AIX32-NEXT:    lxvw4x vs0, r4, r5
+; AIX32-NEXT:    rlwimi r4, r3, 0, 30, 27
+; AIX32-NEXT:    lxvw4x vs0, r5, r7
+; AIX32-NEXT:    stxvw4x vs0, 0, r4
+; AIX32-NEXT:    ori r4, r6, 35584
+; AIX32-NEXT:    lxvw4x vs0, r5, r4
 ; AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; AIX32-NEXT:    bl .calleeInt[PR]
 ; AIX32-NEXT:    nop

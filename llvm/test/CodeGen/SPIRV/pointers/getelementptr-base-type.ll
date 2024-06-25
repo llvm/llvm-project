@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK:  %[[#FLOAT32:]] = OpTypeFloat 32
 ; CHECK:  %[[#PTR:]] = OpTypePointer CrossWorkgroup %[[#FLOAT32]]

@@ -111,12 +111,12 @@ declare void @__cxa_rethrow()
 define i32 @catch_thing() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define {{[^@]+}}@catch_thing() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @__cxa_rethrow()
-; CHECK-NEXT:    to label [[TMP1:%.*]] unwind label [[TMP2:%.*]]
+; CHECK-NEXT:            to label [[TMP1:%.*]] unwind label [[TMP2:%.*]]
 ; CHECK:       1:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr null
+; CHECK-NEXT:            catch ptr null
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, i32 } [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[TMP4]])
 ; CHECK-NEXT:    tail call void @__cxa_end_catch()

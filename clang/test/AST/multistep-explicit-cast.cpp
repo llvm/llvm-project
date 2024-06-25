@@ -1,5 +1,5 @@
 // Test without serialization:
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ast-dump %s | FileCheck %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -o %t %s

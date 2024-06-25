@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -stats -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -stats -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-DAG:  4 polly-scops      - Maximal number of loops in scops

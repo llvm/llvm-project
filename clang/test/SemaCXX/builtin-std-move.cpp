@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s
 // RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -DNO_CONSTEXPR
 // RUN: %clang_cc1 -std=c++20 -verify=cxx20,expected %s
+//
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -std=c++17 -verify=cxx17,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP -DNO_CONSTEXPR
+// RUN: %clang_cc1 -std=c++20 -verify=cxx20,expected %s -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 namespace std {
 #ifndef NO_CONSTEXPR
@@ -112,7 +116,7 @@ constexpr bool f(A a) { // #f
 
 #ifndef NO_CONSTEXPR
 static_assert(f({}), "should be constexpr");
-#else
+#elif !defined(NEW_INTERP)
 // expected-error@#f {{never produces a constant expression}}
 // expected-note@#call {{}}
 #endif

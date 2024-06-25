@@ -419,19 +419,7 @@ public:
       : CommandObjectParsed(
             interpreter, "demangle", "Demangle a C++ mangled name.",
             "language cplusplus demangle [<mangled-name> ...]") {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeSymbol;
-    index_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeSymbol, eArgRepeatPlus);
   }
 
   ~CommandObjectMultiwordItaniumABI_Demangle() override = default;

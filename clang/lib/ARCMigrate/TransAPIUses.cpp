@@ -41,7 +41,7 @@ public:
     getReturnValueSel = sels.getUnarySelector(&ids.get("getReturnValue"));
     setReturnValueSel = sels.getUnarySelector(&ids.get("setReturnValue"));
 
-    IdentifierInfo *selIds[2];
+    const IdentifierInfo *selIds[2];
     selIds[0] = &ids.get("getArgument");
     selIds[1] = &ids.get("atIndex");
     getArgumentSel = sels.getSelector(2, selIds);

@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fmodules -fmodule-format=obj -fmodule-name=MainA \
 // RUN:     -debug-info-kind=limited -dwarf-ext-refs \
 // RUN:     -fimplicit-module-maps -x c -fmodules-cache-path=%t -F %S/Inputs \
-// RUN:     %s -S -emit-llvm -debugger-tuning=lldb -o - | FileCheck %s
+// RUN:     %s -emit-llvm -debugger-tuning=lldb -o - | FileCheck %s
 
 #include "MainA/MainPriv.h"
 

@@ -13,7 +13,7 @@
 
 ; Check that we do not crash in object mode
 ; OBJ:       Exception section {
-; OBJ-NEXT:    Symbol: .test__trap_annotation (3)
+; OBJ-NEXT:    Symbol: .test__trap_annotation
 
 !1 = !{!"ppc-trap-reason", !"1", !"2"}
 declare void @llvm.ppc.trap(i32 %a)

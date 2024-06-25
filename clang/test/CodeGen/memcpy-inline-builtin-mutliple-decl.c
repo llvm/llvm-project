@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-w64-mingw32 -S -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-w64-mingw32 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 //
 // Verifies that clang detects memcpy inline version and uses it instead of the builtin.
 // Checks that clang correctly walks through multiple forward declaration.

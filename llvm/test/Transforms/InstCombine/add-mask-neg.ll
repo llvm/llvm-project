@@ -89,8 +89,8 @@ define <2 x i32> @dec_mask_neg_v2i32(<2 x i32> %X) {
   ret <2 x i32> %dec
 }
 
-define <2 x i32> @dec_mask_neg_v2i32_undef(<2 x i32> %X) {
-; CHECK-LABEL: @dec_mask_neg_v2i32_undef(
+define <2 x i32> @dec_mask_neg_v2i32_poison(<2 x i32> %X) {
+; CHECK-LABEL: @dec_mask_neg_v2i32_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[X]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[DEC:%.*]] = and <2 x i32> [[TMP1]], [[TMP2]]
@@ -98,7 +98,7 @@ define <2 x i32> @dec_mask_neg_v2i32_undef(<2 x i32> %X) {
 ;
   %neg = sub <2 x i32> zeroinitializer, %X
   %mask = and <2 x i32> %neg, %X
-  %dec = add <2 x i32> %mask, <i32 -1, i32 undef>
+  %dec = add <2 x i32> %mask, <i32 -1, i32 poison>
   ret <2 x i32> %dec
 }
 

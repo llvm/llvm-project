@@ -35,8 +35,8 @@ define <vscale x 16 x i8> @urem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(
 ; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
 ;
-  %BO0 = mul nuw <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 15, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-  %BO1 = mul <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 5, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %BO0 = mul nuw <vscale x 16 x i8> %X, splat (i8 15)
+  %BO1 = mul <vscale x 16 x i8> %X, splat (i8 5)
   %r = urem <vscale x 16 x i8> %BO0, %BO1
   ret <vscale x 16 x i8> %r
 }
@@ -253,8 +253,8 @@ define <vscale x 16 x i8> @srem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(<vscale x 16 
 ; CHECK-LABEL: @srem_XY_XZ_with_CY_rem_CZ_eq_0_scalable(
 ; CHECK-NEXT:    ret <vscale x 16 x i8> zeroinitializer
 ;
-  %BO0 = mul nsw <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 15, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
-  %BO1 = mul <vscale x 16 x i8> %X, shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 5, i64 0) , <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer)
+  %BO0 = mul nsw <vscale x 16 x i8> %X, splat (i8 15)
+  %BO1 = mul <vscale x 16 x i8> %X, splat (i8 5)
   %r = srem <vscale x 16 x i8> %BO0, %BO1
   ret <vscale x 16 x i8> %r
 }

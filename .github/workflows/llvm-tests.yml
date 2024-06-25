@@ -42,6 +42,7 @@ jobs:
       BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
       BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
+      BASELINE_VERSION_MINOR: ${{ steps.vars.outputs.BASELINE_VERSION_MINOR }}
       LLVM_VERSION_MAJOR: ${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
       LLVM_VERSION_MINOR: ${{ steps.version.outputs.LLVM_VERSION_MINOR }}
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
@@ -58,7 +59,14 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
-          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 ] || [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+          # C++ ABI:
+          # 18.1.0 we aren't doing ABI checks.
+          # 18.1.1 We want to check 18.1.0.
+          # C ABI:
+          # 18.1.0 We want to check 17.0.x
+          # 18.1.1 We want to check 18.1.0
+          echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
+          if [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
             {
               echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))"
               echo "ABI_HEADERS=llvm-c"
@@ -82,7 +90,7 @@ jobs:
         include:
           - name: build-baseline
             llvm_version_major: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}
-            ref: llvmorg-${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}.0.0
+            ref: llvmorg-${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}.${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MINOR }}.0
             repo: llvm/llvm-project
           - name: build-latest
             llvm_version_major: ${{ needs.abi-dump-setup.outputs.LLVM_VERSION_MAJOR }}

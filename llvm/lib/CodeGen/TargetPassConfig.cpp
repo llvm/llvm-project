@@ -205,6 +205,10 @@ static cl::opt<bool> MISchedPostRA(
 static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
     cl::desc("Run live interval analysis earlier in the pipeline"));
 
+static cl::opt<bool> DisableReplaceWithVecLib(
+    "disable-replace-with-vec-lib", cl::Hidden,
+    cl::desc("Disable replace with vector math call pass"));
+
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
 /// to duplicate their names all over the place.
@@ -856,7 +860,7 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableReplaceWithVecLib)
     addPass(createReplaceWithVeclibLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
@@ -866,6 +870,9 @@ void TargetPassConfig::addIRPasses() {
   // This pass has to run before ScalarizeMaskedMemIntrin and ExpandReduction
   // passes since it emits those kinds of intrinsics.
   addPass(createExpandVectorPredicationPass());
+
+  // Instrument function entry after all inlining.
+  addPass(createPostInlineEntryExitInstrumenterPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
@@ -918,7 +925,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
   case ExceptionHandling::None:
@@ -1221,19 +1228,13 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
+  bool NeedsBBSections =
+      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
   // Machine function splitter uses the basic block sections feature. Both
-  // cannot be enabled at the same time. Basic block sections takes precedence.
-  // FIXME: In principle, BasicBlockSection::Labels and splitting can used
-  // together. Update this check once we have addressed any issues.
-  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
-    if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
-      addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
-          TM->getBBSectionsFuncListBuf()));
-      addPass(llvm::createBasicBlockPathCloningPass());
-    }
-    addPass(llvm::createBasicBlockSectionsPass());
-  } else if (TM->Options.EnableMachineFunctionSplitter ||
-             EnableMachineFunctionSplitter) {
+  // cannot be enabled at the same time. We do not apply machine function
+  // splitter if -basic-block-sections is requested.
+  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
+                           EnableMachineFunctionSplitter)) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1249,6 +1250,16 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
+  }
+  // We run the BasicBlockSections pass if either we need BB sections or BB
+  // address map (or both).
+  if (NeedsBBSections || TM->Options.BBAddrMap) {
+    if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
+      addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
+          TM->getBBSectionsFuncListBuf()));
+      addPass(llvm::createBasicBlockPathCloningPass());
+    }
+    addPass(llvm::createBasicBlockSectionsPass());
   }
 
   addPostBBSections();
@@ -1422,6 +1433,8 @@ void TargetPassConfig::addFastRegAlloc() {
 /// scheduling, and register allocation itself.
 void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&DetectDeadLanesID);
+
+  addPass(&InitUndefID);
 
   addPass(&ProcessImplicitDefsID);
 

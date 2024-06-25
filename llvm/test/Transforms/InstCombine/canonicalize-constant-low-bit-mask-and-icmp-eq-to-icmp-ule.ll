@@ -62,8 +62,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat_edgecase0(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -4, i8 -1>
-; CHECK-NEXT:    [[RET:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[X:%.*]], <i8 4, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
@@ -80,12 +79,12 @@ define <2 x i1> @p2_vec_nonsplat_edgecase1(<2 x i8> %x) {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
-; CHECK-LABEL: @p3_vec_splat_undef(
+define <3 x i1> @p3_vec_splat_poison(<3 x i8> %x) {
+; CHECK-LABEL: @p3_vec_splat_poison(
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ult <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 poison, i8 3>
   %ret = icmp eq <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }

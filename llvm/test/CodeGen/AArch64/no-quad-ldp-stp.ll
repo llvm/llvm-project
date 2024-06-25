@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=aarch64-eabi -mattr=+slow-paired-128 -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,SLOW
-; RUN: llc < %s -mtriple=aarch64-eabi -mcpu=exynos-m3         -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,FAST
+; RUN: llc < %s -mtriple=aarch64 -mattr=+slow-paired-128 -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,SLOW
+; RUN: llc < %s -mtriple=aarch64 -mcpu=exynos-m3         -verify-machineinstrs -asm-verbose=false | FileCheck %s --check-prefixes=CHECK,FAST
 
 ; CHECK-LABEL: test_nopair_st
 ; SLOW: str

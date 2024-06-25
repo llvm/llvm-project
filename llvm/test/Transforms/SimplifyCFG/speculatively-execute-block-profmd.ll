@@ -155,7 +155,7 @@ define i32 @unpredictable(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !unpredictable !2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !unpredictable [[META2:![0-9]+]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
@@ -190,7 +190,7 @@ define i32 @unpredictable_yet_taken(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !prof [[PROF0]], !unpredictable !2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[VAL]], i32 0, !prof [[PROF0]], !unpredictable [[META2]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]
@@ -225,7 +225,7 @@ define i32 @unpredictable_yet_nontaken(i1 %c, i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @sideeffect1()
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF0]], !unpredictable !2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 0, i32 [[VAL]], !prof [[PROF0]], !unpredictable [[META2]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[DISPATCH]] ]

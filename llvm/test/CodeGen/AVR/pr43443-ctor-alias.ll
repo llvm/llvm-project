@@ -13,11 +13,11 @@
 
 @f2 = global %struct.foo zeroinitializer
 
-@llvm.global_ctors = appending global [1 x { i32, void () addrspace(1)*, i8* }] [{ i32, void () addrspace(1)*, i8* } { i32 65535, void () addrspace(1)* @_GLOBAL__sub_I_failed.cc, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr addrspace(1), ptr }] [{ i32, ptr addrspace(1), ptr } { i32 65535, ptr addrspace(1) @_GLOBAL__sub_I_failed.cc, ptr null }]
 
-@_ZN3fooC1Ev = alias void (%struct.foo*), void (%struct.foo*) addrspace(1)* @_ZN3fooC2Ev
+@_ZN3fooC1Ev = alias void (ptr), ptr addrspace(1) @_ZN3fooC2Ev
 
-define void @_ZN3fooC2Ev(%struct.foo* dereferenceable(1) %this) {
+define void @_ZN3fooC2Ev(ptr dereferenceable(1) %this) {
 ; CHECK-LABEL: _ZN3fooC2Ev:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    push r28
@@ -42,9 +42,9 @@ define void @_ZN3fooC2Ev(%struct.foo* dereferenceable(1) %this) {
 ; CHECK-NEXT:    pop r28
 ; CHECK-NEXT:    ret
 entry:
-  %this.addr = alloca %struct.foo*
-  store %struct.foo* %this, %struct.foo** %this.addr
-  %this1 = load %struct.foo*, %struct.foo** %this.addr
+  %this.addr = alloca ptr
+  store ptr %this, ptr %this.addr
+  %this1 = load ptr, ptr %this.addr
   ret void
 }
 
@@ -56,7 +56,7 @@ define internal void @__cxx_global_var_init() addrspace(1) {
 ; CHECK-NEXT:    call _ZN3fooC1Ev
 ; CHECK-NEXT:    ret
 entry:
-  call addrspace(1) void @_ZN3fooC1Ev(%struct.foo* dereferenceable(1) @f2)
+  call addrspace(1) void @_ZN3fooC1Ev(ptr dereferenceable(1) @f2)
   ret void
 }
 

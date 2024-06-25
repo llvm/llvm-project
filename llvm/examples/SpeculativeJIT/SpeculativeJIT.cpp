@@ -49,7 +49,9 @@ public:
     if (!DL)
       return DL.takeError();
 
-    auto EPC = SelfExecutorProcessControl::Create();
+    auto EPC = SelfExecutorProcessControl::Create(
+        nullptr,
+        std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt));
     if (!EPC)
       return EPC.takeError();
 
@@ -116,14 +118,6 @@ private:
                  std::move(ISMBuilder)) {
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
-    this->ES->setDispatchTask(
-        [this](std::unique_ptr<Task> T) {
-          CompileThreads.async(
-              [UnownedT = T.release()]() {
-                std::unique_ptr<Task> T(UnownedT);
-                T->run();
-              });
-        });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;
     ExitOnErr(CXXRuntimeoverrides.enable(MainJD, Mangle));
@@ -136,7 +130,7 @@ private:
   std::unique_ptr<ExecutionSession> ES;
   DataLayout DL;
   MangleAndInterner Mangle{*ES, DL};
-  ThreadPool CompileThreads{llvm::hardware_concurrency(NumThreads)};
+  DefaultThreadPool CompileThreads{llvm::hardware_concurrency(NumThreads)};
 
   JITDylib &MainJD;
 

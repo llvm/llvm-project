@@ -10,7 +10,7 @@
 
 void basic() {
   int *ptr;
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> ptr"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
   *(ptr+5)=1;
 // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:5}:""
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:9}:"["
@@ -20,7 +20,7 @@ void basic() {
 // The weird preceding semicolon ensures that we preserve that range intact.
 void char_ranges() {
   int *p;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   ;* ( p + 5 ) = 1;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""
@@ -108,7 +108,7 @@ void char_ranges() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:15}:"]"
 
   int *ptrrrrrr;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int> ptrrrrrr"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:"std::span<int> "
 
   ;* ( ptrrrrrr + 123456 )= 1;
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""

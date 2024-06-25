@@ -86,7 +86,7 @@ namespace PR18097 {
     };
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
     // CHECK: call void @_ZN7PR180977dynamic1XC1Ei(ptr {{[^,]*}} @_ZN7PR180977dynamic1yE, i32 noundef 4)
-    // CHECK: store i32 5, ptr getelementptr inbounds ({{.*}}, ptr @_ZN7PR180977dynamic1yE, i32 0, i32 1)
+    // CHECK: store i32 5, ptr getelementptr inbounds (i8, ptr @_ZN7PR180977dynamic1yE, i32 4)
     Y y = { X(4), 5 };
   }
 
@@ -110,7 +110,7 @@ namespace PR18097 {
     // CHECK-LABEL: define {{.*}} @__cxx_global_var_init
     // CHECK: tail call void @llvm.memcpy.p0.p0.i32(ptr{{.*}} @_ZN7PR180978constant2y2E, ptr{{.*}} @_ZN7PR180978constantL1xE, i32 3, i1 false)
     // CHECK: %0 = load i32, ptr @_ZN7PR180978constant1zE
-    // CHECK: store i32 %0, ptr getelementptr inbounds (%"struct.PR18097::constant::Y", ptr @_ZN7PR180978constant2y2E, i32 0, i32 1)
+    // CHECK: store i32 %0, ptr getelementptr inbounds (i8, ptr @_ZN7PR180978constant2y2E, i32 4)
     int z;
     constexpr X x{1};
     Y y2 = { x, z };

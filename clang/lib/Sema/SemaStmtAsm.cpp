@@ -829,7 +829,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
   NamedDecl *FoundDecl = nullptr;
 
   // MS InlineAsm uses 'this' as a base
-  if (getLangOpts().CPlusPlus && Base.equals("this")) {
+  if (getLangOpts().CPlusPlus && Base == "this") {
     if (const Type *PT = getCurrentThisType().getTypePtrOrNull())
       FoundDecl = PT->getPointeeType()->getAsTagDecl();
   } else {

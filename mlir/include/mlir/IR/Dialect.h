@@ -210,10 +210,18 @@ public:
   /// registration. The promised interface type can be an interface of any type
   /// not just a dialect interface, i.e. it may also be an
   /// AttributeInterface/OpInterface/TypeInterface/etc.
-  template <typename ConcreteT, typename InterfaceT>
+  template <typename InterfaceT, typename ConcreteT>
   void declarePromisedInterface() {
     unresolvedPromisedInterfaces.insert(
         {TypeID::get<ConcreteT>(), InterfaceT::getInterfaceID()});
+  }
+
+  // Declare the same interface for multiple types.
+  // Example:
+  // declarePromisedInterfaces<FunctionOpInterface, MyFuncType1, MyFuncType2>()
+  template <typename InterfaceT, typename... ConcreteT>
+  void declarePromisedInterfaces() {
+    (declarePromisedInterface<InterfaceT, ConcreteT>(), ...);
   }
 
   /// Checks if the given interface, which is attempting to be used, is a

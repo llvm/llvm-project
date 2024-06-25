@@ -8,7 +8,7 @@
 // RUN:     -emit-module-interface -fprebuilt-module-path=%t -o %t/b.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cppm \
 // RUN:     -emit-module-interface -fprebuilt-module-path=%t -o %t/c.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.pcm -S \
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.pcm \
 // RUN:     -fprebuilt-module-path=%t -emit-llvm -disable-llvm-passes -o - \
 // RUN:     | FileCheck %t/c.cppm
 //
@@ -20,7 +20,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -O3 %t/c.cppm \
 // RUN:     -emit-module-interface -fprebuilt-module-path=%t -o %t/c.pcm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -O3 %t/c.pcm \
-// RUN:     -fprebuilt-module-path=%t -S -emit-llvm -disable-llvm-passes \
+// RUN:     -fprebuilt-module-path=%t -emit-llvm -disable-llvm-passes \
 // RUN:     -o - | FileCheck %t/c.cppm
 
 //--- a.cppm

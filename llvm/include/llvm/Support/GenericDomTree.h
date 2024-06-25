@@ -187,10 +187,8 @@ template <class NodeT>
 void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
                   unsigned Lev) {
   O.indent(2 * Lev) << "[" << Lev << "] " << N;
-  for (typename DomTreeNodeBase<NodeT>::const_iterator I = N->begin(),
-                                                       E = N->end();
-       I != E; ++I)
-    PrintDomTree<NodeT>(*I, O, Lev + 1);
+  for (const auto &I : *N)
+    PrintDomTree<NodeT>(I, O, Lev + 1);
 }
 
 namespace DomTreeBuilder {

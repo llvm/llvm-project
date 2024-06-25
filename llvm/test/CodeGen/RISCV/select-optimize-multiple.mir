@@ -3,6 +3,10 @@
 # RUN:  | FileCheck -check-prefix=RV32I %s
 # RUN: llc -mtriple=riscv64 -run-pass=finalize-isel -simplify-mir -o - %s \
 # RUN:  | FileCheck -check-prefix=RV64I %s
+# RUN: llc -mtriple=riscv32 -passes=finalize-isel -simplify-mir -o - %s \
+# RUN:  | FileCheck -check-prefix=RV32I %s
+# RUN: llc -mtriple=riscv64 -passes=finalize-isel -simplify-mir -o - %s \
+# RUN:  | FileCheck -check-prefix=RV64I %s
 
 # Provide dummy definitions of functions and just enough metadata to create a
 # DBG_VALUE.

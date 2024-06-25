@@ -45,11 +45,11 @@ namespace LIBC_NAMESPACE {
 namespace fputil {
 
 LIBC_INLINE float multiply_add(float x, float y, float z) {
-  return fma(x, y, z);
+  return fma<float>(x, y, z);
 }
 
 LIBC_INLINE double multiply_add(double x, double y, double z) {
-  return fma(x, y, z);
+  return fma<double>(x, y, z);
 }
 
 } // namespace fputil

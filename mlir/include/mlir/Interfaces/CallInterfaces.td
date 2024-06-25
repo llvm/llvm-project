@@ -68,7 +68,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
     /// `symbolTable` is an optional parameter that will allow for using a
     /// cached symbol table for symbol lookups instead of performing an O(N)
     /// scan.
-    Operation *resolveCallable(SymbolTableCollection *symbolTable = nullptr);
+    ::mlir::Operation *resolveCallable(::mlir::SymbolTableCollection *symbolTable = nullptr);
   }];
 }
 

@@ -21,19 +21,9 @@ std::basic_fstream<char, std::char_traits<wchar_t> > f;
 // expected-error-re@ios:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 // expected-error-re@streambuf:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@fstream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@istream:* {{only virtual member functions can be marked 'override'}}
-// expected-error@istream:* {{only virtual member functions can be marked 'override'}}
+// expected-error@*:* 11 {{only virtual member functions can be marked 'override'}}
 
 // FIXME: As of commit r324062 Clang incorrectly generates a diagnostic about mismatching
 // exception specifications for types which are already invalid for one reason or another.
 // For now we tolerate this diagnostic.
-// expected-error@ostream:* 0-1 {{exception specification of overriding function is more lax than base version}}
+// expected-error@*:* 0-1 {{exception specification of overriding function is more lax than base version}}

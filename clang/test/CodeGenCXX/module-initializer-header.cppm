@@ -3,8 +3,8 @@
 // RUN: split-file %s %t
 //
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -xc++-user-header -emit-header-unit %t/header.h -o %t/header.pcm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=%t/header.pcm %t/M.cppm -S -emit-llvm -o - | FileCheck %t/M.cppm
-// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=%t/header.pcm %t/Use.cpp -S -emit-llvm -o - | FileCheck %t/Use.cpp
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=%t/header.pcm %t/M.cppm -emit-llvm -o - | FileCheck %t/M.cppm
+// RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple -fmodule-file=%t/header.pcm %t/Use.cpp -emit-llvm -o - | FileCheck %t/Use.cpp
 //
 //--- header.h
 int foo();

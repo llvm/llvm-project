@@ -318,7 +318,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %k255, %val
+    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
     ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3

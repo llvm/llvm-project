@@ -10,4 +10,4 @@
 
 #include "src/math/scalbn.h"
 
-LIST_SCALBN_TESTS(double, LIBC_NAMESPACE::scalbn)
+LIST_SCALBN_TESTS(double, int, LIBC_NAMESPACE::scalbn)

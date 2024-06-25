@@ -235,7 +235,7 @@ define i1 @strlen0_after_write_to_first_byte_global() {
 
 define i1 @strlen0_after_write_to_second_byte_global() {
 ; CHECK-LABEL: @strlen0_after_write_to_second_byte_global(
-; CHECK-NEXT:    store i8 49, ptr getelementptr inbounds ([32 x i8], ptr @a, i32 0, i32 1), align 16
+; CHECK-NEXT:    store i8 49, ptr getelementptr inbounds (i8, ptr @a, i32 1), align 16
 ; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, ptr @a, align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]

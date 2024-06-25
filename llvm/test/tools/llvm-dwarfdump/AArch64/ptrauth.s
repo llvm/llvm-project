@@ -23,7 +23,7 @@
 
 # CHECK: 0x0000004f:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p3")
-# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values")")
+# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values,strip")")
 
 # CHECK: 0x0000005a:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
@@ -31,11 +31,11 @@
 # CHECK:                 DW_AT_LLVM_ptrauth_extra_discriminator  (0x04d4)
 # CHECK:                 DW_AT_LLVM_ptrauth_authenticates_null_values    (true)
 
-# CHECK: 0x00000062:   DW_TAG_variable
+# CHECK: 0x00000063:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p4")
-# CHECK:                 DW_AT_type      (0x0000006d "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values")")
+# CHECK:                 DW_AT_type (0x0000006e "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values,sign-and-strip")")
 
-# CHECK: 0x0000006d:   DW_TAG_LLVM_ptrauth_type
+# CHECK: 0x0000006e:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
 # CHECK:                 DW_AT_LLVM_ptrauth_address_discriminated        (true)
 # CHECK:                 DW_AT_LLVM_ptrauth_extra_discriminator  (0x04d5)
@@ -44,7 +44,7 @@
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.file	1 "/" "/tmp/p.c"
-	.comm	_p,8                            ; @p
+	.comm	_p,8,3                          ; @p
 	.section	__DWARF,__debug_abbrev,regular,debug
 Lsection_abbrev:
 	.byte	1                               ; Abbreviation Code
@@ -140,6 +140,8 @@ Lsection_abbrev:
 	.byte	5                               ; DW_FORM_data2
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
+	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)
 	.byte	8                               ; Abbreviation Code
@@ -157,6 +159,8 @@ Lsection_abbrev:
 	.byte	25                              ; DW_FORM_flag_present
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
+	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)
 	.byte	0                               ; EOM(3)
@@ -170,7 +174,7 @@ Ldebug_info_start0:
 .set Lset1, Lsection_abbrev-Lsection_abbrev ; Offset Into Abbrev. Section
 	.long	Lset1
 	.byte	8                               ; Address Size (in bytes)
-	.byte	1                               ; Abbrev [1] 0xb:0x6b DW_TAG_compile_unit
+	.byte	1                               ; Abbrev [1] 0xb:0x6d DW_TAG_compile_unit
 	.long	0                               ; DW_AT_producer
 	.short	12                              ; DW_AT_language
 	.long	1                               ; DW_AT_name
@@ -210,25 +214,27 @@ Ldebug_info_start0:
                                         ; DW_AT_external
 	.byte	1                               ; DW_AT_decl_file
 	.byte	1                               ; DW_AT_decl_line
-	.byte	7                               ; Abbrev [7] 0x5a:0x8 DW_TAG_LLVM_ptrauth_type
+	.byte	7                               ; Abbrev [7] 0x5a:0x9 DW_TAG_LLVM_ptrauth_type
 	.long	59                              ; DW_AT_type
 	.byte	4                               ; DW_AT_LLVM_ptrauth_key
                                         ; DW_AT_LLVM_ptrauth_address_discriminated
 	.short	1236                            ; DW_AT_LLVM_ptrauth_extra_discriminator
                                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
-	.byte	5                               ; Abbrev [5] 0x62:0xb DW_TAG_variable
+	.byte	1                               ; DW_AT_LLVM_ptrauth_authentication_mode
+	.byte	5                               ; Abbrev [5] 0x63:0xb DW_TAG_variable
 	.long	21                              ; DW_AT_name
-	.long	109                             ; DW_AT_type
+	.long	110                             ; DW_AT_type
                                         ; DW_AT_external
 	.byte	1                               ; DW_AT_decl_file
 	.byte	1                               ; DW_AT_decl_line
-	.byte	8                               ; Abbrev [8] 0x6d:0x8 DW_TAG_LLVM_ptrauth_type
+	.byte	8                               ; Abbrev [8] 0x6e:0x9 DW_TAG_LLVM_ptrauth_type
 	.long	59                              ; DW_AT_type
 	.byte	4                               ; DW_AT_LLVM_ptrauth_key
                                         ; DW_AT_LLVM_ptrauth_address_discriminated
 	.short	1237                            ; DW_AT_LLVM_ptrauth_extra_discriminator
                                         ; DW_AT_LLVM_ptrauth_isa_pointer
                                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
+	.byte	2                               ; DW_AT_LLVM_ptrauth_authentication_mode
 	.byte	0                               ; End Of Children Mark
 Ldebug_info_end0:
 	.section	__DWARF,__debug_str,regular,debug

@@ -5,20 +5,20 @@
       program ppc_vec_unit
       implicit none
 
-      ! CHECK-LLVM-DAG: %[[VI1:.*]] = alloca <4 x i32>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VI2:.*]] = alloca <4 x i32>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VI1:.*]] = alloca <4 x i32>, i64 1, align 16
       vector(integer(4)) :: vi1, vi2
 
-      ! CHECK-LLVM-DAG: %[[VR1:.*]] = alloca <2 x double>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VR2:.*]] = alloca <2 x double>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VR1:.*]] = alloca <2 x double>, i64 1, align 16
       vector(real(8)) :: vr1, vr2
 
-      ! CHECK-LLVM-DAG: %[[VU1:.*]] = alloca <8 x i16>, i64 1, align 16
       ! CHECK-LLVM-DAG: %[[VU2:.*]] = alloca <8 x i16>, i64 1, align 16
+      ! CHECK-LLVM-DAG: %[[VU1:.*]] = alloca <8 x i16>, i64 1, align 16
       vector(unsigned(2)) :: vu1, vu2
 
-      ! CHECK-LLVM-DAG: %[[VP1:.*]] = alloca <256 x i1>, i64 1, align 32
       ! CHECK-LLVM-DAG: %[[VP2:.*]] = alloca <256 x i1>, i64 1, align 32
+      ! CHECK-LLVM-DAG: %[[VP1:.*]] = alloca <256 x i1>, i64 1, align 32
       __vector_pair :: vp1, vp2
 
       __vector_quad :: vq1, vq2
@@ -44,7 +44,7 @@
       ! CHECK-LLVM-NEXT: store <512 x i1> %[[RESQ]], ptr @_QFEvq2, align 64
 
       contains
-      ! CHECK-LLVM-LABEL: define <4 x i32> @_QFPtest_vec_integer_assign
+      ! CHECK-LLVM-LABEL: define internal <4 x i32> @_QFPtest_vec_integer_assign
       function test_vec_integer_assign(arg1)
         ! CHECK-LLVM: %[[FUNC_RES:.*]] = alloca <4 x i32>, i64 1, align 16
         vector(integer(4)) :: arg1, test_vec_integer_assign
@@ -58,7 +58,7 @@
         ! CHECK-LLVM-NEXT: ret <4 x i32> %[[RET]]
       end function test_vec_integer_assign
 
-      ! CHECK-LLVM-LABEL: define <2 x double> @_QFPtest_vec_real_assign
+      ! CHECK-LLVM-LABEL: define internal <2 x double> @_QFPtest_vec_real_assign
       function test_vec_real_assign(arg1)
         ! CHECK-LLVM: %[[FUNC_RES:.*]] = alloca <2 x double>, i64 1, align 16
         vector(real(8)) :: arg1, test_vec_real_assign
@@ -72,7 +72,7 @@
         ! CHECK-LLVM-NEXT: ret <2 x double> %[[RET]]
       end function test_vec_real_assign
 
-      ! CHECK-LLVM-LABEL: define <8 x i16> @_QFPtest_vec_unsigned_assign
+      ! CHECK-LLVM-LABEL: define internal <8 x i16> @_QFPtest_vec_unsigned_assign
       function test_vec_unsigned_assign(arg1)
         ! CHECK-LLVM: %[[FUNC_RES:.*]] = alloca <8 x i16>, i64 1, align 16
         vector(unsigned(2)) :: arg1, test_vec_unsigned_assign
@@ -86,7 +86,7 @@
         ! CHECK-LLVM-NEXT: ret <8 x i16> %[[RET]]
       end function test_vec_unsigned_assign
 
-      ! CHECK-LLVM-LABEL: define <256 x i1> @_QFPtest_vec_pair_assign
+      ! CHECK-LLVM-LABEL: define internal <256 x i1> @_QFPtest_vec_pair_assign
       function test_vec_pair_assign(arg1)
         ! CHECK-LLVM: %[[FUNC_RES:.*]] = alloca <256 x i1>, i64 1, align 32
         __vector_pair :: arg1, test_vec_pair_assign
@@ -100,7 +100,7 @@
         ! CHECK-LLVM-NEXT: ret <256 x i1> %[[RET]]
       end function test_vec_pair_assign
 
-      ! CHECK-LLVM-LABEL: define <512 x i1> @_QFPtest_vec_quad_assign
+      ! CHECK-LLVM-LABEL: define internal <512 x i1> @_QFPtest_vec_quad_assign
       function test_vec_quad_assign(arg1)
         ! CHECK-LLVM: %[[FUNC_RES:.*]] = alloca <512 x i1>, i64 1, align 64
         __vector_quad :: arg1, test_vec_quad_assign

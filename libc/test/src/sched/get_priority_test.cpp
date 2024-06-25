@@ -58,7 +58,7 @@ TEST(LlvmLibcSchedGetPriorityTest, HandleBadPolicyTest) {
 }
 
 TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   // We Test:
   // SCHED_OTHER, SCHED_FIFO, SCHED_RR

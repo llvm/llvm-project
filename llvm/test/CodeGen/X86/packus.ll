@@ -131,7 +131,7 @@ define <8 x i16> @trunc_lshr_v4i64_demandedelts(<4 x i64> %a0) {
 ; SSE4-LABEL: trunc_lshr_v4i64_demandedelts:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
+; SSE4-NEXT:    pmovsxbd {{.*#+}} xmm2 = [1,1,1,1]
 ; SSE4-NEXT:    pand %xmm2, %xmm1
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE4-NEXT:    pand %xmm2, %xmm0

@@ -48,7 +48,7 @@ entry:
 ; CHECK-NEXT:   br label %while.body
 ; CHECK:      while.body:
 ; CHECK-NEXT:   llvm.lifetime.start
-; CHECK-NEXT:   call void @llvm.dbg.declare(metadata ptr %agg.tmp.sroa.3.i,
+; CHECK-NEXT:   #dbg_declare(ptr %agg.tmp.sroa.3.i,
   %agg.tmp.sroa.3 = alloca [20 x i8], align 4
   tail call void @llvm.dbg.declare(metadata ptr %agg.tmp.sroa.3, metadata !25, metadata !30), !dbg !31
   %agg.tmp.sroa.0.0.copyload = load i32, ptr @b, align 8, !dbg !33

@@ -692,7 +692,7 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
         "WARNING: HWASan is ignoring requested __hwasan_handle_longjmp: "
         "stack top: %p; target %p; distance: %p (%zd)\n"
         "False positive error reports may follow\n",
-        (void *)sp, (void *)dst, dst - sp);
+        (void *)sp, (void *)dst, dst - sp, dst - sp);
     return;
   }
   TagMemory(sp, dst - sp, 0);

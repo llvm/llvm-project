@@ -257,67 +257,67 @@ define <2 x i8> @umin_maxval_commute(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
-define <2 x i8> @smax_maxval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @smax_maxval_partial_undef(
+define <2 x i8> @smax_maxval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @smax_maxval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> <i8 127, i8 127>
 ;
-  %r = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 undef, i8 127>, <2 x i8> %x)
+  %r = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 poison, i8 127>, <2 x i8> %x)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @smin_minval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @smin_minval_partial_undef(
+define <2 x i8> @smin_minval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @smin_minval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> <i8 -128, i8 -128>
 ;
-  %r = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 -128, i8 undef>)
+  %r = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 -128, i8 poison>)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @umax_maxval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @umax_maxval_partial_undef(
+define <2 x i8> @umax_maxval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @umax_maxval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
-  %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 255, i8 undef>, <2 x i8> %x)
+  %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 255, i8 poison>, <2 x i8> %x)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @umin_minval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @umin_minval_partial_undef(
+define <2 x i8> @umin_minval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @umin_minval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 undef, i8 0>)
+  %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 poison, i8 0>)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @smax_minval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @smax_minval_partial_undef(
+define <2 x i8> @smax_minval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @smax_minval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
-  %r = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 undef, i8 -128>, <2 x i8> %x)
+  %r = call <2 x i8> @llvm.smax.v2i8(<2 x i8> <i8 poison, i8 -128>, <2 x i8> %x)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @smin_maxval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @smin_maxval_partial_undef(
+define <2 x i8> @smin_maxval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @smin_maxval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
-  %r = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 undef, i8 127>)
+  %r = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 poison, i8 127>)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @umax_minval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @umax_minval_partial_undef(
+define <2 x i8> @umax_minval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @umax_minval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
-  %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 0, i8 undef>, <2 x i8> %x)
+  %r = call <2 x i8> @llvm.umax.v2i8(<2 x i8> <i8 0, i8 poison>, <2 x i8> %x)
   ret <2 x i8> %r
 }
 
-define <2 x i8> @umin_maxval_partial_undef(<2 x i8> %x) {
-; CHECK-LABEL: @umin_maxval_partial_undef(
+define <2 x i8> @umin_maxval_partial_poison(<2 x i8> %x) {
+; CHECK-LABEL: @umin_maxval_partial_poison(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
 ;
-  %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 255, i8 undef>)
+  %r = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 255, i8 poison>)
   ret <2 x i8> %r
 }
 
@@ -743,7 +743,7 @@ define <2 x i8> @umin_umin_constants_commute2(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i8> [[M]]
 ;
   %m = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %x, <2 x i8> <i8 127, i8 127>)
-  %m2 = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %m, <2 x i8> <i8 200, i8 undef>)
+  %m2 = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %m, <2 x i8> <i8 200, i8 poison>)
   ret <2 x i8> %m2
 }
 
@@ -803,7 +803,7 @@ define <2 x i8> @smin_smin_constants(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i8> [[M]]
 ;
   %m = call <2 x i8> @llvm.smin.v2i8(<2 x i8> %x, <2 x i8> <i8 7, i8 7>)
-  %m2 = call <2 x i8> @llvm.smin.v2i8(<2 x i8> <i8 undef, i8 9>, <2 x i8> %m)
+  %m2 = call <2 x i8> @llvm.smin.v2i8(<2 x i8> <i8 poison, i8 9>, <2 x i8> %m)
   ret <2 x i8> %m2
 }
 

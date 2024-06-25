@@ -1,0 +1,144 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+// RUN: clang-installapi -target arm64-apple-macos13.1 \
+// RUN: -F%t -install_name /System/Library/Frameworks/Foo.framework/Foo \
+// RUN: %t/inputs.json -o %t/outputs.tbd -v 2>&1 | FileCheck %s --check-prefix=VERBOSE
+// RUN: llvm-readtapi -compare %t/outputs.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+// VERBOSE:       Public Headers: 
+// VERBOSE-NEXT:  #import <Foo/Foo.h> 
+// CHECK-NOT:     error:  
+// CHECK-NOT:     warning:  
+
+//--- Foo.framework/Headers/Foo.h
+// Ignore forward declaration. 
+@class NSObject;
+
+@interface Visible 
+@end
+
+__attribute__((visibility("hidden")))
+@interface Hidden
+@end
+
+__attribute__((visibility("hidden")))
+@interface HiddenWithIvars {
+@public 
+char _ivar;
+}
+@end
+
+__attribute__((objc_exception))
+@interface Exception 
+@end
+
+@interface PublicClass : Visible  {
+@package 
+  int _internal;
+@protected
+  int _external;
+@private
+  int private;
+@public
+char _public;
+}
+@end
+
+
+//--- Foo.framework/PrivateHeaders/Foo_Private.h
+#import <Foo/Foo.h>
+
+@interface ClassWithIvars : Visible  {
+  char _ivar1;
+  char _ivar2;
+@private
+  int _privateIVar;
+@protected
+  int _externalIVar;
+@package 
+  int _internalIVar;
+}
+@end
+
+@interface Exception () {
+@public 
+  char _ivarFromExtension;
+@private 
+  int _privateIvarFromExtension;
+}
+@end
+
+
+//--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/Foo.framework/Headers/Foo.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/Foo.framework/PrivateHeaders/Foo_Private.h",
+    "type" : "private"
+  }
+  ],
+  "version": "3"
+}
+
+//--- expected.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "objc_class": [
+            "PublicClass",
+            "Exception",
+            "Visible",
+            "ClassWithIvars"
+          ],
+          "objc_eh_type": [
+            "Exception"
+          ],
+          "objc_ivar": [
+            "Exception._ivarFromExtension",
+            "ClassWithIvars._ivar2",
+            "PublicClass._external",
+            "ClassWithIvars._ivar1",
+            "ClassWithIvars._externalIVar",
+            "PublicClass._public"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/Foo.framework/Foo"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

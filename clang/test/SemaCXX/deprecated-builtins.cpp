@@ -17,3 +17,8 @@ void f() {
     a = __has_trivial_destructor(A);  // expected-warning-re {{__has_trivial_destructor {{.*}} use __is_trivially_destructible}}
 
 }
+
+void test_builtin_empty_parentheses_diags(void) {
+    __has_nothrow_copy(); // expected-error {{expected a type}}
+    __has_nothrow_copy(1); // expected-error {{expected a type}}
+}

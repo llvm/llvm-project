@@ -3,7 +3,7 @@
 // RUN:     FileCheck %s --check-prefix=REMARK
 
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
-// RUN:     -Rpass=atomic-expand -S -emit-llvm -o - 2>&1 | \
+// RUN:     -Rpass=atomic-expand -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-CAS
 
 // REQUIRES: amdgpu-registered-target

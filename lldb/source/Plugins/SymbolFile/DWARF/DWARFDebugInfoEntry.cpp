@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <limits>
 #include <optional>
 
 #include "llvm/Support/LEB128.h"
@@ -41,13 +42,23 @@ extern int g_verbose;
 // Extract a debug info entry for a given DWARFUnit from the data
 // starting at the offset in offset_ptr
 bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
-                                  const DWARFUnit *cu,
+                                  const DWARFUnit &unit,
                                   lldb::offset_t *offset_ptr) {
   m_offset = *offset_ptr;
+  auto report_error = [&](const char *fmt, const auto &...vals) {
+    unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: {1}, please file a bug and "
+        "attach the file at the start of this error message",
+        static_cast<uint64_t>(m_offset), llvm::formatv(fmt, vals...));
+    *offset_ptr = std::numeric_limits<lldb::offset_t>::max();
+    return false;
+  };
+
   m_parent_idx = 0;
   m_sibling_idx = 0;
   const uint64_t abbr_idx = data.GetULEB128(offset_ptr);
-  lldbassert(abbr_idx <= UINT16_MAX);
+  if (abbr_idx > std::numeric_limits<uint16_t>::max())
+    return report_error("abbreviation code {0} too big", abbr_idx);
   m_abbr_idx = abbr_idx;
 
   if (m_abbr_idx == 0) {
@@ -56,31 +67,18 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
     return true; // NULL debug tag entry
   }
 
-  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-  if (abbrevDecl == nullptr) {
-    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: invalid abbreviation code {1}, "
-        "please file a bug and "
-        "attach the file at the start of this error message",
-        (uint64_t)m_offset, (unsigned)abbr_idx);
-    // WE can't parse anymore if the DWARF is borked...
-    *offset_ptr = UINT32_MAX;
-    return false;
-  }
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(&unit);
+  if (abbrevDecl == nullptr)
+    return report_error("invalid abbreviation code {0}", abbr_idx);
+
   m_tag = abbrevDecl->getTag();
   m_has_children = abbrevDecl->hasChildren();
   // Skip all data in the .debug_info or .debug_types for the attributes
   for (const auto &attribute : abbrevDecl->attributes()) {
-    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, cu))
+    if (DWARFFormValue::SkipValue(attribute.Form, data, offset_ptr, &unit))
       continue;
 
-    cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
-        "and "
-        "attach the file at the start of this error message",
-        (uint64_t)m_offset, (unsigned)attribute.Form);
-    *offset_ptr = m_offset;
-    return false;
+    return report_error("Unsupported DW_FORM_{1:x}", attribute.Form);
   }
   return true;
 }
@@ -610,79 +608,6 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
       child = child->GetSibling();
     }
   }
-}
-
-DWARFDeclContext
-DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
-                                               DWARFUnit *cu) {
-  DWARFDeclContext dwarf_decl_ctx;
-  for (;;) {
-    const dw_tag_t tag = die->Tag();
-    if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
-      return dwarf_decl_ctx;
-    dwarf_decl_ctx.AppendDeclContext(tag, die->GetName(cu));
-    DWARFDIE parent_decl_ctx_die = die->GetParentDeclContextDIE(cu);
-    if (!parent_decl_ctx_die || parent_decl_ctx_die.GetDIE() == die)
-      return dwarf_decl_ctx;
-    if (parent_decl_ctx_die.Tag() == DW_TAG_compile_unit ||
-        parent_decl_ctx_die.Tag() == DW_TAG_partial_unit)
-      return dwarf_decl_ctx;
-    die = parent_decl_ctx_die.GetDIE();
-    cu = parent_decl_ctx_die.GetCU();
-  }
-}
-
-DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
-  return GetDWARFDeclContextStatic(this, cu);
-}
-
-DWARFDIE
-DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
-  DWARFAttributes attributes = GetAttributes(cu, Recurse::yes);
-  return GetParentDeclContextDIE(cu, attributes);
-}
-
-DWARFDIE
-DWARFDebugInfoEntry::GetParentDeclContextDIE(
-    DWARFUnit *cu, const DWARFAttributes &attributes) const {
-  DWARFDIE die(cu, const_cast<DWARFDebugInfoEntry *>(this));
-
-  while (die) {
-    // If this is the original DIE that we are searching for a declaration for,
-    // then don't look in the cache as we don't want our own decl context to be
-    // our decl context...
-    if (die.GetDIE() != this) {
-      switch (die.Tag()) {
-      case DW_TAG_compile_unit:
-      case DW_TAG_partial_unit:
-      case DW_TAG_namespace:
-      case DW_TAG_structure_type:
-      case DW_TAG_union_type:
-      case DW_TAG_class_type:
-        return die;
-
-      default:
-        break;
-      }
-    }
-
-    DWARFDIE spec_die = attributes.FormValueAsReference(DW_AT_specification);
-    if (spec_die) {
-      DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE();
-      if (decl_ctx_die)
-        return decl_ctx_die;
-    }
-
-    DWARFDIE abs_die = attributes.FormValueAsReference(DW_AT_abstract_origin);
-    if (abs_die) {
-      DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE();
-      if (decl_ctx_die)
-        return decl_ctx_die;
-    }
-
-    die = die.GetParent();
-  }
-  return DWARFDIE();
 }
 
 lldb::offset_t DWARFDebugInfoEntry::GetFirstAttributeOffset() const {

@@ -190,12 +190,17 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @sext32_0213_0ext(<8 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: sext32_0213_0ext:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
-; CHECK-NEXT:    vmullb.s32 q2, q0, q3
+; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    vmullb.s32 q2, q4, q3
 ; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmullb.s32 q1, q0, q3
 ; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -210,12 +215,17 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @sext32_0ext_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: sext32_0ext_0213:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
-; CHECK-NEXT:    vmullb.s32 q2, q3, q0
+; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    vmullb.s32 q2, q3, q4
 ; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmullb.s32 q1, q3, q0
 ; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -466,12 +476,17 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @zext32_0213_0ext(<8 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: zext32_0213_0ext:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
-; CHECK-NEXT:    vmullb.u32 q2, q0, q3
+; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    vmullb.u32 q2, q4, q3
 ; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmullb.u32 q1, q0, q3
 ; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -486,12 +501,17 @@ entry:
 define arm_aapcs_vfpcc <4 x i64> @zext32_0ext_0213(<8 x i32> %src1, i32 %src2) {
 ; CHECK-LABEL: zext32_0ext_0213:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r0
-; CHECK-NEXT:    vmullb.u32 q2, q3, q0
+; CHECK-NEXT:    vmov.f32 s17, s4
 ; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    vmullb.u32 q2, q3, q4
 ; CHECK-NEXT:    vmov.f32 s2, s3
 ; CHECK-NEXT:    vmullb.u32 q1, q3, q0
 ; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %shuf1 = shufflevector <8 x i32> %src1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>

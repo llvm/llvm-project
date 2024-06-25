@@ -37,8 +37,8 @@ cc_library(
     }),
     hdrs = select({
         ":llvm_zstd_enabled": [
-            "lib/zstd.h",
             "lib/zdict.h",
+            "lib/zstd.h",
             "lib/zstd_errors.h",
         ],
         "//conditions:default": [],

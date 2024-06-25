@@ -9,7 +9,7 @@ define void @test1() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[EXN_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[EXN_DISPATCH:%.*]]
 ; CHECK:       exn.dispatch:
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %pad1] unwind to caller
 ; CHECK:       pad1:
@@ -42,14 +42,14 @@ define void @test2() personality ptr @ProcessCLRException {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[VIA_CATCHSWITCH:%.*]] unwind label [[CLEANUP_INNER:%.*]]
+; CHECK-NEXT:            to label [[VIA_CATCHSWITCH:%.*]] unwind label [[CLEANUP_INNER:%.*]]
 ; CHECK:       cleanup.inner:
 ; CHECK-NEXT:    [[CP_INNER:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    call void @llvm.foo(i32 0)
 ; CHECK-NEXT:    cleanupret from [[CP_INNER]] unwind to caller
 ; CHECK:       via.catchswitch:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[DISPATCH_INNER:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[DISPATCH_INNER:%.*]]
 ; CHECK:       dispatch.inner:
 ; CHECK-NEXT:    [[CS_INNER:%.*]] = catchswitch within none [label %pad.inner] unwind to caller
 ; CHECK:       pad.inner:
@@ -96,17 +96,17 @@ define void @test3() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[VIA_CLEANUP:%.*]] unwind label [[CLEANUP:%.*]]
+; CHECK-NEXT:            to label [[VIA_CLEANUP:%.*]] unwind label [[CLEANUP:%.*]]
 ; CHECK:       via.cleanup:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[VIA_CATCHSWITCH:%.*]] unwind label [[CLEANUP_INNER:%.*]]
+; CHECK-NEXT:            to label [[VIA_CATCHSWITCH:%.*]] unwind label [[CLEANUP_INNER:%.*]]
 ; CHECK:       cleanup.inner:
 ; CHECK-NEXT:    [[CP_INNER:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    call void @llvm.foo(i32 0)
 ; CHECK-NEXT:    cleanupret from [[CP_INNER]] unwind label [[CLEANUP]]
 ; CHECK:       via.catchswitch:
 ; CHECK-NEXT:    invoke void @f()
-; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[DISPATCH_INNER:%.*]]
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[DISPATCH_INNER:%.*]]
 ; CHECK:       dispatch.inner:
 ; CHECK-NEXT:    [[CS_INNER:%.*]] = catchswitch within none [label %pad.inner] unwind label [[CLEANUP]]
 ; CHECK:       pad.inner:

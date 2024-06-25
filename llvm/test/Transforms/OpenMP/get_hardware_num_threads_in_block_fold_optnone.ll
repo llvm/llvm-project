@@ -5,7 +5,7 @@ target triple = "nvptx64"
 @G = external global i32
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
+; CHECK: @G = external global i32
 ;.
 define weak void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0

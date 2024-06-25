@@ -3,15 +3,15 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-ios13.0.0"
 
-  define void @test_memset_debug(i8* %ptr, i32 %c, i32 %len) local_unnamed_addr!dbg !9 {
+  define void @test_memset_debug(ptr %ptr, i32 %c, i32 %len) local_unnamed_addr!dbg !9 {
   entry:
     %conv = zext i32 %len to i64, !dbg !11
     %0 = trunc i32 %c to i8, !dbg !11
-    call void @llvm.memset.p0i8.i64(i8* align 1 %ptr, i8 %0, i64 %conv, i1 false) #3, !dbg !11
+    call void @llvm.memset.p0.i64(ptr align 1 %ptr, i8 %0, i64 %conv, i1 false) #3, !dbg !11
     ret void, !dbg !12
   }
 
-  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+  declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
   attributes #1 = { argmemonly nounwind willreturn writeonly }
 
   !llvm.module.flags = !{!0, !1, !2, !3, !4}

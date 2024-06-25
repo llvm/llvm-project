@@ -46,9 +46,29 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 1
-; PATCH-NEXT:   .short  1
-; LiveOut Entry 1: %ymm2 (16 bytes) --> %xmm2
+; Num LiveOut Entries: 6
+; PATCH-NEXT:   .short  6
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -79,25 +99,46 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 5
-; PATCH-NEXT:   .short  5
+; Num LiveOut Entries: 10
+; PATCH-NEXT:   .short 10
+
 ; LiveOut Entry 1: %rax (1 bytes) --> %al or %ah
 ; PATCH-NEXT:   .short  0
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 1
-; LiveOut Entry 2: %r8 (8 bytes)
+; LiveOut Entry 2:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 3: %r8 (8 bytes)
 ; PATCH-NEXT:   .short  8
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 3: %ymm0 (32 bytes)
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 8: %ymm0 (32 bytes)
 ; PATCH-NEXT:   .short  17
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 4: %ymm1 (32 bytes)
+; LiveOut Entry 9: %ymm1 (32 bytes)
 ; PATCH-NEXT:   .short  18
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 32
-; LiveOut Entry 5: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 10: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -125,13 +166,33 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 2
-; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %rsp (8 bytes)
+; Num LiveOut Entries: 7
+; PATCH-NEXT:   .short 7
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16
@@ -164,13 +225,33 @@ entry:
 ; Padding
 ; PATCH-NEXT:   .p2align  3
 ; PATCH-NEXT:   .short  0
-; Num LiveOut Entries: 2
-; PATCH-NEXT:   .short  2
-; LiveOut Entry 1: %rsp (8 bytes)
+; Num LiveOut Entries: 7
+; PATCH-NEXT:   .short 7
+; LiveOut Entry 1:
+; PATCH-NEXT:   .short 3
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 2: %rsp (8 bytes)
 ; PATCH-NEXT:   .short  7
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 8
-; LiveOut Entry 2: %ymm2 (16 bytes) --> %xmm2
+; LiveOut Entry 3:
+; PATCH-NEXT:   .short 12
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 4:
+; PATCH-NEXT:   .short 13
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 5:
+; PATCH-NEXT:   .short 14
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 6:
+; PATCH-NEXT:   .short 15
+; PATCH-NEXT:   .byte 0
+; PATCH-NEXT:   .byte 8
+; LiveOut Entry 7: %ymm2 (16 bytes) --> %xmm2
 ; PATCH-NEXT:   .short  19
 ; PATCH-NEXT:   .byte 0
 ; PATCH-NEXT:   .byte 16

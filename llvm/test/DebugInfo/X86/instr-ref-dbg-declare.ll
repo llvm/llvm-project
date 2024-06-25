@@ -2,7 +2,7 @@
 ; RUN:     -experimental-debug-variable-locations=true \
 ; RUN:  | FileCheck %s
 
-;; Copy of DebugInfo/COFF/types-array-advanced.ll. This features a dbg.declare 
+;; Copy of DebugInfo/COFF/types-array-advanced.ll. This features a dbg.declare
 ;; of something (dynamic alloca) that isn't an argument, causing a SDDbgValue
 ;; with the indirect flag set to be emitted. Test that it's preserved in
 ;; instruction referencing mode -- we don't have an IsIndirect flag on

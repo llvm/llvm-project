@@ -61,24 +61,22 @@ int test_islower(int *x) {
 }
 
 int test_bugpath_notes(FILE *f1, char c, FILE *f2) {
-  int f = fileno(f2);
-  if (f == -1) // \
+  // This test has the purpose of checking that notes appear at correct place.
+  long a = ftell(f2); // no note
+  if (a == -1) // \
     // expected-note{{Taking false branch}}
-    return 0;
-  int l = islower(c);
-  f = fileno(f1); // \
-  // expected-note{{Value assigned to 'f'}} \
-  // expected-note{{Assuming that 'fileno' fails}}
-  return dup(f); // \
+    return -1;
+  int l = islower(c); // no note
+  a = ftell(f1); // \
+  // expected-note{{Value assigned to 'a'}} \
+  // expected-note{{Assuming that 'ftell' fails}}
+  return dup(a); // \
   // expected-warning{{The 1st argument to 'dup' is -1 but should be >= 0}} \
   // expected-note{{The 1st argument to 'dup' is -1 but should be >= 0}}
 }
 
 int test_fileno_arg_note(FILE *f1) {
-  return dup(fileno(f1)); // \
-  // expected-warning{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
-  // expected-note{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
-  // expected-note{{Assuming that 'fileno' fails}}
+  return dup(fileno(f1)); // no warning
 }
 
 int test_readlink_bufsize_zero(char *Buf, size_t Bufsize) {

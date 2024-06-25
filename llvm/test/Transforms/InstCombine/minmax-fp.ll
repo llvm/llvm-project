@@ -257,7 +257,7 @@ define double @t16(i32 %x) {
 define double @t17(i32 %x) {
 ; CHECK-LABEL: @t17(
 ; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 2)
-; CHECK-NEXT:    [[SEL:%.*]] = sitofp i32 [[SEL1]] to double
+; CHECK-NEXT:    [[SEL:%.*]] = uitofp nneg i32 [[SEL1]] to double
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = icmp sgt i32 %x, 2

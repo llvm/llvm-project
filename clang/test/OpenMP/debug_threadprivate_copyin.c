@@ -7,12 +7,12 @@
 // expected-no-diagnostics
 
 // CHECK: define internal void @main.omp_outlined_debug__(
-// CHECK: call void @llvm.dbg.declare(metadata ptr %.global_tid..addr,
-// CHECK: call void @llvm.dbg.declare(metadata ptr %.bound_tid..addr,
-// CHECK: call void @llvm.dbg.declare(metadata ptr %nt.addr
+// CHECK: #dbg_declare(ptr %.global_tid..addr,
+// CHECK: #dbg_declare(ptr %.bound_tid..addr,
+// CHECK: #dbg_declare(ptr %nt.addr
 // CHECK: store ptr %gbl_dynamic_int, ptr %gbl_dynamic_int.addr, align 8
-// CHECK-NOT: call void @llvm.dbg.declare(metadata ptr %gbl_dynamic_int.addr
-// CHECK-NOT: call void @llvm.dbg.declare(metadata ptr %gbl_static_int.addr
+// CHECK-NOT: #dbg_declare(ptr %gbl_dynamic_int.addr
+// CHECK-NOT: #dbg_declare(ptr %gbl_static_int.addr
 
 extern int printf(const char *, ...);
 extern void omp_set_num_threads(int);

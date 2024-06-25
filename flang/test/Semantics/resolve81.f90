@@ -5,9 +5,9 @@
 ! R801 type-declaration-stmt ->
 !        declaration-type-spec [[, attr-spec]... ::] entity-decl-list
 !  attr-spec values are:
-!    PUBLIC, PRIVATE, ALLOCATABLE, ASYNCHRONOUS, CODIMENSION, CONTIGUOUS, 
-!    DIMENSION (array-spec), EXTERNAL, INTENT (intent-spec), INTRINSIC, 
-!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, SAVE, TARGET, VALUE, 
+!    PUBLIC, PRIVATE, ALLOCATABLE, ASYNCHRONOUS, CODIMENSION, CONTIGUOUS,
+!    DIMENSION (array-spec), EXTERNAL, INTENT (intent-spec), INTRINSIC,
+!    BIND(C), OPTIONAL, PARAMETER, POINTER, PROTECTED, SAVE, TARGET, VALUE,
 !    VOLATILE
 module m
 
@@ -28,6 +28,8 @@ module m
   !WARNING: Attribute 'EXTERNAL' cannot be used more than once
   real, external, external :: externFunc
   !WARNING: Attribute 'INTRINSIC' cannot be used more than once
+  !ERROR: 'cos' may not have both the BIND(C) and INTRINSIC attributes
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   real, intrinsic, bind(c), intrinsic :: cos
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
   integer, bind(c), volatile, bind(c) :: bindVar

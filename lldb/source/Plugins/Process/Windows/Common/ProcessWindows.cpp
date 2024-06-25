@@ -405,8 +405,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                "{1:x} with watchpoint {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc, id);
 
-      stop_info = StopInfo::CreateStopReasonWithWatchpointID(
-          *stop_thread, id, m_watchpoints[id].address);
+      stop_info = StopInfo::CreateStopReasonWithWatchpointID(*stop_thread, id);
       stop_thread->SetStopInfo(stop_info);
 
       return;
@@ -857,7 +856,7 @@ Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   info.address = wp_sp->GetLoadAddress();
   info.size = wp_sp->GetByteSize();
   info.read = wp_sp->WatchpointRead();
-  info.write = wp_sp->WatchpointWrite();
+  info.write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
 
   for (unsigned i = 0U; i < m_thread_list.GetSize(); i++) {
     Thread *thread = m_thread_list.GetThreadAtIndex(i).get();

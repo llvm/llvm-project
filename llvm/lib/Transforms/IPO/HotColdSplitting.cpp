@@ -215,15 +215,10 @@ bool HotColdSplitting::isFunctionCold(const Function &F) const {
   return false;
 }
 
-bool HotColdSplitting::isBasicBlockCold(BasicBlock *BB,
-                          BranchProbability ColdProbThresh,
-                          SmallPtrSetImpl<BasicBlock *> &ColdBlocks,
-                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks,
-                          BlockFrequencyInfo *BFI) const {
-  // This block is already part of some outlining region.
-  if (ColdBlocks.count(BB))
-    return true;
-
+bool HotColdSplitting::isBasicBlockCold(
+    BasicBlock *BB, BranchProbability ColdProbThresh,
+    SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks,
+    BlockFrequencyInfo *BFI) const {
   if (BFI) {
     if (PSI->isColdBlock(BB, BFI))
       return true;
@@ -372,17 +367,11 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
   return Penalty;
 }
 
-Function *HotColdSplitting::extractColdRegion(
-    const BlockSequence &Region, const CodeExtractorAnalysisCache &CEAC,
-    DominatorTree &DT, BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
-    OptimizationRemarkEmitter &ORE, AssumptionCache *AC, unsigned Count) {
+// Determine if it is beneficial to split the \p Region.
+bool HotColdSplitting::isSplittingBeneficial(CodeExtractor &CE,
+                                             const BlockSequence &Region,
+                                             TargetTransformInfo &TTI) {
   assert(!Region.empty());
-
-  // TODO: Pass BFI and BPI to update profile information.
-  CodeExtractor CE(Region, &DT, /* AggregateArgs */ false, /* BFI */ nullptr,
-                   /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
-                   /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
-                   /* Suffix */ "cold." + std::to_string(Count));
 
   // Perform a simple cost/benefit analysis to decide whether or not to permit
   // splitting.
@@ -394,9 +383,18 @@ Function *HotColdSplitting::extractColdRegion(
   LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
                     << ", penalty = " << OutliningPenalty << "\n");
   if (!OutliningBenefit.isValid() || OutliningBenefit <= OutliningPenalty)
-    return nullptr;
+    return false;
 
-  Function *OrigF = Region[0]->getParent();
+  return true;
+}
+
+// Split the single \p EntryPoint cold region. \p CE is the region code
+// extractor.
+Function *HotColdSplitting::extractColdRegion(
+    BasicBlock &EntryPoint, CodeExtractor &CE,
+    const CodeExtractorAnalysisCache &CEAC, BlockFrequencyInfo *BFI,
+    TargetTransformInfo &TTI, OptimizationRemarkEmitter &ORE) {
+  Function *OrigF = EntryPoint.getParent();
   if (Function *OutF = CE.extractCodeRegion(CEAC)) {
     User *U = *OutF->user_begin();
     CallInst *CI = cast<CallInst>(U);
@@ -419,7 +417,7 @@ Function *HotColdSplitting::extractColdRegion(
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "HotColdSplit",
-                                &*Region[0]->begin())
+                                &*EntryPoint.begin())
              << ore::NV("Original", OrigF) << " split cold code into "
              << ore::NV("Split", OutF);
     });
@@ -428,9 +426,9 @@ Function *HotColdSplitting::extractColdRegion(
 
   ORE.emit([&]() {
     return OptimizationRemarkMissed(DEBUG_TYPE, "ExtractFailed",
-                                    &*Region[0]->begin())
+                                    &*EntryPoint.begin())
            << "Failed to extract region at block "
-           << ore::NV("Block", Region.front());
+           << ore::NV("Block", &EntryPoint);
   });
   return nullptr;
 }
@@ -620,16 +618,18 @@ public:
 } // namespace
 
 bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
-  bool Changed = false;
-
-  // The set of cold blocks.
+  // The set of cold blocks outlined.
   SmallPtrSet<BasicBlock *, 4> ColdBlocks;
+
+  // The set of cold blocks cannot be outlined.
+  SmallPtrSet<BasicBlock *, 4> CannotBeOutlinedColdBlocks;
 
   // Set of cold blocks obtained with RPOT.
   SmallPtrSet<BasicBlock *, 4> AnnotatedColdBlocks;
 
-  // The worklist of non-intersecting regions left to outline.
-  SmallVector<OutliningRegion, 2> OutliningWorklist;
+  // The worklist of non-intersecting regions left to outline. The first member
+  // of the pair is the entry point into the region to be outlined.
+  SmallVector<std::pair<BasicBlock *, CodeExtractor>, 2> OutliningWorklist;
 
   // Set up an RPO traversal. Experimentally, this performs better (outlines
   // more) than a PO traversal, because we prevent region overlap by keeping
@@ -655,10 +655,18 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   if (ColdBranchProbDenom.getNumOccurrences())
     ColdProbThresh = BranchProbability(1, ColdBranchProbDenom.getValue());
 
+  unsigned OutlinedFunctionID = 1;
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
-    if (!isBasicBlockCold(BB, ColdProbThresh, ColdBlocks, AnnotatedColdBlocks,
-                          BFI))
+    // This block is already part of some outlining region.
+    if (ColdBlocks.count(BB))
+      continue;
+
+    // This block is already part of some region cannot be outlined.
+    if (CannotBeOutlinedColdBlocks.count(BB))
+      continue;
+
+    if (!isBasicBlockCold(BB, ColdProbThresh, AnnotatedColdBlocks, BFI))
       continue;
 
     LLVM_DEBUG({
@@ -681,50 +689,69 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
         return markFunctionCold(F);
       }
 
-      // If this outlining region intersects with another, drop the new region.
-      //
-      // TODO: It's theoretically possible to outline more by only keeping the
-      // largest region which contains a block, but the extra bookkeeping to do
-      // this is tricky/expensive.
-      bool RegionsOverlap = any_of(Region.blocks(), [&](const BlockTy &Block) {
-        return !ColdBlocks.insert(Block.first).second;
-      });
-      if (RegionsOverlap)
-        continue;
+      do {
+        BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
+        LLVM_DEBUG({
+          dbgs() << "Hot/cold splitting attempting to outline these blocks:\n";
+          for (BasicBlock *BB : SubRegion)
+            BB->dump();
+        });
 
-      OutliningWorklist.emplace_back(std::move(Region));
+        // TODO: Pass BFI and BPI to update profile information.
+        CodeExtractor CE(
+            SubRegion, &*DT, /* AggregateArgs */ false, /* BFI */ nullptr,
+            /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
+            /* AllowAlloca */ false, /* AllocaBlock */ nullptr,
+            /* Suffix */ "cold." + std::to_string(OutlinedFunctionID));
+
+        if (CE.isEligible() && isSplittingBeneficial(CE, SubRegion, TTI) &&
+            // If this outlining region intersects with another, drop the new
+            // region.
+            //
+            // TODO: It's theoretically possible to outline more by only keeping
+            // the largest region which contains a block, but the extra
+            // bookkeeping to do this is tricky/expensive.
+            none_of(SubRegion, [&](BasicBlock *Block) {
+              return ColdBlocks.contains(Block);
+            })) {
+          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
+
+          LLVM_DEBUG({
+            for (auto *Block : SubRegion)
+              dbgs() << "  contains cold block:" << Block->getName() << "\n";
+          });
+
+          OutliningWorklist.emplace_back(
+              std::make_pair(SubRegion[0], std::move(CE)));
+          ++OutlinedFunctionID;
+        } else {
+          // The cold block region cannot be outlined.
+          for (auto *Block : SubRegion)
+            if ((DT->dominates(BB, Block) && PDT->dominates(Block, BB)) ||
+                (PDT->dominates(BB, Block) && DT->dominates(Block, BB)))
+              // Will skip this cold block in the loop to save the compile time
+              CannotBeOutlinedColdBlocks.insert(Block);
+        }
+      } while (!Region.empty());
+
       ++NumColdRegionsFound;
     }
   }
 
   if (OutliningWorklist.empty())
-    return Changed;
+    return false;
 
   // Outline single-entry cold regions, splitting up larger regions as needed.
-  unsigned OutlinedFunctionID = 1;
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
   CodeExtractorAnalysisCache CEAC(F);
-  do {
-    OutliningRegion Region = OutliningWorklist.pop_back_val();
-    assert(!Region.empty() && "Empty outlining region in worklist");
-    do {
-      BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
-      LLVM_DEBUG({
-        dbgs() << "Hot/cold splitting attempting to outline these blocks:\n";
-        for (BasicBlock *BB : SubRegion)
-          BB->dump();
-      });
+  for (auto &BCE : OutliningWorklist) {
+    Function *Outlined =
+        extractColdRegion(*BCE.first, BCE.second, CEAC, BFI, TTI, ORE);
+    assert(Outlined && "Should be outlined");
+    (void)Outlined;
+  }
 
-      Function *Outlined = extractColdRegion(SubRegion, CEAC, *DT, BFI, TTI,
-                                             ORE, AC, OutlinedFunctionID);
-      if (Outlined) {
-        ++OutlinedFunctionID;
-        Changed = true;
-      }
-    } while (!Region.empty());
-  } while (!OutliningWorklist.empty());
-
-  return Changed;
+  return true;
 }
 
 bool HotColdSplitting::run(Module &M) {

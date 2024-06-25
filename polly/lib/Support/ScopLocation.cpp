@@ -25,7 +25,7 @@ void getDebugLocation(const Region *R, unsigned &LineBegin, unsigned &LineEnd,
 
   for (const BasicBlock *BB : R->blocks())
     for (const Instruction &Inst : *BB) {
-      DebugLoc DL = Inst.getDebugLoc();
+      DebugLoc DL = Inst.getStableDebugLoc();
       if (!DL)
         continue;
 

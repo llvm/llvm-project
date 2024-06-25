@@ -3,7 +3,7 @@
 
 # RUN: llvm-readobj --string-dump=.strings \
 # RUN:   --string-dump=.not_null_terminated %t > %t.readobj.out
-# RUN: FileCheck %s --input-file=%t.readobj.out
+# RUN: FileCheck %s --input-file=%t.readobj.out --check-prefixes=HEADER,CHECK
 
 # Also test the different ways --string-dump can be specified, i.e. as a short
 # flag (-p), with different prefix modes (-p .foo, -p=.foo, -p.foo), and with
@@ -23,7 +23,9 @@
 # RUN: llvm-readelf -hp1 -p2 %t | cmp %t.readelf.out -
 # RUN: llvm-readelf -hp 1 -p.not_null_terminated %t | cmp %t.readelf.out -
 
-# CHECK:      String dump of section '.strings':
+# HEADER:     LoadName:
+# CHECK:      {{^$}}
+# CHECK-NEXT: String dump of section '.strings':
 # CHECK-NEXT: [ 0] here
 # CHECK-NEXT: [ 5] are
 # CHECK-NEXT: [ 9] some

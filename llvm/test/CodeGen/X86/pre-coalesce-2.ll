@@ -75,7 +75,7 @@ while.body:                                       ; preds = %56, %while.body.pre
   %e.058 = phi ptr [ %incdec.ptr60, %56 ], [ %e.0.ph, %while.body.preheader ]
   %incdec.ptr60 = getelementptr inbounds i8, ptr %p1.addr.0.ph.pn, i64 1
   %conv = sext i8 %21 to i32
-  %call = tail call i32 (ptr, i32, ...) @fn3(ptr getelementptr inbounds ({ [17 x i8], [47 x i8] }, ptr @.str, i32 0, i32 0, i64 0), i32 %conv) #2
+  %call = tail call i32 (ptr, i32, ...) @fn3(ptr @.str, i32 %conv) #2
   call void @__sanitizer_cov_trace_cmp4(i32 %call, i32 0)
   %tobool = icmp eq i32 %call, 0
   br i1 %tobool, label %if.end5, label %cleanup

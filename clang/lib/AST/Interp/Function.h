@@ -15,9 +15,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_FUNCTION_H
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
-#include "Source.h"
 #include "Descriptor.h"
+#include "Source.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -108,6 +109,8 @@ public:
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
 
+  bool hasNonNullAttr() const { return getDecl()->hasAttr<NonNullAttr>(); }
+
   /// Range over the scope blocks.
   llvm::iterator_range<llvm::SmallVector<Scope, 2>::const_iterator>
   scopes() const {
@@ -182,6 +185,22 @@ public:
   bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
 
   unsigned getNumParams() const { return ParamTypes.size(); }
+
+  /// Returns the number of parameter this function takes when it's called,
+  /// i.e excluding the instance pointer and the RVO pointer.
+  unsigned getNumWrittenParams() const {
+    assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
+    return getNumParams() - hasThisPointer() - hasRVO();
+  }
+  unsigned getWrittenArgSize() const {
+    return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
+  }
+
+  bool isThisPointerExplicit() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->isExplicitObjectMemberFunction();
+    return false;
+  }
 
   unsigned getParamOffset(unsigned ParamIndex) const {
     return ParamOffsets[ParamIndex];

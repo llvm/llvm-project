@@ -11,7 +11,7 @@
 ; RUN: llvm-dwarfdump --debug-info -r 0 main.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-MAIN %s
 ; RUN: llvm-dwarfdump --debug-info -r 0 helper.dwo.dwo | FileCheck -check-prefix=BOLT-DWO-DWO-HELPER %s
 
-; Tests that BOLT correctly handles DWARF5 DWP file as input. Output has correct CU, and all the type units are written out.
+;; Tests that BOLT correctly handles DWARF5 DWP file as input. Output has correct CU, and all the type units are written out.
 
 ; BOLT-DWO-DWO-MAIN: debug_info.dwo
 ; BOLT-DWO-DWO-MAIN-NEXT: type_signature = 0x49dc260088be7e56

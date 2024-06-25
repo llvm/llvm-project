@@ -67,11 +67,27 @@ void Test() {
   if (str1.compare(comp())) {
   }
   // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings;
+
+  std::string_view sv1("a");
+  std::string_view sv2("b");
+  if (sv1.compare(sv2)) {
+  }
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [readability-string-compare]
+}
+
+struct DerivedFromStdString : std::string {};
+
+void TestDerivedClass() {
+  DerivedFromStdString derived;
+  if (derived.compare(derived)) {
+  }
+  // CHECK-MESSAGES: [[@LINE-2]]:7: warning: do not use 'compare' to test equality of strings; use the string equality operator instead [readability-string-compare]
 }
 
 void Valid() {
   std::string str1("a", 1);
   std::string str2("b", 1);
+
   if (str1 == str2) {
   }
   if (str1 != str2) {
@@ -95,5 +111,12 @@ void Valid() {
   if (str1.compare(str2) == 1) {
   }
   if (str1.compare(str2) == -1) {
+  }
+
+  std::string_view sv1("a");
+  std::string_view sv2("b");
+  if (sv1 == sv2) {
+  }
+  if (sv1.compare(sv2) > 0) {
   }
 }

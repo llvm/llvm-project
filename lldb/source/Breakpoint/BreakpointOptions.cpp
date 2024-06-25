@@ -102,19 +102,11 @@ const char *BreakpointOptions::g_option_names[(
     "ConditionText", "IgnoreCount", 
     "EnabledState", "OneShotState", "AutoContinue"};
 
-bool BreakpointOptions::NullCallback(void *baton,
-                                     StoppointCallbackContext *context,
-                                     lldb::user_id_t break_id,
-                                     lldb::user_id_t break_loc_id) {
-  return true;
-}
-
 // BreakpointOptions constructor
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
-    : m_callback(BreakpointOptions::NullCallback),
-      m_baton_is_command_baton(false), m_callback_is_synchronous(false),
-      m_enabled(true), m_one_shot(false), m_ignore_count(0),
-      m_condition_text_hash(0), m_inject_condition(false),
+    : m_callback(nullptr), m_baton_is_command_baton(false),
+      m_callback_is_synchronous(false), m_enabled(true), m_one_shot(false),
+      m_ignore_count(0), m_condition_text_hash(0), m_inject_condition(false),
       m_auto_continue(false), m_set_flags(0) {
   if (all_flags_set)
     m_set_flags.Set(~((Flags::ValueType)0));
@@ -420,7 +412,7 @@ void BreakpointOptions::SetCallback(
 }
 
 void BreakpointOptions::ClearCallback() {
-  m_callback = BreakpointOptions::NullCallback;
+  m_callback = nullptr;
   m_callback_is_synchronous = false;
   m_callback_baton_sp.reset();
   m_baton_is_command_baton = false;
@@ -449,7 +441,7 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
 }
 
 bool BreakpointOptions::HasCallback() const {
-  return m_callback != BreakpointOptions::NullCallback;
+  return static_cast<bool>(m_callback);
 }
 
 bool BreakpointOptions::GetCommandLineCallbacks(StringList &command_list) {

@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, fma, (double x, double y, double z)) {
-  return fputil::fma(x, y, z);
+  return fputil::fma<double>(x, y, z);
 }
 
 } // namespace LIBC_NAMESPACE

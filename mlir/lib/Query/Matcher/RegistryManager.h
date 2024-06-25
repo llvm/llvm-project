@@ -61,6 +61,7 @@ public:
 
   static VariantMatcher constructMatcher(MatcherCtor ctor,
                                          internal::SourceRange nameRange,
+                                         llvm::StringRef functionName,
                                          ArrayRef<ParserValue> args,
                                          internal::Diagnostics *error);
 };

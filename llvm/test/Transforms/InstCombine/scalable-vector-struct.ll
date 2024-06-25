@@ -3,19 +3,19 @@
 
 %struct.test = type { <vscale x 1 x i32>, <vscale x 1 x i32> }
 
-define <vscale x 1 x i32> @load(%struct.test* %x) {
+define <vscale x 1 x i32> @load(ptr %x) {
 ; CHECK-LABEL: define <vscale x 1 x i32> @load
 ; CHECK-SAME: (ptr [[X:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = load [[STRUCT_TEST:%.*]], ptr [[X]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = extractvalue [[STRUCT_TEST]] [[A]], 1
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[B]]
 ;
-  %a = load %struct.test, %struct.test* %x
+  %a = load %struct.test, ptr %x
   %b = extractvalue %struct.test %a, 1
   ret <vscale x 1 x i32> %b
 }
 
-define void @store(%struct.test* %x, <vscale x 1 x i32> %y, <vscale x 1 x i32> %z) {
+define void @store(ptr %x, <vscale x 1 x i32> %y, <vscale x 1 x i32> %z) {
 ; CHECK-LABEL: define void @store
 ; CHECK-SAME: (ptr [[X:%.*]], <vscale x 1 x i32> [[Y:%.*]], <vscale x 1 x i32> [[Z:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = insertvalue [[STRUCT_TEST:%.*]] undef, <vscale x 1 x i32> [[Y]], 0
@@ -25,6 +25,6 @@ define void @store(%struct.test* %x, <vscale x 1 x i32> %y, <vscale x 1 x i32> %
 ;
   %a = insertvalue %struct.test undef, <vscale x 1 x i32> %y, 0
   %b = insertvalue %struct.test %a, <vscale x 1 x i32> %z, 1
-  store %struct.test %b, %struct.test* %x
+  store %struct.test %b, ptr %x
   ret void
 }

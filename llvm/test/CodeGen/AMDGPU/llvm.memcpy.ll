@@ -315,10 +315,9 @@ define amdgpu_kernel void @test_small_memcpy_i64_global_to_global_align16(ptr ad
 
 ; FUNC-LABEL: {{^}}test_memcpy_const_string_align4:
 ; SI: s_getpc_b64
-; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, hello.align4@rel32@lo+20
+; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, hello.align4@rel32@lo+4
 ; SI: s_addc_u32
-; SI-DAG: s_load_dwordx4
-; SI-DAG: s_load_dwordx4
+; SI-DAG: s_load_dwordx8
 ; SI-DAG: s_load_dwordx2
 ; SI-DAG: buffer_store_dwordx4
 ; SI-DAG: buffer_store_dwordx4

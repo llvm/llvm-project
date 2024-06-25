@@ -1,0 +1,57 @@
+# Tapi's awareness of symlinks relies on POSIX level apis not available on windows.
+; REQUIRES: system-darwin
+
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: mkdir -p %t/sysroot/usr/lib/
+; RUN: mkdir -p %t/sysroot/System/Library/Frameworks/System.framework
+; RUN: yaml2obj %S/Inputs/libSystem.1.yaml -o %t/sysroot/usr/lib/libSystem.1.dylib
+; RUN: cd %t/sysroot/usr/lib
+# Set relative symlink.
+; RUN: ln -s  libSystem.1.dylib libSystem.dylib
+# Set broken but accepted symlink.
+; RUN: ln -s /usr/lib/libSystem.1.dylib %t/sysroot/System/Library/Frameworks/System.framework/System
+# Set absolute symlink.
+; RUN: ln -s  %t/sysroot/usr/lib/libSystem.dylib libfoo.dylib
+; RUN: cd %t
+; RUN: llvm-readtapi -stubify %t/sysroot 2>&1 | FileCheck -allow-empty %s
+; RUN: llvm-readtapi -compare %t/sysroot/usr/lib/libfoo.tbd  %t/expected_system.tbd 2>&1 | FileCheck -allow-empty %s
+; RUN: file %t/sysroot/System/Library/Frameworks/System.framework/System.tbd 2>&1 | FileCheck -allow-empty %s
+
+# Warn on invalid symlink.
+; RUN: ln -s  %t/sysroot/usr/libSystem.dylib %t/sysroot/usr/lib/libbroken.dylib
+; RUN: llvm-readtapi -stubify %t/sysroot 2>&1 | FileCheck %s --check-prefix BROKEN_SYMLINK 
+
+; CHECK-NOT: error: 
+; CHECK-NOT: warning: 
+
+; BROKEN_SYMLINK: ignoring broken symlink: {{.*}}/usr/lib/libbroken.dylib
+
+;--- expected_system.tbd
+{
+  "main_library": {
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libSystem.1.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "10.14",
+        "target": "x86_64-macos"
+      },
+      {
+        "min_deployment": "12",
+        "target": "x86_64-maccatalyst"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

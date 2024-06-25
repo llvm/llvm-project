@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin -S -stack-protector 2 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin -stack-protector 2 -emit-llvm -o - | FileCheck %s
 
 class A {
  public:

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 namespace std {
 constexpr bool is_constant_evaluated() noexcept {

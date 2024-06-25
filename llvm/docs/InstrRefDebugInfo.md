@@ -24,7 +24,7 @@ referring to instruction values:
 
 ```llvm
 %2 = add i32 %0, %1
-call void @llvm.dbg.value(metadata i32 %2,
+  #dbg_value(metadata i32 %2,
 ```
 
 In LLVM IR, the IR Value is synonymous with the instruction that computes the

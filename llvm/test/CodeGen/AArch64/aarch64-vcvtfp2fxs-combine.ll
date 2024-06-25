@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-linux-eabi -o - | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -o - | FileCheck %s
 
 %struct.a= type { i64, i64, i64, i64 }
 

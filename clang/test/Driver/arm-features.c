@@ -74,7 +74,7 @@
 // Check +crypto for M and R profiles:
 //
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-r+crypto   -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CRYPTO-R %s
-// CHECK-CRYPTO-R: "-cc1"{{.*}} "-target-cpu" "cortex-r52"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
+// CHECK-CRYPTO-R: "-cc1"{{.*}} "-target-cpu" "generic"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-m.base+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv8-m.main+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
 // RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m23+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s

@@ -12,7 +12,7 @@ entry:
 
 for.body:
 ; CHECK: for.body
-; CHECK: ldr w{{[0-9]+}}, [x{{[0-9]+}}, x{{[0-9]+}}]
+; CHECK: ldr w{{[0-9]+}}, [x{{[0-9]+}}]
 ; CHECK: add x[[REG:[0-9]+]],
 ; CHECK:                      x[[REG]], #1, lsl  #12
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]

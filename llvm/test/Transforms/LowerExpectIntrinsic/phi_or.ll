@@ -99,5 +99,5 @@ declare i64 @llvm.expect.i64(i64, i64)
 
 
 !0 = !{!"clang version 5.0.0 (trunk 302965)"}
-; CHECK: [[WEIGHT]] = !{!"branch_weights", i32 2000, i32 1}
-; CHECK: [[WEIGHT2]] = !{!"branch_weights", i32 1, i32 2000}
+; CHECK: [[WEIGHT]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
+; CHECK: [[WEIGHT2]] = !{!"branch_weights", !"expected", i32 1, i32 2000}

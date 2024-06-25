@@ -102,7 +102,7 @@ class TsanBasicTestCase(TestBase):
         backtraces = thread.GetStopReasonExtendedBacktraces(
             lldb.eInstrumentationRuntimeTypeThreadSanitizer
         )
-        self.assertTrue(backtraces.GetSize() >= 2)
+        self.assertGreaterEqual(backtraces.GetSize(), 2)
 
         # First backtrace is a memory operation
         thread = backtraces.GetThreadAtIndex(0)

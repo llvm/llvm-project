@@ -47,6 +47,11 @@ private:
   void initMips16SPAliasReg(MachineFunction &MF);
 };
 
+class Mips16DAGToDAGISelLegacy : public MipsDAGToDAGISelLegacy {
+public:
+  explicit Mips16DAGToDAGISelLegacy(MipsTargetMachine &TM, CodeGenOptLevel OL);
+};
+
 FunctionPass *createMips16ISelDag(MipsTargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
 }

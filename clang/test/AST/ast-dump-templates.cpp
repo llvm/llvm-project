@@ -104,3 +104,17 @@ void (*q)() = f<>;
 // CHECK1: template<> void f<0L>()
 // CHECK1: template<> void f<0U>()
 }
+
+namespace test6 {
+template <class D>
+constexpr bool C = true;
+
+template <class Key>
+void func() {
+  C<Key>;
+// DUMP:      UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'C'
+// DUMP-NEXT: `-TemplateArgument type 'Key'
+// DUMP-NEXT:   `-TemplateTypeParmType {{.*}} 'Key' dependent depth 0 index 0
+// DUMP-NEXT:     `-TemplateTypeParm {{.*}} 'Key'
+}
+}

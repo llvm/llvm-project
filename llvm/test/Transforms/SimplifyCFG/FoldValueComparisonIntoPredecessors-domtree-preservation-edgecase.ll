@@ -10,10 +10,10 @@ define dso_local i32 @readCBPandCoeffsFromNAL(i1 %c, i32 %x, i32 %y) local_unnam
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       if.end80:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[INFLOOP:%.*]] [
-; CHECK-NEXT:    i32 10, label [[IF_END172237]]
-; CHECK-NEXT:    i32 14, label [[IF_END172237]]
-; CHECK-NEXT:    i32 9, label [[COMMON_RET]]
-; CHECK-NEXT:    i32 12, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 10, label [[IF_END172237]]
+; CHECK-NEXT:      i32 14, label [[IF_END172237]]
+; CHECK-NEXT:      i32 9, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 12, label [[COMMON_RET]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end172237:
 ; CHECK-NEXT:    br label [[COMMON_RET]]

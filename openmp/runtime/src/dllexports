@@ -1268,6 +1268,11 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_val_8_cas_cpt            2158
     %endif
 
+    # No longer need to put ordinal numbers
+    __kmpc_push_num_threads_list
+    __kmpc_push_num_threads_strict
+    __kmpc_push_num_threads_list_strict
+
 %endif
 
 __kmpc_set_thread_limit

@@ -10,6 +10,8 @@
 #define restrict /*restrict*/
 #endif
 
+typedef struct _FILE FILE;
+
 typedef __builtin_va_list va_list;
 
 #define va_start(ap, param) __builtin_va_start(ap, param)
@@ -20,6 +22,10 @@ typedef __builtin_va_list va_list;
 int vprintf (const char *restrict format, va_list arg);
 
 int vsprintf (char *restrict s, const char *restrict format, va_list arg);
+
+int vfprintf(FILE *stream, const char *format, va_list ap);
+
+int vfscanf(FILE *stream, const char *format, va_list ap);
 
 int some_library_function(int n, va_list arg);
 

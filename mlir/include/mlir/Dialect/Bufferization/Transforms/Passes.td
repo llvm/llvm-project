@@ -315,7 +315,21 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     The main issue with this pass (and the out-param calling convention) is that
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
+
+    If the hoist-static-allocs option is on, the pass tries to eliminate the
+    allocation for the returned memref and avoid the memory-copy if possible.
+    This optimization applies on the returned memref which has static shape and
+    is allocated by memref.alloc in the function. It will use the memref given
+    in function argument to replace the allocated memref.
   }];
+  let options = [
+    Option<"addResultAttribute", "add-result-attr", "bool",
+       /*default=*/"false",
+       "Add the attribute 'bufferize.result' to all output parameters.">,
+    Option<"hoistStaticAllocs", "hoist-static-allocs",
+       "bool", /*default=*/"false",
+       "Hoist static allocations to call sites.">,
+  ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
 }
@@ -334,11 +348,6 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
     with tensor typed operands remains.
   }];
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
-}
-
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
@@ -454,6 +463,24 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     argument is read/written and which returned values are aliasing/equivalent.
     For debugging purposes, such information can be printed with
     `test-analysis-only`.
+
+    The order in which ops are analyzed is important. The analysis is greedy and
+    ops that are analyzed earlier are more likely to bufferize in-place. The
+    heuristic can be set with `analysis-heuristic`. At the moment, the following
+    heuristics are available:
+
+    * `bottom-up` (default): Analyze ops from bottom to top.
+    * `top-down`: Analyze ops from top to bottom.
+    * `fuzzer`: Randomize the ordering of ops with `analysis-fuzzer-seed`.
+    * `bottom-up-from-terminators`: Traverse the reverse use-def chains of
+      tensor IR, starting from region branch terminators (bottom-up). Nested
+      regions are traversed before enclosing regions. Analyze the traversed ops
+      first, then analyze the remaining ops bottom-up. This heuristic is useful
+      for bufferizing loop constructs. One-Shot Bufferize currently supports
+      only such IR where yielded tensor values bufferize to equivalent region
+      iter_args, and first analyzing all ops on the path from the "yielding" op
+      to the beginning of the loop body makes it more likely for the region
+      iter_args and yielded values to bufferize to equivalent buffers.
   }];
   let options = [
     Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",
@@ -471,6 +498,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",

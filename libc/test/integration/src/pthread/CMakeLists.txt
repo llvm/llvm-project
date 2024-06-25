@@ -18,6 +18,46 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_rwlock_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_rwlock_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.include.time
+    libc.include.errno
+    libc.src.pthread.pthread_rwlock_destroy
+    libc.src.pthread.pthread_rwlock_init
+    libc.src.pthread.pthread_rwlock_rdlock
+    libc.src.pthread.pthread_rwlock_tryrdlock
+    libc.src.pthread.pthread_rwlock_timedrdlock
+    libc.src.pthread.pthread_rwlock_wrlock
+    libc.src.pthread.pthread_rwlock_trywrlock
+    libc.src.pthread.pthread_rwlock_timedwrlock
+    libc.src.pthread.pthread_rwlock_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_setpshared
+    libc.src.pthread.pthread_rwlockattr_setkind_np
+    libc.src.__support.threads.linux.raw_mutex
+    libc.src.stdio.printf
+    libc.src.stdlib.getenv
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.time.clock_gettime
+    libc.src.sys.random.getrandom
+    libc.src.unistd.fork
+    libc.src.sys.wait.waitpid
+    libc.src.stdlib.exit
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.new
+    libc.src.__support.threads.sleep
+)
+
+add_integration_test(
   pthread_test
   SUITE
     libc-pthread-integration-tests

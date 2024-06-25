@@ -45,6 +45,8 @@
 ; ASM:         .cv_loc 1 1 5 3                 # t.cpp:5:3
 ; ASM:         callq   capture
 ; ASM:         leaq    40(%rsp), %rcx
+; ASM: [[end_inline_1:\.Ltmp.*]]:
+; ASM:         .cv_loc 0 1 11 5                # t.cpp:11:5
 ; ASM:         jmp     .LBB0_3
 ; ASM: [[else_start:\.Ltmp.*]]:
 ; ASM: .LBB0_2:                                # %if.else
@@ -87,7 +89,7 @@
 ; ASM: .long   116                     # TypeIndex
 ; ASM: .short  0                       # Flags
 ; ASM: .asciz  "v"
-; ASM: .cv_def_range    [[inline_site1]] [[else_start]], frame_ptr_rel, 44
+; ASM: .cv_def_range    [[inline_site1]] [[end_inline_1]], frame_ptr_rel, 44
 ; ASM: .short  4430                    # Record kind: S_INLINESITE_END
 ; ASM: .short  4429                    # Record kind: S_INLINESITE
 ; ASM: .short  4414                    # Record kind: S_LOCAL
@@ -154,7 +156,7 @@
 ; OBJ:        ChangeLineOffset: 1
 ; OBJ:        ChangeCodeOffset: 0x14
 ; OBJ:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xD, LineOffset: 1}
-; OBJ:        ChangeCodeLength: 0xC
+; OBJ:        ChangeCodeLength: 0xA
 ; OBJ:      ]
 ; OBJ:    }
 ; OBJ:    LocalSym {
@@ -168,7 +170,7 @@
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x14
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 0x19
+; OBJ:        Range: 0x17
 ; OBJ:      }
 ; OBJ:    }
 ; OBJ:    InlineSiteEnd {

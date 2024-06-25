@@ -41,7 +41,7 @@
   define dso_local i32 @fn2(i32 signext %a) local_unnamed_addr !dbg !12 {
   entry:
     call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !18
-    tail call void bitcast (void (...)* @clobber to void ()*)(), !dbg !18
+    tail call void @clobber(), !dbg !18
     %add = add nsw i32 %a, 10, !dbg !18
     %call = tail call i32 @fn1(i32 signext 44, i32 signext %a, i32 signext %add), !dbg !18
     call void @llvm.dbg.value(metadata i32 %call, metadata !17, metadata !DIExpression()), !dbg !18

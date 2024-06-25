@@ -41,7 +41,7 @@
 
   declare void @cb2()
 
-  declare i8* @attachedcall()
+  declare ptr @attachedcall()
 ...
 ---
 name:            fn1

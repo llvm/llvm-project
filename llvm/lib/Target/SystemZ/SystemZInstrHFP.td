@@ -134,8 +134,8 @@ let Defs = [CC] in {
     def ADR : BinaryRR<"adr", 0x2A, null_frag, FP64,  FP64>;
     def AXR : BinaryRR<"axr", 0x36, null_frag, FP128, FP128>;
   }
-  def AE : BinaryRX<"ae", 0x7A, null_frag, FP32, load, 4>;
-  def AD : BinaryRX<"ad", 0x6A, null_frag, FP64, load, 8>;
+  def AE : BinaryRX<"ae", 0x7A, null_frag, FP32, z_load, 4>;
+  def AD : BinaryRX<"ad", 0x6A, null_frag, FP64, z_load, 8>;
 }
 
 // Addition (unnormalized).
@@ -144,8 +144,8 @@ let Defs = [CC] in {
     def AUR : BinaryRR<"aur", 0x3E, null_frag, FP32, FP32>;
     def AWR : BinaryRR<"awr", 0x2E, null_frag, FP64, FP64>;
   }
-  def AU : BinaryRX<"au", 0x7E, null_frag, FP32, load, 4>;
-  def AW : BinaryRX<"aw", 0x6E, null_frag, FP64, load, 8>;
+  def AU : BinaryRX<"au", 0x7E, null_frag, FP32, z_load, 4>;
+  def AW : BinaryRX<"aw", 0x6E, null_frag, FP64, z_load, 8>;
 }
 
 // Subtraction.
@@ -154,8 +154,8 @@ let Defs = [CC] in {
   def SDR : BinaryRR<"sdr", 0x2B, null_frag, FP64,  FP64>;
   def SXR : BinaryRR<"sxr", 0x37, null_frag, FP128, FP128>;
 
-  def SE : BinaryRX<"se", 0x7B, null_frag, FP32, load, 4>;
-  def SD : BinaryRX<"sd", 0x6B, null_frag, FP64, load, 8>;
+  def SE : BinaryRX<"se", 0x7B, null_frag, FP32, z_load, 4>;
+  def SD : BinaryRX<"sd", 0x6B, null_frag, FP64, z_load, 8>;
 }
 
 // Subtraction (unnormalized).
@@ -163,8 +163,8 @@ let Defs = [CC] in {
   def SUR : BinaryRR<"sur", 0x3F, null_frag, FP32, FP32>;
   def SWR : BinaryRR<"swr", 0x2F, null_frag, FP64, FP64>;
 
-  def SU : BinaryRX<"su", 0x7F, null_frag, FP32, load, 4>;
-  def SW : BinaryRX<"sw", 0x6F, null_frag, FP64, load, 8>;
+  def SU : BinaryRX<"su", 0x7F, null_frag, FP32, z_load, 4>;
+  def SW : BinaryRX<"sw", 0x6F, null_frag, FP64, z_load, 8>;
 }
 
 // Multiplication.
@@ -173,55 +173,55 @@ let isCommutable = 1 in {
   def MDR  : BinaryRR <"mdr",  0x2C,   null_frag, FP64,  FP64>;
   def MXR  : BinaryRR <"mxr",  0x26,   null_frag, FP128, FP128>;
 }
-def MEE : BinaryRXE<"mee", 0xED37, null_frag, FP32, load, 4>;
-def MD  : BinaryRX <"md",  0x6C,   null_frag, FP64, load, 8>;
+def MEE : BinaryRXE<"mee", 0xED37, null_frag, FP32, z_load, 4>;
+def MD  : BinaryRX <"md",  0x6C,   null_frag, FP64, z_load, 8>;
 
 // Extending multiplication (f32 x f32 -> f64).
 def MDER : BinaryRR<"mder", 0x3C, null_frag, FP64, FP32>;
-def MDE  : BinaryRX<"mde",  0x7C, null_frag, FP64, load, 4>;
+def MDE  : BinaryRX<"mde",  0x7C, null_frag, FP64, z_load, 4>;
 let isAsmParserOnly = 1 in {
   def MER : BinaryRR<"mer", 0x3C, null_frag, FP64, FP32>;
-  def ME  : BinaryRX<"me",  0x7C, null_frag, FP64, load, 4>;
+  def ME  : BinaryRX<"me",  0x7C, null_frag, FP64, z_load, 4>;
 }
 
 // Extending multiplication (f64 x f64 -> f128).
 def MXDR : BinaryRR<"mxdr", 0x27, null_frag, FP128, FP64>;
-def MXD  : BinaryRX<"mxd",  0x67, null_frag, FP128, load, 8>;
+def MXD  : BinaryRX<"mxd",  0x67, null_frag, FP128, z_load, 8>;
 
 // Fused multiply-add.
 def MAER : TernaryRRD<"maer", 0xB32E, null_frag, FP32, FP32>;
 def MADR : TernaryRRD<"madr", 0xB33E, null_frag, FP64, FP64>;
-def MAE  : TernaryRXF<"mae",  0xED2E, null_frag, FP32, FP32, load, 4>;
-def MAD  : TernaryRXF<"mad",  0xED3E, null_frag, FP64, FP64, load, 8>;
+def MAE  : TernaryRXF<"mae",  0xED2E, null_frag, FP32, FP32, z_load, 4>;
+def MAD  : TernaryRXF<"mad",  0xED3E, null_frag, FP64, FP64, z_load, 8>;
 
 // Fused multiply-subtract.
 def MSER : TernaryRRD<"mser", 0xB32F, null_frag, FP32, FP32>;
 def MSDR : TernaryRRD<"msdr", 0xB33F, null_frag, FP64, FP64>;
-def MSE  : TernaryRXF<"mse",  0xED2F, null_frag, FP32, FP32, load, 4>;
-def MSD  : TernaryRXF<"msd",  0xED3F, null_frag, FP64, FP64, load, 8>;
+def MSE  : TernaryRXF<"mse",  0xED2F, null_frag, FP32, FP32, z_load, 4>;
+def MSD  : TernaryRXF<"msd",  0xED3F, null_frag, FP64, FP64, z_load, 8>;
 
 // Multiplication (unnormalized).
 def MYR  : BinaryRRD<"myr",  0xB33B, null_frag, FP128, FP64>;
 def MYHR : BinaryRRD<"myhr", 0xB33D, null_frag, FP64,  FP64>;
 def MYLR : BinaryRRD<"mylr", 0xB339, null_frag, FP64,  FP64>;
-def MY   : BinaryRXF<"my",   0xED3B, null_frag, FP128, FP64, load, 8>;
-def MYH  : BinaryRXF<"myh",  0xED3D, null_frag, FP64,  FP64, load, 8>;
-def MYL  : BinaryRXF<"myl",  0xED39, null_frag, FP64,  FP64, load, 8>;
+def MY   : BinaryRXF<"my",   0xED3B, null_frag, FP128, FP64, z_load, 8>;
+def MYH  : BinaryRXF<"myh",  0xED3D, null_frag, FP64,  FP64, z_load, 8>;
+def MYL  : BinaryRXF<"myl",  0xED39, null_frag, FP64,  FP64, z_load, 8>;
 
 // Fused multiply-add (unnormalized).
 def MAYR  : TernaryRRD<"mayr",  0xB33A, null_frag, FP128, FP64>;
 def MAYHR : TernaryRRD<"mayhr", 0xB33C, null_frag, FP64,  FP64>;
 def MAYLR : TernaryRRD<"maylr", 0xB338, null_frag, FP64,  FP64>;
-def MAY   : TernaryRXF<"may",   0xED3A, null_frag, FP128, FP64, load, 8>;
-def MAYH  : TernaryRXF<"mayh",  0xED3C, null_frag, FP64,  FP64, load, 8>;
-def MAYL  : TernaryRXF<"mayl",  0xED38, null_frag, FP64,  FP64, load, 8>;
+def MAY   : TernaryRXF<"may",   0xED3A, null_frag, FP128, FP64, z_load, 8>;
+def MAYH  : TernaryRXF<"mayh",  0xED3C, null_frag, FP64,  FP64, z_load, 8>;
+def MAYL  : TernaryRXF<"mayl",  0xED38, null_frag, FP64,  FP64, z_load, 8>;
 
 // Division.
 def DER : BinaryRR <"der", 0x3D,   null_frag, FP32,  FP32>;
 def DDR : BinaryRR <"ddr", 0x2D,   null_frag, FP64,  FP64>;
 def DXR : BinaryRRE<"dxr", 0xB22D, null_frag, FP128, FP128>;
-def DE  : BinaryRX <"de",  0x7D,   null_frag, FP32, load, 4>;
-def DD  : BinaryRX <"dd",  0x6D,   null_frag, FP64, load, 8>;
+def DE  : BinaryRX <"de",  0x7D,   null_frag, FP32, z_load, 4>;
+def DD  : BinaryRX <"dd",  0x6D,   null_frag, FP64, z_load, 8>;
 
 
 //===----------------------------------------------------------------------===//
@@ -233,7 +233,7 @@ let Defs = [CC] in {
   def CDR : CompareRR <"cdr", 0x29,   null_frag, FP64,  FP64>;
   def CXR : CompareRRE<"cxr", 0xB369, null_frag, FP128, FP128>;
 
-  def CE : CompareRX<"ce", 0x79, null_frag, FP32, load, 4>;
-  def CD : CompareRX<"cd", 0x69, null_frag, FP64, load, 8>;
+  def CE : CompareRX<"ce", 0x79, null_frag, FP32, z_load, 4>;
+  def CD : CompareRX<"cd", 0x69, null_frag, FP64, z_load, 8>;
 }
 

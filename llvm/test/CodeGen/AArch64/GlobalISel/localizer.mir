@@ -23,15 +23,15 @@
 
   define i32 @intrablock_with_globalvalue() {
   entry:
-    %0 = load i32, i32* @var1, align 4
+    %0 = load i32, ptr @var1, align 4
     %cmp = icmp eq i32 %0, 1
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:
-    store i32 2, i32* @var2, align 4
-    store i32 3, i32* @var1, align 4
-    store i32 2, i32* @var3, align 4
-    store i32 3, i32* @var1, align 4
+    store i32 2, ptr @var2, align 4
+    store i32 3, ptr @var1, align 4
+    store i32 2, ptr @var3, align 4
+    store i32 3, ptr @var1, align 4
     br label %if.end
 
   if.end:
@@ -39,15 +39,15 @@
   }
   define i32 @adrp_add() {
   entry:
-    %0 = load i32, i32* @var1, align 4
+    %0 = load i32, ptr @var1, align 4
     %cmp = icmp eq i32 %0, 1
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:
-    store i32 2, i32* @var2, align 4
-    store i32 3, i32* @var1, align 4
-    store i32 2, i32* @var3, align 4
-    store i32 3, i32* @var1, align 4
+    store i32 2, ptr @var2, align 4
+    store i32 3, ptr @var1, align 4
+    store i32 2, ptr @var3, align 4
+    store i32 3, ptr @var1, align 4
     br label %if.end
 
   if.end:

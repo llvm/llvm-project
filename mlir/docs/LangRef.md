@@ -49,7 +49,7 @@ using familiar concepts of compiler [Passes](Passes.md). Enabling an arbitrary
 set of passes on an arbitrary set of operations results in a significant scaling
 challenge, since each transformation must potentially take into account the
 semantics of any operation. MLIR addresses this complexity by allowing operation
-semantics to be described abstractly using [Traits](Traits.md) and
+semantics to be described abstractly using [Traits](Traits) and
 [Interfaces](Interfaces.md), enabling transformations to operate on operations
 more generically. Traits often describe verification constraints on valid IR,
 enabling complex invariants to be captured and checked. (see
@@ -234,7 +234,7 @@ their regions. For instance, the scope of values in a region with
 [SSA control flow semantics](#control-flow-and-ssacfg-regions) is constrained
 according to the standard definition of
 [SSA dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)).
-Another example is the [IsolatedFromAbove trait](Traits.md/#isolatedfromabove),
+Another example is the [IsolatedFromAbove trait](Traits/#isolatedfromabove),
 which restricts directly accessing values defined in containing regions.
 
 Function identifiers and mapping identifiers are associated with
@@ -478,7 +478,7 @@ the enclosing region, if any. By default, operations inside a region can
 reference values defined outside of the region whenever it would have been legal
 for operands of the enclosing operation to reference those values, but this can
 be restricted using traits, such as
-[OpTrait::IsolatedFromAbove](Traits.md/#isolatedfromabove), or a custom
+[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom
 verifier.
 
 Example:
@@ -761,7 +761,7 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop). Each operation has an
+[`cmpi` operation](Dialects/ArithOps.md/#arithcmpi-arithcmpiop). Each operation has an
 attribute dictionary, which associates a set of attribute names to attribute
 values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as

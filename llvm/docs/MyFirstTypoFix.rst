@@ -448,37 +448,44 @@ Actually, this would be a great time to read the rest of the :ref:`developer
 policy <developer_policy>` too.
 
 
-Post-commit errors
-==================
+.. _MyFirstTypoFix Issues After Landing Your PR:
+
+Issues After Landing Your PR
+============================
 
 Once your change is submitted it will be picked up by automated build
 bots that will build and test your patch in a variety of configurations.
 
-You can see all configurations and their current state in a waterfall
-view at http://lab.llvm.org/buildbot/#/waterfall. The waterfall view is good
-to get a general overview over the tested configurations and to see
-which configuration have been broken for a while.
+The "console" view at http://lab.llvm.org/buildbot/#/console displays results
+for specific commits. If you want to follow how your change is affecting the
+build bots, this should be the first place to look.
 
-The console view at http://lab.llvm.org/buildbot/#/console helps to get a
-better understanding of the build results of a specific patch. If you
-want to follow along how your change is affecting the build bots, **this
-should be the first place to look at**.
+The columns are build configurations and the rows are individual commits. Along
+the rows are colored bubbles. The color of the bubble represents the build's
+status. Green is passing, red has failed and yellow is a build in progress.
 
-Note: only recent changes are shown in the console view. So if your change
-is not there, please rely on PR comments and buildbot emails to notify you
-of any issues intead.
+A red build may have already been failing before your change was committed. This
+means you didn't break the build but you should check that you did not make it
+any worse by adding new problems.
 
-The colored bubbles correspond to projects in the waterfall. If you see a broken
-build, do not despair - some build bots are
-continuously broken; if your change broke the build, you will see a red
-bubble in the console view, while an already broken build will show an
-orange bubble. Of course, even when the build was already broken, a new
-change might introduce a hidden new failure.
+.. note::
+   Only recent changes are shown in the console view. If your change is not
+   there, rely on PR comments and build bot emails to notify you of any problems.
 
-When you want to see more details how a specific build is broken, click the red bubble.
-If the error logs confuse you, do not worry - you can ask for help by adding a comment
-to your PR, or asking on `Discord <https://discord.com/invite/xS7Z362>`__.
+If there is a problem in a build that includes your changes, you may receive
+a report by email or as a comment on your PR. Please check whether the problem
+has been caused by your changes specifically. As builds contain changes from
+many authors and sometimes fail due to unrelated infrastructure problems.
 
+To see the details of a build, click the bubble in the console view, or the link
+provided in the problem report. You will be able to view and download logs for
+each stage of that build.
+
+If you need help understanding the problem, or have any other questions, you can
+ask them as a comment on your PR, or on `Discord <https://discord.com/invite/xS7Z362>`__.
+
+If you do not receive any reports of problems, no action is required from you.
+Your changes are working as expected, well done!
 
 Reverts
 -------

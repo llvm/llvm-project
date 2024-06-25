@@ -1,4 +1,4 @@
-;RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -stats < %s 2>&1  | FileCheck %s
+;RUN: opt %loadNPMPolly -passes=polly-import-jscop -polly-import-jscop-postfix=transformed -stats < %s 2>&1  | FileCheck %s
 ; REQUIRES: asserts
 
 ;int A[100];

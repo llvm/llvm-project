@@ -5,8 +5,8 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 ;.
-; CHECK: @[[SWITCH_TABLE_SWITCH_TO_LOOKUP_I64:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
-; CHECK: @[[SWITCH_TABLE_SWITCH_TO_LOOKUP_I128:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
+; CHECK: @switch.table.switch_to_lookup_i64 = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
+; CHECK: @switch.table.switch_to_lookup_i128 = private unnamed_addr constant [3 x i8] c"\03\01\02", align 1
 ;.
 define i8 @switch_to_lookup_i64(i64 %x){
 ; CHECK-LABEL: @switch_to_lookup_i64(

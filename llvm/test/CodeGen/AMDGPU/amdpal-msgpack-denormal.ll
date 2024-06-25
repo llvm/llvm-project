@@ -3,45 +3,45 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -enable-var-scope %s
 
 ; amdpal compute shader: check for 0x2e12 (COMPUTE_PGM_RSRC1) in pal metadata
-; SI-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0x2c0000{{$}}
-; VI-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2e12 (COMPUTE_PGM_RSRC1): 0x2c0000{{$}}
+; SI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x2c0000{{$}}
+; VI-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2e12 (COMPUTE_PGM_RSRC1)': 0x2c0000{{$}}
 define amdgpu_cs half @cs_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
 
 ; amdpal evaluation shader: check for 0x2cca (SPI_SHADER_PGM_RSRC1_ES) in pal metadata
-; SI-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0x2c0000{{$}}
-; VI-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2cca (SPI_SHADER_PGM_RSRC1_ES): 0x2c0000{{$}}
+; SI-DAG: '0x2cca (SPI_SHADER_PGM_RSRC1_ES)': 0x2c0000{{$}}
+; VI-DAG: '0x2cca (SPI_SHADER_PGM_RSRC1_ES)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2cca (SPI_SHADER_PGM_RSRC1_ES)': 0x2c0000{{$}}
 define amdgpu_es half @es_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
 
 ; amdpal geometry shader: check for 0x2c8a (SPI_SHADER_PGM_RSRC1_GS) in pal metadata
-; SI-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0x2c0000{{$}}
-; VI-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2c8a (SPI_SHADER_PGM_RSRC1_GS): 0x2c0000{{$}}
+; SI-DAG: '0x2c8a (SPI_SHADER_PGM_RSRC1_GS)': 0x2c0000{{$}}
+; VI-DAG: '0x2c8a (SPI_SHADER_PGM_RSRC1_GS)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2c8a (SPI_SHADER_PGM_RSRC1_GS)': 0x2c0000{{$}}
 define amdgpu_gs half @gs_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
 
 ; amdpal hull shader: check for 0x2d0a (SPI_SHADER_PGM_RSRC1_HS) in pal metadata
-; SI-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0x2c0000{{$}}
-; VI-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2d0a (SPI_SHADER_PGM_RSRC1_HS): 0x2c0000{{$}}
+; SI-DAG: '0x2d0a (SPI_SHADER_PGM_RSRC1_HS)': 0x2c0000{{$}}
+; VI-DAG: '0x2d0a (SPI_SHADER_PGM_RSRC1_HS)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2d0a (SPI_SHADER_PGM_RSRC1_HS)': 0x2c0000{{$}}
 define amdgpu_hs half @hs_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
 
 ; amdpal load shader: check for 0x2d4a (SPI_SHADER_PGM_RSRC1_LS) in pal metadata
-; SI-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0x2c0000{{$}}
-; VI-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2d4a (SPI_SHADER_PGM_RSRC1_LS): 0x2c0000{{$}}
+; SI-DAG: '0x2d4a (SPI_SHADER_PGM_RSRC1_LS)': 0x2c0000{{$}}
+; VI-DAG: '0x2d4a (SPI_SHADER_PGM_RSRC1_LS)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2d4a (SPI_SHADER_PGM_RSRC1_LS)': 0x2c0000{{$}}
 define amdgpu_ls half @ls_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
@@ -49,18 +49,18 @@ define amdgpu_ls half @ls_amdpal(half %arg0) #0 {
 
 ; amdpal pixel shader: check for 0x2c0a (SPI_SHADER_PGM_RSRC1_PS) in pal metadata
 ; below.
-; SI-DAG:           0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0x2c0000{{$}}
-; VI-DAG:           0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0x2c02c0{{$}}
-; GFX9-DAG:         0x2c0a (SPI_SHADER_PGM_RSRC1_PS): 0x2c0000{{$}}
+; SI-DAG:           '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)': 0x2c0000{{$}}
+; VI-DAG:           '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)': 0x2c02c0{{$}}
+; GFX9-DAG:         '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)': 0x2c0000{{$}}
 define amdgpu_ps half @ps_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
 }
 
 ; amdpal vertex shader: check for 45352 (SPI_SHADER_PGM_RSRC1_VS) in pal metadata
-; SI-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0x2c0000{{$}}
-; VI-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0x2c02c0{{$}}
-; GFX9-DAG: 0x2c4a (SPI_SHADER_PGM_RSRC1_VS): 0x2c0000{{$}}
+; SI-DAG: '0x2c4a (SPI_SHADER_PGM_RSRC1_VS)': 0x2c0000{{$}}
+; VI-DAG: '0x2c4a (SPI_SHADER_PGM_RSRC1_VS)': 0x2c02c0{{$}}
+; GFX9-DAG: '0x2c4a (SPI_SHADER_PGM_RSRC1_VS)': 0x2c0000{{$}}
 define amdgpu_vs half @vs_amdpal(half %arg0) #0 {
   %add = fadd half %arg0, 1.0
   ret half %add
@@ -77,7 +77,7 @@ attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 ;       - 0x123456789abcdef0
 ;       - 0xfedcba9876543210
 ;     .registers:
-;       0x2c0b (SPI_SHADER_PGM_RSRC2_PS): 0x42000000
+;       '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)': 0x42000000
 ; ...
 ; 	.end_amdgpu_pal_metadata
 

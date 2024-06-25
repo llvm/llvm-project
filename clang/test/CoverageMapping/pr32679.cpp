@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -cc1 -triple i686-pc-windows-msvc19.0.0 -emit-obj -fprofile-instrument=clang -std=c++14 -fdelayed-template-parsing -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name pr32679.cpp -o - %s | FileCheck %s -check-prefix=MSABI -implicit-check-not=f2
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -cc1 -triple %itanium_abi_triple -emit-obj -fprofile-instrument=clang -std=c++14 -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name pr32679.cpp -o - %s | FileCheck %s -check-prefix=ITANIUM -implicit-check-not=f2
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -cc1 -triple i686-pc-windows-msvc19.0.0 -fprofile-instrument=clang -std=c++14 -fdelayed-template-parsing -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name pr32679.cpp -o - %s | FileCheck %s -check-prefix=MSABI -implicit-check-not=f2
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -cc1 -triple %itanium_abi_triple -fprofile-instrument=clang -std=c++14 -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name pr32679.cpp -o - %s | FileCheck %s -check-prefix=ITANIUM -implicit-check-not=f2
 
 template <typename T, int S1>
 struct CreateSpecialization;

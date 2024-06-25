@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -std=c++11 -fcxx-exceptions -fexceptions -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -std=c++11 -fcxx-exceptions -fexceptions -o - %s | FileCheck %s
 
 namespace std {
   struct string {

@@ -50,35 +50,33 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) nounwind {
 ; X86-BSR-NEXT:    xorl $31, %eax
 ; X86-BSR-NEXT:    addl $32, %eax
 ; X86-BSR-NEXT:  .LBB1_2:
-; X86-BSR-NEXT:    testl $-64, %eax
-; X86-BSR-NEXT:    setne %al
+; X86-BSR-NEXT:    shrl $6, %eax
+; X86-BSR-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-BSR-NEXT:    retl
 ;
 ; X86-LZCNT-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X86-LZCNT:       # %bb.0:
-; X86-LZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-LZCNT-NEXT:    addl $32, %eax
-; X86-LZCNT-NEXT:    xorl %ecx, %ecx
+; X86-LZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
+; X86-LZCNT-NEXT:    addl $32, %ecx
+; X86-LZCNT-NEXT:    xorl %eax, %eax
 ; X86-LZCNT-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-LZCNT-NEXT:    cmovel %eax, %ecx
-; X86-LZCNT-NEXT:    testb $64, %cl
-; X86-LZCNT-NEXT:    setne %al
+; X86-LZCNT-NEXT:    cmovel %ecx, %eax
+; X86-LZCNT-NEXT:    shrl $6, %eax
+; X86-LZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-LZCNT-NEXT:    retl
 ;
 ; X64-BSR-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X64-BSR:       # %bb.0:
 ; X64-BSR-NEXT:    bsrq %rdi, %rax
 ; X64-BSR-NEXT:    shrl $6, %eax
-; X64-BSR-NEXT:    cmpl $1, %eax
-; X64-BSR-NEXT:    sete %al
+; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-BSR-NEXT:    retq
 ;
 ; X64-LZCNT-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X64-LZCNT:       # %bb.0:
 ; X64-LZCNT-NEXT:    lzcntq %rdi, %rax
 ; X64-LZCNT-NEXT:    shrl $6, %eax
-; X64-LZCNT-NEXT:    cmpl $1, %eax
-; X64-LZCNT-NEXT:    sete %al
+; X64-LZCNT-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-LZCNT-NEXT:    retq
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 -1)
   %lshr = lshr i64 %ctlz, 6
@@ -131,33 +129,33 @@ define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) nounwind {
 ; X86-BSR-NEXT:    xorl $31, %eax
 ; X86-BSR-NEXT:    addl $32, %eax
 ; X86-BSR-NEXT:  .LBB3_2:
-; X86-BSR-NEXT:    testl $-64, %eax
-; X86-BSR-NEXT:    setne %al
+; X86-BSR-NEXT:    shrl $6, %eax
+; X86-BSR-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-BSR-NEXT:    retl
 ;
 ; X86-LZCNT-LABEL: lshr_ctlz_undef_cmpne_zero_i64:
 ; X86-LZCNT:       # %bb.0:
-; X86-LZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
-; X86-LZCNT-NEXT:    addl $32, %eax
-; X86-LZCNT-NEXT:    xorl %ecx, %ecx
+; X86-LZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
+; X86-LZCNT-NEXT:    addl $32, %ecx
+; X86-LZCNT-NEXT:    xorl %eax, %eax
 ; X86-LZCNT-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-LZCNT-NEXT:    cmovel %eax, %ecx
-; X86-LZCNT-NEXT:    testb $64, %cl
-; X86-LZCNT-NEXT:    setne %al
+; X86-LZCNT-NEXT:    cmovel %ecx, %eax
+; X86-LZCNT-NEXT:    shrl $6, %eax
+; X86-LZCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-LZCNT-NEXT:    retl
 ;
 ; X64-BSR-LABEL: lshr_ctlz_undef_cmpne_zero_i64:
 ; X64-BSR:       # %bb.0:
 ; X64-BSR-NEXT:    bsrq %rdi, %rax
-; X64-BSR-NEXT:    testl $-64, %eax
-; X64-BSR-NEXT:    setne %al
+; X64-BSR-NEXT:    shrl $6, %eax
+; X64-BSR-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-BSR-NEXT:    retq
 ;
 ; X64-LZCNT-LABEL: lshr_ctlz_undef_cmpne_zero_i64:
 ; X64-LZCNT:       # %bb.0:
 ; X64-LZCNT-NEXT:    lzcntq %rdi, %rax
-; X64-LZCNT-NEXT:    testb $64, %al
-; X64-LZCNT-NEXT:    setne %al
+; X64-LZCNT-NEXT:    shrl $6, %eax
+; X64-LZCNT-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-LZCNT-NEXT:    retq
   %ctlz = call i64 @llvm.ctlz.i64(i64 %in, i1 -1)
   %lshr = lshr i64 %ctlz, 6

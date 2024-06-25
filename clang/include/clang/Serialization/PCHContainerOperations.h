@@ -1,4 +1,4 @@
-//===--- Serialization/PCHContainerOperations.h - PCH Containers --*- C++ -*-===//
+//===-- PCHContainerOperations.h - PCH Containers ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 #include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 
 namespace llvm {

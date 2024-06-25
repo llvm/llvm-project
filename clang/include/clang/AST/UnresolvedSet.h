@@ -47,6 +47,7 @@ public:
   // temporaries with defaulted ctors are not zero initialized.
   UnresolvedSetIterator() : iterator_adaptor_base(nullptr) {}
 
+  uint64_t getDeclID() const { return I->getDeclID(); }
   NamedDecl *getDecl() const { return I->getDecl(); }
   void setDecl(NamedDecl *ND) const { return I->setDecl(ND); }
   AccessSpecifier getAccess() const { return I->getAccess(); }

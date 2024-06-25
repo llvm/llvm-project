@@ -1,5 +1,3 @@
-// REQUIRES: mips-registered-target
-
 // Check frontend and linker invocations on FSF MIPS toolchain.
 //
 // = Big-endian, mips32, hard float

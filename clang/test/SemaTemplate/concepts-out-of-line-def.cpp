@@ -536,3 +536,66 @@ void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
 template <class T>
 void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}
 } // namespace GH74314
+
+namespace GH56482 {
+template <typename SlotMap>
+concept slot_map_has_reserve = true;
+
+template <typename T> struct Slot_map {
+  constexpr void reserve() const noexcept
+    requires slot_map_has_reserve<Slot_map>;
+
+  constexpr void reserve(int) const noexcept
+    requires slot_map_has_reserve<Slot_map<T>>;
+};
+
+template <typename T>
+constexpr void Slot_map<T>::reserve() const noexcept
+  requires slot_map_has_reserve<Slot_map<T>>
+{}
+
+template <typename T>
+constexpr void Slot_map<T>::reserve(int) const noexcept
+  requires slot_map_has_reserve<Slot_map>
+{}
+} // namespace GH56482
+
+namespace GH74447 {
+template <typename T> struct S {
+  template <typename... U, int V>
+  void test(T target, U... value)
+    requires requires {
+      target;
+      sizeof...(value) == 1;
+      V == 2;
+    };
+};
+
+template <typename T>
+template <typename... U, int V>
+void S<T>::test(T target, U... value)
+  requires requires {
+    target;
+    sizeof...(value) == 1;
+    V == 2;
+  }
+{}
+} // namespace GH74447
+
+namespace GH72557 {
+
+template <typename...>
+concept IsAnyOf = true;
+
+template <class... DerTs> struct DerivedCollection {
+  template <class DerT>
+    requires IsAnyOf<DerTs...>
+  unsigned long index();
+};
+
+template <class... DerTs>
+template <class DerT>
+  requires IsAnyOf<DerTs...>
+unsigned long DerivedCollection<DerTs...>::index() {}
+
+} // namespace GH72557

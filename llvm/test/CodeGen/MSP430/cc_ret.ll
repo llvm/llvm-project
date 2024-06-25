@@ -10,13 +10,13 @@ entry:
 ; CHECK: call #f_i16
 ; CHECK: mov r12, &g_i16
   %0 = call i16 @f_i16()
-  store volatile i16 %0, i16* @g_i16
+  store volatile i16 %0, ptr @g_i16
 
 ; CHECK: call #f_i32
 ; CHECK: mov r13, &g_i32+2
 ; CHECK: mov r12, &g_i32
   %1 = call i32 @f_i32()
-  store volatile i32 %1, i32* @g_i32
+  store volatile i32 %1, ptr @g_i32
 
 ; CHECK: call #f_i64
 ; CHECK: mov r15, &g_i64+6
@@ -24,7 +24,7 @@ entry:
 ; CHECK: mov r13, &g_i64+2
 ; CHECK: mov r12, &g_i64
   %2 = call i64 @f_i64()
-  store volatile i64 %2, i64* @g_i64
+  store volatile i64 %2, ptr @g_i64
 
   ret void
 }

@@ -99,7 +99,7 @@ public:
   bool isScalableVector() const { return isVector() && IsScalable; }
   bool isFixedLengthVector() const { return isVector() && !IsScalable; }
   bool isChar() const { return ElementBitwidth == 8; }
-  bool isVoid() const { return Void & !Pointer; }
+  bool isVoid() const { return Void && !Pointer; }
   bool isDefault() const { return DefaultType; }
   bool isFloat() const { return Float && !BFloat; }
   bool isBFloat() const { return BFloat && !Float; }
@@ -165,7 +165,7 @@ class Intrinsic {
   ClassKind Class;
 
   /// The architectural #ifdef guard.
-  std::string Guard;
+  std::string SVEGuard, SMEGuard;
 
   // The merge suffix such as _m, _x or _z.
   std::string MergeSuffix;
@@ -184,7 +184,8 @@ public:
   Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
             StringRef MergeSuffix, uint64_t MemoryElementTy, StringRef LLVMName,
             uint64_t Flags, ArrayRef<ImmCheck> ImmChecks, TypeSpec BT,
-            ClassKind Class, SVEEmitter &Emitter, StringRef Guard);
+            ClassKind Class, SVEEmitter &Emitter, StringRef SVEGuard,
+            StringRef SMEGuard);
 
   ~Intrinsic()=default;
 
@@ -194,7 +195,27 @@ public:
   TypeSpec getBaseTypeSpec() const { return BaseTypeSpec; }
   SVEType getBaseType() const { return BaseType; }
 
-  StringRef getGuard() const { return Guard; }
+  StringRef getSVEGuard() const { return SVEGuard; }
+  StringRef getSMEGuard() const { return SMEGuard; }
+  void printGuard(raw_ostream &OS) const {
+    if (!SVEGuard.empty() && SMEGuard.empty())
+      OS << SVEGuard;
+    else if (SVEGuard.empty() && !SMEGuard.empty())
+      OS << SMEGuard;
+    else {
+      if (SVEGuard.find(",") != std::string::npos ||
+          SVEGuard.find("|") != std::string::npos)
+        OS << "(" << SVEGuard << ")";
+      else
+        OS << SVEGuard;
+      OS << "|";
+      if (SMEGuard.find(",") != std::string::npos ||
+          SMEGuard.find("|") != std::string::npos)
+        OS << "(" << SMEGuard << ")";
+      else
+        OS << SMEGuard;
+    }
+  }
   ClassKind getClassKind() const { return Class; }
 
   SVEType getReturnType() const { return Types[0]; }
@@ -943,11 +964,12 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
                      StringRef MergeSuffix, uint64_t MemoryElementTy,
                      StringRef LLVMName, uint64_t Flags,
                      ArrayRef<ImmCheck> Checks, TypeSpec BT, ClassKind Class,
-                     SVEEmitter &Emitter, StringRef Guard)
+                     SVEEmitter &Emitter, StringRef SVEGuard,
+                     StringRef SMEGuard)
     : Name(Name.str()), LLVMName(LLVMName), Proto(Proto.str()),
-      BaseTypeSpec(BT), Class(Class), Guard(Guard.str()),
-      MergeSuffix(MergeSuffix.str()), BaseType(BT, 'd'), Flags(Flags),
-      ImmChecks(Checks.begin(), Checks.end()) {
+      BaseTypeSpec(BT), Class(Class), SVEGuard(SVEGuard.str()),
+      SMEGuard(SMEGuard.str()), MergeSuffix(MergeSuffix.str()),
+      BaseType(BT, 'd'), Flags(Flags), ImmChecks(Checks.begin(), Checks.end()) {
   // Types[0] is the return value.
   for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
     char Mod;
@@ -1147,7 +1169,8 @@ void SVEEmitter::createIntrinsic(
   StringRef Name = R->getValueAsString("Name");
   StringRef Proto = R->getValueAsString("Prototype");
   StringRef Types = R->getValueAsString("Types");
-  StringRef Guard = R->getValueAsString("TargetGuard");
+  StringRef SVEGuard = R->getValueAsString("SVETargetGuard");
+  StringRef SMEGuard = R->getValueAsString("SMETargetGuard");
   StringRef LLVMName = R->getValueAsString("LLVMIntrinsic");
   uint64_t Merge = R->getValueAsInt("Merge");
   StringRef MergeSuffix = R->getValueAsString("MergeSuffix");
@@ -1203,13 +1226,13 @@ void SVEEmitter::createIntrinsic(
 
     Out.push_back(std::make_unique<Intrinsic>(
         Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags, ImmChecks,
-        TS, ClassS, *this, Guard));
+        TS, ClassS, *this, SVEGuard, SMEGuard));
 
     // Also generate the short-form (e.g. svadd_m) for the given type-spec.
     if (Intrinsic::isOverloadedIntrinsic(Name))
       Out.push_back(std::make_unique<Intrinsic>(
           Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags,
-          ImmChecks, TS, ClassG, *this, Guard));
+          ImmChecks, TS, ClassG, *this, SVEGuard, SMEGuard));
   }
 }
 
@@ -1229,9 +1252,9 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
                    [](const std::unique_ptr<Intrinsic> &A,
                       const std::unique_ptr<Intrinsic> &B) {
                      auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(I->getGuard(),
-                                              (unsigned)I->getClassKind(),
-                                              I->getName());
+                       return std::make_tuple(
+                           I->getSVEGuard().str() + I->getSMEGuard().str(),
+                           (unsigned)I->getClassKind(), I->getName());
                      };
                      return ToTuple(A) < ToTuple(B);
                    });
@@ -1385,17 +1408,14 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         SVEType ToV(To.BaseType, N);
         for (const ReinterpretTypeInfo &From : Reinterprets) {
           SVEType FromV(From.BaseType, N);
-          if (ShortForm) {
-            OS << "__aio __attribute__((target(\"sve\"))) " << ToV.str()
-               << " svreinterpret_" << To.Suffix;
-            OS << "(" << FromV.str() << " op) __arm_streaming_compatible {\n";
-            OS << "  return __builtin_sve_reinterpret_" << To.Suffix << "_"
-               << From.Suffix << Suffix << "(op);\n";
-            OS << "}\n\n";
-          } else
-            OS << "#define svreinterpret_" << To.Suffix << "_" << From.Suffix
-               << Suffix << "(...) __builtin_sve_reinterpret_" << To.Suffix
-               << "_" << From.Suffix << Suffix << "(__VA_ARGS__)\n";
+          OS << "__aio "
+                "__attribute__((__clang_arm_builtin_alias(__builtin_sve_"
+                "reinterpret_"
+             << To.Suffix << "_" << From.Suffix << Suffix << ")))\n"
+             << ToV.str() << " svreinterpret_" << To.Suffix;
+          if (!ShortForm)
+            OS << "_" << From.Suffix << Suffix;
+          OS << "(" << FromV.str() << " op);\n";
         }
       }
   }
@@ -1437,10 +1457,12 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
   for (auto &Def : Defs) {
     // Only create BUILTINs for non-overloaded intrinsics, as overloaded
     // declarations only live in the header file.
-    if (Def->getClassKind() != ClassG)
+    if (Def->getClassKind() != ClassG) {
       OS << "TARGET_BUILTIN(__builtin_sve_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"" << Def->getGuard()
-         << "\")\n";
+         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
+      Def->printGuard(OS);
+      OS << "\")\n";
+    }
   }
 
   // Add reinterpret functions.
@@ -1453,7 +1475,7 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
         SVEType FromV(From.BaseType, N);
         OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
            << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sve\")\n";
+           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
       }
     }
   }
@@ -1579,6 +1601,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#endif\n";
 
   OS << "#include <arm_sve.h>\n\n";
+  OS << "#include <stddef.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1604,6 +1627,11 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & 1;\n";
   OS << "}\n\n";
+
+  OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memmove(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memset(void *s, int c, size_t n) __arm_streaming_compatible;\n";
+  OS << "void *__arm_sc_memchr(void *s, int c, size_t n) __arm_streaming_compatible;\n\n";
 
   OS << "__ai __attribute__((target(\"sme\"))) void svundef_za(void) "
         "__arm_streaming_compatible __arm_out(\"za\") "
@@ -1635,10 +1663,12 @@ void SVEEmitter::createSMEBuiltins(raw_ostream &OS) {
   for (auto &Def : Defs) {
     // Only create BUILTINs for non-overloaded intrinsics, as overloaded
     // declarations only live in the header file.
-    if (Def->getClassKind() != ClassG)
+    if (Def->getClassKind() != ClassG) {
       OS << "TARGET_BUILTIN(__builtin_sme_" << Def->getMangledName() << ", \""
-         << Def->getBuiltinTypeStr() << "\", \"n\", \"" << Def->getGuard()
-         << "\")\n";
+         << Def->getBuiltinTypeStr() << "\", \"n\", \"";
+      Def->printGuard(OS);
+      OS << "\")\n";
+    }
   }
 
   OS << "#endif\n\n";
@@ -1775,14 +1805,19 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
-  uint64_t IsStreamingOrSVE2p1Flag = getEnumValueForFlag("IsStreamingOrSVE2p1");
+  uint64_t VerifyRuntimeMode = getEnumValueForFlag("VerifyRuntimeMode");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
+
   for (auto &Def : Defs) {
+    if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
+        !Def->getSMEGuard().empty())
+      report_fatal_error("Missing VerifyRuntimeMode flag");
+
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
-    else if (Def->isFlagSet(IsStreamingOrSVE2p1Flag))
-      StreamingMap["ArmStreamingOrSVE2p1"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(VerifyRuntimeMode))
+      StreamingMap["VerifyRuntimeMode"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

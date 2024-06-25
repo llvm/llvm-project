@@ -486,82 +486,102 @@
         end subroutine omp_fulfill_event
 
         subroutine omp_init_lock(svar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_lock_kind) svar
         end subroutine omp_init_lock
 
         subroutine omp_destroy_lock(svar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_destroy_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_lock_kind) svar
         end subroutine omp_destroy_lock
 
         subroutine omp_set_lock(svar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_set_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_lock_kind) svar
         end subroutine omp_set_lock
 
         subroutine omp_unset_lock(svar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_unset_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_lock_kind) svar
         end subroutine omp_unset_lock
 
         function omp_test_lock(svar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_test_lock
 !DIR$ ENDIF
+#endif
           import
           logical (kind=omp_logical_kind) omp_test_lock
           integer (kind=omp_lock_kind) svar
         end function omp_test_lock
 
         subroutine omp_init_nest_lock(nvar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_nest_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_nest_lock_kind) nvar
         end subroutine omp_init_nest_lock
 
         subroutine omp_destroy_nest_lock(nvar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_destroy_nest_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_nest_lock_kind) nvar
         end subroutine omp_destroy_nest_lock
 
         subroutine omp_set_nest_lock(nvar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_set_nest_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_nest_lock_kind) nvar
         end subroutine omp_set_nest_lock
 
         subroutine omp_unset_nest_lock(nvar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_unset_nest_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_nest_lock_kind) nvar
         end subroutine omp_unset_nest_lock
 
         function omp_test_nest_lock(nvar) bind(c)
+#ifdef __INTEL_COMPILER
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_test_nest_lock
 !DIR$ ENDIF
+#endif
           import
           integer (kind=omp_integer_kind) omp_test_nest_lock
           integer (kind=omp_nest_lock_kind) nvar
@@ -990,6 +1010,7 @@
         end subroutine kmp_set_warnings_off
       end interface
 
+#ifdef __INTEL_COMPILER
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)
 
 !DIR$ IF(__INTEL_COMPILER.LT.1900)
@@ -1158,3 +1179,4 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
+#endif

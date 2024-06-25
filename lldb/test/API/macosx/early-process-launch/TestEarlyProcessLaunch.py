@@ -38,14 +38,14 @@ class TestEarlyProcessLaunch(TestBase):
         logfile_early = os.path.join(self.getBuildDir(), "types-log-early.txt")
         self.addTearDownHook(lambda: self.runCmd("log disable lldb types"))
         self.runCmd("log enable -f %s lldb types" % logfile_early)
-        self.runCmd("expression global = 15")
+        self.runCmd("expression --language objc -- global = 15")
 
         err = process.Continue()
         self.assertTrue(err.Success())
 
         logfile_later = os.path.join(self.getBuildDir(), "types-log-later.txt")
         self.runCmd("log enable -f %s lldb types" % logfile_later)
-        self.runCmd("expression global = 25")
+        self.runCmd("expression --language objc -- global = 25")
 
         self.assertTrue(os.path.exists(logfile_early))
         self.assertTrue(os.path.exists(logfile_later))

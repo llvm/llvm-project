@@ -722,7 +722,7 @@ TEST(TBDv5, WriteFile) {
   File.setInstallName("@rpath/S/L/F/Foo.framework/Foo");
   File.setCurrentVersion(PackedVersion(1, 2, 0));
   File.setCompatibilityVersion(PackedVersion(1, 1, 0));
-  File.addRPath(AllTargets[0], "@executable_path/.../Frameworks");
+  File.addRPath("@executable_path/.../Frameworks", AllTargets[0]);
 
   for (const auto &Targ : AllTargets) {
     File.addParentUmbrella(Targ, "System");
@@ -897,7 +897,7 @@ TEST(TBDv5, WriteMultipleDocuments) {
   NestedFile.setTwoLevelNamespace();
   NestedFile.setApplicationExtensionSafe(false);
   NestedFile.setCurrentVersion(PackedVersion(2, 1, 1));
-  NestedFile.addRPath(AllTargets[0], "@executable_path/.../Frameworks");
+  NestedFile.addRPath("@executable_path/.../Frameworks", AllTargets[0]);
   for (const auto &Targ : AllTargets)
     NestedFile.addReexportedLibrary("@rpath/libfoo.dylib", Targ);
   NestedFile.addSymbol(EncodeKind::GlobalSymbol, "_funcFoo", AllTargets,
@@ -1228,6 +1228,84 @@ TEST(TBDv5, NotForSharedCache) {
   EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
   EXPECT_FALSE(ReadFile->hasSimulatorSupport());
   EXPECT_TRUE(ReadFile->isOSLibNotForSharedCache());
+}
+
+TEST(TBDv5, ObjCInterfaces) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator",
+      "min_deployment": "14.0"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "exported_symbols": [
+    {
+      "data": {
+         "global": [
+              "_global",
+              "_OBJC_METACLASS_$_Standalone",
+              "_OBJC_CLASS_$_Standalone2"
+          ],
+          "weak": ["_OBJC_EHTYPE_$_NSObject"],
+          "objc_class": [
+              "ClassA",
+              "ClassB"
+          ],
+          "objc_eh_type": ["ClassA"]
+      }
+    }]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  Target ExpectedTarget =
+      Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(14, 0));
+  EXPECT_EQ(*File->targets().begin(), ExpectedTarget);
+
+  // Check Symbols.
+  ExportedSymbolSeq Exports;
+  for (const auto *Sym : File->symbols()) {
+    ExportedSymbol Temp =
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined() || Sym->isWeakReferenced(),
+                       Sym->isThreadLocalValue(), Sym->isData()};
+    Exports.emplace_back(std::move(Temp));
+  }
+  llvm::sort(Exports);
+
+  std::vector<ExportedSymbol> ExpectedExports = {
+      {EncodeKind::GlobalSymbol, "_OBJC_CLASS_$_Standalone2", false, false,
+       true},
+      {EncodeKind::GlobalSymbol, "_OBJC_EHTYPE_$_NSObject", true, false, true},
+      {EncodeKind::GlobalSymbol, "_OBJC_METACLASS_$_Standalone", false, false,
+       true},
+      {EncodeKind::GlobalSymbol, "_global", false, false, true},
+      {EncodeKind::ObjectiveCClass, "ClassA", false, false, true},
+      {EncodeKind::ObjectiveCClass, "ClassB", false, false, true},
+      {EncodeKind::ObjectiveCClassEHType, "ClassA", false, false, true}};
+
+  EXPECT_EQ(ExpectedExports.size(), Exports.size());
+  EXPECT_TRUE(
+      std::equal(Exports.begin(), Exports.end(), std::begin(ExpectedExports)));
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+
+  Expected<TBDFile> Output =
+      TextAPIReader::get(MemoryBufferRef(Buffer, "Output.tbd"));
+  EXPECT_TRUE(!!Output);
+  TBDFile WriteResultFile = std::move(Output.get());
+  EXPECT_EQ(*File, *WriteResultFile);
 }
 
 TEST(TBDv5, MergeIF) {

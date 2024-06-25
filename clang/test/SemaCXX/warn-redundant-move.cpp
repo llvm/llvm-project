@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wredundant-move -std=c++11 -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wredundant-move -std=c++11 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 %s -ast-dump | FileCheck %s --check-prefix=CHECK-AST
+// RUN: %clang_cc1 -std=c++11 %s -ast-dump | FileCheck %s --check-prefix=CHECK-AST
 
 // definitions for std::move
 namespace std {

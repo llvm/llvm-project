@@ -43,7 +43,7 @@ struct S {
 const int S::b;
 const auto S::c = 0;
 
-namespace std { template<typename T> struct initializer_list { initializer_list(); }; }
+namespace std { template<typename T> struct initializer_list { const T *a, *b; initializer_list(); }; }
 
 // In an initializer of the form ( expression-list ), the expression-list
 // shall be a single assigment-expression.

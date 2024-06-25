@@ -10,17 +10,17 @@ namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
+  bool ReportContext(const Context& context) override {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
+  void ReportRuns(const std::vector<Run>& report) override {
     all_runs_.insert(all_runs_.end(), begin(report), end(report));
     ConsoleReporter::ReportRuns(report);
   }
 
   TestReporter() {}
-  virtual ~TestReporter() {}
+  ~TestReporter() override {}
 
   mutable std::vector<Run> all_runs_;
 };
@@ -35,8 +35,9 @@ struct TestCase {
   void CheckRun(Run const& run) const {
     BM_CHECK(name == run.benchmark_name())
         << "expected " << name << " got " << run.benchmark_name();
-    BM_CHECK(error_occurred == run.error_occurred);
-    BM_CHECK(error_message == run.error_message);
+    BM_CHECK_EQ(error_occurred,
+                benchmark::internal::SkippedWithError == run.skipped);
+    BM_CHECK(error_message == run.skip_message);
     if (error_occurred) {
       // BM_CHECK(run.iterations == 0);
     } else {
@@ -47,7 +48,8 @@ struct TestCase {
 
 std::vector<TestCase> ExpectedResults;
 
-int AddCases(const char* base_name, std::initializer_list<TestCase> const& v) {
+int AddCases(const std::string& base_name,
+             std::initializer_list<TestCase> const& v) {
   for (auto TC : v) {
     TC.name = base_name + TC.name;
     ExpectedResults.push_back(std::move(TC));
@@ -141,7 +143,8 @@ ADD_CASES("BM_error_during_running_ranged_for",
 
 void BM_error_after_running(benchmark::State& state) {
   for (auto _ : state) {
-    benchmark::DoNotOptimize(state.iterations());
+    auto iterations = double(state.iterations()) * double(state.iterations());
+    benchmark::DoNotOptimize(iterations);
   }
   if (state.thread_index() <= (state.threads() / 2))
     state.SkipWithError("error message");

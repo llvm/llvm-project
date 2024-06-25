@@ -1,5 +1,5 @@
 ! Test non-contiguous slice of parameter array.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 subroutine test2(i)
   integer, parameter :: a(*,*) = reshape( [ 1,2,3,4 ], [ 2,2 ])
   integer :: x(2)

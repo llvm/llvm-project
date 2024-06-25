@@ -187,7 +187,8 @@ struct RBeginFunction {
 };
 static_assert( std::is_invocable_v<RangeRBeginT,  RBeginFunction const&>);
 static_assert(!std::is_invocable_v<RangeRBeginT,  RBeginFunction &&>);
-static_assert(!std::is_invocable_v<RangeRBeginT,  RBeginFunction &>);
+static_assert(
+    std::is_invocable_v<RangeRBeginT, RBeginFunction&>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCRBeginT, RBeginFunction const&>);
 static_assert( std::is_invocable_v<RangeCRBeginT, RBeginFunction &>);
 
@@ -246,7 +247,7 @@ private:
 constexpr bool testRBeginFunction() {
   RBeginFunction a{};
   const RBeginFunction aa{};
-  static_assert(!std::invocable<RangeRBeginT, decltype((a))>);
+  assert(std::ranges::rbegin(a) == &a.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crbegin(a) == &a.x);
   assert(std::ranges::rbegin(aa) == &aa.x);
   assert(std::ranges::crbegin(aa) == &aa.x);
@@ -267,21 +268,21 @@ constexpr bool testRBeginFunction() {
 
   RBeginFunctionReturnsEmptyPtr d{};
   const RBeginFunctionReturnsEmptyPtr dd{};
-  static_assert(!std::invocable<RangeRBeginT, decltype((d))>);
+  assert(std::ranges::rbegin(d) == &d.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crbegin(d) == &d.x);
   assert(std::ranges::rbegin(dd) == &dd.x);
   assert(std::ranges::crbegin(dd) == &dd.x);
 
   RBeginFunctionWithDataMember e{};
   const RBeginFunctionWithDataMember ee{};
-  static_assert(!std::invocable<RangeRBeginT, decltype((e))>);
+  assert(std::ranges::rbegin(e) == &e.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::rbegin(ee) == &ee.x);
   assert(std::ranges::crbegin(e) == &e.x);
   assert(std::ranges::crbegin(ee) == &ee.x);
 
   RBeginFunctionWithPrivateBeginMember f{};
   const RBeginFunctionWithPrivateBeginMember ff{};
-  static_assert(!std::invocable<RangeRBeginT, decltype((f))>);
+  assert(std::ranges::rbegin(f) == &f.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crbegin(f) == &f.y);
   assert(std::ranges::rbegin(ff) == &ff.y);
   assert(std::ranges::crbegin(ff) == &ff.y);

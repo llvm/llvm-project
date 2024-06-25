@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -S -emit-llvm -fsanitize=alignment %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -emit-llvm -fsanitize=alignment %s -o - | FileCheck %s
 
 struct alignas(32) S1 {
   int x;

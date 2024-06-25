@@ -1,6 +1,6 @@
 // This test checks if a symbol gets mangled dwarf names with -fpseudo-probe-for-profiling option.
-// RUN: %clang_cc1 -triple x86_64 -x c++ -S -emit-llvm -debug-info-kind=line-tables-only -o - < %s | FileCheck %s --check-prefix=PLAIN
-// RUN: %clang_cc1 -triple x86_64 -x c++  -S -emit-llvm -debug-info-kind=line-tables-only -fpseudo-probe-for-profiling -o - < %s | FileCheck %s --check-prefix=MANGLE
+// RUN: %clang_cc1 -triple x86_64 -x c++ -emit-llvm -debug-info-kind=line-tables-only -o - < %s | FileCheck %s --check-prefix=PLAIN
+// RUN: %clang_cc1 -triple x86_64 -x c++  -emit-llvm -debug-info-kind=line-tables-only -fpseudo-probe-for-profiling -o - < %s | FileCheck %s --check-prefix=MANGLE
 
 int foo() {
   return 0;

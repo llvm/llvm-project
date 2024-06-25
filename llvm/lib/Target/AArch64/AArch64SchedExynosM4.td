@@ -27,7 +27,7 @@ def ExynosM4Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE]);
+                                                    [HasMTE, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -309,7 +309,6 @@ def M4WriteFMAC3H  : SchedWriteRes<[M4UnitFMACH]> { let Latency = 3; }
 def M4WriteFMAC3   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 3; }
 def M4WriteFMAC4   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 4; }
 def M4WriteFMAC4H  : SchedWriteRes<[M4UnitFMACH]> { let Latency = 4; }
-def M4WriteFMAC5   : SchedWriteRes<[M4UnitFMAC]>  { let Latency = 5; }
 
 def M4WriteFSQR7H  : SchedWriteRes<[M4UnitFSQRH]> { let Latency = 7;
                                                     let ReleaseAtCycles = [6]; }
@@ -495,8 +494,7 @@ def M4WriteMOVI    : SchedWriteVariant<[SchedVar<IsZeroFPIdiomPred, [M4WriteZ0]>
 // Fast forwarding.
 def M4ReadAESM1    : SchedReadAdvance<+1, [M4WriteNCRY1]>;
 def M4ReadFMACM1   : SchedReadAdvance<+1, [M4WriteFMAC4,
-                                           M4WriteFMAC4H,
-                                           M4WriteFMAC5]>;
+                                           M4WriteFMAC4H]>;
 def M4ReadNMULM1   : SchedReadAdvance<+1, [M4WriteNMUL3]>;
 def M4ReadNMULP2   : SchedReadAdvance<-2, [M4WriteNMUL3]>;
 

@@ -128,6 +128,52 @@ define <vscale x 4 x i1> @sve_signature_pred(<vscale x 4 x i1> %arg1, <vscale x 
   ret <vscale x 4 x i1> %arg2
 }
 
+; Test that scalable predicate argument in [1 x <vscale x 4 x i1>] type are properly assigned to P registers.
+; CHECK-LABEL: name: sve_signature_pred_1xv4i1
+; CHECK: [[RES:%[0-9]+]]:ppr = COPY $p1
+; CHECK: $p0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit $p0
+define [1 x <vscale x 4 x i1>] @sve_signature_pred_1xv4i1([1 x <vscale x 4 x i1>] %arg1, [1 x <vscale x 4 x i1>] %arg2) nounwind {
+  ret [1 x <vscale x 4 x i1>] %arg2
+}
+
+; Test that upto to two scalable predicate arguments in [2 x <vscale x 4 x i1>] type can be assigned to P registers.
+; CHECK-LABEL: name: sve_signature_pred_2xv4i1
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p3
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p2
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1
+define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1([2 x <vscale x 4 x i1>] %arg1, [2 x <vscale x 4 x i1>] %arg2) nounwind {
+  ret [2 x <vscale x 4 x i1>] %arg2
+}
+
+; Test that a scalable predicate argument in [1 x <vscale x 32 x i1>] type is assigned to two P registers.
+; CHECK-LABLE: name: sve_signature_pred_1xv32i1
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p3
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p2
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1
+define [1 x <vscale x 32 x i1>] @sve_signature_pred_1xv32i1([1 x <vscale x 32 x i1>] %arg1, [1 x <vscale x 32 x i1>] %arg2) nounwind {
+  ret [1 x <vscale x 32 x i1>] %arg2
+}
+
+; Test that a scalable predicate argument in [2 x <vscale x 32 x i1>] type is assigned to four P registers.
+; CHECK-LABLE: name: sve_signature_pred_2xv32i1
+; CHECK: [[RES3:%[0-9]+]]:ppr = COPY $p3
+; CHECK: [[RES2:%[0-9]+]]:ppr = COPY $p2
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p1
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p0
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: $p2 = COPY [[RES2]]
+; CHECK: $p3 = COPY [[RES3]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1, implicit $p2, implicit $p3
+define [2 x <vscale x 32 x i1>] @sve_signature_pred_2xv32i1([2 x <vscale x 32 x i1>] %arg1) nounwind {
+  ret [2 x <vscale x 32 x i1>] %arg1
+}
+
 ; CHECK-LABEL: name: sve_signature_vec_caller
 ; CHECK-DAG: [[ARG2:%[0-9]+]]:zpr = COPY $z1
 ; CHECK-DAG: [[ARG1:%[0-9]+]]:zpr = COPY $z0
@@ -154,6 +200,84 @@ define <vscale x 4 x i32> @sve_signature_vec_caller(<vscale x 4 x i32> %arg1, <v
 define <vscale x 4 x i1> @sve_signature_pred_caller(<vscale x 4 x i1> %arg1, <vscale x 4 x i1> %arg2) nounwind {
   %res = call <vscale x 4 x i1> @sve_signature_pred(<vscale x 4 x i1> %arg2, <vscale x 4 x i1> %arg1)
   ret <vscale x 4 x i1> %res
+}
+
+; CHECK-LABEL: name: sve_signature_pred_1xv4i1_caller
+; CHECK-DAG: [[ARG2:%[0-9]+]]:ppr = COPY $p1
+; CHECK-DAG: [[ARG1:%[0-9]+]]:ppr = COPY $p0
+; CHECK-DAG: $p0 = COPY [[ARG2]]
+; CHECK-DAG: $p1 = COPY [[ARG1]]
+; CHECK-NEXT: BL @sve_signature_pred_1xv4i1, csr_aarch64_sve_aapcs
+; CHECK: [[RES:%[0-9]+]]:ppr = COPY $p0
+; CHECK: $p0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit $p0
+define [1 x <vscale x 4 x i1>] @sve_signature_pred_1xv4i1_caller([1 x <vscale x 4 x i1>] %arg1, [1 x <vscale x 4 x i1>] %arg2) nounwind {
+  %res = call [1 x <vscale x 4 x i1>] @sve_signature_pred_1xv4i1([1 x <vscale x 4 x i1>] %arg2, [1 x <vscale x 4 x i1>] %arg1)
+  ret [1 x <vscale x 4 x i1>] %res
+}
+
+; CHECK-LABEL: name: sve_signature_pred_2xv4i1_caller
+; CHECK-DAG: [[ARG2_2:%[0-9]+]]:ppr = COPY $p3
+; CHECK-DAG: [[ARG2_1:%[0-9]+]]:ppr = COPY $p2
+; CHECK-DAG: [[ARG1_2:%[0-9]+]]:ppr = COPY $p1
+; CHECK-DAG: [[ARG1_1:%[0-9]+]]:ppr = COPY $p0
+; CHECK-DAG: $p0 = COPY [[ARG2_1]]
+; CHECK-DAG: $p1 = COPY [[ARG2_2]]
+; CHECK-DAG: $p2 = COPY [[ARG1_1]]
+; CHECK-DAG: $p3 = COPY [[ARG1_2]]
+; CHECK-NEXT: BL @sve_signature_pred_2xv4i1, csr_aarch64_sve_aapcs
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p0
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p1
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1
+define [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1_caller([2 x <vscale x 4 x i1>] %arg1, [2 x <vscale x 4 x i1>] %arg2) nounwind {
+  %res = call [2 x <vscale x 4 x i1>] @sve_signature_pred_2xv4i1([2 x <vscale x 4 x i1>] %arg2, [2 x <vscale x 4 x i1>] %arg1)
+  ret [2 x <vscale x 4 x i1>] %res
+}
+
+; CHECK-LABEL: name: sve_signature_pred_1xv32i1_caller
+; CHECK-DAG: [[ARG2_2:%[0-9]+]]:ppr = COPY $p3
+; CHECK-DAG: [[ARG2_1:%[0-9]+]]:ppr = COPY $p2
+; CHECK-DAG: [[ARG1_2:%[0-9]+]]:ppr = COPY $p1
+; CHECK-DAG: [[ARG1_1:%[0-9]+]]:ppr = COPY $p0
+; CHECK-DAG: $p0 = COPY [[ARG2_1]]
+; CHECK-DAG: $p1 = COPY [[ARG2_2]]
+; CHECK-DAG: $p2 = COPY [[ARG1_1]]
+; CHECK-DAG: $p3 = COPY [[ARG1_2]]
+; CHECK-NEXT: BL @sve_signature_pred_1xv32i1, csr_aarch64_sve_aapcs
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p0
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p1
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1
+define [1 x <vscale x 32 x i1>] @sve_signature_pred_1xv32i1_caller([1 x <vscale x 32 x i1>] %arg1, [1 x <vscale x 32 x i1>] %arg2) nounwind {
+  %res = call [1 x <vscale x 32 x i1>] @sve_signature_pred_1xv32i1([1 x <vscale x 32 x i1>] %arg2, [1 x <vscale x 32 x i1>] %arg1)
+  ret [1 x <vscale x 32 x i1>] %res
+}
+
+; CHECK-LABEL: name: sve_signature_pred_2xv32i1_caller
+; CHECK-DAG: [[ARG3:%[0-9]+]]:ppr = COPY $p3
+; CHECK-DAG: [[ARG2:%[0-9]+]]:ppr = COPY $p2
+; CHECK-DAG: [[ARG1:%[0-9]+]]:ppr = COPY $p1
+; CHECK-DAG: [[ARG0:%[0-9]+]]:ppr = COPY $p0
+; CHECK-DAG: $p0 = COPY [[ARG0]]
+; CHECK-DAG: $p1 = COPY [[ARG1]]
+; CHECK-DAG: $p2 = COPY [[ARG2]]
+; CHECK-DAG: $p3 = COPY [[ARG3]]
+; CHECK-NEXT: BL @sve_signature_pred_2xv32i1, csr_aarch64_sve_aapcs
+; CHECK: [[RES0:%[0-9]+]]:ppr = COPY $p0
+; CHECK: [[RES1:%[0-9]+]]:ppr = COPY $p1
+; CHECK: [[RES2:%[0-9]+]]:ppr = COPY $p2
+; CHECK: [[RES3:%[0-9]+]]:ppr = COPY $p3
+; CHECK: $p0 = COPY [[RES0]]
+; CHECK: $p1 = COPY [[RES1]]
+; CHECK: $p2 = COPY [[RES2]]
+; CHECK: $p3 = COPY [[RES3]]
+; CHECK: RET_ReallyLR implicit $p0, implicit $p1
+define [2 x <vscale x 32 x i1>] @sve_signature_pred_2xv32i1_caller([2 x <vscale x 32 x i1>] %arg1) {
+  %res = call [2 x <vscale x 32 x i1>] @sve_signature_pred_2xv32i1([2 x <vscale x 32 x i1>] %arg1)
+  ret [2 x <vscale x 32 x i1>] %res
 }
 
 ; Test that functions returning or taking SVE arguments use the correct

@@ -5,8 +5,8 @@
 @var2 = internal global i32 0
 
 ;.
-; CHECK: @[[VAR1:[a-zA-Z0-9_$"\\.-]+]] = internal global [1 x i32] undef
-; CHECK: @[[VAR2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
+; CHECK: @var1 = internal global [1 x i32] undef
+; CHECK: @var2 = internal global i32 0
 ;.
 define ptr addrspace(1) @foo(ptr addrspace(4) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -124,8 +124,6 @@ define internal i16 @bar3(ptr %p1, i16 %p2) {
   ret i16 %p2
 }
 
-; CHECK-LABEL: declare {{[^@]+}}@func6
-; CHECK-SAME: (ptr)
 declare void @func6(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }

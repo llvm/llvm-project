@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: no-threads
-// ALLOW_RETRIES: 2
+// UNSUPPORTED: no-threads, c++03
 
 // <condition_variable>
 
@@ -18,81 +17,105 @@
 //   wait_for(Lock& lock, const chrono::duration<Rep, Period>& rel_time);
 
 #include <condition_variable>
+#include <atomic>
+#include <cassert>
+#include <chrono>
 #include <mutex>
 #include <thread>
-#include <chrono>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-std::condition_variable_any cv;
+template <class Mutex>
+struct MyLock : std::unique_lock<Mutex> {
+  using std::unique_lock<Mutex>::unique_lock;
+};
 
-typedef std::timed_mutex L0;
-typedef std::unique_lock<L0> L1;
-
-L0 m0;
-
-int test1 = 0;
-int test2 = 0;
-
-bool expect_timeout = false;
-
-void f()
-{
-    typedef std::chrono::system_clock Clock;
-    typedef std::chrono::milliseconds milliseconds;
-    L1 lk(m0);
-    assert(test2 == 0);
-    test1 = 1;
-    cv.notify_one();
-    Clock::time_point t0 = Clock::now();
-    Clock::time_point wait_end = t0 + milliseconds(250);
-    Clock::duration d;
-    do {
-        d = wait_end - Clock::now();
-        if (d <= milliseconds(0)) break;
-    } while (test2 == 0 && cv.wait_for(lk, d) == std::cv_status::no_timeout);
-    Clock::time_point t1 = Clock::now();
-    if (!expect_timeout)
-    {
-        assert(t1 - t0 < milliseconds(250));
-        assert(test2 != 0);
-    }
-    else
-    {
-        assert(t1 - t0 - milliseconds(250) < milliseconds(50));
-        assert(test2 == 0);
-    }
+template <class Function>
+std::chrono::microseconds measure(Function f) {
+  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+  f();
+  std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 }
 
-int main(int, char**)
-{
-    {
-        L1 lk(m0);
-        std::thread t = support::make_test_thread(f);
-        assert(test1 == 0);
-        while (test1 == 0)
-            cv.wait(lk);
-        assert(test1 != 0);
-        test2 = 1;
-        lk.unlock();
-        cv.notify_one();
-        t.join();
-    }
-    test1 = 0;
-    test2 = 0;
-    expect_timeout = true;
-    {
-        L1 lk(m0);
-        std::thread t = support::make_test_thread(f);
-        assert(test1 == 0);
-        while (test1 == 0)
-            cv.wait(lk);
-        assert(test1 != 0);
-        lk.unlock();
-        t.join();
-    }
+template <class Lock>
+void test() {
+  using Mutex = typename Lock::mutex_type;
+  // Test unblocking via a call to notify_one() in another thread.
+  //
+  // To test this, we set a very long timeout in wait_for() and we wait
+  // again in case we get awoken spuriously. Note that it can actually
+  // happen that we get awoken spuriously and fail to recognize it
+  // (making this test useless), but the likelihood should be small.
+  {
+    std::atomic<bool> ready(false);
+    std::atomic<bool> likely_spurious(true);
+    auto timeout = std::chrono::seconds(3600);
+    std::condition_variable_any cv;
+    Mutex mutex;
 
+    std::thread t1 = support::make_test_thread([&] {
+      Lock lock(mutex);
+      auto elapsed = measure([&] {
+        ready = true;
+        do {
+          std::cv_status result = cv.wait_for(lock, timeout);
+          assert(result == std::cv_status::no_timeout);
+        } while (likely_spurious);
+      });
+
+      // This can technically fail if we have many spurious awakenings, but in practice the
+      // tolerance is so high that it shouldn't be a problem.
+      assert(elapsed < timeout);
+    });
+
+    std::thread t2 = support::make_test_thread([&] {
+      while (!ready) {
+        // spin
+      }
+
+      // Acquire the same mutex as t1. This blocks the condition variable inside its wait call
+      // so we can notify it while it is waiting.
+      Lock lock(mutex);
+      cv.notify_one();
+      likely_spurious = false;
+      lock.unlock();
+    });
+
+    t2.join();
+    t1.join();
+  }
+
+  // Test unblocking via a timeout.
+  //
+  // To test this, we create a thread that waits on a condition variable
+  // with a certain timeout, and we never awaken it. To guard against
+  // spurious wakeups, we wait again whenever we are awoken for a reason
+  // other than a timeout.
+  {
+    auto timeout = std::chrono::milliseconds(250);
+    std::condition_variable_any cv;
+    Mutex mutex;
+
+    std::thread t1 = support::make_test_thread([&] {
+      Lock lock(mutex);
+      std::cv_status result;
+      do {
+        auto elapsed = measure([&] { result = cv.wait_for(lock, timeout); });
+        if (result == std::cv_status::timeout)
+          assert(elapsed >= timeout);
+      } while (result != std::cv_status::timeout);
+    });
+
+    t1.join();
+  }
+}
+
+int main(int, char**) {
+  test<std::unique_lock<std::mutex>>();
+  test<std::unique_lock<std::timed_mutex>>();
+  test<MyLock<std::mutex>>();
+  test<MyLock<std::timed_mutex>>();
   return 0;
 }

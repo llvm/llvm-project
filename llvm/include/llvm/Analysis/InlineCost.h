@@ -65,7 +65,8 @@ const char MaxInlineStackSizeAttributeName[] = "inline-max-stacksize";
 // The cost-benefit pair computed by cost-benefit analysis.
 class CostBenefitPair {
 public:
-  CostBenefitPair(APInt Cost, APInt Benefit) : Cost(Cost), Benefit(Benefit) {}
+  CostBenefitPair(APInt Cost, APInt Benefit)
+      : Cost(std::move(Cost)), Benefit(std::move(Benefit)) {}
 
   const APInt &getCost() const { return Cost; }
 

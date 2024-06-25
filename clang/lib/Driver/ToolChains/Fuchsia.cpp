@@ -119,8 +119,11 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Dyld));
   }
 
-  if (ToolChain.getArch() == llvm::Triple::riscv64)
+  if (Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
@@ -251,9 +254,7 @@ void fuchsia::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
 Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : ToolChain(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != D.Dir)
-    getProgramPaths().push_back(D.Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   if (!D.SysRoot.empty()) {
     SmallString<128> P(D.SysRoot);
@@ -432,13 +433,23 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     if (Version.empty())
       return;
 
-    // First add the per-target include path.
+    // First add the per-target multilib include dir.
+    if (!SelectedMultilibs.empty() && !SelectedMultilibs.back().isDefault()) {
+      const Multilib &M = SelectedMultilibs.back();
+      SmallString<128> TargetDir(Path);
+      llvm::sys::path::append(TargetDir, Target, M.gccSuffix(), "c++", Version);
+      if (getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir);
+      }
+    }
+
+    // Second add the per-target include dir.
     SmallString<128> TargetDir(Path);
     llvm::sys::path::append(TargetDir, Target, "c++", Version);
     if (getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
 
-    // Second add the generic one.
+    // Third the generic one.
     SmallString<128> Dir(Path);
     llvm::sys::path::append(Dir, "c++", Version);
     addSystemInclude(DriverArgs, CC1Args, Dir);
