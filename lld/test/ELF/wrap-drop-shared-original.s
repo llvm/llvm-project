@@ -26,7 +26,7 @@
 # ORIGINAL-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap_foo
 # ORIGINAL-NEXT: NOTYPE  GLOBAL DEFAULT     6 ref
 
-# ORIGINAL-AND-WRAPPED: (NEEDED) Shared library: [liboriginal-and-wrapped.so]
+# ORIGINAL-AND-WRAPPED: (NEEDED) Shared library: liboriginal-and-wrapped.so
 # ORIGINAL-AND-WRAPPED:      Symbol table '.dynsym' contains 3 entries:
 # ORIGINAL-AND-WRAPPED:      NOTYPE  LOCAL  DEFAULT   UND
 # ORIGINAL-AND-WRAPPED-NEXT: NOTYPE  GLOBAL DEFAULT   UND __wrap_foo
