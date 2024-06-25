@@ -46,11 +46,21 @@ constexpr bool base_const() {
 
   return true;
 }
+
+bool base_move() {
+  auto view = BasicTestView<SizedInputIterator>{SizedInputIterator(), SizedInputIterator()};
+  auto sv = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
+  [[maybe_unused]] auto result = sv.begin().base();
+  assert(result.move_counter==1);
+  assert(result.copy_counter==0);
+  return true;
+}
+
 int main(int, char**) {
   base_noexcept();
   static_assert(base_noexcept());
   base_const();
   static_assert(base_const());
-
+  base_move();
   return 0;
 }
