@@ -1088,14 +1088,14 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   return res;
 }
 
-// DEFINE_REAL_PTHREAD_FUNCTIONS
+// DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 namespace __sanitizer {
-int real_pthread_create(void *th, void *attr, void *(*callback)(void *),
-                        void *param) {
+int internal_pthread_create(void *th, void *attr, void *(*callback)(void *),
+                            void *param) {
   ScopedIgnoreInterceptors ignore;
   return REAL(pthread_create)(th, attr, callback, param);
 }
-int real_pthread_join(void *th, void **ret) {
+int internal_pthread_join(void *th, void **ret) {
   ScopedIgnoreInterceptors ignore;
   return REAL(pthread_join(th, ret));
 }
