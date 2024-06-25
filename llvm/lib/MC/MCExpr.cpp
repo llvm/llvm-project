@@ -669,7 +669,7 @@ static void AttemptToFoldSymbolOffsetDifference(
     bool Reverse = false;
     if (FA == FB)
       Reverse = SA.getOffset() < SB.getOffset();
-    else if (!isa<MCDummyFragment>(FA))
+    else
       Reverse = FA->getLayoutOrder() < FB->getLayoutOrder();
 
     uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
@@ -680,7 +680,6 @@ static void AttemptToFoldSymbolOffsetDifference(
       Displacement *= -1;
     }
 
-    [[maybe_unused]] bool Found = false;
     // Track whether B is before a relaxable instruction and whether A is after
     // a relaxable instruction. If SA and SB are separated by a linker-relaxable
     // instruction, the difference cannot be resolved as it may be changed by
@@ -697,8 +696,11 @@ static void AttemptToFoldSymbolOffsetDifference(
           return;
       }
       if (&*FI == FA) {
-        Found = true;
-        break;
+        // If FA and FB belong to the same subsection, the loop will find FA and
+        // we can resolve the difference.
+        Addend += Reverse ? -Displacement : Displacement;
+        FinalizeFolding();
+        return;
       }
 
       int64_t Num;
@@ -716,14 +718,6 @@ static void AttemptToFoldSymbolOffsetDifference(
       } else {
         return;
       }
-    }
-    // If FA and FB belong to the same subsection, either the previous loop
-    // found FA, or FA is a dummy fragment not in the fragment list (which means
-    // SA is a pending label (see flushPendingLabels)) or FA and FB belong to
-    // different subsections. In either case, we can resolve the difference.
-    if (Found || isa<MCDummyFragment>(FA)) {
-      Addend += Reverse ? -Displacement : Displacement;
-      FinalizeFolding();
     }
   }
 }

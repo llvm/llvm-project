@@ -1566,6 +1566,16 @@ define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
   ret ptr %ptr
 }
 
+define ptr @gep_sdiv_nuw(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_nuw(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr nuw %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
 define ptr @gep_ashr(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_ashr(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
@@ -1757,6 +1767,26 @@ define ptr @gep_to_i8_nusw_nuw(ptr %p) {
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr nusw nuw i32, ptr %p, i64 1
+  ret ptr %gep
+}
+
+define ptr @gep_sel_const(i1 %c) {
+; CHECK-LABEL: @gep_sel_const(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr (i8, ptr @A, i64 5), ptr getelementptr (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr i8, ptr %sel, i64 5
+  ret ptr %gep
+}
+
+define ptr @gep_sel_const_nuw(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr nuw (i8, ptr @A, i64 5), ptr getelementptr nuw (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr nuw i8, ptr %sel, i64 5
   ret ptr %gep
 }
 
