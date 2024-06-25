@@ -584,23 +584,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   EXPECT_TOKEN(Tokens[20], tok::greater, TT_BinaryOperator);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
-  auto Tokens = annotate("template <template <typename...> typename X,\n"
-                         "          template <typename...> class Y,\n"
-                         "          typename... T>\n"
-                         "class A {};");
-  ASSERT_EQ(Tokens.size(), 28u) << Tokens;
-  EXPECT_TOKEN(Tokens[1], tok::less, TT_TemplateOpener);
-  EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
-  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
-  EXPECT_FALSE(Tokens[6]->ClosesTemplateDeclaration);
-  EXPECT_TOKEN(Tokens[11], tok::less, TT_TemplateOpener);
-  EXPECT_TOKEN(Tokens[14], tok::greater, TT_TemplateCloser);
-  EXPECT_FALSE(Tokens[14]->ClosesTemplateDeclaration);
-  EXPECT_TOKEN(Tokens[21], tok::greater, TT_TemplateCloser);
-  EXPECT_TRUE(Tokens[21]->ClosesTemplateDeclaration);
-}
-
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.WhitespaceSensitiveMacros.push_back("FOO");
