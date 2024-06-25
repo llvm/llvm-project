@@ -2397,22 +2397,19 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 StmtResult Parser::ParseOpenMPExecutableDirective(
     ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
     bool ReadDirectiveWithinMetadirective) {
+  assert((DKind == OMPD_error ||
+          getDirectiveCategory(DKind) == Category::Executable ||
+          getDirectiveCategory(DKind) == Category::Subsidiary) &&
+         "Directive with an unexpected category");
   bool HasAssociatedStatement = true;
+  Association Assoc = getDirectiveAssociation(DKind);
 
-  switch (DKind) {
-  case OMPD_barrier:
-  case OMPD_cancel:
-  case OMPD_cancellation_point:
-  case OMPD_depobj:
-  case OMPD_error:
-  case OMPD_flush:
-  case OMPD_interop:
-  case OMPD_scan:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
-  case OMPD_target_update:
-  case OMPD_taskwait:
-  case OMPD_taskyield:
+  // OMPD_ordered has None as association, but it comes in two variants,
+  // the second of which is associated with a block.
+  // OMPD_scan and OMPD_section are both "separating", but section is treated
+  // as if it was associated with a statement, while scan is not.
+  if (DKind != OMPD_ordered && DKind != OMPD_section &&
+      (Assoc == Association::None || Assoc == Association::Separating)) {
     if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
@@ -2423,9 +2420,6 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
       }
     }
     HasAssociatedStatement = false;
-    break;
-  default:
-    break;
   }
 
   SourceLocation EndLoc;
