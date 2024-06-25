@@ -379,7 +379,7 @@ struct LegalizeTransferWriteOpsByDecomposition
 /// disjoint, but that information is lost after decomposition (without analysis
 /// to reconstruct it).
 ///
-/// Example:
+/// Example (pseudo-MLIR):
 ///
 /// ```
 /// vector.transfer_write %vector, %dest[%y, %x], %mask
@@ -388,24 +388,21 @@ struct LegalizeTransferWriteOpsByDecomposition
 /// Is rewritten to:
 /// ```
 /// scf.for %slice_idx = %c0 to %c8_vscale step %c1 {
-///   %upper_slice_y = arith.addi %slice_idx, %y : index
-///   %upper_slice_mask = vector.extract %mask[%slice_idx]
-///     : vector<[8]xi1> from vector<[16]x[8]xi1>
-///   %upper_slice = vector.extract %upper_tile[%slice_idx]
-///     : vector<[8]xi16> from vector<[8]x[8]xi16>
-///   vector.transfer_write %upper_slice,
-///     %dest[%upper_slice_y, %x], %upper_slice_mask
-///     : vector<[8]xi16>, memref<?x?xi16>
-///   // Same again for the lower tile:
-///   %lower_slice_idx = arith.addi %c8_vscale, %slice_idx : index
-///   %lower_slice_y = arith.addi %lower_slice_idx, %y : index
-///   %lower_slice_mask = vector.extract %mask[%lower_slice_idx]
-///     : vector<[8]xi1> from vector<[16]x[8]xi1>
-///   %lower_slice = vector.extract %lower_tile[%slice_idx]
-///     : vector<[8]xi16> from vector<[8]x[8]xi16>
-///   vector.transfer_write %lower_slice,
-///     %dest[%lower_slice_y, %x], %lower_slice_mask
-///     : vector<[8]xi16>, memref<?x?xi16>
+///   %upper_slice_mask = vector.extract %mask[%slice_idx] ─┐
+///     : vector<[8]xi1> from vector<[16]x[8]xi1>           |
+///   %upper_slice = vector.extract %upper_tile[%slice_idx] |- Store upper tile
+///     : vector<[8]xi16> from vector<[8]x[8]xi16>          |
+///   vector.transfer_write %upper_slice,                   |
+///     %dest[%slice_idx + %y, %x], %upper_slice_mask       |
+///     : vector<[8]xi16>, memref<?x?xi16>                  ┘
+///   %lower_slice_idx = %slice_idx + %c8_vscale                 ─┐
+///   %lower_slice_mask = vector.extract %mask[%lower_slice_idx]  |
+///     : vector<[8]xi1> from vector<[16]x[8]xi1>                 |
+///   %lower_slice = vector.extract %lower_tile[%slice_idx]       |- Store lower
+///     : vector<[8]xi16> from vector<[8]x[8]xi16>                |  tile
+///   vector.transfer_write %lower_slice,                         |
+///     %dest[%lower_slice_idx + %y, %x], %lower_slice_mask       |
+///     : vector<[8]xi16>, memref<?x?xi16>                        ┘
 /// }
 /// ```
 struct LegalizeMultiTileTransferWriteAsStoreLoop
