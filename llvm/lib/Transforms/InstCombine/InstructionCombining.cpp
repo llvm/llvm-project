@@ -2795,8 +2795,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (GEPEltType->isScalableTy() ||
       (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
        match(GEP.getOperand(1),
-             m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
-                         m_Shl(m_Value(), m_ConstantInt()))))) {
+             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                  m_Shl(m_Value(), m_ConstantInt())))))) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     return replaceInstUsesWith(
         GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));

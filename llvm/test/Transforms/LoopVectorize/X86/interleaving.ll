@@ -158,8 +158,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; ATOM:       for.body:
 ; ATOM-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; ATOM-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; ATOM-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl nsw i64 [[INDVARS_IV]], 3
-; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 [[ARRAYIDX_IDX]]
+; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP0]]
 ; ATOM-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; ATOM-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[TMP0]], 1
 ; ATOM-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
