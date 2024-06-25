@@ -985,17 +985,45 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::AddrOf AddrOf,
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Convert Convert,
                                                      ChildrenT Children) {
-  return std::nullopt;
+  auto Child = traverse(Children[0].get(), ValueKind::Value);
+  if (!Child)
+    return std::nullopt;
+
+  Type *DestTy = Convert.getResultType();
+  if (!Child->Ty->isIntegerTy() || !DestTy->isIntegerTy())
+    return std::nullopt;
+
+  uint64_t ToBits = DestTy->getPrimitiveSizeInBits().getFixedValue();
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+
+  if (ToBits < FromBits) {
+    // This function is called "ZExt", but it's actually doing a truncation on
+    // generic types (operation is "Child & ((1u << ToBits) - 1)").
+    emitLegacyZExt(ToBits);
+  }
+  return NewOpResult{DestTy, ValueKind::Value};
 }
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::ZExt ZExt,
                                                      ChildrenT Children) {
-  return std::nullopt;
+  auto Child = traverse(Children[0].get(), ValueKind::Value);
+  if (!Child || !Child->Ty->isIntegerTy())
+    return std::nullopt;
+
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+  emitLegacyZExt(FromBits);
+  return NewOpResult{ZExt.getResultType(), ValueKind::Value};
 }
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::SExt SExt,
                                                      ChildrenT Children) {
-  return std::nullopt;
+  auto Child = traverse(Children[0].get(), ValueKind::Value);
+  if (!Child || !Child->Ty->isIntegerTy())
+    return std::nullopt;
+
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+  emitLegacySExt(FromBits);
+  return NewOpResult{SExt.getResultType(), ValueKind::Value};
 }
 
 std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
