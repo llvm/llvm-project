@@ -4,7 +4,7 @@
 ; RUN: not opt < %s -load-pass-plugin=%t/nonexistent.so -disable-output 2>&1 | FileCheck %s
 
 ; RUN: opt %s -o %t.o
-; RUN: llvm-lto2 run -load-pass-plugin=%t/nonexistent.so %t.o -o %t \
+; RUN: not llvm-lto2 run -load-pass-plugin=%t/nonexistent.so %t.o -o %t \
 ; RUN:     -r %t.o,test 2>&1 | \
 ; RUN:   FileCheck %s
 
