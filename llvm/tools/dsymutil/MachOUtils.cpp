@@ -381,7 +381,6 @@ bool generateDsymCompanion(
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
 
   // Layout but don't emit.
-  ObjectStreamer.flushPendingLabels();
   MCAsmLayout Layout(MCAsm);
   MCAsm.layout(Layout);
 

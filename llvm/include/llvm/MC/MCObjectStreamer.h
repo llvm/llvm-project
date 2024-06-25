@@ -91,7 +91,6 @@ public:
   MCFragment *getCurrentFragment() const;
 
   void insert(MCFragment *F) {
-    flushPendingLabels(F);
     MCSection *CurSection = getCurrentSectionOnly();
     CurSection->addFragment(*F);
     F->setParent(CurSection);
@@ -106,23 +105,14 @@ public:
 protected:
   bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
 
-  /// Assign a label to the current Section and Subsection even though a
-  /// fragment is not yet present. Use flushPendingLabels(F) to associate
-  /// a fragment with this label.
-  void addPendingLabel(MCSymbol* label);
-
   /// If any labels have been emitted but not assigned fragments in the current
   /// Section and Subsection, ensure that they get assigned to fragment F.
   /// Optionally, one can provide an offset \p FOffset as a symbol offset within
   /// the fragment.
-  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0);
+  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0) {}
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
-
-  /// Create a data fragment for any pending labels across all Sections
-  /// and Subsections.
-  void flushPendingLabels();
 
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
