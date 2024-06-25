@@ -374,15 +374,21 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         OUTPUT ${output_file}
         EXTRA_OPTS "${mcpu}" -fno-builtin -nostdlib
                    "${build_flags}" -I${PROJECT_SOURCE_DIR}/${file_dir}
+        DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
       )
       list( APPEND bytecode_files ${output_file} )
     endforeach()
 
-    set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
+    set( builtins_comp_lib_tgt builtins.comp.${arch_suffix} )
+    add_custom_target( ${builtins_comp_lib_tgt}
+      DEPENDS ${bytecode_files}
+    )
 
+    set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
     link_bc(
       TARGET ${builtins_link_lib_tgt}
       INPUTS ${bytecode_files}
+      DEPENDENCIES ${builtins_comp_lib_tgt}
     )
 
     set( builtins_link_lib $<TARGET_PROPERTY:${builtins_link_lib_tgt},TARGET_FILE> )
@@ -391,7 +397,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
         COMMAND libclc::llvm-spirv ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${builtins_link_lib}
+        DEPENDS ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
@@ -403,7 +409,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
         COMMAND libclc::opt ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
           ${builtins_link_lib}
-        DEPENDS libclc::opt ${builtins_link_lib}
+        DEPENDS libclc::opt ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
@@ -418,7 +424,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( obj_suffix ${arch_suffix}.bc )
       add_custom_command( OUTPUT ${obj_suffix}
         COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
-        DEPENDS ${builtins_opt_lib} prepare_builtins )
+        DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} prepare_builtins )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
 
       # nvptx-- targets don't include workitem builtins
