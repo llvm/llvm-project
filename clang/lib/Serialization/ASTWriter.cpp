@@ -5382,6 +5382,17 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     }
   }
 
+  // Form the record of special types.
+  RecordData SpecialTypes;
+  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
+  AddTypeRef(Context.getFILEType(), SpecialTypes);
+  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
+
   PrepareWritingSpecialDecls(SemaRef);
 
   // Write the control block
@@ -5412,17 +5423,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     AllSelectors.push_back(SelectorAndID.first);
   for (auto &Selector : AllSelectors)
     SemaRef.ObjC().updateOutOfDateSelector(Selector);
-
-  // Form the record of special types.
-  RecordData SpecialTypes;
-  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
-  AddTypeRef(Context.getFILEType(), SpecialTypes);
-  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
 
   if (Chain) {
     // Write the mapping information describing our module dependencies and how
