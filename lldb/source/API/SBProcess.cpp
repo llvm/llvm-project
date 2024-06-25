@@ -14,6 +14,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "lldb/Core/AddressRangeListImpl.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -26,6 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
@@ -320,8 +322,8 @@ void SBProcess::ReportEventState(const SBEvent &event, FileSP out) const {
   if (process_sp) {
     StreamFile stream(out);
     const StateType event_state = SBProcess::GetStateFromEvent(event);
-    stream.Printf("Process %" PRIu64 " %s\n",
-        process_sp->GetID(), SBDebugger::StateAsCString(event_state));
+    stream.Printf("Process %" PRIu64 " %s\n", process_sp->GetID(),
+                  SBDebugger::StateAsCString(event_state));
   }
 }
 
@@ -377,7 +379,6 @@ bool SBProcess::SetSelectedThreadByIndexID(uint32_t index_id) {
         process_sp->GetTarget().GetAPIMutex());
     ret_val = process_sp->GetThreadList().SetSelectedThreadByIndexID(index_id);
   }
-
 
   return ret_val;
 }
@@ -546,7 +547,6 @@ ByteOrder SBProcess::GetByteOrder() const {
   if (process_sp)
     byteOrder = process_sp->GetTarget().GetArchitecture().GetByteOrder();
 
-
   return byteOrder;
 }
 
@@ -557,7 +557,6 @@ uint32_t SBProcess::GetAddressByteSize() const {
   ProcessSP process_sp(GetSP());
   if (process_sp)
     size = process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
-
 
   return size;
 }
@@ -808,6 +807,55 @@ const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
   return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
+}
+
+lldb::SBAddressRangeList SBProcess::FindRangesInMemory(
+    const void *buf, uint64_t size, const SBAddressRangeList &ranges,
+    uint32_t alignment, uint32_t max_matches, SBError &error) {
+  LLDB_INSTRUMENT_VA(this, buf, size, ranges, alignment, max_matches, error);
+
+  lldb::SBAddressRangeList matches;
+
+  ProcessSP process_sp(GetSP());
+  if (!process_sp) {
+    error.SetErrorString("SBProcess is invalid");
+    return matches;
+  }
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
+    error.SetErrorString("process is running");
+    return matches;
+  }
+  std::lock_guard<std::recursive_mutex> guard(
+      process_sp->GetTarget().GetAPIMutex());
+  matches.m_opaque_up->ref() = process_sp->FindRangesInMemory(
+      reinterpret_cast<const uint8_t *>(buf), size, ranges.ref().ref(),
+      alignment, max_matches, error.ref());
+  return matches;
+}
+
+lldb::addr_t SBProcess::FindInMemory(const void *buf, uint64_t size,
+                                     const SBAddressRange &range,
+                                     uint32_t alignment, SBError &error) {
+  LLDB_INSTRUMENT_VA(this, buf, size, range, alignment, error);
+
+  ProcessSP process_sp(GetSP());
+
+  if (!process_sp) {
+    error.SetErrorString("SBProcess is invalid");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
+    error.SetErrorString("process is running");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  std::lock_guard<std::recursive_mutex> guard(
+      process_sp->GetTarget().GetAPIMutex());
+  return process_sp->FindInMemory(reinterpret_cast<const uint8_t *>(buf), size,
+                                  range.ref(), alignment, error.ref());
 }
 
 size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,

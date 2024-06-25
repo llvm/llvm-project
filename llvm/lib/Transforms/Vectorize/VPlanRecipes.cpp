@@ -442,20 +442,20 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       return nullptr;
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination for exiting blocks now and
     // to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+
+    if (!getParent()->isExiting())
+      return CondBr;
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
   case VPInstruction::BranchOnCount: {

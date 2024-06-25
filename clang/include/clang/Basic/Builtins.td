@@ -1218,6 +1218,24 @@ def ElementwiseAbs : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseACos : Builtin {
+  let Spellings = ["__builtin_elementwise_acos"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseASin : Builtin {
+  let Spellings = ["__builtin_elementwise_asin"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseATan : Builtin {
+  let Spellings = ["__builtin_elementwise_atan"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1244,6 +1262,12 @@ def ElementwiseCeil : Builtin {
 
 def ElementwiseCos : Builtin {
   let Spellings = ["__builtin_elementwise_cos"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCosh : Builtin {
+  let Spellings = ["__builtin_elementwise_cosh"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1320,6 +1344,12 @@ def ElementwiseSin : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseSinh : Builtin {
+  let Spellings = ["__builtin_elementwise_sinh"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseSqrt : Builtin {
   let Spellings = ["__builtin_elementwise_sqrt"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1328,6 +1358,12 @@ def ElementwiseSqrt : Builtin {
 
 def ElementwiseTan : Builtin {
   let Spellings = ["__builtin_elementwise_tan"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseTanh : Builtin {
+  let Spellings = ["__builtin_elementwise_tanh"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

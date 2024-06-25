@@ -62,12 +62,6 @@ int bar() {
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_Z3fooi.ifunc = weak_odr alias i32 (i32), ptr @_Z3fooi
-// CHECK: @_Z3foov.ifunc = weak_odr alias i32 (), ptr @_Z3foov
-// CHECK: @_ZN7MyClass3gooEi.ifunc = weak_odr alias i32 (ptr, i32), ptr @_ZN7MyClass3gooEi
-// CHECK: @_ZN7MyClass23unused_with_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass23unused_with_default_defEv
-// CHECK: @_ZN7MyClass32unused_with_implicit_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass32unused_with_implicit_default_defEv
-// CHECK: @_ZN7MyClass40unused_with_implicit_forward_default_defEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv
 // CHECK: @_ZN7MyClass3gooEi = weak_odr ifunc i32 (ptr, i32), ptr @_ZN7MyClass3gooEi.resolver
 // CHECK: @_Z3fooi = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
 // CHECK: @_Z3foov = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
