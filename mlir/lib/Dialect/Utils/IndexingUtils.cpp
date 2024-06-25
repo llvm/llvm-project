@@ -318,7 +318,6 @@ mlir::computeInclusiveLinearIndex(OpFoldResult sourceOffset,
 
   bindSymbolsList(getContext(sourceOffset), MutableArrayRef{symbols});
   AffineExpr expr = symbols.front();
-  AffineExpr constOneExpr = getAffineConstantExpr(1, getContext(sourceOffset));
   values[0] = sourceOffset;
 
   for (unsigned i = 0; i < sourceRank; ++i) {
@@ -329,9 +328,10 @@ mlir::computeInclusiveLinearIndex(OpFoldResult sourceOffset,
     unsigned baseIdxForDim = 1 + 2 * i;
     unsigned subOffsetForDim = baseIdxForDim;
     unsigned origStrideForDim = baseIdxForDim + 1;
-    // Subtract 1 from the index to get the inclusive bound
-    expr = expr + (symbols[subOffsetForDim] - constOneExpr) *
-                      symbols[origStrideForDim];
+    AffineExpr dimSize = symbols[subOffsetForDim];
+    AffineExpr stride = symbols[origStrideForDim];
+    // Subtract 1 from the dimension size to get the inclusive bound
+    expr = expr + (dimSize - 1) * stride;
     values[subOffsetForDim] = indices[i];
     values[origStrideForDim] = origStride;
   }

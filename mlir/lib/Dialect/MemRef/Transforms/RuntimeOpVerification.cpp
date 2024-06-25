@@ -237,7 +237,7 @@ computeLinearInclusiveBounds(OpBuilder &builder, Location loc,
 }
 
 /// Verifies that the linear bounds of a reinterpret_cast op are within the
-/// linear bounds of the base memref: low >= baseLow && high <= baseHigh
+/// linear bounds of the base memref: low >= baseLow && high <= baseHigh.
 struct ReinterpretCastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<
           ReinterpretCastOpInterface, ReinterpretCastOp> {
@@ -251,7 +251,8 @@ struct ReinterpretCastOpInterface
     builder.setInsertionPointAfter(op);
 
     // Compute the linear bounds of the base memref
-    auto [baseLow, baseHigh] = computeLinearBounds(builder, loc, baseMemref);
+    auto [baseLow, baseHigh] =
+        computeLinearInclusiveBounds(builder, loc, baseMemref);
 
     // Compute the linear bounds of the resulting memref
     auto [low, high] = computeLinearInclusiveBounds(builder, loc, resultMemref);
@@ -260,9 +261,9 @@ struct ReinterpretCastOpInterface
     auto geLow = builder.createOrFold<arith::CmpIOp>(
         loc, arith::CmpIPredicate::sge, low, baseLow);
 
-    // Check high < baseHigh
+    // Check high <= baseHigh
     auto leHigh = builder.createOrFold<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::slt, high, baseHigh);
+        loc, arith::CmpIPredicate::sle, high, baseHigh);
 
     auto assertCond = builder.createOrFold<arith::AndIOp>(loc, geLow, leHigh);
 

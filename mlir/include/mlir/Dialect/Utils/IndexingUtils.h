@@ -260,6 +260,9 @@ computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<OpFoldResult> strides,
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
                    ArrayRef<Value> indices);
+/// Compute linear index from provided strides and indices, assuming strided
+/// Unlike the above, this version computes the inclusive linear index by
+/// subtracting 1 from each dimension size
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeInclusiveLinearIndex(OpFoldResult sourceOffset,
                             ArrayRef<OpFoldResult> strides,
