@@ -1267,23 +1267,34 @@ class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
   let Inst{15-8} = 0b01110111;
   let Inst{7-5} = op2;
   let Predicates = [HasGCS];
+  let hasSideEffects = 1;
 }
 
-def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1">;
+let mayStore = 1, mayLoad = 1 in
+def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1", [(int_aarch64_gcsss1 (i64 GPR64:$Rt))]>;
+let mayStore = 1 in
 def GCSPUSHM : GCSRtIn<0b011, 0b000, "gcspushm">;
 
 class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
             list<dag> pattern = []>
-    : RtSystemI<1, (outs GPR64:$Rt), (ins), mnemonic, "\t$Rt", pattern> {
+    : RtSystemI<1, (outs GPR64:$Rt), (ins GPR64:$src), mnemonic, "\t$Rt", pattern> {
   let Inst{20-19} = 0b01;
   let Inst{18-16} = op1;
   let Inst{15-8} = 0b01110111;
   let Inst{7-5} = op2;
   let Predicates = [HasGCS];
+  let hasSideEffects = 1;
+  // The input register is unchanged when GCS is disabled, so we need it as
+  // both an input and output operand.
+  let Constraints = "$src = $Rt";
 }
 
-def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2">;
-def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm">;
+let mayStore = 1, mayLoad = 1 in
+def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2",
+                       [(set GPR64:$Rt, (int_aarch64_gcsss2 GPR64:$src))]>;
+let mayLoad = 1 in
+def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm",
+                       [(set GPR64:$Rt, (int_aarch64_gcspopm GPR64:$src))]>;
 def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
 
 def GCSB_DSYNC_disable : InstAlias<"gcsb\tdsync", (HINT 19), 0>;
@@ -1292,7 +1303,8 @@ def GCSB_DSYNC         : InstAlias<"gcsb\tdsync", (HINT 19), 1>, Requires<[HasGC
 def : TokenAlias<"DSYNC", "dsync">;
 
 let Uses = [X16], Defs = [X16], CRm = 0b0101 in {
-  def CHKFEAT   : SystemNoOperands<0b000, "hint\t#40">;
+  def CHKFEAT   : SystemNoOperands<0b000, "hint\t#40",
+                                   [(set X16, (int_aarch64_chkfeat X16))]>;
 }
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 0>;
 def : InstAlias<"chkfeat\tx16", (CHKFEAT), 1>, Requires<[HasCHK]>;
