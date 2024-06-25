@@ -612,12 +612,12 @@ void RuntimePointerChecking::printChecks(
     OS.indent(Depth) << "Check " << N++ << ":\n";
 
     OS.indent(Depth + 2) << "Comparing group (" << Check1 << "):\n";
-    for (unsigned K = 0; K < First.size(); ++K)
-      OS.indent(Depth + 2) << *Pointers[First[K]].PointerValue << "\n";
+    for (unsigned K : First)
+      OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
 
     OS.indent(Depth + 2) << "Against group (" << Check2 << "):\n";
-    for (unsigned K = 0; K < Second.size(); ++K)
-      OS.indent(Depth + 2) << *Pointers[Second[K]].PointerValue << "\n";
+    for (unsigned K : Second)
+      OS.indent(Depth + 2) << *Pointers[K].PointerValue << "\n";
   }
 }
 
@@ -627,15 +627,12 @@ void RuntimePointerChecking::print(raw_ostream &OS, unsigned Depth) const {
   printChecks(OS, Checks, Depth);
 
   OS.indent(Depth) << "Grouped accesses:\n";
-  for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
-    const auto &CG = CheckingGroups[I];
-
+  for (const auto &CG : CheckingGroups) {
     OS.indent(Depth + 2) << "Group " << &CG << ":\n";
     OS.indent(Depth + 4) << "(Low: " << *CG.Low << " High: " << *CG.High
                          << ")\n";
-    for (unsigned J = 0; J < CG.Members.size(); ++J) {
-      OS.indent(Depth + 6) << "Member: " << *Pointers[CG.Members[J]].Expr
-                           << "\n";
+    for (unsigned Member : CG.Members) {
+      OS.indent(Depth + 6) << "Member: " << *Pointers[Member].Expr << "\n";
     }
   }
 }
