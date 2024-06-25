@@ -365,7 +365,7 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
 
     std::string HashString;
     for (const auto &BB : BF->blocks()) {
-      std::set<std::string> FunctionNames;
+      std::multiset<std::string> FunctionNames;
       for (const MCInst &Instr : BB) {
         // Skip non-call instructions.
         if (!BC.MIB->isCall(Instr))
@@ -397,9 +397,8 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
         std::string &FunctionName = ProfiledFunctionIdToName[CallSite.DestId];
         FunctionNames.insert(FunctionName);
       }
-      for (const std::string &FunctionName : FunctionNames) {
+      for (const std::string &FunctionName : FunctionNames)
         HashString.append(FunctionName);
-      }
     }
     size_t Hash = ComputeCallHash(HashString);
     auto It = CallHashToBF.find(Hash);
