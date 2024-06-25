@@ -723,15 +723,18 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
       return false;
     }();
 
-    const llvm::Triple &T = CGF.getTarget().getTriple();
-    // Restrict to Linux because not all targets set errno, such as MacOS.
-    if (IntrinsicID && T.getOS() == llvm::Triple::Linux) {
+    // Restrict to target with errno, for example, MacOS doesn't set errno.
+    if (IntrinsicID && CGF.CGM.getLangOpts().MathErrno) {
       llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-      MDNode *RootMD = CGF.CGM.getTBAARoot();
+      ASTContext &Context = CGF.getContext();
       // Emit "int" TBAA metadata on FP math libcalls.
-      MDNode *AliasType = MDHelper.createTBAAScalarTypeNode("int", RootMD);
+      clang::QualType IntTy = Context.IntTy;
+      MDNode *AliasType = CGF.CGM.getTBAATypeInfo(IntTy);
       MDNode *MDInt = MDHelper.createTBAAStructTagNode(AliasType, AliasType, 0);
-
+      if (CGF.CGM.getCodeGenOpts().NewStructPathTBAA) {
+        uint64_t Size = Context.getTypeSizeInChars(IntTy).getQuantity();
+        MDInt = MDHelper.createTBAAAccessTag(AliasType, AliasType, 0, Size);
+      }
       Value *Val = Call.getScalarVal();
       cast<llvm::Instruction>(Val)->setMetadata(LLVMContext::MD_tbaa, MDInt);
     }

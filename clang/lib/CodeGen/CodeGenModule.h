@@ -783,8 +783,6 @@ public:
   CtorList &getGlobalCtors() { return GlobalCtors; }
   CtorList &getGlobalDtors() { return GlobalDtors; }
 
-  llvm::MDNode *getTBAARoot() { return TBAA->getRoot(); };
-
   /// getTBAATypeInfo - Get metadata used to describe accesses to objects of
   /// the given type.
   llvm::MDNode *getTBAATypeInfo(QualType QTy);

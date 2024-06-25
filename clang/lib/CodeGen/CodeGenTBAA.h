@@ -140,6 +140,10 @@ class CodeGenTBAA {
   llvm::MDNode *Root;
   llvm::MDNode *Char;
 
+  /// getRoot - This is the mdnode for the root of the metadata type graph
+  /// for this translation unit.
+  llvm::MDNode *getRoot();
+
   /// getChar - This is the mdnode for "char", which is special, and any types
   /// considered to be equivalent to it.
   llvm::MDNode *getChar();
@@ -173,10 +177,6 @@ public:
               const CodeGenOptions &CGO, const LangOptions &Features,
               MangleContext &MContext);
   ~CodeGenTBAA();
-
-  /// getRoot - This is the mdnode for the root of the metadata type graph
-  /// for this translation unit.
-  llvm::MDNode *getRoot();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
   /// given type.
