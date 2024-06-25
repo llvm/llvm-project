@@ -97,4 +97,20 @@ add_proxy_header_library(
     libc.include.float
 )
 
+add_proxy_header_library(
+  sys_mman_macros
+  HDRS
+    sys_mman_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_mman_macros
+)
+
+add_proxy_header_library(
+  sys_auxv_macros
+  HDRS
+    sys_auxv_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_auxv_macros
+)
+
 add_subdirectory(types)

@@ -18,9 +18,14 @@ add_entrypoint_object(
   HDRS
     ../mmap.h
   DEPENDS
+    libc.hdr.sys_auxv_macros
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.off64_t
+    libc.hdr.types.off_t
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.block
     libc.src.errno.errno
 )
 

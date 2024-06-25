@@ -9,7 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MMAP_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MMAP_H
 
-#include <sys/mman.h> // For size_t and off_t
+#include "hdr/types/off_t.h"
+
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE {
 

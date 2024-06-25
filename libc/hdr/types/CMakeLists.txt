@@ -126,3 +126,15 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.atexithandler_t
     libc.include.stdlib
 )
+
+add_proxy_header_library(
+  off_t
+  HDRS
+    off_t.h
+)
+
+add_proxy_header_library(
+  off64_t
+  HDRS
+    off64_t.h
+)
