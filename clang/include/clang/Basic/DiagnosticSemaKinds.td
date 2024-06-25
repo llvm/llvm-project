@@ -3246,6 +3246,9 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_attribute_unsupported_m_profile
+    : Error<"on M-profile architectures %0 attribute is not supported on targets missing %1;"
+            " specify an appropriate -march= or -mcpu=">;
 def err_duplicate_target_attribute
     : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
