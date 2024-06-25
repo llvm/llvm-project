@@ -1070,15 +1070,15 @@ static void genSimdClauses(lower::AbstractConverter &converter,
                            const List<Clause> &clauses, mlir::Location loc,
                            mlir::omp::SimdClauseOps &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAligned(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_simd, clauseOps);
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
-  // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Nontemporal, clause::Order>(
-      loc, llvm::omp::Directive::OMPD_simd);
+  // TODO Support delayed privatization.
+  cp.processTODO<clause::Allocate, clause::Linear, clause::Nontemporal,
+                 clause::Order>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -2199,7 +2199,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       ompDeclConstruct.u);
 }
@@ -2276,7 +2276,7 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPStandaloneConstruct &standaloneConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       standaloneConstruct.u);
 }
@@ -2296,7 +2296,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAtomicConstruct &atomicConstruct) {
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::OmpAtomicRead &atomicRead) {
             mlir::Location loc = converter.genLocation(atomicRead.source);
@@ -2487,7 +2487,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPConstruct &ompConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       ompConstruct.u);
 }
@@ -2649,21 +2649,22 @@ void Fortran::lower::gatherOpenMPDeferredDeclareTargets(
     const parser::OpenMPDeclarativeConstruct &ompDecl,
     llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo>
         &deferredDeclareTarget) {
-  std::visit(common::visitors{
-                 [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
-                   collectDeferredDeclareTargets(converter, semaCtx, eval,
-                                                 ompReq, deferredDeclareTarget);
-                 },
-                 [&](const auto &) {},
-             },
-             ompDecl.u);
+  Fortran::common::visit(
+      common::visitors{
+          [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
+            collectDeferredDeclareTargets(converter, semaCtx, eval, ompReq,
+                                          deferredDeclareTarget);
+          },
+          [&](const auto &) {},
+      },
+      ompDecl.u);
 }
 
 bool Fortran::lower::isOpenMPDeviceDeclareTarget(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
     const parser::OpenMPDeclarativeConstruct &ompDecl) {
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
             mlir::omp::DeclareTargetDeviceType targetType =

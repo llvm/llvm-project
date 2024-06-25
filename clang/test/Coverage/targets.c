@@ -14,4 +14,4 @@
 // RUN: %clang_cc1 -debug-info-kind=limited -triple x86_64-unknown-unknown -emit-llvm -o %t %s
 
 // clang 1.0 fails to compile Python 2.6
-// RUN: %clang -target x86_64-apple-darwin9 -### -S %s -mmacosx-version-min=10.4
+// RUN: %clang -target x86_64-apple-darwin9 -### -S %s -mmacos-version-min=10.4

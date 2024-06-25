@@ -214,7 +214,7 @@ private:
   int prescannerNesting_{0};
   int continuationLines_{0};
   bool isPossibleMacroCall_{false};
-  bool afterIncludeDirective_{false};
+  bool afterPreprocessingDirective_{false};
   bool disableSourceContinuation_{false};
 
   Provenance startProvenance_;
@@ -246,6 +246,8 @@ private:
   // line in an include file.
   bool omitNewline_{false};
   bool skipLeadingAmpersand_{false};
+
+  const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
 
   const Provenance spaceProvenance_{
       allSources_.CompilerInsertionProvenance(' ')};

@@ -17,8 +17,8 @@ static const size_t kMaxAllowedMallocSizePlusOne =
 int main() {
   void *p = malloc(kMaxAllowedMallocSizePlusOne);
   // CHECK: {{ERROR: AddressSanitizer: requested allocation size .* \(.* after adjustments for alignment, red zones etc\.\) exceeds maximum supported size}}
-  // CHECK: {{#[0-9] 0x.* in .*malloc}}
-  // CHECK: {{#[0-9] 0x.* in main .*malloc-size-too-big.cpp:}}[[@LINE-3]]
+  // CHECK: {{#0 0x.* in .*malloc}}
+  // CHECK: {{#[1-3] 0x.* in main .*malloc-size-too-big.cpp:}}[[@LINE-3]]
   // CHECK: SUMMARY: AddressSanitizer: allocation-size-too-big
 
   printf("malloc returned: %zu\n", (size_t)p);

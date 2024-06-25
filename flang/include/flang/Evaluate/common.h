@@ -128,9 +128,9 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   return false; // silence g++ warning
 }
 
-ENUM_CLASS(
-    RealFlag, Overflow, DivideByZero, InvalidArgument, Underflow, Inexact)
-
+// These are ordered like the bits in a common fenv.h header file.
+ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
+    Inexact)
 using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 template <typename A> struct ValueWithRealFlags {

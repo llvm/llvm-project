@@ -31,6 +31,27 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
+def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
+                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
+                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisInt<1>]>,
+                              [SDNPHasChain, SDNPSideEffect]>;
+let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
+  def AllocateZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
+}
+def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
+          (AllocateZABuffer $size)>;
+
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
+                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+let usesCustomInserter = 1 in {
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
@@ -220,6 +241,15 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0))
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
+
+// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
+// the streaming value of VG around streaming-mode changes in locally-streaming
+// functions.
+def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGSave), (VGSavePseudo)>;
+
+def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions

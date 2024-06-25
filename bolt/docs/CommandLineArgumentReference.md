@@ -802,6 +802,11 @@
 
   The maximum size of a function to consider for inference.
 
+- `--stale-matching-min-matched-block=<uint>`
+
+  Minimum percent of exact match block for a function to be considered for
+  profile inference.
+
 - `--stale-threshold=<uint>`
 
   Maximum percentage of stale functions to tolerate (default: 100)

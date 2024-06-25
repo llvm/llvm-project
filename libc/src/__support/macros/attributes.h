@@ -42,4 +42,10 @@
 #define LIBC_CONSTINIT
 #endif
 
+#if defined(__clang__) && __has_attribute(preferred_type)
+#define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
+#else
+#define LIBC_PREFERED_TYPE(TYPE)
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
