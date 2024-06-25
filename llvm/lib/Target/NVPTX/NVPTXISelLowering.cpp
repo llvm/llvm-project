@@ -5242,25 +5242,26 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
                            N0.getOperand(1), N1);
 
   // fold (add (select cond, 0, (mul a, b)), c)
-  //   -> (select cond, (mad a, b, c), c)
+  //   -> (select cond, c, (mad a, b, c))
   //
   if (N0.getOpcode() == ISD::SELECT) {
-    bool ZeroCond;
+    unsigned ZeroOpNum;
     if (isConstZero(N0->getOperand(1)))
-      ZeroCond = true;
+      ZeroOpNum = 1;
     else if (isConstZero(N0->getOperand(2)))
-      ZeroCond = false;
+      ZeroOpNum = 2;
     else
       return SDValue();
 
-    SDValue M = N0->getOperand(ZeroCond ? 2 : 1);
+    SDValue M = N0->getOperand((ZeroOpNum == 1) ? 2 : 1);
     if (M->getOpcode() != ISD::MUL || !M.getNode()->hasOneUse())
       return SDValue();
 
     SDValue MAD = DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT,
                                   M->getOperand(0), M->getOperand(1), N1);
     return DCI.DAG.getSelect(SDLoc(N), VT, N0->getOperand(0),
-                             (ZeroCond ? N1 : MAD), (ZeroCond ? MAD : N1));
+                             ((ZeroOpNum == 1) ? N1 : MAD),
+                             ((ZeroOpNum == 1) ? MAD : N1));
   }
 
   return SDValue();
