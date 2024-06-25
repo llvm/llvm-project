@@ -16,9 +16,14 @@ enum class ObserveState { generated, always, never };
 
 struct OmptAssertEvent {
 
-  static OmptAssertEvent Asserter(const std::string &Name,
-                                  const std::string &Group,
-                                  const ObserveState &Expected);
+  static OmptAssertEvent AssertionSyncPoint(const std::string &Name,
+                                            const std::string &Group,
+                                            const ObserveState &Expected,
+                                            const std::string &MarkerName);
+
+  static OmptAssertEvent AssertionSuspend(const std::string &Name,
+                                          const std::string &Group,
+                                          const ObserveState &Expected);
 
   static OmptAssertEvent ThreadBegin(const std::string &Name,
                                      const std::string &Group,
@@ -53,20 +58,20 @@ struct OmptAssertEvent {
   static OmptAssertEvent
   Target(const std::string &Name, const std::string &Group,
          const ObserveState &Expected, ompt_target_t Kind,
-         ompt_scope_endpoint_t Endpoint,
-         int DeviceNum = std::numeric_limits<int>::min(),
-         ompt_data_t *TaskData = std::numeric_limits<ompt_data_t *>::min(),
-         ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
-         const void *CodeptrRA = std::numeric_limits<void *>::min());
+         ompt_scope_endpoint_t Endpoint, int DeviceNum = expectedDefault(int),
+         ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+         ompt_id_t TargetId = expectedDefault(ompt_id_t),
+         const void *CodeptrRA = expectedDefault(void *));
 
-  static OmptAssertEvent TargetEmi(
-      const std::string &Name, const std::string &Group,
-      const ObserveState &Expected, ompt_target_t Kind,
-      ompt_scope_endpoint_t Endpoint, int DeviceNum,
-      ompt_data_t *TaskData = std::numeric_limits<ompt_data_t *>::min(),
-      ompt_data_t *TargetTaskData = std::numeric_limits<ompt_data_t *>::min(),
-      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
-      const void *CodeptrRA = std::numeric_limits<void *>::min());
+  static OmptAssertEvent
+  TargetEmi(const std::string &Name, const std::string &Group,
+            const ObserveState &Expected, ompt_target_t Kind,
+            ompt_scope_endpoint_t Endpoint,
+            int DeviceNum = expectedDefault(int),
+            ompt_data_t *TaskData = expectedDefault(ompt_data_t *),
+            ompt_data_t *TargetTaskData = expectedDefault(ompt_data_t *),
+            ompt_data_t *TargetData = expectedDefault(ompt_data_t *),
+            const void *CodeptrRA = expectedDefault(void *));
 
   static OmptAssertEvent
   TargetDataOp(const std::string &Name, const std::string &Group,
@@ -78,13 +83,14 @@ struct OmptAssertEvent {
   static OmptAssertEvent
   TargetDataOp(const std::string &Name, const std::string &Group,
                const ObserveState &Expected, ompt_target_data_op_t OpType,
-               size_t Bytes, void *SrcAddr = std::numeric_limits<void *>::min(),
-               void *DstAddr = std::numeric_limits<void *>::min(),
-               int SrcDeviceNum = std::numeric_limits<int>::min(),
-               int DstDeviceNum = std::numeric_limits<int>::min(),
-               ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
-               ompt_id_t HostOpId = std::numeric_limits<ompt_id_t>::min(),
-               const void *CodeptrRA = std::numeric_limits<void *>::min());
+               size_t Bytes = expectedDefault(size_t),
+               void *SrcAddr = expectedDefault(void *),
+               void *DstAddr = expectedDefault(void *),
+               int SrcDeviceNum = expectedDefault(int),
+               int DstDeviceNum = expectedDefault(int),
+               ompt_id_t TargetId = expectedDefault(ompt_id_t),
+               ompt_id_t HostOpId = expectedDefault(ompt_id_t),
+               const void *CodeptrRA = expectedDefault(void *));
 
   static OmptAssertEvent
   TargetDataOpEmi(const std::string &Name, const std::string &Group,
@@ -94,18 +100,19 @@ struct OmptAssertEvent {
                   void *SrcAddr, int SrcDeviceNum, void *DstAddr,
                   int DstDeviceNum, size_t Bytes, const void *CodeptrRA);
 
-  static OmptAssertEvent TargetDataOpEmi(
-      const std::string &Name, const std::string &Group,
-      const ObserveState &Expected, ompt_target_data_op_t OpType,
-      ompt_scope_endpoint_t Endpoint, size_t Bytes,
-      void *SrcAddr = std::numeric_limits<void *>::min(),
-      void *DstAddr = std::numeric_limits<void *>::min(),
-      int SrcDeviceNum = std::numeric_limits<int>::min(),
-      int DstDeviceNum = std::numeric_limits<int>::min(),
-      ompt_data_t *TargetTaskData = std::numeric_limits<ompt_data_t *>::min(),
-      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
-      ompt_id_t *HostOpId = std::numeric_limits<ompt_id_t *>::min(),
-      const void *CodeptrRA = std::numeric_limits<void *>::min());
+  static OmptAssertEvent
+  TargetDataOpEmi(const std::string &Name, const std::string &Group,
+                  const ObserveState &Expected, ompt_target_data_op_t OpType,
+                  ompt_scope_endpoint_t Endpoint,
+                  size_t Bytes = expectedDefault(size_t),
+                  void *SrcAddr = expectedDefault(void *),
+                  void *DstAddr = expectedDefault(void *),
+                  int SrcDeviceNum = expectedDefault(int),
+                  int DstDeviceNum = expectedDefault(int),
+                  ompt_data_t *TargetTaskData = expectedDefault(ompt_data_t *),
+                  ompt_data_t *TargetData = expectedDefault(ompt_data_t *),
+                  ompt_id_t *HostOpId = expectedDefault(ompt_id_t *),
+                  const void *CodeptrRA = expectedDefault(void *));
 
   static OmptAssertEvent TargetSubmit(const std::string &Name,
                                       const std::string &Group,
@@ -116,8 +123,8 @@ struct OmptAssertEvent {
   static OmptAssertEvent
   TargetSubmit(const std::string &Name, const std::string &Group,
                const ObserveState &Expected, unsigned int RequestedNumTeams,
-               ompt_id_t TargetId = std::numeric_limits<ompt_id_t>::min(),
-               ompt_id_t HostOpId = std::numeric_limits<ompt_id_t>::min());
+               ompt_id_t TargetId = expectedDefault(ompt_id_t),
+               ompt_id_t HostOpId = expectedDefault(ompt_id_t));
 
   static OmptAssertEvent
   TargetSubmitEmi(const std::string &Name, const std::string &Group,
@@ -125,12 +132,12 @@ struct OmptAssertEvent {
                   ompt_data_t *TargetData, ompt_id_t *HostOpId,
                   unsigned int RequestedNumTeams);
 
-  static OmptAssertEvent TargetSubmitEmi(
-      const std::string &Name, const std::string &Group,
-      const ObserveState &Expected, unsigned int RequestedNumTeams,
-      ompt_scope_endpoint_t Endpoint,
-      ompt_data_t *TargetData = std::numeric_limits<ompt_data_t *>::min(),
-      ompt_id_t *HostOpId = std::numeric_limits<ompt_id_t *>::min());
+  static OmptAssertEvent
+  TargetSubmitEmi(const std::string &Name, const std::string &Group,
+                  const ObserveState &Expected, unsigned int RequestedNumTeams,
+                  ompt_scope_endpoint_t Endpoint,
+                  ompt_data_t *TargetData = expectedDefault(ompt_data_t *),
+                  ompt_id_t *HostOpId = expectedDefault(ompt_id_t *));
 
   static OmptAssertEvent ControlTool(const std::string &Name,
                                      const std::string &Group,
@@ -139,11 +146,10 @@ struct OmptAssertEvent {
   static OmptAssertEvent DeviceInitialize(
       const std::string &Name, const std::string &Group,
       const ObserveState &Expected, int DeviceNum,
-      const char *Type = std::numeric_limits<const char *>::min(),
-      ompt_device_t *Device = std::numeric_limits<ompt_device_t *>::min(),
-      ompt_function_lookup_t LookupFn =
-          std::numeric_limits<ompt_function_lookup_t>::min(),
-      const char *DocumentationStr = std::numeric_limits<const char *>::min());
+      const char *Type = expectedDefault(const char *),
+      ompt_device_t *Device = expectedDefault(ompt_device_t *),
+      ompt_function_lookup_t LookupFn = expectedDefault(ompt_function_lookup_t),
+      const char *DocumentationStr = expectedDefault(const char *));
 
   static OmptAssertEvent DeviceFinalize(const std::string &Name,
                                         const std::string &Group,
@@ -153,13 +159,13 @@ struct OmptAssertEvent {
   static OmptAssertEvent
   DeviceLoad(const std::string &Name, const std::string &Group,
              const ObserveState &Expected, int DeviceNum,
-             const char *Filename = std::numeric_limits<const char *>::min(),
-             int64_t OffsetInFile = std::numeric_limits<int64_t>::min(),
-             void *VmaInFile = std::numeric_limits<void *>::min(),
-             size_t Bytes = std::numeric_limits<size_t>::min(),
-             void *HostAddr = std::numeric_limits<void *>::min(),
-             void *DeviceAddr = std::numeric_limits<void *>::min(),
-             uint64_t ModuleId = std::numeric_limits<int64_t>::min());
+             const char *Filename = expectedDefault(const char *),
+             int64_t OffsetInFile = expectedDefault(int64_t),
+             void *VmaInFile = expectedDefault(void *),
+             size_t Bytes = expectedDefault(size_t),
+             void *HostAddr = expectedDefault(void *),
+             void *DeviceAddr = expectedDefault(void *),
+             uint64_t ModuleId = expectedDefault(int64_t));
 
   static OmptAssertEvent DeviceUnload(const std::string &Name,
                                       const std::string &Group,
@@ -181,6 +187,65 @@ struct OmptAssertEvent {
                                       const std::string &Group,
                                       const ObserveState &Expected,
                                       ompt_record_ompt_t *Record);
+
+  /// Handle type = ompt_record_target_t
+  static OmptAssertEvent
+  BufferRecord(const std::string &Name, const std::string &Group,
+               const ObserveState &Expected, ompt_callbacks_t Type,
+               ompt_target_t Kind, ompt_scope_endpoint_t Endpoint,
+               int DeviceNum = expectedDefault(int),
+               ompt_id_t TaskId = expectedDefault(ompt_id_t),
+               ompt_id_t TargetId = expectedDefault(ompt_id_t),
+               const void *CodeptrRA = expectedDefault(void *));
+
+  /// Handle type = ompt_callback_target_data_op
+  static OmptAssertEvent
+  BufferRecord(const std::string &Name, const std::string &Group,
+               const ObserveState &Expected, ompt_callbacks_t Type,
+               ompt_target_data_op_t OpType, size_t Bytes,
+               std::pair<ompt_device_time_t, ompt_device_time_t> Timeframe,
+               void *SrcAddr = expectedDefault(void *),
+               void *DstAddr = expectedDefault(void *),
+               int SrcDeviceNum = expectedDefault(int),
+               int DstDeviceNum = expectedDefault(int),
+               ompt_id_t TargetId = expectedDefault(ompt_id_t),
+               ompt_id_t HostOpId = expectedDefault(ompt_id_t),
+               const void *CodeptrRA = expectedDefault(void *));
+
+  /// Handle type = ompt_callback_target_data_op
+  static OmptAssertEvent BufferRecord(
+      const std::string &Name, const std::string &Group,
+      const ObserveState &Expected, ompt_callbacks_t Type,
+      ompt_target_data_op_t OpType, size_t Bytes = expectedDefault(size_t),
+      ompt_device_time_t MinimumTimeDelta = expectedDefault(ompt_device_time_t),
+      void *SrcAddr = expectedDefault(void *),
+      void *DstAddr = expectedDefault(void *),
+      int SrcDeviceNum = expectedDefault(int),
+      int DstDeviceNum = expectedDefault(int),
+      ompt_id_t TargetId = expectedDefault(ompt_id_t),
+      ompt_id_t HostOpId = expectedDefault(ompt_id_t),
+      const void *CodeptrRA = expectedDefault(void *));
+
+  /// Handle type = ompt_callback_target_submit
+  static OmptAssertEvent
+  BufferRecord(const std::string &Name, const std::string &Group,
+               const ObserveState &Expected, ompt_callbacks_t Type,
+               std::pair<ompt_device_time_t, ompt_device_time_t> Timeframe,
+               unsigned int RequestedNumTeams = expectedDefault(unsigned int),
+               unsigned int GrantedNumTeams = expectedDefault(unsigned int),
+               ompt_id_t TargetId = expectedDefault(ompt_id_t),
+               ompt_id_t HostOpId = expectedDefault(ompt_id_t));
+
+  /// Handle type = ompt_callback_target_submit
+  /// Note: This will also act as the simplest default CTOR
+  static OmptAssertEvent BufferRecord(
+      const std::string &Name, const std::string &Group,
+      const ObserveState &Expected, ompt_callbacks_t Type,
+      ompt_device_time_t MinimumTimeDelta = expectedDefault(ompt_device_time_t),
+      unsigned int RequestedNumTeams = expectedDefault(unsigned int),
+      unsigned int GrantedNumTeams = expectedDefault(unsigned int),
+      ompt_id_t TargetId = expectedDefault(ompt_id_t),
+      ompt_id_t HostOpId = expectedDefault(ompt_id_t));
 
   /// Allow move construction (due to std::unique_ptr)
   OmptAssertEvent(OmptAssertEvent &&o) = default;

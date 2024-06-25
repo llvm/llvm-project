@@ -359,6 +359,19 @@ void OmptCallbackHandler::handleWorkEnd(ompt_work_t work_type,
                                         ompt_data_t *task_data, uint64_t count,
                                         const void *codeptr_ra) {}
 
+void OmptCallbackHandler::handleAssertionSyncPoint(
+    const std::string &MarkerName) {
+  if (RecordAndReplay) {
+    recordEvent(OmptAssertEvent::AssertionSyncPoint(
+        "Assertion SyncPoint", "", ObserveState::generated, MarkerName));
+    return;
+  }
+
+  for (const auto &S : Subscribers)
+    S->notify(OmptAssertEvent::AssertionSyncPoint(
+        "Assertion SyncPoint", "", ObserveState::generated, MarkerName));
+}
+
 void OmptCallbackHandler::recordEvent(OmptAssertEvent &&Event) {
   RecordedEvents.emplace_back(std::forward<OmptAssertEvent>(Event));
 }

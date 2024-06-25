@@ -31,6 +31,12 @@ std::string makeHexString(uint64_t Data, bool IsPointer = true,
   return os.str();
 }
 
+std::string internal::AssertionSyncPoint::toString() const {
+  std::string S{"Assertion SyncPoint: '"};
+  S.append(Name).append(1, '\'');
+  return S;
+}
+
 std::string internal::ThreadBegin::toString() const {
   std::string S{"OMPT Callback ThreadBegin: "};
   S.append("ThreadType=").append(std::to_string(ThreadType));

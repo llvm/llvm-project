@@ -23,7 +23,7 @@ static OmptEventReporter *EventReporter;
 
 #define OMPT_BUFFER_REQUEST_SIZE 256
 
-#ifndef LIBOMPTARGET_LIBOMPTEST_USE_GTEST
+#ifndef LIBOFFLOAD_LIBOMPTEST_USE_GOOGLETEST
 std::unordered_map<std::string, TestSuite> TestRegistrar::Tests;
 #endif
 
@@ -80,7 +80,7 @@ static void on_ompt_callback_buffer_complete(
     if (ompt_get_record_type_fn(buffer, CurrentPos) != ompt_record_ompt) {
       printf("WARNING: received non-ompt type buffer object\n");
     }
-    // ToDo: Sometimes it may happen that the retrieved record may be null?!
+    // TODO: Sometimes it may happen that the retrieved record may be null?!
     // Only handle non-null records
     if (Record != nullptr)
       OmptCallbackHandler::get().handleBufferRecord(Record);
@@ -425,6 +425,21 @@ int flush_trace(ompt_device_t *Device) {
   if (!ompt_flush_trace)
     return 0;
   return ompt_flush_trace(Device);
+}
+
+int flush_traced_devices() {
+  if (!ompt_flush_trace || TracedDevices == nullptr)
+    return 0;
+
+  size_t NumFlushedDevices = 0;
+  for (auto Device : *TracedDevices)
+    if (ompt_flush_trace(Device) == 1)
+      ++NumFlushedDevices;
+
+  // Provide time to process triggered assert events
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+  return (NumFlushedDevices == TracedDevices->size());
 }
 
 int stop_trace(ompt_device_t *Device) {

@@ -32,4 +32,9 @@ constexpr ompt_target_t ENTER_DATA_NOWAIT = ompt_target_enter_data_nowait;
 constexpr ompt_target_t EXIT_DATA_NOWAIT = ompt_target_exit_data_nowait;
 constexpr ompt_target_t UPDATE_NOWAIT = ompt_target_update_nowait;
 
-#endif // include guard
+/// Aliases for enum: ompt_callbacks_t (partial)
+constexpr ompt_callbacks_t CB_TARGET = ompt_callback_target;
+constexpr ompt_callbacks_t CB_DATAOP = ompt_callback_target_data_op;
+constexpr ompt_callbacks_t CB_KERNEL = ompt_callback_target_submit;
+
+#endif

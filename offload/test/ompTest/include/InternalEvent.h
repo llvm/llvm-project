@@ -4,12 +4,21 @@
 #include "InternalEventCommon.h"
 
 #include <cstring>
+#include <limits>
+
+#define expectedDefault(TypeName) std::numeric_limits<TypeName>::min()
 
 namespace omptest {
 
 namespace internal {
 // clang-format off
-event_class_stub(Asserter)
+event_class_w_custom_body(AssertionSyncPoint,                                  \
+  AssertionSyncPoint(const std::string &Name)                                  \
+    : InternalEvent(EventTy::AssertionSyncPoint), Name(Name) {}                \
+                                                                               \
+  const std::string Name;                                                      \
+)
+event_class_stub(AssertionSuspend)
 event_class_w_custom_body(ThreadBegin,                                         \
   ThreadBegin(ompt_thread_t ThreadType)                                        \
     : InternalEvent(EventTy::ThreadBegin), ThreadType(ThreadType) {}           \

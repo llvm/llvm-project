@@ -31,6 +31,11 @@ public:
   /// events
   void replay();
 
+  /// Special asserter callback which checks that upon encountering the
+  /// synchronization point, all expected events have been processed. That is:
+  /// there are currently no remaining expected events for any asserter.
+  void handleAssertionSyncPoint(const std::string &MarkerName);
+
   void handleThreadBegin(ompt_thread_t ThreadType, ompt_data_t *ThreadData);
 
   void handleThreadEnd(ompt_data_t *ThreadData);

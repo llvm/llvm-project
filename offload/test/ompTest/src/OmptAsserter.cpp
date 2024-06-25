@@ -1,5 +1,7 @@
 #include "OmptAsserter.h"
 
+#include <algorithm>
+
 using namespace omptest;
 using namespace internal;
 
@@ -53,27 +55,25 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
                                      const OmptAssertEvent &ObservedEvent) {
   assert(ExpectedEvent.getEventType() == ObservedEvent.getEventType() &&
          "Type mismatch: Expected != Observed event type");
+  assert(TC && "Missing parent TestCase");
 
   // Ignore all events within "default" group
   auto GroupName = ExpectedEvent.getEventGroup();
   if (GroupName == "default")
     return true;
 
-  // Get the expected event group and a pointer to the observed internal event
-  auto EventGroup = EventGroups.find(GroupName);
+  // Get a pointer to the observed internal event
   auto Event = ObservedEvent.getEvent();
 
   switch (Event->getType()) {
   case EventTy::Target:
     if (auto E = static_cast<const internal::Target *>(Event)) {
       if (E->Endpoint == ompt_scope_begin) {
-        assert(EventGroup == EventGroups.end() && "Group already exists");
         // Add new group since we entered a Target Region
-        EventGroups.emplace(GroupName, E->TargetId);
+        TC->addActiveEventGroup(GroupName, AssertEventGroup{E->TargetId});
       } else if (E->Endpoint == ompt_scope_end) {
-        assert(EventGroup != EventGroups.end() && "Group does not exist");
-        // Erase group since we return from a Target Region
-        EventGroups.erase(GroupName);
+        // Deprecate group since we return from a Target Region
+        TC->deprecateActiveEventGroup(GroupName);
       }
       return true;
     }
@@ -81,40 +81,47 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
   case EventTy::TargetEmi:
     if (auto E = static_cast<const internal::TargetEmi *>(Event)) {
       if (E->Endpoint == ompt_scope_begin) {
-        assert(EventGroup == EventGroups.end() && "Group already exists");
         // Add new group since we entered a Target Region
-        EventGroups.emplace(GroupName, E->TargetData->value);
+        TC->addActiveEventGroup(GroupName,
+                                AssertEventGroup{E->TargetData->value});
       } else if (E->Endpoint == ompt_scope_end) {
-        assert(EventGroup != EventGroups.end() && "Group does not exist");
-        // Erase group since we return from a Target Region
-        EventGroups.erase(GroupName);
+        // Deprecate group since we return from a Target Region
+        TC->deprecateActiveEventGroup(GroupName);
       }
       return true;
     }
     return false;
   case EventTy::TargetDataOp:
-    if (auto E = static_cast<const internal::TargetDataOp *>(Event)) {
-      if (EventGroup != EventGroups.end())
-        return E->TargetId == EventGroup->second.TargetRegion;
-    }
+    if (auto E = static_cast<const internal::TargetDataOp *>(Event))
+      return TC->checkActiveEventGroups(GroupName,
+                                        AssertEventGroup{E->TargetId});
+
     return false;
   case EventTy::TargetDataOpEmi:
-    if (auto E = static_cast<const internal::TargetDataOpEmi *>(Event)) {
-      if (EventGroup != EventGroups.end())
-        return E->TargetData->value == EventGroup->second.TargetRegion;
-    }
+    if (auto E = static_cast<const internal::TargetDataOpEmi *>(Event))
+      return TC->checkActiveEventGroups(GroupName,
+                                        AssertEventGroup{E->TargetData->value});
+
     return false;
   case EventTy::TargetSubmit:
-    if (auto E = static_cast<const internal::TargetSubmit *>(Event)) {
-      if (EventGroup != EventGroups.end())
-        return E->TargetId == EventGroup->second.TargetRegion;
-    }
+    if (auto E = static_cast<const internal::TargetSubmit *>(Event))
+      return TC->checkActiveEventGroups(GroupName,
+                                        AssertEventGroup{E->TargetId});
+
     return false;
   case EventTy::TargetSubmitEmi:
-    if (auto E = static_cast<const internal::TargetSubmitEmi *>(Event)) {
-      if (EventGroup != EventGroups.end())
-        return E->TargetData->value == EventGroup->second.TargetRegion;
-    }
+    if (auto E = static_cast<const internal::TargetSubmitEmi *>(Event))
+      return TC->checkActiveEventGroups(GroupName,
+                                        AssertEventGroup{E->TargetData->value});
+
+    return false;
+  case EventTy::BufferRecord:
+    // BufferRecords are delivered asynchronously: also check deprecated groups.
+    if (auto E = static_cast<const internal::BufferRecord *>(Event))
+      return (TC->checkActiveEventGroups(
+                  GroupName, AssertEventGroup{E->Record.target_id}) ||
+              TC->checkDeprecatedEventGroups(
+                  GroupName, AssertEventGroup{E->Record.target_id}));
     return false;
   // Some event types do not need any handling
   case EventTy::ThreadBegin:
@@ -128,14 +135,11 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
   case EventTy::DeviceFinalize:
   case EventTy::DeviceLoad:
   case EventTy::DeviceUnload:
-    return true;
-  // Some event types are not implemented yet
   case EventTy::BufferRequest:
   case EventTy::BufferComplete:
-    assert(false && "Encountered unimplemented event type");
+    return true;
   // Observed events should be part of the OpenMP spec
   case EventTy::None:
-  case EventTy::BufferRecord:
   default:
     assert(false && "Encountered invalid event type");
   }
@@ -144,19 +148,36 @@ bool OmptAsserter::verifyEventGroups(const OmptAssertEvent &ExpectedEvent,
 }
 
 void OmptSequencedAsserter::insert(OmptAssertEvent &&AE) {
+  std::lock_guard<std::mutex> Lock(AssertMutex);
   Events.emplace_back(std::move(AE));
 }
 
 void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
+  std::lock_guard<std::mutex> Lock(AssertMutex);
   // Ignore notifications while inactive
   if (Events.empty() || !isActive() || isSuppressedEventType(AE.getEventType()))
     return;
 
   ++NumNotifications;
 
+  if (AE.getEventType() == EventTy::AssertionSyncPoint) {
+    auto NumRemainingEvents = getRemainingEventCount();
+    // Upon encountering a marker, all events should have been processed
+    if (NumRemainingEvents == 0)
+      return;
+
+    reportError(
+        AE, "[OmptSequencedAsserter] Encountered marker while still awaiting " +
+                std::to_string(NumRemainingEvents) + " events. Asserted " +
+                std::to_string(NumAssertSuccesses) + "/" +
+                std::to_string(Events.size()) + " events successfully.");
+    State = AssertState::fail;
+    return;
+  }
+
   if (NextEvent >= Events.size()) {
     // If we are not expecting any more events and passively asserting: return
-    if (!ActiveMode)
+    if (AssertionSuspended)
       return;
 
     reportError(AE, "[OmptSequencedAsserter] Too many events to check (" +
@@ -168,12 +189,11 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
     return;
   }
 
-  // If the event is meant for the Asserter itself -- enter 'passive' assertion.
-  // Since we may encounter multiple successive Asserter events, loop until we
-  // hit the next non-Asserter event.
-  while (Events[NextEvent].getEventType() == EventTy::Asserter) {
-    ActiveMode = false;
-    ++NumAssertSuccesses;
+  // On AssertionSuspend -- enter 'passive' assertion.
+  // Since we may encounter multiple, successive AssertionSuspend events, loop
+  // until we hit the next non-AssertionSuspend event.
+  while (Events[NextEvent].getEventType() == EventTy::AssertionSuspend) {
+    AssertionSuspended = true;
     // We just hit the very last event: return
     if (++NextEvent >= Events.size())
       return;
@@ -181,7 +201,7 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   // If we are actively asserting, increment the event counter.
   // Otherwise: If passively asserting, we will keep waiting for a match.
-  auto &E = ActiveMode ? Events[NextEvent++] : Events[NextEvent];
+  auto &E = AssertionSuspended ? Events[NextEvent] : Events[NextEvent++];
   if (E == AE && verifyEventGroups(E, AE)) {
     if (E.getEventExpectedState() == ObserveState::always) {
       ++NumAssertSuccesses;
@@ -189,19 +209,30 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
       reportError(E, AE, "[OmptSequencedAsserter] Encountered forbidden event");
       State = AssertState::fail;
     }
+
     // Return to active assertion
-    if (!ActiveMode) {
-      ActiveMode = true;
+    if (AssertionSuspended) {
+      AssertionSuspended = false;
       ++NextEvent;
     }
+
     return;
   }
 
-  if (!ActiveMode)
+  if (AssertionSuspended)
     return;
 
   reportError(E, AE, "[OmptSequencedAsserter] The events are not equal");
   State = AssertState::fail;
+}
+
+size_t OmptSequencedAsserter::getRemainingEventCount() {
+  return std::count_if(Events.begin(), Events.end(),
+                       [](const omptest::OmptAssertEvent &E) {
+                         return E.getEventExpectedState() ==
+                                ObserveState::always;
+                       }) -
+         NumAssertSuccesses;
 }
 
 AssertState OmptSequencedAsserter::getState() {
@@ -211,9 +242,11 @@ AssertState OmptSequencedAsserter::getState() {
   // special asserter events remaining in the sequence.
   for (size_t i = NextEvent; i < Events.size(); ++i) {
     auto &E = Events[i];
-    if (E.getEventExpectedState() == ObserveState::always &&
-        E.getEventType() != EventTy::Asserter) {
+    if (E.getEventExpectedState() == ObserveState::always) {
       State = AssertState::fail;
+      reportError(E, "[OmptSequencedAsserter] Expected event was not "
+                     "encountered (Remaining events: " +
+                         std::to_string(getRemainingEventCount()) + ")");
       break;
     }
   }
@@ -222,10 +255,12 @@ AssertState OmptSequencedAsserter::getState() {
 }
 
 void OmptEventAsserter::insert(OmptAssertEvent &&AE) {
+  std::lock_guard<std::mutex> Lock(AssertMutex);
   Events.emplace_back(std::move(AE));
 }
 
 void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
+  std::lock_guard<std::mutex> Lock(AssertMutex);
   if (Events.empty() || !isActive() || isSuppressedEventType(AE.getEventType()))
     return;
 
@@ -234,11 +269,25 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   ++NumNotifications;
 
-  for (size_t I = 0; I < Events.size(); ++I) {
-    auto &E = Events[I];
-    if (E == AE) {
+  if (AE.getEventType() == EventTy::AssertionSyncPoint) {
+    auto NumRemainingEvents = getRemainingEventCount();
+    // Upon encountering a marker, all events should have been processed
+    if (NumRemainingEvents == 0)
+      return;
+
+    reportError(
+        AE, "[OmptSequencedAsserter] Encountered marker while still awaiting " +
+                std::to_string(NumRemainingEvents) + " events. Asserted " +
+                std::to_string(NumAssertSuccesses) + " events successfully.");
+    State = AssertState::fail;
+    return;
+  }
+
+  for (size_t i = 0; i < Events.size(); ++i) {
+    auto &E = Events[i];
+    if (E == AE && verifyEventGroups(E, AE)) {
       if (E.getEventExpectedState() == ObserveState::always) {
-        Events.erase(Events.begin() + I);
+        Events.erase(Events.begin() + i);
         ++NumAssertSuccesses;
       } else if (E.getEventExpectedState() == ObserveState::never) {
         reportError(E, AE, "[OmptEventAsserter] Encountered forbidden event");
@@ -249,17 +298,29 @@ void OmptEventAsserter::notifyImpl(OmptAssertEvent &&AE) {
   }
 }
 
+size_t OmptEventAsserter::getRemainingEventCount() {
+  // size_t EventCount = std::count_if(Events.begin(), Events.end(), [](const
+  // omptest::OmptAssertEvent &E) { return E.getEventExpectedState() ==
+  // ObserveState::always; });
+  return std::count_if(
+      Events.begin(), Events.end(), [](const omptest::OmptAssertEvent &E) {
+        return E.getEventExpectedState() == ObserveState::always;
+      });
+}
+
 AssertState OmptEventAsserter::getState() {
   // This is called after the testcase executed.
   // Once reached no more expected events should be in the queue
-  if (!Events.empty())
-    for (const auto &E : Events) {
-      // Check if any of the remaining events were expected to be observed
-      if (E.getEventExpectedState() == ObserveState::always) {
-        State = AssertState::fail;
-        break;
-      }
+  for (const auto &E : Events) {
+    // Check if any of the remaining events were expected to be observed
+    if (E.getEventExpectedState() == ObserveState::always) {
+      State = AssertState::fail;
+      reportError(E, "[OmptEventAsserter] Expected event was not "
+                     "encountered (Remaining events: " +
+                         std::to_string(getRemainingEventCount()) + ")");
+      break;
     }
+  }
 
   return State;
 }
@@ -272,4 +333,44 @@ void OmptEventReporter::notify(OmptAssertEvent &&AE) {
   auto Notification{AE.toString()};
   Notification.push_back('\n');
   OutStream << Notification;
+}
+
+bool OmptEventGroupInterface::addActiveEventGroup(
+    const std::string &GroupName, omptest::AssertEventGroup Group) {
+  std::lock_guard<std::mutex> Lock(GroupMutex);
+  auto EventGroup = ActiveEventGroups.find(GroupName);
+  if (EventGroup != ActiveEventGroups.end() &&
+      EventGroup->second.TargetRegion == Group.TargetRegion)
+    return false;
+  ActiveEventGroups.emplace(GroupName, Group);
+  return true;
+}
+
+bool OmptEventGroupInterface::deprecateActiveEventGroup(
+    const std::string &GroupName) {
+  std::lock_guard<std::mutex> Lock(GroupMutex);
+  auto EventGroup = ActiveEventGroups.find(GroupName);
+  auto DeprecatedEventGroup = DeprecatedEventGroups.find(GroupName);
+  if (EventGroup == ActiveEventGroups.end() &&
+      DeprecatedEventGroup != DeprecatedEventGroups.end())
+    return false;
+  DeprecatedEventGroups.emplace(GroupName, EventGroup->second);
+  ActiveEventGroups.erase(GroupName);
+  return true;
+}
+
+bool OmptEventGroupInterface::checkActiveEventGroups(
+    const std::string &GroupName, omptest::AssertEventGroup Group) {
+  std::lock_guard<std::mutex> Lock(GroupMutex);
+  auto EventGroup = ActiveEventGroups.find(GroupName);
+  return (EventGroup != ActiveEventGroups.end() &&
+          EventGroup->second.TargetRegion == Group.TargetRegion);
+}
+
+bool OmptEventGroupInterface::checkDeprecatedEventGroups(
+    const std::string &GroupName, omptest::AssertEventGroup Group) {
+  std::lock_guard<std::mutex> Lock(GroupMutex);
+  auto EventGroup = DeprecatedEventGroups.find(GroupName);
+  return (EventGroup != DeprecatedEventGroups.end() &&
+          EventGroup->second.TargetRegion == Group.TargetRegion);
 }

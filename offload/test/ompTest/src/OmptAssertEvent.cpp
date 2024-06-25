@@ -8,12 +8,23 @@ OmptAssertEvent::OmptAssertEvent(const std::string &Name,
                                  internal::InternalEvent *IE)
     : Name(Name), Group(Group), ExpectedState(Expected), TheEvent(IE) {}
 
-OmptAssertEvent OmptAssertEvent::Asserter(const std::string &Name,
-                                          const std::string &Group,
-                                          const ObserveState &Expected) {
+OmptAssertEvent OmptAssertEvent::AssertionSyncPoint(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, const std::string &MarkerName) {
   auto EName = getName(Name);
   auto EGroup = getGroup(Group);
-  return OmptAssertEvent(EName, EGroup, Expected, new internal::Asserter());
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::AssertionSyncPoint(MarkerName));
+}
+
+OmptAssertEvent
+OmptAssertEvent::AssertionSuspend(const std::string &Name,
+                                  const std::string &Group,
+                                  const ObserveState &Expected) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::AssertionSuspend());
 }
 
 OmptAssertEvent OmptAssertEvent::ThreadBegin(const std::string &Name,
@@ -297,6 +308,160 @@ OmptAssertEvent OmptAssertEvent::BufferRecord(const std::string &Name,
   auto EGroup = getGroup(Group);
   return OmptAssertEvent(EName, EGroup, Expected,
                          new internal::BufferRecord(Record));
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecord(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_callbacks_t Type, ompt_target_t Kind,
+    ompt_scope_endpoint_t Endpoint, int DeviceNum, ompt_id_t TaskId,
+    ompt_id_t TargetId, const void *CodeptrRA) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+
+  if (Type != ompt_callback_target)
+    assert(false && "CTOR only suited for type: 'ompt_callback_target'");
+
+  ompt_record_target_t Subrecord{Kind,   Endpoint, DeviceNum,
+                                 TaskId, TargetId, CodeptrRA};
+
+  ompt_record_ompt_t *RecordPtr =
+      (ompt_record_ompt_t *)malloc(sizeof(ompt_record_ompt_t));
+  memset(RecordPtr, 0, sizeof(ompt_record_ompt_t));
+  RecordPtr->type = Type;
+  RecordPtr->time = expectedDefault(ompt_device_time_t);
+  RecordPtr->thread_id = expectedDefault(ompt_id_t);
+  RecordPtr->target_id = TargetId;
+  RecordPtr->record.target = Subrecord;
+
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::BufferRecord(RecordPtr));
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecord(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_callbacks_t Type,
+    ompt_target_data_op_t OpType, size_t Bytes,
+    std::pair<ompt_device_time_t, ompt_device_time_t> Timeframe, void *SrcAddr,
+    void *DstAddr, int SrcDeviceNum, int DstDeviceNum, ompt_id_t TargetId,
+    ompt_id_t HostOpId, const void *CodeptrRA) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+
+  if (Type != ompt_callback_target_data_op)
+    assert(false &&
+           "CTOR only suited for type: 'ompt_callback_target_data_op'");
+
+  ompt_record_target_data_op_t Subrecord{
+      HostOpId,     OpType, SrcAddr,          SrcDeviceNum, DstAddr,
+      DstDeviceNum, Bytes,  Timeframe.second, CodeptrRA};
+
+  ompt_record_ompt_t *RecordPtr =
+      (ompt_record_ompt_t *)malloc(sizeof(ompt_record_ompt_t));
+  memset(RecordPtr, 0, sizeof(ompt_record_ompt_t));
+  RecordPtr->type = Type;
+  RecordPtr->time = Timeframe.first;
+  RecordPtr->thread_id = expectedDefault(ompt_id_t);
+  RecordPtr->target_id = TargetId;
+  RecordPtr->record.target_data_op = Subrecord;
+
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::BufferRecord(RecordPtr));
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecord(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_callbacks_t Type,
+    ompt_target_data_op_t OpType, size_t Bytes,
+    ompt_device_time_t MinimumTimeDelta, void *SrcAddr, void *DstAddr,
+    int SrcDeviceNum, int DstDeviceNum, ompt_id_t TargetId, ompt_id_t HostOpId,
+    const void *CodeptrRA) {
+  return BufferRecord(Name, Group, Expected, Type, OpType, Bytes,
+                      {MinimumTimeDelta, expectedDefault(ompt_device_time_t)},
+                      SrcAddr, DstAddr, SrcDeviceNum, DstDeviceNum, TargetId,
+                      HostOpId, CodeptrRA);
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecord(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_callbacks_t Type,
+    std::pair<ompt_device_time_t, ompt_device_time_t> Timeframe,
+    unsigned int RequestedNumTeams, unsigned int GrantedNumTeams,
+    ompt_id_t TargetId, ompt_id_t HostOpId) {
+  auto EName = getName(Name);
+  auto EGroup = getGroup(Group);
+
+  bool isDefault = (Timeframe.first == expectedDefault(ompt_device_time_t));
+  isDefault &= (Timeframe.second == expectedDefault(ompt_device_time_t));
+  isDefault &= (RequestedNumTeams == expectedDefault(unsigned int));
+  isDefault &= (GrantedNumTeams == expectedDefault(unsigned int));
+  isDefault &= (TargetId == expectedDefault(ompt_id_t));
+  isDefault &= (HostOpId == expectedDefault(ompt_id_t));
+
+  ompt_record_ompt_t *RecordPtr =
+      (ompt_record_ompt_t *)malloc(sizeof(ompt_record_ompt_t));
+  memset(RecordPtr, 0, sizeof(ompt_record_ompt_t));
+  RecordPtr->type = Type;
+
+  // This handles the simplest occurrence of a device tracing record
+  // We can only check for Type -- since all other properties are set to default
+  if (isDefault) {
+    RecordPtr->time = expectedDefault(ompt_device_time_t);
+    RecordPtr->thread_id = expectedDefault(ompt_id_t);
+    RecordPtr->target_id = expectedDefault(ompt_id_t);
+    if (Type == ompt_callback_target) {
+      ompt_record_target_t Subrecord{expectedDefault(ompt_target_t),
+                                     expectedDefault(ompt_scope_endpoint_t),
+                                     expectedDefault(int),
+                                     expectedDefault(ompt_id_t),
+                                     expectedDefault(ompt_id_t),
+                                     expectedDefault(void *)};
+      RecordPtr->record.target = Subrecord;
+    }
+
+    if (Type == ompt_callback_target_data_op) {
+      ompt_record_target_data_op_t Subrecord{
+          expectedDefault(ompt_id_t), expectedDefault(ompt_target_data_op_t),
+          expectedDefault(void *),    expectedDefault(int),
+          expectedDefault(void *),    expectedDefault(int),
+          expectedDefault(size_t),    expectedDefault(ompt_device_time_t),
+          expectedDefault(void *)};
+      RecordPtr->record.target_data_op = Subrecord;
+    }
+
+    if (Type == ompt_callback_target_submit) {
+      ompt_record_target_kernel_t Subrecord{
+          expectedDefault(ompt_id_t), expectedDefault(unsigned int),
+          expectedDefault(unsigned int), expectedDefault(ompt_device_time_t)};
+      RecordPtr->record.target_kernel = Subrecord;
+    }
+
+    return OmptAssertEvent(EName, EGroup, Expected,
+                           new internal::BufferRecord(RecordPtr));
+  }
+
+  if (Type != ompt_callback_target_submit)
+    assert(false && "CTOR only suited for type: 'ompt_callback_target_submit'");
+
+  ompt_record_target_kernel_t Subrecord{HostOpId, RequestedNumTeams,
+                                        GrantedNumTeams, Timeframe.second};
+
+  RecordPtr->time = Timeframe.first;
+  RecordPtr->thread_id = expectedDefault(ompt_id_t);
+  RecordPtr->target_id = TargetId;
+  RecordPtr->record.target_kernel = Subrecord;
+
+  return OmptAssertEvent(EName, EGroup, Expected,
+                         new internal::BufferRecord(RecordPtr));
+}
+
+OmptAssertEvent OmptAssertEvent::BufferRecord(
+    const std::string &Name, const std::string &Group,
+    const ObserveState &Expected, ompt_callbacks_t Type,
+    ompt_device_time_t MinimumTimeDelta, unsigned int RequestedNumTeams,
+    unsigned int GrantedNumTeams, ompt_id_t TargetId, ompt_id_t HostOpId) {
+  return BufferRecord(Name, Group, Expected, Type,
+                      {MinimumTimeDelta, expectedDefault(ompt_device_time_t)},
+                      RequestedNumTeams, GrantedNumTeams, TargetId, HostOpId);
 }
 
 std::string OmptAssertEvent::getEventName() const { return Name; }

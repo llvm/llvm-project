@@ -6,45 +6,49 @@
 #include "OmptAssertEvent.h"
 #include "OmptAsserter.h"
 #include "OmptCallbackHandler.h"
+#include "OmptTesterGlobals.h"
 
 // This will allow us to override the "TEST" macro of gtest
 #define GTEST_DONT_DEFINE_TEST 1
 #include "gtest/gtest.h"
 
 namespace testing {
-class GTEST_API_ OmptTestCase : public testing::Test {
+class GTEST_API_ OmptTestCase : public testing::Test,
+                                public OmptEventGroupInterface {
+public:
 protected:
   void SetUp() override {
-    OmptCallbackHandler::get().subscribe(&SequenceAsserter);
-    OmptCallbackHandler::get().subscribe(&SetAsserter);
-    OmptCallbackHandler::get().subscribe(&EventReporter);
+    OmptCallbackHandler::get().subscribe(SequenceAsserter.get());
+    OmptCallbackHandler::get().subscribe(SetAsserter.get());
+    OmptCallbackHandler::get().subscribe(EventReporter.get());
   }
 
   void TearDown() override {
+    // Actively flush potential in-flight trace records
+    flush_traced_devices();
+
     // Remove subscribers to not be notified of events after test execution.
     OmptCallbackHandler::get().clearSubscribers();
 
     // This common testcase must not encounter any failures.
-    if (SequenceAsserter.getState() == omptest::AssertState::fail ||
-        SetAsserter.getState() == omptest::AssertState::fail)
+    if (SequenceAsserter->getState() == omptest::AssertState::fail ||
+        SetAsserter->getState() == omptest::AssertState::fail)
       ADD_FAILURE();
   }
-
-public:
-  OmptSequencedAsserter SequenceAsserter;
-  OmptEventAsserter SetAsserter;
-  OmptEventReporter EventReporter;
 };
 
 class GTEST_API_ OmptTestCaseXFail : public testing::OmptTestCase {
 protected:
   void TearDown() override {
+    // Actively flush potential in-flight trace records
+    flush_traced_devices();
+
     // Remove subscribers to not be notified of events after test execution.
     OmptCallbackHandler::get().clearSubscribers();
 
     // This eXpectedly failing testcase has to encounter at least one failure.
-    if (SequenceAsserter.getState() == omptest::AssertState::pass &&
-        SetAsserter.getState() == omptest::AssertState::pass)
+    if (SequenceAsserter->getState() == omptest::AssertState::pass &&
+        SetAsserter->getState() == omptest::AssertState::pass)
       ADD_FAILURE();
   }
 };

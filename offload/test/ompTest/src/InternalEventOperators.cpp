@@ -1,15 +1,11 @@
 #include "InternalEvent.h"
 
-#include <cstring>
-#include <limits>
-
-#define expectedDefault(TypeName) std::numeric_limits<TypeName>::min()
-
 namespace omptest {
 
 namespace internal {
 // clang-format off
-event_class_operator_stub(Asserter)
+event_class_operator_stub(AssertionSyncPoint)
+event_class_operator_stub(AssertionSuspend)
 event_class_operator_stub(ThreadBegin)
 event_class_operator_stub(ThreadEnd)
 event_class_operator_w_body(ParallelBegin,                                     \
@@ -91,17 +87,145 @@ event_class_operator_w_body(DeviceInitialize,                                  \
 )
 event_class_operator_stub(DeviceFinalize)
 event_class_operator_w_body(DeviceLoad,                                        \
-  bool isSameDeviceNum = (Expected.DeviceNum == Observed.DeviceNum);           \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
   bool isSameSize = (Expected.Bytes == expectedDefault(size_t)) ?              \
                        true : (Expected.Bytes == Observed.Bytes);              \
   return isSameDeviceNum && isSameSize;                                        \
 )
 event_class_operator_stub(DeviceUnload)
-event_class_operator_stub(BufferRequest)
-event_class_operator_stub(BufferComplete)
-event_class_operator_stub(BufferRecord)
+event_class_operator_w_body(BufferRequest,                                     \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
+  bool isSameSize = (Expected.Bytes == expectedDefault(size_t *)) ?            \
+                       true : (Expected.Bytes == Observed.Bytes);              \
+  return isSameDeviceNum && isSameSize;                                        \
+)
+event_class_operator_w_body(BufferComplete,                                    \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
+  bool isSameSize = (Expected.Bytes == expectedDefault(size_t)) ?              \
+                       true : (Expected.Bytes == Observed.Bytes);              \
+  return isSameDeviceNum && isSameSize;                                        \
+)
+event_class_operator_w_body(BufferRecord,                                      \
+  bool isSameType = (Expected.Record.type == Observed.Record.type);            \
+  bool isSameTargetId =                                                        \
+      (Expected.Record.target_id == expectedDefault(ompt_id_t))                \
+       ? true                                                                  \
+       : (Expected.Record.target_id == Observed.Record.target_id);             \
+  if (!(isSameType && isSameTargetId)) return false;                           \
+  bool isEqual = true;                                                         \
+  ompt_device_time_t ObservedDurationNs =                                      \
+      Observed.Record.record.target_data_op.end_time - Observed.Record.time;   \
+  switch(Expected.Record.type) {                                               \
+  case ompt_callback_target:                                                   \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target.kind == expectedDefault(ompt_target_t))   \
+        ? true                                                                 \
+        : (Expected.Record.record.target.kind ==                               \
+           Observed.Record.record.target.kind);                                \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target.endpoint ==                               \
+       expectedDefault(ompt_scope_endpoint_t))                                 \
+        ? true                                                                 \
+        : (Expected.Record.record.target.endpoint ==                           \
+           Observed.Record.record.target.endpoint);                            \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target.device_num == expectedDefault(int))       \
+        ? true                                                                 \
+        : (Expected.Record.record.target.device_num ==                         \
+           Observed.Record.record.target.device_num);                          \
+    break;                                                                     \
+  case ompt_callback_target_data_op:                                           \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.optype ==                         \
+       expectedDefault(ompt_target_data_op_t))                                 \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.optype ==                      \
+          Observed.Record.record.target_data_op.optype);                       \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.bytes == expectedDefault(size_t)) \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.bytes ==                       \
+          Observed.Record.record.target_data_op.bytes);                        \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.src_addr ==                       \
+       expectedDefault(void *))                                                \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.src_addr ==                    \
+          Observed.Record.record.target_data_op.src_addr);                     \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.dest_addr ==                      \
+       expectedDefault(void *))                                                \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.dest_addr ==                   \
+          Observed.Record.record.target_data_op.dest_addr);                    \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.src_device_num ==                 \
+       expectedDefault(int))                                                   \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.src_device_num ==              \
+          Observed.Record.record.target_data_op.src_device_num);               \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.dest_device_num ==                \
+       expectedDefault(int))                                                   \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.dest_device_num ==             \
+          Observed.Record.record.target_data_op.dest_device_num);              \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.host_op_id ==                     \
+       expectedDefault(ompt_id_t))                                             \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.host_op_id ==                  \
+          Observed.Record.record.target_data_op.host_op_id);                   \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_data_op.codeptr_ra ==                     \
+       expectedDefault(void *))                                                \
+       ? true                                                                  \
+       : (Expected.Record.record.target_data_op.codeptr_ra ==                  \
+          Observed.Record.record.target_data_op.codeptr_ra);                   \
+    if (Expected.Record.record.target_data_op.end_time !=                      \
+        expectedDefault(ompt_device_time_t)) {                                 \
+      isEqual &=                                                               \
+         ObservedDurationNs <= Expected.Record.record.target_data_op.end_time; \
+    }                                                                          \
+    isEqual &= ObservedDurationNs >= Expected.Record.time;                     \
+    break;                                                                     \
+  case ompt_callback_target_submit:                                            \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_kernel.requested_num_teams ==             \
+       expectedDefault(unsigned int))                                          \
+       ? true                                                                  \
+       : (Expected.Record.record.target_kernel.requested_num_teams ==          \
+          Observed.Record.record.target_kernel.requested_num_teams);           \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_kernel.granted_num_teams ==               \
+       expectedDefault(unsigned int))                                          \
+       ? true                                                                  \
+       : (Expected.Record.record.target_kernel.granted_num_teams ==            \
+          Observed.Record.record.target_kernel.granted_num_teams);             \
+    isEqual &=                                                                 \
+      (Expected.Record.record.target_kernel.host_op_id ==                      \
+       expectedDefault(ompt_id_t))                                             \
+       ? true                                                                  \
+       : (Expected.Record.record.target_kernel.host_op_id ==                   \
+          Observed.Record.record.target_kernel.host_op_id);                    \
+    if (Expected.Record.record.target_kernel.end_time !=                       \
+        expectedDefault(ompt_device_time_t)) {                                 \
+      isEqual &=                                                               \
+         ObservedDurationNs <= Expected.Record.record.target_kernel.end_time;  \
+    }                                                                          \
+    isEqual &= ObservedDurationNs >= Expected.Record.time;                     \
+    break;                                                                     \
+  default:                                                                     \
+    assert(false && "Encountered invalid record type");                        \
+  }                                                                            \
+  return isEqual;                                                              \
+)
 
-define_cast_func(Asserter)
+define_cast_func(AssertionSyncPoint)
+define_cast_func(AssertionSuspend)
 define_cast_func(ThreadBegin)
 define_cast_func(ThreadEnd)
 define_cast_func(ParallelBegin)
@@ -124,7 +248,8 @@ define_cast_func(BufferRequest)
 define_cast_func(BufferComplete)
 define_cast_func(BufferRecord)
 
-class_equals_op(Asserter)
+class_equals_op(AssertionSyncPoint)
+class_equals_op(AssertionSuspend)
 class_equals_op(ThreadBegin)
 class_equals_op(ThreadEnd)
 class_equals_op(ParallelBegin)
