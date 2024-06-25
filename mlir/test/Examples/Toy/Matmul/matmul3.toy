@@ -1,3 +1,5 @@
+# RUN: toyc-ch7 %s -emit=mlir 2>&1 | FileCheck %s
+
 def main() {
   var a<6, 1> = [1, 2, 3, 4, 5, 6];
   var b<1, 6> = [1, 2, 3, 4, 5, 6];
@@ -5,3 +7,12 @@ def main() {
   print(c);
 }
 
+#CHECK-LABEL: toy.func @main() {
+# CHECK-NEXT:    %0 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+# CHECK-NEXT:    %1 = toy.reshape(%0 : tensor<6xf64>) to tensor<6x1xf64>
+# CHECK-NEXT:    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
+# CHECK-NEXT:    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<1x6xf64>
+# CHECK-NEXT:    %4 = toy.matmul %3, %1 : tensor<1x6xf64>, tensor<6x1xf64> -> tensor<*xf64>
+# CHECK-NEXT:    toy.print %4 : tensor<*xf64>
+# CHECK-NEXT:    toy.return
+# CHECK-NEXT:  }
