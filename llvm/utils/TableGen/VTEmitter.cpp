@@ -13,7 +13,6 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <array>
 #include <cassert>
-#include <cstring>
 #include <map>
 #include <string>
 using namespace llvm;
