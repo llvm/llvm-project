@@ -67,7 +67,7 @@ def run_case(root, dir, input_path, output_path, tool_path):
 docker run -t \
     -v {root}/..:{docker_root} \
     {image} \
-    {docker_root}/build-release/bin/thebesttv \
+    sudo {docker_root}/build-release/bin/thebesttv \
         --no-npe-good-source --no-nodes \
         {docker_root}/graph-generation/{dir}/input.json \
 '''
