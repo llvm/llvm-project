@@ -20,10 +20,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
-    # setjmp.h entrypoints
-    libc.src.setjmp.longjmp
-    libc.src.setjmp.setjmp
-
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -184,6 +180,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     # libc.src.sys.epoll.epoll_pwait2
 
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+  )
+endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
