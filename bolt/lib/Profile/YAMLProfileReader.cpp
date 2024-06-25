@@ -14,6 +14,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 
@@ -340,6 +341,69 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
   }
 
   return false;
+}
+
+void YAMLProfileReader::matchWithCallsAsAnchors(
+    BinaryContext &BC, uint64_t &MatchedWithCallsAsAnchors) {
+  auto ComputeCallHash = [&](std::string HashString) {
+    if (YamlBP.Header.HashFunction == HashFunction::StdHash)
+      return std::hash<std::string>{}(HashString);
+    if (YamlBP.Header.HashFunction == HashFunction::XXH3)
+      return llvm::xxh3_64bits(HashString);
+    llvm_unreachable("Unhandled HashFunction");
+  };
+
+  std::unordered_map<uint64_t, BinaryFunction &> CallHashToBF;
+
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    if (ProfiledFunctions.count(BF))
+      continue;
+
+    std::string HashString;
+    for (const auto &BB : BF->blocks()) {
+      std::set<std::string> FunctionNames;
+      for (const MCInst &Instr : BB) {
+        // Skip non-call instructions.
+        if (!BC.MIB->isCall(Instr))
+          continue;
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+        if (!CallSymbol)
+          continue;
+        FunctionNames.insert(std::string(CallSymbol->getName()));
+      }
+      // Adds called functions to the hash string in lexigraphic order.
+      for (const std::string &FunctionName : FunctionNames)
+        HashString.append(FunctionName);
+    }
+    CallHashToBF.emplace(ComputeCallHash(HashString), BF);
+  }
+
+  std::unordered_map<uint32_t, std::string> ProfiledFunctionIdToName;
+
+  for (const yaml::bolt::BinaryFunctionProfile YamlBF : YamlBP.Functions)
+    ProfiledFunctionIdToName[YamlBF.Id] = YamlBF.Name;
+
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+    std::string HashString{""};
+    for (const yaml::bolt::BinaryBasicBlockProfile &Block : YamlBF.Blocks) {
+      std::multiset<std::string> FunctionNames;
+      for (const yaml::bolt::CallSiteInfo &CallSite : Block.CallSites) {
+        std::string &FunctionName = ProfiledFunctionIdToName[CallSite.DestId];
+        FunctionNames.insert(FunctionName);
+      }
+      for (const std::string &FunctionName : FunctionNames) {
+        HashString.append(FunctionName);
+      }
+    }
+    size_t Hash = ComputeCallHash(HashString);
+    auto It = CallHashToBF.find(Hash);
+    if (It == CallHashToBF.end())
+      continue;
+    matchProfileToFunction(YamlBF, It->second);
+    ++MatchedWithCallsAsAnchors;
+  }
 }
 
 Error YAMLProfileReader::readProfile(BinaryContext &BC) {
