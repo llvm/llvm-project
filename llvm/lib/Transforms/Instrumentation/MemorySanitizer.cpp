@@ -124,8 +124,9 @@
 ///      __msan_metadata_ptr_for_store_n(ptr, size);
 ///    Note that the sanitizer code has to deal with how shadow/origin pairs
 ///    returned by the these functions are represented in different ABIs. In
-///    the X86_64 ABI they are returned in RDX:RAX, and in the SystemZ ABI they
-///    are written to memory pointed to by a hidden parameter.
+///    the X86_64 ABI they are returned in RDX:RAX, in PowerPC64 they are
+///    returned in r3 and r4, and in the SystemZ ABI they are written to memory
+///    pointed to by a hidden parameter.
 ///  - TLS variables are stored in a single per-task struct. A call to a
 ///    function __msan_get_context_state() returning a pointer to that struct
 ///    is inserted into every instrumented function before the entry block;
@@ -139,7 +140,8 @@
 /// Also, KMSAN currently ignores uninitialized memory passed into inline asm
 /// calls, making sure we're on the safe side wrt. possible false positives.
 ///
-///  KernelMemorySanitizer only supports X86_64 and SystemZ at the moment.
+///  KernelMemorySanitizer only supports X86_64, SystemZ and PowerPC64 at the
+///  moment.
 ///
 //
 // FIXME: This sanitizer does not yet handle scalable vectors
@@ -3287,6 +3289,106 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Convert `Mask` into `<n x i1>`.
+  Constant *createDppMask(unsigned Width, unsigned Mask) {
+    SmallVector<Constant *, 4> R(Width);
+    for (auto &M : R) {
+      M = ConstantInt::getBool(F.getContext(), Mask & 1);
+      Mask >>= 1;
+    }
+    return ConstantVector::get(R);
+  }
+
+  // Calculate output shadow as array of booleans `<n x i1>`, assuming if any
+  // arg is poisoned, entire dot product is poisoned.
+  Value *findDppPoisonedOutput(IRBuilder<> &IRB, Value *S, unsigned SrcMask,
+                               unsigned DstMask) {
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+
+    S = IRB.CreateSelect(createDppMask(Width, SrcMask), S,
+                         Constant::getNullValue(S->getType()));
+    Value *SElem = IRB.CreateOrReduce(S);
+    Value *IsClean = IRB.CreateIsNull(SElem, "_msdpp");
+    Value *DstMaskV = createDppMask(Width, DstMask);
+
+    return IRB.CreateSelect(
+        IsClean, Constant::getNullValue(DstMaskV->getType()), DstMaskV);
+  }
+
+  // See `Intel Intrinsics Guide` for `_dp_p*` instructions.
+  //
+  // 2 and 4 element versions produce single scalar of dot product, and then
+  // puts it into elements of output vector, selected by 4 lowest bits of the
+  // mask. Top 4 bits of the mask control which elements of input to use for dot
+  // product.
+  //
+  // 8 element version mask still has only 4 bit for input, and 4 bit for output
+  // mask. According to the spec it just operates as 4 element version on first
+  // 4 elements of inputs and output, and then on last 4 elements of inputs and
+  // output.
+  void handleDppIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *S0 = getShadow(&I, 0);
+    Value *S1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(S0, S1);
+
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+    assert(Width == 2 || Width == 4 || Width == 8);
+
+    const unsigned Mask = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    const unsigned SrcMask = Mask >> 4;
+    const unsigned DstMask = Mask & 0xf;
+
+    // Calculate shadow as `<n x i1>`.
+    Value *SI1 = findDppPoisonedOutput(IRB, S, SrcMask, DstMask);
+    if (Width == 8) {
+      // First 4 elements of shadow are already calculated. `makeDppShadow`
+      // operats on 32 bit masks, so we can just shift masks, and repeat.
+      SI1 = IRB.CreateOr(
+          SI1, findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
+    }
+    // Extend to real size of shadow, poisoning either all or none bits of an
+    // element.
+    S = IRB.CreateSExt(SI1, S->getType(), "_msdpp");
+
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
+
+  Value *convertBlendvToSelectMask(IRBuilder<> &IRB, Value *C) {
+    C = CreateAppToShadowCast(IRB, C);
+    FixedVectorType *FVT = cast<FixedVectorType>(C->getType());
+    unsigned ElSize = FVT->getElementType()->getPrimitiveSizeInBits();
+    C = IRB.CreateAShr(C, ElSize - 1);
+    FVT = FixedVectorType::get(IRB.getInt1Ty(), FVT->getNumElements());
+    return IRB.CreateTrunc(C, FVT);
+  }
+
+  // `blendv(f, t, c)` is effectively `select(c[top_bit], t, f)`.
+  void handleBlendvIntrinsic(IntrinsicInst &I) {
+    Value *C = I.getOperand(2);
+    Value *T = I.getOperand(1);
+    Value *F = I.getOperand(0);
+
+    Value *Sc = getShadow(&I, 2);
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+
+    {
+      IRBuilder<> IRB(&I);
+      // Extract top bit from condition and its shadow.
+      C = convertBlendvToSelectMask(IRB, C);
+      Sc = convertBlendvToSelectMask(IRB, Sc);
+
+      setShadow(C, Sc);
+      setOrigin(C, Oc);
+    }
+
+    handleSelectLikeInst(I, C, T, F);
+  }
+
   // Instrument sum-of-absolute-differences intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
@@ -3642,7 +3744,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
+  static SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
     SmallVector<int, 8> Mask;
     for (unsigned X = OddElements ? 1 : 0; X < Width; X += 2) {
       Mask.append(2, X);
@@ -3956,6 +4058,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_packuswb:
     case Intrinsic::x86_avx2_packusdw:
       handleVectorPackIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_sse41_pblendvb:
+    case Intrinsic::x86_sse41_blendvpd:
+    case Intrinsic::x86_sse41_blendvps:
+    case Intrinsic::x86_avx_blendv_pd_256:
+    case Intrinsic::x86_avx_blendv_ps_256:
+    case Intrinsic::x86_avx2_pblendvb:
+      handleBlendvIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_avx_dp_ps_256:
+    case Intrinsic::x86_sse41_dppd:
+    case Intrinsic::x86_sse41_dpps:
+      handleDppIntrinsic(I);
       break;
 
     case Intrinsic::x86_mmx_packsswb:
@@ -4481,14 +4598,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitSelectInst(SelectInst &I) {
-    IRBuilder<> IRB(&I);
     // a = select b, c, d
     Value *B = I.getCondition();
     Value *C = I.getTrueValue();
     Value *D = I.getFalseValue();
+
+    handleSelectLikeInst(I, B, C, D);
+  }
+
+  void handleSelectLikeInst(Instruction &I, Value *B, Value *C, Value *D) {
+    IRBuilder<> IRB(&I);
+
     Value *Sb = getShadow(B);
     Value *Sc = getShadow(C);
     Value *Sd = getShadow(D);
+
+    Value *Ob = MS.TrackOrigins ? getOrigin(B) : nullptr;
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+    Value *Od = MS.TrackOrigins ? getOrigin(D) : nullptr;
 
     // Result shadow if condition shadow is 0.
     Value *Sa0 = IRB.CreateSelect(B, Sc, Sd);
@@ -4522,10 +4649,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
       // a = select b, c, d
       // Oa = Sb ? Ob : (b ? Oc : Od)
-      setOrigin(
-          &I, IRB.CreateSelect(Sb, getOrigin(I.getCondition()),
-                               IRB.CreateSelect(B, getOrigin(I.getTrueValue()),
-                                                getOrigin(I.getFalseValue()))));
+      setOrigin(&I, IRB.CreateSelect(Sb, Ob, IRB.CreateSelect(B, Oc, Od)));
     }
   }
 

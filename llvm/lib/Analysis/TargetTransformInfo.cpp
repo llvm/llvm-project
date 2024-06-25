@@ -98,8 +98,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
 
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
   ParamTys.reserve(Arguments.size());
-  for (unsigned Idx = 0, Size = Arguments.size(); Idx != Size; ++Idx)
-    ParamTys.push_back(Arguments[Idx]->getType());
+  for (const Value *Argument : Arguments)
+    ParamTys.push_back(Argument->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -425,6 +425,10 @@ bool TargetTransformInfo::isNumRegsMajorCostOfLSR() const {
 
 bool TargetTransformInfo::shouldFoldTerminatingConditionAfterLSR() const {
   return TTIImpl->shouldFoldTerminatingConditionAfterLSR();
+}
+
+bool TargetTransformInfo::shouldDropLSRSolutionIfLessProfitable() const {
+  return TTIImpl->shouldDropLSRSolutionIfLessProfitable();
 }
 
 bool TargetTransformInfo::isProfitableLSRChainElement(Instruction *I) const {

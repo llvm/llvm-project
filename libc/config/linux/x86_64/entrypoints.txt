@@ -214,6 +214,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.scanf
     libc.src.stdio.fscanf
     libc.src.stdio.fileno
+    libc.src.stdio.fdopen
 
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
@@ -421,6 +422,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
     libc.src.math.fminimum_mag_numl
+    libc.src.math.fmul
     libc.src.math.fmod
     libc.src.math.fmodf
     libc.src.math.fmodl
@@ -528,6 +530,65 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C23 _Float16 entrypoints
+    libc.src.math.canonicalizef16
+    libc.src.math.ceilf16
+    libc.src.math.copysignf16
+    libc.src.math.f16divf
+    libc.src.math.f16fmaf
+    libc.src.math.f16sqrtf
+    libc.src.math.fabsf16
+    libc.src.math.fdimf16
+    libc.src.math.floorf16
+    libc.src.math.fmaxf16
+    libc.src.math.fmaximumf16
+    libc.src.math.fmaximum_magf16
+    libc.src.math.fmaximum_mag_numf16
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminf16
+    libc.src.math.fminimumf16
+    libc.src.math.fminimum_magf16
+    libc.src.math.fminimum_mag_numf16
+    libc.src.math.fminimum_numf16
+    libc.src.math.fmodf16
+    libc.src.math.frexpf16
+    libc.src.math.fromfpf16
+    libc.src.math.fromfpxf16
+    libc.src.math.getpayloadf16
+    libc.src.math.ilogbf16
+    libc.src.math.ldexpf16
+    libc.src.math.llogbf16
+    libc.src.math.llrintf16
+    libc.src.math.llroundf16
+    libc.src.math.logbf16
+    libc.src.math.lrintf16
+    libc.src.math.lroundf16
+    libc.src.math.modff16
+    libc.src.math.nanf16
+    libc.src.math.nearbyintf16
+    libc.src.math.nextafterf16
+    libc.src.math.nextdownf16
+    libc.src.math.nexttowardf16
+    libc.src.math.nextupf16
+    libc.src.math.remainderf16
+    libc.src.math.remquof16
+    libc.src.math.rintf16
+    libc.src.math.roundf16
+    libc.src.math.roundevenf16
+    libc.src.math.scalblnf16
+    libc.src.math.scalbnf16
+    libc.src.math.setpayloadf16
+    libc.src.math.setpayloadsigf16
+    libc.src.math.totalorderf16
+    libc.src.math.totalordermagf16
+    libc.src.math.truncf16
+    libc.src.math.ufromfpf16
+    libc.src.math.ufromfpxf16
+  )
+endif()
+
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
@@ -565,6 +626,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
+    libc.src.math.remquof128
     libc.src.math.rintf128
     libc.src.math.roundevenf128
     libc.src.math.roundf128
@@ -672,9 +734,20 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
     libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_rwlock_init
+    libc.src.pthread.pthread_rwlock_tryrdlock
+    libc.src.pthread.pthread_rwlock_rdlock
+    libc.src.pthread.pthread_rwlock_timedrdlock
+    libc.src.pthread.pthread_rwlock_trywrlock
+    libc.src.pthread.pthread_rwlock_wrlock
+    libc.src.pthread.pthread_rwlock_timedwrlock
+    libc.src.pthread.pthread_rwlock_unlock
+    libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlockattr_destroy
+    libc.src.pthread.pthread_rwlockattr_getkind_np
     libc.src.pthread.pthread_rwlockattr_getpshared
     libc.src.pthread.pthread_rwlockattr_init
+    libc.src.pthread.pthread_rwlockattr_setkind_np
     libc.src.pthread.pthread_rwlockattr_setpshared
     libc.src.pthread.pthread_setspecific
 
@@ -728,9 +801,11 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
+    libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.quick_exit
 
     # signal.h entrypoints
     libc.src.signal.raise

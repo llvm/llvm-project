@@ -110,7 +110,7 @@ SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
   return GetBaseSymbolFile().GetDIEToVariable();
 }
 
-llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+SymbolFileDWARF::CompilerTypeToDIE &
 SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
   return GetBaseSymbolFile().GetForwardDeclCompilerTypeToDIE();
 }
@@ -125,9 +125,8 @@ UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
   return GetBaseSymbolFile().GetUniqueDWARFASTTypeMap();
 }
 
-lldb::TypeSP
-SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
-  return GetBaseSymbolFile().FindDefinitionTypeForDWARFDeclContext(die);
+DWARFDIE SymbolFileDWARFDwo::FindDefinitionDIE(const DWARFDIE &die) {
+  return GetBaseSymbolFile().FindDefinitionDIE(die);
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
@@ -145,7 +144,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
   if (die_ref.file_index() == GetFileIndex())
-    return DebugInfo().GetDIE(die_ref);
+    return DebugInfo().GetDIE(die_ref.section(), die_ref.die_offset());
   return GetBaseSymbolFile().GetDIE(die_ref);
 }
 
@@ -173,4 +172,9 @@ bool SymbolFileDWARFDwo::GetDebugInfoHadFrameVariableErrors() const {
 }
 void SymbolFileDWARFDwo::SetDebugInfoHadFrameVariableErrors() {
   return GetBaseSymbolFile().SetDebugInfoHadFrameVariableErrors();
+}
+
+SymbolFileDWARF *
+SymbolFileDWARFDwo::GetDIERefSymbolFile(const DIERef &die_ref) {
+  return GetBaseSymbolFile().GetDIERefSymbolFile(die_ref);
 }

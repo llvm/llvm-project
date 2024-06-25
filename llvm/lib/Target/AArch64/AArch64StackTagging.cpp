@@ -86,7 +86,7 @@ static cl::opt<size_t> ClMaxLifetimes(
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
-enum RecordStackHistoryMode {
+enum StackTaggingRecordStackHistoryMode {
   // Do not record frame record info.
   none,
 
@@ -95,7 +95,7 @@ enum RecordStackHistoryMode {
   instr,
 };
 
-static cl::opt<RecordStackHistoryMode> ClRecordStackHistory(
+static cl::opt<StackTaggingRecordStackHistoryMode> ClRecordStackHistory(
     "stack-tagging-record-stack-history",
     cl::desc("Record stack frames with tagged allocations in a thread-local "
              "ring buffer"),

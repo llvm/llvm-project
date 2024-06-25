@@ -126,7 +126,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                            PreHeader);
       } else {
         // Succ is LatchExit.
-        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
+        NewPN->addIncoming(PoisonValue::get(PN.getType()), PreHeader);
       }
 
       Value *V = PN.getIncomingValueForBlock(Latch);
@@ -253,7 +253,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
 
     // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
     SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
@@ -272,7 +272,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [undef, PreHeader]
+    //   PN = PHI [I, Latch], [poison, PreHeader]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]
@@ -849,7 +849,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
        if (PredBB == Latch)
-         // The latch exit is handled seperately, see connectX
+         // The latch exit is handled separately, see connectX
          continue;
        if (!L->contains(PredBB))
          // Even if we had dedicated exits, the code above inserted an
@@ -1016,12 +1016,17 @@ bool llvm::UnrollRuntimeLoopRemainder(
   auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
-    UnrollResult =
-        UnrollLoop(remainderLoop,
-                   {/*Count*/ Count - 1, /*Force*/ false, /*Runtime*/ false,
-                    /*AllowExpensiveTripCount*/ false,
-                    /*UnrollRemainder*/ false, ForgetAllSCEV},
-                   LI, SE, DT, AC, TTI, /*ORE*/ nullptr, PreserveLCSSA);
+    UnrollLoopOptions ULO;
+    ULO.Count = Count - 1;
+    ULO.Force = false;
+    ULO.Runtime = false;
+    ULO.AllowExpensiveTripCount = false;
+    ULO.UnrollRemainder = false;
+    ULO.ForgetAllSCEV = ForgetAllSCEV;
+    assert(!getLoopConvergenceHeart(L) &&
+           "A loop with a convergence heart does not allow runtime unrolling.");
+    UnrollResult = UnrollLoop(remainderLoop, ULO, LI, SE, DT, AC, TTI,
+                              /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)

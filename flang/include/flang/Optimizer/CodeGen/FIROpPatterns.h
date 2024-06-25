@@ -51,7 +51,9 @@ protected:
   /// appropriate reified structures.
   mlir::Value integerCast(mlir::Location loc,
                           mlir::ConversionPatternRewriter &rewriter,
-                          mlir::Type ty, mlir::Value val) const;
+                          mlir::Type ty, mlir::Value val,
+                          bool fold = false) const;
+
   struct TypePair {
     mlir::Type fir;
     mlir::Type llvm;
@@ -125,6 +127,12 @@ protected:
                                    mlir::ConversionPatternRewriter &rewriter,
                                    unsigned maskValue) const;
 
+  /// Compute the descriptor size in bytes. The result is not guaranteed to be a
+  /// compile time constant if the box is for an assumed rank, in which case the
+  /// box rank will be read.
+  mlir::Value computeBoxSize(mlir::Location, TypePair boxTy, mlir::Value box,
+                             mlir::ConversionPatternRewriter &rewriter) const;
+
   template <typename... ARGS>
   mlir::LLVM::GEPOp genGEP(mlir::Location loc, mlir::Type ty,
                            mlir::ConversionPatternRewriter &rewriter,
@@ -138,9 +146,12 @@ protected:
   // Find the Block in which the alloca should be inserted.
   // The order to recursively find the proper block:
   // 1. An OpenMP Op that will be outlined.
-  // 2. A LLVMFuncOp
-  // 3. The first ancestor that is an OpenMP Op or a LLVMFuncOp
-  mlir::Block *getBlockForAllocaInsert(mlir::Operation *op) const;
+  // 2. An OpenMP or OpenACC Op with one or more regions holding executable
+  // code.
+  // 3. A LLVMFuncOp
+  // 4. The first ancestor that is one of the above.
+  mlir::Block *getBlockForAllocaInsert(mlir::Operation *op,
+                                       mlir::Region *parentRegion) const;
 
   // Generate an alloca of size 1 for an object of type \p llvmObjectTy in the
   // allocation address space provided for the architecture in the DataLayout

@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 
-namespace cwg2621 { // cwg2621: 16
+namespace cwg2621 { // cwg2621: sup 2877
 #if __cplusplus >= 202002L
 enum class E { a };
 namespace One {
@@ -17,9 +17,8 @@ auto v = a;
 }
 namespace Two {
 using cwg2621::E;
-int E; // we see this
+int E; // ignored by type-only lookup
 using enum E;
-// since-cxx20-error@-1 {{unknown type name E}}
 }
 #endif
 }
@@ -129,7 +128,7 @@ int y = cwg2640_a\N{LOTUS});
 namespace cwg2644 { // cwg2644: 8
 #if __cplusplus >= 201103L
 auto z = [a = 42](int a) {
-// cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
+// cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
 // since-cxx11-error@-2 {{a lambda parameter cannot shadow an explicitly captured entity}}
 //   since-cxx11-note@-3 {{variable 'a' is explicitly captured here}}
      return 1;
@@ -240,3 +239,30 @@ void test() {
 }
 }
 #endif
+
+
+namespace cwg2692 { // cwg2692: 19
+#if __cplusplus >= 202302L
+
+ struct A {
+    static void f(A); // #cwg2692-1
+    void f(this A); // #cwg2692-2
+
+    void g();
+  };
+
+  void A::g() {
+    (&A::f)(A());
+    // expected-error@-1 {{call to 'f' is ambiguous}}
+    // expected-note@#cwg2692-1 {{candidate}}
+    // expected-note@#cwg2692-2 {{candidate}}
+
+
+
+    (&A::f)();
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    // expected-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    // expected-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+  }
+#endif
+}

@@ -16,7 +16,7 @@
 ;      }
 ;    }
 ;
-; CHECK-LABEL @manyarrays
+; CHECK-LABEL: @manyarrays
 ; CHECK: load{{.*}}!alias.scope
 ; CHECK: store{{.*}}!alias.scope
 ; CHECK: load{{.*}}!alias.scope

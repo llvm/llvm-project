@@ -663,6 +663,17 @@ Loop::LocRange Loop::getLocRange() const {
   return LocRange();
 }
 
+std::string Loop::getLocStr() const {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  if (const DebugLoc LoopDbgLoc = getStartLoc())
+    LoopDbgLoc.print(OS);
+  else
+    // Just print the module name.
+    OS << getHeader()->getParent()->getParent()->getModuleIdentifier();
+  return Result;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
@@ -1103,6 +1114,26 @@ std::optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
 int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
                               int Default) {
   return getOptionalIntLoopAttribute(TheLoop, Name).value_or(Default);
+}
+
+CallBase *llvm::getLoopConvergenceHeart(const Loop *TheLoop) {
+  BasicBlock *H = TheLoop->getHeader();
+  for (Instruction &II : *H) {
+    if (auto *CB = dyn_cast<CallBase>(&II)) {
+      if (!CB->isConvergent())
+        continue;
+      // This is the heart if it uses a token defined outside the loop. The
+      // verifier has already checked that only the loop intrinsic can use such
+      // a token.
+      if (auto *Token = CB->getConvergenceControlToken()) {
+        auto *TokenDef = cast<Instruction>(Token);
+        if (!TheLoop->contains(TokenDef->getParent()))
+          return CB;
+      }
+      return nullptr;
+    }
+  }
+  return nullptr;
 }
 
 bool llvm::isFinite(const Loop *L) {

@@ -2691,10 +2691,10 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   //   `sourceOffset + sum_i(staticOffset_i * sourceStrides_i)`.
   int64_t targetOffset = sourceOffset;
   for (auto it : llvm::zip(staticOffsets, sourceStrides)) {
-    auto staticOffset = std::get<0>(it), targetStride = std::get<1>(it);
+    auto staticOffset = std::get<0>(it), sourceStride = std::get<1>(it);
     targetOffset = (SaturatedInteger::wrap(targetOffset) +
                     SaturatedInteger::wrap(staticOffset) *
-                        SaturatedInteger::wrap(targetStride))
+                        SaturatedInteger::wrap(sourceStride))
                        .asInteger();
   }
 

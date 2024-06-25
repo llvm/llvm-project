@@ -16,6 +16,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
 namespace lower {
@@ -175,7 +176,7 @@ static void addUseDeviceClause(
     useDeviceLocs.push_back(operand.getLoc());
   }
   for (const omp::Object &object : objects)
-    useDeviceSyms.push_back(object.id());
+    useDeviceSyms.push_back(object.sym());
 }
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
@@ -312,6 +313,20 @@ bool ClauseProcessor::processDeviceType(
       result.deviceType = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processDistSchedule(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::DistScheduleClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::DistSchedule>()) {
+    result.distScheduleStaticAttr = converter.getFirOpBuilder().getUnitAttr();
+    const auto &chunkSize = std::get<std::optional<ExprTy>>(clause->t);
+    if (chunkSize)
+      result.distScheduleChunkSizeVar =
+          fir::getBase(converter.genExprValue(*chunkSize, stmtCtx));
     return true;
   }
   return false;
@@ -500,6 +515,65 @@ bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
 //===----------------------------------------------------------------------===//
 // ClauseProcessor repeatable clauses
 //===----------------------------------------------------------------------===//
+static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
+  llvm::StringMap<bool> featuresMap;
+  llvm::SmallVector<llvm::StringRef> targetFeaturesVec;
+  if (mlir::LLVM::TargetFeaturesAttr features =
+          fir::getTargetFeatures(module)) {
+    llvm::ArrayRef<mlir::StringAttr> featureAttrs = features.getFeatures();
+    for (auto &featureAttr : featureAttrs) {
+      llvm::StringRef featureKeyString = featureAttr.strref();
+      featuresMap[featureKeyString.substr(1)] = (featureKeyString[0] == '+');
+    }
+  }
+  return featuresMap;
+}
+
+static void
+addAlignedClause(lower::AbstractConverter &converter,
+                 const omp::clause::Aligned &clause,
+                 llvm::SmallVectorImpl<mlir::Value> &alignedVars,
+                 llvm::SmallVectorImpl<mlir::Attribute> &alignmentAttrs) {
+  using Aligned = omp::clause::Aligned;
+  lower::StatementContext stmtCtx;
+  mlir::IntegerAttr alignmentValueAttr;
+  int64_t alignment = 0;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  if (auto &alignmentValueParserExpr =
+          std::get<std::optional<Aligned::Alignment>>(clause.t)) {
+    mlir::Value operand = fir::getBase(
+        converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
+    alignment = *fir::getIntIfConstant(operand);
+  } else {
+    llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+    alignment =
+        llvm::OpenMPIRBuilder::getOpenMPDefaultSimdAlign(triple, featuresMap);
+  }
+
+  // The default alignment for some targets is equal to 0.
+  // Do not generate alignment assumption if alignment is less than or equal to
+  // 0.
+  if (alignment > 0) {
+    auto &objects = std::get<omp::ObjectList>(clause.t);
+    if (!objects.empty())
+      genObjectList(objects, converter, alignedVars);
+    alignmentValueAttr = builder.getI64IntegerAttr(alignment);
+    // All the list items in a aligned clause will have same alignment
+    for (std::size_t i = 0; i < objects.size(); i++)
+      alignmentAttrs.push_back(alignmentValueAttr);
+  }
+}
+
+bool ClauseProcessor::processAligned(
+    mlir::omp::AlignedClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Aligned>(
+      [&](const omp::clause::Aligned &clause, const parser::CharBlock &) {
+        addAlignedClause(converter, clause, result.alignedVars,
+                         result.alignmentAttrs);
+      });
+}
 
 bool ClauseProcessor::processAllocate(
     mlir::omp::AllocateClauseOps &result) const {
@@ -525,7 +599,7 @@ bool ClauseProcessor::processCopyin() const {
   bool hasCopyin = findRepeatableClause<omp::clause::Copyin>(
       [&](const omp::clause::Copyin &clause, const parser::CharBlock &) {
         for (const omp::Object &object : clause.v) {
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           assert(sym && "Expecting symbol");
           if (const auto *commonDetails =
                   sym->detailsIf<semantics::CommonBlockDetails>()) {
@@ -655,7 +729,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   auto declSrc = builder.create<hlfir::DeclareOp>(
       loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
-  converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
+  converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
 }
@@ -698,7 +772,7 @@ bool ClauseProcessor::processCopyprivate(
   bool hasCopyPrivate = findRepeatableClause<clause::Copyprivate>(
       [&](const clause::Copyprivate &clause, const parser::CharBlock &) {
         for (const Object &object : clause.v) {
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           if (const auto *commonDetails =
                   sym->detailsIf<semantics::CommonBlockDetails>()) {
             for (const auto &mem : commonDetails->objects())
@@ -739,7 +813,7 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
                  "array sections not supported for task depend");
           }
 
-          semantics::Symbol *sym = object.id();
+          semantics::Symbol *sym = object.sym();
           const mlir::Value variable = converter.getSymbolAddress(*sym);
           result.dependVars.push_back(variable);
         }
@@ -870,11 +944,11 @@ bool ClauseProcessor::processMap(
           lower::AddrAndBoundsInfo info =
               lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                     mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
 
-          auto origSymbol = converter.getSymbolAddress(*object.id());
+          auto origSymbol = converter.getSymbolAddress(*object.sym());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -894,12 +968,12 @@ bool ClauseProcessor::processMap(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          if (object.id()->owner().IsDerivedType()) {
+          if (object.sym()->owner().IsDerivedType()) {
             addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
                                         semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
-            ptrMapSyms->push_back(object.id());
+            ptrMapSyms->push_back(object.sym());
             if (mapSymTypes)
               mapSymTypes->push_back(symAddr.getType());
             if (mapSymLocs)

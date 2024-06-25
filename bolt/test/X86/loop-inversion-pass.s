@@ -16,19 +16,19 @@
 # RUN:    --print-finalized --loop-inversion-opt -o %t.out3 \
 # RUN:    | FileCheck --check-prefix="CHECK3" %s
 
-# The case where the loop is used:
+## The case where the loop is used:
 # FDATA: 1 main 2 1 main #.J1# 0 420
 # FDATA: 1 main b 1 main #.Jloop# 0 420
 # FDATA: 1 main b 1 main d 0 1
 # CHECK: BB Layout   : .LBB00, .Ltmp0, .Ltmp1, .LFT0
 
-# The case where the loop is unused:
+## The case where the loop is unused:
 # FDATA2: 1 main 2 1 main #.J1# 0 420
 # FDATA2: 1 main b 1 main #.Jloop# 0 1
 # FDATA2: 1 main b 1 main d 0 420
 # CHECK2: BB Layout   : .LBB00, .Ltmp1, .LFT0, .Ltmp0
 
-# The case where the loop does not require rotation:
+## The case where the loop does not require rotation:
 # FDATA3: 1 main 2 1 main #.J1# 0 420
 # FDATA3: 1 main b 1 main #.Jloop# 0 420
 # FDATA3: 1 main b 1 main d 0 1

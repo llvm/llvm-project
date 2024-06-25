@@ -13,6 +13,8 @@
 #ifndef LLVM_IR_GEPNOWRAPFLAGS_H
 #define LLVM_IR_GEPNOWRAPFLAGS_H
 
+#include <assert.h>
+
 namespace llvm {
 
 /// Represents flags for the getelementptr instruction/expression.
@@ -42,6 +44,9 @@ public:
       : Flags(IsInBounds ? (InBoundsFlag | NUSWFlag) : 0) {}
 
   static GEPNoWrapFlags none() { return GEPNoWrapFlags(); }
+  static GEPNoWrapFlags all() {
+    return GEPNoWrapFlags(InBoundsFlag | NUSWFlag | NUWFlag);
+  }
   static GEPNoWrapFlags inBounds() {
     return GEPNoWrapFlags(InBoundsFlag | NUSWFlag);
   }

@@ -44,13 +44,11 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   const AArch64Subtarget *Subtarget;
 
 public:
-  static char ID;
-
   AArch64DAGToDAGISel() = delete;
 
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
+      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -507,11 +505,20 @@ private:
   bool SelectAllActivePredicate(SDValue N);
   bool SelectAnyPredicate(SDValue N);
 };
+
+class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit AArch64DAGToDAGISelLegacy(AArch64TargetMachine &tm,
+                                     CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<AArch64DAGToDAGISel>(tm, OptLevel)) {}
+};
 } // end anonymous namespace
 
-char AArch64DAGToDAGISel::ID = 0;
+char AArch64DAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -4352,7 +4359,9 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   //   N1 = SRL_PRED true, V, splat(imm)  --> rotr amount
   //   N0 = SHL_PRED true, V, splat(bits-imm)
   //   V = (xor x, y)
-  if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+  if (VT.isScalableVector() &&
+      (Subtarget->hasSVE2() ||
+       (Subtarget->hasSME() && Subtarget->isStreaming()))) {
     if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
         N1.getOpcode() != AArch64ISD::SRL_PRED)
       std::swap(N0, N1);
@@ -6867,7 +6876,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 /// AArch64-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
                                          CodeGenOptLevel OptLevel) {
-  return new AArch64DAGToDAGISel(TM, OptLevel);
+  return new AArch64DAGToDAGISelLegacy(TM, OptLevel);
 }
 
 /// When \p PredVT is a scalable vector predicate in the form

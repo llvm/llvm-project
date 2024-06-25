@@ -24,16 +24,17 @@ public:
   BOLTDWARF5AccelTableData(const uint64_t DieOffset,
                            const std::optional<uint64_t> DefiningParentOffset,
                            const unsigned DieTag, const unsigned UnitID,
-                           const bool IsTU,
+                           const bool IsParentRoot, const bool IsTU,
                            const std::optional<unsigned> SecondUnitID)
       : DWARF5AccelTableData(DieOffset, DefiningParentOffset, DieTag, UnitID,
                              IsTU),
-        SecondUnitID(SecondUnitID) {}
+        SecondUnitID(SecondUnitID), IsParentRoot(IsParentRoot) {}
 
   uint64_t getDieOffset() const { return DWARF5AccelTableData::getDieOffset(); }
   unsigned getDieTag() const { return DWARF5AccelTableData::getDieTag(); }
   unsigned getUnitID() const { return DWARF5AccelTableData::getUnitID(); }
   bool isTU() const { return DWARF5AccelTableData::isTU(); }
+  bool isParentRoot() const { return IsParentRoot; }
   std::optional<unsigned> getSecondUnitID() const { return SecondUnitID; }
 
   void setPatchOffset(uint64_t PatchOffset) { OffsetVal = PatchOffset; }
@@ -41,6 +42,7 @@ public:
 
 private:
   std::optional<unsigned> SecondUnitID;
+  bool IsParentRoot;
 };
 
 class DWARF5AcceleratorTable {
@@ -57,6 +59,7 @@ public:
   std::optional<BOLTDWARF5AccelTableData *>
   addAccelTableEntry(DWARFUnit &Unit, const DIE &Die,
                      const std::optional<uint64_t> &DWOID,
+                     const uint32_t NumberParentsInChain,
                      std::optional<BOLTDWARF5AccelTableData *> &Parent);
   /// Set current unit being processed.
   void setCurrentUnit(DWARFUnit &Unit, const uint64_t UnitStartOffset);

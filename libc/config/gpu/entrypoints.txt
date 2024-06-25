@@ -1,3 +1,13 @@
+if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+  set(extra_entrypoints
+      # stdio.h entrypoints
+      libc.src.stdio.sprintf
+      libc.src.stdio.snprintf
+      libc.src.stdio.vsprintf
+      libc.src.stdio.vsnprintf
+  )
+endif()
+
 set(TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
@@ -175,6 +185,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.errno
 
     # stdio.h entrypoints
+    ${extra_entrypoints}
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fseek
