@@ -158,10 +158,10 @@ define amdgpu_kernel void @half4(ptr addrspace(1) nocapture readonly %0, ptr add
 ; GFX1030-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX1030-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
+; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1030-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1030-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1030-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1030-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX1030-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX1030-NEXT:    s_endpgm
   %gep0 = getelementptr half, ptr addrspace(1) %0, i64 0
