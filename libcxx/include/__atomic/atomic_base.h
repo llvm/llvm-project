@@ -33,7 +33,7 @@ struct __atomic_base // false
   mutable __cxx_atomic_impl<_Tp> __a_;
 
 #if _LIBCPP_STD_VER >= 17
-  static _LIBCPP_CONSTEXPR bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
+  static constexpr bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
 #endif
 
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
@@ -128,11 +128,6 @@ struct __atomic_base // false
 
   __atomic_base(const __atomic_base&) = delete;
 };
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, bool __b>
-_LIBCPP_CONSTEXPR bool __atomic_base<_Tp, __b>::is_always_lock_free;
-#endif
 
 // atomic<Integral>
 
