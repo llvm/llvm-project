@@ -279,7 +279,7 @@ void llvm::SplitModule(
     std::unique_ptr<Module> MPart(
         CloneModule(M, VMap, [&](const GlobalValue *GV) {
           if (auto It = ClusterIDMap.find(GV); It != ClusterIDMap.end())
-            return (It->second == I);
+            return It->second == I;
           else
             return isInPartition(GV, I, N);
         }));
