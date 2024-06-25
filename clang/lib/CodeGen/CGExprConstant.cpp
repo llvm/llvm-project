@@ -2024,10 +2024,27 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    if (auto FD = dyn_cast<FunctionDecl>(D))
-      return CGM.GetAddrOfFunction(FD);
+    auto PtrAuthSign = [&](llvm::Constant *C) {
+      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
-    if (auto VD = dyn_cast<VarDecl>(D)) {
+      if (AuthInfo) {
+        if (hasNonZeroOffset())
+          return ConstantLValue(nullptr);
+
+        C = applyOffset(C);
+        C = CGM.getConstantSignedPointer(
+            C, AuthInfo.getKey(), nullptr,
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
+        return ConstantLValue(C, /*applied offset*/ true);
+      }
+
+      return ConstantLValue(C);
+    };
+
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
+
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
@@ -2040,13 +2057,13 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    if (const auto *GD = dyn_cast<MSGuidDecl>(D))
       return CGM.GetAddrOfMSGuidDecl(GD);
 
-    if (auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
+    if (const auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
       return CGM.GetAddrOfUnnamedGlobalConstantDecl(GCD);
 
-    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
+    if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
       return CGM.GetAddrOfTemplateParamObject(TPO);
 
     return nullptr;

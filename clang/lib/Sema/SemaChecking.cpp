@@ -183,6 +183,33 @@ bool Sema::checkArgCount(CallExpr *Call, unsigned DesiredArgCount) {
          << /*is non object*/ 0 << Call->getArg(1)->getSourceRange();
 }
 
+static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
+  bool HasError = false;
+
+  for (unsigned I = 0; I < Call->getNumArgs(); ++I) {
+    Expr *Arg = Call->getArg(I);
+
+    if (Arg->isValueDependent())
+      continue;
+
+    std::optional<std::string> ArgString = Arg->tryEvaluateString(S.Context);
+    int DiagMsgKind = -1;
+    // Arguments must be pointers to constant strings and cannot use '$'.
+    if (!ArgString.has_value())
+      DiagMsgKind = 0;
+    else if (ArgString->find('$') != std::string::npos)
+      DiagMsgKind = 1;
+
+    if (DiagMsgKind >= 0) {
+      S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
+          << DiagMsgKind << Arg->getSourceRange();
+      HasError = true;
+    }
+  }
+
+  return !HasError;
+}
+
 static bool convertArgumentToType(Sema &S, Expr *&Value, QualType Ty) {
   if (Value->isTypeDependent())
     return false;
@@ -3160,8 +3187,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only.
+  case Builtin::BI__builtin_elementwise_acos:
+  case Builtin::BI__builtin_elementwise_asin:
+  case Builtin::BI__builtin_elementwise_atan:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
+  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
@@ -3173,8 +3204,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_rint:
   case Builtin::BI__builtin_elementwise_nearbyint:
   case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_sinh:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_tan:
+  case Builtin::BI__builtin_elementwise_tanh:
   case Builtin::BI__builtin_elementwise_trunc:
   case Builtin::BI__builtin_elementwise_canonicalize: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
@@ -3344,6 +3377,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_column_major_store:
     return BuiltinMatrixColumnMajorStore(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_verbose_trap:
+    if (!checkBuiltinVerboseTrap(TheCall, *this))
+      return ExprError();
+    break;
 
   case Builtin::BI__builtin_get_device_side_mangled_name: {
     auto Check = [](CallExpr *TheCall) {
@@ -3635,8 +3673,12 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_elementwise_acos:
+  case Builtin::BI__builtin_elementwise_asin:
+  case Builtin::BI__builtin_elementwise_atan:
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_cos:
+  case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
   case Builtin::BI__builtin_elementwise_floor:
@@ -3646,8 +3688,10 @@ bool Sema::CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_pow:
   case Builtin::BI__builtin_elementwise_roundeven:
   case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_sinh:
   case Builtin::BI__builtin_elementwise_sqrt:
   case Builtin::BI__builtin_elementwise_tan:
+  case Builtin::BI__builtin_elementwise_tanh:
   case Builtin::BI__builtin_elementwise_trunc: {
     if (CheckFloatOrHalfRepresentations(this, TheCall))
       return true;
