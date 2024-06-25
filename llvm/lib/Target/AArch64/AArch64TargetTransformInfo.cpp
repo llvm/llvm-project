@@ -2761,7 +2761,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return AdjustCost(Entry->Cost);
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() &&
       TLI->getTypeAction(Src->getContext(), SrcTy) ==
           TargetLowering::TypePromoteInteger &&
       TLI->getTypeAction(Dst->getContext(), DstTy) ==
@@ -2782,8 +2783,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
-      TLI->isTypeLegal(DstTy))
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() && TLI->isTypeLegal(DstTy))
     CCH = TTI::CastContextHint::Normal;
 
   return AdjustCost(
