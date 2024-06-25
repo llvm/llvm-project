@@ -82,7 +82,6 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
-extern cl::opt<bool> MatchProfileWithFunctionHash;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
@@ -140,6 +139,9 @@ KeepTmp("keep-tmp",
   cl::desc("preserve intermediate .o file"),
   cl::Hidden,
   cl::cat(BoltCategory));
+
+cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
+                   cl::cat(BoltCategory));
 
 static cl::opt<unsigned>
 LiteThresholdPct("lite-threshold-pct",
@@ -2979,9 +2981,6 @@ void RewriteInstance::selectFunctionsToProcess() {
   auto shouldProcess = [&](const BinaryFunction &Function) {
     if (mustSkip(Function))
       return false;
-
-    if (opts::MatchProfileWithFunctionHash)
-      return true;
 
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
