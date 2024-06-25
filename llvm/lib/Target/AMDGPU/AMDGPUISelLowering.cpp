@@ -68,7 +68,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
 
   // Enable ganging up loads and stores in the memcpy DAG lowering.
-  MaxGluedStoresPerMemcpy = 32;
+  MaxGluedStoresPerMemcpy = 16;
 
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
