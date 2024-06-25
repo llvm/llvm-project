@@ -45,6 +45,9 @@ jobs:
       - name: Build tool
         run: |
           ./graph-generation/tool -h
+      - name: Pull Docker images
+        run: |
+          docker pull thebesttv/arch:php
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 1440
