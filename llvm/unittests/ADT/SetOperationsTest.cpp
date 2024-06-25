@@ -75,7 +75,7 @@ TEST(SetOperationsTest, SetIntersect) {
   SV.insert(5);
   set_intersect(SV, Set2);
   // SV should contain only 6 and 5 now.
-  EXPECT_EQ(SV.getArrayRef(), ArrayRef({6, 5}));
+  EXPECT_THAT(SV, testing::ElementsAre(6, 5));
 }
 
 TEST(SetOperationsTest, SetIntersection) {
