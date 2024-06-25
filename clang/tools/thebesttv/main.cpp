@@ -46,7 +46,7 @@ void fixCompilationDatabase(fs::path path) {
     for (auto &cmd : input) {
         std::string file = cmd["file"];
         if (visitedFiles.find(file) != visitedFiles.end()) {
-            logger.warn("Duplicate entry for file: {}", file);
+            // logger.warn("Duplicate entry for file: {}", file);
             needsUpdate = true;
             continue;
         }
