@@ -25,7 +25,7 @@ define internal i32 @f1() readnone {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    br label %[[BB2:.*]]
 ; IR:       [[BB2]]:
-; IR-NEXT:    ret i32 undef
+; IR-NEXT:    ret i32 poison
 ;
 entry:
   br i1 false, label %bb1, label %bb2
