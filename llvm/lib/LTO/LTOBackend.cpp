@@ -192,8 +192,9 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
+      errs() << "Failed to load passes from plugin '" << PluginFN
+             << "' (request ignored): " << toString(PassPlugin.takeError())
+             <<  "\n";
       continue;
     }
 
