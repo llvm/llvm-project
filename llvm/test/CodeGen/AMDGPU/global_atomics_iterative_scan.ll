@@ -111,11 +111,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare i32 @llvm.amdgcn.workgroup.id.x() #1
-
-declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-
 attributes #0 = {"target-cpu"="gfx906"}
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none)}
 
