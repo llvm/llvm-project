@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <array>
 #include <cassert>
 #include <map>
-#include <string>
 using namespace llvm;
 
 namespace {
@@ -31,14 +29,11 @@ public:
 
 } // End anonymous namespace.
 
-std::string VTtoGetLLVMTyString(const Record *VT) {
+static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
   bool IsVector = VT->getValueAsBit("isVector");
-  std::string GetLLVMTyString;
   if (IsVector)
-    GetLLVMTyString +=
-        (Twine(VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed") +
-         "VectorType::get(")
-            .str();
+    OS << (VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed")
+       << "VectorType::get(";
 
   auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
   int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
@@ -65,18 +60,14 @@ std::string VTtoGetLLVMTyString(const Record *VT) {
       FloatTy = (OutputVTName == "ppcf128") ? "PPC_FP128Ty" : "FP128Ty";
       break;
     }
-    GetLLVMTyString += (Twine("Type::get") + FloatTy + "(Context)").str();
+    OS << "Type::get" << FloatTy << "(Context)";
   } else if (OutputVT->getValueAsBit("isInteger"))
-    GetLLVMTyString +=
-        (Twine("Type::getIntNTy(Context, ") + Twine(OutputVTSize) + ")").str();
+    OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
   else
     llvm_unreachable("Unhandled case");
 
   if (IsVector)
-    GetLLVMTyString +=
-        (Twine(", ") + std::to_string(VT->getValueAsInt("nElem")) + ")").str();
-
-  return GetLLVMTyString;
+    OS << ", " << VT->getValueAsInt("nElem") << ")";
 }
 
 void VTEmitter::run(raw_ostream &OS) {
@@ -192,8 +183,9 @@ void VTEmitter::run(raw_ostream &OS) {
     if (!IsInteger && !IsVector && !IsFP)
       continue;
 
-    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", "
-       << VTtoGetLLVMTyString(VT) << ")\n";
+    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
+    VTtoGetLLVMTyString(OS, VT);
+    OS << ")\n";
   }
   OS << "#endif\n\n";
 }
