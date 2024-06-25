@@ -99,6 +99,8 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
+add_math_entrypoint_object(f16divf)
+
 add_math_entrypoint_object(f16fmaf)
 
 add_math_entrypoint_object(f16sqrtf)
@@ -230,6 +232,7 @@ add_math_entrypoint_object(llogbf128)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf16)
 add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
@@ -347,9 +350,12 @@ add_math_entrypoint_object(roundevenl)
 add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 
+add_math_entrypoint_object(scalblnf16)
+
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
+add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
 
 add_math_entrypoint_object(setpayloadf16)

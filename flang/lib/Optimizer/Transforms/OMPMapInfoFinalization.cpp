@@ -238,20 +238,50 @@ class OMPMapInfoFinalizationPass
                          baseAddrIndex);
   }
 
+  // Adjusts the descriptors map type based on the map type of the original
+  // map type which will apply to the base address, the main alteration that
+  // is done currently is appending OMP_MAP_TO in cases where we only have
+  // OMP_MAP_FROM or an ALLOC (lack of flag). This is because we will
+  // always need to map the descriptor to device (or at the very least it
+  // seems to be the case currently with the current lowered IR), as without
+  // the appropriate descriptor information on the device there is a risk
+  // of the kernel IR requesting for various data that will not have been
+  // copied to perform things like indexing, this can cause segfaults and
+  // memory access errors. These alterations are only unapplicable to
+  // target exit currently.
+  unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
+                                     mlir::Operation *target) {
+    auto newDescFlag = llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag);
+
+    if ((llvm::isa_and_nonnull<mlir::omp::TargetDataOp>(target) ||
+         llvm::isa_and_nonnull<mlir::omp::TargetOp>(target)) &&
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            (newDescFlag &
+             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM)) &&
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            (newDescFlag & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO) !=
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO))
+      return static_cast<
+          std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+          newDescFlag | llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+
+    if ((llvm::isa_and_nonnull<mlir::omp::TargetDataOp>(target) ||
+         llvm::isa_and_nonnull<mlir::omp::TargetEnterDataOp>(target)) &&
+        mapTypeFlag == 0)
+      return static_cast<
+          std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+
+    return mapTypeFlag;
+  }
+
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                                fir::FirOpBuilder &builder,
                                                mlir::Operation *target) {
     llvm::SmallVector<ParentAndPlacement> mapMemberUsers;
     getMemberUserList(op, mapMemberUsers);
-
-    // NOTE/TODO: We currently only support a MapInfoOp being used in one
-    // member list at a time, currently the frontend will generate a new
-    // MapInfoOp per map clause, so this should not be an issue, but in the
-    // future when we seek to cleanup and optimize the IR, this will need to
-    // be extended.
-    assert(mapMemberUsers.size() <= 1 &&
-           "genDescriptorMemberMaps currently only supports descriptor used by "
-           "one MapInfoOp member list");
 
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
@@ -318,8 +348,9 @@ class OMPMapInfoFinalizationPass
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
             mlir::Value{}, newMembers, newMembersAttr /*members_index*/,
             mlir::SmallVector<mlir::Value>{},
-            builder.getIntegerAttr(builder.getIntegerType(64, false),
-                                   op.getMapType().value()),
+            builder.getIntegerAttr(
+                builder.getIntegerType(64, false),
+                getDescriptorMapType(op.getMapType().value(), target)),
             op.getMapCaptureTypeAttr(), op.getNameAttr(),
             builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
@@ -370,7 +401,8 @@ class OMPMapInfoFinalizationPass
                                   fir::FirOpBuilder &builder,
                                   mlir::Operation *target) {
     auto mapClauseOwner =
-        llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(target);
+        llvm::dyn_cast_if_present<mlir::omp::MapClauseOwningOpInterface>(
+            target);
     if (!mapClauseOwner)
       return;
 
@@ -398,6 +430,33 @@ class OMPMapInfoFinalizationPass
     mapClauseOwner.getMapOperandsMutable().assign(newMapOps);
   }
 
+  // We retrieve the first user that is a Target operation, there
+  // should only be one currently, every MapInfoOp can be tied to
+  // at most 1 Target operation and at the minimum no operation,
+  // this may change in the future with IR cleanups/modifications
+  // in which case this pass will need updated to support cases
+  // where a map can have more than one user and more than one of
+  // those users can be a Target operation. For now, we simply
+  // return the first target operation encountered, which may
+  // be on the parent MapInfoOp in the case of a member mapping
+  // in which case we must traverse the MapInfoOp chain until we
+  // find the first TargetOp user.
+  mlir::Operation *getFirstTargetUser(mlir::omp::MapInfoOp mapOp) {
+    for (auto *user : mapOp->getUsers()) {
+      if (llvm::isa<mlir::omp::TargetOp>(user) ||
+          llvm::isa<mlir::omp::TargetDataOp>(user) ||
+          llvm::isa<mlir::omp::TargetEnterDataOp>(user) ||
+          llvm::isa<mlir::omp::TargetExitDataOp>(user) ||
+          llvm::isa<mlir::omp::TargetUpdateOp>(user))
+        return user;
+
+      if (auto mapUser = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(user))
+        return getFirstTargetUser(mapUser);
+    }
+
+    return nullptr;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -417,13 +476,15 @@ class OMPMapInfoFinalizationPass
     getOperation()->walk([&](mlir::omp::MapInfoOp op) {
       // TODO: Currently only supports a single user for the MapInfoOp, this
       // is fine for the moment as the Fortran frontend will generate a
-      // new MapInfoOp per Target operation and clause for the moment.
-      // However, when/if we optimise/cleanup the IR, it likely isn't too
-      // difficult to extend this function, it would require some
-      // modification to create a single new MapInfoOp per new MapInfoOp
-      // generated and share it across all users appropriately, making sure
-      // to only add a single member link per new generation for the original
-      // originating descriptor MapInfoOp.
+      // new MapInfoOp with at most one user currently, in the case of
+      // members of other objects like derived types, the user would be the
+      // parent, in cases where it's a regular non-member map the user would
+      // be the target operation it is being mapped by.
+      //
+      // However, when/if we optimise/cleanup the IR we will have to extend
+      // this pass to support multiple users, as I would imagine we may wish
+      // to have a map be re-used by multiple users (e.g. across multiple
+      // targets that map the variable and have identical map properties)
       assert(llvm::hasSingleElement(op->getUsers()) &&
              "OMPMapInfoFinalization currently only supports single users "
              "of a MapInfoOp");
@@ -432,7 +493,14 @@ class OMPMapInfoFinalizationPass
           mlir::isa_and_present<fir::BoxAddrOp>(
               op.getVarPtr().getDefiningOp())) {
         builder.setInsertionPoint(op);
-        genDescriptorMemberMaps(op, builder, *op->getUsers().begin());
+
+        // - contact benifit people
+        // - update broken  lit tests
+        // -create commit and apply clang-format
+        // -cherry pick pr onto PR stack and split the commit into relevant
+        // components and rebase fixup into orignal corresponding PR. -push
+        // upstream
+        genDescriptorMemberMaps(op, builder, getFirstTargetUser(op));
       }
     });
 
@@ -440,7 +508,7 @@ class OMPMapInfoFinalizationPass
     // the targets block arguments, simplifying the process as no need to
     // avoid accidental duplicate additions
     getOperation()->walk([&](mlir::omp::MapInfoOp op) {
-      addImplicitMembersToTarget(op, builder, *op->getUsers().begin());
+      addImplicitMembersToTarget(op, builder, getFirstTargetUser(op));
     });
   }
 };

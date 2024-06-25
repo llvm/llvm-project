@@ -57,7 +57,6 @@ export inline int getA() {
     return 43;
 }
 
-// Now we add a new declaration without introducing a new type.
 // The consuming module which didn't use m:partA completely is expected to be
 // not changed.
 export inline int getA2() {
@@ -67,7 +66,7 @@ export inline int getA2() {
 export class A {
 public:
     int getMem();
-    // Now we add a new declaration without introducing a new type.
+
     // The consuming module which didn't use m:partA completely is expected to be
     // not changed.
     int getMem2();
@@ -77,7 +76,6 @@ export template <typename T>
 class ATempl {
 public:
     T getT();
-    // Add a new declaration without introducing a new type.
     T getT2();
 };
 
