@@ -829,6 +829,7 @@ SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
   }
 
   if (!IsLocal) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *MemOp = MF.getMachineMemOperand(
         MachinePointerInfo::getGOT(MF),
@@ -890,6 +891,7 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
   if (UseGOT) {
+    // Mark the load instruction as invariant to enable hoisting in MachineLICM.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *MemOp = MF.getMachineMemOperand(
         MachinePointerInfo::getGOT(MF),
