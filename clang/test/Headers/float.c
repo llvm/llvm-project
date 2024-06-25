@@ -1,9 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding -ffinite-math-only %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding -ffinite-math-only %s
 // expected-no-diagnostics
 
 /* Basic floating point conformance checks against:
@@ -107,9 +111,34 @@
     #elif   DECIMAL_DIG < 10
         #error "Mandatory macro DECIMAL_DIG is invalid."
     #endif
+
+    #if __FINITE_MATH_ONLY__ == 0
+        #ifndef INFINITY
+            #error "Mandatory macro INFINITY is missing."
+        #endif
+        #ifndef NAN
+            #error "Mandatory macro NAN is missing."
+        #endif
+    #else
+        #ifdef INFINITY
+            #error "Macro INFINITY should not be defined."
+        #endif
+
+        #ifdef NAN
+            #error "Macro NAN should not be defined."
+        #endif
+    #endif
 #else
     #ifdef DECIMAL_DIG
         #error "Macro DECIMAL_DIG should not be defined."
+    #endif
+
+    #ifdef INFINITY
+        #error "Macro INFINITY should not be defined."
+    #endif
+
+    #ifdef NAN
+        #error "Macro NAN should not be defined."
     #endif
 #endif
 

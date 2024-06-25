@@ -47,6 +47,8 @@
     (defined(__cplusplus) && __cplusplus >= 201103L) ||                        \
     (__STDC_HOSTED__ && defined(_AIX) && defined(_ALL_SOURCE))
 #    undef DECIMAL_DIG
+#    undef INFINITY
+#    undef NAN
 #  endif
 #  undef FLT_DIG
 #  undef DBL_DIG
@@ -93,6 +95,10 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
     (defined(__cplusplus) && __cplusplus >= 201103L)
 #define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
+#if defined(__FINITE_MATH_ONLY__) && !__FINITE_MATH_ONLY__
+#  define INFINITY (__builtin_infinity())
+#  define NAN (__builtin_nan(""))
+#endif
 #endif
 #define FLT_ROUNDS (__builtin_flt_rounds())
 #define FLT_RADIX __FLT_RADIX__
