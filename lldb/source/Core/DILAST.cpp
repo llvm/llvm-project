@@ -71,140 +71,109 @@ lldb::ValueObjectSP DILGetSPWithLock(lldb::ValueObjectSP in_valobj_sp,
   return value_sp;
 }
 
-std::string to_string(BinaryOpKind kind) {
-  switch (kind) {
-      // clang-format off
-    case BinaryOpKind::Mul:       return "'*'";
-    case BinaryOpKind::Div:       return "'/'";
-    case BinaryOpKind::Rem:       return "'%'";
-    case BinaryOpKind::Add:       return "'+'";
-    case BinaryOpKind::Sub:       return "'-'";
-    case BinaryOpKind::Shl:       return "'<<'";
-    case BinaryOpKind::Shr:       return "'>>'";
-    case BinaryOpKind::LT:        return "'<'";
-    case BinaryOpKind::GT:        return "'>'";
-    case BinaryOpKind::LE:        return "'<='";
-    case BinaryOpKind::GE:        return "'>='";
-    case BinaryOpKind::EQ:        return "'=='";
-    case BinaryOpKind::NE:        return "'!='";
-    case BinaryOpKind::And:       return "'&'";
-    case BinaryOpKind::Xor:       return "'^'";
-    case BinaryOpKind::Or:        return "'|'";
-    case BinaryOpKind::LAnd:      return "'&&'";
-    case BinaryOpKind::LOr:       return "'||'";
-    case BinaryOpKind::Assign:    return "'='";
-    case BinaryOpKind::MulAssign: return "'*='";
-    case BinaryOpKind::DivAssign: return "'/='";
-    case BinaryOpKind::RemAssign: return "'%='";
-    case BinaryOpKind::AddAssign: return "'+='";
-    case BinaryOpKind::SubAssign: return "'-='";
-    case BinaryOpKind::ShlAssign: return "'<<='";
-    case BinaryOpKind::ShrAssign: return "'>>='";
-    case BinaryOpKind::AndAssign: return "'&='";
-    case BinaryOpKind::XorAssign: return "'^='";
-    case BinaryOpKind::OrAssign:  return "'|='";
-      // clang-format on
-  }
-  llvm_unreachable("did you add an element to BinaryOpKind?");
-}
-
-BinaryOpKind clang_token_kind_to_binary_op_kind(
-    clang::tok::TokenKind token_kind) {
+BinaryOpKind
+clang_token_kind_to_binary_op_kind(clang::tok::TokenKind token_kind) {
   switch (token_kind) {
-      // clang-format off
-    case clang::tok::star:                return BinaryOpKind::Mul;
-    case clang::tok::slash:               return BinaryOpKind::Div;
-    case clang::tok::percent:             return BinaryOpKind::Rem;
-    case clang::tok::plus:                return BinaryOpKind::Add;
-    case clang::tok::minus:               return BinaryOpKind::Sub;
-    case clang::tok::lessless:            return BinaryOpKind::Shl;
-    case clang::tok::greatergreater:      return BinaryOpKind::Shr;
-    case clang::tok::less:                return BinaryOpKind::LT;
-    case clang::tok::greater:             return BinaryOpKind::GT;
-    case clang::tok::lessequal:           return BinaryOpKind::LE;
-    case clang::tok::greaterequal:        return BinaryOpKind::GE;
-    case clang::tok::equalequal:          return BinaryOpKind::EQ;
-    case clang::tok::exclaimequal:        return BinaryOpKind::NE;
-    case clang::tok::amp:                 return BinaryOpKind::And;
-    case clang::tok::caret:               return BinaryOpKind::Xor;
-    case clang::tok::pipe:                return BinaryOpKind::Or;
-    case clang::tok::ampamp:              return BinaryOpKind::LAnd;
-    case clang::tok::pipepipe:            return BinaryOpKind::LOr;
-    case clang::tok::equal:               return BinaryOpKind::Assign;
-    case clang::tok::starequal:           return BinaryOpKind::MulAssign;
-    case clang::tok::slashequal:          return BinaryOpKind::DivAssign;
-    case clang::tok::percentequal:        return BinaryOpKind::RemAssign;
-    case clang::tok::plusequal:           return BinaryOpKind::AddAssign;
-    case clang::tok::minusequal:          return BinaryOpKind::SubAssign;
-    case clang::tok::lesslessequal:       return BinaryOpKind::ShlAssign;
-    case clang::tok::greatergreaterequal: return BinaryOpKind::ShrAssign;
-    case clang::tok::ampequal:            return BinaryOpKind::AndAssign;
-    case clang::tok::caretequal:          return BinaryOpKind::XorAssign;
-    case clang::tok::pipeequal:           return BinaryOpKind::OrAssign;
-      // clang-format on
+  case clang::tok::star:
+    return BinaryOpKind::Mul;
+  case clang::tok::slash:
+    return BinaryOpKind::Div;
+  case clang::tok::percent:
+    return BinaryOpKind::Rem;
+  case clang::tok::plus:
+    return BinaryOpKind::Add;
+  case clang::tok::minus:
+    return BinaryOpKind::Sub;
+  case clang::tok::lessless:
+    return BinaryOpKind::Shl;
+  case clang::tok::greatergreater:
+    return BinaryOpKind::Shr;
+  case clang::tok::less:
+    return BinaryOpKind::LT;
+  case clang::tok::greater:
+    return BinaryOpKind::GT;
+  case clang::tok::lessequal:
+    return BinaryOpKind::LE;
+  case clang::tok::greaterequal:
+    return BinaryOpKind::GE;
+  case clang::tok::equalequal:
+    return BinaryOpKind::EQ;
+  case clang::tok::exclaimequal:
+    return BinaryOpKind::NE;
+  case clang::tok::amp:
+    return BinaryOpKind::And;
+  case clang::tok::caret:
+    return BinaryOpKind::Xor;
+  case clang::tok::pipe:
+    return BinaryOpKind::Or;
+  case clang::tok::ampamp:
+    return BinaryOpKind::LAnd;
+  case clang::tok::pipepipe:
+    return BinaryOpKind::LOr;
+  case clang::tok::equal:
+    return BinaryOpKind::Assign;
+  case clang::tok::starequal:
+    return BinaryOpKind::MulAssign;
+  case clang::tok::slashequal:
+    return BinaryOpKind::DivAssign;
+  case clang::tok::percentequal:
+    return BinaryOpKind::RemAssign;
+  case clang::tok::plusequal:
+    return BinaryOpKind::AddAssign;
+  case clang::tok::minusequal:
+    return BinaryOpKind::SubAssign;
+  case clang::tok::lesslessequal:
+    return BinaryOpKind::ShlAssign;
+  case clang::tok::greatergreaterequal:
+    return BinaryOpKind::ShrAssign;
+  case clang::tok::ampequal:
+    return BinaryOpKind::AndAssign;
+  case clang::tok::caretequal:
+    return BinaryOpKind::XorAssign;
+  case clang::tok::pipeequal:
+    return BinaryOpKind::OrAssign;
 
-    default:
-      break;
+  default:
+    break;
   }
   llvm_unreachable("did you add an element to BinaryOpKind?");
 }
 
 bool binary_op_kind_is_comp_assign(BinaryOpKind kind) {
   switch (kind) {
-    case BinaryOpKind::Assign:
-    case BinaryOpKind::MulAssign:
-    case BinaryOpKind::DivAssign:
-    case BinaryOpKind::RemAssign:
-    case BinaryOpKind::AddAssign:
-    case BinaryOpKind::SubAssign:
-    case BinaryOpKind::ShlAssign:
-    case BinaryOpKind::ShrAssign:
-    case BinaryOpKind::AndAssign:
-    case BinaryOpKind::XorAssign:
-    case BinaryOpKind::OrAssign:
-      return true;
+  case BinaryOpKind::Assign:
+  case BinaryOpKind::MulAssign:
+  case BinaryOpKind::DivAssign:
+  case BinaryOpKind::RemAssign:
+  case BinaryOpKind::AddAssign:
+  case BinaryOpKind::SubAssign:
+  case BinaryOpKind::ShlAssign:
+  case BinaryOpKind::ShrAssign:
+  case BinaryOpKind::AndAssign:
+  case BinaryOpKind::XorAssign:
+  case BinaryOpKind::OrAssign:
+    return true;
 
-    default:
-      return false;
+  default:
+    return false;
   }
-}
-
-std::string to_string(UnaryOpKind kind) {
-  switch (kind) {
-      // clang-format off
-    case UnaryOpKind::PostInc: return "postfix '++'";
-    case UnaryOpKind::PostDec: return "postfix '--'";
-    case UnaryOpKind::PreInc:  return "prefix '++'";
-    case UnaryOpKind::PreDec:  return "prefix '--'";
-    case UnaryOpKind::AddrOf:  return "prefix '&'";
-    case UnaryOpKind::Deref:   return "prefix '*'";
-    case UnaryOpKind::Plus:    return "prefix '+'";
-    case UnaryOpKind::Minus:   return "prefix '-'";
-    case UnaryOpKind::Not:     return "prefix '~'";
-    case UnaryOpKind::LNot:    return "prefix '!'";
-      // clang-format on
-  }
-  llvm_unreachable("did you add an element to UnaryOpKind?");
 }
 
 CompilerType DILASTNode::result_type_deref() const {
   auto type = result_type();
-  return type.IsReferenceType()
-      ? type.GetNonReferenceType()
-      : type;
+  return type.IsReferenceType() ? type.GetNonReferenceType() : type;
 }
 
 static std::unordered_map<std::string, CompilerType> context_args;
 
-bool IsContextVar(const std::string& name) {
+bool IsContextVar(const std::string &name) {
   return context_args.find(name) != context_args.end();
 }
 
-static lldb::ValueObjectSP LookupStaticIdentifier(
-    lldb::TargetSP target_sp,
-    const llvm::StringRef& name_ref,
-    ConstString unqualified_name)
-{
+static lldb::ValueObjectSP
+LookupStaticIdentifier(lldb::TargetSP target_sp,
+                       const llvm::StringRef &name_ref,
+                       ConstString unqualified_name) {
   // List global variable with the same "basename". There can be many matches
   // from other scopes (namespaces, classes), so we do additional filtering
   // later.
@@ -212,9 +181,7 @@ static lldb::ValueObjectSP LookupStaticIdentifier(
   VariableList variable_list;
   ConstString name(name_ref);
   target_sp->GetImages().FindGlobalVariables(
-      name,
-      (size_t)std::numeric_limits<uint32_t>::max,
-      variable_list);
+      name, (size_t)std::numeric_limits<uint32_t>::max, variable_list);
   if (!variable_list.Empty()) {
     ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
     if (exe_scope == nullptr)
@@ -236,17 +203,14 @@ static lldb::ValueObjectSP LookupStaticIdentifier(
     llvm::StringRef name_sstr = name.GetStringRef();
 
     if (val->GetVariable() && val->GetVariable()->NameMatches(unqualified_name))
-    {
       return val;
-    }
 
     if (val_name_sstr == name_sstr ||
         val_name_sstr == llvm::formatv("::{0}", name_sstr).str() ||
         val_name_sstr.ends_with(llvm::formatv(" {0}", name_sstr).str()) ||
         val_name_sstr.ends_with(llvm::formatv("*{0}", name_sstr).str()) ||
-        val_name_sstr.ends_with(llvm::formatv("&{0}", name_sstr).str())) {
+        val_name_sstr.ends_with(llvm::formatv("&{0}", name_sstr).str()))
       return val;
-    }
   }
   lldb::ValueObjectSP empty_obj_sp;
   return empty_obj_sp;
@@ -261,77 +225,20 @@ struct EnumMember {
 static std::vector<EnumMember> GetEnumMembers(CompilerType type) {
   std::vector<EnumMember> enum_member_list;
   if (type.IsValid()) {
-    type.ForEachEnumerator([&enum_member_list](
-        const CompilerType &integer_type,
-        ConstString name,
-        const llvm::APSInt &value) -> bool {
-      EnumMember enum_member = {integer_type, name, value};
-      enum_member_list.push_back(enum_member);
-      return true; // Keep iterating
-    });
+    type.ForEachEnumerator(
+        [&enum_member_list](const CompilerType &integer_type, ConstString name,
+                            const llvm::APSInt &value) -> bool {
+          EnumMember enum_member = {integer_type, name, value};
+          enum_member_list.push_back(enum_member);
+          return true; // Keep iterating
+        });
   }
   return enum_member_list;
 }
 
-/*
-CompilerType ResolveTypeByNameBad (
-    const std::string& name,
-    std::shared_ptr<ExecutionContextScope> ctx_scope)
-{
-  llvm::StringRef name_ref(name);
-  bool global_scope = false;
-
-  if (name_ref.starts_with("::")) {
-    name_ref = name_ref.drop_front(2);
-    global_scope = true;
-  }
-
-  lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
-  lldb::SBTarget target;
-  target.SetSP(target_sp);
-  lldb::SBTypeList types = target.FindTypes(name_ref.data());
-
-  // We've found multiple types, try finding the "correct" one.
-  //CompilerType full_match;
-  lldb::SBType full_match;
-  //std::vector<CompilerType> partial_matches;
-  std::vector<lldb::SBType> partial_matches;
-
-  for (uint32_t i = 0; i < types.GetSize(); ++i) {
-    lldb::SBType type = types.GetTypeAtIndex(i);
-    llvm::StringRef type_name = type.GetName();
-
-    if (type_name == name_ref)
-      full_match = type;
-    else if (type_name.ends_with(name_ref))
-      partial_matches.push_back(type);
-  }
-
-  // Full match is always correct.
-  if (full_match.IsValid()) {
-    // Convert full_match to CompilerType and return it.
-    CompilerType ret_type = full_match.GetSP()->GetCompilerType(false);
-    return ret_type;
-  } else {
-    // If we have partial matches, pick a "random" one.
-    if (partial_matches.size() > 0) {
-      // convert partial_matches.back() to a CompilerType and return it.
-      CompilerType ret_type = partial_matches.back().GetSP()->GetCompilerType(false);
-      return ret_type;
-    }
-  }
-  CompilerType empty_type;
-  return empty_type;
-}
-*/
-
-CompilerType ResolveTypeByName(
-    const std::string& name,
-    std::shared_ptr<ExecutionContextScope> ctx_scope)
-{
-  // TODO: Do scope-aware type lookup. Look for the types defined
-  // in the current scope (function, class, namespace) and prioritize them.
-
+CompilerType
+ResolveTypeByName(const std::string &name,
+                  std::shared_ptr<ExecutionContextScope> ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
@@ -349,19 +256,16 @@ CompilerType ResolveTypeByName(
     ModuleList &images = target_sp->GetImages();
     ConstString const_type_name(type_name);
     TypeQuery query(type_name);
-    //TypeQuery query(type_name, lldb_private::e_find_one);
     TypeResults results;
     images.FindTypes(nullptr, query, results);
-    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
+    for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types())
       if (type_sp)
         result_type_list.push_back(type_sp->GetFullCompilerType());
-    }
 
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto *vendor = runtime->GetDeclVendor()) {
-          auto types =
-              vendor->FindTypes(const_type_name, UINT32_MAX);
+          auto types = vendor->FindTypes(const_type_name, UINT32_MAX);
           for (auto type : types)
             result_type_list.push_back(type);
         }
@@ -371,7 +275,7 @@ CompilerType ResolveTypeByName(
     if (result_type_list.size() == 0) {
       for (auto type_system_sp : target_sp->GetScratchTypeSystems())
         if (auto compiler_type =
-            type_system_sp->GetBuiltinTypeByName(const_type_name))
+                type_system_sp->GetBuiltinTypeByName(const_type_name))
           result_type_list.push_back(compiler_type);
     }
   }
@@ -382,34 +286,31 @@ CompilerType ResolveTypeByName(
 
   for (uint32_t i = 0; i < result_type_list.size(); ++i) {
     CompilerType type = result_type_list[i];
-    llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();;
+    llvm::StringRef type_name_ref = type.GetTypeName().GetStringRef();
+    ;
 
-    if (type_name_ref == name_ref) {
+    if (type_name_ref == name_ref)
       full_match = type;
-    } else if (type_name_ref.ends_with(name_ref)) {
+    else if (type_name_ref.ends_with(name_ref))
       partial_matches.push_back(type);
-    }
   }
 
   if (global_scope) {
     // Look only for full matches when looking for a globally qualified type.
-    if (full_match.IsValid()) {
+    if (full_match.IsValid())
       return full_match;
-    }
   } else {
-    // TODO: We're looking for type, but there may be multiple
-    // candidates and which one is correct depends on the currect scope. For now
-    // just pick the most "probable" type.
+    // We're looking for type, but there may be multiple candidates and which
+    // one is correct may depend on the currect scope. For now just pick the
+    // most "probable" type.
 
     // Full match is always correct if we're currently in the global scope.
-    if (full_match.IsValid()) {
+    if (full_match.IsValid())
       return full_match;
-    }
 
     // If we have partial matches, pick a "random" one.
-    if (partial_matches.size() > 0) {
+    if (partial_matches.size() > 0)
       return partial_matches.back();
-    }
   }
 
   CompilerType empty_type;
@@ -417,7 +318,7 @@ CompilerType ResolveTypeByName(
 }
 
 static lldb::VariableSP DILFindVariable(ConstString name,
-                                        VariableList* variable_list) {
+                                        VariableList *variable_list) {
   lldb::VariableSP exact_match;
   std::vector<lldb::VariableSP> possible_matches;
 
@@ -428,32 +329,30 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   for (pos = variable_list->begin(); pos != end; ++pos) {
     llvm::StringRef str_ref_name = pos->get()->GetName().GetStringRef();
     // Check for global vars, which might start with '::'.
-    if (str_ref_name.size() > 2 &&
-        str_ref_name[0] == ':' && str_ref_name[1] == ':') {
+    if (str_ref_name.size() > 2 && str_ref_name[0] == ':' &&
+        str_ref_name[1] == ':')
       str_ref_name = str_ref_name.drop_front(2);
-    }
+
     ConstString tmp_name(str_ref_name);
-    if (tmp_name == name) {
+    if (tmp_name == name)
       possible_matches.push_back(*pos);
-    } else if (pos->get()->NameMatches(name)){
+    else if (pos->get()->NameMatches(name))
       possible_matches.push_back(*pos);
-    }
   }
 
   // Look for exact matches (favors local vars over global vars)
-  for (auto var_sp : possible_matches) {
+  for (auto var_sp : possible_matches)
     if (var_sp->GetName() == name) {
       exact_match = var_sp;
       break;
     }
-  }
 
   if (!exact_match)
     // Look for a global var exact match.
     for (auto var_sp : possible_matches) {
       llvm::StringRef str_ref_name = var_sp->GetName().GetStringRef();
-      if (str_ref_name.size() > 2 &&
-          str_ref_name[0] == ':' && str_ref_name[1] == ':')
+      if (str_ref_name.size() > 2 && str_ref_name[0] == ':' &&
+          str_ref_name[1] == ':')
         str_ref_name = str_ref_name.drop_front(2);
       ConstString tmp_name(str_ref_name);
       if (tmp_name == name) {
@@ -469,15 +368,13 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   return exact_match;
 }
 
-std::unique_ptr<IdentifierInfo> LookupIdentifier(
-    const std::string& name,
-    std::shared_ptr<ExecutionContextScope> ctx_scope,
-    lldb::DynamicValueType use_dynamic,
-    CompilerType *scope_ptr) {
+std::unique_ptr<IdentifierInfo>
+LookupIdentifier(const std::string &name,
+                 std::shared_ptr<ExecutionContextScope> ctx_scope,
+                 lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr) {
   auto context_arg = context_args.find(name);
-  if (context_arg != context_args.end()) {
+  if (context_arg != context_args.end())
     return IdentifierInfo::FromContextArg(context_arg->second);
-  }
 
   ConstString name_str(name);
   llvm::StringRef name_ref = name_str.GetStringRef();
@@ -486,21 +383,20 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
   // Will return an invalid value in case the requested register doesn't exist.
   if (name_ref.starts_with("$")) {
     lldb::ValueObjectSP value_sp;
-    const char* reg_name = name_ref.drop_front(1).data();
+    const char *reg_name = name_ref.drop_front(1).data();
     Target *target = ctx_scope->CalculateTarget().get();
-    Process* process = ctx_scope->CalculateProcess().get();
+    Process *process = ctx_scope->CalculateProcess().get();
     if (target && process) {
       Process::StopLocker stop_locker;
       if (stop_locker.TryLock(&process->GetRunLock())) {
-        StackFrame* stack_frame = ctx_scope->CalculateStackFrame().get();
+        StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
         if (stack_frame) {
           lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
           if (reg_ctx) {
             if (const RegisterInfo *reg_info =
-                reg_ctx->GetRegisterInfoByName(reg_name)) {
-              value_sp = ValueObjectRegister::Create(stack_frame, reg_ctx,
-                                                    reg_info);
-            }
+                    reg_ctx->GetRegisterInfoByName(reg_name))
+              value_sp =
+                  ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
           }
         }
       }
@@ -530,57 +426,51 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
         lldb::VariableSP var_sp =
             DILFindVariable(ConstString(name_ref), variable_list);
         if (var_sp)
-          value_sp = frame->GetValueObjectForFrameVariable(var_sp,
-                                                           use_dynamic);
+          value_sp = frame->GetValueObjectForFrameVariable(var_sp, use_dynamic);
       }
       if (!value_sp)
         value_sp = frame->FindVariable(ConstString(name_ref));
 
       bool use_synthetic = false;
-      lldb::ValueObjectSP value(DILGetSPWithLock(value_sp, use_dynamic,
-                                                 use_synthetic));
-      if (value) {
+      lldb::ValueObjectSP value(
+          DILGetSPWithLock(value_sp, use_dynamic, use_synthetic));
+      if (value)
         // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(value);
-      }
+
       // Try looking for an instance variable (class member).
       ConstString this_string("this");
       value = frame->FindVariable(this_string);
-      if (value) {
+      if (value)
         value = value->GetChildMemberWithName(name_ref.data());
-      }
-      if (value) {
+
+      if (value)
         // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(value->GetStaticValue());
-      }
+
     } else {
       // In a "value" scope `this` refers to the scope object itself.
-      if (name_ref == "this") {
+      if (name_ref == "this")
         return IdentifierInfo::FromThisKeyword(scope_ptr->GetPointerType());
-      }
+
       // Lookup the variable as a member of the current scope value.
       lldb::ValueObjectSP empty_sp;
       bool use_synthetic = false;
-      auto [member, path] = GetMemberInfo(empty_sp, *scope_ptr,
-                                          name_ref.data(), use_synthetic);
-      if (member) {
+      auto [member, path] =
+          GetMemberInfo(empty_sp, *scope_ptr, name_ref.data(), use_synthetic);
+      if (member)
         return IdentifierInfo::FromMemberPath(member.type, std::move(path));
-      }
     }
   }
 
   // Try looking for a global or static variable.
-
-  // TODO: Implement scope-aware lookup. Relative scopes should be
-  // resolved relative to the current scope. I.e. if the current frame is in
-  // "ns1::ns2::Foo()", then "ns2::x" should resolve to "ns1::ns2::x".
 
   lldb::ValueObjectSP value;
   if (!global_scope) {
     // Try looking for static member of the current scope value, e.g.
     // `ScopeType::NAME`. NAME can include nested struct (`Nested::SUBNAME`),
     // but it cannot be part of the global scope (start with "::").
-    const char* type_name = "";
+    const char *type_name = "";
     if (scope_ptr)
       type_name = scope_ptr->GetCanonicalType().GetTypeName().AsCString();
     std::string name_with_type_prefix =
@@ -590,10 +480,9 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
   }
 
   // Lookup a regular global variable.
-  if (!value) {
+  if (!value)
     value = LookupStaticIdentifier(ctx_scope->CalculateTarget(), name_ref,
                                    name_str);
-  }
 
   // Try looking up enum value.
   if (!value && name_ref.contains("::")) {
@@ -610,12 +499,10 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
         if (auto temp = type.GetByteSize(ctx_scope.get()))
           byte_size = temp.value();
         lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
-        lldb::DataExtractorSP data_sp =
-            std::make_shared<DataExtractor>(
-                &bytes, byte_size,
-                target_sp->GetArchitecture().GetByteOrder(),
-                static_cast<uint8_t>(target_sp->GetArchitecture()
-                                         .GetAddressByteSize()));
+        lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+            &bytes, byte_size, target_sp->GetArchitecture().GetByteOrder(),
+            static_cast<uint8_t>(
+                target_sp->GetArchitecture().GetAddressByteSize()));
         ExecutionContext exe_ctx(
             ExecutionContextRef(ExecutionContext(target_sp.get(), false)));
         value = ValueObject::CreateValueObjectFromData("result", *data_sp,
@@ -628,19 +515,18 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
   // Last resort, lookup as a register (e.g. `rax` or `rip`).
   if (!value) {
     Target *target = ctx_scope->CalculateTarget().get();
-    Process* process = ctx_scope->CalculateProcess().get();
+    Process *process = ctx_scope->CalculateProcess().get();
     if (target && process) {
       Process::StopLocker stop_locker;
       if (stop_locker.TryLock(&process->GetRunLock())) {
-        StackFrame* stack_frame = ctx_scope->CalculateStackFrame().get();
+        StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
         if (stack_frame) {
           lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
           if (reg_ctx) {
             if (const RegisterInfo *reg_info =
-                reg_ctx->GetRegisterInfoByName(name_ref.data())) {
-              value = ValueObjectRegister::Create(stack_frame, reg_ctx,
-                                                     reg_info);
-            }
+                    reg_ctx->GetRegisterInfoByName(name_ref.data()))
+              value =
+                  ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
           }
         }
       }
@@ -648,36 +534,35 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
   }
 
   // Force static value, otherwise we can end up with the "real" type.
-  // TODO: Fix this! I don't think it's forcing the static value.
   return IdentifierInfo::FromValue(value);
 }
 
-void DILErrorNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void DILErrorNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void LiteralNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void LiteralNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void IdentifierNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void IdentifierNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void SizeOfNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void SizeOfNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void BuiltinFunctionCallNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void BuiltinFunctionCallNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void CStyleCastNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void CStyleCastNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void CxxStaticCastNode::Accept(DILVisitor* v) const { return v->Visit(this); }
+void CxxStaticCastNode::Accept(DILVisitor *v) const { return v->Visit(this); }
 
-void CxxReinterpretCastNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void CxxReinterpretCastNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void MemberOfNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void MemberOfNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void ArraySubscriptNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void ArraySubscriptNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void BinaryOpNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void BinaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void UnaryOpNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void UnaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void TernaryOpNode::Accept(DILVisitor* v) const { v->Visit(this); }
+void TernaryOpNode::Accept(DILVisitor *v) const { v->Visit(this); }
 
-void SmartPtrToPtrDecay::Accept(DILVisitor* v) const { v->Visit(this); }
+void SmartPtrToPtrDecay::Accept(DILVisitor *v) const { v->Visit(this); }
 
-}  // namespace lldb_eval
+} // namespace lldb_private
