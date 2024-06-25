@@ -388,6 +388,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
@@ -725,6 +726,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_PLT32:
@@ -808,6 +810,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
