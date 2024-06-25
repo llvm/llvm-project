@@ -142,14 +142,14 @@ add_header_library(
     range_reduction_double_fma.h
     range_reduction_double_nofma.h
   DEPENDS
-  libc.src.__support.FPUtil.double_double
-  libc.src.__support.FPUtil.dyadic_float
-  libc.src.__support.FPUtil.fp_bits
-  libc.src.__support.FPUtil.fma
-  libc.src.__support.FPUtil.multiply_add
-  libc.src.__support.FPUtil.nearest_integer
-  libc.src.__support.common
-  libc.src.__support.integer_literals
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.common
+    libc.src.__support.integer_literals
 )
 
 add_header_library(
@@ -169,7 +169,31 @@ add_header_library(
     sincos_eval.h
   DEPENDS
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.integer_literals
+)
+
+add_entrypoint_object(
+  cos
+  SRCS
+    cos.cpp
+  HDRS
+    ../cos.h
+  DEPENDS
+    .range_reduction_double
+    .sincos_eval
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -200,16 +224,15 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    .range_reduction_double
+    .sincos_eval
     libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
