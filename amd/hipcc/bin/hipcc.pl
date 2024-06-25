@@ -180,7 +180,6 @@ if ($HIP_PLATFORM eq "amd") {
     }
 } elsif ($HIP_PLATFORM eq "nvidia") {
     $CUDA_PATH=$ENV{'CUDA_PATH'} // '/usr/local/cuda';
-    $HIP_INCLUDE_PATH = "$HIP_PATH/include";
     if ($verbose & 0x2) {
         print ("CUDA_PATH=$CUDA_PATH\n");
     }
@@ -188,6 +187,7 @@ if ($HIP_PLATFORM eq "amd") {
     $HIPCC=get_normalized_path("$CUDA_PATH/bin/nvcc");
     $HIPCXXFLAGS .= " -Wno-deprecated-gpu-targets ";
     $HIPCXXFLAGS .= " -isystem " . get_normalized_path("$CUDA_PATH/include");
+    $HIPCXXFLAGS .= " -isystem " . get_normalized_path("$HIP_PATH/include");
     $HIPCFLAGS .= " -isystem " . get_normalized_path("$CUDA_PATH/include");
 
     $HIPLDFLAGS = " -Wno-deprecated-gpu-targets -lcuda -lcudart -L" . get_normalized_path("$CUDA_PATH/lib64");
