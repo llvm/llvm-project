@@ -50,7 +50,7 @@ std::string VTtoGetLLVMTyString(const Record *VT) {
     default:
       llvm_unreachable("Unhandled case");
     case 16:
-      FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy";
+      FloatTy = (OutputVTName == "bf16") ? "BFloatTy" : "HalfTy";
       break;
     case 32:
       FloatTy = "FloatTy";
@@ -62,7 +62,7 @@ std::string VTtoGetLLVMTyString(const Record *VT) {
       FloatTy = "X86_FP80Ty";
       break;
     case 128:
-      FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty";
+      FloatTy = (OutputVTName == "ppcf128") ? "PPC_FP128Ty" : "FP128Ty";
       break;
     }
     GetLLVMTyString += (Twine("Type::get") + FloatTy + "(Context)").str();
