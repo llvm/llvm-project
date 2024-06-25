@@ -1,6 +1,16 @@
+#!/usr/bin/env python
+#
+# ====- Generate headers for libc functions  ------------*- python -*--==#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ==-------------------------------------------------------------------------==#
 import yaml
 import os
 import re
+import argparse
 
 from header import HeaderFile
 from class_implementation.classes.macro import Macro
@@ -12,8 +22,16 @@ from class_implementation.classes.object import Object
 
 
 def yaml_to_classes(yaml_data):
+    """
+    Convert YAML data to header classes.
+
+    Args:
+        yaml_data: The YAML data containing header specifications.
+
+    Returns:
+        HeaderFile: An instance of HeaderFile populated with the data.
+    """
     header_name = yaml_data.get("header", "unknown.h")
-    # standard = yaml_data.get('standard', None)
     header = HeaderFile(header_name)
 
     for macro_data in yaml_data.get("macros", []):
@@ -51,29 +69,44 @@ def yaml_to_classes(yaml_data):
 
 
 def load_yaml_file(yaml_file):
+    """
+    Load YAML file and convert it to header classes.
+
+    Args:
+        yaml_file: The path to the YAML file.
+
+    Returns:
+        HeaderFile: An instance of HeaderFile populated with the data from the YAML file.
+    """
     with open(yaml_file, "r") as f:
         yaml_data = yaml.safe_load(f)
     return yaml_to_classes(yaml_data)
 
 
-# will be used for specific functions a user wants to generate headers for
-"""
-def filter_functions(header, function_names):
-    filtered_functions = []
-    function_name_set = set(function_names)
-    for func in header.functions:
-        if func.name in function_name_set:
-            filtered_functions.append(func)
-    return filtered_functions
-"""
-
-
 def fill_public_api(header_str, h_def_content):
-    # using regular expression to identify the public_api string
+    """
+    Replace the %%public_api() placeholder in the .h.def content with the generated header content.
+
+    Args:
+        header_str: The generated header string.
+        h_def_content: The content of the .h.def file.
+
+    Returns:
+        The final header content with the public API filled in.
+    """
     return re.sub(r"%%public_api\(\)", header_str, h_def_content)
 
 
 def main(yaml_file, h_def_file, output_dir):
+    """
+    Main function to generate header files from YAML and .h.def templates.
+
+    Args:
+        yaml_file: Path to the YAML file containing header specification.
+        h_def_file: Path to the .h.def template file.
+        output_dir: Directory to output the generated header file.
+    """
+    
     header = load_yaml_file(yaml_file)
 
     with open(h_def_file, "r") as f:
@@ -92,8 +125,6 @@ def main(yaml_file, h_def_file, output_dir):
 
 
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Generate header files from YAML and .h.def templates"
     )
@@ -109,5 +140,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.yaml_file, args.h_def_file, args.output_dir)
-
-# Example Command Line Arg: python3 yaml_to_classes.py yaml/stdc_stdbit.yaml h_def/stdbit.h.def --output_dir output
