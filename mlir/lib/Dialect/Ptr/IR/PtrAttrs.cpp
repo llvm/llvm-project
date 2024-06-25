@@ -27,11 +27,11 @@ LogicalResult SpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                uint32_t index) {
   if (size % kBitsInByte != 0)
     return emitError() << "size entry must be divisible by 8";
-  else if (abi % kBitsInByte != 0)
+  if (abi % kBitsInByte != 0)
     return emitError() << "abi entry must be divisible by 8";
-  else if (preferred % kBitsInByte != 0)
+  if (preferred % kBitsInByte != 0)
     return emitError() << "preferred entry must be divisible by 8";
-  else if (index != kOptionalSpecValue && index % kBitsInByte != 0)
+  if (index != kOptionalSpecValue && index % kBitsInByte != 0)
     return emitError() << "index entry must be divisible by 8";
   if (abi > preferred)
     return emitError() << "preferred alignment is expected to be at least "

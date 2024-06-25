@@ -43,7 +43,7 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   let summary = "pointer type";
   let description = [{
     The `ptr` type is an opaque pointer type. This type typically represents
-    a reference to an object in memory. Pointers are optionally parameterized
+    a handle to an object in memory. Pointers are optionally parameterized
     by a memory space.
     Syntax:
 
@@ -57,10 +57,6 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   let builders = [
     TypeBuilder<(ins CArg<"Attribute", "nullptr">:$memorySpace), [{
       return $_get($_ctxt, memorySpace);
-    }]>,
-    TypeBuilder<(ins CArg<"unsigned">:$addressSpace), [{
-      return $_get($_ctxt, IntegerAttr::get(IntegerType::get($_ctxt, 32),
-                                            addressSpace));
     }]>
   ];
   let skipDefaultBuilders = 1;

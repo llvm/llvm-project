@@ -3,11 +3,11 @@ add_mlir_dialect_library(
   PtrAttrs.cpp
   PtrTypes.cpp
   PtrDialect.cpp
-  ADDITIONAL_HEADER_DIRS
-  ${PROJECT_SOURCE_DIR}/mlir/Dialect/Pointer
+
   DEPENDS
   MLIRPtrOpsAttributesIncGen
   MLIRPtrOpsIncGen
+
   LINK_LIBS
   PUBLIC
   MLIRIR
