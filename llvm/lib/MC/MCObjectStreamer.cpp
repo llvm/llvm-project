@@ -319,21 +319,12 @@ void MCObjectStreamer::emitPendingAssignments(MCSymbol *Symbol) {
 // Emit a label at a previously emitted fragment/offset position. This must be
 // within the currently-active section.
 void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
-                                      MCFragment *F, uint64_t Offset) {
-  assert(F->getParent() == getCurrentSectionOnly());
-
+                                      MCDataFragment &F, uint64_t Offset) {
+  assert(F.getParent() == getCurrentSectionOnly());
   MCStreamer::emitLabel(Symbol, Loc);
   getAssembler().registerSymbol(*Symbol);
-  auto *DF = dyn_cast_or_null<MCDataFragment>(F);
+  Symbol->setFragment(&F);
   Symbol->setOffset(Offset);
-  if (DF) {
-    Symbol->setFragment(F);
-  } else {
-    assert(isa<MCDummyFragment>(F) &&
-           "F must either be an MCDataFragment or the pending MCDummyFragment");
-    assert(Offset == 0);
-    addPendingLabel(Symbol);
-  }
 }
 
 void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
