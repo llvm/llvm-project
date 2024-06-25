@@ -1,3 +1,5 @@
+// RUN: toyc-ch7 %s -emit=mlir-affine 2>&1 | FileCheck %s
+
 module {
   toy.func @main() {
     %0 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>
@@ -9,3 +11,46 @@ module {
     toy.return
   }
 }
+
+//CHECK-LABEL: func @main
+//CHECK-NEXT: %cst = arith.constant 0.000000e+00 : f64
+//CHECK-NEXT: %cst_0 = arith.constant 6.000000e+00 : f64
+//CHECK-NEXT: %cst_1 = arith.constant 5.000000e+00 : f64
+//CHECK-NEXT: %cst_2 = arith.constant 4.000000e+00 : f64
+//CHECK-NEXT: %cst_3 = arith.constant 3.000000e+00 : f64
+//CHECK-NEXT: %cst_4 = arith.constant 2.000000e+00 : f64
+//CHECK-NEXT: %cst_5 = arith.constant 1.000000e+00 : f64
+//CHECK-NEXT: %alloc = memref.alloc() : memref<3x2xf64>
+//CHECK-NEXT: %alloc_6 = memref.alloc() : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_5, %alloc_6[0, 0] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_4, %alloc_6[0, 1] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_3, %alloc_6[0, 2] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_2, %alloc_6[1, 0] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_1, %alloc_6[1, 1] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_0, %alloc_6[1, 2] : memref<2x3xf64>
+//CHECK-NEXT: affine.store %cst_5, %alloc[0, 0] : memref<3x2xf64>
+//CHECK-NEXT: affine.store %cst_4, %alloc[0, 1] : memref<3x2xf64>
+//CHECK-NEXT: affine.store %cst_3, %alloc[1, 0] : memref<3x2xf64>
+//CHECK-NEXT: affine.store %cst_2, %alloc[1, 1] : memref<3x2xf64>
+//CHECK-NEXT: affine.store %cst_1, %alloc[2, 0] : memref<3x2xf64>
+//CHECK-NEXT: affine.store %cst_0, %alloc[2, 1] : memref<3x2xf64>
+//CHECK-NEXT: %alloc_7 = memref.alloc() : memref<2x2xf64>
+//CHECK-NEXT: affine.for %arg0 = 0 to 2 {
+//CHECK-NEXT:   affine.for %arg1 = 0 to 2 {
+//CHECK-NEXT:     affine.store %cst, %alloc_7[%arg0, %arg1] : memref<2x2xf64>
+//CHECK-NEXT:     affine.for %arg2 = 0 to 3 {
+//CHECK-NEXT:       %0 = affine.load %alloc_6[%arg0, %arg2] : memref<2x3xf64>
+//CHECK-NEXT:       %1 = affine.load %alloc[%arg2, %arg1] : memref<3x2xf64>
+//CHECK-NEXT:       %2 = arith.mulf %0, %1 : f64
+//CHECK-NEXT:       %3 = arith.addf %2, %cst : f64
+//CHECK-NEXT:       %4 = affine.load %alloc_7[%arg0, %arg1] : memref<2x2xf64>
+//CHECK-NEXT:       %5 = arith.addf %3, %4 : f64
+//CHECK-NEXT:       affine.store %5, %alloc_7[%arg0, %arg1] : memref<2x2xf64>
+//CHECK-NEXT:     }
+//CHECK-NEXT:   }
+//CHECK-NEXT: }
+//CHECK-NEXT: toy.print %alloc_7 : memref<2x2xf64>
+//CHECK-NEXT: memref.dealloc %alloc_6 : memref<2x3xf64>
+//CHECK-NEXT: memref.dealloc %alloc : memref<3x2xf64>
+//CHECK-NEXT: return
+//CHECK-NEXT: }
