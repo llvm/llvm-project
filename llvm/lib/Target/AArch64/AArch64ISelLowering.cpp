@@ -16237,12 +16237,13 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  if (!VecTy->isScalableTy() && !Subtarget->isNeonAvailable() &&
+  if (isa<FixedVectorType>(VecTy) && !Subtarget->isNeonAvailable() &&
       (!Subtarget->useSVEForFixedLengthVectors() ||
        !getSVEPredPatternFromNumElements(MinElts)))
     return false;
 
-  if (VecTy->isScalableTy() && !Subtarget->isSVEorStreamingSVEAvailable())
+  if (isa<ScalableVectorType>(VecTy) &&
+      !Subtarget->isSVEorStreamingSVEAvailable())
     return false;
 
   // Ensure the number of vector elements is greater than 1.
