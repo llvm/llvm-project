@@ -60,6 +60,12 @@ function(cxx_add_warning_flags target enable_werror enable_pedantic)
       -Wno-c++14-compat
       -Wno-noexcept-type
       -Wno-suggest-override
+      -Wno-alloc-size-larger-than
+      -Wno-deprecated-declarations
+      -Wno-dangling-reference
+      -Wno-strict-overflow
+      -Wno-maybe-uninitialized
+      -Wno-strict-aliasing
       )
 
   endif()
