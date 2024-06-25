@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPUMCExpr.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -245,7 +246,7 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, getContext());
+  Header.EmitKernelCodeT(OS, getContext(), llvm::AMDGPUMCExprPrint);
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -328,14 +329,10 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
   auto PrintField = [&](const MCExpr *Expr, uint32_t Shift, uint32_t Mask,
                         StringRef Directive) {
-    int64_t IVal;
     OS << "\t\t" << Directive << ' ';
-    const MCExpr *pgm_rsrc1_bits =
+    const MCExpr *ShiftedAndMaskedExpr =
         MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
-    if (pgm_rsrc1_bits->evaluateAsAbsolute(IVal))
-      OS << static_cast<uint64_t>(IVal);
-    else
-      pgm_rsrc1_bits->print(OS, MAI);
+    llvm::AMDGPUMCExprPrint(ShiftedAndMaskedExpr, OS, MAI);
     OS << '\n';
   };
 
@@ -447,12 +444,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    int64_t IVal;
-    if (accum_bits->evaluateAsAbsolute(IVal)) {
-      OS << static_cast<uint64_t>(IVal);
-    } else {
-      accum_bits->print(OS, MAI);
-    }
+    llvm::AMDGPUMCExprPrint(accum_bits, OS, MAI);
     OS << '\n';
   }
 
