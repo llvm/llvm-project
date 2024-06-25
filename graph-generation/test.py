@@ -30,7 +30,7 @@ def get_directories(root):
 def get_test_cases(root):
     # get all directories under root
     directories = get_directories(root)
-    # 额外处理真实项目测试集：https://github.com/thebesttv/vul-parser-benchmark
+    # 基于 docker 的真实项目测试集
     if REAL_WORLD_DIR in directories:
         directories += [os.path.join(REAL_WORLD_DIR, d)
                         for d in get_directories(os.path.join(root, REAL_WORLD_DIR))]
