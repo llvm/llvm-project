@@ -649,10 +649,10 @@ TEST(APFloatTest, MinimumNumber) {
       APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
       APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
 
-  EXPECT_EQ(1.0, minimumnum(f1, f2).convertToDouble());
-  EXPECT_EQ(1.0, minimumnum(f2, f1).convertToDouble());
-  EXPECT_EQ(-0.0, minimumnum(zp, zn).convertToDouble());
-  EXPECT_EQ(-0.0, minimumnum(zn, zp).convertToDouble());
+  EXPECT_TRUE(f1.bitwiseIsEqual(minimumnum(f1, f2)));
+  EXPECT_TRUE(f1.bitwiseIsEqual(minimumnum(f2, f1)));
+  EXPECT_TRUE(zn.bitwiseIsEqual(minimumnum(zp, zn)));
+  EXPECT_TRUE(zn.bitwiseIsEqual(minimumnum(zn, zp)));
 
   EXPECT_TRUE(minimumnum(zn, zp).isNegative());
   EXPECT_TRUE(minimumnum(zp, zn).isNegative());
@@ -696,10 +696,10 @@ TEST(APFloatTest, MaximumNumber) {
       APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
       APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
 
-  EXPECT_EQ(2.0, maximumnum(f1, f2).convertToDouble());
-  EXPECT_EQ(2.0, maximumnum(f2, f1).convertToDouble());
-  EXPECT_EQ(0.0, maximumnum(zp, zn).convertToDouble());
-  EXPECT_EQ(0.0, maximumnum(zn, zp).convertToDouble());
+  EXPECT_TRUE(f2.bitwiseIsEqual(minimumnum(f1, f2)));
+  EXPECT_TRUE(f2.bitwiseIsEqual(minimumnum(f2, f1)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(minimumnum(zp, zn)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(minimumnum(zn, zp)));
 
   EXPECT_FALSE(maximumnum(zn, zp).isNegative());
   EXPECT_FALSE(maximumnum(zp, zn).isNegative());
