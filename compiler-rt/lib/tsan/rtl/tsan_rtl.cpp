@@ -815,7 +815,7 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   ctx->thread_registry.Lock();
   ctx->slot_mtx.Lock();
   ScopedErrorReportLock::Lock();
-  AllocatorLock();
+  AllocatorLockBeforeFork();
   // Suppress all reports in the pthread_atfork callbacks.
   // Reports will deadlock on the report_mtx.
   // We could ignore sync operations as well,
@@ -835,11 +835,12 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
 #  endif
 }
 
-static void ForkAfter(ThreadState* thr) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+static void ForkAfter(ThreadState* thr,
+                      bool child) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;
-  AllocatorUnlock();
+  AllocatorUnlockAfterFork(child);
   ScopedErrorReportLock::Unlock();
   ctx->slot_mtx.Unlock();
   ctx->thread_registry.Unlock();
@@ -849,10 +850,10 @@ static void ForkAfter(ThreadState* thr) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   GlobalProcessorUnlock();
 }
 
-void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr); }
+void ForkParentAfter(ThreadState* thr, uptr pc) { ForkAfter(thr, false); }
 
 void ForkChildAfter(ThreadState* thr, uptr pc, bool start_thread) {
-  ForkAfter(thr);
+  ForkAfter(thr, true);
   u32 nthread = ctx->thread_registry.OnFork(thr->tid);
   VPrintf(1,
           "ThreadSanitizer: forked new process with pid %d,"
