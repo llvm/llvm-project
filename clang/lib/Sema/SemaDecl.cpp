@@ -3911,6 +3911,49 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
+  const auto OldFX = Old->getFunctionEffects();
+  const auto NewFX = New->getFunctionEffects();
+  QualType OldQTypeForComparison = OldQType;
+  if (OldFX != NewFX) {
+    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+    for (const auto &Diff : Diffs) {
+      if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
+        Diag(New->getLocation(),
+             diag::warn_mismatched_func_effect_redeclaration)
+            << Diff.effectName();
+        Diag(Old->getLocation(), diag::note_previous_declaration);
+      }
+    }
+    // Following a warning, we could skip merging effects from the previous
+    // declaration, but that would trigger an additional "conflicting types"
+    // error.
+    if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
+      FunctionEffectSet::Conflicts MergeErrs;
+      FunctionEffectSet MergedFX =
+          FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
+      if (!MergeErrs.empty())
+        diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
+                                             Old->getLocation());
+
+      FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
+      EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
+      QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
+                                               NewFPT->getParamTypes(), EPI);
+
+      New->setType(ModQT);
+      NewQType = New->getType();
+
+      // Revise OldQTForComparison to include the merged effects,
+      // so as not to fail due to differences later.
+      if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
+        EPI = OldFPT->getExtProtoInfo();
+        EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
+        OldQTypeForComparison = Context.getFunctionType(
+            OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+      }
+    }
+  }
+
   if (getLangOpts().CPlusPlus) {
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
@@ -4075,9 +4118,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // We also want to respect all the extended bits except noreturn.
 
     // noreturn should now match unless the old type info didn't have it.
-    QualType OldQTypeForComparison = OldQType;
     if (!OldTypeInfo.getNoReturn() && NewTypeInfo.getNoReturn()) {
-      auto *OldType = OldQType->castAs<FunctionProtoType>();
+      auto *OldType = OldQTypeForComparison->castAs<FunctionProtoType>();
       const FunctionType *OldTypeForComparison
         = Context.adjustFunctionType(OldType, OldTypeInfo.withNoReturn(true));
       OldQTypeForComparison = QualType(OldTypeForComparison, 0);
@@ -20545,4 +20587,63 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+// Report a failure to merge function effects between declarations due to a
+// conflict.
+void Sema::diagnoseFunctionEffectMergeConflicts(
+    const FunctionEffectSet::Conflicts &Errs, SourceLocation NewLoc,
+    SourceLocation OldLoc) {
+  for (const FunctionEffectSet::Conflict &Conflict : Errs) {
+    Diag(NewLoc, diag::warn_conflicting_func_effects)
+        << Conflict.Kept.description() << Conflict.Rejected.description();
+    Diag(OldLoc, diag::note_previous_declaration);
+  }
+}
+
+// Warn and return true if adding an effect to a set would create a conflict.
+bool Sema::diagnoseConflictingFunctionEffect(
+    const FunctionEffectsRef &FX, const FunctionEffectWithCondition &NewEC,
+    SourceLocation NewAttrLoc) {
+  // If the new effect has a condition, we can't detect conflicts until the
+  // condition is resolved.
+  if (NewEC.Cond.getCondition() != nullptr)
+    return false;
+
+  // Diagnose the new attribute as incompatible with a previous one.
+  auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
+    Diag(NewAttrLoc, diag::err_attributes_are_not_compatible)
+        << ("'" + NewEC.description() + "'")
+        << ("'" + PrevEC.description() + "'") << false;
+    // We don't necessarily have the location of the previous attribute,
+    // so no note.
+    return true;
+  };
+
+  // Compare against previous attributes.
+  FunctionEffect::Kind NewKind = NewEC.Effect.kind();
+
+  for (const FunctionEffectWithCondition &PrevEC : FX) {
+    // Again, can't check yet when the effect is conditional.
+    if (PrevEC.Cond.getCondition() != nullptr)
+      continue;
+
+    FunctionEffect::Kind PrevKind = PrevEC.Effect.kind();
+    // Note that we allow PrevKind == NewKind; it's redundant and ignored.
+
+    if (PrevEC.Effect.oppositeKind() == NewKind)
+      return Incompatible(PrevEC);
+
+    // A new allocating is incompatible with a previous nonblocking.
+    if (PrevKind == FunctionEffect::Kind::NonBlocking &&
+        NewKind == FunctionEffect::Kind::Allocating)
+      return Incompatible(PrevEC);
+
+    // A new nonblocking is incompatible with a previous allocating.
+    if (PrevKind == FunctionEffect::Kind::Allocating &&
+        NewKind == FunctionEffect::Kind::NonBlocking)
+      return Incompatible(PrevEC);
+  }
+
+  return false;
 }

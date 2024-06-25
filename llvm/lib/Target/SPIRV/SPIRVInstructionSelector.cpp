@@ -1445,20 +1445,50 @@ static unsigned getArrayComponentCount(MachineRegisterInfo *MRI,
 }
 
 // Return true if the type represents a constant register
-static bool isConstReg(MachineRegisterInfo *MRI, SPIRVType *OpDef) {
+static bool isConstReg(MachineRegisterInfo *MRI, SPIRVType *OpDef,
+                       SmallPtrSet<SPIRVType *, 4> &Visited) {
   if (OpDef->getOpcode() == SPIRV::ASSIGN_TYPE &&
       OpDef->getOperand(1).isReg()) {
     if (SPIRVType *RefDef = MRI->getVRegDef(OpDef->getOperand(1).getReg()))
       OpDef = RefDef;
   }
-  return OpDef->getOpcode() == TargetOpcode::G_CONSTANT ||
-         OpDef->getOpcode() == TargetOpcode::G_FCONSTANT;
+
+  if (Visited.contains(OpDef))
+    return true;
+  Visited.insert(OpDef);
+
+  unsigned Opcode = OpDef->getOpcode();
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
+    return true;
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+    return cast<GIntrinsic>(*OpDef).getIntrinsicID() ==
+           Intrinsic::spv_const_composite;
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    for (unsigned i = OpDef->getNumExplicitDefs(); i < OpDef->getNumOperands();
+         i++) {
+      SPIRVType *OpNestedDef =
+          OpDef->getOperand(i).isReg()
+              ? MRI->getVRegDef(OpDef->getOperand(i).getReg())
+              : nullptr;
+      if (OpNestedDef && !isConstReg(MRI, OpNestedDef, Visited))
+        return false;
+    }
+    return true;
+  }
+  }
+  return false;
 }
 
 // Return true if the virtual register represents a constant
 static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
+  SmallPtrSet<SPIRVType *, 4> Visited;
   if (SPIRVType *OpDef = MRI->getVRegDef(OpReg))
-    return isConstReg(MRI, OpDef);
+    return isConstReg(MRI, OpDef, Visited);
   return false;
 }
 
@@ -1882,8 +1912,10 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     Register OpReg = I.getOperand(i).getReg();
     SPIRVType *OpDefine = MRI->getVRegDef(OpReg);
     SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpReg);
-    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine) ||
-        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
+    SmallPtrSet<SPIRVType *, 4> Visited;
+    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine, Visited) ||
+        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+        GR.isAggregateType(OpType)) {
       // The case of G_ADDRSPACE_CAST inside spv_const_composite() is processed
       // by selectAddrSpaceCast()
       CompositeArgs.push_back(OpReg);
