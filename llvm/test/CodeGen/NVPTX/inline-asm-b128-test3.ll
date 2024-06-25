@@ -10,7 +10,7 @@ target triple = "nvptx64-nvidia-cuda"
 @llvm.used = appending global [6 x ptr] [ptr @_Z6kernelv, ptr addrspacecast (ptr addrspace(1) @size to ptr), ptr addrspacecast (ptr addrspace(1) @value to ptr), ptr addrspacecast (ptr addrspace(1) @x to ptr), ptr addrspacecast (ptr addrspace(1) @y to ptr), ptr addrspacecast (ptr addrspace(1) @z to ptr)], section "llvm.metadata"
 
 ; Function Attrs: alwaysinline mustprogress willreturn memory(readwrite, argmem: none, inaccessiblemem: none)
-define void @_Z6kernelv() #0 {
+define void @_Z6kernelv() {
   ; CHECK-LABEL: _Z6kernelv
   ; CHECK: mov.b128 [[X:%rq[0-9]+]], {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
   ; CHECK: mov.b128 [[Y:%rq[0-9]+]], {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
@@ -62,43 +62,43 @@ define void @_Z6kernelv() #0 {
   %5 = phi i128 [ %x.promoted5, %.lr.ph.preheader.new ], [ %asmresult19.3, %.lr.ph ]
   %i.04 = phi i64 [ 0, %.lr.ph.preheader.new ], [ %inc.3, %.lr.ph ]
   %niter = phi i64 [ 0, %.lr.ph.preheader.new ], [ %niter.next.3, %.lr.ph ]
-  %6 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04, i128 %5, i128 %4, i128 %3) #1
+  %6 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04, i128 %5, i128 %4, i128 %3)
   %asmresult = extractvalue { i128, i128, i128 } %6, 0
   %asmresult7 = extractvalue { i128, i128, i128 } %6, 1
   %asmresult8 = extractvalue { i128, i128, i128 } %6, 2
   %add = add nsw i128 %asmresult, %asmresult7
   %add12 = add nsw i128 %add, %asmresult8
   %add14 = add nsw i128 %add12, %2
-  %7 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04, i128 %asmresult, i128 %asmresult7, i128 %asmresult8) #1
+  %7 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04, i128 %asmresult, i128 %asmresult7, i128 %asmresult8)
   %asmresult19 = extractvalue { i128, i128, i128 } %7, 0
   %asmresult20 = extractvalue { i128, i128, i128 } %7, 1
   %asmresult21 = extractvalue { i128, i128, i128 } %7, 2
   %inc = add nuw nsw i64 %i.04, 1
-  %8 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc, i128 %asmresult19, i128 %asmresult20, i128 %asmresult21) #1
+  %8 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc, i128 %asmresult19, i128 %asmresult20, i128 %asmresult21)
   %asmresult.1 = extractvalue { i128, i128, i128 } %8, 0
   %asmresult7.1 = extractvalue { i128, i128, i128 } %8, 1
   %asmresult8.1 = extractvalue { i128, i128, i128 } %8, 2
   %add.1 = add nsw i128 %asmresult.1, %asmresult7.1
   %add12.1 = add nsw i128 %add.1, %asmresult8.1
   %add14.1 = add nsw i128 %add12.1, %add14
-  %9 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc, i128 %asmresult.1, i128 %asmresult7.1, i128 %asmresult8.1) #1
+  %9 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc, i128 %asmresult.1, i128 %asmresult7.1, i128 %asmresult8.1)
   %asmresult19.1 = extractvalue { i128, i128, i128 } %9, 0
   %asmresult20.1 = extractvalue { i128, i128, i128 } %9, 1
   %asmresult21.1 = extractvalue { i128, i128, i128 } %9, 2
   %inc.1 = add nuw nsw i64 %i.04, 2
-  %10 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.1, i128 %asmresult19.1, i128 %asmresult20.1, i128 %asmresult21.1) #1
+  %10 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.1, i128 %asmresult19.1, i128 %asmresult20.1, i128 %asmresult21.1)
   %asmresult.2 = extractvalue { i128, i128, i128 } %10, 0
   %asmresult7.2 = extractvalue { i128, i128, i128 } %10, 1
   %asmresult8.2 = extractvalue { i128, i128, i128 } %10, 2
   %add.2 = add nsw i128 %asmresult.2, %asmresult7.2
   %add12.2 = add nsw i128 %add.2, %asmresult8.2
   %add14.2 = add nsw i128 %add12.2, %add14.1
-  %11 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.1, i128 %asmresult.2, i128 %asmresult7.2, i128 %asmresult8.2) #1
+  %11 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.1, i128 %asmresult.2, i128 %asmresult7.2, i128 %asmresult8.2)
   %asmresult19.2 = extractvalue { i128, i128, i128 } %11, 0
   %asmresult20.2 = extractvalue { i128, i128, i128 } %11, 1
   %asmresult21.2 = extractvalue { i128, i128, i128 } %11, 2
   %inc.2 = add nuw nsw i64 %i.04, 3
-  %12 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.2, i128 %asmresult19.2, i128 %asmresult20.2, i128 %asmresult21.2) #1
+  %12 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.2, i128 %asmresult19.2, i128 %asmresult20.2, i128 %asmresult21.2)
   %asmresult.3 = extractvalue { i128, i128, i128 } %12, 0
   %asmresult7.3 = extractvalue { i128, i128, i128 } %12, 1
   %asmresult8.3 = extractvalue { i128, i128, i128 } %12, 2
@@ -107,7 +107,7 @@ define void @_Z6kernelv() #0 {
   %add14.3 = add nsw i128 %add12.3, %add14.2
   %13 = bitcast i128 %add14.3 to <2 x i64>
   store <2 x i64> %13, ptr addrspace(1) @value, align 16
-  %14 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.2, i128 %asmresult.3, i128 %asmresult7.3, i128 %asmresult8.3) #1
+  %14 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %inc.2, i128 %asmresult.3, i128 %asmresult7.3, i128 %asmresult8.3)
   %asmresult19.3 = extractvalue { i128, i128, i128 } %14, 0
   %asmresult20.3 = extractvalue { i128, i128, i128 } %14, 1
   %asmresult21.3 = extractvalue { i128, i128, i128 } %14, 2
@@ -138,7 +138,7 @@ define void @_Z6kernelv() #0 {
   %21 = phi i128 [ %asmresult19.epil, %.lr.ph.epil ], [ %.unr11, %._crit_edge.loopexit.unr-lcssa ]
   %i.04.epil = phi i64 [ %inc.epil, %.lr.ph.epil ], [ %i.04.unr, %._crit_edge.loopexit.unr-lcssa ]
   %epil.iter = phi i64 [ %epil.iter.next, %.lr.ph.epil ], [ 0, %._crit_edge.loopexit.unr-lcssa ]
-  %22 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04.epil, i128 %21, i128 %20, i128 %19) #1
+  %22 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09add.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09add.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09add.cc.u64 lo, lo, 3;\0A\09add.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04.epil, i128 %21, i128 %20, i128 %19)
   %asmresult.epil = extractvalue { i128, i128, i128 } %22, 0
   %asmresult7.epil = extractvalue { i128, i128, i128 } %22, 1
   %asmresult8.epil = extractvalue { i128, i128, i128 } %22, 2
@@ -147,7 +147,7 @@ define void @_Z6kernelv() #0 {
   %add14.epil = add nsw i128 %add12.epil, %18
   %23 = bitcast i128 %add14.epil to <2 x i64>
   store <2 x i64> %23, ptr addrspace(1) @value, align 16
-  %24 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04.epil, i128 %asmresult.epil, i128 %asmresult7.epil, i128 %asmresult8.epil) #1
+  %24 = tail call { i128, i128, i128 } asm "{\0A\09.reg .b64 lo;\0A\09.reg .b64 hi;\0A\09mov.b128 {lo, hi}, $0;\0A\09sub.cc.u64 lo, lo, 1;\0A\09mov.b128 $0, {lo, hi};\0A\09mov.b128 {lo, hi}, $1;\0A\09sub.cc.u64 hi, hi, 2;\0A\09mov.b128 $1, {lo, hi};\0A\09mov.b128 {lo, hi}, $2;\0A\09sub.cc.u64 lo, lo, 3;\0A\09sub.cc.u64 hi, hi, 3;\0A\09mov.b128 $2, {lo, hi};\0A\09}\0A\09", "=q,=q,=q,l,0,1,2"(i64 %i.04.epil, i128 %asmresult.epil, i128 %asmresult7.epil, i128 %asmresult8.epil)
   %asmresult19.epil = extractvalue { i128, i128, i128 } %24, 0
   %asmresult20.epil = extractvalue { i128, i128, i128 } %24, 1
   %asmresult21.epil = extractvalue { i128, i128, i128 } %24, 2
@@ -166,8 +166,6 @@ define void @_Z6kernelv() #0 {
   ret void
 }
 
-attributes #0 = { alwaysinline mustprogress willreturn memory(readwrite, argmem: none, inaccessiblemem: none) "nvvm.annotations_transplanted" "nvvm.kernel" "nvvm.restrict_processed" "target-cpu"="sm_89" }
-attributes #1 = { nounwind }
 
 !nvvmir.version = !{!0, !1, !0, !1, !1, !0, !0, !0, !1}
 

@@ -3107,15 +3107,15 @@ SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
 
   assert(Op.getOperand(1).getValueType() == MVT::i128 &&
          "Custom lowering for 128-bit CopyToReg only");
-  
+
   SDNode *Node = Op.getNode();
   SDLoc DL(Node);
 
   SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Op->getOperand(2));
   SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
-                                 DAG.getIntPtrConstant(0, DL));
+                           DAG.getIntPtrConstant(0, DL));
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
-                                 DAG.getIntPtrConstant(1, DL));
+                           DAG.getIntPtrConstant(1, DL));
 
   SmallVector<SDValue, 8> NewOps(Op->getNumOperands() + 1);
   SmallVector<EVT, 8> ResultsType(Node->value_begin(), Node->value_end());
@@ -3130,11 +3130,12 @@ SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
   return DAG.getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
 }
 
-unsigned NVPTXTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
-                  std::optional<MVT> RegisterVT = std::nullopt) const {
-    if(VT == MVT::i128 && RegisterVT == MVT::i128)
-      return 1;
-    return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT);
+unsigned NVPTXTargetLowering::getNumRegisters(
+    LLVMContext &Context, EVT VT,
+    std::optional<MVT> RegisterVT = std::nullopt) const {
+  if (VT == MVT::i128 && RegisterVT == MVT::i128)
+    return 1;
+  return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT);
 }
 
 bool NVPTXTargetLowering::splitValueIntoRegisterParts(
@@ -5203,7 +5204,7 @@ NVPTXTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'l':
     case 'f':
     case 'd':
-    case 'q':    
+    case 'q':
     case '0':
     case 'N':
       return C_RegisterClass;
@@ -6323,8 +6324,8 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
 
 static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
                                    SmallVectorImpl<SDValue> &Results) {
-  // Change the CopyFromReg to output 2 64-bit results instead of a 128-bit result
-  // so that it can pass the legalization
+  // Change the CopyFromReg to output 2 64-bit results instead of a 128-bit
+  // result so that it can pass the legalization
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Reg = N->getOperand(1);

@@ -527,7 +527,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     break;
   }
   case ISD::CopyFromReg: {
-    if(N->getOperand(1).getValueType() == MVT::i128){
+    if (N->getOperand(1).getValueType() == MVT::i128) {
       SelectI128toV2I64(N);
       return;
     }
@@ -3825,17 +3825,17 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   SDValue Dst = N->getOperand(1);
   SDValue Lo = N->getOperand(2);
   SDValue Hi = N->getOperand(3);
-  
+
   SDLoc DL(N);
   SDNode *Mov =
       CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128, {Lo, Hi});
-  
+
   SmallVector<EVT, 8> ResultsType(N->value_begin(), N->value_end());
   SmallVector<SDValue, 8> NewOps(N->getNumOperands() - 1);
   NewOps[0] = N->getOperand(0);
   NewOps[1] = Dst;
   NewOps[2] = SDValue(Mov, 0);
-  if (N->getNumOperands() == 5) 
+  if (N->getNumOperands() == 5)
     NewOps[3] = N->getOperand(4);
   SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
 
@@ -3847,17 +3847,18 @@ void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
   // Dst:i128, Src:i128
   //
   // {lo, hi} = CopyFromReg Src
-  // 
+  //
   // ==>
-  // 
+  //
   // {lo, hi} = I128toV2I64 Src
-  // 
+  //
   SDValue Ch = N->getOperand(0);
   SDValue Src = N->getOperand(1);
   SDValue Glue = N->getOperand(2);
   SDLoc DL(N);
 
-  // Add Glue and Ch to the operands and results to avoid break the execution order
+  // Add Glue and Ch to the operands and results to avoid break the execution
+  // order
   SDNode *Mov = CurDAG->getMachineNode(
       NVPTX::I128toV2I64, DL,
       {MVT::i64, MVT::i64, Ch.getValueType(), Glue.getValueType()},
