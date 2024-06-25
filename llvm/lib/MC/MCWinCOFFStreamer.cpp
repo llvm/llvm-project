@@ -196,7 +196,9 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   getAssembler().registerSection(*SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
+  auto *F = getContext().allocFragment<MCSymbolIdFragment>(Symbol);
+  F->setParent(SXData);
+  SXData->addFragment(*F);
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 
