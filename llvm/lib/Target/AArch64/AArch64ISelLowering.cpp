@@ -1484,7 +1484,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (!Subtarget->isLittleEndian())
         setOperationAction(ISD::BITCAST, VT, Expand);
 
-      if (Subtarget->hasSVE2orSME())
+      if (Subtarget->hasSVE2() ||
+          (Subtarget->hasSME() && Subtarget->isStreaming()))
         // For SLI/SRI.
         setOperationAction(ISD::OR, VT, Custom);
     }
@@ -1937,7 +1938,7 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  if (!Subtarget->hasSVEorSME())
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
     return true;
 
   // We can only use the BRKB + CNTP sequence with legal predicate types. We can
@@ -14527,7 +14528,9 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
-    if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+    if (VT.isScalableVector() &&
+        (Subtarget->hasSVE2() ||
+         (Subtarget->hasSME() && Subtarget->isStreaming()))) {
       SDValue RShOperand;
       unsigned ShiftValue;
       if (canLowerSRLToRoundingShiftForVT(Op, VT, DAG, ShiftValue, RShOperand))
@@ -16234,15 +16237,13 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  if (!VecTy->isScalableTy() && !Subtarget->isNeonAvailable() &&
-      !Subtarget->useSVEForFixedLengthVectors())
+  if (isa<FixedVectorType>(VecTy) && !Subtarget->isNeonAvailable() &&
+      (!Subtarget->useSVEForFixedLengthVectors() ||
+       !getSVEPredPatternFromNumElements(MinElts)))
     return false;
 
-  if (VecTy->isScalableTy() && !Subtarget->hasSVEorSME())
-    return false;
-
-  // Ensure that the predicate for this number of elements is available.
-  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(MinElts))
+  if (isa<ScalableVectorType>(VecTy) &&
+      !Subtarget->isSVEorStreamingSVEAvailable())
     return false;
 
   // Ensure the number of vector elements is greater than 1.
