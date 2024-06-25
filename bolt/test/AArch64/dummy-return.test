@@ -1,0 +1,6 @@
+REQUIRES: system-linux
+
+RUN: %clang %p/../Inputs/main.c -o %t -Wl,-q -static
+RUN: not llvm-bolt -instrument -instrumentation-sleep-time=1 %t -o %t.instr 2>&1 | FileCheck %s
+
+CHECK: not implemented
