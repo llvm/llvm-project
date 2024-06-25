@@ -696,10 +696,10 @@ TEST(APFloatTest, MaximumNumber) {
       APFloat::getSNaN(APFloat::IEEEdouble(), true, &intPayload_cdef),
       APFloat::getNaN(APFloat::IEEEdouble(), true, 0xcdef)};
 
-  EXPECT_TRUE(f2.bitwiseIsEqual(minimumnum(f1, f2)));
-  EXPECT_TRUE(f2.bitwiseIsEqual(minimumnum(f2, f1)));
-  EXPECT_TRUE(zp.bitwiseIsEqual(minimumnum(zp, zn)));
-  EXPECT_TRUE(zp.bitwiseIsEqual(minimumnum(zn, zp)));
+  EXPECT_TRUE(f2.bitwiseIsEqual(maximumnum(f1, f2)));
+  EXPECT_TRUE(f2.bitwiseIsEqual(maximumnum(f2, f1)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(maximumnum(zp, zn)));
+  EXPECT_TRUE(zp.bitwiseIsEqual(maximumnum(zn, zp)));
 
   EXPECT_FALSE(maximumnum(zn, zp).isNegative());
   EXPECT_FALSE(maximumnum(zp, zn).isNegative());
