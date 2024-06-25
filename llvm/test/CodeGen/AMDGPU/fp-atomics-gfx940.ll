@@ -316,10 +316,10 @@ define <2 x i16> @global_atomic_fadd_v2bf16_rtn(ptr addrspace(1) %ptr, <2 x i16>
 define amdgpu_kernel void @local_atomic_fadd_v2f16_noret(ptr addrspace(3) %ptr, <2 x half> %data) {
 ; GFX940-LABEL: local_atomic_fadd_v2f16_noret:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX940-NEXT:    ds_pk_add_f16 v0, v1
 ; GFX940-NEXT:    s_endpgm
 ;
@@ -359,10 +359,10 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 define amdgpu_kernel void @local_atomic_fadd_v2bf16_noret(ptr addrspace(3) %ptr, <2 x i16> %data) {
 ; GFX940-LABEL: local_atomic_fadd_v2bf16_noret:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX940-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX940-NEXT:    v_mov_b32_e32 v0, s2
-; GFX940-NEXT:    v_mov_b32_e32 v1, s3
+; GFX940-NEXT:    v_mov_b32_e32 v0, s0
+; GFX940-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
 ; GFX940-NEXT:    ds_pk_add_bf16 v0, v1
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)

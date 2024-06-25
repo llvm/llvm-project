@@ -1725,36 +1725,30 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     case 8:
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
     }
-  case S_LOAD_IMM:
-    // Use the constrained opcodes when the subtarget has the XNACK support
-    // enabled.
-    if (STM->isXNACKEnabled()) {
-      switch (Width) {
-      default:
-        return 0;
-      case 2:
-        return AMDGPU::S_LOAD_DWORDX2_IMM_ec;
-      case 3:
-        return AMDGPU::S_LOAD_DWORDX3_IMM_ec;
-      case 4:
-        return AMDGPU::S_LOAD_DWORDX4_IMM_ec;
-      case 8:
-        return AMDGPU::S_LOAD_DWORDX8_IMM_ec;
-      }
-    } else {
-      switch (Width) {
-      default:
-        return 0;
-      case 2:
-        return AMDGPU::S_LOAD_DWORDX2_IMM;
-      case 3:
-        return AMDGPU::S_LOAD_DWORDX3_IMM;
-      case 4:
-        return AMDGPU::S_LOAD_DWORDX4_IMM;
-      case 8:
-        return AMDGPU::S_LOAD_DWORDX8_IMM;
-      }
+  case S_LOAD_IMM: {
+    // If XNACK is enabled, use the constrained opcodes when the first load is
+    // under-aligned.
+    const MachineMemOperand *MMO = *CI.I->memoperands_begin();
+    auto NeedsConstrainedOpc = [&MMO, Width](const GCNSubtarget &ST) {
+      return ST.isXNACKEnabled() && MMO->getAlign().value() < Width;
+    };
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX2_IMM_ec
+                                       : AMDGPU::S_LOAD_DWORDX2_IMM;
+    case 3:
+      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX3_IMM_ec
+                                       : AMDGPU::S_LOAD_DWORDX3_IMM;
+    case 4:
+      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX4_IMM_ec
+                                       : AMDGPU::S_LOAD_DWORDX4_IMM;
+    case 8:
+      return NeedsConstrainedOpc(*STM) ? AMDGPU::S_LOAD_DWORDX8_IMM_ec
+                                       : AMDGPU::S_LOAD_DWORDX8_IMM;
     }
+  }
   case GLOBAL_LOAD:
     switch (Width) {
     default:
