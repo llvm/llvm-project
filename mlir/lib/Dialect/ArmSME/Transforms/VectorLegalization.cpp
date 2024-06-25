@@ -431,8 +431,8 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
       return rewriter.notifyMatchFailure(writeOp,
                                          kMatchFailureNotSMETileTypeMultiple);
 
-    // Note: We also disallow masks where any dimension is larger than 16 as
-    // that won't be possible to arm_sve.psel.
+    // Note: We also disallow masks where any dimension is > 16 because that
+    // prevents the masking from being lowered to use arm_sve.psel.
     auto mask = writeOp.getMask();
     if (!isSupportedMaskOp(mask) || (mask && (vectorType.getDimSize(0) > 16 ||
                                               vectorType.getDimSize(1) > 16)))
