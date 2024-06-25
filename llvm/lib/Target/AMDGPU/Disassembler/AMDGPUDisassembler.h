@@ -289,8 +289,8 @@ public:
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
-  bool isGFX12_10Plus() const;
-  bool isGFX12_10Only() const;
+  bool isGFX1210Plus() const;
+  bool isGFX1210Only() const;
   bool isGFX13() const;
   bool isGFX13Plus() const;
 

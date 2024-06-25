@@ -540,8 +540,8 @@ bool getWMMAIsXDL(unsigned Opc) {
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
-  if (ST.hasFeature(AMDGPU::FeatureGFX12_10Insts))
-    return SIEncodingFamily::GFX12_10;
+  if (ST.hasFeature(AMDGPU::FeatureGFX1210Insts))
+    return SIEncodingFamily::GFX1210;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
@@ -1119,7 +1119,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // workgroup must share".
 
   // GFX12.1 only supports CU mode, which contains four SIMDs.
-  if (isGFX12_10Only(*STI)) {
+  if (isGFX1210Only(*STI)) {
     assert(STI->getFeatureBits().test(FeatureCuMode));
     return 4;
   }
@@ -1345,7 +1345,7 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   const auto &Features = STI->getFeatureBits();
-  if (Features.test(FeatureGFX12_10Insts))
+  if (Features.test(FeatureGFX1210Insts))
     return Features.test(FeatureWavefrontSize32) ? 1024 : 512;
   if (Features.test(FeatureGFX90AInsts))
     return 512;
@@ -2354,7 +2354,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX12_10Plus(STI))
+  if (isGFX1210Plus(STI))
     return 32;
   return 16;
 }
@@ -2427,12 +2427,12 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
-bool isGFX12_10Plus(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts];
+bool isGFX1210Plus(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts];
 }
 
-bool isGFX12_10Only(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts] && !isGFX13(STI);
+bool isGFX1210Only(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1210Insts] && !isGFX13(STI);
 }
 
 bool isGFX13(const MCSubtargetInfo &STI) {
@@ -2442,7 +2442,7 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
-  if (isGFX12_10Only(STI))
+  if (isGFX1210Only(STI))
     return false;
   return isGFX10Plus(STI);
 }
@@ -3440,7 +3440,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
   case AMDGPU::V_MAD_U32_e64:
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
-    return ST.hasFeature(AMDGPU::FeatureGFX12_10Insts);
+    return ST.hasFeature(AMDGPU::FeatureGFX1210Insts);
   default:
     return hasAny64BitVGPROperands(OpDesc);
   }

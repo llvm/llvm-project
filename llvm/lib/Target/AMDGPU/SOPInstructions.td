@@ -1701,7 +1701,7 @@ let OtherPredicates = [HasImageInsts] in {
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {
-  let SubtargetPredicate = isNotGFX12_10Plus;
+  let SubtargetPredicate = isNotGFX1210Plus;
 }
 
 // On SI the documentation says sleep for approximately 64 * low 2
@@ -1722,7 +1722,7 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
-  let SubtargetPredicate = isGFX12_10Plus;
+  let SubtargetPredicate = isGFX1210Plus;
 }
 
 def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
@@ -1775,7 +1775,7 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
 
 def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
-  let SubtargetPredicate = isGFX12_10Plus;
+  let SubtargetPredicate = isGFX1210Plus;
 }
 } // End hasSideEffects
 
@@ -1860,7 +1860,7 @@ let OtherPredicates = [HasExportInsts] in
                 [(int_amdgcn_s_wait_kmcnt timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX12Plus, hasSideEffects = 1
 
-let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
+let SubtargetPredicate = isGFX1210Plus, hasSideEffects = 1 in {
   def S_WAIT_ASYNCCNT :
     SOPP_Pseudo<"s_wait_asynccnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
@@ -1877,7 +1877,7 @@ let SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1 in {
       let Uses = [TENSORcnt];
       let Defs = [TENSORcnt];
     }
-} // End SubtargetPredicate = isGFX12_10Plus, hasSideEffects = 1
+} // End SubtargetPredicate = isGFX1210Plus, hasSideEffects = 1
 
 let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
   def S_WAIT_XCNT :

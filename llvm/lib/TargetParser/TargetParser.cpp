@@ -385,7 +385,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx10-3-insts"] = true;
       Features["gfx11-insts"] = true;
       Features["gfx12-insts"] = true;
-      Features["gfx12-10-insts"] = true;
+      Features["gfx1210-insts"] = true;
       Features["bitop3-insts"] = true;
       Features["prng-inst"] = true;
       Features["tanh-insts"] = true;

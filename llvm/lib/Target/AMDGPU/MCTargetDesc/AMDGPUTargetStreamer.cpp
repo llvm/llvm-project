@@ -361,7 +361,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   KD.kernarg_size->print(OS, MAI);
   OS << '\n';
 
-  if (isGFX12_10Plus(STI)) {
+  if (isGFX1210Plus(STI)) {
     PrintField(
         KD.compute_pgm_rsrc2, amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_SHIFT,
         amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT, ".amdhsa_user_sgpr_count");

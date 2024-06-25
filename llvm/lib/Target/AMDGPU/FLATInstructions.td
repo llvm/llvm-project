@@ -1126,7 +1126,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = isGFX12_10Plus in {
+let SubtargetPredicate = isGFX1210Plus in {
 
 let Uses = [M0, EXEC, ASYNCcnt] in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
@@ -1145,7 +1145,7 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_s
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
-} // End SubtargetPredicate = isGFX12_10Plus
+} // End SubtargetPredicate = isGFX1210Plus
 
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte", VGPR_32>;
@@ -1189,7 +1189,7 @@ defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_s
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
 
-let SubtargetPredicate = isGFX12_10Plus in {
+let SubtargetPredicate = isGFX1210Plus in {
 defm FLAT_LOAD_MONITOR_B32    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b32",  VGPR_32>;
 defm FLAT_LOAD_MONITOR_B64    : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b64",  VReg_64>;
 defm FLAT_LOAD_MONITOR_B128   : FLAT_Flat_Load_Pseudo <"flat_load_monitor_b128", VReg_128>;
@@ -1203,7 +1203,7 @@ defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VG
 defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
 defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
-} // End SubtargetPredicate = isGFX12_10Plus.
+} // End SubtargetPredicate = isGFX1210Plus.
 
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {
@@ -1221,14 +1221,14 @@ let SubtargetPredicate = isGFX12Plus in {
   }
 } // End SubtargetPredicate = isGFX12Plus
 
-let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_10 in {
+let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot1210 in {
   let Mnemonic = "global_load_tr_b128" in
   defm GLOBAL_LOAD_TR_B128_w64  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w64", VReg_64>;
   let Mnemonic = "global_load_tr_b64" in
   defm GLOBAL_LOAD_TR_B64_w64   : FLAT_Global_Load_Pseudo <"global_load_tr_b64_w64", VGPR_32>;
 }
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX12_10Plus in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1210Plus in {
   defm GLOBAL_LOAD_TR6_B96 : FLAT_Global_Load_Pseudo <"global_load_tr6_b96", VReg_96>;
   defm GLOBAL_LOAD_TR4_B64 : FLAT_Global_Load_Pseudo <"global_load_tr4_b64", VReg_64>;
 }
@@ -1981,17 +1981,17 @@ let OtherPredicates = [isGFX12Plus] in {
   }
 }
 
-let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_10] in {
+let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot1210] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, v4i16>;
 }
 
-let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX12_10Plus] in {
+let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1210Plus] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
-let OtherPredicates = [isGFX12_10Plus] in {
+let OtherPredicates = [isGFX1210Plus] in {
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B32,  int_amdgcn_flat_load_monitor_b32,  i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B64,  int_amdgcn_flat_load_monitor_b64,  v2i32>;
   def  : FlatLoadPat_CPOL <FLAT_LOAD_MONITOR_B128, int_amdgcn_flat_load_monitor_b128, v4i32>;
@@ -3159,7 +3159,7 @@ multiclass VFLAT_Real_AllAddr_gfx12<bits<8> op,
 }
 
 multiclass VGLOBAL_Real_AllAddr_gfx1200<bits<8> op> {
-  let AssemblerPredicate = isGFX12Not12_10 in {
+  let AssemblerPredicate = isGFX12Not1210 in {
     defm "" : VFLAT_Real_gfx12<op>;
     defm _SADDR : VFLAT_Real_gfx12<op>;
   }
@@ -3356,9 +3356,9 @@ multiclass VFLAT_Real_gfx1210<bits<8> op,
                               string name = get_FLAT_ps<NAME>.Mnemonic> {
   defvar ps = !cast<FLAT_Pseudo>(NAME);
   def _gfx1210 : VFLAT_Real<op, ps, name>,
-                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX12_10> {
-    let AssemblerPredicate = isGFX12_10Only;
-    let DecoderNamespace = "GFX12_10";
+                 SIMCInstr<ps.PseudoInstr, SIEncodingFamily.GFX1210> {
+    let AssemblerPredicate = isGFX1210Only;
+    let DecoderNamespace = "GFX1210";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
     let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
@@ -3368,7 +3368,7 @@ multiclass VFLAT_Real_gfx1210<bits<8> op,
 multiclass VFLAT_Aliases_gfx1210<string name> {
   defvar ps = get_FLAT_ps<NAME>;
   if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12_10Only]>;
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX1210Only]>;
 }
 
 multiclass VFLAT_Real_Base_gfx1210<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :

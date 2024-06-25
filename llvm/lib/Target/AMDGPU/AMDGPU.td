@@ -485,8 +485,8 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+"
 >;
 
-def FeatureGFX12_10Insts : SubtargetFeature<"gfx12-10-insts",
-  "GFX12_10Insts",
+def FeatureGFX1210Insts : SubtargetFeature<"gfx1210-insts",
+  "GFX1210Insts",
   "true",
   "Additional instructions for GFX1210+"
 >;
@@ -921,8 +921,8 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
-def FeatureGFX12_10DGEMMInsts : SubtargetFeature<"gfx1210-dgemm-insts",
-  "HasGFX12_10DGEMMInsts",
+def FeatureGFX1210DGEMMInsts : SubtargetFeature<"gfx1210-dgemm-insts",
+  "HasGFX1210DGEMMInsts",
   "true",
   "Has v_wmma_f64_16x16x4_f64, v_wmma_f64_16x16x8_f64 instructions"
 >;
@@ -1867,7 +1867,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
-   FeatureGFX12_10Insts,
+   FeatureGFX1210Insts,
    FeatureLocalMemorySize393216,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
@@ -1913,7 +1913,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureGFX12_10DGEMMInsts,
+   FeatureGFX1210DGEMMInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
@@ -1925,7 +1925,7 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
-   FeatureGFX12_10Insts,
+   FeatureGFX1210Insts,
    FeatureLocalMemorySize393216,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
@@ -2271,34 +2271,34 @@ def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX13Insts))>;
 
-def isGFX12Not12_10 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX12_10Insts))>;
+def isGFX12Not1210 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX1210Insts))>;
 
 def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
-def isGFX12PlusNot12_10 :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX12_10Insts())">,
-  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts)))>;
+def isGFX12PlusNot1210 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1210Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1210Insts)))>;
 
-def isGFX12_10Only :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12_10Insts, (not FeatureGFX13Insts))>;
+def isGFX1210Only :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1210Insts, (not FeatureGFX13Insts))>;
 
-def isGFX12_10Plus :
-  Predicate<"Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
+def isGFX1210Plus :
+  Predicate<"Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX1210Insts)>;
 
-def isNotGFX12_10Plus :
-  Predicate<"!Subtarget->hasGFX12_10Insts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX12_10Insts))>;
+def isNotGFX1210Plus :
+  Predicate<"!Subtarget->hasGFX1210Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX1210Insts))>;
 
-def isGFX940orGFX12_10orGFX13Plus :
-  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX12_10Insts() || "
+def isGFX940orGFX1210orGFX13Plus :
+  Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1210Insts() || "
             "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX12_10Insts,
+  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1210Insts,
                              FeatureGFX13Insts)>;
 
 def isGFX13Only :
@@ -2332,11 +2332,11 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 def HasBufferFlatGlobalAtomicsF64 :
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
   // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX1210Insts)>;
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1210Insts)>;
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
@@ -2379,16 +2379,16 @@ def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
 def HasMTBUFInsts : Predicate<"Subtarget->hasMTBUFInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
 
 def HasFormattedMUBUFInsts : Predicate<"Subtarget->hasFormattedMUBUFInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
 
 def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX12_10Insts)))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (all_of (not FeatureGFX90AInsts), (not FeatureGFX1210Insts)))>;
 
 def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
-  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX12_10Insts))>;
+  AssemblerPredicate<(any_of FeatureGFX13Insts, (not FeatureGFX1210Insts))>;
 
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
@@ -2472,23 +2472,23 @@ def HasFmaakFmamkF32Insts :
 
 def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
 
 def HasSGetShaderCyclesInst :
   Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
@@ -2642,9 +2642,9 @@ def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
-def HasGFX12_10DGEMMInsts
-  : Predicate<"Subtarget->hasGFX12_10DGEMMInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX12_10DGEMMInsts)>;
+def HasGFX1210DGEMMInsts
+  : Predicate<"Subtarget->hasGFX1210DGEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX1210DGEMMInsts)>;
 
 def HasDefaultComponentZero
   : Predicate<"Subtarget->hasDefaultComponentZero()">,
@@ -2657,7 +2657,7 @@ def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
 def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts, FeatureGFX13Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts, FeatureGFX13Insts)>;
 
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;
@@ -2734,7 +2734,7 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 
 def HasVectorPrefetch :
   Predicate<"Subtarget->hasVectorPrefetch()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+  AssemblerPredicate<(any_of FeatureGFX1210Insts)>;
 
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;

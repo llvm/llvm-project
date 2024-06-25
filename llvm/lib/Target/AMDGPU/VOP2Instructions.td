@@ -846,7 +846,7 @@ defm V_SUB_U32 : VOP2Inst_VOPD <"v_sub_u32", VOP_I32_I32_I32_ARITH, 0x14, "v_sub
 defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32", 1>;
 }
 
-let SubtargetPredicate = isGFX12_10Plus in {
+let SubtargetPredicate = isGFX1210Plus in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
@@ -1438,7 +1438,7 @@ multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
 }
 
 multiclass VOP2Only_Real_MADK64_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2Only_Real_MADK64<GFX12_10Gen, gfx1210Op>,
+  VOP2Only_Real_MADK64<GFX1210Gen, gfx1210Op>,
   VOP2Only_Real_MADK64<GFX13Gen, op>;
 
 multiclass VOP2Only_Real_MADK_with_name<GFXGen Gen, bits<6> op, string asmName,
@@ -1618,7 +1618,7 @@ multiclass VOP2_Real_FULL<GFXGen Gen, bits<6> op> :
   VOP2_Real_dpp8<Gen, op>;
 
 multiclass VOP2_Real_FULL_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2_Real_FULL<GFX12_10Gen, gfx1210Op>,
+  VOP2_Real_FULL<GFX1210Gen, gfx1210Op>,
   VOP2_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
@@ -1641,7 +1641,7 @@ multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
   VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
 
 multiclass VOP2_Real_NO_DPP_gfx1210_gfx13<bits<6> gfx1210Op, bits<6> op> :
-  VOP2_Real_NO_DPP<GFX12_10Gen, gfx1210Op>,
+  VOP2_Real_NO_DPP<GFX1210Gen, gfx1210Op>,
   VOP2_Real_NO_DPP<GFX13Gen, op>;
 
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,

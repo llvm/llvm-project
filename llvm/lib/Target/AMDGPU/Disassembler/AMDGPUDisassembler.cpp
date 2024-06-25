@@ -507,10 +507,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
-    if (isGFX12_10Plus() && Bytes.size() >= 16) {
+    if (isGFX1210Plus() && Bytes.size() >= 16) {
       DecoderUInt128 DecW = eat16Bytes(Bytes);
 
-      if (tryDecodeInst(DecoderTableGFX12_10128, MI, DecW, Address, CS))
+      if (tryDecodeInst(DecoderTableGFX1210128, MI, DecW, Address, CS))
         break;
 
       if (tryDecodeInst(DecoderTableGFX13128, MI, DecW, Address, CS))
@@ -528,8 +528,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DecW, Address, CS))
         break;
 
-      if (isGFX12_10Only() &&
-          tryDecodeInst(DecoderTableGFX12_1096, DecoderTableGFX12_10_FAKE1696,
+      if (isGFX1210Only() &&
+          tryDecodeInst(DecoderTableGFX121096, DecoderTableGFX1210_FAKE1696,
                         MI, DecW, Address, CS))
         break;
 
@@ -559,8 +559,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
             tryDecodeInst(DecoderTableGFX1396, MI, DecW, Address, CS))
           break;
 
-        if (isGFX12_10Only() &&
-            tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address, CS))
+        if (isGFX1210Only() &&
+            tryDecodeInst(DecoderTableGFX121096, MI, DecW, Address, CS))
           break;
       }
 
@@ -614,8 +614,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS))
         break;
 
-      if (isGFX12_10Only() &&
-          tryDecodeInst(DecoderTableGFX12_1064, DecoderTableGFX12_10_FAKE1664,
+      if (isGFX1210Only() &&
+          tryDecodeInst(DecoderTableGFX121064, DecoderTableGFX1210_FAKE1664,
                         MI, QW, Address, CS))
         break;
 
@@ -675,8 +675,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (isGFX10() && tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS))
         break;
 
-      if (isGFX12_10Only() &&
-          tryDecodeInst(DecoderTableGFX12_1032, DecoderTableGFX12_10_FAKE1632,
+      if (isGFX1210Only() &&
+          tryDecodeInst(DecoderTableGFX121032, DecoderTableGFX1210_FAKE1632,
                         MI, DW, Address, CS))
         break;
 
@@ -1979,12 +1979,12 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
 
-bool AMDGPUDisassembler::isGFX12_10Only() const {
-  return AMDGPU::isGFX12_10Only(STI);
+bool AMDGPUDisassembler::isGFX1210Only() const {
+  return AMDGPU::isGFX1210Only(STI);
 }
 
-bool AMDGPUDisassembler::isGFX12_10Plus() const {
-  return AMDGPU::isGFX12_10Plus(STI);
+bool AMDGPUDisassembler::isGFX1210Plus() const {
+  return AMDGPU::isGFX1210Plus(STI);
 }
 
 bool AMDGPUDisassembler::isGFX13() const {
@@ -2157,7 +2157,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   }
 
   // Bits [27].
-  if (isGFX12_10Plus()) {
+  if (isGFX1210Plus()) {
     PRINT_PSEUDO_DIRECTIVE_COMMENT("FLAT_SCRATCH_IS_NV",
                                    COMPUTE_PGM_RSRC1_GFX121_FLAT_SCRATCH_IS_NV);
   } else {
@@ -2171,7 +2171,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Bits [29-31].
   if (isGFX10Plus()) {
     // WGP_MODE is not available on GFX1210.
-    if (!isGFX12_10Only()) {
+    if (!isGFX1210Only()) {
       PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
     }
@@ -2309,7 +2309,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     }
 
     // Bits [14-21].
-    if (isGFX12_10Plus()) {
+    if (isGFX1210Plus()) {
       PRINT_PSEUDO_DIRECTIVE_COMMENT("NAMED_BAR_CNT",
                                      COMPUTE_PGM_RSRC3_GFX121_NAMED_BAR_CNT);
       PRINT_PSEUDO_DIRECTIVE_COMMENT("ENABLE_DYNAMIC_VGPR",
