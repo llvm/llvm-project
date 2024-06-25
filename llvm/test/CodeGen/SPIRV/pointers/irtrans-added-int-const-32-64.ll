@@ -1,6 +1,6 @@
 ; The goal of the test is to check that collisions between explicit integer constants and
 ; integer constants added automatically by IR Translator are resolved correctly both for
-; 32- and 64-bits platforms. The test is successfull if it doesn't crash and generate valid
+; 32- and 64-bits platforms. The test is successful if it doesn't crash and generate valid
 ; SPIR-V code for both 32 and 64 bits targets.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV64
