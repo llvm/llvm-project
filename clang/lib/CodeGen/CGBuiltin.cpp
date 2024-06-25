@@ -19105,7 +19105,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
                               EmitScalarExpr(E->getArg(3)), AO, SSID);
     } else {
-      // The ds_fadd_* builtins do not have syncscope/order arguments.
+      // The ds_atomic_fadd_* builtins do not have syncscope/order arguments.
       SSID = llvm::SyncScope::System;
       AO = AtomicOrdering::SequentiallyConsistent;
 
