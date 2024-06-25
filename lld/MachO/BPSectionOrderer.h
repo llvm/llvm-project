@@ -20,7 +20,7 @@ namespace lld::macho {
 
 class InputSection;
 
-/// Run Balanced Partitioning to find the optimial function and data order to
+/// Run Balanced Partitioning to find the optimal function and data order to
 /// improve startup time and compressed size.
 ///
 /// It is important that .subsections_via_symbols is used to ensure functions
