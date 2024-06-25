@@ -297,7 +297,7 @@ define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) {
 ; CHECK-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-NEXT:    mov.s v0[3], w8
 ; CHECK-NEXT:    ret
-    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
+    %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
     ret <4 x i32> %out
 }
 
@@ -410,9 +410,10 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    mov x11, sp
 ; CHECK-NEXT:    str s0, [sp]
+; CHECK-NEXT:    mov.h v1[0], w0
 ; CHECK-NEXT:    mov.h v1[1], w1
 ; CHECK-NEXT:    mov.h v1[2], w2
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
@@ -444,9 +445,10 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    fmov s0, w3
+; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    add x10, sp, #8
 ; CHECK-NEXT:    strh w0, [sp, #8]
+; CHECK-NEXT:    mov.h v0[0], w3
 ; CHECK-NEXT:    mov.h v0[1], w4
 ; CHECK-NEXT:    mov.h v0[2], w5
 ; CHECK-NEXT:    shl.4h v0, v0, #15

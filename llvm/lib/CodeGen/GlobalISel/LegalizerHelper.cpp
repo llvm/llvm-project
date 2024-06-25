@@ -7544,7 +7544,6 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
   Register LastWriteVal;
   std::optional<APInt> PassthruSplatVal =
       isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
-  ;
 
   if (PassthruSplatVal.has_value()) {
     LastWriteVal =

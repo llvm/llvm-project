@@ -5748,7 +5748,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_MASKED_COMPRESS(SDNode *N) {
                                     WideVecVT.getVectorNumElements());
 
   SDValue WideVec = ModifyToType(Vec, WideVecVT);
-  SDValue WideMask = ModifyToType(Mask, WideMaskVT);
+  SDValue WideMask = ModifyToType(Mask, WideMaskVT, /*FillWithZeroes=*/true);
   SDValue WidePassthru = ModifyToType(Passthru, WideVecVT);
   return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), WideVecVT, WideVec,
                      WideMask, WidePassthru);

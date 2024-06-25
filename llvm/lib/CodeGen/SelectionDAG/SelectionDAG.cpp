@@ -7519,7 +7519,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Vector and mask must have same number of elements.");
 
     if (N1.isUndef() || N2.isUndef())
-      return getUNDEF(VecVT);
+      return N3;
 
     break;
   }
