@@ -13,6 +13,7 @@
 #include <array>
 #include <cassert>
 #include <map>
+#include <string>
 using namespace llvm;
 
 namespace {
@@ -135,13 +136,34 @@ void VTEmitter::run(raw_ostream &OS) {
   for (const auto *VT : VTsByNumber) {
     if (!VT)
       continue;
-    auto LLVMTyForEVT = VT->getValueAsString("LLVMTyForEVT");
-    if (LLVMTyForEVT.empty())
+    auto LLVMTy = VT->getValueAsString("LLVMTy");
+    bool IsInteger = VT->getValueAsBit("isInteger");
+    bool IsVector = VT->getValueAsBit("isVector");
+
+    if (LLVMTy.empty() && !(IsInteger || IsVector))
       continue;
 
-    OS << "  GET_VT_EVT("
-       << VT->getValueAsString("LLVMName") << ", "
-       << LLVMTyForEVT << ")\n";
+    OS << "  GET_VT_EVT(" << VT->getValueAsString("LLVMName") << ", ";
+
+    if (IsVector)
+      OS << (VT->getValueAsBit("isScalable") ? "Scalable" : "Fixed")
+         << "VectorType::get(";
+
+    auto OutputVT = IsVector ? VT->getValueAsDef("ElementType") : VT;
+    auto OutputLLVMTy = OutputVT->getValueAsString("LLVMTy");
+
+    if (!OutputLLVMTy.empty())
+      OS << "Type::get" << OutputLLVMTy << "(Context)";
+    else if (OutputVT->getValueAsBit("isInteger"))
+      OS << "Type::getIntNTy(Context, " << OutputVT->getValueAsInt("Size")
+         << ")";
+    else
+      llvm_unreachable("unhandled case");
+
+    if (IsVector)
+      OS << ", " << VT->getValueAsInt("nElem") << ")";
+
+    OS << ")\n";
   }
   OS << "#endif\n\n";
 }

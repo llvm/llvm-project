@@ -14,7 +14,7 @@
 class ValueType<int size, int value> {
   string Namespace = "MVT";
   string LLVMName = NAME;
-  string LLVMTyForEVT = "";
+  string LLVMTy = "";
   int Size = size;
   int Value = value;
   int nElem = 1;
@@ -35,22 +35,17 @@ class VTAny<int value> : ValueType<0, value> {
 
 class VTInt<int size, int value>
     : ValueType<size, value> {
-  let LLVMTyForEVT = !strconcat("Type::getIntNTy(Context, ",
-                                !cast<string>(size), ")");
   let isInteger = true;
 }
 
-class VTFP<int size, string LLVMTy, int value>
+class VTFP<int size, string llvmty, int value>
     : ValueType<size, value> {
-  let LLVMTyForEVT = !strconcat("Type::get", LLVMTy, "(Context)");
+  let LLVMTy = llvmty;
   let isFP = true;
 }
 
 class VTVec<int nelem, ValueType elt, int value>
     : ValueType<!mul(nelem, elt.Size), value> {
-  let LLVMTyForEVT = !strconcat("FixedVectorType::get(",
-                                elt.LLVMTyForEVT, ", ",
-                                !cast<string>(nelem), ")");
   let nElem = nelem;
   let ElementType = elt;
   let isInteger = elt.isInteger;
@@ -60,9 +55,6 @@ class VTVec<int nelem, ValueType elt, int value>
 
 class VTScalableVec<int nelem, ValueType elt, int value>
     : VTVec<nelem, elt, value> {
-  let LLVMTyForEVT = !strconcat("ScalableVectorType::get(",
-                                elt.LLVMTyForEVT, ", ",
-                                !cast<string>(nelem), ")");
   let isScalable = true;
 }
 
