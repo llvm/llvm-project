@@ -493,13 +493,6 @@ class OMPMapInfoFinalizationPass
           mlir::isa_and_present<fir::BoxAddrOp>(
               op.getVarPtr().getDefiningOp())) {
         builder.setInsertionPoint(op);
-
-        // - contact benifit people
-        // - update broken  lit tests
-        // -create commit and apply clang-format
-        // -cherry pick pr onto PR stack and split the commit into relevant
-        // components and rebase fixup into orignal corresponding PR. -push
-        // upstream
         genDescriptorMemberMaps(op, builder, getFirstTargetUser(op));
       }
     });
