@@ -1567,6 +1567,8 @@ public:
 
   bool hasFlatScratchInit() const { return FlatScratchInit; }
 
+  bool hasPrivateSegmentSize() const { return PrivateSegmentSize; }
+
   unsigned getNumKernargPreloadSGPRs() const { return NumKernargPreloadSGPRs; }
 
   unsigned getNumUsedUserSGPRs() const { return NumUsedUserSGPRs; }
@@ -1630,6 +1632,8 @@ private:
   bool DispatchID = false;
 
   bool FlatScratchInit = false;
+
+  bool PrivateSegmentSize = false;
 
   unsigned NumKernargPreloadSGPRs = 0;
 
