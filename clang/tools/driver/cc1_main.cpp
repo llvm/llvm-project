@@ -171,18 +171,24 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
     return 1;
   }
 
+  // Create a target machine using the input features, the triple information
+  // and a dummy instance of llvm::TargetOptions. Note that this is _not_ the
+  // same as the `clang::TargetOptions` instance we have access to here.
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+
+  // Extract the feature names that are enabled for the given target.
+  // We do that by capturing the key from the set of SubtargetFeatureKV entries
+  // provided by MCSubtargetInfo, which match the '-target-feature' values.
   const std::vector<llvm::SubtargetFeatureKV> Features =
     MCInfo->getEnabledProcessorFeatures();
-
-  std::vector<llvm::StringRef> EnabledFeatureNames;
+  std::set<llvm::StringRef> EnabledFeatureNames;
   for (const llvm::SubtargetFeatureKV &feature : Features)
-    EnabledFeatureNames.push_back(feature.Key);
+    EnabledFeatureNames.insert(feature.Key);
 
   if (!MachineTriple.isAArch64()) {
     // The option was already checked in Driver::HandleImmediateArgs,

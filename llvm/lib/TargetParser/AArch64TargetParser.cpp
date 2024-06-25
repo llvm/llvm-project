@@ -18,6 +18,7 @@
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
+#include <vector>
 
 #define DEBUG_TYPE "target-parser"
 
@@ -174,22 +175,27 @@ void AArch64::PrintSupportedExtensions() {
 }
 
 void
-AArch64::printEnabledExtensions(std::vector<StringRef> EnabledFeatureNames) {
+AArch64::printEnabledExtensions(std::set<StringRef> EnabledFeatureNames) {
   outs() << "Extensions enabled for the given AArch64 target\n\n"
          << "    " << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
-  auto IsEnabled = [&](const ExtensionInfo &Ext) {
-    StringRef FeatureName = Ext.PosTargetFeature.split('+').second; // drop '+' before comparing
-    return std::find(EnabledFeatureNames.begin(), EnabledFeatureNames.end(),
-                     FeatureName) != EnabledFeatureNames.end();
-  };
-  for (const auto &Ext : Extensions) {
-    if (IsEnabled(Ext)) {
-      outs() << "    "
-             << format("%-55s%s\n",
-                       Ext.ArchFeatureName.str().c_str(),
-                       Ext.Description.str().c_str());
-    }
+  std::vector<ExtensionInfo> EnabledExtensionsInfo;
+  for (const auto &FeatureName : EnabledFeatureNames) {
+    std::string PosFeatureName = '+' + FeatureName.str();
+    if (auto ExtInfo = targetFeatureToExtension(PosFeatureName))
+      EnabledExtensionsInfo.push_back(*ExtInfo);
+  }
+
+  std::sort(EnabledExtensionsInfo.begin(), EnabledExtensionsInfo.end(),
+            [](const ExtensionInfo &Lhs, const ExtensionInfo &Rhs) {
+              return Lhs.ArchFeatureName < Rhs.ArchFeatureName;
+            });
+
+  for (const auto &Ext : EnabledExtensionsInfo) {
+    outs() << "    "
+           << format("%-55s%s\n",
+                     Ext.ArchFeatureName.str().c_str(),
+                     Ext.Description.str().c_str());
   }
 }
 

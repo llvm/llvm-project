@@ -2402,7 +2402,7 @@ TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
 
 TEST(TargetParserTest, AArch64PrintEnabledExtensions) {
   // Pick a single enabled extension to validate formatting
-  std::vector<StringRef> EnabledExtensions = {"crc"};
+  std::set<StringRef> EnabledExtensions = {"crc"};
   std::string ExpectedOutput =
       "Extensions enabled for the given AArch64 target\n\n"
       "    Architecture Feature(s)                                Description\n"

@@ -22,7 +22,7 @@
 
 // ===== Architecture extensions =====
 
-// RUN: %clang -target aarch64 -march=armv8.1-a --print-enabled-extensions 2>&1 | sort | FileCheck -check-prefix=ARCH-EXTENSION --implicit-check-not FEAT_ %s
+// RUN: %clang -target aarch64 -march=armv8.1-a --print-enabled-extensions | FileCheck -check-prefix=ARCH-EXTENSION --implicit-check-not FEAT_ %s
 // ARCH-EXTENSION: FEAT_AdvSIMD
 // ARCH-EXTENSION: FEAT_CRC32
 // ARCH-EXTENSION: FEAT_ETE

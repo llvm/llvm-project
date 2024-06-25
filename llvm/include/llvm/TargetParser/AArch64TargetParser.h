@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <array>
+#include <set>
 #include <vector>
 
 namespace llvm {
@@ -351,7 +352,7 @@ uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 void PrintSupportedExtensions();
 
-void printEnabledExtensions(std::vector<StringRef> EnabledFeatureNames);
+void printEnabledExtensions(std::set<StringRef> EnabledFeatureNames);
 
 } // namespace AArch64
 } // namespace llvm

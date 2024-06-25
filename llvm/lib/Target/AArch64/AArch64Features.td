@@ -9,10 +9,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// A SubtargetFeature that can be toggled from the command line, and therefore
-// has an AEK_* entry in ArmExtKind.
+// A SubtargetFeature that represents one or more Architecture Extensions, as
+// defined by the Arm ARM and tipically identified by a 'FEAT_*' name.
+// Each Extension record defines an ExtensionInfo entry in the Target Parser
+// with a corresponding 'AEK_*' entry in the ArchExtKind enum.
 class Extension<
-  string TargetFeatureName,            // String used for -target-feature and -march, unless overridden.
+  string TargetFeatureName,            // String used for -target-feature, unless overridden.
   string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
   string ArchitectureFeatureName,      // The extension's "FEAT_*"" name(s) defined by the architecture
   string Desc,                         // Description.
@@ -23,14 +25,17 @@ class Extension<
 
     string ArchFeatureName = ArchitectureFeatureName;
 
-    // By default, extensions are available as -march/-cpu command line options.
-    string MArchName = "";
+    // The user visible name used by -march/-mcpu modifiers and target attribute
+    // values. Extensions are not available on these by default.
+    string UserVisibleName = "";
 
     // An alias that can be used on the command line, if the extension has one.
     // Used for correcting historical names while remaining backwards compatible.
-    string MArchAlias = "";
+    string UserVisibleAlias = "";
 }
 
+// An Extension that can be toggled via a '-march'/'-mcpu' modifier or a target
+// attribute, e.g. '+sm4".
 class ExtensionWithMArch<
   string TargetFeatureName,            // String used for -target-feature and -march, unless overridden.
   string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
@@ -42,7 +47,7 @@ class ExtensionWithMArch<
     // used for -target-feature. However, there are exceptions. Therefore we
     // add a separate field for this, to allow overriding it. Strongly prefer
     // not doing so.
-    let MArchName = TargetFeatureName;
+    let UserVisibleName = TargetFeatureName;
 }
 
 
@@ -58,11 +63,11 @@ class ExtensionWithMArch<
 //  Armv8.0 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-let ArchExtKindSpelling = "AEK_FP", MArchName = "fp" in
+let ArchExtKindSpelling = "AEK_FP", UserVisibleName = "fp" in
 def FeatureFPARMv8 : ExtensionWithMArch<"fp-armv8", "FPARMv8", "FEAT_FP",
   "Enable ARMv8">;
 
-let ArchExtKindSpelling = "AEK_SIMD", MArchName = "simd" in
+let ArchExtKindSpelling = "AEK_SIMD", UserVisibleName = "simd" in
 def FeatureNEON : ExtensionWithMArch<"neon", "NEON", "FEAT_AdvSIMD",
   "Enable Advanced SIMD instructions", [FeatureFPARMv8]>;
 
@@ -89,7 +94,7 @@ def FeatureCRC : ExtensionWithMArch<"crc", "CRC", "FEAT_CRC32",
 // This SubtargetFeature is special. It controls only whether codegen will turn
 // `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
-let MArchName = "pmuv3" in
+let UserVisibleName = "pmuv3" in
 def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon", "FEAT_PMUv3",
   "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension">;
 
@@ -103,7 +108,7 @@ def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2
 def FeatureLSE : ExtensionWithMArch<"lse", "LSE", "FEAT_LSE",
   "Enable ARMv8.1 Large System Extension (LSE) atomic instructions">;
 
-let MArchAlias = "rdma" in
+let UserVisibleAlias = "rdma" in
 def FeatureRDM : ExtensionWithMArch<"rdm", "RDM", "FEAT_RDM",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions",
   [FeatureNEON]>;
@@ -133,11 +138,11 @@ def FeatureSHA3 : ExtensionWithMArch<"sha3", "SHA3", "FEAT_SHA3, FEAT_SHA512",
 def FeatureRAS : ExtensionWithMArch<"ras", "RAS", "FEAT_RAS, FEAT_RASv1p1",
   "Enable ARMv8 Reliability, Availability and Serviceability Extensions">;
 
-let ArchExtKindSpelling = "AEK_FP16", MArchName = "fp16" in
+let ArchExtKindSpelling = "AEK_FP16", UserVisibleName = "fp16" in
 def FeatureFullFP16 : ExtensionWithMArch<"fullfp16", "FullFP16", "FEAT_FP16",
   "Full FP16", [FeatureFPARMv8]>;
 
-let ArchExtKindSpelling = "AEK_PROFILE", MArchName = "profile" in
+let ArchExtKindSpelling = "AEK_PROFILE", UserVisibleName = "profile" in
 def FeatureSPE : ExtensionWithMArch<"spe", "SPE", "FEAT_SPE",
   "Enable Statistical Profiling extension">;
 
@@ -175,7 +180,7 @@ def FeatureRCPC : ExtensionWithMArch<"rcpc", "RCPC", "FEAT_LRCPC",
 def FeaturePAuth : ExtensionWithMArch<"pauth", "PAuth", "FEAT_PAuth",
   "Enable v8.3-A Pointer Authentication extension">;
 
-let ArchExtKindSpelling = "AEK_JSCVT", MArchName = "jscvt" in
+let ArchExtKindSpelling = "AEK_JSCVT", UserVisibleName = "jscvt" in
 def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
   "Enable v8.3-A JavaScript FP conversion instructions",
   [FeatureFPARMv8]>;
@@ -183,7 +188,7 @@ def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
 def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
   "Enable v8.3-A Extend of the CCSIDR number of sets">;
 
-let ArchExtKindSpelling = "AEK_FCMA", MArchName = "fcma" in
+let ArchExtKindSpelling = "AEK_FCMA", UserVisibleName = "fcma" in
 def FeatureComplxNum : ExtensionWithMArch<"complxnum", "ComplxNum", "FEAT_FCMA",
   "Enable v8.3-A Floating-point complex number support",
   [FeatureNEON]>;
@@ -256,13 +261,13 @@ def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
 
-let ArchExtKindSpelling = "AEK_RAND", MArchName = "rng" in
+let ArchExtKindSpelling = "AEK_RAND", UserVisibleName = "rng" in
 def FeatureRandGen : ExtensionWithMArch<"rand", "RandGen", "FEAT_RNG",
   "Enable Random Number generation instructions">;
 
 // NOTE: "memtag" means FEAT_MTE + FEAT_MTE2 for -march or
 // __attribute((target(...))), but only FEAT_MTE for FMV.
-let MArchName = "memtag" in
+let UserVisibleName = "memtag" in
 def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
   "Enable Memory Tagging Extension">;
 
@@ -334,7 +339,7 @@ def FeatureCLRBHB : Extension<"clrbhb", "CLRBHB", "FEAT_CLRBHB",
 def FeaturePRFM_SLC : Extension<"prfm-slc-target", "PRFM_SLC", "FEAT_PRFMSLC",
   "Enable SLC target for PRFM instruction">;
 
-let MArchName = "predres2" in
+let UserVisibleName = "predres2" in
 def FeatureSPECRES2 : ExtensionWithMArch<"specres2", "SPECRES2", "FEAT_SPECRES2",
   "Enable Speculation Restriction Instruction",
   [FeaturePredRes]>;
