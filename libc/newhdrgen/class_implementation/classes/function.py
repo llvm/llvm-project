@@ -10,12 +10,15 @@
 
 
 class Function:
-    def __init__(self, return_type, name, arguments, guard=None, attributes=None):
+    def __init__(self, standard, return_type, name, arguments, guard=None, attributes=[]):
+        self.standard = standard
         self.return_type = return_type
         self.name = name
-        self.arguments = [arg if isinstance(arg, str) else arg['type'] for arg in arguments]
+        self.arguments = [
+            arg['type'] for arg in arguments
+        ]
         self.guard = guard
-        self.attributes = attributes or []
+        self.attributes = attributes
 
     def __str__(self):
         args_str = ", ".join(self.arguments)

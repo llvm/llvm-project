@@ -10,12 +10,12 @@
 
 
 class Macro:
-    def __init__(self, name, value = None):
+    def __init__(self, name, value=None):
         self.name = name
         self.value = value
 
     def __str__(self):
         if self.value != None:
-            return f'#define {self.name} {self.value}'
+            return f"#define {self.name} {self.value}"
         else:
             return f"#define {self.name}"
