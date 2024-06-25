@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
@@ -409,6 +410,51 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
       });
   ASSERT_TRUE(Mod2 != nullptr);
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
+}
+
+TEST(AsmParserTest, DIExpressionAtBeginningWithSlotMappingParsing) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  StringRef Source =
+      "%st = type { i32, i32 }\n"
+      "@v = common global [50 x %st] zeroinitializer, align 16\n"
+      "%0 = type { i32, i32, i32, i32 }\n"
+      "@g = common global [50 x %0] zeroinitializer, align 16\n"
+      "define void @marker4(i64 %d) {\n"
+      "entry:\n"
+      "  %conv = trunc i64 %d to i32\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %st], ptr @v, i64 0, i64 0, i32 0), align 16\n"
+      "  store i32 %conv, ptr getelementptr inbounds "
+      "    ([50 x %0], ptr @g, i64 0, i64 0, i32 0), align 16\n"
+      "  ret void\n"
+      "}";
+  SlotMapping Mapping;
+  auto Mod = parseAssemblyString(Source, Error, Ctx, &Mapping);
+  ASSERT_TRUE(Mod != nullptr);
+  auto &M = *Mod;
+  unsigned Read;
+
+  DIExpression *Expr;
+
+  Expr = parseDIExpressionAtBeginning("i32", Read, Error, M, &Mapping);
+  ASSERT_FALSE(Expr);
+
+  Expr = parseDIExpressionAtBeginning("!DIExpression()", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 0);
+
+  Expr = parseDIExpressionAtBeginning("!DIExpression(0)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 1);
+
+  Expr = parseDIExpressionAtBeginning("!DIExpression(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3);
+
+  Expr = parseDIExpressionAtBeginning("(DW_OP_LLVM_fragment, 0, 1)", Read, Error, M, &Mapping);
+  ASSERT_TRUE(Expr);
+  ASSERT_EQ(Expr->getNumElements(), 3);
 }
 
 } // end anonymous namespace

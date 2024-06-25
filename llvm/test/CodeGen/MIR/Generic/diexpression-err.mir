@@ -139,7 +139,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !17
     %0:gr32 = COPY $edi
     %1:gr32 = nsw IMUL32rri %0, 42, implicit-def dead $eflags, debug-instr-number 1, debug-location !18
-    ; CHECK: {{.*}}.mir:[[#@LINE+1]]:38: invalid DWARF op 'W_OP_LLVM_arg'
+    ; CHECK: {{.*}}.mir:[[#@LINE+1]]:38: expected unsigned integer
     DBG_INSTR_REF !14, !DIExpression(W_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !17
     LIFETIME_START %stack.0.pinnedlocal, debug-location !19
     %2:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @sink, $noreg, debug-location !28 :: (load (s64) from got)

@@ -201,6 +201,9 @@ namespace llvm {
     bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
                               const SlotMapping *Slots);
 
+    bool parseDIExpressionAtBeginning(MDNode *&Result, unsigned &Read,
+                                      const SlotMapping *Slots);
+
     LLVMContext &getContext() { return Context; }
 
   private:

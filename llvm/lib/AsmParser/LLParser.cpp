@@ -124,6 +124,21 @@ bool LLParser::parseTypeAtBeginning(Type *&Ty, unsigned &Read,
   return false;
 }
 
+bool LLParser::parseDIExpressionAtBeginning(MDNode *&Result, unsigned &Read,
+                                            const SlotMapping *Slots) {
+  restoreParsingState(Slots);
+  Lex.Lex();
+
+  Read = 0;
+  SMLoc Start = Lex.getLoc();
+  Result = nullptr;
+  bool Status = parseDIExpression(Result, /*IsDistinct=*/false);
+  SMLoc End = Lex.getLoc();
+  Read = End.getPointer() - Start.getPointer();
+
+  return Status;
+}
+
 void LLParser::restoreParsingState(const SlotMapping *Slots) {
   if (!Slots)
     return;
@@ -5827,8 +5842,8 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 /// parseDIExpression:
 ///   ::= !DIExpression(0, 7, -1)
 bool LLParser::parseDIExpression(MDNode *&Result, bool IsDistinct) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
-  Lex.Lex();
+  if (Lex.getKind() == lltok::MetadataVar)
+    Lex.Lex();
 
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
