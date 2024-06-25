@@ -595,7 +595,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %for.body.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %sum.0.lcssa.unr = phi i32 [ undef, %entry ], [ %sum.0.lcssa.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.0.lcssa.unr = phi i32 [ poison, %entry ], [ %sum.0.lcssa.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %3 = icmp ult i64 %1, 7
@@ -713,7 +713,7 @@ define i32 @test2(ptr nocapture %a, i64 %n) {
 ; PROLOG-BLOCK-NEXT:    %2 = load i32, ptr %a, align 4
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %sum.0.lcssa.unr = phi i32 [ undef, %entry ], [ %2, %for.body.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.0.lcssa.unr = phi i32 [ poison, %entry ], [ %2, %for.body.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %for.body.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %2, %for.body.prol ]
 ; PROLOG-BLOCK-NEXT:    %3 = icmp ult i64 %1, 1
@@ -1440,7 +1440,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %3 = icmp ult i64 %1, 7
@@ -1561,7 +1561,7 @@ define i32 @hdr_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %2 = load i32, ptr %a, align 4
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %2, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %3 = icmp ult i64 %1, 1
@@ -1880,7 +1880,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %3 = icmp ult i64 %1, 7
@@ -2001,7 +2001,7 @@ define i32 @otherblock_latch_same_exit(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %2 = load i32, ptr %a, align 4
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %2, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %3 = icmp ult i64 %1, 1
@@ -2321,7 +2321,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %3 = icmp ult i64 %1, 7
@@ -2442,7 +2442,7 @@ define i32 @otherblock_latch_same_exit2(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK-NEXT:    %2 = load i32, ptr %a, align 4
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %2, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %3 = icmp ult i64 %1, 1
@@ -2763,7 +2763,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %result.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %3 = icmp ult i64 %1, 7
@@ -2884,7 +2884,7 @@ define i32 @otherblock_latch_same_exit3(ptr nocapture %a, i64 %n, i1 %cond) {
 ; PROLOG-BLOCK:       latch.prol:
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ undef, %entry ], [ %2, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %result.unr = phi i32 [ poison, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %2, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %3 = icmp ult i64 %1, 1
@@ -3171,7 +3171,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
 ; PROLOG-NEXT:    %i4.unr = phi i32 [ 0, %preheader ], [ %i4.unr.ph, %header.prol.loopexit.unr-lcssa ]
-; PROLOG-NEXT:    %i2.ph.unr = phi i32 [ undef, %preheader ], [ %i2.ph.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %i2.ph.unr = phi i32 [ poison, %preheader ], [ %i2.ph.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %2 = icmp ult i32 %1, 7
 ; PROLOG-NEXT:    br i1 %2, label %latchExit, label %preheader.new
 ; PROLOG:       preheader.new:
@@ -3243,7 +3243,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %i4.unr = phi i32 [ 0, %preheader ], [ 1, %latch.prol ]
-; PROLOG-BLOCK-NEXT:    %i2.ph.unr = phi i32 [ undef, %preheader ], [ -1, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %i2.ph.unr = phi i32 [ poison, %preheader ], [ -1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %2 = icmp ult i32 %1, 1
 ; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchExit, label %preheader.new
 ; PROLOG-BLOCK:       preheader.new:
@@ -3544,7 +3544,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; PROLOG:       loop_header.prol.loopexit:
 ; PROLOG-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ %iv.unr.ph, %loop_header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %sum.unr.ph, %loop_header.prol.loopexit.unr-lcssa ]
-; PROLOG-NEXT:    %sum.next.lcssa.unr = phi i64 [ undef, %entry ], [ %sum.next.lcssa.unr.ph, %loop_header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.next.lcssa.unr = phi i64 [ poison, %entry ], [ %sum.next.lcssa.unr.ph, %loop_header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %2 = icmp ult i64 %1, 7
 ; PROLOG-NEXT:    br i1 %2, label %latchexit, label %entry.new
 ; PROLOG:       entry.new:
@@ -3671,7 +3671,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; PROLOG-BLOCK:       loop_header.prol.loopexit:
 ; PROLOG-BLOCK-NEXT:    %iv.unr = phi i64 [ 0, %entry ], [ 1, %loop_latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.unr = phi i64 [ 0, %entry ], [ %add, %loop_latch.prol ]
-; PROLOG-BLOCK-NEXT:    %sum.next.lcssa.unr = phi i64 [ undef, %entry ], [ %add, %loop_latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.next.lcssa.unr = phi i64 [ poison, %entry ], [ %add, %loop_latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
 ; PROLOG-BLOCK-NEXT:    br i1 %2, label %latchexit, label %entry.new
 ; PROLOG-BLOCK:       entry.new:
@@ -3991,7 +3991,7 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; PROLOG-NEXT:    %sum.02.unr.ph = phi i32 [ %add.prol, %latch.prol ]
 ; PROLOG-NEXT:    br label %header.prol.loopexit
 ; PROLOG:       header.prol.loopexit:
-; PROLOG-NEXT:    %sum.0.lcssa.unr = phi i32 [ undef, %entry ], [ %sum.0.lcssa.unr.ph, %header.prol.loopexit.unr-lcssa ]
+; PROLOG-NEXT:    %sum.0.lcssa.unr = phi i32 [ poison, %entry ], [ %sum.0.lcssa.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ %indvars.iv.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %sum.02.unr.ph, %header.prol.loopexit.unr-lcssa ]
 ; PROLOG-NEXT:    %2 = icmp ult i64 %1, 7
@@ -4114,7 +4114,7 @@ define i32 @test6(ptr nocapture %a, i64 %n, i1 %cond, i32 %x) {
 ; PROLOG-BLOCK-NEXT:    %load.prol = load i32, ptr %a, align 4
 ; PROLOG-BLOCK-NEXT:    br label %header.prol.loopexit
 ; PROLOG-BLOCK:       header.prol.loopexit:
-; PROLOG-BLOCK-NEXT:    %sum.0.lcssa.unr = phi i32 [ undef, %entry ], [ %load.prol, %latch.prol ]
+; PROLOG-BLOCK-NEXT:    %sum.0.lcssa.unr = phi i32 [ poison, %entry ], [ %load.prol, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %indvars.iv.unr = phi i64 [ 0, %entry ], [ 1, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %sum.02.unr = phi i32 [ 0, %entry ], [ %load.prol, %latch.prol ]
 ; PROLOG-BLOCK-NEXT:    %2 = icmp ult i64 %1, 1
