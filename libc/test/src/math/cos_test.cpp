@@ -48,7 +48,9 @@ TEST_F(LlvmLibcCosTest, TrickyInputs) {
       -0x1.08087e9aad90bp+887,  -0x1.8bb5847d49973p+845,
       0x1.6ac5b262ca1ffp+849,   0x1.f08b14e1c4d0fp+890,
       0x1.2b5fe88a9d8d5p+903,   0x1.f6d7518808571p+1023,
-      -0x1.a880417b7b119p+1023,
+      -0x1.a880417b7b119p+1023, 0x1.00a33764a0a83p-7,
+      0x1.fe81868fc47fep+1,     0x1.0da8cc189b47dp-10,
+      0x1.da1838053b866p+5,
 
   };
   constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
