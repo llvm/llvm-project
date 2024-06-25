@@ -13,7 +13,6 @@
 #include <array>
 #include <cassert>
 #include <map>
-#include <string>
 using namespace llvm;
 
 namespace {
@@ -73,7 +72,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsFP = VT->getValueAsBit("isFP");
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
-    bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
+    bool IsNormalValueType = VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
     StringRef EltName = IsVector ? VT->getValueAsDef("ElementType")->getName()
                                  : "INVALID_SIMPLE_VALUE_TYPE";
@@ -156,18 +155,27 @@ void VTEmitter::run(raw_ostream &OS) {
       StringRef FloatTy = "";
       auto OutputVTName = OutputVT->getValueAsString("LLVMName");
       switch (OutputVTSize) {
-	default:
-          llvm_unreachable("unhandled case");
-	case 16: FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy"; break;
-	case 32: FloatTy = "FloatTy"; break;
-	case 64: FloatTy = "DoubleTy"; break;
-	case 80: FloatTy = "X86_FP80Ty"; break;
-	case 128: FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty"; break;
+      default:
+        llvm_unreachable("unhandled case");
+      case 16:
+        FloatTy = OutputVTName == "bf16" ? "BFloatTy" : "HalfTy";
+        break;
+      case 32:
+        FloatTy = "FloatTy";
+        break;
+      case 64:
+        FloatTy = "DoubleTy";
+        break;
+      case 80:
+        FloatTy = "X86_FP80Ty";
+        break;
+      case 128:
+        FloatTy = OutputVTName == "ppcf128" ? "PPC_FP128Ty" : "FP128Ty";
+        break;
       }
       OS << "Type::get" << FloatTy << "(Context)";
     } else if (OutputVT->getValueAsBit("isInteger"))
-      OS << "Type::getIntNTy(Context, " << OutputVTSize
-         << ")";
+      OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
     else
       llvm_unreachable("unhandled case");
 
