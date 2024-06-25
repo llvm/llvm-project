@@ -427,6 +427,10 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
       CalleeBefore.Uses;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_callee_avail_external) =
+      Callee.hasAvailableExternallyLinkage();
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::is_caller_avail_external) =
+      Caller.hasAvailableExternallyLinkage();
 
   // Add the cost features
   for (size_t I = 0;

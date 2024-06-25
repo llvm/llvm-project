@@ -5430,6 +5430,98 @@ bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
   return true;
 }
 
+// TODO: Fix pointer type handling
+bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
+                                         MachineInstr &MI,
+                                         Intrinsic::ID IID) const {
+
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
+
+  auto createLaneOp = [&IID, &B](Register Src0, Register Src1, Register Src2,
+                                 LLT VT) -> Register {
+    auto LaneOp = B.buildIntrinsic(IID, {VT}).addUse(Src0);
+    switch (IID) {
+    case Intrinsic::amdgcn_readfirstlane:
+      return LaneOp.getReg(0);
+    case Intrinsic::amdgcn_readlane:
+      return LaneOp.addUse(Src1).getReg(0);
+    case Intrinsic::amdgcn_writelane:
+      return LaneOp.addUse(Src1).addUse(Src2).getReg(0);
+    default:
+      llvm_unreachable("unhandled lane op");
+    }
+  };
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register Src1, Src2;
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
+    Src1 = MI.getOperand(3).getReg();
+    if (IID == Intrinsic::amdgcn_writelane) {
+      Src2 = MI.getOperand(4).getReg();
+    }
+  }
+
+  LLT Ty = MRI.getType(DstReg);
+  unsigned Size = Ty.getSizeInBits();
+
+  if (Size == 32) {
+    // Already legal
+    return true;
+  }
+
+  if (Size < 32) {
+    Src0 = B.buildAnyExt(S32, Src0).getReg(0);
+    if (Src2.isValid())
+      Src2 = B.buildAnyExt(LLT::scalar(32), Src2).getReg(0);
+
+    Register LaneOpDst = createLaneOp(Src0, Src1, Src2, S32);
+    B.buildTrunc(DstReg, LaneOpDst);
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if (Size % 32 != 0)
+    return false;
+
+  LLT PartialResTy = S32;
+  if (Ty.isVector()) {
+    LLT EltTy = Ty.getElementType();
+    switch (EltTy.getSizeInBits()) {
+    case 16:
+      PartialResTy = Ty.changeElementCount(ElementCount::getFixed(2));
+      break;
+    case 32:
+      PartialResTy = EltTy;
+      break;
+    default:
+      // Handle all other cases via S32 pieces;
+      break;
+    }
+  }
+
+  SmallVector<Register, 2> PartialRes;
+  unsigned NumParts = Size / 32;
+  MachineInstrBuilder Src0Parts = B.buildUnmerge(PartialResTy, Src0);
+  MachineInstrBuilder Src2Parts;
+
+  if (Src2.isValid())
+    Src2Parts = B.buildUnmerge(PartialResTy, Src2);
+
+  for (unsigned i = 0; i < NumParts; ++i) {
+    Src0 = Src0Parts.getReg(i);
+    if (Src2.isValid())
+      Src2 = Src2Parts.getReg(i);
+    PartialRes.push_back(createLaneOp(Src0, Src1, Src2, PartialResTy));
+  }
+
+  B.buildMergeLikeInstr(DstReg, PartialRes);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -7370,6 +7462,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_writelane:
+  case Intrinsic::amdgcn_readfirstlane:
+    return legalizeLaneOp(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

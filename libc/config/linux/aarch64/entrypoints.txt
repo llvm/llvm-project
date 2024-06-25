@@ -344,6 +344,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceilf
     libc.src.math.ceill
     libc.src.math.coshf
+    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.erff
     libc.src.math.exp
@@ -505,6 +506,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.f16divf
     libc.src.math.f16fmaf
     libc.src.math.f16sqrtf
     libc.src.math.fabsf16
