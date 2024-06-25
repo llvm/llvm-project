@@ -210,11 +210,14 @@ public:
   static bool classof(const DebugRangesSectionWriter *Writer) {
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
-
+  
+  /// Append a range to the main buffer.
   void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
 
+  /// Sets Unit DIE to be updated for CU.
   void setDie(DIE *Die) { this->Die = Die; }
 
+  /// Returns Unit DIE to be updated for CU.
   DIE *getDie() const { return Die; }
 
   /// Writes out range lists for a current CU being processed.
@@ -238,7 +241,7 @@ protected:
   static constexpr uint64_t EmptyRangesOffset{0};
 
 private:
-  /// Stores DIE to be updated for CU.
+  /// Stores Unit DIE to be updated for CU.
   DIE *Die{0};
 
   RangesWriterKind Kind;
