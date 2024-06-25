@@ -123,7 +123,7 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up
   return __res;
 }
 
-#endif // _LIBCPP_STD_VER
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 
