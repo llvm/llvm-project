@@ -213,9 +213,9 @@ public:
 
   void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
 
-  void setDie(std::optional<DIE *> Die) { this->Die = Die; }
+  void setDie(DIE *Die) { this->Die = Die; }
 
-  std::optional<DIE *> getDie() const { return Die; }
+  DIE *getDie() const { return Die; }
 
   /// Writes out range lists for a current CU being processed.
   void virtual finalizeSection(){};
@@ -238,7 +238,7 @@ protected:
   static constexpr uint64_t EmptyRangesOffset{0};
 
 private:
-  std::optional<DIE *> Die;
+  DIE *Die{0};
 
   RangesWriterKind Kind;
 };
