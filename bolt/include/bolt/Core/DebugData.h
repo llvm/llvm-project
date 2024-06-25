@@ -238,6 +238,7 @@ protected:
   static constexpr uint64_t EmptyRangesOffset{0};
 
 private:
+  /// Stores DIE to be updated for CU.
   DIE *Die{0};
 
   RangesWriterKind Kind;
