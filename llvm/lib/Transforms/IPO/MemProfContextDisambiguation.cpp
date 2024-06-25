@@ -2203,7 +2203,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   // Make a copy of the computed context ids that we can sort for stability.
   auto ContextIds = getContextIds();
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  std::sort(SortedIds.begin(), SortedIds.end());
+  llvm::sort(SortedIds);
   for (auto Id : SortedIds)
     OS << " " << Id;
   OS << "\n";
@@ -2238,7 +2238,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextEdge::print(
      << " AllocTypes: " << getAllocTypeString(AllocTypes);
   OS << " ContextIds:";
   std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-  std::sort(SortedIds.begin(), SortedIds.end());
+  llvm::sort(SortedIds);
   for (auto Id : SortedIds)
     OS << " " << Id;
 }
@@ -2380,7 +2380,7 @@ private:
     std::string IdString = "ContextIds:";
     if (ContextIds.size() < 100) {
       std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
-      std::sort(SortedIds.begin(), SortedIds.end());
+      llvm::sort(SortedIds);
       for (auto Id : SortedIds)
         IdString += (" " + Twine(Id)).str();
     } else {

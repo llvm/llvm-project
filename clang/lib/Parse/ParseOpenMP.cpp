@@ -4785,8 +4785,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         getLangOpts());
     Data.ExtraModifierLoc = Tok.getLocation();
     if (Data.ExtraModifier == OMPC_ADJUST_ARGS_unknown) {
-      SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
-                StopBeforeMatch);
+      Diag(Tok, diag::err_omp_unknown_adjust_args_op);
+      SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {
       ConsumeToken();
       if (Tok.is(tok::colon))
@@ -4799,7 +4799,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   bool IsComma =
       (Kind != OMPC_reduction && Kind != OMPC_task_reduction &&
        Kind != OMPC_in_reduction && Kind != OMPC_depend &&
-       Kind != OMPC_doacross && Kind != OMPC_map) ||
+       Kind != OMPC_doacross && Kind != OMPC_map && Kind != OMPC_adjust_args) ||
       (Kind == OMPC_reduction && !InvalidReductionId) ||
       (Kind == OMPC_map && Data.ExtraModifier != OMPC_MAP_unknown) ||
       (Kind == OMPC_depend && Data.ExtraModifier != OMPC_DEPEND_unknown) ||
