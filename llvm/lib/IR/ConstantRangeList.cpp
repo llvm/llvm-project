@@ -84,7 +84,7 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
 ConstantRangeList
 ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
   assert(getBitWidth() == CRL.getBitWidth() &&
-         "ConstantRangeList types don't agree!");
+         "ConstantRangeList bitwidths don't agree!");
   // Handle common cases.
   if (empty())
     return CRL;
@@ -136,7 +136,7 @@ ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
 ConstantRangeList
 ConstantRangeList::intersectWith(const ConstantRangeList &CRL) const {
   assert(getBitWidth() == CRL.getBitWidth() &&
-         "ConstantRangeList types don't agree!");
+         "ConstantRangeList bitwidths don't agree!");
 
   // Handle common cases.
   if (empty())

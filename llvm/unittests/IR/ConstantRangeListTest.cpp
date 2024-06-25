@@ -197,13 +197,12 @@ TEST_F(ConstantRangeListTest, Intersect) {
             GetCRL({{AP2, AP4}, {AP8, AP10}}));
   EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP16}})),
             GetCRL({{AP2, AP4}, {AP8, AP12}}));
-  EXPECT_EQ(CRL.intersectWith(GetCRL({{{APN2, AP2}, {AP6, AP10}}})),
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP2}, {AP6, AP10}})),
             GetCRL({{AP0, AP2}, {AP8, AP10}}));
-  EXPECT_EQ(CRL.intersectWith(GetCRL({{{AP2, AP6}, {AP10, AP16}}})),
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP6}, {AP10, AP16}})),
             GetCRL({{AP2, AP4}, {AP10, AP12}}));
-  EXPECT_EQ(
-      CRL.intersectWith(GetCRL({{{APN2, AP2}, {AP7, AP10}, {AP11, AP16}}})),
-      GetCRL({{AP0, AP2}, {AP8, AP10}, {AP11, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP2}, {AP7, AP10}, {AP11, AP16}})),
+            GetCRL({{AP0, AP2}, {AP8, AP10}, {AP11, AP12}}));
   EXPECT_EQ(CRL.intersectWith(CRL), CRL);
 }
 
