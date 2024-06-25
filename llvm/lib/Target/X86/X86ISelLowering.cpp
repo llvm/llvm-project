@@ -28530,7 +28530,6 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
       }
     }
 
-
     // Extract the lo/hi parts to any extend to i16.
     // We're going to mask off the low byte of each result element of the
     // pmullw, so it doesn't matter what's in the high byte of each 16-bit
