@@ -39,9 +39,9 @@ bool ABIInfo::isOHOSFamily() const {
   return getTarget().getTriple().isOHOSFamily();
 }
 
-RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                            QualType Ty, AggValueSlot Slot) const {
-  return RValue::getIgnored();
+Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty) const {
+  return Address::invalid();
 }
 
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {

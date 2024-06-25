@@ -22,5 +22,4 @@ TEST(LateInit, CheckLateInitIsOK) {
 
   GPA.init(Opts);
   EXPECT_TRUE(GPA.shouldSample());
-  GPA.uninitTestOnly();
 }

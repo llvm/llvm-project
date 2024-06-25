@@ -22,7 +22,6 @@ static_library("Utility") {
     "DataExtractor.cpp",
     "Diagnostics.cpp",
     "Environment.cpp",
-    "ErrorMessages.cpp",
     "Event.cpp",
     "FileSpec.cpp",
     "FileSpecList.cpp",

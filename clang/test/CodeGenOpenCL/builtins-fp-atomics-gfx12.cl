@@ -10,10 +10,7 @@ typedef half  __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 
 // CHECK-LABEL: test_local_add_2bf16
-// CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
-// CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
-
+// CHECK: call <2 x i16> @llvm.amdgcn.ds.fadd.v2bf16(ptr addrspace(3) %{{.*}}, <2 x i16> %
 // GFX12-LABEL:  test_local_add_2bf16
 // GFX12: ds_pk_add_rtn_bf16
 short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
@@ -21,10 +18,7 @@ short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2bf16_noret
-// CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
-// CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
-
+// CHECK: call <2 x i16> @llvm.amdgcn.ds.fadd.v2bf16(ptr addrspace(3) %{{.*}}, <2 x i16> %
 // GFX12-LABEL:  test_local_add_2bf16_noret
 // GFX12: ds_pk_add_bf16
 void test_local_add_2bf16_noret(__local short2 *addr, short2 x) {
@@ -32,7 +26,7 @@ void test_local_add_2bf16_noret(__local short2 *addr, short2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2f16
-// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x half> %{{.+}} seq_cst, align 4
+// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
 // GFX12-LABEL:  test_local_add_2f16
 // GFX12: ds_pk_add_rtn_f16
 half2 test_local_add_2f16(__local half2 *addr, half2 x) {
@@ -40,7 +34,7 @@ half2 test_local_add_2f16(__local half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: test_local_add_2f16_noret
-// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x half> %{{.+}} seq_cst, align 4
+// CHECK: call <2 x half> @llvm.amdgcn.ds.fadd.v2f16(ptr addrspace(3) %{{.*}}, <2 x half> %
 // GFX12-LABEL:  test_local_add_2f16_noret
 // GFX12: ds_pk_add_f16
 void test_local_add_2f16_noret(__local half2 *addr, half2 x) {

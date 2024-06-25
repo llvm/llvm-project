@@ -2458,9 +2458,7 @@ static bool OptimizeStaticIFuncs(Module &M) {
   bool Changed = false;
   for (GlobalIFunc &IF : M.ifuncs())
     if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
-      if (!IF.use_empty() &&
-          (!Callee->isDeclaration() ||
-           none_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))) {
+      if (!IF.use_empty()) {
         IF.replaceAllUsesWith(Callee);
         NumIFuncsResolved++;
         Changed = true;

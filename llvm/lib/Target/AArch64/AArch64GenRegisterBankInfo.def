@@ -137,9 +137,7 @@ bool AArch64GenRegisterBankInfo::checkValueMapImpl(unsigned Idx,
                                                    unsigned Offset) {
   unsigned PartialMapBaseIdx = Idx - PartialMappingIdx::PMI_Min;
   const ValueMapping &Map =
-      AArch64GenRegisterBankInfo::getValueMapping(
-        (PartialMappingIdx)FirstInBank,
-        TypeSize::getFixed(Size))[Offset];
+      AArch64GenRegisterBankInfo::getValueMapping((PartialMappingIdx)FirstInBank, Size)[Offset];
   return Map.BreakDown == &PartMappings[PartialMapBaseIdx] &&
          Map.NumBreakDowns == 1;
 }
@@ -169,7 +167,7 @@ bool AArch64GenRegisterBankInfo::checkPartialMappingIdx(
 }
 
 unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
-                                                             TypeSize Size) {
+                                                             unsigned Size) {
   if (RBIdx == PMI_FirstGPR) {
     if (Size <= 32)
       return 0;
@@ -180,20 +178,17 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
     return -1;
   }
   if (RBIdx == PMI_FirstFPR) {
-    const unsigned MinSize = Size.getKnownMinValue();
-    assert((!Size.isScalable() || MinSize >= 128) &&
-           "Scalable vector types should have size of at least 128 bits");
-    if (MinSize <= 16)
+    if (Size <= 16)
       return 0;
-    if (MinSize <= 32)
+    if (Size <= 32)
       return 1;
-    if (MinSize <= 64)
+    if (Size <= 64)
       return 2;
-    if (MinSize <= 128)
+    if (Size <= 128)
       return 3;
-    if (MinSize <= 256)
+    if (Size <= 256)
       return 4;
-    if (MinSize <= 512)
+    if (Size <= 512)
       return 5;
     return -1;
   }
@@ -202,7 +197,7 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
 
 const RegisterBankInfo::ValueMapping *
 AArch64GenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx,
-                                            const TypeSize Size) {
+                                            unsigned Size) {
   assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
   unsigned BaseIdxOffset = getRegBankBaseIdxOffset(RBIdx, Size);
   if (BaseIdxOffset == -1u)
@@ -226,8 +221,7 @@ const AArch64GenRegisterBankInfo::PartialMappingIdx
 
 const RegisterBankInfo::ValueMapping *
 AArch64GenRegisterBankInfo::getCopyMapping(unsigned DstBankID,
-                                           unsigned SrcBankID,
-                                           const TypeSize Size) {
+                                           unsigned SrcBankID, unsigned Size) {
   assert(DstBankID < AArch64::NumRegisterBanks && "Invalid bank ID");
   assert(SrcBankID < AArch64::NumRegisterBanks && "Invalid bank ID");
   PartialMappingIdx DstRBIdx = BankIDToCopyMapIdx[DstBankID];

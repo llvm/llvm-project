@@ -185,12 +185,6 @@ public:
            (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
   }
 
-  /// Returns true if the target has access to either the full range of SVE instructions,
-  /// or the streaming-compatible subset of SVE instructions.
-  bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || (hasSME() && isStreaming());
-  }
-
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -380,11 +374,11 @@ public:
   }
 
   bool useSVEForFixedLengthVectors() const {
-    if (!isSVEorStreamingSVEAvailable())
-      return false;
+    if (!isNeonAvailable())
+      return hasSVEorSME();
 
     // Prefer NEON unless larger SVE registers are available.
-    return !isNeonAvailable() || getMinSVEVectorSizeInBits() >= 256;
+    return hasSVEorSME() && getMinSVEVectorSizeInBits() >= 256;
   }
 
   bool useSVEForFixedLengthVectors(EVT VT) const {

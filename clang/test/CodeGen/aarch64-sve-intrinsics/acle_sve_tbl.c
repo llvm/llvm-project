@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svint8_t test_svtbl_s8(svint8_t data, svuint8_t indices) MODE_ATTR
+svint8_t test_svtbl_s8(svint8_t data, svuint8_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_s8,,)(data, indices);
 }
@@ -47,7 +39,7 @@ svint8_t test_svtbl_s8(svint8_t data, svuint8_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-svint16_t test_svtbl_s16(svint16_t data, svuint16_t indices) MODE_ATTR
+svint16_t test_svtbl_s16(svint16_t data, svuint16_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_s16,,)(data, indices);
 }
@@ -62,7 +54,7 @@ svint16_t test_svtbl_s16(svint16_t data, svuint16_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svtbl_s32(svint32_t data, svuint32_t indices) MODE_ATTR
+svint32_t test_svtbl_s32(svint32_t data, svuint32_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_s32,,)(data, indices);
 }
@@ -77,7 +69,7 @@ svint32_t test_svtbl_s32(svint32_t data, svuint32_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svtbl_s64(svint64_t data, svuint64_t indices) MODE_ATTR
+svint64_t test_svtbl_s64(svint64_t data, svuint64_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_s64,,)(data, indices);
 }
@@ -92,7 +84,7 @@ svint64_t test_svtbl_s64(svint64_t data, svuint64_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i8> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svtbl_u8(svuint8_t data, svuint8_t indices) MODE_ATTR
+svuint8_t test_svtbl_u8(svuint8_t data, svuint8_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_u8,,)(data, indices);
 }
@@ -107,7 +99,7 @@ svuint8_t test_svtbl_u8(svuint8_t data, svuint8_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-svuint16_t test_svtbl_u16(svuint16_t data, svuint16_t indices) MODE_ATTR
+svuint16_t test_svtbl_u16(svuint16_t data, svuint16_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_u16,,)(data, indices);
 }
@@ -122,7 +114,7 @@ svuint16_t test_svtbl_u16(svuint16_t data, svuint16_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svtbl_u32(svuint32_t data, svuint32_t indices) MODE_ATTR
+svuint32_t test_svtbl_u32(svuint32_t data, svuint32_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_u32,,)(data, indices);
 }
@@ -137,7 +129,7 @@ svuint32_t test_svtbl_u32(svuint32_t data, svuint32_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svtbl_u64(svuint64_t data, svuint64_t indices) MODE_ATTR
+svuint64_t test_svtbl_u64(svuint64_t data, svuint64_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_u64,,)(data, indices);
 }
@@ -152,7 +144,7 @@ svuint64_t test_svtbl_u64(svuint64_t data, svuint64_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.tbl.nxv8f16(<vscale x 8 x half> [[DATA:%.*]], <vscale x 8 x i16> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-svfloat16_t test_svtbl_f16(svfloat16_t data, svuint16_t indices) MODE_ATTR
+svfloat16_t test_svtbl_f16(svfloat16_t data, svuint16_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_f16,,)(data, indices);
 }
@@ -167,7 +159,7 @@ svfloat16_t test_svtbl_f16(svfloat16_t data, svuint16_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.tbl.nxv4f32(<vscale x 4 x float> [[DATA:%.*]], <vscale x 4 x i32> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-svfloat32_t test_svtbl_f32(svfloat32_t data, svuint32_t indices) MODE_ATTR
+svfloat32_t test_svtbl_f32(svfloat32_t data, svuint32_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_f32,,)(data, indices);
 }
@@ -182,7 +174,7 @@ svfloat32_t test_svtbl_f32(svfloat32_t data, svuint32_t indices) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i64> [[INDICES:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
-svfloat64_t test_svtbl_f64(svfloat64_t data, svuint64_t indices) MODE_ATTR
+svfloat64_t test_svtbl_f64(svfloat64_t data, svuint64_t indices)
 {
   return SVE_ACLE_FUNC(svtbl,_f64,,)(data, indices);
 }

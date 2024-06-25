@@ -2,9 +2,9 @@
 
 namespace std {
   template<typename T> struct initializer_list {
-    const T *p;
+    T *p;
     __SIZE_TYPE__ n;
-    initializer_list(const T*, __SIZE_TYPE__);
+    initializer_list(T*, __SIZE_TYPE__);
   };
 }
 

@@ -42,9 +42,6 @@ public:
   /// Each element is an integer representing an instruction in the module.
   ArrayRef<unsigned> Str;
 
-  /// Whether to consider leaf descendants or only leaf children.
-  bool OutlinerLeafDescendants;
-
   /// A repeated substring in the tree.
   struct RepeatedSubstring {
     /// The length of the string.
@@ -133,27 +130,11 @@ private:
   /// this step.
   unsigned extend(unsigned EndIdx, unsigned SuffixesToAdd);
 
-  /// This vector contains all leaf nodes of this suffix tree. These leaf nodes
-  /// are identified using post-order depth-first traversal, so that the order
-  /// of these leaf nodes in the vector matches the order of the leaves in the
-  /// tree from left to right if one were to draw the tree on paper.
-  std::vector<SuffixTreeLeafNode *> LeafNodes;
-
-  /// Perform a post-order depth-first traversal of the tree and perform two
-  /// tasks during the traversal. The first is to populate LeafNodes, adding
-  /// nodes in order of the traversal. The second is to keep track of the leaf
-  /// descendants of every internal node by assigning values to LeftLeafIndex
-  /// and RightLefIndex fields of SuffixTreeNode for all internal nodes.
-  void setLeafNodes();
-
 public:
   /// Construct a suffix tree from a sequence of unsigned integers.
   ///
   /// \param Str The string to construct the suffix tree for.
-  /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
-  /// only leaf children (used by Machine Outliner).
-  SuffixTree(const ArrayRef<unsigned> &Str,
-             bool OutlinerLeafDescendants = false);
+  SuffixTree(const ArrayRef<unsigned> &Str);
 
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
@@ -172,12 +153,6 @@ public:
     /// FIXME: This may not be true for targets like X86 which support many
     /// instruction lengths.
     const unsigned MinLength = 2;
-
-    /// Vector of leaf nodes of the suffix tree.
-    const std::vector<SuffixTreeLeafNode *> &LeafNodes;
-
-    /// Whether to consider leaf descendants or only leaf children.
-    bool OutlinerLeafDescendants = !LeafNodes.empty();
 
     /// Move the iterator to the next repeated substring.
     void advance();
@@ -204,10 +179,7 @@ public:
       return !(*this == Other);
     }
 
-    RepeatedSubstringIterator(
-        SuffixTreeInternalNode *N,
-        const std::vector<SuffixTreeLeafNode *> &LeafNodes = {})
-        : N(N), LeafNodes(LeafNodes) {
+    RepeatedSubstringIterator(SuffixTreeInternalNode *N) : N(N) {
       // Do we have a non-null node?
       if (!N)
         return;
@@ -219,7 +191,7 @@ public:
   };
 
   typedef RepeatedSubstringIterator iterator;
-  iterator begin() { return iterator(Root, LeafNodes); }
+  iterator begin() { return iterator(Root); }
   iterator end() { return iterator(nullptr); }
 };
 

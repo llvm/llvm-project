@@ -162,7 +162,9 @@ static void getProducerCandidates(unsigned dstId, MemRefDependenceGraph *mdg,
   }
 
   llvm::sort(srcIdCandidates);
-  srcIdCandidates.erase(llvm::unique(srcIdCandidates), srcIdCandidates.end());
+  srcIdCandidates.erase(
+      std::unique(srcIdCandidates.begin(), srcIdCandidates.end()),
+      srcIdCandidates.end());
 }
 
 /// Returns in 'producerConsumerMemrefs' the memrefs involved in a

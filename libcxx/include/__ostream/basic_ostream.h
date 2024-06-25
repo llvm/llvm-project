@@ -52,9 +52,6 @@ public:
   }
   ~basic_ostream() override;
 
-  basic_ostream(const basic_ostream& __rhs)            = delete;
-  basic_ostream& operator=(const basic_ostream& __rhs) = delete;
-
 protected:
   inline _LIBCPP_HIDE_FROM_ABI basic_ostream(basic_ostream&& __rhs);
 
@@ -64,6 +61,9 @@ protected:
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_ostream& __rhs) {
     basic_ios<char_type, traits_type>::swap(__rhs);
   }
+
+  basic_ostream(const basic_ostream& __rhs)            = delete;
+  basic_ostream& operator=(const basic_ostream& __rhs) = delete;
 
 public:
   // 27.7.2.4 Prefix/suffix:

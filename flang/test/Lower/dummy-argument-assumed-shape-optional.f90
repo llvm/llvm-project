@@ -41,6 +41,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_3]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}
@@ -85,6 +86,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_3]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}
@@ -130,6 +132,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_3]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}
@@ -189,6 +192,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_38]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_33]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}
@@ -251,6 +255,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_41]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_36]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}
@@ -319,6 +324,7 @@ end subroutine
 ! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_41]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_36]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
+! CHECK:    fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xf32>>
 ! CHECK:  }
 ! CHECK:  return
 ! CHECK:}

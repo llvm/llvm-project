@@ -13,7 +13,6 @@
 #include "terminator.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/pointer.h"
 #include "flang/Runtime/type-code.h"
 #include <cstdlib>
 
@@ -76,7 +75,7 @@ RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
     dim->sm = byteSize;
     byteSize *= extent;
   }
-  void *p{runtime::AllocateValidatedPointerPayload(byteSize)};
+  void *p{byteSize ? std::malloc(byteSize) : std::malloc(1)};
   if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
@@ -92,11 +91,8 @@ RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *descriptor) {
   if (descriptor->version != CFI_VERSION) {
     return CFI_INVALID_DESCRIPTOR;
   }
-  if (descriptor->attribute == CFI_attribute_pointer) {
-    if (!runtime::ValidatePointerPayload(*descriptor)) {
-      return CFI_INVALID_DESCRIPTOR;
-    }
-  } else if (descriptor->attribute != CFI_attribute_allocatable) {
+  if (descriptor->attribute != CFI_attribute_allocatable &&
+      descriptor->attribute != CFI_attribute_pointer) {
     // Non-interoperable object
     return CFI_INVALID_DESCRIPTOR;
   }

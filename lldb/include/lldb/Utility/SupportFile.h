@@ -30,12 +30,8 @@ public:
 
   virtual ~SupportFile() = default;
 
-  /// Return true if both SupportFiles have the same FileSpec and, if both have
-  /// a valid Checksum, the Checksum is the same.
   bool operator==(const SupportFile &other) const {
-    if (m_checksum && other.m_checksum)
-      return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
-    return m_file_spec == other.m_file_spec;
+    return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
   }
 
   bool operator!=(const SupportFile &other) const { return !(*this == other); }
@@ -48,6 +44,9 @@ public:
 
   /// Materialize the file to disk and return the path to that temporary file.
   virtual const FileSpec &Materialize() { return m_file_spec; }
+
+  /// Change the file name.
+  void Update(const FileSpec &file_spec) { m_file_spec = file_spec; }
 
 protected:
   FileSpec m_file_spec;

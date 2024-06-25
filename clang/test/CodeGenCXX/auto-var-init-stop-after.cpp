@@ -18,7 +18,7 @@ typedef struct {
 
 int foo(unsigned n) {
   // scalar variable
-  long a;
+  long a = 888;
   // array
   S arr[ARRLEN];
   // VLA

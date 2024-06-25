@@ -181,7 +181,8 @@ void RegAllocBase::enqueue(const LiveInterval *LI) {
   if (VRM->hasPhys(Reg))
     return;
 
-  if (shouldAllocateRegister(Reg)) {
+  const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
+  if (ShouldAllocateClass(*TRI, RC)) {
     LLVM_DEBUG(dbgs() << "Enqueuing " << printReg(Reg, TRI) << '\n');
     enqueueImpl(LI);
   } else {

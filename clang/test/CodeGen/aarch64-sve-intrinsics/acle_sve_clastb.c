@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[FALLBACK:%.*]], <vscale x 16 x i8> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svint8_t test_svclastb_s8(svbool_t pg, svint8_t fallback, svint8_t data) MODE_ATTR
+svint8_t test_svclastb_s8(svbool_t pg, svint8_t fallback, svint8_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_s8,,)(pg, fallback, data);
 }
@@ -49,7 +41,7 @@ svint8_t test_svclastb_s8(svbool_t pg, svint8_t fallback, svint8_t data) MODE_AT
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.clastb.nxv8i16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x i16> [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
-svint16_t test_svclastb_s16(svbool_t pg, svint16_t fallback, svint16_t data) MODE_ATTR
+svint16_t test_svclastb_s16(svbool_t pg, svint16_t fallback, svint16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_s16,,)(pg, fallback, data);
 }
@@ -66,7 +58,7 @@ svint16_t test_svclastb_s16(svbool_t pg, svint16_t fallback, svint16_t data) MOD
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.clastb.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
-svint32_t test_svclastb_s32(svbool_t pg, svint32_t fallback, svint32_t data) MODE_ATTR
+svint32_t test_svclastb_s32(svbool_t pg, svint32_t fallback, svint32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_s32,,)(pg, fallback, data);
 }
@@ -83,7 +75,7 @@ svint32_t test_svclastb_s32(svbool_t pg, svint32_t fallback, svint32_t data) MOD
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.clastb.nxv2i64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svint64_t test_svclastb_s64(svbool_t pg, svint64_t fallback, svint64_t data) MODE_ATTR
+svint64_t test_svclastb_s64(svbool_t pg, svint64_t fallback, svint64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_s64,,)(pg, fallback, data);
 }
@@ -98,7 +90,7 @@ svint64_t test_svclastb_s64(svbool_t pg, svint64_t fallback, svint64_t data) MOD
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.clastb.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[FALLBACK:%.*]], <vscale x 16 x i8> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svclastb_u8(svbool_t pg, svuint8_t fallback, svuint8_t data) MODE_ATTR
+svuint8_t test_svclastb_u8(svbool_t pg, svuint8_t fallback, svuint8_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_u8,,)(pg, fallback, data);
 }
@@ -115,7 +107,7 @@ svuint8_t test_svclastb_u8(svbool_t pg, svuint8_t fallback, svuint8_t data) MODE
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.clastb.nxv8i16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x i16> [[FALLBACK:%.*]], <vscale x 8 x i16> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
-svuint16_t test_svclastb_u16(svbool_t pg, svuint16_t fallback, svuint16_t data) MODE_ATTR
+svuint16_t test_svclastb_u16(svbool_t pg, svuint16_t fallback, svuint16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_u16,,)(pg, fallback, data);
 }
@@ -132,7 +124,7 @@ svuint16_t test_svclastb_u16(svbool_t pg, svuint16_t fallback, svuint16_t data) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.clastb.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[FALLBACK:%.*]], <vscale x 4 x i32> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
-svuint32_t test_svclastb_u32(svbool_t pg, svuint32_t fallback, svuint32_t data) MODE_ATTR
+svuint32_t test_svclastb_u32(svbool_t pg, svuint32_t fallback, svuint32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_u32,,)(pg, fallback, data);
 }
@@ -149,7 +141,7 @@ svuint32_t test_svclastb_u32(svbool_t pg, svuint32_t fallback, svuint32_t data) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.clastb.nxv2i64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[FALLBACK:%.*]], <vscale x 2 x i64> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svuint64_t test_svclastb_u64(svbool_t pg, svuint64_t fallback, svuint64_t data) MODE_ATTR
+svuint64_t test_svclastb_u64(svbool_t pg, svuint64_t fallback, svuint64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_u64,,)(pg, fallback, data);
 }
@@ -166,7 +158,7 @@ svuint64_t test_svclastb_u64(svbool_t pg, svuint64_t fallback, svuint64_t data) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.clastb.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[FALLBACK:%.*]], <vscale x 8 x half> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
-svfloat16_t test_svclastb_f16(svbool_t pg, svfloat16_t fallback, svfloat16_t data) MODE_ATTR
+svfloat16_t test_svclastb_f16(svbool_t pg, svfloat16_t fallback, svfloat16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_f16,,)(pg, fallback, data);
 }
@@ -183,7 +175,7 @@ svfloat16_t test_svclastb_f16(svbool_t pg, svfloat16_t fallback, svfloat16_t dat
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.clastb.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[FALLBACK:%.*]], <vscale x 4 x float> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
-svfloat32_t test_svclastb_f32(svbool_t pg, svfloat32_t fallback, svfloat32_t data) MODE_ATTR
+svfloat32_t test_svclastb_f32(svbool_t pg, svfloat32_t fallback, svfloat32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_f32,,)(pg, fallback, data);
 }
@@ -200,7 +192,7 @@ svfloat32_t test_svclastb_f32(svbool_t pg, svfloat32_t fallback, svfloat32_t dat
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.clastb.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[FALLBACK:%.*]], <vscale x 2 x double> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
-svfloat64_t test_svclastb_f64(svbool_t pg, svfloat64_t fallback, svfloat64_t data) MODE_ATTR
+svfloat64_t test_svclastb_f64(svbool_t pg, svfloat64_t fallback, svfloat64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_f64,,)(pg, fallback, data);
 }
@@ -215,7 +207,7 @@ svfloat64_t test_svclastb_f64(svbool_t pg, svfloat64_t fallback, svfloat64_t dat
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.aarch64.sve.clastb.n.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], i8 [[FALLBACK:%.*]], <vscale x 16 x i8> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret i8 [[TMP0]]
 //
-int8_t test_svclastb_n_s8(svbool_t pg, int8_t fallback, svint8_t data) MODE_ATTR
+int8_t test_svclastb_n_s8(svbool_t pg, int8_t fallback, svint8_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_s8,,)(pg, fallback, data);
 }
@@ -238,7 +230,7 @@ int8_t test_svclastb_n_s8(svbool_t pg, int8_t fallback, svint8_t data) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
 // CPP-CHECK-NEXT:    ret i16 [[TMP4]]
 //
-int16_t test_svclastb_n_s16(svbool_t pg, int16_t fallback, svint16_t data) MODE_ATTR
+int16_t test_svclastb_n_s16(svbool_t pg, int16_t fallback, svint16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_s16,,)(pg, fallback, data);
 }
@@ -261,7 +253,7 @@ int16_t test_svclastb_n_s16(svbool_t pg, int16_t fallback, svint16_t data) MODE_
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
 // CPP-CHECK-NEXT:    ret i32 [[TMP4]]
 //
-int32_t test_svclastb_n_s32(svbool_t pg, int32_t fallback, svint32_t data) MODE_ATTR
+int32_t test_svclastb_n_s32(svbool_t pg, int32_t fallback, svint32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_s32,,)(pg, fallback, data);
 }
@@ -284,7 +276,7 @@ int32_t test_svclastb_n_s32(svbool_t pg, int32_t fallback, svint32_t data) MODE_
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
 // CPP-CHECK-NEXT:    ret i64 [[TMP4]]
 //
-int64_t test_svclastb_n_s64(svbool_t pg, int64_t fallback, svint64_t data) MODE_ATTR
+int64_t test_svclastb_n_s64(svbool_t pg, int64_t fallback, svint64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_s64,,)(pg, fallback, data);
 }
@@ -299,7 +291,7 @@ int64_t test_svclastb_n_s64(svbool_t pg, int64_t fallback, svint64_t data) MODE_
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i8 @llvm.aarch64.sve.clastb.n.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], i8 [[FALLBACK:%.*]], <vscale x 16 x i8> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret i8 [[TMP0]]
 //
-uint8_t test_svclastb_n_u8(svbool_t pg, uint8_t fallback, svuint8_t data) MODE_ATTR
+uint8_t test_svclastb_n_u8(svbool_t pg, uint8_t fallback, svuint8_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_u8,,)(pg, fallback, data);
 }
@@ -322,7 +314,7 @@ uint8_t test_svclastb_n_u8(svbool_t pg, uint8_t fallback, svuint8_t data) MODE_A
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[TMP3]] to i16
 // CPP-CHECK-NEXT:    ret i16 [[TMP4]]
 //
-uint16_t test_svclastb_n_u16(svbool_t pg, uint16_t fallback, svuint16_t data) MODE_ATTR
+uint16_t test_svclastb_n_u16(svbool_t pg, uint16_t fallback, svuint16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_u16,,)(pg, fallback, data);
 }
@@ -345,7 +337,7 @@ uint16_t test_svclastb_n_u16(svbool_t pg, uint16_t fallback, svuint16_t data) MO
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[TMP3]] to i32
 // CPP-CHECK-NEXT:    ret i32 [[TMP4]]
 //
-uint32_t test_svclastb_n_u32(svbool_t pg, uint32_t fallback, svuint32_t data) MODE_ATTR
+uint32_t test_svclastb_n_u32(svbool_t pg, uint32_t fallback, svuint32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_u32,,)(pg, fallback, data);
 }
@@ -368,7 +360,7 @@ uint32_t test_svclastb_n_u32(svbool_t pg, uint32_t fallback, svuint32_t data) MO
 // CPP-CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
 // CPP-CHECK-NEXT:    ret i64 [[TMP4]]
 //
-uint64_t test_svclastb_n_u64(svbool_t pg, uint64_t fallback, svuint64_t data) MODE_ATTR
+uint64_t test_svclastb_n_u64(svbool_t pg, uint64_t fallback, svuint64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_u64,,)(pg, fallback, data);
 }
@@ -385,7 +377,7 @@ uint64_t test_svclastb_n_u64(svbool_t pg, uint64_t fallback, svuint64_t data) MO
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call half @llvm.aarch64.sve.clastb.n.nxv8f16(<vscale x 8 x i1> [[TMP0]], half [[FALLBACK:%.*]], <vscale x 8 x half> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret half [[TMP1]]
 //
-float16_t test_svclastb_n_f16(svbool_t pg, float16_t fallback, svfloat16_t data) MODE_ATTR
+float16_t test_svclastb_n_f16(svbool_t pg, float16_t fallback, svfloat16_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_f16,,)(pg, fallback, data);
 }
@@ -402,7 +394,7 @@ float16_t test_svclastb_n_f16(svbool_t pg, float16_t fallback, svfloat16_t data)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.aarch64.sve.clastb.n.nxv4f32(<vscale x 4 x i1> [[TMP0]], float [[FALLBACK:%.*]], <vscale x 4 x float> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret float [[TMP1]]
 //
-float32_t test_svclastb_n_f32(svbool_t pg, float32_t fallback, svfloat32_t data) MODE_ATTR
+float32_t test_svclastb_n_f32(svbool_t pg, float32_t fallback, svfloat32_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_f32,,)(pg, fallback, data);
 }
@@ -419,7 +411,7 @@ float32_t test_svclastb_n_f32(svbool_t pg, float32_t fallback, svfloat32_t data)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call double @llvm.aarch64.sve.clastb.n.nxv2f64(<vscale x 2 x i1> [[TMP0]], double [[FALLBACK:%.*]], <vscale x 2 x double> [[DATA:%.*]])
 // CPP-CHECK-NEXT:    ret double [[TMP1]]
 //
-float64_t test_svclastb_n_f64(svbool_t pg, float64_t fallback, svfloat64_t data) MODE_ATTR
+float64_t test_svclastb_n_f64(svbool_t pg, float64_t fallback, svfloat64_t data)
 {
   return SVE_ACLE_FUNC(svclastb,_n_f64,,)(pg, fallback, data);
 }

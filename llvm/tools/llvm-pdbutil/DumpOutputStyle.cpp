@@ -1494,13 +1494,13 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
           if (auto EC = Visitor.visitSymbolStreamFiltered(ModS.getSymbolArray(),
                                                           Filter)) {
             P.formatLine("Error while processing symbol records.  {0}",
-                         toStringWithoutConsuming(EC));
+                         toString(std::move(EC)));
             return EC;
           }
         } else if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(),
                                                        SS.Offset)) {
           P.formatLine("Error while processing symbol records.  {0}",
-                       toStringWithoutConsuming(EC));
+                       toString(std::move(EC)));
           return EC;
         }
         return Error::success();

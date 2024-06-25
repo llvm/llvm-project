@@ -32,14 +32,6 @@ static constexpr bool RestrictToPODTypesDefault = false;
 static constexpr char IgnoreMacrosName[] = "IgnoreMacros";
 static constexpr bool IgnoreMacrosDefault = true;
 
-static constexpr char StrictCStandardComplianceName[] =
-    "StrictCStandardCompliance";
-static constexpr bool StrictCStandardComplianceDefault = true;
-
-static constexpr char StrictCppStandardComplianceName[] =
-    "StrictCppStandardCompliance";
-static constexpr bool StrictCppStandardComplianceDefault = true;
-
 namespace {
 
 struct Designators {
@@ -105,12 +97,7 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
       IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
-      StrictCStandardCompliance(Options.get(StrictCStandardComplianceName,
-                                            StrictCStandardComplianceDefault)),
-      StrictCppStandardCompliance(
-          Options.get(StrictCppStandardComplianceName,
-                      StrictCppStandardComplianceDefault)) {}
+          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)) {}
 
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasBaseWithFields =
@@ -192,9 +179,6 @@ void UseDesignatedInitializersCheck::storeOptions(
                 IgnoreSingleElementAggregates);
   Options.store(Opts, RestrictToPODTypesName, RestrictToPODTypes);
   Options.store(Opts, IgnoreMacrosName, IgnoreMacros);
-  Options.store(Opts, StrictCStandardComplianceName, StrictCStandardCompliance);
-  Options.store(Opts, StrictCppStandardComplianceName,
-                StrictCppStandardCompliance);
 }
 
 } // namespace clang::tidy::modernize

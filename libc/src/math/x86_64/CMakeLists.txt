@@ -9,6 +9,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sin
+  SRCS
+    sin.cpp
+  HDRS
+    ../sin.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   tan
   SRCS
     tan.cpp

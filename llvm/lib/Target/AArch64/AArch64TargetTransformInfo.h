@@ -276,7 +276,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->isSVEAvailable())
+    if (!ST->hasSVE() || !ST->isNeonAvailable())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.
@@ -373,11 +373,9 @@ public:
 
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
-  bool supportsScalableVectors() const {
-    return ST->isSVEorStreamingSVEAvailable();
-  }
+  bool supportsScalableVectors() const { return ST->hasSVE(); }
 
-  bool enableScalableVectorization() const { return ST->isSVEAvailable(); }
+  bool enableScalableVectorization() const { return ST->hasSVE(); }
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;

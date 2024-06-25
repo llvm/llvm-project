@@ -207,8 +207,9 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
 
 void transform::TestFuseConsumerOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  producesHandle(getConsumer(), effects);
+  producesHandle(getFusedConsumer(), effects);
   modifiesPayload(effects);
 }
 
@@ -284,8 +285,9 @@ transform::TestTileUsingForallOp::apply(TransformRewriter &rewriter,
 
 void transform::TestTileUsingForallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getTarget(), effects);
+  producesHandle(getTiledOp(), effects);
+  producesHandle(getLoops(), effects);
   modifiesPayload(effects);
 }
 
@@ -373,8 +375,9 @@ transform::TestFuseUsingForallOp::apply(TransformRewriter &rewriter,
 
 void transform::TestFuseUsingForallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getRootOpMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
+  consumesHandle(getRootOp(), effects);
+  producesHandle(getTiledOps(), effects);
+  producesHandle(getLoops(), effects);
   modifiesPayload(effects);
 }
 

@@ -132,13 +132,13 @@ static cl::opt<bool>
 #ifndef NDEBUG
 static cl::list<std::string>
     SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma separated list of attribute names that are "
+                  cl::desc("Comma seperated list of attribute names that are "
                            "allowed to be seeded."),
                   cl::CommaSeparated);
 
 static cl::list<std::string> FunctionSeedAllowList(
     "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma separated list of function names that are "
+    cl::desc("Comma seperated list of function names that are "
              "allowed to be seeded."),
     cl::CommaSeparated);
 #endif
@@ -1749,10 +1749,6 @@ bool Attributor::checkForAllCallees(
   return Pred(Callees.getArrayRef());
 }
 
-bool canMarkAsVisited(const User *Usr) {
-  return isa<PHINode>(Usr) || !isa<Instruction>(Usr);
-}
-
 bool Attributor::checkForAllUses(
     function_ref<bool(const Use &, bool &)> Pred,
     const AbstractAttribute &QueryingAA, const Value &V,
@@ -1800,7 +1796,7 @@ bool Attributor::checkForAllUses(
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    if (canMarkAsVisited(U->getUser()) && !Visited.insert(U).second)
+    if (isa<PHINode>(U->getUser()) && !Visited.insert(U).second)
       continue;
     DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U->getUser()))

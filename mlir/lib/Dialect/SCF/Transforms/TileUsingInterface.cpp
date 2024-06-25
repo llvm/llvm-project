@@ -718,7 +718,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   SmallVector<Value> &initTensors = maybeInitTensors.value();
 
   // 3. Define the callback to use for generating the inner most tile loop body.
-  SmallVector<Operation *> parallelTiledOps;
+  Operation *parallelOp = nullptr;
   auto innerYieldTiledValuesFn =
       [&](RewriterBase &rewriter, Location loc, ValueRange ivs,
           ValueRange regionIterArgs, SmallVector<Value> &tiledResult,
@@ -743,33 +743,26 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
     }
 
     // 4a. Clone the operation.
-    {
-      auto clonedOp = cast<PartialReductionOpInterface>(
-          cloneOpAndUpdateDestinationArgs(b, op, regionIterArgs));
+    auto clonedOp = cast<PartialReductionOpInterface>(
+        cloneOpAndUpdateDestinationArgs(b, op, regionIterArgs));
 
-      // 4b. Tile the cloned operation.
-      FailureOr<TilingResult> partialTilingResult =
-          clonedOp.tileToPartialReduction(b, loc, regionIterArgs, offsets,
-                                          sizes, reductionDims);
-      if (failed(partialTilingResult)) {
-        return failure();
-      }
-      std::swap(parallelTiledOps, partialTilingResult->tiledOps);
-      std::swap(tiledResult, partialTilingResult->tiledValues);
+    // 4b. Tile the cloned operation.
+    parallelOp = clonedOp.tileToPartialReduction(b, loc, regionIterArgs,
+                                                 offsets, sizes, reductionDims);
+    // 4c. Delete the cloned operation.
+    b.eraseOp(clonedOp);
 
-      // 4c. Delete the cloned operation.
-      b.eraseOp(clonedOp);
-    }
-
+    tiledResult.append(parallelOp->result_begin(), parallelOp->result_end());
     // 4d. Compute the offsets and sizes needed to insert the result of the
     // tiled value back into destination before yielding the destination.
-    for (auto result : tiledResult) {
+    for (int resultIdx : llvm::seq<int>(0, parallelOp->getNumResults())) {
       SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
       resultOffsets.emplace_back(std::move(outOffsets));
 
       SmallVector<OpFoldResult> outSizes;
       for (size_t i = 0; i < offsets.size(); i++) {
-        outSizes.push_back(tensor::getMixedSize(b, loc, result, i));
+        outSizes.push_back(
+            tensor::getMixedSize(b, loc, parallelOp->getResult(resultIdx), i));
       }
       resultSizes.emplace_back(std::move(outSizes));
     }
@@ -789,21 +782,15 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   // 5. Apply the merge reduction to combine all the partial values.
   b.setInsertionPointAfter(*loops.begin());
-  FailureOr<MergeResult> mergeResult =
-      op.mergeReductions(b, loc, replacements, reductionDims);
-  if (failed(mergeResult)) {
-    return failure();
-  }
-  b.replaceOp(op, mergeResult->replacements);
+  Operation *mergeOp = op.mergeReductions(b, loc, replacements, reductionDims);
+  b.replaceOp(op, mergeOp->getResults());
 
-  SCFReductionTilingResult reductionTilingResult;
-  std::swap(reductionTilingResult.parallelTiledOps, parallelTiledOps);
-  std::swap(reductionTilingResult.mergeOps, mergeResult->mergeOps);
-  std::swap(reductionTilingResult.initialValues, initTensors);
-  std::swap(reductionTilingResult.loops, loops);
-  std::swap(reductionTilingResult.replacements, mergeResult->replacements);
-
-  return reductionTilingResult;
+  SCFReductionTilingResult results;
+  results.initialValues = initTensors;
+  results.loops = loops;
+  results.parallelTiledOp = parallelOp;
+  results.mergeOp = mergeOp;
+  return results;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1261,13 +1261,11 @@ struct PayloadIRResource
 ///   - consumes = Read + Free,
 ///   - produces = Allocate + Write,
 ///   - onlyReads = Read.
-void consumesHandle(MutableArrayRef<OpOperand> handles,
+void consumesHandle(ValueRange handles,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void producesHandle(ResultRange handles,
+void producesHandle(ValueRange handles,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void producesHandle(MutableArrayRef<BlockArgument> handles,
-                    SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
-void onlyReadsHandle(MutableArrayRef<OpOperand> handles,
+void onlyReadsHandle(ValueRange handles,
                      SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
 
 /// Checks whether the transform op consumes the given handle.
@@ -1298,8 +1296,8 @@ public:
   /// the results by allocating and writing it and reads/writes the payload IR
   /// in the process.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    consumesHandle(this->getOperation()->getOpOperands(), effects);
-    producesHandle(this->getOperation()->getOpResults(), effects);
+    consumesHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
     modifiesPayload(effects);
   }
 
@@ -1324,8 +1322,8 @@ public:
   /// This op produces handles to the Payload IR without consuming the original
   /// handles and without modifying the IR itself.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    onlyReadsHandle(this->getOperation()->getOpOperands(), effects);
-    producesHandle(this->getOperation()->getOpResults(), effects);
+    onlyReadsHandle(this->getOperation()->getOperands(), effects);
+    producesHandle(this->getOperation()->getResults(), effects);
     if (llvm::any_of(this->getOperation()->getOperandTypes(), [](Type t) {
           return isa<TransformHandleTypeInterface,
                      TransformValueHandleTypeInterface>(t);

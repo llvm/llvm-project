@@ -147,7 +147,7 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
                  MAP_ALLOWNOMEM)) {
     MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
     setrlimit(RLIMIT_AS, &Limit);
-    TEST_SKIP("Limiting address space does not prevent mmap.");
+    GTEST_SKIP() << "Limiting address space does not prevent mmap.";
   }
 
   // Test requires that the default length is at least 6 characters.

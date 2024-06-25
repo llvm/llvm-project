@@ -286,7 +286,7 @@ bool PresburgerSpace::isAligned(const PresburgerSpace &other,
   return getNumVarKind(kind) == other.getNumVarKind(kind);
 }
 
-void PresburgerSpace::setVarSymbolSeparation(unsigned newSymbolCount) {
+void PresburgerSpace::setVarSymbolSeperation(unsigned newSymbolCount) {
   assert(newSymbolCount <= getNumDimAndSymbolVars() &&
          "invalid separation position");
   numRange = numRange + numSymbols - newSymbolCount;

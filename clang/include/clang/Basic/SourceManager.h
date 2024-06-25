@@ -1676,11 +1676,6 @@ public:
   isInTheSameTranslationUnit(std::pair<FileID, unsigned> &LOffs,
                              std::pair<FileID, unsigned> &ROffs) const;
 
-  /// \param Loc a source location in a loaded AST (of a PCH/Module file).
-  /// \returns a FileID uniquely identifies the AST of a loaded
-  /// module/PCH where `Loc` is at.
-  FileID getUniqueLoadedASTFileID(SourceLocation Loc) const;
-
   /// Determines whether the two decomposed source location is in the same TU.
   bool isInTheSameTranslationUnitImpl(
       const std::pair<FileID, unsigned> &LOffs,
@@ -1981,7 +1976,6 @@ private:
                                          SourceLocation SpellLoc,
                                          SourceLocation ExpansionLoc,
                                          unsigned ExpansionLength) const;
-  void updateSlocUsageStats() const;
 };
 
 /// Comparison function object.

@@ -279,9 +279,6 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
       hasParent(callExpr()),
       hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
 
-  auto IsInCompilerGeneratedFunction = hasAncestor(namedDecl(anyOf(
-      isImplicit(), functionDecl(isDefaulted()), functionTemplateDecl())));
-
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
@@ -302,7 +299,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),
                    unless(isInTemplateInstantiation()),
-                   unless(IsInCompilerGeneratedFunction))
+                   unless(hasAncestor(functionTemplateDecl())))
                    .bind("implicitCastToBool")),
       this);
 
@@ -334,7 +331,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
                     anything()),
               unless(isInTemplateInstantiation()),
-              unless(IsInCompilerGeneratedFunction))),
+              unless(hasAncestor(functionTemplateDecl())))),
       this);
 }
 

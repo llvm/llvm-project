@@ -2395,7 +2395,8 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   llvm::erase_if(SymbolList,
                  [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
-  SymbolList.erase(llvm::unique(SymbolList), SymbolList.end());
+  SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
+                   SymbolList.end());
   printExportSymbolList(SymbolList);
 }
 

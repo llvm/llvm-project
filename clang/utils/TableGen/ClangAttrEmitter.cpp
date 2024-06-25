@@ -105,9 +105,9 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.readDeclAs<" +
+      .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">()")
+                              ">(LocalDeclID(Record.readInt()))")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
@@ -903,15 +903,13 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
-    bool isCovered;
 
   public:
     EnumArgument(const Record &Arg, StringRef Attr)
         : Argument(Arg, Attr), values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")),
-          isCovered(Arg.getValueAsBit("IsCovered")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -995,7 +993,7 @@ namespace {
         OS << "      OS << \" " << I << "\";\n";
         OS << "      break;\n";
       }
-      if (!isCovered) {
+      if (isExternal) {
         OS << "    default:\n";
         OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
@@ -1038,7 +1036,7 @@ namespace {
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
       }
-      if (!isCovered) {
+      if (isExternal) {
         OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
@@ -1052,7 +1050,6 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
-    bool isCovered;
 
   protected:
     void writeValueImpl(raw_ostream &OS) const override {
@@ -1071,8 +1068,7 @@ namespace {
           values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")),
-          isCovered(Arg.getValueAsBit("IsCovered")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -1114,10 +1110,6 @@ namespace {
         OS << "    case " << fullType << "::" << UI << ":\n";
         OS << "      OS << \" " << UI << "\";\n";
         OS << "      break;\n";
-      }
-      if (!isCovered) {
-        OS << "    default:\n";
-        OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "      }\n";
       OS << "    }\n";
@@ -1175,9 +1167,6 @@ namespace {
         if (Uniques.insert(enums[I]).second)
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
-      }
-      if (!isCovered) {
-        OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
          << "  llvm_unreachable(\"No enumerator with that value\");\n"

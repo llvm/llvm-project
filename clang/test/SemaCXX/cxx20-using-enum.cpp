@@ -148,10 +148,13 @@ template <int I> struct C {
   enum class D { d,
                  e,
                  f };
-  using enum D; // expected-error {{using-enum cannot name a dependent type}}
+  using enum D;
+
+  static constexpr int W = int(f) + I;
 };
 
 static_assert(C<2>::V == 4);
+static_assert(C<20>::W == 22);
 
 } // namespace Seven
 
@@ -237,13 +240,6 @@ class TPLa {
 TPLa<int> a;
 
 } // namespace Thirteen
-
-namespace Fourteen {
-template<typename T>
-int A = T();
-
-using enum A<int>; // expected-error {{A is not an enumerated type}}
-} // namespace Fourteen
 
 namespace GH58057 {
 struct Wrap {

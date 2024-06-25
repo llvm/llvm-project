@@ -1,6 +1,6 @@
 void __init_cpu_features_resolver(unsigned long hwcap,
                                   const __ifunc_arg_t *arg) {
-  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
+  if (__aarch64_cpu_features.features)
     return;
 
   __init_cpu_features_constructor(hwcap, arg);
@@ -10,7 +10,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   unsigned long hwcap = 0;
   unsigned long hwcap2 = 0;
   // CPU features already initialized.
-  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
+  if (__aarch64_cpu_features.features)
     return;
 
   int res = 0;

@@ -34,8 +34,8 @@ public:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, uint64_t &Offset) const;
   void computeInfo(CGFunctionInfo &FI) const override;
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
-                   AggValueSlot Slot) const override;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
   ABIArgInfo extendType(QualType Ty) const;
 };
 
@@ -346,8 +346,8 @@ void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {
     I.info = classifyArgumentType(I.type, Offset);
 }
 
-RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType OrigTy, AggValueSlot Slot) const {
+Address MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType OrigTy) const {
   QualType Ty = OrigTy;
 
   // Integer arguments are promoted to 32-bit on O32 and 64-bit on N32/N64.
@@ -373,25 +373,28 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // MinABIStackAlignInBytes is the size of argument slots on the stack.
   CharUnits ArgSlotSize = CharUnits::fromQuantity(MinABIStackAlignInBytes);
 
-  RValue Res = emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false, TyInfo,
-                                ArgSlotSize, /*AllowHigherAlign*/ true, Slot);
+  Address Addr = emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
+                          TyInfo, ArgSlotSize, /*AllowHigherAlign*/ true);
 
-  // If there was a promotion, "unpromote".
+
+  // If there was a promotion, "unpromote" into a temporary.
   // TODO: can we just use a pointer into a subset of the original slot?
   if (DidPromote) {
-    llvm::Type *ValTy = CGF.ConvertType(OrigTy);
-    llvm::Value *Promoted = Res.getScalarVal();
+    Address Temp = CGF.CreateMemTemp(OrigTy, "vaarg.promotion-temp");
+    llvm::Value *Promoted = CGF.Builder.CreateLoad(Addr);
 
     // Truncate down to the right width.
-    llvm::Type *IntTy = (OrigTy->isIntegerType() ? ValTy : CGF.IntPtrTy);
+    llvm::Type *IntTy = (OrigTy->isIntegerType() ? Temp.getElementType()
+                                                 : CGF.IntPtrTy);
     llvm::Value *V = CGF.Builder.CreateTrunc(Promoted, IntTy);
     if (OrigTy->isPointerType())
-      V = CGF.Builder.CreateIntToPtr(V, ValTy);
+      V = CGF.Builder.CreateIntToPtr(V, Temp.getElementType());
 
-    return RValue::get(V);
+    CGF.Builder.CreateStore(V, Temp);
+    Addr = Temp;
   }
 
-  return Res;
+  return Addr;
 }
 
 ABIArgInfo MipsABIInfo::extendType(QualType Ty) const {

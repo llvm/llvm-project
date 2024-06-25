@@ -1123,13 +1123,15 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     // FIXME: Support other types
-    Type *FromTy =
-        getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(1).getReg()));
+    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
+    if ((ToSize != 32 && ToSize != 64) || (FromSize != 32 && FromSize != 64))
       return UnableToLegalize;
     LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver);
+        MI, MIRBuilder,
+        ToSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
+        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
+        LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -8390,6 +8392,8 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineFunction &MF = *MI.getMF();
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -8511,6 +8515,13 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
   }
 
   return true;
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
 }
 
 // Get a vectorized representation of the memset value operand, GISel edition.

@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -32,7 +24,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincw.n32(i32 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincw_n_s32(int32_t op) MODE_ATTR
+int32_t test_svqincw_n_s32(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_n_s32,,)(op, 1);
 }
@@ -47,7 +39,7 @@ int32_t test_svqincw_n_s32(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincw_n_s32_1(int32_t op) MODE_ATTR
+int32_t test_svqincw_n_s32_1(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_n_s32,,)(op, 16);
 }
@@ -62,7 +54,7 @@ int32_t test_svqincw_n_s32_1(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqincw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-int64_t test_svqincw_n_s64(int64_t op) MODE_ATTR
+int64_t test_svqincw_n_s64(int64_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_n_s64,,)(op, 1);
 }
@@ -77,7 +69,7 @@ int64_t test_svqincw_n_s64(int64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqincw.n32(i32 [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-uint32_t test_svqincw_n_u32(uint32_t op) MODE_ATTR
+uint32_t test_svqincw_n_u32(uint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_n_u32,,)(op, 16);
 }
@@ -92,7 +84,7 @@ uint32_t test_svqincw_n_u32(uint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqincw.n64(i64 [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svqincw_n_u64(uint64_t op) MODE_ATTR
+uint64_t test_svqincw_n_u64(uint64_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_n_u64,,)(op, 1);
 }
@@ -107,7 +99,7 @@ uint64_t test_svqincw_n_u64(uint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.sqincw.n32(i32 [[OP:%.*]], i32 4, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-int32_t test_svqincw_pat_n_s32(int32_t op) MODE_ATTR
+int32_t test_svqincw_pat_n_s32(int32_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_n_s32,,)(op, SV_VL4, 16);
 }
@@ -122,7 +114,7 @@ int32_t test_svqincw_pat_n_s32(int32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.sqincw.n64(i64 [[OP:%.*]], i32 5, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-int64_t test_svqincw_pat_n_s64(int64_t op) MODE_ATTR
+int64_t test_svqincw_pat_n_s64(int64_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_n_s64,,)(op, SV_VL5, 1);
 }
@@ -137,7 +129,7 @@ int64_t test_svqincw_pat_n_s64(int64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.aarch64.sve.uqincw.n32(i32 [[OP:%.*]], i32 6, i32 16)
 // CPP-CHECK-NEXT:    ret i32 [[TMP0]]
 //
-uint32_t test_svqincw_pat_n_u32(uint32_t op) MODE_ATTR
+uint32_t test_svqincw_pat_n_u32(uint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_n_u32,,)(op, SV_VL6, 16);
 }
@@ -152,7 +144,7 @@ uint32_t test_svqincw_pat_n_u32(uint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sve.uqincw.n64(i64 [[OP:%.*]], i32 7, i32 1)
 // CPP-CHECK-NEXT:    ret i64 [[TMP0]]
 //
-uint64_t test_svqincw_pat_n_u64(uint64_t op) MODE_ATTR
+uint64_t test_svqincw_pat_n_u64(uint64_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_n_u64,,)(op, SV_VL7, 1);
 }
@@ -167,7 +159,7 @@ uint64_t test_svqincw_pat_n_u64(uint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqincw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 16)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svqincw_s32(svint32_t op) MODE_ATTR
+svint32_t test_svqincw_s32(svint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_s32,,)(op, 16);
 }
@@ -182,7 +174,7 @@ svint32_t test_svqincw_s32(svint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqincw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 31, i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svqincw_u32(svuint32_t op) MODE_ATTR
+svuint32_t test_svqincw_u32(svuint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw,_u32,,)(op, 1);
 }
@@ -197,7 +189,7 @@ svuint32_t test_svqincw_u32(svuint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sqincw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 8, i32 16)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svint32_t test_svqincw_pat_s32(svint32_t op) MODE_ATTR
+svint32_t test_svqincw_pat_s32(svint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_s32,,)(op, SV_VL8, 16);
 }
@@ -212,7 +204,7 @@ svint32_t test_svqincw_pat_s32(svint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uqincw.nxv4i32(<vscale x 4 x i32> [[OP:%.*]], i32 9, i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-svuint32_t test_svqincw_pat_u32(svuint32_t op) MODE_ATTR
+svuint32_t test_svqincw_pat_u32(svuint32_t op)
 {
   return SVE_ACLE_FUNC(svqincw_pat,_u32,,)(op, SV_VL16, 1);
 }

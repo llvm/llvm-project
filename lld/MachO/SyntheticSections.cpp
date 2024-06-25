@@ -1478,8 +1478,11 @@ void IndirectSymtabSection::finalizeContents() {
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
-  if (sym->symtabIndex == UINT32_MAX || !needsBinding(sym))
+  if (sym->symtabIndex == UINT32_MAX)
     return INDIRECT_SYMBOL_LOCAL;
+  if (auto *defined = dyn_cast<Defined>(sym))
+    if (defined->privateExtern)
+      return INDIRECT_SYMBOL_LOCAL;
   return sym->symtabIndex;
 }
 

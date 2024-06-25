@@ -18,7 +18,6 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
-#include <stack>
 
 using namespace clang;
 

@@ -20,6 +20,7 @@
 using namespace llvm;
 
 void MipsRegInfoRecord::EmitMipsOptionRecord() {
+  MCAssembler &MCA = Streamer->getAssembler();
   MipsTargetStreamer *MTS =
       static_cast<MipsTargetStreamer *>(Streamer->getTargetStreamer());
 
@@ -35,6 +36,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     MCSectionELF *Sec =
         Context.getELFSection(".MIPS.options", ELF::SHT_MIPS_OPTIONS,
                               ELF::SHF_ALLOC | ELF::SHF_MIPS_NOSTRIP, 1);
+    MCA.registerSection(*Sec);
     Sec->setAlignment(Align(8));
     Streamer->switchSection(Sec);
 
@@ -52,6 +54,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
   } else {
     MCSectionELF *Sec = Context.getELFSection(".reginfo", ELF::SHT_MIPS_REGINFO,
                                               ELF::SHF_ALLOC, 24);
+    MCA.registerSection(*Sec);
     Sec->setAlignment(MTS->getABI().IsN32() ? Align(8) : Align(4));
     Streamer->switchSection(Sec);
 

@@ -44,13 +44,7 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
                unless(isInTemplateInstantiation()))
           .bind("call-move");
 
-  Finder->addMatcher(
-      expr(anyOf(
-          castExpr(hasSourceExpression(MoveCallMatcher)),
-          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(anyOf(
-                               isCopyConstructor(), isMoveConstructor()))),
-                           hasArgument(0, MoveCallMatcher)))),
-      this);
+  Finder->addMatcher(MoveCallMatcher, this);
 
   auto ConstTypeParmMatcher =
       qualType(references(isConstQualified())).bind("invocation-parm-type");

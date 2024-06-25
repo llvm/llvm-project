@@ -4,8 +4,8 @@
 ;; Check AssignmentTrackingPass ignores a dbg.declare with an empty metadata
 ;; location operand.
 
-; CHECK:      #dbg_declare
-; CHECK-NOT:  #dbg_assign
+; CHECK:      call void @llvm.dbg.declare
+; CHECK-NOT:  call void @llvm.dbg.assign
 
 define dso_local void @_Z3funv() #0 !dbg !10 {
 entry:

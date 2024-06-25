@@ -191,13 +191,12 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
 }
 
 TEST_F(MapAllocatorTest, SecondaryOptions) {
-  // Test options that are only meaningful if the secondary cache is enabled.
+  // Attempt to set a maximum number of entries higher than the array size.
+  EXPECT_FALSE(
+      Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
+  // A negative number will be cast to a scudo::u32, and fail.
+  EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
   if (Allocator->canCache(0U)) {
-    // Attempt to set a maximum number of entries higher than the array size.
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
-    // Attempt to set an invalid (negative) number of entries
-    EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
     // Various valid combinations.
     EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
     EXPECT_TRUE(

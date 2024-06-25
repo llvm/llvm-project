@@ -9,7 +9,6 @@ add_llvm_component_library(LLVMCore
   Comdat.cpp
   ConstantFold.cpp
   ConstantRange.cpp
-  ConstantRangeList.cpp
   Constants.cpp
   ConvergenceVerifier.cpp
   Core.cpp

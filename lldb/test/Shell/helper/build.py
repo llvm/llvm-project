@@ -441,9 +441,9 @@ class MsvcBuilder(Builder):
         if not subdirs:
             return None
 
-        from packaging import version
+        from distutils.version import StrictVersion
 
-        subdirs.sort(key=lambda x: version.parse(x))
+        subdirs.sort(key=lambda x: StrictVersion(x))
 
         if self.verbose:
             full_path = os.path.join(vcinstalldir, subdirs[-1])
@@ -517,9 +517,11 @@ class MsvcBuilder(Builder):
             if not sdk_versions:
                 return (None, None)
 
-            from packaging import version
+            # Windows SDK version numbers consist of 4 dotted components, so we
+            # have to use LooseVersion, as StrictVersion supports 3 or fewer.
+            from pkg_resources import packaging
 
-            sdk_versions.sort(key=lambda x: version.parse(x), reverse=True)
+            sdk_versions.sort(key=lambda x: packaging.version.parse(x), reverse=True)
             option_value_name = "OptionId.DesktopCPP" + self.msvc_arch_str
             for v in sdk_versions:
                 try:

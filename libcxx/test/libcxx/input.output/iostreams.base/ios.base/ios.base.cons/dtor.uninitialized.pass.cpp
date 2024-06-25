@@ -10,7 +10,7 @@
 
 // The fix for issue 57964 requires an updated dylib due to explicit
 // instantiations. That means Apple backdeployment targets remain broken.
-// XFAIL: using-built-library-before-llvm-19
+// UNSUPPORTED: using-built-library-before-llvm-19
 
 // <ios>
 

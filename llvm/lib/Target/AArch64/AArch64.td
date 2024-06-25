@@ -19,7 +19,6 @@ include "llvm/Target/Target.td"
 // Subtarget features.
 //===----------------------------------------------------------------------===//
 include "AArch64Features.td"
-include "AArch64FMV.td"
 
 //===----------------------------------------------------------------------===//
 // Register File Description

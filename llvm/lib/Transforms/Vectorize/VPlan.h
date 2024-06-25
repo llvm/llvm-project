@@ -614,15 +614,6 @@ public:
       appendPredecessor(Pred);
   }
 
-  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
-  /// This VPBlockBase must have no successors. This VPBlockBase is not added
-  /// as predecessor of any VPBasicBlock in \p NewSuccs.
-  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
-    assert(Successors.empty() && "Block successors already set.");
-    for (auto *Succ : NewSuccs)
-      appendSuccessor(Succ);
-  }
-
   /// Remove all the predecessor of this block.
   void clearPredecessors() { Predecessors.clear(); }
 
@@ -1334,7 +1325,20 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override;
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    if (getOperand(0) != Op)
+      return false;
+    switch (getOpcode()) {
+    default:
+      return false;
+    case VPInstruction::BranchOnCount:
+    case VPInstruction::CanonicalIVIncrementForPart:
+      return true;
+    };
+    llvm_unreachable("switch should return");
+  }
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
@@ -3674,10 +3678,6 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->isVectorToScalar();
   return false;
 }
-
-/// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(VPValue *V, VPlan &Plan);
-
 } // end namespace vputils
 
 } // end namespace llvm

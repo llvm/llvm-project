@@ -5,16 +5,8 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
-
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -33,7 +25,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svint8_t test_svldnt1_s8(svbool_t pg, const int8_t *base) MODE_ATTR
+svint8_t test_svldnt1_s8(svbool_t pg, const int8_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_s8,,)(pg, base);
 }
@@ -50,7 +42,7 @@ svint8_t test_svldnt1_s8(svbool_t pg, const int8_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
-svint16_t test_svldnt1_s16(svbool_t pg, const int16_t *base) MODE_ATTR
+svint16_t test_svldnt1_s16(svbool_t pg, const int16_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_s16,,)(pg, base);
 }
@@ -67,7 +59,7 @@ svint16_t test_svldnt1_s16(svbool_t pg, const int16_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
-svint32_t test_svldnt1_s32(svbool_t pg, const int32_t *base) MODE_ATTR
+svint32_t test_svldnt1_s32(svbool_t pg, const int32_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_s32,,)(pg, base);
 }
@@ -84,7 +76,7 @@ svint32_t test_svldnt1_s32(svbool_t pg, const int32_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svint64_t test_svldnt1_s64(svbool_t pg, const int64_t *base) MODE_ATTR
+svint64_t test_svldnt1_s64(svbool_t pg, const int64_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_s64,,)(pg, base);
 }
@@ -99,7 +91,7 @@ svint64_t test_svldnt1_s64(svbool_t pg, const int64_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svldnt1_u8(svbool_t pg, const uint8_t *base) MODE_ATTR
+svuint8_t test_svldnt1_u8(svbool_t pg, const uint8_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_u8,,)(pg, base);
 }
@@ -116,7 +108,7 @@ svuint8_t test_svldnt1_u8(svbool_t pg, const uint8_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 //
-svuint16_t test_svldnt1_u16(svbool_t pg, const uint16_t *base) MODE_ATTR
+svuint16_t test_svldnt1_u16(svbool_t pg, const uint16_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_u16,,)(pg, base);
 }
@@ -133,7 +125,7 @@ svuint16_t test_svldnt1_u16(svbool_t pg, const uint16_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
 //
-svuint32_t test_svldnt1_u32(svbool_t pg, const uint32_t *base) MODE_ATTR
+svuint32_t test_svldnt1_u32(svbool_t pg, const uint32_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_u32,,)(pg, base);
 }
@@ -150,7 +142,7 @@ svuint32_t test_svldnt1_u32(svbool_t pg, const uint32_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
-svuint64_t test_svldnt1_u64(svbool_t pg, const uint64_t *base) MODE_ATTR
+svuint64_t test_svldnt1_u64(svbool_t pg, const uint64_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_u64,,)(pg, base);
 }
@@ -167,7 +159,7 @@ svuint64_t test_svldnt1_u64(svbool_t pg, const uint64_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ldnt1.nxv8f16(<vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP1]]
 //
-svfloat16_t test_svldnt1_f16(svbool_t pg, const float16_t *base) MODE_ATTR
+svfloat16_t test_svldnt1_f16(svbool_t pg, const float16_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_f16,,)(pg, base);
 }
@@ -184,7 +176,7 @@ svfloat16_t test_svldnt1_f16(svbool_t pg, const float16_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.nxv4f32(<vscale x 4 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 //
-svfloat32_t test_svldnt1_f32(svbool_t pg, const float32_t *base) MODE_ATTR
+svfloat32_t test_svldnt1_f32(svbool_t pg, const float32_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_f32,,)(pg, base);
 }
@@ -201,7 +193,7 @@ svfloat32_t test_svldnt1_f32(svbool_t pg, const float32_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ldnt1.nxv2f64(<vscale x 2 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
-svfloat64_t test_svldnt1_f64(svbool_t pg, const float64_t *base) MODE_ATTR
+svfloat64_t test_svldnt1_f64(svbool_t pg, const float64_t *base)
 {
   return SVE_ACLE_FUNC(svldnt1,_f64,,)(pg, base);
 }
@@ -218,7 +210,7 @@ svfloat64_t test_svldnt1_f64(svbool_t pg, const float64_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
-svint8_t test_svldnt1_vnum_s8(svbool_t pg, const int8_t *base, int64_t vnum) MODE_ATTR
+svint8_t test_svldnt1_vnum_s8(svbool_t pg, const int8_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_s8,,)(pg, base, vnum);
 }
@@ -237,7 +229,7 @@ svint8_t test_svldnt1_vnum_s8(svbool_t pg, const int8_t *base, int64_t vnum) MOD
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
-svint16_t test_svldnt1_vnum_s16(svbool_t pg, const int16_t *base, int64_t vnum) MODE_ATTR
+svint16_t test_svldnt1_vnum_s16(svbool_t pg, const int16_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_s16,,)(pg, base, vnum);
 }
@@ -256,7 +248,7 @@ svint16_t test_svldnt1_vnum_s16(svbool_t pg, const int16_t *base, int64_t vnum) 
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
-svint32_t test_svldnt1_vnum_s32(svbool_t pg, const int32_t *base, int64_t vnum) MODE_ATTR
+svint32_t test_svldnt1_vnum_s32(svbool_t pg, const int32_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_s32,,)(pg, base, vnum);
 }
@@ -275,7 +267,7 @@ svint32_t test_svldnt1_vnum_s32(svbool_t pg, const int32_t *base, int64_t vnum) 
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svint64_t test_svldnt1_vnum_s64(svbool_t pg, const int64_t *base, int64_t vnum) MODE_ATTR
+svint64_t test_svldnt1_vnum_s64(svbool_t pg, const int64_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_s64,,)(pg, base, vnum);
 }
@@ -292,7 +284,7 @@ svint64_t test_svldnt1_vnum_s64(svbool_t pg, const int64_t *base, int64_t vnum) 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> [[PG:%.*]], ptr [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
 //
-svuint8_t test_svldnt1_vnum_u8(svbool_t pg, const uint8_t *base, int64_t vnum) MODE_ATTR
+svuint8_t test_svldnt1_vnum_u8(svbool_t pg, const uint8_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_u8,,)(pg, base, vnum);
 }
@@ -311,7 +303,7 @@ svuint8_t test_svldnt1_vnum_u8(svbool_t pg, const uint8_t *base, int64_t vnum) M
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
-svuint16_t test_svldnt1_vnum_u16(svbool_t pg, const uint16_t *base, int64_t vnum) MODE_ATTR
+svuint16_t test_svldnt1_vnum_u16(svbool_t pg, const uint16_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_u16,,)(pg, base, vnum);
 }
@@ -330,7 +322,7 @@ svuint16_t test_svldnt1_vnum_u16(svbool_t pg, const uint16_t *base, int64_t vnum
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
-svuint32_t test_svldnt1_vnum_u32(svbool_t pg, const uint32_t *base, int64_t vnum) MODE_ATTR
+svuint32_t test_svldnt1_vnum_u32(svbool_t pg, const uint32_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_u32,,)(pg, base, vnum);
 }
@@ -349,7 +341,7 @@ svuint32_t test_svldnt1_vnum_u32(svbool_t pg, const uint32_t *base, int64_t vnum
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svuint64_t test_svldnt1_vnum_u64(svbool_t pg, const uint64_t *base, int64_t vnum) MODE_ATTR
+svuint64_t test_svldnt1_vnum_u64(svbool_t pg, const uint64_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_u64,,)(pg, base, vnum);
 }
@@ -368,7 +360,7 @@ svuint64_t test_svldnt1_vnum_u64(svbool_t pg, const uint64_t *base, int64_t vnum
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.ldnt1.nxv8f16(<vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 //
-svfloat16_t test_svldnt1_vnum_f16(svbool_t pg, const float16_t *base, int64_t vnum) MODE_ATTR
+svfloat16_t test_svldnt1_vnum_f16(svbool_t pg, const float16_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_f16,,)(pg, base, vnum);
 }
@@ -387,7 +379,7 @@ svfloat16_t test_svldnt1_vnum_f16(svbool_t pg, const float16_t *base, int64_t vn
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.nxv4f32(<vscale x 4 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 //
-svfloat32_t test_svldnt1_vnum_f32(svbool_t pg, const float32_t *base, int64_t vnum) MODE_ATTR
+svfloat32_t test_svldnt1_vnum_f32(svbool_t pg, const float32_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_f32,,)(pg, base, vnum);
 }
@@ -406,7 +398,7 @@ svfloat32_t test_svldnt1_vnum_f32(svbool_t pg, const float32_t *base, int64_t vn
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.ldnt1.nxv2f64(<vscale x 2 x i1> [[TMP0]], ptr [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
-svfloat64_t test_svldnt1_vnum_f64(svbool_t pg, const float64_t *base, int64_t vnum) MODE_ATTR
+svfloat64_t test_svldnt1_vnum_f64(svbool_t pg, const float64_t *base, int64_t vnum)
 {
   return SVE_ACLE_FUNC(svldnt1_vnum,_f64,,)(pg, base, vnum);
 }

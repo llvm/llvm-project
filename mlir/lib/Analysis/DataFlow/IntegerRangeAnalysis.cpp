@@ -195,14 +195,9 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       max -= 1;
     }
 
-    // If we infer the lower bound to be larger than the upper bound, the
-    // resulting range is meaningless and should not be used in further
-    // inferences.
-    if (max.sge(min)) {
-      IntegerValueRangeLattice *ivEntry = getLatticeElement(*iv);
-      auto ivRange = ConstantIntRanges::fromSigned(min, max);
-      propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
-    }
+    IntegerValueRangeLattice *ivEntry = getLatticeElement(*iv);
+    auto ivRange = ConstantIntRanges::fromSigned(min, max);
+    propagateIfChanged(ivEntry, ivEntry->join(IntegerValueRange{ivRange}));
     return;
   }
 

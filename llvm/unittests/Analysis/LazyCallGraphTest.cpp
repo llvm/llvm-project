@@ -1169,7 +1169,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   LazyCallGraph::SCC &NewDC = *NewCs.begin();
   EXPECT_EQ(&NewDC, CG.lookupSCC(D1));
   EXPECT_EQ(&NewDC, CG.lookupSCC(D3));
-  auto NewRCs = DRC.removeInternalRefEdges({{&D1, &D2}});
+  auto NewRCs = DRC.removeInternalRefEdge(D1, {&D2});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &NewDRC = *NewRCs[0];
   EXPECT_EQ(&NewDRC, CG.lookupRefSCC(D1));
@@ -1186,8 +1186,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   EXPECT_TRUE(D2RC.isParentOf(NewDRC));
 
   // Now that we've updated the call graph, D2 is dead, so remove it.
-  CG.markDeadFunction(D2F);
-  CG.removeDeadFunctions({&D2F});
+  CG.removeDeadFunction(D2F);
 
   // Check that the graph still looks the same.
   EXPECT_EQ(&ARC, CG.lookupRefSCC(A1));
@@ -1345,7 +1344,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   // Remove the edge from b -> a, which should leave the 3 functions still in
   // a single connected component because of a -> b -> c -> a.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdges({{&B, &A}});
+      RC.removeInternalRefEdge(B, {&A});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
@@ -1361,7 +1360,7 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
 
   // Remove the edge from c -> a, which should leave 'a' in the original RefSCC
   // and form a new RefSCC for 'b' and 'c'.
-  NewRCs = RC.removeInternalRefEdges({{&C, &A}});
+  NewRCs = RC.removeInternalRefEdge(C, {&A});
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BCRC = *NewRCs[0];
   LazyCallGraph::RefSCC &ARC = *NewRCs[1];
@@ -1426,7 +1425,7 @@ TEST(LazyCallGraphTest, InternalMultiEdgeRemoval) {
 
   // Remove the edges from b -> a and b -> c, leaving b in its own RefSCC.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdges({{&B, &A}, {&B, &C}});
+      RC.removeInternalRefEdge(B, {&A, &C});
 
   ASSERT_EQ(2u, NewRCs.size());
   LazyCallGraph::RefSCC &BRC = *NewRCs[0];
@@ -1495,7 +1494,7 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from a -> c which doesn't change anything.
   SmallVector<LazyCallGraph::RefSCC *, 1> NewRCs =
-      RC.removeInternalRefEdges({{&AN, &CN}});
+      RC.removeInternalRefEdge(AN, {&CN});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -1510,8 +1509,8 @@ TEST(LazyCallGraphTest, InternalNoOpEdgeRemoval) {
 
   // Remove the edge from b -> a and c -> b; again this doesn't change
   // anything.
-  NewRCs = RC.removeInternalRefEdges({{&BN, &AN}});
-  NewRCs = RC.removeInternalRefEdges({{&CN, &BN}});
+  NewRCs = RC.removeInternalRefEdge(BN, {&AN});
+  NewRCs = RC.removeInternalRefEdge(CN, {&BN});
   EXPECT_EQ(0u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
   EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
@@ -2164,8 +2163,7 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRef) {
 
   // Now delete 'dead'. There are no uses of this function but there are
   // spurious references.
-  CG.markDeadFunction(DeadN.getFunction());
-  CG.removeDeadFunctions({&DeadN.getFunction()});
+  CG.removeDeadFunction(DeadN.getFunction());
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2214,8 +2212,7 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.markDeadFunction(AN.getFunction());
-  CG.removeDeadFunctions({&AN.getFunction()});
+  CG.removeDeadFunction(AN.getFunction());
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2272,8 +2269,7 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive2) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.markDeadFunction(AN.getFunction());
-  CG.removeDeadFunctions({&AN.getFunction()});
+  CG.removeDeadFunction(AN.getFunction());
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.
@@ -2324,8 +2320,7 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive3) {
 
   // Now delete 'a'. There are no uses of this function but there are
   // spurious references.
-  CG.markDeadFunction(AN.getFunction());
-  CG.removeDeadFunctions({&AN.getFunction()});
+  CG.removeDeadFunction(AN.getFunction());
 
   // The only observable change should be that the RefSCC is gone from the
   // postorder sequence.

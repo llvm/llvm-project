@@ -140,9 +140,6 @@ public:
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
                           bool isOpenMP = false) const;
-  SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address;
-  }
 };
 
 } // end namespace toolchains

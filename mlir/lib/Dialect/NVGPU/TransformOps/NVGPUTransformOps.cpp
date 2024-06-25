@@ -134,8 +134,8 @@ transform::ApplyNVGPUToNVVMConversionPatternsOp::verifyTypeConverter(
 
 void transform::CreateAsyncGroupsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTargetMutable(), effects);
-  transform::producesHandle(getOperation()->getOpResults(), effects);
+  transform::consumesHandle(getTarget(), effects);
+  transform::producesHandle(getResult(), effects);
   transform::modifiesPayload(effects);
 }
 

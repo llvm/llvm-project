@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -36,7 +28,7 @@
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i32> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base) MODE_ATTR
+svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base)
 {
   return svld1sw_s64(pg, base);
 }
@@ -55,7 +47,7 @@ svint64_t test_svld1sw_s64(svbool_t pg, const int32_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = sext <vscale x 2 x i32> [[TMP1]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 //
-svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base) MODE_ATTR
+svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base)
 {
   return svld1sw_u64(pg, base);
 }
@@ -82,7 +74,7 @@ svuint64_t test_svld1sw_u64(svbool_t pg, const int32_t *base) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum) MODE_ATTR
+svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum)
 {
   return svld1sw_vnum_s64(pg, base, vnum);
 }
@@ -109,12 +101,10 @@ svint64_t test_svld1sw_vnum_s64(svbool_t pg, const int32_t *base, int64_t vnum) 
 // CPP-CHECK-NEXT:    [[TMP5:%.*]] = sext <vscale x 2 x i32> [[TMP4]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP5]]
 //
-svuint64_t test_svld1sw_vnum_u64(svbool_t pg, const int32_t *base, int64_t vnum) MODE_ATTR
+svuint64_t test_svld1sw_vnum_u64(svbool_t pg, const int32_t *base, int64_t vnum)
 {
   return svld1sw_vnum_u64(pg, base, vnum);
 }
-
-#ifndef __ARM_FEATURE_SME 
 
 // CHECK-LABEL: @test_svld1sw_gather_u64base_s64(
 // CHECK-NEXT:  entry:
@@ -371,5 +361,3 @@ svint64_t test_svld1sw_gather_u64base_index_s64(svbool_t pg, svuint64_t bases, i
 svuint64_t test_svld1sw_gather_u64base_index_u64(svbool_t pg, svuint64_t bases, int64_t index) {
   return SVE_ACLE_FUNC(svld1sw_gather, _u64base, _index_u64, )(pg, bases, index);
 }
-
-#endif

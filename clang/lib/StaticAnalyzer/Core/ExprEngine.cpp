@@ -2422,10 +2422,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.addNodes(Dst);
       break;
     }
-
-    case Stmt::EmbedExprClass:
-      llvm::report_fatal_error("Support for EmbedExpr is not implemented.");
-      break;
   }
 }
 

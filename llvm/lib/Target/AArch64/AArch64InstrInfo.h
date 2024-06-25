@@ -572,9 +572,6 @@ private:
   bool optimizePTestInstr(MachineInstr *PTest, unsigned MaskReg,
                           unsigned PredReg,
                           const MachineRegisterInfo *MRI) const;
-  std::optional<unsigned>
-  canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
-                      MachineInstr *Pred, const MachineRegisterInfo *MRI) const;
 };
 
 struct UsedNZCV {

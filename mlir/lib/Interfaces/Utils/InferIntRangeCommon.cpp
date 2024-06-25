@@ -35,8 +35,6 @@ using namespace mlir;
 /// constants and returns std::nullopt on overflow.
 using ConstArithFn =
     function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
-using ConstArithStdFn =
-    std::function<std::optional<APInt>(const APInt &, const APInt &)>;
 
 /// Compute op(minLeft, minRight) and op(maxLeft, maxRight) if possible,
 /// If either computation overflows, make the result unbounded.
@@ -184,16 +182,16 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithStdFn uadd = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function uadd = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nuw)
                        ? a.uadd_sat(b)
                        : a.uadd_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithStdFn sadd = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function sadd = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nsw)
                        ? a.sadd_sat(b)
@@ -217,16 +215,16 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithStdFn usub = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function usub = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nuw)
                        ? a.usub_sat(b)
                        : a.usub_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithStdFn ssub = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function ssub = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nsw)
                        ? a.ssub_sat(b)
@@ -249,16 +247,16 @@ mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithStdFn umul = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function umul = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nuw)
                        ? a.umul_sat(b)
                        : a.umul_ov(b, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithStdFn smul = [=](const APInt &a,
-                             const APInt &b) -> std::optional<APInt> {
+  std::function smul = [=](const APInt &a,
+                           const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nsw)
                        ? a.smul_sat(b)
@@ -567,16 +565,16 @@ mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
 
   // The signed/unsigned overflow behavior of shl by `rhs` matches a mul with
   // 2^rhs.
-  ConstArithStdFn ushl = [=](const APInt &l,
-                             const APInt &r) -> std::optional<APInt> {
+  std::function ushl = [=](const APInt &l,
+                           const APInt &r) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nuw)
                        ? l.ushl_sat(r)
                        : l.ushl_ov(r, overflowed);
     return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithStdFn sshl = [=](const APInt &l,
-                             const APInt &r) -> std::optional<APInt> {
+  std::function sshl = [=](const APInt &l,
+                           const APInt &r) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = any(ovfFlags & OverflowFlags::Nsw)
                        ? l.sshl_sat(r)

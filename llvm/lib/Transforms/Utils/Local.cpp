@@ -231,7 +231,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
+          setBranchWeights(*SI, Weights);
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -1603,8 +1603,7 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize =
-          DII->getExpression()->getActiveBits(DII->getVariable()))
+  if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits())
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
@@ -1630,8 +1629,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
   const DataLayout &DL = DVR->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize =
-          DVR->getExpression()->getActiveBits(DVR->getVariable()))
+  if (std::optional<uint64_t> FragmentSize = DVR->getFragmentSizeInBits())
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a

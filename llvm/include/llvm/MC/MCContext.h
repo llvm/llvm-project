@@ -21,7 +21,6 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSymbolTableEntry.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
@@ -45,7 +44,6 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
-class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -82,7 +80,7 @@ struct WasmSignature;
 ///
 class MCContext {
 public:
-  using SymbolTable = StringMap<MCSymbolTableValue, BumpPtrAllocator &>;
+  using SymbolTable = StringMap<MCSymbol *, BumpPtrAllocator &>;
   using DiagHandlerTy =
       std::function<void(const SMDiagnostic &, bool, const SourceMgr &,
                          std::vector<const MDNode *> &)>;
@@ -136,9 +134,6 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
-  /// For MCFragment instances.
-  BumpPtrAllocator FragmentAllocator;
-
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
@@ -151,7 +146,7 @@ private:
 
   SpecificBumpPtrAllocator<wasm::WasmSignature> WasmSignatureAllocator;
 
-  /// Bindings of names to symbol table values.
+  /// Bindings of names to symbols.
   SymbolTable Symbols;
 
   /// A mapping from a local label number and an instance count to a symbol.
@@ -162,8 +157,18 @@ private:
   /// We have three labels represented by the pairs (1, 0), (2, 0) and (1, 1)
   DenseMap<std::pair<unsigned, unsigned>, MCSymbol *> LocalSymbols;
 
+  /// Keeps tracks of names that were used both for used declared and
+  /// artificial symbols. The value is "true" if the name has been used for a
+  /// non-section symbol (there can be at most one of those, plus an unlimited
+  /// number of section symbols with the same name).
+  StringMap<bool, BumpPtrAllocator &> UsedNames;
+
   /// Keeps track of labels that are used in inline assembly.
-  StringMap<MCSymbol *, BumpPtrAllocator &> InlineAsmUsedLabelNames;
+  SymbolTable InlineAsmUsedLabelNames;
+
+  /// The next ID to dole out to an unnamed assembler temporary symbol with
+  /// a given prefix.
+  StringMap<unsigned> NextID;
 
   /// Instances of directional local labels.
   DenseMap<unsigned, MCLabel *> Instances;
@@ -238,7 +243,7 @@ private:
   /// Honor temporary labels, this is useful for debugging semantic
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
-  bool SaveTempLabels = false;
+  bool AllowTemporaryLabels = true;
   bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
@@ -246,6 +251,31 @@ private:
 
   /// A collection of MCPseudoProbe in the current module
   MCPseudoProbeTable PseudoProbeTable;
+
+  // Sections are differentiated by the quadruple (section_name, group_name,
+  // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
+  // combined into one section.
+  struct ELFSectionKey {
+    std::string SectionName;
+    StringRef GroupName;
+    StringRef LinkedToName;
+    unsigned UniqueID;
+
+    ELFSectionKey(StringRef SectionName, StringRef GroupName,
+                  StringRef LinkedToName, unsigned UniqueID)
+        : SectionName(SectionName), GroupName(GroupName),
+          LinkedToName(LinkedToName), UniqueID(UniqueID) {}
+
+    bool operator<(const ELFSectionKey &Other) const {
+      if (SectionName != Other.SectionName)
+        return SectionName < Other.SectionName;
+      if (GroupName != Other.GroupName)
+        return GroupName < Other.GroupName;
+      if (int O = LinkedToName.compare(Other.LinkedToName))
+        return O < 0;
+      return UniqueID < Other.UniqueID;
+    }
+  };
 
   struct COFFSectionKey {
     std::string SectionName;
@@ -320,8 +350,8 @@ private:
   };
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
+  std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
@@ -340,24 +370,22 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
-  MCDataFragment *allocInitialFragment(MCSection &Sec);
-
-  MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
-
-  MCSymbol *createSymbolImpl(const MCSymbolTableEntry *Name, bool IsTemporary);
-  MCSymbol *createRenamableSymbol(const Twine &Name, bool AlwaysAddSuffix,
-                                  bool IsTemporary);
+  MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
+                             bool CanBeUnnamed);
+  MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
+                         bool IsTemporary);
 
   MCSymbol *getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                               unsigned Instance);
 
   MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
-                                     unsigned Flags, unsigned EntrySize,
+                                     unsigned Flags, SectionKind K,
+                                     unsigned EntrySize,
                                      const MCSymbolELF *Group, bool IsComdat,
                                      unsigned UniqueID,
                                      const MCSymbolELF *LinkedToSym);
 
-  MCSymbolXCOFF *createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
+  MCSymbolXCOFF *createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
                                        bool IsTemporary);
 
   /// Map of currently defined macros.
@@ -418,6 +446,7 @@ public:
 
   CodeViewContext &getCVContext();
 
+  void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
   void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 
   /// \name Module Lifetime Management
@@ -433,11 +462,6 @@ public:
 
   /// Create and return a new MC instruction.
   MCInst *createMCInst();
-
-  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
-        F(std::forward<Args>(args)...);
-  }
 
   /// \name Symbol Management
   /// @{
@@ -458,12 +482,6 @@ public:
   /// omitted in the symbol table. This is rarely used.
   MCSymbol *createNamedTempSymbol();
   MCSymbol *createNamedTempSymbol(const Twine &Name);
-
-  /// Get or create a symbol for a basic block. For non-always-emit symbols,
-  /// this behaves like createTempSymbol, except that it uses the
-  /// PrivateLabelPrefix instead of the PrivateGlobalPrefix. When AlwaysEmit is
-  /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
-  MCSymbol *createBlockSymbol(const Twine &Name, bool AlwaysEmit = false);
 
   /// Create the definition of a directional local symbol for numbered label
   /// (used for "1:" definitions).
@@ -600,14 +618,16 @@ public:
                                                    unsigned EntrySize);
 
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, uint32_t Subsection = 0);
+                                MCSection *Parent, const MCExpr *SubsectionId);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
-                                StringRef COMDATSymName, int Selection,
+                                SectionKind Kind, StringRef COMDATSymName,
+                                int Selection,
                                 unsigned UniqueID = GenericSectionID,
                                 const char *BeginSymName = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
+                                SectionKind Kind,
                                 const char *BeginSymName = nullptr);
 
   /// Gets or creates a section equivalent to Sec that is associated with the

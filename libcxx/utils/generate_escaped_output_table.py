@@ -84,7 +84,7 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = r"""
+DATA_ARRAY_TEMPLATE = """
 /// The entries of the characters to escape in format's debug string.
 ///
 /// Contains the entries for [format.string.escaped]/2.2.1.2.1

@@ -91,9 +91,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy MDNodes.
   for (MDNode *I : DistinctMDNodes)
     I->deleteAsSubclass();
-
-  for (auto *ConstantRangeListAttribute : ConstantRangeListAttributes)
-    ConstantRangeListAttribute->~ConstantRangeListAttributeImpl();
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (CLASS * I : CLASS##s)                                                   \
     delete I;

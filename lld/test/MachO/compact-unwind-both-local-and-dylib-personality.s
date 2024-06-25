@@ -42,20 +42,19 @@
 
 # RUN: llvm-objdump --macho --indirect-symbols --unwind-info --bind %t/d.out | FileCheck %s --check-prefixes=D -D#%x,OFF=0x100000000
 
-# A:      Indirect symbols for (__DATA_CONST,__got) 4 entries
+# A:      Indirect symbols for (__DATA_CONST,__got)
 # A-NEXT: address                    index name
 # A:      0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
-# A:      0x[[#%x,PERSONALITY_1:]]      LOCAL
-# A:      0x[[#%x,PERSONALITY_2:]]      LOCAL
-# A:      0x[[#%x,GXX_PERSONALITY_HI:]] LOCAL
+# A:      0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
+# A:      0x[[#%x,PERSONALITY_1:]]  LOCAL
+# A:      0x[[#%x,PERSONALITY_2:]]  LOCAL
 
 # BC:      Indirect symbols for (__DATA_CONST,__got)
 # BC-NEXT: address                    index name
-# BC:      0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
 # C:       0x[[#%x,GXX_PERSONALITY_HI:]] LOCAL
+# BC:      0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
 # BC:      0x[[#%x,PERSONALITY_1:]]      LOCAL
 # BC:      0x[[#%x,PERSONALITY_2:]]      LOCAL
-# BC-EMPTY:
 
 # CHECK:        Personality functions: (count = 3)
 # CHECK-DAG:     personality[{{[0-9]+}}]: 0x{{0*}}[[#GXX_PERSONALITY_LO-OFF]]
@@ -67,14 +66,14 @@
 # A-NEXT: __DATA_CONST __got        0x[[#GXX_PERSONALITY_LO-0]] pointer         0 libc++abi        ___gxx_personality_v0
 
 
-# D:      Indirect symbols for (__DATA_CONST,__got) 6 entries
+# D:      Indirect symbols for (__DATA_CONST,__got)
 # D-NEXT: address                    index name
 # D:      0x[[#%x,GXX_PERSONALITY_HI:]] [[#]] ___gxx_personality_v0
-# D:      0x[[#%x,PERSONALITY_1:]]      LOCAL
-# D:      0x[[#%x,PERSONALITY_2:]]      LOCAL
-# D:      0x[[#%x,PERSONALITY_3:]]      LOCAL
-# D:      0x[[#%x,PERSONALITY_4:]]      LOCAL
-# D:      0x[[#%x,GXX_PERSONALITY_LO:]] LOCAL
+# D:      0x[[#%x,PERSONALITY_1:]] [[#]] _personality_1
+# D:      0x[[#%x,PERSONALITY_2:]] [[#]] _personality_2
+# D:      0x[[#%x,PERSONALITY_3:]] [[#]] _personality_3
+# D:      0x[[#%x,PERSONALITY_4:]] [[#]] _personality_4
+# D:      0x[[#%x,GXX_PERSONALITY_LO:]] [[#]] ___gxx_personality_v0
 
 # D: Contents of __unwind_info section:
 # D:  Personality functions: (count = 1)

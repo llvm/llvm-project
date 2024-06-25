@@ -44,8 +44,8 @@ public:
                                   int &FARsLeft) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
-                   AggValueSlot Slot) const override;
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
 
   ABIArgInfo extendType(QualType Ty) const;
 
@@ -417,13 +417,14 @@ ABIArgInfo LoongArchABIInfo::classifyReturnType(QualType RetTy) const {
   return classifyArgumentType(RetTy, /*IsFixed=*/true, GARsLeft, FARsLeft);
 }
 
-RValue LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                   QualType Ty, AggValueSlot Slot) const {
+Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                    QualType Ty) const {
   CharUnits SlotSize = CharUnits::fromQuantity(GRLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true))
-    return Slot.asRValue();
+    return Address(CGF.Builder.CreateLoad(VAListAddr),
+                   CGF.ConvertTypeForMem(Ty), SlotSize);
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 
@@ -431,7 +432,7 @@ RValue LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
                           /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
                           SlotSize,
-                          /*AllowHigherAlign=*/true, Slot);
+                          /*AllowHigherAlign=*/true);
 }
 
 ABIArgInfo LoongArchABIInfo::extendType(QualType Ty) const {

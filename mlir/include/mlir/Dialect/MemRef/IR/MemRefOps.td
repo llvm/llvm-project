@@ -706,7 +706,6 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
   let extraClassDeclaration = [{
     // Returns the source MemRefType for this DMA operation.
     Value getSrcMemRef() { return getOperand(0); }
-    OpOperand &getSrcMemRefMutable() { return getOperation()->getOpOperand(0); }
     // Returns the rank (number of indices) of the source MemRefType.
     unsigned getSrcMemRefRank() {
       return ::llvm::cast<MemRefType>(getSrcMemRef().getType()).getRank();
@@ -719,7 +718,6 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
 
     // Returns the destination MemRefType for this DMA operations.
     Value getDstMemRef() { return getOperand(1 + getSrcMemRefRank()); }
-    OpOperand &getDstMemRefMutable() { return getOperation()->getOpOperand(1 + getSrcMemRefRank()); }
     // Returns the rank (number of indices) of the destination MemRefType.
     unsigned getDstMemRefRank() {
       return ::llvm::cast<MemRefType>(getDstMemRef().getType()).getRank();
@@ -746,9 +744,6 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     // Returns the Tag MemRef for this DMA operation.
     Value getTagMemRef() {
       return getOperand(1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1);
-    }
-    OpOperand &getTagMemRefMutable() {
-      return getOperation()->getOpOperand(1 + getSrcMemRefRank() + 1 + getDstMemRefRank() + 1);
     }
 
     // Returns the rank (number of indices) of the tag MemRefType.
@@ -806,11 +801,11 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     void getEffects(
         SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>> &
         effects) {
-      effects.emplace_back(MemoryEffects::Read::get(), &getSrcMemRefMutable(),
+      effects.emplace_back(MemoryEffects::Read::get(), getSrcMemRef(),
                            SideEffects::DefaultResource::get());
-      effects.emplace_back(MemoryEffects::Write::get(), &getDstMemRefMutable(),
+      effects.emplace_back(MemoryEffects::Write::get(), getDstMemRef(),
                            SideEffects::DefaultResource::get());
-      effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
+      effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
                            SideEffects::DefaultResource::get());
     }
   }];
@@ -857,7 +852,7 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
     void getEffects(
         SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>> &
         effects) {
-      effects.emplace_back(MemoryEffects::Read::get(), &getTagMemRefMutable(),
+      effects.emplace_back(MemoryEffects::Read::get(), getTagMemRef(),
                            SideEffects::DefaultResource::get());
     }
   }];
@@ -897,7 +892,7 @@ def MemRef_ExtractAlignedPointerAsIndexOp :
   }];
 
   let arguments = (ins
-    AnyRankedOrUnrankedMemRef:$source
+    AnyStridedMemRef:$source
   );
   let results = (outs Index:$aligned_pointer);
 

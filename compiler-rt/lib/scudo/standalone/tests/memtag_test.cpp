@@ -19,10 +19,10 @@ namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
-    TEST_SKIP("Memory tagging is not supported");
+    GTEST_SKIP();
   // Skip when running with HWASan.
   if (&__hwasan_init != 0)
-    TEST_SKIP("Incompatible with HWASan");
+    GTEST_SKIP();
 
   EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
   EXPECT_DEATH(untagPointer((uptr)0), "not supported");
@@ -48,7 +48,7 @@ class MemtagTest : public Test {
 protected:
   void SetUp() override {
     if (!archSupportsMemoryTagging() || !systemDetectsMemoryTagFaultsTestOnly())
-      TEST_SKIP("Memory tagging is not supported");
+      GTEST_SKIP() << "Memory tagging is not supported";
 
     BufferSize = getPageSizeCached();
     ASSERT_FALSE(MemMap.isAllocated());

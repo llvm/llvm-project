@@ -23,15 +23,15 @@ class MCSymbol;
 class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
-  MCSectionSPIRV()
-      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*Begin=*/nullptr) {}
+  MCSectionSPIRV(SectionKind K, MCSymbol *Begin)
+      : MCSection(SV_SPIRV, "", K, Begin) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
 
 public:
   ~MCSectionSPIRV() = default;
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            uint32_t Subsection) const override {}
+                            const MCExpr *Subsection) const override {}
   bool useCodeAlign() const override { return false; }
   bool isVirtualSection() const override { return false; }
 };

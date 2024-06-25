@@ -307,8 +307,7 @@ namespace options {
     } else if (opt.consume_front("opt-remarks-hotness-threshold=")) {
       auto ResultOrErr = remarks::parseHotnessThresholdOption(opt);
       if (!ResultOrErr)
-        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s",
-                opt.data());
+        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s", opt);
       else
         RemarksHotnessThreshold = *ResultOrErr;
     } else if (opt.consume_front("opt-remarks-format=")) {
@@ -320,7 +319,7 @@ namespace options {
     } else if (opt.consume_front("time-trace-granularity=")) {
       unsigned Granularity;
       if (opt.getAsInteger(10, Granularity))
-        message(LDPL_FATAL, "Invalid time trace granularity: %s", opt.data());
+        message(LDPL_FATAL, "Invalid time trace granularity: %s", opt);
       else
         time_trace_granularity = Granularity;
     } else {

@@ -945,7 +945,7 @@ TEST(ParameterHints, ConstructorStdInitList) {
   // Do not show hints for std::initializer_list constructors.
   assertParameterHints(R"cpp(
     namespace std {
-      template <typename E> class initializer_list { const E *a, *b; };
+      template <typename> class initializer_list {};
     }
     struct S {
       S(std::initializer_list<int> param);

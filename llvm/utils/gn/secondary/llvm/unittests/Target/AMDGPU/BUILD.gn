@@ -19,6 +19,5 @@ unittest("AMDGPUTests") {
     "AMDGPUUnitTests.cpp",
     "DwarfRegMappings.cpp",
     "ExecMayBeModifiedBeforeAnyUse.cpp",
-    "PALMetadata.cpp",
   ]
 }

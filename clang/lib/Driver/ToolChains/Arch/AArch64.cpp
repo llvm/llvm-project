@@ -98,12 +98,16 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
 
-  const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
-      llvm::AArch64::parseCpu(CPU);
-  if (!CpuInfo)
-    return false;
+  if (CPU == "generic") {
+    Extensions.enable(llvm::AArch64::AEK_SIMD);
+  } else {
+    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+        llvm::AArch64::parseCpu(CPU);
+    if (!CpuInfo)
+      return false;
 
-  Extensions.addCPUDefaults(*CpuInfo);
+    Extensions.addCPUDefaults(*CpuInfo);
+  }
 
   if (Split.second.size() &&
       !DecodeAArch64Features(D, Split.second, Extensions))

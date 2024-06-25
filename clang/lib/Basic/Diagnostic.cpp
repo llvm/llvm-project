@@ -360,10 +360,9 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
-  // A command line -Wfoo has an invalid L and cannot override error/fatal
-  // mapping, while a warning pragma can.
+  // Don't allow a mapping to a warning override an error/fatal mapping.
   bool WasUpgradedFromWarning = false;
-  if (Map == diag::Severity::Warning && L.isInvalid()) {
+  if (Map == diag::Severity::Warning) {
     DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
     if (Info.getSeverity() == diag::Severity::Error ||
         Info.getSeverity() == diag::Severity::Fatal) {

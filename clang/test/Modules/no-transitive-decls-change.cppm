@@ -44,6 +44,10 @@ export inline int getA() {
     return 43;
 }
 
+export inline int getA2(int) {
+    return 88;
+}
+
 //--- m-partA.v1.cppm
 export module m:partA;
 
@@ -59,6 +63,7 @@ namespace A_Impl {
 
 namespace A {
     using A_Impl::getAImpl;
+    // Adding a new declaration without introducing a new declaration name.
     using A_Impl::getA2Impl;
 }
 
@@ -66,9 +71,14 @@ inline int getA() {
     return 43;
 }
 
+inline int getA2(int) {
+    return 88;
+}
+
+// Now we add a new declaration without introducing new identifier and new types.
 // The consuming module which didn't use m:partA completely is expected to be
 // not changed.
-inline int getB(int) {
+inline int getA(int) {
     return 88;
 }
 

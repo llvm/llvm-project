@@ -62,7 +62,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 
   uint64_t Offset = AUIPCSymbol->getOffset();
   if (DF->getContents().size() == Offset) {
-    DF = dyn_cast_or_null<MCDataFragment>(DF->getNext());
+    DF = dyn_cast_or_null<MCDataFragment>(DF->getNextNode());
     if (!DF)
       return nullptr;
     Offset = 0;

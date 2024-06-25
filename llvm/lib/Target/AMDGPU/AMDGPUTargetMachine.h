@@ -58,7 +58,8 @@ public:
                              const CGPassBuilderOption &Opts,
                              PassInstrumentationCallbacks *PIC) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB,
+                                    bool PopulateClassToPassNames) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
@@ -75,7 +76,7 @@ public:
 
   bool splitModule(Module &M, unsigned NumParts,
                    function_ref<void(std::unique_ptr<Module> MPart)>
-                       ModuleCallback) override;
+                       ModuleCallback) const override;
 };
 
 //===----------------------------------------------------------------------===//

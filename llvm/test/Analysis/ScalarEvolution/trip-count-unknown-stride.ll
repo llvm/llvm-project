@@ -271,10 +271,9 @@ define void @ne_nsw_pos_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nsw_pos_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_pos_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %pos_step = icmp sgt i32 %s, 0
@@ -300,10 +299,9 @@ define void @ne_nsw_neg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nsw_neg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_neg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %neg_step = icmp slt i32 %s, 0
@@ -329,10 +327,9 @@ define void @ne_nsw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nsw_nonneg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_nonneg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %nonneg_step = icmp sge i32 %s, 0
@@ -384,10 +381,9 @@ define void @ne_nuw_pos_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nuw_pos_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_pos_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %pos_step = icmp sgt i32 %s, 0
@@ -413,10 +409,9 @@ define void @ne_nuw_neg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nuw_neg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_neg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %neg_step = icmp slt i32 %s, 0
@@ -442,10 +437,9 @@ define void @ne_nuw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nuw_nonneg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_nonneg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %nonneg_step = icmp sge i32 %s, 0

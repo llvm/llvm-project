@@ -219,8 +219,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachineDominatorTree>();
+      AU.addPreserved<MachineDominatorTree>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -285,7 +285,7 @@ char HexagonBitSimplify::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
 
@@ -2800,7 +2800,7 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
   auto &HRI = *HST.getRegisterInfo();
   auto &HII = *HST.getInstrInfo();
 
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MDT = &getAnalysis<MachineDominatorTree>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed;
 

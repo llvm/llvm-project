@@ -6,7 +6,7 @@
 
 ; CHECK-NOT: @s
 
-; CHECK: #dbg_value(!DIArgList(ptr poison
+; CHECK: call void @llvm.dbg.value(metadata !DIArgList(ptr poison
 
 %struct.S = type { i32 }
 

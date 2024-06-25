@@ -29,7 +29,7 @@ using namespace llvm;
 
 namespace llvm {
 template <class GraphType> struct GraphTraits;
-} // namespace llvm
+}
 
 // This option shows static (relative) call counts.
 // FIXME:
@@ -215,7 +215,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
   }
 };
 
-} // namespace llvm
+} // end llvm namespace
 
 namespace {
 void doCallGraphDOTPrinting(

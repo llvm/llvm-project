@@ -59,11 +59,6 @@ void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
   vector::populateFoldArithExtensionPatterns(patterns);
 }
 
-void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  vector::populateElementwiseToVectorOpsPatterns(patterns);
-}
-
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);

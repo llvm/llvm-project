@@ -168,7 +168,7 @@ public:
     ValueRange posRange = posRangeIf.getResults();
     return {posRange.front(), posRange.back()};
   }
-}; // namespace
+};
 
 class LooseCompressedLevel : public SparseLevel</*hasPosBuf=*/true> {
 public:
@@ -190,7 +190,7 @@ public:
     Value pHi = genIndexLoad(b, l, getPosBuf(), memCrd);
     return {pLo, pHi};
   }
-}; // namespace
+};
 
 class SingletonLevel : public SparseLevel</*hasPosBuf=*/false> {
 public:
@@ -210,13 +210,6 @@ public:
     // Use the segHi as the loop upper bound.
     return {p, segHi};
   }
-
-  ValuePair
-  collapseRangeBetween(OpBuilder &b, Location l, ValueRange batchPrefix,
-                       std::pair<Value, Value> parentRange) const override {
-    // Singleton level keeps the same range after collapsing.
-    return parentRange;
-  };
 };
 
 class NOutOfMLevel : public SparseLevel</*hasPosBuf=*/false> {
@@ -331,13 +324,6 @@ public:
   TrivialIterator(const SparseTensorLevel &stl)
       : ConcreteIterator(stl, IterKind::kTrivial, /*itValCnt=*/1) {}
 
-  TrivialIterator(OpBuilder &b, Location l, const SparseTensorLevel &stl,
-                  Value posLo, Value posHi)
-      : ConcreteIterator(stl, IterKind::kTrivial, /*itValCnt=*/1), posLo(posLo),
-        posHi(posHi) {
-    seek(posLo);
-  }
-
   std::string getDebugInterfacePrefix() const override {
     return std::string("trivial<") + stl.toString() + ">";
   }
@@ -427,14 +413,6 @@ public:
       : ConcreteIterator(stl, IterKind::kDedup, /*itValCnt=*/2) {
     assert(!stl.isUnique());
   }
-
-  DedupIterator(OpBuilder &b, Location l, const SparseTensorLevel &stl,
-                Value posLo, Value posHi)
-      : ConcreteIterator(stl, IterKind::kDedup, /*itValCnt=*/2), posHi(posHi) {
-    assert(!stl.isUnique());
-    seek({posLo, genSegmentHigh(b, l, posLo)});
-  }
-
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
     return from->kind == IterKind::kDedup;
@@ -1497,88 +1475,8 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
 }
 
 //===----------------------------------------------------------------------===//
-// SparseIterationSpace Implementation
-//===----------------------------------------------------------------------===//
-
-mlir::sparse_tensor::SparseIterationSpace::SparseIterationSpace(
-    Location l, OpBuilder &b, Value t, unsigned tid,
-    std::pair<Level, Level> lvlRange, ValueRange parentPos)
-    : lvls() {
-  auto [lvlLo, lvlHi] = lvlRange;
-
-  Value c0 = C_IDX(0);
-  if (parentPos.empty())
-    parentPos = c0;
-
-  for (Level lvl = lvlLo; lvl < lvlHi; lvl++)
-    lvls.emplace_back(makeSparseTensorLevel(b, l, t, tid, lvl));
-
-  bound = lvls.front()->peekRangeAt(b, l, /*batchPrefix=*/{}, parentPos);
-  for (auto &lvl : getLvlRef().drop_front())
-    bound = lvl->collapseRangeBetween(b, l, /*batchPrefix=*/{}, bound);
-}
-
-SparseIterationSpace mlir::sparse_tensor::SparseIterationSpace::fromValues(
-    IterSpaceType dstTp, ValueRange values, unsigned int tid) {
-  // Reconstruct every sparse tensor level.
-  SparseIterationSpace space;
-  for (auto [i, lt] : llvm::enumerate(dstTp.getLvlTypes())) {
-    unsigned bufferCnt = 0;
-    if (lt.isWithPosLT())
-      bufferCnt++;
-    if (lt.isWithCrdLT())
-      bufferCnt++;
-    // Sparse tensor buffers.
-    ValueRange buffers = values.take_front(bufferCnt);
-    values = values.drop_front(bufferCnt);
-
-    // Level size.
-    Value sz = values.front();
-    values = values.drop_front();
-    space.lvls.push_back(
-        makeSparseTensorLevel(lt, sz, buffers, tid, i + dstTp.getLoLvl()));
-  }
-  // Two bounds.
-  space.bound = std::make_pair(values[0], values[1]);
-  values = values.drop_front(2);
-
-  // Must have consumed all values.
-  assert(values.empty());
-  return space;
-}
-
-std::unique_ptr<SparseIterator>
-SparseIterationSpace::extractIterator(OpBuilder &b, Location l) const {
-  return makeSimpleIterator(b, l, *this);
-}
-
-//===----------------------------------------------------------------------===//
 // SparseIterator factory functions.
 //===----------------------------------------------------------------------===//
-
-/// Helper function to create a TensorLevel object from given `tensor`.
-std::unique_ptr<SparseTensorLevel>
-sparse_tensor::makeSparseTensorLevel(LevelType lt, Value sz, ValueRange b,
-                                     unsigned t, Level l) {
-  assert(lt.getNumBuffer() == b.size());
-  switch (lt.getLvlFmt()) {
-  case LevelFormat::Dense:
-    return std::make_unique<DenseLevel>(t, l, sz);
-  case LevelFormat::Batch:
-    return std::make_unique<BatchLevel>(t, l, sz);
-  case LevelFormat::Compressed:
-    return std::make_unique<CompressedLevel>(t, l, lt, sz, b[0], b[1]);
-  case LevelFormat::LooseCompressed:
-    return std::make_unique<LooseCompressedLevel>(t, l, lt, sz, b[0], b[1]);
-  case LevelFormat::Singleton:
-    return std::make_unique<SingletonLevel>(t, l, lt, sz, b[0]);
-  case LevelFormat::NOutOfM:
-    return std::make_unique<NOutOfMLevel>(t, l, lt, sz, b[0]);
-  case LevelFormat::Undef:
-    llvm_unreachable("undefined level format");
-  }
-  llvm_unreachable("unrecognizable level format");
-}
 
 std::unique_ptr<SparseTensorLevel>
 sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
@@ -1589,16 +1487,33 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   Value sz = stt.hasEncoding() ? b.create<LvlOp>(l, t, lvl).getResult()
                                : b.create<tensor::DimOp>(l, t, lvl).getResult();
 
-  SmallVector<Value, 2> buffers;
-  if (lt.isWithPosLT()) {
+  switch (lt.getLvlFmt()) {
+  case LevelFormat::Dense:
+    return std::make_unique<DenseLevel>(tid, lvl, sz);
+  case LevelFormat::Batch:
+    return std::make_unique<BatchLevel>(tid, lvl, sz);
+  case LevelFormat::Compressed: {
     Value pos = b.create<ToPositionsOp>(l, t, lvl);
-    buffers.push_back(pos);
+    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
+    return std::make_unique<CompressedLevel>(tid, lvl, lt, sz, pos, crd);
   }
-  if (lt.isWithCrdLT()) {
-    Value pos = b.create<ToCoordinatesOp>(l, t, lvl);
-    buffers.push_back(pos);
+  case LevelFormat::LooseCompressed: {
+    Value pos = b.create<ToPositionsOp>(l, t, lvl);
+    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
+    return std::make_unique<LooseCompressedLevel>(tid, lvl, lt, sz, pos, crd);
   }
-  return makeSparseTensorLevel(lt, sz, buffers, tid, lvl);
+  case LevelFormat::Singleton: {
+    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
+    return std::make_unique<SingletonLevel>(tid, lvl, lt, sz, crd);
+  }
+  case LevelFormat::NOutOfM: {
+    Value crd = b.create<ToCoordinatesOp>(l, t, lvl);
+    return std::make_unique<NOutOfMLevel>(tid, lvl, lt, sz, crd);
+  }
+  case LevelFormat::Undef:
+    llvm_unreachable("undefined level format");
+  }
+  llvm_unreachable("unrecognizable level format");
 }
 
 std::pair<std::unique_ptr<SparseTensorLevel>, std::unique_ptr<SparseIterator>>
@@ -1608,26 +1523,6 @@ sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
   auto it = std::make_unique<TrivialIterator>(*stl);
   it->setSparseEmitStrategy(strategy);
   return std::make_pair(std::move(stl), std::move(it));
-}
-
-std::unique_ptr<SparseIterator>
-sparse_tensor::makeSimpleIterator(OpBuilder &b, Location l,
-                                  const SparseIterationSpace &iterSpace) {
-  // assert(iterSpace.getSpaceDim() == 1);
-  std::unique_ptr<SparseIterator> ret;
-  if (!iterSpace.isUnique()) {
-    // We always dedupliate the non-unique level, but we should optimize it away
-    // if possible.
-    ret = std::make_unique<DedupIterator>(b, l, iterSpace.getLastLvl(),
-                                          iterSpace.getBoundLo(),
-                                          iterSpace.getBoundHi());
-  } else {
-    ret = std::make_unique<TrivialIterator>(b, l, iterSpace.getLastLvl(),
-                                            iterSpace.getBoundLo(),
-                                            iterSpace.getBoundHi());
-  }
-  ret->setSparseEmitStrategy(SparseEmitStrategy::kFunctional);
-  return ret;
 }
 
 std::unique_ptr<SparseIterator>

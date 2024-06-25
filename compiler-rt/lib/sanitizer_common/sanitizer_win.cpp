@@ -384,8 +384,9 @@ bool DontDumpShadowMemory(uptr addr, uptr length) {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
-                      uptr granularity) {
+                      uptr min_shadow_base_alignment,
+                      UNUSED uptr &high_mem_end) {
+  const uptr granularity = GetMmapGranularity();
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =

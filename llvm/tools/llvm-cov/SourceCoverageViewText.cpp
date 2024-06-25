@@ -414,4 +414,5 @@ void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {
         << getOptions().CreatedTimeStr << "\n";
 }
 
-void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned) {}
+void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned,
+                                               unsigned) {}

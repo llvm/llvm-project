@@ -24,6 +24,10 @@ using namespace llvm;
 
 namespace {
 
+static inline bool isNullConstantOrUndef(SDValue V) {
+  return V.isUndef() || isNullConstant(V);
+}
+
 static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   // This is only used for packed vectors, where using 0 for undef should
   // always be good.
@@ -132,8 +136,6 @@ private:
   bool isFlatScratchBaseLegal(SDValue Addr) const;
   bool isFlatScratchBaseLegalSV(SDValue Addr) const;
   bool isFlatScratchBaseLegalSVImm(SDValue Addr) const;
-  bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
-                                   bool IsBuffer, int64_t ImmOffset = 0) const;
 
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
@@ -176,13 +178,11 @@ private:
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false, bool HasSOffset = false,
-                        int64_t ImmOffset = 0) const;
+                        bool IsBuffer = false) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                             SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false, bool HasSOffset = false,
-                            int64_t ImmOffset = 0) const;
+                            bool IsBuffer = false) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                   SDValue *Offset, bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
@@ -194,8 +194,6 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
-  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
-                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,

@@ -6060,8 +6060,6 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-      if (RepeatedSequenceLocs.size() < 2)
-        return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
   }
@@ -6886,8 +6884,8 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
          ++Stage) {
       std::deque<SUnit *> Instrs =
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
-      llvm::sort(Instrs,
-                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
+      std::sort(Instrs.begin(), Instrs.end(),
+                [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
       for (SUnit *SU : Instrs)
         ProposedSchedule.push_back(SU);
     }

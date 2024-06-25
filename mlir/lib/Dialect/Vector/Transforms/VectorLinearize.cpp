@@ -151,12 +151,10 @@ struct LinearizeVectorExtractStridedSlice final
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType dstType =
-        getTypeConverter()->convertType<VectorType>(extractOp.getType());
-    assert(dstType && "vector type destination expected.");
-    if (extractOp.getVector().getType().isScalable() || dstType.isScalable())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalable vectors are not supported.");
+    Type dstType = getTypeConverter()->convertType(extractOp.getType());
+    assert(!(extractOp.getVector().getType().isScalable() ||
+             cast<VectorType>(dstType).isScalable()) &&
+           "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -266,14 +264,10 @@ struct LinearizeVectorShuffle final
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType dstType =
-        getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
-    assert(dstType && "vector type destination expected.");
-    // The assert is used because vector.shuffle does not support scalable
-    // vectors.
+    Type dstType = getTypeConverter()->convertType(shuffleOp.getType());
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
-             dstType.isScalable()) &&
+             cast<VectorType>(dstType).isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -342,10 +336,9 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
-    if (extractOp.getVector().getType().isScalable() ||
-        cast<VectorType>(dstTy).isScalable())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalable vectors are not supported.");
+    assert(!(extractOp.getVector().getType().isScalable() ||
+             cast<VectorType>(dstTy).isScalable()) &&
+           "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -401,12 +394,10 @@ struct LinearizeVectorInsert final
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType dstTy = getTypeConverter()->convertType<VectorType>(
-        insertOp.getDestVectorType());
-    assert(dstTy && "vector type destination expected.");
-    if (insertOp.getDestVectorType().isScalable() || dstTy.isScalable())
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "scalable vectors are not supported.");
+    Type dstTy = getTypeConverter()->convertType(insertOp.getDestVectorType());
+    assert(!(insertOp.getDestVectorType().isScalable() ||
+             cast<VectorType>(dstTy).isScalable()) &&
+           "scalable vectors are not supported.");
 
     if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
                                          targetVectorBitWidth))

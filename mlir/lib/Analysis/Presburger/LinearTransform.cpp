@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Support/LLVM.h"
 #include <utility>
@@ -47,21 +48,21 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
   IntegerRelation result(rel.getSpace());
 
   for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
-    ArrayRef<DynamicAPInt> eq = rel.getEquality(i);
+    ArrayRef<MPInt> eq = rel.getEquality(i);
 
-    const DynamicAPInt &c = eq.back();
+    const MPInt &c = eq.back();
 
-    SmallVector<DynamicAPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
+    SmallVector<MPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
     newEq.push_back(c);
     result.addEquality(newEq);
   }
 
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i) {
-    ArrayRef<DynamicAPInt> ineq = rel.getInequality(i);
+    ArrayRef<MPInt> ineq = rel.getInequality(i);
 
-    const DynamicAPInt &c = ineq.back();
+    const MPInt &c = ineq.back();
 
-    SmallVector<DynamicAPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
+    SmallVector<MPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
     newIneq.push_back(c);
     result.addInequality(newIneq);
   }

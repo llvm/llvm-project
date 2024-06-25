@@ -41,8 +41,12 @@ class raw_pwrite_stream;
 /// implementation.
 class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
+  MCSection::iterator CurInsertionPoint;
   bool EmitEHFrame;
   bool EmitDebugFrame;
+  SmallVector<MCSymbol *, 2> PendingLabels;
+  SmallSetVector<MCSection *, 4> PendingLabelSections;
+  unsigned CurSubsectionIdx = 0;
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
@@ -88,8 +92,9 @@ public:
   MCFragment *getCurrentFragment() const;
 
   void insert(MCFragment *F) {
+    flushPendingLabels(F);
     MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->addFragment(*F);
+    CurSection->getFragmentList().insert(CurInsertionPoint, F);
     F->setParent(CurSection);
   }
 
@@ -100,10 +105,25 @@ public:
   MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
 
 protected:
-  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
+  bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
+
+  /// Assign a label to the current Section and Subsection even though a
+  /// fragment is not yet present. Use flushPendingLabels(F) to associate
+  /// a fragment with this label.
+  void addPendingLabel(MCSymbol* label);
+
+  /// If any labels have been emitted but not assigned fragments in the current
+  /// Section and Subsection, ensure that they get assigned to fragment F.
+  /// Optionally, one can provide an offset \p FOffset as a symbol offset within
+  /// the fragment.
+  void flushPendingLabels(MCFragment *F, uint64_t FOffset = 0);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
+
+  /// Create a data fragment for any pending labels across all Sections
+  /// and Subsections.
+  void flushPendingLabels();
 
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
@@ -111,7 +131,7 @@ public:
   /// @{
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                               uint64_t Offset);
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -121,7 +141,7 @@ public:
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction
@@ -137,6 +157,8 @@ public:
                             unsigned MaxBytesToEmit = 0) override;
   void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
+                               const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,

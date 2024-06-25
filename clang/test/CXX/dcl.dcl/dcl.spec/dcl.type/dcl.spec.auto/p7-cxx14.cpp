@@ -4,7 +4,9 @@
 
 namespace std {
   template<typename T> struct initializer_list {
-    const T *a, *b;
+    const T *p;
+    unsigned long n;
+    initializer_list(const T *p, unsigned long n);
   };
 }
 

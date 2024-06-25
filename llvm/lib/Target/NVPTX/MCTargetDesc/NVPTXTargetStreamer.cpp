@@ -46,7 +46,8 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
                            const MCSection *Section) {
   // FIXME: the checks for the DWARF sections are very fragile and should be
   // fixed up in a followup patch.
-  if (!Section || Section->isText())
+  if (!Section || Section->getKind().isText() ||
+      Section->getKind().isWriteable())
     return false;
   return Section == FI->getDwarfAbbrevSection() ||
          Section == FI->getDwarfInfoSection() ||
@@ -83,7 +84,8 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
 }
 
 void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
-                                        MCSection *Section, uint32_t SubSection,
+                                        MCSection *Section,
+                                        const MCExpr *SubSection,
                                         raw_ostream &OS) {
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();

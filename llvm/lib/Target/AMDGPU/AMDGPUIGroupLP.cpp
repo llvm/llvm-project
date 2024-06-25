@@ -612,7 +612,10 @@ void PipelineSolver::populateReadyList(
   }
 
   if (UseCostHeur) {
-    llvm::sort(ReadyList, llvm::less_second());
+    std::sort(ReadyList.begin(), ReadyList.end(),
+              [](std::pair<int, int> A, std::pair<int, int> B) {
+                return A.second < B.second;
+              });
   }
 
   assert(ReadyList.size() == CurrSU.second.size());
@@ -1479,7 +1482,9 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   MFMAChains = 0;
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
-    if (is_contained(MFMAChainSeeds, MFMAPipeSU))
+    if (MFMAChainSeeds.size() &&
+        std::find(MFMAChainSeeds.begin(), MFMAChainSeeds.end(), MFMAPipeSU) !=
+            MFMAChainSeeds.end())
       continue;
     if (!std::any_of(MFMAPipeSU->Preds.begin(), MFMAPipeSU->Preds.end(),
                      [&TII](SDep &Succ) {

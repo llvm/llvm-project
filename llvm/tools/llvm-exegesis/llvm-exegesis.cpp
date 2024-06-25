@@ -470,11 +470,9 @@ void benchmarkMain() {
 #endif
   }
 
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
   InitializeAllExegesisTargets();
-#define LLVM_EXEGESIS(TargetName)                                              \
-  LLVMInitialize##TargetName##AsmPrinter();                                    \
-  LLVMInitialize##TargetName##AsmParser();
-#include "llvm/Config/TargetExegesis.def"
 
   const LLVMState State =
       ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
@@ -623,11 +621,9 @@ static void analysisMain() {
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
+  InitializeAllAsmPrinters();
+  InitializeAllDisassemblers();
   InitializeAllExegesisTargets();
-#define LLVM_EXEGESIS(TargetName)                                              \
-  LLVMInitialize##TargetName##AsmPrinter();                                    \
-  LLVMInitialize##TargetName##Disassembler();
-#include "llvm/Config/TargetExegesis.def"
 
   auto MemoryBuffer = ExitOnFileError(
       BenchmarkFile,
@@ -694,11 +690,9 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   // Initialize targets so we can print them when flag --version is specified.
-#define LLVM_EXEGESIS(TargetName)                                              \
-  LLVMInitialize##TargetName##Target();                                        \
-  LLVMInitialize##TargetName##TargetInfo();                                    \
-  LLVMInitialize##TargetName##TargetMC();
-#include "llvm/Config/TargetExegesis.def"
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
 
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);

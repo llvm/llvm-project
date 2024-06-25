@@ -1877,27 +1877,6 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       FromFn = QT->getAs<FunctionType>();
       Changed = true;
     }
-
-    // For C, when called from checkPointerTypesForAssignment,
-    // we need to not alter FromFn, or else even an innocuous cast
-    // like dropping effects will fail. In C++ however we do want to
-    // alter FromFn (because of the way PerformImplicitConversion works).
-    if (getLangOpts().CPlusPlus) {
-      FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
-
-      // Transparently add/drop effects; here we are concerned with
-      // language rules/canonicalization. Adding/dropping effects is a warning.
-      const auto FromFX = FromFPT->getFunctionEffects();
-      const auto ToFX = ToFPT->getFunctionEffects();
-      if (FromFX != ToFX) {
-        FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
-        ExtInfo.FunctionEffects = ToFX;
-        QualType QT = Context.getFunctionType(
-            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
-        FromFn = QT->getAs<FunctionType>();
-        Changed = true;
-      }
-    }
   }
 
   if (!Changed)
@@ -2001,12 +1980,12 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
     return false;
 
   // There are no conversions between extended vector types, only identity.
-  if (auto *ToExtType = ToType->getAs<ExtVectorType>()) {
-    if (auto *FromExtType = FromType->getAs<ExtVectorType>()) {
+  if (ToType->isExtVectorType()) {
+    if (FromType->isExtVectorType()) {
       // HLSL allows implicit truncation of vector types.
       if (S.getLangOpts().HLSL) {
-        unsigned FromElts = FromExtType->getNumElements();
-        unsigned ToElts = ToExtType->getNumElements();
+        unsigned FromElts = FromType->getAs<VectorType>()->getNumElements();
+        unsigned ToElts = ToType->getAs<VectorType>()->getNumElements();
         if (FromElts < ToElts)
           return false;
         if (FromElts == ToElts)
@@ -2014,8 +1993,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
         else
           ICK = ICK_HLSL_Vector_Truncation;
 
-        QualType FromElTy = FromExtType->getElementType();
-        QualType ToElTy = ToExtType->getElementType();
+        QualType FromElTy = FromType->getAs<VectorType>()->getElementType();
+        QualType ToElTy = ToType->getAs<VectorType>()->getElementType();
         if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
           return true;
         return IsVectorElementConversion(S, FromElTy, ToElTy, ElConv, From);

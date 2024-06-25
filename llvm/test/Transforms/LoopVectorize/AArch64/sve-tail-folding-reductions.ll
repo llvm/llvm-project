@@ -14,7 +14,9 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -69,7 +71,9 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-IN-LOOP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-IN-LOOP-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-IN-LOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-IN-LOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -142,7 +146,9 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -196,7 +202,9 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-IN-LOOP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-IN-LOOP-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; CHECK-IN-LOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-IN-LOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -267,7 +275,9 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -335,7 +345,9 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-IN-LOOP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-IN-LOOP-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-IN-LOOP-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-IN-LOOP-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], [[TMP4]]
 ; CHECK-IN-LOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; CHECK-IN-LOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

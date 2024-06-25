@@ -17,7 +17,6 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
-#include <deque>
 #include <optional>
 #include <vector>
 

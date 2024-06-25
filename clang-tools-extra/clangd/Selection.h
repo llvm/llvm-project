@@ -45,7 +45,6 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/SmallVector.h"
-#include <stack>
 
 namespace clang {
 namespace clangd {

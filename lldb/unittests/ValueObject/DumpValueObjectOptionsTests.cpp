@@ -98,10 +98,9 @@ public:
     ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     for (auto [value, options, expected] : tests) {
       DataExtractor data_extractor{&value, sizeof(value), endian, 4};
-      auto valobj_sp = ValueObjectConstResult::Create(exe_scope, enum_type,
-                                                      var_name, data_extractor);
-      if (llvm::Error error = valobj_sp->Dump(strm, options))
-        llvm::consumeError(std::move(error));
+      ValueObjectConstResult::Create(exe_scope, enum_type, var_name,
+                                     data_extractor)
+          ->Dump(strm, options);
       ASSERT_STREQ(strm.GetString().str().c_str(), expected);
       strm.Clear();
     }

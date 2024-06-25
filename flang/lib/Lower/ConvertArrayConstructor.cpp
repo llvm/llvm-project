@@ -438,7 +438,7 @@ public:
 
   void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
                  hlfir::Entity value) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](auto &impl) { return impl.pushValue(loc, builder, value); },
         implVariant);
   }
@@ -446,7 +446,7 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](auto &impl) {
           return impl.startImpliedDo(loc, builder, lower, upper, stride);
         },
@@ -455,13 +455,13 @@ public:
 
   hlfir::Entity finishArrayCtorLowering(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-    return Fortran::common::visit(
+    return std::visit(
         [&](auto &impl) { return impl.finishArrayCtorLowering(loc, builder); },
         implVariant);
   }
 
   void startImpliedDoScope(llvm::StringRef doName, mlir::Value indexValue) {
-    Fortran::common::visit(
+    std::visit(
         [&](auto &impl) {
           return impl.startImpliedDoScope(doName, indexValue);
         },
@@ -469,8 +469,8 @@ public:
   }
 
   void endImpliedDoScope() {
-    Fortran::common::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
-                           implVariant);
+    std::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
+               implVariant);
   }
 
 private:
@@ -612,17 +612,16 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
         arrayValueListStack.pop_back_val();
     for (const Fortran::evaluate::ArrayConstructorValue<T> &acValue :
          *currentArrayValueList)
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
-                arrayValueListStack.push_back(&impledDo.values());
-                localNumberOfImpliedDo++;
-              },
-              [&](const Fortran::evaluate::Expr<T> &expr) {
-                localNumberOfExpr++;
-                anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
-              }},
-          acValue.u);
+      std::visit(Fortran::common::visitors{
+                     [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
+                       arrayValueListStack.push_back(&impledDo.values());
+                       localNumberOfImpliedDo++;
+                     },
+                     [&](const Fortran::evaluate::Expr<T> &expr) {
+                       localNumberOfExpr++;
+                       anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
+                     }},
+                 acValue.u);
     anyImpliedDo = anyImpliedDo || localNumberOfImpliedDo > 0;
 
     if (localNumberOfImpliedDo == 0) {
@@ -766,7 +765,7 @@ static void genAcValue(mlir::Location loc,
                                    impliedDoIndexValue);
 
   for (const auto &acValue : impledDo.values())
-    Fortran::common::visit(
+    std::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },
@@ -788,7 +787,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
       loc, converter, arrayCtorExpr, symMap, stmtCtx);
   // Run the array lowering strategy through the ac-values.
   for (const auto &acValue : arrayCtorExpr)
-    Fortran::common::visit(
+    std::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },

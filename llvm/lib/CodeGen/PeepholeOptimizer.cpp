@@ -172,8 +172,8 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       AU.addPreserved<MachineLoopInfo>();
       if (Aggressive) {
-        AU.addRequired<MachineDominatorTreeWrapperPass>();
-        AU.addPreserved<MachineDominatorTreeWrapperPass>();
+        AU.addRequired<MachineDominatorTree>();
+        AU.addPreserved<MachineDominatorTree>();
       }
     }
 
@@ -487,7 +487,7 @@ char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
 
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
                       "Peephole Optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
                     "Peephole Optimizations", false, false)
@@ -1670,8 +1670,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT = Aggressive ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
-                  : nullptr;
+  DT  = Aggressive ? &getAnalysis<MachineDominatorTree>() : nullptr;
   MLI = &getAnalysis<MachineLoopInfo>();
   MF.setDelegate(this);
 

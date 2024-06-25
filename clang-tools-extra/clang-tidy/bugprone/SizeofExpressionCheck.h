@@ -30,7 +30,6 @@ private:
   const bool WarnOnSizeOfThis;
   const bool WarnOnSizeOfCompareToConstant;
   const bool WarnOnSizeOfPointerToAggregate;
-  const bool WarnOnSizeOfPointer;
 };
 
 } // namespace clang::tidy::bugprone

@@ -5,15 +5,7 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-
 #include <arm_sve.h>
-
-#if defined __ARM_FEATURE_SME
-#define MODE_ATTR __arm_streaming
-#else
-#define MODE_ATTR
-#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -34,7 +26,7 @@
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_s8(svint8_t op) MODE_ATTR
+uint64_t test_svlen_s8(svint8_t op)
 {
   return SVE_ACLE_FUNC(svlen,_s8,,)(op);
 }
@@ -51,7 +43,7 @@ uint64_t test_svlen_s8(svint8_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_s16(svint16_t op) MODE_ATTR
+uint64_t test_svlen_s16(svint16_t op)
 {
   return SVE_ACLE_FUNC(svlen,_s16,,)(op);
 }
@@ -68,7 +60,7 @@ uint64_t test_svlen_s16(svint16_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_s32(svint32_t op) MODE_ATTR
+uint64_t test_svlen_s32(svint32_t op)
 {
   return SVE_ACLE_FUNC(svlen,_s32,,)(op);
 }
@@ -85,7 +77,7 @@ uint64_t test_svlen_s32(svint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_s64(svint64_t op) MODE_ATTR
+uint64_t test_svlen_s64(svint64_t op)
 {
   return SVE_ACLE_FUNC(svlen,_s64,,)(op);
 }
@@ -102,7 +94,7 @@ uint64_t test_svlen_s64(svint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_u8(svuint8_t op) MODE_ATTR
+uint64_t test_svlen_u8(svuint8_t op)
 {
   return SVE_ACLE_FUNC(svlen,_u8,,)(op);
 }
@@ -119,7 +111,7 @@ uint64_t test_svlen_u8(svuint8_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_u16(svuint16_t op) MODE_ATTR
+uint64_t test_svlen_u16(svuint16_t op)
 {
   return SVE_ACLE_FUNC(svlen,_u16,,)(op);
 }
@@ -136,7 +128,7 @@ uint64_t test_svlen_u16(svuint16_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_u32(svuint32_t op) MODE_ATTR
+uint64_t test_svlen_u32(svuint32_t op)
 {
   return SVE_ACLE_FUNC(svlen,_u32,,)(op);
 }
@@ -153,7 +145,7 @@ uint64_t test_svlen_u32(svuint32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_u64(svuint64_t op) MODE_ATTR
+uint64_t test_svlen_u64(svuint64_t op)
 {
   return SVE_ACLE_FUNC(svlen,_u64,,)(op);
 }
@@ -170,7 +162,7 @@ uint64_t test_svlen_u64(svuint64_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 3
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
+uint64_t test_svlen_f16(svfloat16_t op)
 {
   return SVE_ACLE_FUNC(svlen,_f16,,)(op);
 }
@@ -187,7 +179,7 @@ uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
+uint64_t test_svlen_f32(svfloat32_t op)
 {
   return SVE_ACLE_FUNC(svlen,_f32,,)(op);
 }
@@ -204,7 +196,7 @@ uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 // CPP-CHECK-NEXT:    ret i64 [[TMP1]]
 //
-uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
+uint64_t test_svlen_f64(svfloat64_t op)
 {
   return SVE_ACLE_FUNC(svlen,_f64,,)(op);
 }
