@@ -115,12 +115,12 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
   gp->mtx.Unlock();
 }
 
-void AllocatorLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+void AllocatorLockBeforeFork() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   global_proc()->internal_alloc_mtx.Lock();
   InternalAllocatorLock();
 }
 
-void AllocatorUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+void AllocatorUnlockAfterFork(bool child) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   InternalAllocatorUnlock();
   global_proc()->internal_alloc_mtx.Unlock();
 }
