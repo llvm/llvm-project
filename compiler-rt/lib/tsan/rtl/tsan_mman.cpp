@@ -17,6 +17,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "tsan_flags.h"
 #include "tsan_interface.h"
 #include "tsan_report.h"
@@ -119,9 +120,18 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
 void AllocatorLockBeforeFork() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   global_proc()->internal_alloc_mtx.Lock();
   InternalAllocatorLock();
+#if !SANITIZER_APPLE
+  // OS X allocates from hooks, see 6a3958247a.
+  allocator()->ForceLock();
+  StackDepotLockBeforeFork();
+#endif
 }
 
 void AllocatorUnlockAfterFork(bool child) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+#if !SANITIZER_APPLE
+  StackDepotUnlockAfterFork(child);
+  allocator()->ForceUnlock();
+#endif
   InternalAllocatorUnlock();
   global_proc()->internal_alloc_mtx.Unlock();
 }
