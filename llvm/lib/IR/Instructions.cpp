@@ -41,6 +41,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -60,22 +61,34 @@ static cl::opt<bool> DisableI2pP2iOpt(
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
-  if (isArrayAllocation()) {
-    auto *C = dyn_cast<ConstantInt>(getArraySize());
-    if (!C)
-      return std::nullopt;
-    assert(!Size.isScalable() && "Array elements cannot have a scalable size");
-    Size *= C->getZExtValue();
+  if (!isArrayAllocation()) {
+    return Size;
   }
-  return Size;
+  auto *C = dyn_cast<ConstantInt>(getArraySize());
+  if (!C)
+    return std::nullopt;
+  assert(!Size.isScalable() && "Array elements cannot have a scalable size");
+  auto checkedProd = checkedMulUnsigned(static_cast<TypeSize::ScalarTy>(Size),
+                                        C->getZExtValue());
+  if (!checkedProd) {
+    return std::nullopt;
+  }
+  return TypeSize::getFixed(*checkedProd);
 }
 
 std::optional<TypeSize>
 AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
-  std::optional<TypeSize> Size = getAllocationSize(DL);
-  if (Size)
-    return *Size * 8;
-  return std::nullopt;
+  std::optional<TypeSize> OptSize = getAllocationSize(DL);
+  if (!OptSize) {
+    return std::nullopt;
+  }
+  auto CheckedProd =
+      checkedMulUnsigned(static_cast<TypeSize::ScalarTy>(*OptSize),
+                         static_cast<TypeSize::ScalarTy>(8));
+  if (!CheckedProd) {
+    return std::nullopt;
+  }
+  return TypeSize::getFixed(*CheckedProd);
 }
 
 //===----------------------------------------------------------------------===//
