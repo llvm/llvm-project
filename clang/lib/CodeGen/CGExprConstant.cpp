@@ -807,9 +807,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
               CGM.getVTablePointerAuthentication(VTableClass)) {
         VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
             VTableAddressPoint, *Authentication);
-        if (!VTableAddressPoint) {
+        if (!VTableAddressPoint)
           return false;
-        }
       }
       if (!AppendBytes(Offset, VTableAddressPoint))
         return false;
@@ -1854,36 +1853,35 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForMemory(const APValue &value,
 /// This can fail if the qualifier needs address discrimination and the
 /// emitter is in an abstract mode.
 llvm::Constant *
-ConstantEmitter::tryEmitConstantSignedPointer(llvm::Constant *unsignedPointer,
-                                              PointerAuthQualifier schema) {
-  assert(schema && "applying trivial ptrauth schema");
+ConstantEmitter::tryEmitConstantSignedPointer(llvm::Constant *UnsignedPointer,
+                                              PointerAuthQualifier Schema) {
+  assert(Schema && "applying trivial ptrauth schema");
 
-  if (schema.hasKeyNone())
-    return unsignedPointer;
+  if (Schema.hasKeyNone())
+    return UnsignedPointer;
 
-  auto key = schema.getKey();
+  unsigned Key = Schema.getKey();
 
   // Create an address placeholder if we're using address discrimination.
-  llvm::GlobalValue *storageAddress = nullptr;
-  if (schema.isAddressDiscriminated()) {
+  llvm::GlobalValue *StorageAddress = nullptr;
+  if (Schema.isAddressDiscriminated()) {
     // We can't do this if the emitter is in an abstract state.
     if (isAbstract())
       return nullptr;
 
-    storageAddress = getCurrentAddrPrivate();
+    StorageAddress = getCurrentAddrPrivate();
   }
 
-  // Fetch the extra discriminator.
-  llvm::ConstantInt *otherDiscriminator =
-      llvm::ConstantInt::get(CGM.IntPtrTy, schema.getExtraDiscriminator());
+  llvm::ConstantInt *Discriminator =
+      llvm::ConstantInt::get(CGM.IntPtrTy, Schema.getExtraDiscriminator());
 
-  auto signedPointer = CGM.getConstantSignedPointer(
-      unsignedPointer, key, storageAddress, otherDiscriminator);
+  llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
+      UnsignedPointer, Key, StorageAddress, Discriminator);
 
-  if (schema.isAddressDiscriminated())
-    registerCurrentAddrPrivate(signedPointer, storageAddress);
+  if (Schema.isAddressDiscriminated())
+    registerCurrentAddrPrivate(SignedPointer, StorageAddress);
 
-  return signedPointer;
+  return SignedPointer;
 }
 
 llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,

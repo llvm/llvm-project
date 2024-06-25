@@ -467,7 +467,7 @@ public:
   void mangleNameOrStandardSubstitution(const NamedDecl *ND);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
-  void mangleVendorQualifier(StringRef qualifier);
+  void mangleVendorQualifier(StringRef Name);
 
 private:
 
@@ -7058,64 +7058,63 @@ void ItaniumMangleContextImpl::mangleCXXDtorComdat(const CXXDestructorDecl *D,
 /// override schema, e.g. if the override has specified type based
 /// discrimination the encoded value will be the discriminator derived from the
 /// type name.
-static void mangleOverrideDiscrimination(CXXNameMangler &mangler,
-                                         ASTContext &context,
-                                         const ThunkInfo &thunk) {
-  auto &langOpts = context.getLangOpts();
-  auto thisType = thunk.ThisType;
-  auto thisRecord = thisType->getPointeeCXXRecordDecl();
-  auto ptrauthClassRecord = context.baseForVTableAuthentication(thisRecord);
-  unsigned typedDiscriminator =
-      context.getPointerAuthVTablePointerDiscriminator(thisRecord);
-  mangler.mangleVendorQualifier("__vtptrauth");
-  auto &manglerStream = mangler.getStream();
-  manglerStream << "I";
-  if (auto explicitAuth =
-          ptrauthClassRecord->getAttr<VTablePointerAuthenticationAttr>()) {
-    manglerStream << "Lj" << explicitAuth->getKey();
+static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
+                                         ASTContext &Context,
+                                         const ThunkInfo &Thunk) {
+  auto &LangOpts = Context.getLangOpts();
+  const CXXRecordDecl *ThisRD = Thunk.ThisType->getPointeeCXXRecordDecl();
+  const CXXRecordDecl *PtrauthClassRD =
+      Context.baseForVTableAuthentication(ThisRD);
+  unsigned TypedDiscriminator =
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+  Mangler.mangleVendorQualifier("__vtptrauth");
+  auto &ManglerStream = Mangler.getStream();
+  ManglerStream << "I";
+  if (const auto *ExplicitAuth =
+          PtrauthClassRD->getAttr<VTablePointerAuthenticationAttr>()) {
+    ManglerStream << "Lj" << ExplicitAuth->getKey();
 
-    if (explicitAuth->getAddressDiscrimination() ==
-        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination) {
-      manglerStream << "Lb" << langOpts.PointerAuthVTPtrAddressDiscrimination;
-    } else {
-      manglerStream << "Lb"
-                    << (explicitAuth->getAddressDiscrimination() ==
+    if (ExplicitAuth->getAddressDiscrimination() ==
+        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination)
+      ManglerStream << "Lb" << LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    else
+      ManglerStream << "Lb"
+                    << (ExplicitAuth->getAddressDiscrimination() ==
                         VTablePointerAuthenticationAttr::AddressDiscrimination);
-    }
 
-    switch (explicitAuth->getExtraDiscrimination()) {
+    switch (ExplicitAuth->getExtraDiscrimination()) {
     case VTablePointerAuthenticationAttr::DefaultExtraDiscrimination: {
-      if (langOpts.PointerAuthVTPtrTypeDiscrimination)
-        manglerStream << "Lj" << typedDiscriminator;
+      if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+        ManglerStream << "Lj" << TypedDiscriminator;
       else
-        manglerStream << "Lj" << 0;
+        ManglerStream << "Lj" << 0;
       break;
     }
     case VTablePointerAuthenticationAttr::TypeDiscrimination:
-      manglerStream << "Lj" << typedDiscriminator;
+      ManglerStream << "Lj" << TypedDiscriminator;
       break;
     case VTablePointerAuthenticationAttr::CustomDiscrimination:
-      manglerStream << "Lj" << explicitAuth->getCustomDiscriminationValue();
+      ManglerStream << "Lj" << ExplicitAuth->getCustomDiscriminationValue();
       break;
     case VTablePointerAuthenticationAttr::NoExtraDiscrimination:
-      manglerStream << "Lj" << 0;
+      ManglerStream << "Lj" << 0;
       break;
     }
   } else {
-    manglerStream << "Lj"
+    ManglerStream << "Lj"
                   << (unsigned)VTablePointerAuthenticationAttr::DefaultKey;
-    manglerStream << "Lb" << langOpts.PointerAuthVTPtrAddressDiscrimination;
-    if (langOpts.PointerAuthVTPtrTypeDiscrimination)
-      manglerStream << "Lj" << typedDiscriminator;
+    ManglerStream << "Lb" << LangOpts.PointerAuthVTPtrAddressDiscrimination;
+    if (LangOpts.PointerAuthVTPtrTypeDiscrimination)
+      ManglerStream << "Lj" << TypedDiscriminator;
     else
-      manglerStream << "Lj" << 0;
+      ManglerStream << "Lj" << 0;
   }
-  manglerStream << "E";
+  ManglerStream << "E";
 }
 
 void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                                            const ThunkInfo &Thunk,
-                                           bool elideOverrideInfo,
+                                           bool ElideOverrideInfo,
                                            raw_ostream &Out) {
   //  <special-name> ::= T <call-offset> <base encoding>
   //                      # base is the nominal target function of thunk
@@ -7141,15 +7140,14 @@ void ItaniumMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                              Thunk.Return.Virtual.Itanium.VBaseOffsetOffset);
 
   Mangler.mangleFunctionEncoding(MD);
-  if (!elideOverrideInfo) {
+  if (!ElideOverrideInfo)
     mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
-  }
 }
 
 void ItaniumMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                                                   CXXDtorType Type,
                                                   const ThunkInfo &Thunk,
-                                                  bool elideOverrideInfo,
+                                                  bool ElideOverrideInfo,
                                                   raw_ostream &Out) {
   //  <special-name> ::= T <call-offset> <base encoding>
   //                      # base is the nominal target function of thunk
@@ -7162,7 +7160,7 @@ void ItaniumMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                            ThisAdjustment.Virtual.Itanium.VCallOffsetOffset);
 
   Mangler.mangleFunctionEncoding(GlobalDecl(DD, Type));
-  if (!elideOverrideInfo)
+  if (!ElideOverrideInfo)
     mangleOverrideDiscrimination(Mangler, getASTContext(), Thunk);
 }
 

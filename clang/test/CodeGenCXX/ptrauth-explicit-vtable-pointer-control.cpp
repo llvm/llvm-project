@@ -133,7 +133,7 @@ void test(NoExplicitAuth *a, ExplicitlyDisableAuth *b, ExplicitAddressDiscrimina
   // CHECK-DEFAULT-NONE: %35 = call i64 @llvm.ptrauth.auth(i64 %34, i32 2, i64 6177)
   // CHECK-DEFAULT-NONE: %36 = inttoptr i64 %35 to ptr
   // CHECK-DEFAULT-NONE: %vfn10 = getelementptr inbounds ptr, ptr %36, i64 2
- 
+
 
   g->f();
   // CHECK-DEFAULT-NONE: %40 = load ptr, ptr %g.addr, align 8, !tbaa !2
@@ -150,7 +150,7 @@ void test(NoExplicitAuth *a, ExplicitlyDisableAuth *b, ExplicitAddressDiscrimina
   // CHECK-DEFAULT-NONE: %49 = call i64 @llvm.ptrauth.auth(i64 %48, i32 2, i64 0)
   // CHECK-DEFAULT-NONE: %50 = inttoptr i64 %49 to ptr
   // CHECK-DEFAULT-NONE: %vfn14 = getelementptr inbounds ptr, ptr %50, i64 2
- 
+
 
   make_subclass(a)->g();
   // CHECK-DEFAULT-NONE: %vtable16 = load ptr, ptr %call15, align 8, !tbaa !6

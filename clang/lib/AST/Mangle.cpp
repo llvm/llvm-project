@@ -516,14 +516,14 @@ public:
       if (MD->isVirtual()) {
         if (const auto *TIV = Ctx.getVTableContext()->getThunkInfo(MD)) {
           for (const auto &T : *TIV) {
-            std::string thunkName;
-            std::string contextualizedName =
-                getMangledThunk(MD, T, /* elideOverrideInfo */ false);
-            if (Ctx.useAbbreviatedThunkName(MD, contextualizedName))
-              thunkName = getMangledThunk(MD, T, /* elideOverrideInfo */ true);
+            std::string ThunkName;
+            std::string ContextualizedName =
+                getMangledThunk(MD, T, /* ElideOverrideInfo */ false);
+            if (Ctx.useAbbreviatedThunkName(MD, ContextualizedName))
+              ThunkName = getMangledThunk(MD, T, /* ElideOverrideInfo */ true);
             else
-              thunkName = contextualizedName;
-            Manglings.emplace_back(thunkName);
+              ThunkName = ContextualizedName;
+            Manglings.emplace_back(ThunkName);
           }
         }
       }
@@ -580,11 +580,11 @@ private:
   }
 
   std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T,
-                              bool elideOverrideInfo) {
+                              bool ElideOverrideInfo) {
     std::string FrontendBuf;
     llvm::raw_string_ostream FOS(FrontendBuf);
 
-    MC->mangleThunk(MD, T, elideOverrideInfo, FOS);
+    MC->mangleThunk(MD, T, ElideOverrideInfo, FOS);
 
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);

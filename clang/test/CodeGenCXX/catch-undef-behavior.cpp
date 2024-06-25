@@ -110,7 +110,7 @@ void member_access(S *p) {
 
   // (3b) Check that 'p' actually points to an 'S'
 
-  // CHECK: [[VTABLE2:%.*]] = load ptr, ptr 
+  // CHECK: [[VTABLE2:%.*]] = load ptr, ptr
   // CHECK: ptrtoint ptr [[VTABLE2]] to i64
   // CHECK-NEXT: mul i64 %[[#]], -4658895280553007687, !nosanitize
   // [...]

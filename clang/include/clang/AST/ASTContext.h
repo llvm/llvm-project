@@ -1281,7 +1281,7 @@ public:
   /// Return the "other" discriminator used for the pointer auth schema used for
   /// vtable pointers in instances of the requested type.
   uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *record);
+  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
@@ -3446,9 +3446,10 @@ public:
 
   /// Resolve the root record to be used to derive the vtable pointer
   /// authentication policy for the specified record.
-  const CXXRecordDecl *baseForVTableAuthentication(const CXXRecordDecl *);
-  bool useAbbreviatedThunkName(GlobalDecl virtualMethodDecl,
-                               StringRef mangledName);
+  const CXXRecordDecl *
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                               StringRef MangledName);
 
   StringRef getCUIDHash() const;
 
@@ -3457,7 +3458,7 @@ private:
   /// `pragma omp [begin] declare variant` directive.
   SmallVector<std::unique_ptr<OMPTraitInfo>, 4> OMPTraitInfoVector;
 
-  llvm::DenseMap<GlobalDecl, llvm::StringSet<>> thunksToBeAbbreviated;
+  llvm::DenseMap<GlobalDecl, llvm::StringSet<>> ThunksToBeAbbreviated;
 };
 
 /// Insertion operator for diagnostics.

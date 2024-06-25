@@ -2589,10 +2589,9 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   VTableField = VTableField.withElementType(PtrTy);
 
   if (auto AuthenticationInfo = CGM.getVTablePointerAuthInfo(
-          this, Vptr.Base.getBase(), VTableField.emitRawPointer(*this))) {
+          this, Vptr.Base.getBase(), VTableField.emitRawPointer(*this)))
     VTableAddressPoint =
         EmitPointerAuthSign(*AuthenticationInfo, VTableAddressPoint);
-  }
 
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(PtrTy);
@@ -2695,7 +2694,7 @@ llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
 
   if (auto AuthenticationInfo =
-            CGM.getVTablePointerAuthInfo(this, RD, This.emitRawPointer(*this))) {
+          CGM.getVTablePointerAuthInfo(this, RD, This.emitRawPointer(*this))) {
     if (AuthMode != VTableAuthMode::UnsafeUbsanStrip) {
       VTable = cast<llvm::Instruction>(
           EmitPointerAuthAuth(*AuthenticationInfo, VTable));

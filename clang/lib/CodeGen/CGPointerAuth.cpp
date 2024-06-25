@@ -208,14 +208,15 @@ CodeGenModule::computeVTPointerAuthentication(const CXXRecordDecl *ThisClass) {
   }
   if (auto ExplicitAuthentication =
           PrimaryBase->getAttr<VTablePointerAuthenticationAttr>()) {
-    auto ExplicitKey = ExplicitAuthentication->getKey();
     auto ExplicitAddressDiscrimination =
         ExplicitAuthentication->getAddressDiscrimination();
     auto ExplicitDiscriminator =
         ExplicitAuthentication->getExtraDiscrimination();
-    if (ExplicitKey == VTablePointerAuthenticationAttr::NoKey) {
+
+    unsigned ExplicitKey = ExplicitAuthentication->getKey();
+    if (ExplicitKey == VTablePointerAuthenticationAttr::NoKey)
       return std::nullopt;
-    }
+
     if (ExplicitKey != VTablePointerAuthenticationAttr::DefaultKey) {
       if (ExplicitKey == VTablePointerAuthenticationAttr::ProcessIndependent)
         Key = (unsigned)PointerAuthSchema::ARM8_3Key::ASDA;
@@ -227,22 +228,20 @@ CodeGenModule::computeVTPointerAuthentication(const CXXRecordDecl *ThisClass) {
     }
 
     if (ExplicitAddressDiscrimination !=
-        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination) {
+        VTablePointerAuthenticationAttr::DefaultAddressDiscrimination)
       AddressDiscriminated =
           ExplicitAddressDiscrimination ==
           VTablePointerAuthenticationAttr::AddressDiscrimination;
-    }
 
     if (ExplicitDiscriminator ==
-        VTablePointerAuthenticationAttr::TypeDiscrimination) {
+        VTablePointerAuthenticationAttr::TypeDiscrimination)
       Discriminator = TypeBasedDiscriminator;
-    } else if (ExplicitDiscriminator ==
-               VTablePointerAuthenticationAttr::CustomDiscrimination) {
+    else if (ExplicitDiscriminator ==
+             VTablePointerAuthenticationAttr::CustomDiscrimination)
       Discriminator = ExplicitAuthentication->getCustomDiscriminationValue();
-    } else if (ExplicitDiscriminator ==
-               VTablePointerAuthenticationAttr::NoExtraDiscrimination) {
+    else if (ExplicitDiscriminator ==
+             VTablePointerAuthenticationAttr::NoExtraDiscrimination)
       Discriminator = 0;
-    }
   }
   return PointerAuthQualifier::Create(Key, AddressDiscriminated, Discriminator,
                                       PointerAuthenticationMode::SignAndAuth,
@@ -275,9 +274,9 @@ CodeGenModule::getVTablePointerAuthInfo(CodeGenFunction *CGF,
     return std::nullopt;
 
   llvm::Value *Discriminator = nullptr;
-  if (auto ExtraDiscriminator = Authentication->getExtraDiscriminator()) {
+  if (auto ExtraDiscriminator = Authentication->getExtraDiscriminator())
     Discriminator = llvm::ConstantInt::get(IntPtrTy, ExtraDiscriminator);
-  }
+
   if (Authentication->isAddressDiscriminated()) {
     assert(StorageAddress &&
            "address not provided for address-discriminated schema");

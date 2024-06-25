@@ -415,11 +415,11 @@ public:
   bool exportThunk() override { return false; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
-                                     const CXXRecordDecl *UnadjustedClass,
+                                     const CXXRecordDecl * /*UnadjustedClass*/,
                                      const ThunkInfo &TI) override;
 
   llvm::Value *performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
-                                       const CXXRecordDecl *UnadjustedClass,
+                                       const CXXRecordDecl * /*UnadjustedClass*/,
                                        const ReturnAdjustment &RA) override;
 
   void EmitThreadLocalInitFuncs(
@@ -2225,11 +2225,10 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
     GV->setLinkage(llvm::GlobalVariable::AvailableExternallyLinkage);
 }
 
-llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
-                                                    Address This,
-                                                    const CXXRecordDecl *,
-                                                    const ThunkInfo &TI) {
-  auto &TA = TI.This;
+llvm::Value *MicrosoftCXXABI::performThisAdjustment(
+    CodeGenFunction &CGF, Address This,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ThunkInfo &TI) {
+  const ThisAdjustment &TA = TI.This;
   if (TA.isEmpty())
     return This.emitRawPointer(CGF);
 
@@ -2279,10 +2278,10 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
   return V;
 }
 
-llvm::Value *
-MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
-                                         const CXXRecordDecl *,
-                                         const ReturnAdjustment &RA) {
+llvm::Value *MicrosoftCXXABI::performReturnAdjustment(
+    CodeGenFunction &CGF, Address Ret,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ReturnAdjustment &RA) {
+
   if (RA.isEmpty())
     return Ret.emitRawPointer(CGF);
 

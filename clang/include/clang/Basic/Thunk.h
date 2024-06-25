@@ -169,13 +169,13 @@ struct ThunkInfo {
   /// CAUTION: In the unlikely event you need to sort ThunkInfos, consider using
   /// an ABI-specific comparator.
   const CXXMethodDecl *Method;
-  const Type *ThisType{nullptr};
+  const Type *ThisType;
 
-  ThunkInfo() : Method(nullptr) {}
+  ThunkInfo() : Method(nullptr), ThisType(nullptr) {}
 
   ThunkInfo(const ThisAdjustment &This, const ReturnAdjustment &Return,
-            const Type *thisType, const CXXMethodDecl *Method = nullptr)
-      : This(This), Return(Return), Method(Method), ThisType(thisType) {}
+            const Type *ThisT, const CXXMethodDecl *Method = nullptr)
+      : This(This), Return(Return), Method(Method), ThisType(ThisT) {}
 
   friend bool operator==(const ThunkInfo &LHS, const ThunkInfo &RHS) {
     return LHS.This == RHS.This && LHS.Return == RHS.Return &&

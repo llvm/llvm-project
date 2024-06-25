@@ -131,10 +131,10 @@ public:
   void mangleName(GlobalDecl GD, raw_ostream &);
   virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
   virtual void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
-                           bool elideOverrideInfo, raw_ostream &) = 0;
+                           bool ElideOverrideInfo, raw_ostream &) = 0;
   virtual void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
                                   const ThunkInfo &Thunk,
-                                  bool elideOverrideInfo, raw_ostream &) = 0;
+                                  bool ElideOverrideInfo, raw_ostream &) = 0;
   virtual void mangleReferenceTemporary(const VarDecl *D,
                                         unsigned ManglingNumber,
                                         raw_ostream &) = 0;

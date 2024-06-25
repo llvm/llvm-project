@@ -3129,14 +3129,14 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return QualType(TypeNode, Quals.getFastQualifiers());
 }
 
-uint16_t ASTContext::getPointerAuthVTablePointerDiscriminator(
-    const CXXRecordDecl *record) {
-  assert(record->isPolymorphic() &&
+uint16_t
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+  assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
   std::unique_ptr<MangleContext> MC(createMangleContext());
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
-  MC->mangleCXXVTable(record, Out);
+  MC->mangleCXXVTable(RD, Out);
   return llvm::getPointerAuthStableSipHash(Str);
 }
 
@@ -13908,75 +13908,72 @@ StringRef ASTContext::getCUIDHash() const {
 }
 
 const CXXRecordDecl *
-ASTContext::baseForVTableAuthentication(const CXXRecordDecl *thisClass) {
-  assert(thisClass);
-  assert(thisClass->isPolymorphic());
-  const CXXRecordDecl *primaryBase = thisClass;
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
+  assert(ThisClass);
+  assert(ThisClass->isPolymorphic());
+  const CXXRecordDecl *PrimaryBase = ThisClass;
   while (1) {
-    assert(primaryBase);
-    assert(primaryBase->isPolymorphic());
-    auto &layout = getASTRecordLayout(primaryBase);
-    auto base = layout.getPrimaryBase();
-    if (!base || base == primaryBase || !base->isPolymorphic())
+    assert(PrimaryBase);
+    assert(PrimaryBase->isPolymorphic());
+    auto &Layout = getASTRecordLayout(PrimaryBase);
+    auto Base = Layout.getPrimaryBase();
+    if (!Base || Base == PrimaryBase || !Base->isPolymorphic())
       break;
-    primaryBase = base;
+    PrimaryBase = Base;
   }
-  return primaryBase;
+  return PrimaryBase;
 }
 
-bool ASTContext::useAbbreviatedThunkName(GlobalDecl virtualMethodDecl,
-                                         StringRef mangledName) {
-  auto method = cast<CXXMethodDecl>(virtualMethodDecl.getDecl());
-  assert(method->isVirtual());
-  bool defaultIncludesPointerAuth =
+bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                                         StringRef MangledName) {
+  auto *Method = cast<CXXMethodDecl>(VirtualMethodDecl.getDecl());
+  assert(Method->isVirtual());
+  bool DefaultIncludesPointerAuth =
       LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
 
-  if (!defaultIncludesPointerAuth)
+  if (!DefaultIncludesPointerAuth)
     return true;
 
-  auto existing = thunksToBeAbbreviated.find(virtualMethodDecl);
-  if (existing != thunksToBeAbbreviated.end())
-    return existing->second.contains(mangledName.str());
+  auto Existing = ThunksToBeAbbreviated.find(VirtualMethodDecl);
+  if (Existing != ThunksToBeAbbreviated.end())
+    return Existing->second.contains(MangledName.str());
 
-  std::unique_ptr<MangleContext> mangler(createMangleContext());
-  llvm::StringMap<llvm::SmallVector<std::string, 2>> thunks;
-  auto vtableContext = getVTableContext();
-  if (const auto *thunkInfos = vtableContext->getThunkInfo(virtualMethodDecl)) {
-    auto destructor = dyn_cast<CXXDestructorDecl>(method);
-    for (const auto &thunk : *thunkInfos) {
-      SmallString<256> elidedName;
-      llvm::raw_svector_ostream elidedNameStream(elidedName);
-      if (destructor) {
-        mangler->mangleCXXDtorThunk(destructor, virtualMethodDecl.getDtorType(),
-                                    thunk, /* elideOverrideInfo */ true,
-                                    elidedNameStream);
-      } else {
-        mangler->mangleThunk(method, thunk, /* elideOverrideInfo */ true,
-                             elidedNameStream);
-      }
-      SmallString<256> mangledName;
-      llvm::raw_svector_ostream mangledNameStream(mangledName);
-      if (destructor) {
-        mangler->mangleCXXDtorThunk(destructor, virtualMethodDecl.getDtorType(),
-                                    thunk, /* elideOverrideInfo */ false,
+  std::unique_ptr<MangleContext> Mangler(createMangleContext());
+  llvm::StringMap<llvm::SmallVector<std::string, 2>> Thunks;
+  auto VtableContext = getVTableContext();
+  if (const auto *ThunkInfos = VtableContext->getThunkInfo(VirtualMethodDecl)) {
+    auto *Destructor = dyn_cast<CXXDestructorDecl>(Method);
+    for (const auto &Thunk : *ThunkInfos) {
+      SmallString<256> ElidedName;
+      llvm::raw_svector_ostream ElidedNameStream(ElidedName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ true,
+                                    ElidedNameStream);
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ true,
+                             ElidedNameStream);
+      SmallString<256> MangledName;
+      llvm::raw_svector_ostream mangledNameStream(MangledName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ false,
                                     mangledNameStream);
-      } else {
-        mangler->mangleThunk(method, thunk, /* elideOverrideInfo */ false,
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
                              mangledNameStream);
-      }
 
-      if (thunks.find(elidedName) == thunks.end()) {
-        thunks[elidedName] = {};
-      }
-      thunks[elidedName].push_back(std::string(mangledName));
+      if (Thunks.find(ElidedName) == Thunks.end())
+        Thunks[ElidedName] = {};
+      Thunks[ElidedName].push_back(std::string(MangledName));
     }
   }
-  llvm::StringSet<> simplifiedThunkNames;
-  for (auto &thunkList : thunks) {
-    llvm::sort(thunkList.second);
-    simplifiedThunkNames.insert(thunkList.second[0]);
+  llvm::StringSet<> SimplifiedThunkNames;
+  for (auto &ThunkList : Thunks) {
+    llvm::sort(ThunkList.second);
+    SimplifiedThunkNames.insert(ThunkList.second[0]);
   }
-  bool result = simplifiedThunkNames.contains(mangledName);
-  thunksToBeAbbreviated[virtualMethodDecl] = std::move(simplifiedThunkNames);
-  return result;
+  bool Result = SimplifiedThunkNames.contains(MangledName);
+  ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
+  return Result;
 }

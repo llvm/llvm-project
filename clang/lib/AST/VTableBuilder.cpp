@@ -1170,9 +1170,9 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
       // can happen when covariant return adjustment is required too.
       if (!VTableThunks.count(Idx)) {
-        auto method = VTables.findOriginalMethodInMap(MD);
-        VTableThunks[Idx].Method = method;
-        VTableThunks[Idx].ThisType = method->getThisType().getTypePtr();
+        const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
+        VTableThunks[Idx].Method = Method;
+        VTableThunks[Idx].ThisType = Method->getThisType().getTypePtr();
       }
       VTableThunks[Idx].This = ThisAdjustment;
     };
@@ -1578,9 +1578,9 @@ void ItaniumVTableBuilder::AddMethods(
               ComputeReturnAdjustment(ReturnAdjustmentOffset);
 
             // This is a virtual thunk for the most derived class, add it.
-            AddThunk(
-                Overrider.Method,
-                ThunkInfo(ThisAdjustment, ReturnAdjustment, OverriddenMD->getThisType().getTypePtr()));
+            AddThunk(Overrider.Method,
+                     ThunkInfo(ThisAdjustment, ReturnAdjustment,
+                               OverriddenMD->getThisType().getTypePtr()));
           }
         }
 
@@ -1933,12 +1933,11 @@ void ItaniumVTableBuilder::LayoutVTablesForVirtualBases(
 }
 
 static void printThunkMethod(const ThunkInfo &Info, raw_ostream &Out) {
-  if (Info.Method) {
-    std::string Str =
-        PredefinedExpr::ComputeName(PredefinedIdentKind::PrettyFunctionNoVirtual,
-                                    Info.Method);
-    Out << " method: " << Str;
-  }
+  if (!Info.Method)
+    return;
+  std::string Str = PredefinedExpr::ComputeName(
+      PredefinedIdentKind::PrettyFunctionNoVirtual, Info.Method);
+  Out << " method: " << Str;
 }
 
 /// dumpLayout - Dump the vtable layout.
@@ -2382,7 +2381,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
 GlobalDecl ItaniumVTableContext::findOriginalMethod(GlobalDecl GD) {
   const auto *MD = cast<CXXMethodDecl>(GD.getDecl());
   computeVTableRelatedInformation(MD->getParent());
-  const auto *OriginalMD = findOriginalMethodInMap(MD);
+  const CXXMethodDecl *OriginalMD = findOriginalMethodInMap(MD);
 
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(OriginalMD))
     return GlobalDecl(DD, GD.getDtorType());

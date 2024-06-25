@@ -267,8 +267,8 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
   CGPointerAuthInfo PointerAuth;
   if (auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
-    auto OrigMD =
-      CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    GlobalDecl OrigMD =
+        CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
     PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
   }
 

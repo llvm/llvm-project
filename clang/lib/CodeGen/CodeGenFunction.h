@@ -4430,10 +4430,10 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
-  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
-                                        llvm::Value *storageAddress,
-                                        GlobalDecl calleeDecl,
-                                        QualType calleeType);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
+                                        GlobalDecl SchemaDecl,
+                                        QualType SchemaType);
   llvm::Value *EmitPointerAuthSign(QualType PointeeType, llvm::Value *Pointer);
   llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
                                    llvm::Value *Pointer);

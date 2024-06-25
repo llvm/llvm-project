@@ -158,10 +158,11 @@ public:
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
                                 const MethodVFTableLocation &ML,
                                 raw_ostream &Out) override;
-  void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk, bool,
-                   raw_ostream &) override;
+  void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
+                   bool ElideOverrideInfo, raw_ostream &) override;
   void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
-                          const ThunkInfo &Thunk, bool, raw_ostream &) override;
+                          const ThunkInfo &Thunk, bool ElideOverrideInfo,
+                          raw_ostream &) override;
   void mangleCXXVFTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
                         raw_ostream &Out) override;
@@ -3715,7 +3716,8 @@ void MicrosoftMangleContextImpl::mangleVirtualMemPtrThunk(
 }
 
 void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
-                                             const ThunkInfo &Thunk, bool,
+                                             const ThunkInfo &Thunk,
+                                             bool /*ElideOverrideInfo*/,
                                              raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
@@ -3740,7 +3742,8 @@ void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
 void MicrosoftMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                                                     CXXDtorType Type,
                                                     const ThunkInfo &Thunk,
-                                                    bool, raw_ostream &Out) {
+                                                    bool /*ElideOverrideInfo*/,
+                                                    raw_ostream &Out) {
   // FIXME: Actually, the dtor thunk should be emitted for vector deleting
   // dtors rather than scalar deleting dtors. Just use the vector deleting dtor
   // mangling manually until we support both deleting dtor types.

@@ -520,10 +520,10 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
 
   if (CGM.getContext().useAbbreviatedThunkName(GD, Name.str())) {
     Name = "";
-    if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
+    if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD))
       MCtx.mangleCXXDtorThunk(DD, GD.getDtorType(), TI,
                               /* elideOverrideInfo */ true, Out);
-    } else
+    else
       MCtx.mangleThunk(MD, TI, /* elideOverrideInfo */ true, Out);
   }
 
