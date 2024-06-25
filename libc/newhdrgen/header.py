@@ -1,4 +1,12 @@
-# class_implementation/classes/header.py
+#!/usr/bin/env python
+#
+# ====- HeaderFile Class for libc function headers  -----------*- python -*--==#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ==-------------------------------------------------------------------------==#
 class HeaderFile:
     def __init__(self, name):
         self.name = name
@@ -28,7 +36,6 @@ class HeaderFile:
         self.includes.append(include)
 
     def __str__(self):
-        # header_guard = self.name.replace(".", "_").upper()
         content = [""]
 
         for include in self.includes:
@@ -49,11 +56,10 @@ class HeaderFile:
                 content.append(f"\t{str(enum)},")
             content.append("};")
 
-        # ToDo: replace line below with common.h functionality
+        # TODO: replace line below with common.h functionality
         content.append("__BEGIN_C_DECLS\n")
-        if self.functions:
-            for function in self.functions:
-                content.append(str(function))
-                content.append("")
+        for function in self.functions:
+            content.append(str(function))
+            content.append("")
         content.append("__END_C_DECLS\n")
         return "\n".join(content)

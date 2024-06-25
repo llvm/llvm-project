@@ -8,10 +8,10 @@
 #
 # ==-------------------------------------------------------------------------==#
 import yaml
-import os
 import re
 import argparse
 
+from pathlib import Path
 from header import HeaderFile
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
@@ -31,7 +31,7 @@ def yaml_to_classes(yaml_data):
     Returns:
         HeaderFile: An instance of HeaderFile populated with the data.
     """
-    header_name = yaml_data.get("header", "unknown.h")
+    header_name = yaml_data.get("header")
     header = HeaderFile(header_name)
 
     for macro_data in yaml_data.get("macros", []):
@@ -115,8 +115,8 @@ def main(yaml_file, h_def_file, output_dir):
     header_str = str(header)
     final_header_content = fill_public_api(header_str, h_def_content)
 
-    output_file_name = os.path.basename(h_def_file).replace(".def", "")
-    output_file_path = os.path.join(output_dir, output_file_name)
+    output_file_name = Path(h_def_file).stem
+    output_file_path = Path(output_dir) / output_file_name
 
     with open(output_file_path, "w") as f:
         f.write(final_header_content)
