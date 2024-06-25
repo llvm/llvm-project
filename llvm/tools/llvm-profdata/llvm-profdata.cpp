@@ -293,6 +293,7 @@ cl::opt<bool> DropProfileSymbolList(
 
 cl::opt<bool> KeepVTableSymbols(
     "keep-vtable-symbols", cl::init(false), cl::Hidden,
+    cl::sub(MergeSubcommand),
     cl::desc("If true, keep the vtable symbols in indexed profiles"));
 
 // Temporary support for writing the previous version of the format, to enable
