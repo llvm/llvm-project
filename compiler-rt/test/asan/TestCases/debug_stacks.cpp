@@ -64,11 +64,11 @@ int main() {
   // CHECK: ERROR: AddressSanitizer: heap-use-after-free
   // CHECK: WRITE of size 1 at 0x{{.*}}
   // CHECK: freed by thread T0 here:
-  // CHECK: #{{[0-9]+}} [[FREE_FRAME_0]]
-  // CHECK: #{{[0-9]+}} [[FREE_FRAME_1]]
+  // CHECK: #0 [[FREE_FRAME_0]]
+  // CHECK: #1 [[FREE_FRAME_1]]
   // CHECK: previously allocated by thread T0 here:
-  // CHECK: #{{[0-9+]}} [[ALLOC_FRAME_0]]
-  // CHECK: #{{[0-9+]}} [[ALLOC_FRAME_1]]
+  // CHECK: #0 [[ALLOC_FRAME_0]]
+  // CHECK: #1 [[ALLOC_FRAME_1]]
 
   return 0;
 }

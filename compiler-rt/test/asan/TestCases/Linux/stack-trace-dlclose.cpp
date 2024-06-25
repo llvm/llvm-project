@@ -41,6 +41,6 @@ int main(int argc, char **argv) {
 }
 #endif
 
-// CHECK: {{    #[0-9]+ 0x.* in (__interceptor_)?malloc}}
-// CHECK: {{    #[0-9]+ 0x.* \(<unknown module>\)}}
-// CHECK: {{    #[0-9]+ 0x.* in main}}
+// CHECK: {{    #0 0x.* in (__interceptor_)?malloc}}
+// CHECK: {{    #1 0x.* \(<unknown module>\)}}
+// CHECK: {{    #2 0x.* in main}}

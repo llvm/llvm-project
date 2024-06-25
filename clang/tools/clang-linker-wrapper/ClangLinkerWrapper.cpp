@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1151,7 +1153,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
 Error handleOverrideImages(
     const InputArgList &Args,
-    DenseMap<OffloadKind, SmallVector<OffloadingImage>> &Images) {
+    MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> &Images) {
   for (StringRef Arg : Args.getAllArgValues(OPT_override_image)) {
     OffloadKind Kind = getOffloadKind(Arg.split("=").first);
     StringRef Filename = Arg.split("=").second;
@@ -1190,7 +1192,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
   std::mutex ImageMtx;
-  DenseMap<OffloadKind, SmallVector<OffloadingImage>> Images;
+  MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> Images;
 
   // Initialize the images with any overriding inputs.
   if (Args.hasArg(OPT_override_image))
@@ -1539,7 +1541,7 @@ getDeviceInput(const ArgList &Args) {
   }
 
   // Link all standard input files and update the list of symbols.
-  DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile>> InputFiles;
+  MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())

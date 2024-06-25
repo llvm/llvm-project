@@ -67,6 +67,8 @@ public:
   bool GetDebugInfoHadFrameVariableErrors() const override;
   void SetDebugInfoHadFrameVariableErrors() override;
 
+  SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref) override;
+
 protected:
   DIEToTypePtr &GetDIEToType() override;
 

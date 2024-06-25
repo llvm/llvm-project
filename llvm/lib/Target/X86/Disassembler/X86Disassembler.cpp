@@ -284,7 +284,10 @@ static int readPrefixes(struct InternalInstruction *insn) {
       //      it's not mandatory prefix
       //  3. if (nextByte >= 0x40 && nextByte <= 0x4f) it's REX and we need
       //     0x0f exactly after it to be mandatory prefix
-      if (isREX(insn, nextByte) || nextByte == 0x0f || nextByte == 0x66)
+      //  4. if (nextByte == 0xd5) it's REX2 and we need
+      //     0x0f exactly after it to be mandatory prefix
+      if (isREX(insn, nextByte) || isREX2(insn, nextByte) || nextByte == 0x0f ||
+          nextByte == 0x66)
         // The last of 0xf2 /0xf3 is mandatory prefix
         insn->mandatoryPrefix = byte;
       insn->repeatPrefix = byte;

@@ -4326,6 +4326,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
   bool UseVP = std::is_same_v<MatchContextClass, VPMatchContext>;
   MatchContextClass Matcher(DAG, TLI, N);
@@ -4355,8 +4356,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
         return FoldedVOp;
 
     N1IsConst = ISD::isConstantSplatVector(N1.getNode(), ConstValue1);
-    assert((!N1IsConst ||
-            ConstValue1.getBitWidth() == VT.getScalarSizeInBits()) &&
+    assert((!N1IsConst || ConstValue1.getBitWidth() == BitWidth) &&
            "Splat APInt should be element width");
   } else {
     N1IsConst = isa<ConstantSDNode>(N1);
@@ -4456,7 +4456,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
       unsigned ShAmt =
           MathOp == ISD::ADD ? (MulC - 1).logBase2() : (MulC + 1).logBase2();
       ShAmt += TZeros;
-      assert(ShAmt < VT.getScalarSizeInBits() &&
+      assert(ShAmt < BitWidth &&
              "multiply-by-constant generated out of bounds shift");
       SDValue Shl =
           DAG.getNode(ISD::SHL, DL, VT, N0, DAG.getConstant(ShAmt, DL, VT));
@@ -4523,6 +4523,16 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     const APInt &C0 = N0.getConstantOperandAPInt(0);
     APInt NewStep = C0 * MulVal;
     return DAG.getStepVector(DL, VT, NewStep);
+  }
+
+  // Fold Y = sra (X, size(X)-1); mul (or (Y, 1), X) -> (abs X)
+  SDValue X;
+  if (!UseVP && (!LegalOperations || hasOperation(ISD::ABS, VT)) &&
+      sd_context_match(
+          N, Matcher,
+          m_Mul(m_Or(m_Sra(m_Value(X), m_SpecificInt(BitWidth - 1)), m_One()),
+                m_Deferred(X)))) {
+    return Matcher.getNode(ISD::ABS, DL, VT, X);
   }
 
   // Fold ((mul x, 0/undef) -> 0,
@@ -5203,6 +5213,7 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+  bool IsSigned = Opcode == ISD::AVGCEILS || Opcode == ISD::AVGFLOORS;
 
   // fold (avg c1, c2)
   if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
@@ -5237,19 +5248,20 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
                        DAG.getShiftAmountConstant(1, VT, DL));
 
   // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
-  if (sd_match(
-          N, m_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+  // fold avgs(sext(x), sext(y)) -> sext(avgs(x, y))
+  if (!IsSigned &&
+      sd_match(N, m_BinOp(Opcode, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
       X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGFLOORU, X.getValueType())) {
-    SDValue AvgFloorU = DAG.getNode(ISD::AVGFLOORU, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgFloorU);
+      hasOperation(Opcode, X.getValueType())) {
+    SDValue AvgU = DAG.getNode(Opcode, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgU);
   }
-  if (sd_match(
-          N, m_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+  if (IsSigned &&
+      sd_match(N, m_BinOp(Opcode, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
       X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGCEILU, X.getValueType())) {
-    SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgCeilU);
+      hasOperation(Opcode, X.getValueType())) {
+    SDValue AvgS = DAG.getNode(Opcode, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgS);
   }
 
   // Fold avgflooru(x,y) -> avgceilu(x,y-1) iff y != 0
@@ -26448,12 +26460,13 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       return N1.getOperand(0);
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
-    if (isNullConstant(N2) &&
-        VT.isScalableVector() == SrcVT.isScalableVector()) {
-      if (VT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements())
+    if (isNullConstant(N2)) {
+      if (VT.knownBitsGE(SrcVT) &&
+          !(VT.isFixedLengthVector() && SrcVT.isScalableVector()))
         return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
                            VT, N0, N1.getOperand(0), N2);
-      else
+      else if (VT.knownBitsLE(SrcVT) &&
+               !(VT.isScalableVector() && SrcVT.isFixedLengthVector()))
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N),
                            VT, N1.getOperand(0), N2);
     }

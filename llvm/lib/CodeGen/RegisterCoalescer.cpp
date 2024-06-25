@@ -4248,8 +4248,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // Removing sub-register operands may allow GR32_ABCD -> GR32 and DPR_VFP2 ->
   // DPR inflation.
   array_pod_sort(InflateRegs.begin(), InflateRegs.end());
-  InflateRegs.erase(std::unique(InflateRegs.begin(), InflateRegs.end()),
-                    InflateRegs.end());
+  InflateRegs.erase(llvm::unique(InflateRegs), InflateRegs.end());
   LLVM_DEBUG(dbgs() << "Trying to inflate " << InflateRegs.size()
                     << " regs.\n");
   for (Register Reg : InflateRegs) {

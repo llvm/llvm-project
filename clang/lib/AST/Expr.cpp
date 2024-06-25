@@ -2373,6 +2373,17 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   llvm_unreachable("unhandled case");
 }
 
+EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
+                     EmbedDataStorage *Data, unsigned Begin,
+                     unsigned NumOfElements)
+    : Expr(EmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
+      EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
+      NumOfElements(NumOfElements) {
+  setDependence(ExprDependence::None);
+  FakeChildNode = IntegerLiteral::Create(
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);
+}
+
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
                            ArrayRef<Expr *> initExprs, SourceLocation rbraceloc)
     : Expr(InitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
@@ -3615,6 +3626,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
   case SourceLocExprClass:
+  case EmbedExprClass:
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
@@ -3769,10 +3781,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
-  case CXXTypeidExprClass:
-    // typeid might throw if its subexpression is potentially-evaluated, so has
-    // side-effects in that case whether or not its subexpression does.
-    return cast<CXXTypeidExpr>(this)->isPotentiallyEvaluated();
+  case CXXTypeidExprClass: {
+    const auto *TE = cast<CXXTypeidExpr>(this);
+    if (!TE->isPotentiallyEvaluated())
+      return false;
+
+    // If this type id expression can throw because of a null pointer, that is a
+    // side-effect independent of if the operand has a side-effect
+    if (IncludePossibleEffects && TE->hasNullCheck())
+      return true;
+
+    break;
+  }
 
   case CXXConstructExprClass:
   case CXXTemporaryObjectExprClass: {

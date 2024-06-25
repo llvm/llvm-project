@@ -164,8 +164,9 @@ static const char *const parserErrorStr =
 /// {2}: Code template for printing an error.
 /// {3}: Name of the attribute or type.
 /// {4}: C++ class of the parameter.
+/// {5}: Optional code to preload the dialect for this variable.
 static const char *const variableParser = R"(
-// Parse variable '{0}'
+// Parse variable '{0}'{5}
 _result_{0} = {1};
 if (::mlir::failed(_result_{0})) {{
   {2}"failed to parse {3} parameter '{0}' which is to be a `{4}`");
@@ -411,9 +412,28 @@ void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
   auto customParser = param.getParser();
   auto parser =
       customParser ? *customParser : StringRef(defaultParameterParser);
+
+  // If the variable points to a dialect specific entity (type of attribute),
+  // we force load the dialect now before trying to parse it.
+  std::string dialectLoading;
+  if (auto *defInit = dyn_cast<llvm::DefInit>(param.getDef())) {
+    auto *dialectValue = defInit->getDef()->getValue("dialect");
+    if (dialectValue) {
+      if (auto *dialectInit =
+              dyn_cast<llvm::DefInit>(dialectValue->getValue())) {
+        Dialect dialect(dialectInit->getDef());
+        auto cppNamespace = dialect.getCppNamespace();
+        std::string name = dialect.getCppClassName();
+        dialectLoading = ("\nodsParser.getContext()->getOrLoadDialect<" +
+                          cppNamespace + "::" + name + ">();")
+                             .str();
+      }
+    }
+  }
   os << formatv(variableParser, param.getName(),
                 tgfmt(parser, &ctx, param.getCppStorageType()),
-                tgfmt(parserErrorStr, &ctx), def.getName(), param.getCppType());
+                tgfmt(parserErrorStr, &ctx), def.getName(), param.getCppType(),
+                dialectLoading);
 }
 
 void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
