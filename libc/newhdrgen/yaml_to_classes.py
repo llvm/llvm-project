@@ -106,7 +106,7 @@ def main(yaml_file, h_def_file, output_dir):
         h_def_file: Path to the .h.def template file.
         output_dir: Directory to output the generated header file.
     """
-    
+
     header = load_yaml_file(yaml_file)
 
     with open(h_def_file, "r") as f:
