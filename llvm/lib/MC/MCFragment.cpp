@@ -199,8 +199,7 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 /* *** */
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions),
-      LinkerRelaxable(false) {}
+    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
 
 void MCFragment::destroy() {
   // First check if we are the sentinel.
