@@ -78,7 +78,6 @@ docker run -t --rm \
     original_output = read_output(output_path)
     os.remove(output_path)
     subprocess.run(cmd, shell=True, \
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, \
                    check=True)
 
     new_output = read_output(output_path)
