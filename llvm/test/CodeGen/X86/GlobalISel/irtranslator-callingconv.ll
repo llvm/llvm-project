@@ -5,6 +5,7 @@
 @a1_8bit = external global i8
 @a7_8bit = external global i8
 @a8_8bit = external global i8
+%struct.all = type { i8, i16, i32, i8, i16, i32, i64, float, double }
 
 define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %arg6, i8 %arg7, i8 %arg8) {
   ; X86-LABEL: name: test_i8_args_8
@@ -745,7 +746,7 @@ define <32 x float> @test_return_v32f32() {
   ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
   ; X86-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[LOAD]](p0) :: (store (<32 x s32>))
   ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
-  ; X86-NEXT:   RET 0
+  ; X86-NEXT:   RET 0, $eax
   ;
   ; X64-LABEL: name: test_return_v32f32
   ; X64: bb.1 (%ir-block.0):
@@ -756,7 +757,7 @@ define <32 x float> @test_return_v32f32() {
   ; X64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
   ; X64-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[COPY]](p0) :: (store (<32 x s32>))
   ; X64-NEXT:   $rax = COPY [[COPY]](p0)
-  ; X64-NEXT:   RET 0
+  ; X64-NEXT:   RET 0, $rax
   ret <32 x float> zeroinitializer
 }
 
@@ -792,4 +793,31 @@ define float @test_call_v32f32() {
   %vect = call <32 x float> @test_return_v32f32()
   %elt = extractelement <32 x float> %vect, i32 7
   ret float %elt
+}
+
+define void @test_sret(ptr sret(%struct.all) align 8 %result) #0 {
+  ; X86-LABEL: name: test_sret
+  ; X86: bb.1.entry:
+  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
+  ; X86-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[LOAD]](p0)
+  ; X86-NEXT:   G_STORE [[C]](s8), [[COPY]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
+  ; X86-NEXT:   RET 0, $eax
+  ;
+  ; X64-LABEL: name: test_sret
+  ; X64: bb.1.entry:
+  ; X64-NEXT:   liveins: $rdi
+  ; X64-NEXT: {{  $}}
+  ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
+  ; X64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
+  ; X64-NEXT:   G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X64-NEXT:   $rax = COPY [[COPY]](p0)
+  ; X64-NEXT:   RET 0, $rax
+entry:
+  %c = getelementptr inbounds %struct.all, ptr %result, i32 0, i32 0
+  store i8 104, ptr %c, align 8
+  ret void
 }
