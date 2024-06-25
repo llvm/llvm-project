@@ -5435,7 +5435,7 @@ more information about subobjects to be determined, so the ``type & 1 == 1``
 case will often give imprecise results when used across a function call boundary
 even when optimization is enabled.
 
-`The ``pass_object_size`` and ``pass_dynamic_object_size`` attributes <https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size>`_
+`The pass_object_size and pass_dynamic_object_size attributes <https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size>`_
 can be used to invisibly pass the object size for a pointer parameter alongside
 the pointer in a function call. This allows more precise object sizes to be
 determined both when building without optimizations and in the ``type & 1 == 1``
