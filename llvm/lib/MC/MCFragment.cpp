@@ -202,60 +202,54 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
     : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
 
 void MCFragment::destroy() {
-  // First check if we are the sentinel.
-  if (Kind == FragmentType(~0)) {
-    delete this;
-    return;
-  }
-
   switch (Kind) {
     case FT_Align:
-      delete cast<MCAlignFragment>(this);
+      cast<MCAlignFragment>(this)->~MCAlignFragment();
       return;
     case FT_Data:
-      delete cast<MCDataFragment>(this);
+      cast<MCDataFragment>(this)->~MCDataFragment();
       return;
     case FT_CompactEncodedInst:
-      delete cast<MCCompactEncodedInstFragment>(this);
+      cast<MCCompactEncodedInstFragment>(this)->~MCCompactEncodedInstFragment();
       return;
     case FT_Fill:
-      delete cast<MCFillFragment>(this);
+      cast<MCFillFragment>(this)->~MCFillFragment();
       return;
     case FT_Nops:
-      delete cast<MCNopsFragment>(this);
+      cast<MCNopsFragment>(this)->~MCNopsFragment();
       return;
     case FT_Relaxable:
-      delete cast<MCRelaxableFragment>(this);
+      cast<MCRelaxableFragment>(this)->~MCRelaxableFragment();
       return;
     case FT_Org:
-      delete cast<MCOrgFragment>(this);
+      cast<MCOrgFragment>(this)->~MCOrgFragment();
       return;
     case FT_Dwarf:
-      delete cast<MCDwarfLineAddrFragment>(this);
+      cast<MCDwarfLineAddrFragment>(this)->~MCDwarfLineAddrFragment();
       return;
     case FT_DwarfFrame:
-      delete cast<MCDwarfCallFrameFragment>(this);
+      cast<MCDwarfCallFrameFragment>(this)->~MCDwarfCallFrameFragment();
       return;
     case FT_LEB:
-      delete cast<MCLEBFragment>(this);
+      cast<MCLEBFragment>(this)->~MCLEBFragment();
       return;
     case FT_BoundaryAlign:
-      delete cast<MCBoundaryAlignFragment>(this);
+      cast<MCBoundaryAlignFragment>(this)->~MCBoundaryAlignFragment();
       return;
     case FT_SymbolId:
-      delete cast<MCSymbolIdFragment>(this);
+      cast<MCSymbolIdFragment>(this)->~MCSymbolIdFragment();
       return;
     case FT_CVInlineLines:
-      delete cast<MCCVInlineLineTableFragment>(this);
+      cast<MCCVInlineLineTableFragment>(this)->~MCCVInlineLineTableFragment();
       return;
     case FT_CVDefRange:
-      delete cast<MCCVDefRangeFragment>(this);
+      cast<MCCVDefRangeFragment>(this)->~MCCVDefRangeFragment();
       return;
     case FT_PseudoProbe:
-      delete cast<MCPseudoProbeAddrFragment>(this);
+      cast<MCPseudoProbeAddrFragment>(this)->~MCPseudoProbeAddrFragment();
       return;
     case FT_Dummy:
-      delete cast<MCDummyFragment>(this);
+      cast<MCDummyFragment>(this)->~MCDummyFragment();
       return;
   }
 }
