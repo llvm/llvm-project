@@ -82,4 +82,8 @@ contact: Ron and Jay
 Reverts: break componsableKernels
 9a88aa0e2b6d [Clang][Sema] Diagnose variable template explicit specializati
 contact: RonL
+
+---
+Reverts: breaks build of kfdtest
+Revert "[CommandLine] Avoid ManagedStatic.h include (NFC)"
 ---
