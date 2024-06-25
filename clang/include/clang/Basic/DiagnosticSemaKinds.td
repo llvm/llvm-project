@@ -924,12 +924,21 @@ def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
         "integer}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
+def err_ptrauth_bad_constant_pointer :
+  Error<"argument to ptrauth_sign_constant must refer to a global variable "
+        "or function">;
+def err_ptrauth_bad_constant_discriminator :
+  Error<"discriminator argument to ptrauth_sign_constant must be a constant "
+        "integer, the address of the global variable where the result "
+        "will be stored, or a blend of the two">;
 def warn_ptrauth_sign_null_pointer :
   Warning<"signing a null pointer will yield a non-null pointer">,
   InGroup<PtrAuthNullPointers>;
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_string_not_literal : Error<
+  "argument must be a string literal%select{| of char type}0">;
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -964,7 +973,7 @@ def err_main_global_variable :
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
-  "ISO C++ does not allow 'main' to be used by a program">, InGroup<Main>;
+    "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -1097,8 +1106,6 @@ def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
-def err_pragma_loop_invalid_argument_value : Error<
-  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
 def err_pragma_loop_compatibility : Error<
   "%select{incompatible|duplicate}0 directives '%1' and '%2'">;
 def err_pragma_loop_precedes_nonloop : Error<
@@ -3265,11 +3272,23 @@ def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
-  "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
-  "constant|a string|an identifier|a constant expression|a builtin function}2">;
+  "%0 attribute requires parameter %1 to be %select{"
+  "int or bool"
+  "|an integer constant"
+  "|a string"
+  "|an identifier"
+  "|a constant expression"
+  "|a builtin function"
+  "|nullptr or a bool, int, or enum literal}2">;
 def err_attribute_argument_type : Error<
-  "%0 attribute requires %select{int or bool|an integer "
-  "constant|a string|an identifier}1">;
+  "%0 attribute requires %select{"
+  "int or bool"
+  "|an integer constant"
+  "|a string"
+  "|an identifier"
+  "|a constant expression"
+  "|a builtin function"
+  "|a pointer or a bool, int, or enum literal}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<
@@ -3721,7 +3740,8 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions}2">,
+  "|non-K&R-style functions"
+  "|functions that return bool, integer, or a pointer type}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
@@ -5360,9 +5380,6 @@ def err_not_class_template_specialization : Error<
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
   "explicit specialization cannot have a storage class">;
-def err_explicit_specialization_inconsistent_storage_class : Error<
-  "explicit specialization has extraneous, inconsistent storage class "
-  "'%select{none|extern|static|__private_extern__|auto|register}0'">;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
@@ -6071,6 +6088,9 @@ def err_thread_thread_different_kind : Error<
 def err_mismatched_owning_module : Error<
   "declaration of %0 in %select{the global module|module %2}1 follows "
   "declaration in %select{the global module|module %4}3">;
+def err_multiple_decl_in_different_modules : Error<
+  "declaration %0 attached to named module '%1' can't be attached to "
+  "other modules">;
 def err_redefinition_different_type : Error<
   "redefinition of %0 with a different type%diff{: $ vs $|}1,2">;
 def err_redefinition_different_kind : Error<
@@ -8778,9 +8798,6 @@ def err_typecheck_incomplete_type_not_modifiable_lvalue : Error<
 def err_typecheck_lvalue_casts_not_supported : Error<
   "assignment to cast is illegal, lvalue casts are not supported">;
 
-def note_typecheck_add_deref_star_not_modifiable_lvalue : Note<
-  "add '*' to dereference it">; 
-
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
 def err_block_decl_ref_not_modifiable_lvalue : Error<
@@ -10880,6 +10897,23 @@ def warn_imp_cast_drops_unaligned : Warning<
   "implicit cast from type %0 to type %1 drops __unaligned qualifier">,
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
+// Function effects
+// spoofing nonblocking/nonallocating
+def warn_invalid_add_func_effects : Warning<
+  "attribute '%0' should not be added via type conversion">,
+  InGroup<FunctionEffects>;
+def warn_mismatched_func_effect_override : Warning<
+  "attribute '%0' on overriding function does not match base declaration">,
+  InGroup<FunctionEffects>;
+def warn_mismatched_func_effect_redeclaration : Warning<
+  "attribute '%0' on function does not match previous declaration">,
+  InGroup<FunctionEffects>;
+def warn_conflicting_func_effects : Warning<
+  "effects conflict when merging declarations; kept '%0', discarded '%1'">,
+  InGroup<FunctionEffects>;
+def err_func_with_effects_no_prototype : Error<
+  "'%0' function must have a prototype">;
+
 } // end of sema category
 
 let CategoryName = "API Notes Issue" in {
@@ -12214,6 +12248,9 @@ def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
 def err_std_source_location_impl_malformed : Error<
   "'std::source_location::__impl' must be standard-layout and have only two 'const char *' fields '_M_file_name' and '_M_function_name', and two integral fields '_M_line' and '_M_column'">;
+
+def err_std_initializer_list_malformed : Error<
+  "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
 // HLSL Diagnostics
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;

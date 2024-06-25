@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "startup/linux/do_start.h"
+#include "include/llvm-libc-macros/link-macros.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
@@ -79,13 +80,13 @@ static ThreadAttributes main_thread_attrib;
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
-  Elf64_Phdr *program_hdr_table = nullptr;
+  ElfW(Phdr) *program_hdr_table = nullptr;
   uintptr_t program_hdr_count = 0;
   app.auxv_ptr = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
   for (auto *aux_entry = app.auxv_ptr; aux_entry->id != AT_NULL; ++aux_entry) {
     switch (aux_entry->id) {
     case AT_PHDR:
-      program_hdr_table = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      program_hdr_table = reinterpret_cast<ElfW(Phdr) *>(aux_entry->value);
       break;
     case AT_PHNUM:
       program_hdr_count = aux_entry->value;
@@ -100,10 +101,10 @@ static ThreadAttributes main_thread_attrib;
 
   ptrdiff_t base = 0;
   app.tls.size = 0;
-  Elf64_Phdr *tls_phdr = nullptr;
+  ElfW(Phdr) *tls_phdr = nullptr;
 
   for (uintptr_t i = 0; i < program_hdr_count; ++i) {
-    Elf64_Phdr &phdr = program_hdr_table[i];
+    ElfW(Phdr) &phdr = program_hdr_table[i];
     if (phdr.p_type == PT_PHDR)
       base = reinterpret_cast<ptrdiff_t>(program_hdr_table) - phdr.p_vaddr;
     if (phdr.p_type == PT_DYNAMIC && _DYNAMIC)

@@ -40,6 +40,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -56,6 +57,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stack>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -1392,7 +1394,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // Change the location to the outer alloca insertion point to create and
   // initialize the allocas we pass into the parallel region.
-  Builder.restoreIP(OuterAllocaIP);
+  InsertPointTy NewOuter(OuterAllocaBlock, OuterAllocaBlock->begin());
+  Builder.restoreIP(NewOuter);
   AllocaInst *TIDAddrAlloca = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
   AllocaInst *ZeroAddrAlloca =
       Builder.CreateAlloca(Int32, nullptr, "zero.addr");
@@ -2156,7 +2159,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   // values.
   unsigned NumReductions = ReductionInfos.size();
   Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
@@ -2557,7 +2560,8 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
+
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -3119,7 +3123,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");

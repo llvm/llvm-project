@@ -687,9 +687,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     // stupid, create a new node if there are none left.
     BinaryOperator *NewOp;
     if (NodesToRewrite.empty()) {
-      Constant *Undef = UndefValue::get(I->getType());
-      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Undef,
-                                     Undef, "", I->getIterator());
+      Constant *Poison = PoisonValue::get(I->getType());
+      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Poison,
+                                     Poison, "", I->getIterator());
       if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {
@@ -1022,7 +1022,8 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
 static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   Constant *MulCst = ConstantInt::get(Shl->getType(), 1);
   auto *SA = cast<ConstantInt>(Shl->getOperand(1));
-  MulCst = ConstantExpr::getShl(MulCst, SA);
+  MulCst = ConstantFoldBinaryInstruction(Instruction::Shl, MulCst, SA);
+  assert(MulCst && "Constant folding of immediate constants failed");
 
   BinaryOperator *Mul = BinaryOperator::CreateMul(Shl->getOperand(0), MulCst,
                                                   "", Shl->getIterator());
