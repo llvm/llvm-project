@@ -3759,6 +3759,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16sqrtf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtf128
+)
+
+add_fp_unittest(
   sin_test
   SUITE
     libc-math-smoke-tests
