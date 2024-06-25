@@ -1574,9 +1574,9 @@ public:
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
 
-  bool isGFX12_10() const {
-    return AMDGPU::isGFX12_10(getSTI());
-  }
+  bool isGFX12_10Only() const { return AMDGPU::isGFX12_10Only(getSTI()); }
+
+  bool isGFX12_10Plus() const { return AMDGPU::isGFX12_10Plus(getSTI()); }
 
   bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
 
@@ -2969,7 +2969,7 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
     return AMDGPU::NoRegister;
   }
 
-  if (RegKind == IS_VGPR && !isGFX12_10() && RegIdx + RegWidth / 32 > 256) {
+  if (RegKind == IS_VGPR && !isGFX12_10Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
   }
@@ -4028,7 +4028,7 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1210 ||
       Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
-  bool AllowSameVGPR = isGFX12_10();
+  bool AllowSameVGPR = isGFX12_10Plus();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -4164,7 +4164,7 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
 // form but switch to VOPD3 otherwise.
 bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
-  if (!isGFX12_10() || !isVOPD(Opcode))
+  if (!isGFX12_10Plus() || !isVOPD(Opcode))
     return false;
 
   if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
@@ -5266,7 +5266,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
-  if (!isGFX12_10()) {
+  if (!isGFX12_10Plus()) {
     if (CPol & CPol::SCAL) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
@@ -6234,7 +6234,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   unsigned UserSGPRCount =
       ExplicitUserSGPRCount ? *ExplicitUserSGPRCount : ImpliedUserSGPRCount;
 
-  if (isGFX12_10()) {
+  if (isGFX12_10Only()) {
     if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
       return TokError("too many user SGPRs enabled");
   AMDGPU::MCKernelDescriptor::bits_set(

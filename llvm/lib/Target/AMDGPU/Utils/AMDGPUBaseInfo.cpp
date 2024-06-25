@@ -1119,7 +1119,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // workgroup must share".
 
   // GFX12.1 only supports CU mode, which contains four SIMDs.
-  if (isGFX12_10(*STI)) {
+  if (isGFX12_10Only(*STI)) {
     assert(STI->getFeatureBits().test(FeatureCuMode));
     return 4;
   }
@@ -2354,7 +2354,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX12_10(STI))
+  if (isGFX12_10Only(STI))
     return 32;
   return 16;
 }
@@ -2427,8 +2427,12 @@ bool isGFX12Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
-bool isGFX12_10(const MCSubtargetInfo &STI) {
+bool isGFX12_10Plus(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts];
+}
+
+bool isGFX12_10Only(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts] && !isGFX13(STI);
 }
 
 bool isGFX13(const MCSubtargetInfo &STI) {
@@ -2438,7 +2442,7 @@ bool isGFX13(const MCSubtargetInfo &STI) {
 bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
-  if (isGFX12_10(STI))
+  if (isGFX12_10Only(STI))
     return false;
   return isGFX10Plus(STI);
 }
