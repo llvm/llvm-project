@@ -184,6 +184,7 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* Ssnpm, Smnpm, Smmpm, Sspm, and Supm are bumped to version 1.0.0
 
 Changes to the WebAssembly Backend
 ----------------------------------

@@ -1077,12 +1077,12 @@ Experimental extensions
     ztso                 0.1
     zvfbfmin             1.0
     zvfbfwma             1.0
-    smmpm                0.8
-    smnpm                0.8
-    ssnpm                0.8
-    sspm                 0.8
+    smmpm                1.0
+    smnpm                1.0
+    ssnpm                1.0
+    sspm                 1.0
     ssqosid              1.0
-    supm                 0.8
+    supm                 1.0
 
 Supported Profiles
     rva20s64
