@@ -108,6 +108,7 @@
 #include <limits>
 #include <optional>
 #include <tuple>
+#include <deque>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -7924,29 +7925,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
 
     // Collect all of the subvectors
-    SmallVector<SDValue> Subvectors;
+    std::deque<SDValue> Subvectors;
     Subvectors.push_back(getValue(I.getOperand(0)));
     for(unsigned i = 0; i < ScaleFactor; i++) {
       auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, DL);
       Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex}));
     }
 
-    while(Subvectors.size() >= 2) {
-      SmallVector<SDValue> NewSubvectors;
-      for(unsigned i = 0; i < Subvectors.size(); i+=2) {
-        unsigned j = i + 1;
-        auto A = Subvectors[i];
-        if(j >= Subvectors.size()) {
-          unsigned OldLastIdx = NewSubvectors.size()-1;
-          auto OldLast = NewSubvectors[OldLastIdx];
-          NewSubvectors[OldLastIdx] = DAG.getNode(ISD::ADD, DL, ReducedTy, {OldLast, A});
-          break;
-        }
-        auto B = Subvectors[j];
-        auto Node = DAG.getNode(ISD::ADD, DL, ReducedTy, {A, B});
-        NewSubvectors.push_back(Node);
-      }
-      Subvectors = NewSubvectors;
+    // Flatten the subvector tree
+    while(Subvectors.size() > 1) {
+      Subvectors.push_back(DAG.getNode(ISD::ADD, DL, ReducedTy, {Subvectors[0], Subvectors[1]}));
+      Subvectors.pop_front();
+      Subvectors.pop_front();
     }
     
     assert(Subvectors.size() == 1 && "There should only be one subvector after tree flattening");
