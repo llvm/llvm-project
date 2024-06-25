@@ -117,7 +117,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
       CastInst::CreateBitOrPointerCast(Sel, I32PtrTy, "bitcast2", Br);
 
   ScalarEvolution SE = buildSE(*F);
-  auto *S = SE.getSCEV(CastB);
+  const SCEV *S = SE.getSCEV(CastB);
   EXPECT_TRUE(isa<SCEVUnknown>(S));
 }
 
@@ -185,7 +185,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVZeroExtendExprNonIntegral) {
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
-  auto *AddRec =
+  const SCEV *AddRec =
       SE.getAddRecExpr(SE.getUnknown(GepBase), SE.getConstant(T_int64, 1),
                        LI->getLoopFor(L), SCEV::FlagNUW);
 
@@ -762,7 +762,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
                     SCEVExpander Exp(SE, M->getDataLayout(), "expander");
                     auto *InsertAt = I.getNextNode();
                     Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-                    auto *ExpandedAR = SE.getSCEV(V);
+                    const SCEV *ExpandedAR = SE.getSCEV(V);
                     // Check that the expansion happened literally.
                     EXPECT_EQ(AR, ExpandedAR);
                   });
@@ -811,7 +811,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
       SCEVExpander Exp(SE, M->getDataLayout(), "expander");
       auto *InsertAt = I.getNextNode();
       Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-      auto *ExpandedAR = SE.getSCEV(V);
+      const SCEV *ExpandedAR = SE.getSCEV(V);
       // Check that the expansion happened literally.
       EXPECT_EQ(AR, ExpandedAR);
     });
@@ -866,7 +866,7 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
               SCEVExpander Exp(SE, M->getDataLayout(), "expander");
               auto *InsertAt = I.getNextNode();
               Value *V = Exp.expandCodeFor(AR, nullptr, InsertAt);
-              auto *ExpandedAR = SE.getSCEV(V);
+              const SCEV *ExpandedAR = SE.getSCEV(V);
               // Check that the expansion happened literally.
               EXPECT_EQ(AR, ExpandedAR);
             });
