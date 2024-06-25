@@ -398,6 +398,7 @@ struct A {
   explicit(false)
   A(typename nondeduced<T1>::type, typename nondeduced<T2>::type, typename nondeduced<B<b>>::type) {}
   // expected-note@-1+ {{candidate template ignored}}
+  // expected-note@-2+ {{implicit deduction guide}}
 };
 
 template<typename T1, typename T2, bool b>
@@ -684,6 +685,7 @@ struct A {
   A(T1 = 0, T2 = 0) {}
   // expected-note@-1 {{explicit constructor declared here}}
   // expected-note@-2 2{{explicit constructor is not a candidate}}
+  // expected-note@-3 2{{implicit deduction guide declared}}
 };
 
 A a0 = 0;

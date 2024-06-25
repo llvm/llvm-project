@@ -22,7 +22,8 @@ namespace Access {
   };
   template<typename T> struct D : B { // expected-note {{not viable}} \
                                          expected-note {{implicit deduction guide declared as 'template <typename T> D(D<T>) -> D<T>'}}
-    D(T, typename T::type); // expected-note {{private member}}
+    D(T, typename T::type); // expected-note {{private member}} \
+                            // expected-note {{implicit deduction guide declared as 'template <typename T> D(T, typename T::type) -> D<T>'}}
   };
   D b = {B(), {}};
 
@@ -59,7 +60,8 @@ Y y(1);
 namespace NoCrashOnGettingDefaultArgLoc {
 template <typename>
 class A {
-  A(int = 1); // expected-note {{candidate template ignored: couldn't infer template argumen}}
+  A(int = 1); // expected-note {{candidate template ignored: couldn't infer template argumen}} \
+              // expected-note {{implicit deduction guide declared as 'template <typename> D(int = <null expr>) -> D<type-parameter-0-0>'}}
 };
 class C : A<int> {
   using A::A;

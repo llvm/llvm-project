@@ -12115,18 +12115,25 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     return;
   }
 
-  // If this is an implicit deduction guide against an implicitly defined
-  // constructor, add a note for it. Neither these deduction guides nor their
-  // corresponding constructors are explicitly spelled in the source code,
-  // and simply producing a deduction failure note around the heading of the
-  // enclosing RecordDecl would be confusing.
+  // If this is a synthesized deduction guide we're deducing against, add a note
+  // for it. These deduction guides are not explicitly spelled in the source
+  // code, so simply printing a deduction failure note mentioning synthesized
+  // template parameters or pointing to the header of the surrounding RecordDecl
+  // would be confusing.
   //
-  // We prefer adding such notes at the end of the last deduction failure
-  // reason because duplicate code snippets appearing in the diagnostic
-  // would likely become noisy.
+  // We prefer adding such notes at the end of the deduction failure because
+  // duplicate code snippets appearing in the diagnostic would likely become
+  // noisy.
   auto _ = llvm::make_scope_exit([&] {
     auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
-    if (!DG || !DG->isImplicit() || DG->getCorrespondingConstructor())
+    if (!DG)
+      return;
+    // We want to always print synthesized deduction guides for type aliases.
+    // They would retain the explicit bit of the corresponding constructor.
+    if (TemplateDecl *OriginTemplate =
+            DG->getDeclName().getCXXDeductionGuideTemplate();
+        !DG->isImplicit() &&
+        (!OriginTemplate || !OriginTemplate->isTypeAlias()))
       return;
     std::string FunctionProto;
     llvm::raw_string_ostream OS(FunctionProto);

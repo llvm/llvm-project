@@ -610,7 +610,7 @@ Improvements to Clang's diagnostics
   The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
 
 - Clang now shows implicit deduction guides corresponding to implcitly defined constructors when 
-  diagnosing overload resolution failure.
+  diagnosing overload resolution failure. #GH92393.
 
 Improvements to Clang's time-trace
 ----------------------------------
