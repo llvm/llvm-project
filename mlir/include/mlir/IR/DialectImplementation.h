@@ -14,7 +14,22 @@
 #ifndef MLIR_IR_DIALECTIMPLEMENTATION_H
 #define MLIR_IR_DIALECTIMPLEMENTATION_H
 
+#include <type_traits>
 #include "mlir/IR/OpImplementation.h"
+
+namespace {
+
+// reference https://stackoverflow.com/a/16000226
+template <typename T, typename = void>
+struct HasStaticDialectName : std::false_type {};
+
+template <typename T>
+struct HasStaticDialectName<
+    T, typename std::enable_if<
+           std::is_same<::llvm::StringLiteral, std::decay_t<decltype(T::dialectName)>>::value,
+           void>::type> : std::true_type {};
+
+} // namespace
 
 namespace mlir {
 
@@ -63,6 +78,9 @@ struct FieldParser<
     AttributeT, std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                                  AttributeT>> {
   static FailureOr<AttributeT> parse(AsmParser &parser) {
+    if constexpr (HasStaticDialectName<AttributeT>::value) {
+      parser.getContext()->getOrLoadDialect(AttributeT::dialectName);
+    }
     AttributeT value;
     if (parser.parseCustomAttributeWithFallback(value))
       return failure();
@@ -112,6 +130,9 @@ struct FieldParser<
     std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                      std::optional<AttributeT>>> {
   static FailureOr<std::optional<AttributeT>> parse(AsmParser &parser) {
+    if constexpr (HasStaticDialectName<AttributeT>::value) {
+      parser.getContext()->getOrLoadDialect(AttributeT::dialectName);
+    }
     AttributeT attr;
     OptionalParseResult result = parser.parseOptionalAttribute(attr);
     if (result.has_value()) {
