@@ -93,15 +93,23 @@ ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
 
   ConstantRangeList Result;
   size_t i = 0, j = 0;
+  // "PreviousRange" tracks the unioned range (its lower is fixed
+  // and the upper may be updated over iterations).
+  // If "PreviousRange" cannot contain a new unioned range, push it
+  // to the result and assign "PreviousRange" with the new range.
   ConstantRange PreviousRange(getBitWidth(), false);
   if (Ranges[i].getLower().slt(CRL.Ranges[j].getLower())) {
     PreviousRange = Ranges[i++];
   } else {
     PreviousRange = CRL.Ranges[j++];
   }
+
+  // Union "PreviousRange" and "CR". If they are disjoint, push "PreviousRange"
+  // to the result and assign it to "CR", a new union range. Otherwise, update
+  // the upper of "PreviousRange" to cover "CR". Note that, the lower of
+  // "PreviousRange" is always less or equal the lower of "CR".
   auto UnionAndUpdateRange = [&PreviousRange,
                               &Result](const ConstantRange &CR) {
-    assert(!CR.isSignWrappedSet() && "Upper wrapped ranges are not supported");
     if (PreviousRange.getUpper().slt(CR.getLower())) {
       Result.Ranges.push_back(PreviousRange);
       PreviousRange = CR;
@@ -141,18 +149,21 @@ ConstantRangeList::intersectWith(const ConstantRangeList &CRL) const {
   while (i < size() && j < CRL.size()) {
     auto &Range = this->Ranges[i];
     auto &OtherRange = CRL.Ranges[j];
-    assert(!Range.isSignWrappedSet() && !OtherRange.isSignWrappedSet() &&
-           "Upper wrapped ranges are not supported");
 
-    APInt Start = Range.getLower().slt(OtherRange.getLower())
-                      ? OtherRange.getLower()
-                      : Range.getLower();
-    APInt End = Range.getUpper().slt(OtherRange.getUpper())
-                    ? Range.getUpper()
-                    : OtherRange.getUpper();
+    // The intersection of two Ranges is (max(lowers), min(uppers)), and it's
+    // possible that max(lowers) > min(uppers). Add the intersection to result
+    // only if it's a non-upper-wrapped range.
+    // To keep simple, we don't call ConstantRange::intersectWith() as it
+    // considers the complex upper wrapped case and may result two ranges,
+    // like (2, 8) && (6, 4) = {(2, 4), (6, 8)}.
+    APInt Start = APIntOps::smax(Range.getLower(), OtherRange.getLower());
+    APInt End = APIntOps::smin(Range.getUpper(), OtherRange.getUpper());
     if (Start.slt(End))
       Result.Ranges.push_back(ConstantRange(Start, End));
 
+    // Move to the next Range in one list determined by the uppers.
+    // For example: A = {(0, 2), (4, 8)}; B = {(-2, 5), (6, 10)}
+    // We need to intersect three pairs: A0 && B0; A1 && B0; A1 && B1.
     if (Range.getUpper().slt(OtherRange.getUpper()))
       i++;
     else
