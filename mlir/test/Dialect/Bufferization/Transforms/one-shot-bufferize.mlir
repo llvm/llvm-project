@@ -269,14 +269,3 @@ func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5x
 
   return %0, %r : tensor<5xf32>, f32
 }
-
-// -----
-
-// CHECK-LABEL: func @func_with_assert(
-//       CHECK: %0 = arith.cmpi slt, %arg0, %arg1 : index
-//       CHECK: cf.assert %0, "%arg0 must be less than %arg1"
-func.func @func_with_assert(%arg0: index, %arg1: index) {
-  %0 = arith.cmpi slt, %arg0, %arg1 : index
-  cf.assert %0, "%arg0 must be less than %arg1"
-  return
-}
