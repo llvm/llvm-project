@@ -1427,10 +1427,6 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *Pred = II.getOperand(1);
   Value *PtrOp = II.getOperand(2);
 
-  // Remove when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryErase(IC, II, 0))
-    return II_NA;
-
   if (isAllActivePredicate(Pred)) {
     StoreInst *Store = IC.Builder.CreateStore(VecOp, PtrOp);
     Store->copyMetadata(II);
@@ -1788,10 +1784,6 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   Value *BasePtr = II.getOperand(2);
   Value *Index = II.getOperand(3);
   Type *Ty = Val->getType();
-
-  // Remove when all lanes are inactive
-  if (auto II_NA = instCombineSVENoActiveUnaryErase(IC, II, 0))
-    return II_NA;
 
   // Contiguous scatter => masked store.
   // (sve.st1.scatter.index Value Mask BasePtr (sve.index IndexBase 1))
