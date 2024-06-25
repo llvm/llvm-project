@@ -44,7 +44,15 @@
 <tr>
  <td><a href="#c99">C99</a></td>
  <td><tt>-std=c99</tt></td>
- <td class="unknown" align="center">Almost certainly</td>
+ <td class="full" align="center">Clang 17</td>
+ <!-- We claim full conformance to C99 despite there being a few entries marked
+      "partial". The partial entries do not impact whether we conform to the
+      letter of the standard, but they are for circumstances where the missing
+      support is thought to only be in edge cases or where we believe we could
+      make further efforts to significantly improve the support. While we list
+      Clang 17 as the version of Clang which fully supports C99, support for
+      the language mode was largely complete in earlier versions of Clang going
+      back to 3.0. -->
 </tr>
 <tr>
  <td><a href="#c11">C11</a></td>
@@ -63,9 +71,9 @@
 </tr>
 </table>
 
-<p>The implementation status for C99, C11, C17, and C23 are currently under
-investigation. Any proposal whose status in Clang is currently unknown
-will be marked in <span class="unknown">magenta</span>.</p>
+<p>The implementation status for C11 and C23 are currently under investigation.
+Any proposal whose status in Clang is currently unknown will be marked in
+<span class="unknown">magenta</span>.</p>
 
 <p>The Clang community is continually striving to improve C standards
 compliance between releases by submitting and tracking
@@ -83,7 +91,7 @@ conformance.</p>
 
 <h2 id="c99">C99 implementation status</h2>
 
-<p>Clang implements a significant portion of the ISO 9899:1999 (C99) standard, but the status of individual proposals is still under investigation.</p>
+<p>Clang implements all of the ISO 9899:1999 (C99) standard.</p>
 <p>Note, the list of C99 features comes from the C99 committee draft. Not all C99 documents are publicly available, so the documents referenced in this section may be inaccurate, unknown, or not linked.</p>
 <!-- https://www.open-std.org/jtc1/sc22/wg14/www/docs/n874.htm contains the
      final editor's report of what's been added to C99, but it includes more
