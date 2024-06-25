@@ -1245,6 +1245,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // combiner for cleanup here so that the unrolling and LICM can be pipelined
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
+    // In order for outer loop vectorization to be done, UnrollAndJam must occur before the SLPVectorizerPass.
     if (EnableUnrollAndJam && PTO.LoopUnrolling)
       FPM.addPass(createFunctionToLoopPassAdaptor(
           LoopUnrollAndJamPass(Level.getSpeedupLevel())));
@@ -1318,6 +1319,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   }
 
   // We do UnrollAndJam in a separate LPM to Unroll ensure it happens first.
+  // In order for outer loop vectorization to be done, UnrollAndJam must occur before the SLPVectorizerPass.
   if (EnableUnrollAndJam && PTO.LoopUnrolling) {
     FPM.addPass(createFunctionToLoopPassAdaptor(
         LoopUnrollAndJamPass(Level.getSpeedupLevel())));
