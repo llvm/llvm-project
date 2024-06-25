@@ -12,11 +12,11 @@ define void @test1(ptr %a1, ptr %a2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[A2:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]], !tbaa.struct [[TBAA_STRUCT6:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[A2]], align 2, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    store i16 [[TMP0]], ptr [[A1:%.*]], align 2, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds i8, ptr [[A1]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA8:![0-9]+]], !tbaa.struct [[TBAA_STRUCT6]]
-; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA8]], !tbaa.struct [[TBAA_STRUCT6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[B]], align 2, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    store i16 [[TMP1]], ptr [[B2]], align 2, !tbaa [[TBAA6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -44,7 +44,5 @@ entry:
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[META4]] = !{[[META2]], i64 2, !"_ZTS7Wrapper", [[META5:![0-9]+]], i64 0, i64 2}
 ; CHECK: [[META5]] = !{[[META2]], i64 2, !"short"}
-; CHECK: [[TBAA_STRUCT6]] = !{i64 0, i64 2, [[META7:![0-9]+]]}
-; CHECK: [[META7]] = !{[[META5]], [[META5]], i64 0, i64 2}
-; CHECK: [[TBAA8]] = !{[[META1]], [[META4]], i64 2, i64 2}
+; CHECK: [[TBAA6]] = !{[[META1]], [[META4]], i64 2, i64 2}
 ;.
