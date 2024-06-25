@@ -29,6 +29,10 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
+llvm::cl::opt<bool> MatchWithCallsAsAnchors("match-with-calls-as-anchors",
+                                  cl::desc("Matches with calls as anchors"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
+
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
@@ -353,7 +357,7 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
     llvm_unreachable("Unhandled HashFunction");
   };
 
-  std::unordered_map<uint64_t, BinaryFunction &> CallHashToBF;
+  std::unordered_map<uint64_t, BinaryFunction *> CallHashToBF;
 
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     if (ProfiledFunctions.count(BF))
@@ -375,12 +379,12 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
       for (const std::string &FunctionName : FunctionNames)
         HashString.append(FunctionName);
     }
-    CallHashToBF.emplace(ComputeCallHash(HashString), BF);
+    CallHashToBF[ComputeCallHash(HashString)] = BF;
   }
 
   std::unordered_map<uint32_t, std::string> ProfiledFunctionIdToName;
 
-  for (const yaml::bolt::BinaryFunctionProfile YamlBF : YamlBP.Functions)
+  for (const yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     ProfiledFunctionIdToName[YamlBF.Id] = YamlBF.Name;
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
@@ -401,7 +405,7 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
     auto It = CallHashToBF.find(Hash);
     if (It == CallHashToBF.end())
       continue;
-    matchProfileToFunction(YamlBF, It->second);
+    matchProfileToFunction(YamlBF, *It->second);
     ++MatchedWithCallsAsAnchors;
   }
 }
@@ -480,7 +484,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       matchProfileToFunction(YamlBF, *BF);
 
   uint64_t MatchedWithCallsAsAnchors = 0;
-  matchWithCallsAsAnchors(BC,  MatchedWithCallsAsAnchors);
+  if (opts::MatchWithCallsAsAnchors)
+    matchWithCallsAsAnchors(BC,  MatchedWithCallsAsAnchors);
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
