@@ -53,6 +53,24 @@ static bool consumeFront(std::string_view &S, std::string_view C) {
   return true;
 }
 
+static bool consumeFrontWithOrWithoutPrefix(std::string_view &S, std::string_view C, bool CheckWithout, size_t N) {
+    std::string_view CWithout = C.substr(N);
+    if (CheckWithout && llvm::itanium_demangle::starts_with(S, CWithout)) {
+        S.remove_prefix(CWithout.size());
+        return true;
+    }
+    if (!llvm::itanium_demangle::starts_with(S, C))
+        return false;
+    S.remove_prefix(C.size());
+    return true;
+}
+
+static bool startsWithOrWithoutPrefix(std::string_view S, std::string_view C, bool CheckWithout, size_t N) {
+  if (CheckWithout && llvm::itanium_demangle::starts_with(S, C.substr(N)))
+    return true;
+  return llvm::itanium_demangle::starts_with(S, C);
+}
+
 static bool isMemberPointer(std::string_view MangledName, bool &Error) {
   Error = false;
   const char F = MangledName.front();
@@ -2256,6 +2274,18 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
 
     NodeList &TP = **Current;
 
+    // <auto-nttp> ::= $ M <type> <nttp>
+    const bool IsAutoNTTP = consumeFront(MangledName, "$M");
+    if (IsAutoNTTP) {
+      // The deduced type of the auto NTTP parameter isn't printed so
+      // we want to ignore the AST created from demangling the type.
+      //
+      // TODO: Avoid the extra allocations to the bump allocator in this case.
+      (void)demangleType(MangledName, QualifierMangleMode::Drop);
+      if (Error)
+        return nullptr;
+    }
+
     TemplateParameterReferenceNode *TPRN = nullptr;
     if (consumeFront(MangledName, "$$Y")) {
       // Template alias
@@ -2266,29 +2296,16 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
     } else if (consumeFront(MangledName, "$$C")) {
       // Type has qualifiers.
       TP.N = demangleType(MangledName, QualifierMangleMode::Mangle);
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$1") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$H") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$I") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$J") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$M")) {
+    } else if (startsWithOrWithoutPrefix(MangledName, "$1", IsAutoNTTP, 1) ||
+               startsWithOrWithoutPrefix(MangledName, "$H", IsAutoNTTP, 1) ||
+               startsWithOrWithoutPrefix(MangledName, "$I", IsAutoNTTP, 1) ||
+               startsWithOrWithoutPrefix(MangledName, "$J", IsAutoNTTP, 1)) {
       // Pointer to member
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
 
-      MangledName.remove_prefix(1);
-
-      // <auto-nttp> ::= $ M <type> 1? <mangled-name>
-      if (llvm::itanium_demangle::starts_with(MangledName, 'M')) {
-        MangledName.remove_prefix(1);
-
-        // The deduced type of the auto NTTP parameter isn't printed so
-        // we want to ignore the AST created from demangling the type.
-        //
-        // TODO: Avoid the extra allocations to the bump allocator in this case.
-        (void)demangleType(MangledName, QualifierMangleMode::Drop);
-        if (Error)
-          return nullptr;
-      }
+      if (!IsAutoNTTP)
+          MangledName.remove_prefix(1); // Remove leading '$'
 
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
@@ -2357,7 +2374,7 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       }
       TPRN->IsMemberPointer = true;
 
-    } else if (consumeFront(MangledName, "$0")) {
+    } else if (consumeFrontWithOrWithoutPrefix(MangledName, "$0", IsAutoNTTP, 1)) {
       // Integral non-type template parameter
       bool IsNegative = false;
       uint64_t Value = 0;
