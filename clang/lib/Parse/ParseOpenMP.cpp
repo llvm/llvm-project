@@ -24,10 +24,10 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
-#include <bitset>
 #include <optional>
 
 using namespace clang;
@@ -2146,7 +2146,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_requires: {
     SourceLocation StartLoc = ConsumeToken();
     SmallVector<OMPClause *, 5> Clauses;
-    std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
+    llvm::SmallBitVector SeenClauses(llvm::omp::Clause_enumSize + 1);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
       Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
@@ -2424,7 +2424,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
 
   SourceLocation EndLoc;
   SmallVector<OMPClause *, 5> Clauses;
-  std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
+  llvm::SmallBitVector SeenClauses(llvm::omp::Clause_enumSize + 1);
   DeclarationNameInfo DirName;
   OpenMPDirectiveKind CancelRegion = OMPD_unknown;
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
@@ -2833,7 +2833,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
                                   /*AllowScopeSpecifier=*/false)) {
       SmallVector<OMPClause *, 1> Clauses;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        std::bitset<llvm::omp::Clause_enumSize + 1> SeenClauses;
+        llvm::SmallBitVector SeenClauses(llvm::omp::Clause_enumSize + 1);
         while (Tok.isNot(tok::annot_pragma_openmp_end)) {
           OpenMPClauseKind CKind =
               Tok.isAnnotation() ? OMPC_unknown
