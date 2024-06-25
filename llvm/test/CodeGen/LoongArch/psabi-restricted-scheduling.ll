@@ -8,10 +8,6 @@
 ; RUN: llc --mtriple=loongarch64 -mattr=+d --code-model=large --post-RA-scheduler=1 < %s \
 ; RUN:     | FileCheck %s --check-prefix=LARGE_SCH
 
-;; FIXME: According to the description of the psABI v2.30, the code sequences
-;; of `PseudoLA*_LARGE` instruction and Medium code model's function call must
-;; be adjacent.
-
 @g = dso_local global i64 zeroinitializer, align 4
 @G = global i64 zeroinitializer, align 4
 @gd = external thread_local global i64
