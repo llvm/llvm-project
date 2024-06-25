@@ -29,9 +29,10 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool> MatchWithCallsAsAnchors("match-with-calls-as-anchors",
-                                  cl::desc("Matches with calls as anchors"),
-                                  cl::Hidden, cl::cat(BoltOptCategory));
+llvm::cl::opt<bool>
+    MatchWithCallsAsAnchors("match-with-calls-as-anchors",
+                            cl::desc("Matches with calls as anchors"),
+                            cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
@@ -358,12 +359,11 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
   };
 
   std::unordered_map<uint64_t, BinaryFunction *> CallHashToBF;
-
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     if (ProfiledFunctions.count(BF))
       continue;
 
-    std::string HashString;
+    std::string HashString{""};
     for (const auto &BB : BF->blocks()) {
       std::multiset<std::string> FunctionNames;
       for (const MCInst &Instr : BB) {
@@ -379,14 +379,23 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
       for (const std::string &FunctionName : FunctionNames)
         HashString.append(FunctionName);
     }
+    // its possible we have some collisions.. our options to solve include
+    // cmp block ct, or potentially fname edit distance. although, thats p exp
+    if (HashString == "")
+      continue;
     CallHashToBF[ComputeCallHash(HashString)] = BF;
   }
 
   std::unordered_map<uint32_t, std::string> ProfiledFunctionIdToName;
-
-  for (const yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
-    ProfiledFunctionIdToName[YamlBF.Id] = YamlBF.Name;
-
+  for (const yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+    // How do we handle functions with multiple names? LTO specifically,
+    // right now the scope of this is to identical names wo lto i think
+    StringRef Name = YamlBF.Name;
+    const size_t Pos = Name.find("(*");
+    if (Pos != StringRef::npos)
+      Name = Name.substr(0, Pos);
+    ProfiledFunctionIdToName[YamlBF.Id] = Name;
+  }
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
       continue;
@@ -400,9 +409,13 @@ void YAMLProfileReader::matchWithCallsAsAnchors(
       for (const std::string &FunctionName : FunctionNames)
         HashString.append(FunctionName);
     }
+    if (HashString == "")
+      continue;
     size_t Hash = ComputeCallHash(HashString);
     auto It = CallHashToBF.find(Hash);
     if (It == CallHashToBF.end())
+      continue;
+    if (ProfiledFunctions.count(It->second))
       continue;
     matchProfileToFunction(YamlBF, *It->second);
     ++MatchedWithCallsAsAnchors;
@@ -484,12 +497,17 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   uint64_t MatchedWithCallsAsAnchors = 0;
   if (opts::MatchWithCallsAsAnchors)
-    matchWithCallsAsAnchors(BC,  MatchedWithCallsAsAnchors);
+    matchWithCallsAsAnchors(BC, MatchedWithCallsAsAnchors);
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
+
+  if (opts::Verbosity >= 2) {
+    outs() << "BOLT-INFO: matched " << MatchedWithCallsAsAnchors
+           << " functions with calls as anchors\n";
+  }
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
