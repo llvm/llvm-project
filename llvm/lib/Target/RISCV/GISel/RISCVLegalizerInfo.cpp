@@ -371,17 +371,25 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FP Operations
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
-                               G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
-      .legalIf(typeIsScalarFPArith(0, ST));
+  auto &FPArithActions = getActionDefinitionsBuilder(
+                             {G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
+                              G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
+                             .legalIf(typeIsScalarFPArith(0, ST));
+  // TODO: Fold this into typeIsScalarFPArith.
+  if (ST.hasStdExtZfh())
+    FPArithActions.legalFor({s16});
 
   getActionDefinitionsBuilder(G_FREM)
       .libcallFor({s32, s64})
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FCOPYSIGN)
-      .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
+  auto &CopySignActions =
+      getActionDefinitionsBuilder(G_FCOPYSIGN)
+          .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
+  // TODO: Fold this into typeIsScalarFPArith.
+  if (ST.hasStdExtZfh())
+    CopySignActions.legalFor({s16, s16});
 
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
