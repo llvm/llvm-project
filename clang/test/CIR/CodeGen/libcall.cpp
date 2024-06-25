@@ -47,7 +47,7 @@ void t(const char* fmt, ...) {
 // CHECK:   %5 = cir.call @_ZL6strlenPKcU17pass_object_size0(%3, %4) : (!cir.ptr<!s8i>, !u64i) -> !u64i
 
 // CHECK: cir.func private @__vsnprintf_chk
-// CHECK: cir.func internal private @_ZL9vsnprintfPcU17pass_object_size1iPKcP13__va_list_tag
+// CHECK: cir.func internal private dsolocal @_ZL9vsnprintfPcU17pass_object_size1iPKcP13__va_list_tag
 
 // Implicit size parameter in arg %1
 //

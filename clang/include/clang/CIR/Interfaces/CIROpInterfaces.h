@@ -17,6 +17,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 namespace mlir {
 namespace cir {} // namespace cir

@@ -8,7 +8,7 @@
 
 void escape(const void *);
 
-// CIR-DAG: cir.global "private" internal @T1._x = #cir.int<99> : !s8i
+// CIR-DAG: cir.global "private" internal dsolocal @T1._x = #cir.int<99> : !s8i
 // LLVM-DAG: internal global i8 99
 
 void T1(void) {

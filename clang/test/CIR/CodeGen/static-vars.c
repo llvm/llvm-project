@@ -4,20 +4,20 @@
 void func1(void) {
   // Should lower default-initialized static vars.
   static int i;
-  // CHECK-DAG: cir.global "private" internal @func1.i = #cir.int<0> : !s32i
+  // CHECK-DAG: cir.global "private" internal dsolocal @func1.i = #cir.int<0> : !s32i
 
   // Should lower constant-initialized static vars.
   static int j = 1;
-  // CHECK-DAG: cir.global "private" internal @func1.j = #cir.int<1> : !s32i
+  // CHECK-DAG: cir.global "private" internal dsolocal @func1.j = #cir.int<1> : !s32i
 
   // Should properly shadow static vars in nested scopes.
   {
     static int j = 2;
-    // CHECK-DAG: cir.global "private" internal @func1.j.1 = #cir.int<2> : !s32i
+    // CHECK-DAG: cir.global "private" internal dsolocal @func1.j.1 = #cir.int<2> : !s32i
   }
   {
     static int j = 3;
-    // CHECK-DAG: cir.global "private" internal @func1.j.2 = #cir.int<3> : !s32i
+    // CHECK-DAG: cir.global "private" internal dsolocal @func1.j.2 = #cir.int<3> : !s32i
   }
 
   // Should lower basic static vars arithmetics.
@@ -31,20 +31,20 @@ void func1(void) {
 // Should shadow static vars on different functions.
 void func2(void) {
   static char i;
-  // CHECK-DAG: cir.global "private" internal @func2.i = #cir.int<0> : !s8i
+  // CHECK-DAG: cir.global "private" internal dsolocal @func2.i = #cir.int<0> : !s8i
   static float j;
-  // CHECK-DAG: cir.global "private" internal @func2.j = #cir.fp<0.000000e+00> : !cir.float
+  // CHECK-DAG: cir.global "private" internal dsolocal @func2.j = #cir.fp<0.000000e+00> : !cir.float
 }
 
 // Should const initialize static vars with constant addresses.
 void func3(void) {
   static int var;
   static int *constAddr = &var;
-  // CHECK-DAG: cir.global "private" internal @func3.constAddr = #cir.global_view<@func3.var> : !cir.ptr<!s32i>
+  // CHECK-DAG: cir.global "private" internal dsolocal @func3.constAddr = #cir.global_view<@func3.var> : !cir.ptr<!s32i>
 }
 
 // Should match type size in bytes between var and initializer.
 void func4(void) {
   static char string[] = "Hello";
-  // CHECK-DAG: cir.global "private" internal @func4.string = #cir.const_array<"Hello\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
+  // CHECK-DAG: cir.global "private" internal dsolocal @func4.string = #cir.const_array<"Hello\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
 }
