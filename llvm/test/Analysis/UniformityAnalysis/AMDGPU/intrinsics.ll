@@ -56,9 +56,9 @@ define amdgpu_kernel void @mov_dpp8(ptr addrspace(1) %out, i32 %in) #0 {
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.writelane(i32 0, i32 1, i32 2)
+; CHECK: DIVERGENT: %tmp0 = call i32 @llvm.amdgcn.writelane.i32(i32 0, i32 1, i32 2)
 define amdgpu_kernel void @writelane(ptr addrspace(1) %out) #0 {
-  %tmp0 = call i32 @llvm.amdgcn.writelane(i32 0, i32 1, i32 2)
+  %tmp0 = call i32 @llvm.amdgcn.writelane.i32(i32 0, i32 1, i32 2)
   store i32 %tmp0, ptr addrspace(1) %out
   ret void
 }
@@ -237,7 +237,7 @@ declare i32 @llvm.amdgcn.permlanex16.var(i32, i32, i32, i1, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i32, i32, i1) #1
 declare i32 @llvm.amdgcn.mov.dpp8.i32(i32, i32) #1
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #1
-declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #1
+declare i32 @llvm.amdgcn.writelane.i32(i32, i32, i32) #1
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v8f32.v16f16(<16 x half>, <16 x half> , <8 x float>) #1
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v8f32.v16i16(<16 x i16>, <16 x i16> , <8 x float>) #1
 declare <16 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v16f16.v16f16(<16 x half>, <16 x half> , <16 x half>, i1 immarg) #1
