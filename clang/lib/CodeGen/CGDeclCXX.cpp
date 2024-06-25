@@ -1059,9 +1059,10 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
     if (Guard.isValid()) {
       // If we have a guard variable, check whether we've already performed
       // these initializations. This happens for TLS initialization functions.
-      llvm::Value *GuardVal = Builder.CreateLoad(Guard);
-      llvm::Value *Uninit = Builder.CreateIsNull(GuardVal,
-                                                 "guard.uninitialized");
+      llvm::Value *GuardVal = EmitLoadOfScalar(
+          MakeAddrLValue(Guard, getContext().IntTy), SourceLocation());
+      llvm::Value *Uninit =
+          Builder.CreateIsNull(GuardVal, "guard.uninitialized");
       llvm::BasicBlock *InitBlock = createBasicBlock("init");
       ExitBlock = createBasicBlock("exit");
       EmitCXXGuardedInitBranch(Uninit, InitBlock, ExitBlock,
@@ -1070,13 +1071,21 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       // Mark as initialized before initializing anything else. If the
       // initializers use previously-initialized thread_local vars, that's
       // probably supposed to be OK, but the standard doesn't say.
-      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
+      EmitStoreOfScalar(llvm::ConstantInt::get(GuardVal->getType(), 1),
+                        MakeAddrLValue(Guard, getContext().IntTy));
 
-      // The guard variable can't ever change again.
-      EmitInvariantStart(
-          Guard.getPointer(),
-          CharUnits::fromQuantity(
-              CGM.getDataLayout().getTypeAllocSize(GuardVal->getType())));
+      // Emit invariant start for TLS guard address.
+      if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+        uint64_t Width =
+            CGM.getDataLayout().getTypeAllocSize(GuardVal->getType());
+        llvm::Value *TLSAddr = Guard.getPointer();
+        // Get the thread-local address via intrinsic.
+        if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
+          if (GV->isThreadLocal())
+            TLSAddr = Builder.CreateThreadLocalAddress(Guard.getPointer());
+        Builder.CreateInvariantStart(
+            TLSAddr, llvm::ConstantInt::getSigned(Int64Ty, Width));
+      }
     }
 
     RunCleanupsScope Scope(*this);

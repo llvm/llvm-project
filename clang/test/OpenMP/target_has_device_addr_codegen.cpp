@@ -1304,11 +1304,13 @@ void use_template() {
 // CHECK-LABEL: define {{[^@]+}}@__tls_init
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1
+// CHECK-NEXT:    [[TLS_ADR_1:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_1]], align 1
 // CHECK-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !prof [[PROF18:![0-9]+]]
 // CHECK:       init:
-// CHECK-NEXT:    store i8 1, ptr @__tls_guard, align 1
+// CHECK-NEXT:    [[TLS_ADR_2:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-NEXT:    store i8 1, ptr [[TLS_ADR_2]], align 1
 // CHECK-NEXT:    call void @__cxx_global_var_init.4()
 // CHECK-NEXT:    br label [[EXIT]]
 // CHECK:       exit:
