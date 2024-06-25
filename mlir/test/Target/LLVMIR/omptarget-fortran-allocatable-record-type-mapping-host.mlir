@@ -120,9 +120,9 @@ module attributes {omp.is_target_device = false} {
 // CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] [i64 0, i64 48, i64 8, i64 20]
 // CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675]
 // CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [8 x i64] [i64 0, i64 40, i64 8, i64 136, i64 48, i64 8, i64 20, i64 4]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [8 x i64] [i64 32, i64 281474976710657, i64 281474976710659, i64 281474976710675, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [8 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659]
 // CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [8 x i64] [i64 0, i64 40, i64 8, i64 240, i64 48, i64 8, i64 20, i64 4]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [8 x i64] [i64 32, i64 281474976710657, i64 281474976710659, i64 281474976710675, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [8 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659, i64 281474976710659, i64 281474976710675, i64 281474976710659]
 // CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] [i64 0, i64 48, i64 8, i64 20]
 // CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710675]
 

@@ -1885,7 +1885,8 @@ static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info);
+                                  EvalInfo &Info,
+                                  std::string *StringResult = nullptr);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -17009,7 +17010,7 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 }
 
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
-                                  EvalInfo &Info) {
+                                  EvalInfo &Info, std::string *StringResult) {
   if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
     return false;
 
@@ -17036,6 +17037,8 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
         Str = Str.substr(0, Pos);
 
       Result = Str.size();
+      if (StringResult)
+        *StringResult = Str;
       return true;
     }
 
@@ -17051,10 +17054,22 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
     if (!Char.getInt()) {
       Result = Strlen;
       return true;
-    }
+    } else if (StringResult)
+      StringResult->push_back(Char.getInt().getExtValue());
     if (!HandleLValueArrayAdjustment(Info, E, String, CharTy, 1))
       return false;
   }
+}
+
+std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
+  uint64_t Result;
+  std::string StringResult;
+
+  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+    return StringResult;
+  return {};
 }
 
 bool Expr::EvaluateCharRangeAsString(std::string &Result,

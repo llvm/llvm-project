@@ -31,7 +31,7 @@ public:
   ~MCSectionSPIRV() = default;
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override {}
+                            uint32_t Subsection) const override {}
   bool useCodeAlign() const override { return false; }
   bool isVirtualSection() const override { return false; }
 };

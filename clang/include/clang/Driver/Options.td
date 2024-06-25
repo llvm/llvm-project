@@ -5421,6 +5421,7 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
@@ -5535,10 +5536,7 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  HelpTextForVariants<[FlangOption],
-                      "Print the resource directory pathname that contains lib and "
-                      "include directories with the runtime libraries and MODULE files.">,
-  Visibility<[ClangOption, CLOption, FlangOption]>;
+  Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -6314,12 +6312,12 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
@@ -6740,9 +6738,6 @@ def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
 
 let Visibility = [CC1Option, CC1AsOption] in {
 
-def tune_cpu : Separate<["-"], "tune-cpu">,
-  HelpText<"Tune for a specific cpu type">,
-  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">,
   MarshallingInfoString<TargetOpts<"ABI">>;
@@ -6769,6 +6764,9 @@ def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple
 
 let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 
+def tune_cpu : Separate<["-"], "tune-cpu">,
+  HelpText<"Tune for a specific cpu type">,
+  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;
@@ -8597,6 +8595,8 @@ def : Separate<["-"], "Xmicrosoft-windows-sdk-root">,
     Alias<_SLASH_winsdkdir>;
 def : Separate<["-"], "Xmicrosoft-windows-sdk-version">,
     Alias<_SLASH_winsdkversion>;
+def : Separate<["-"], "Xmicrosoft-windows-sys-root">,
+    Alias<_SLASH_winsysroot>;
 
 // Ignored:
 
@@ -8768,3 +8768,11 @@ def spirv : DXCFlag<"spirv">,
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;
+def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Disable the wasm-opt optimizer">,
+  MarshallingInfoFlag<LangOpts<"NoWasmOpt">>;
+def wasm_opt : Flag<["--"], "wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Enable the wasm-opt optimizer (default)">,
+  MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;

@@ -502,7 +502,6 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
     auto *Ordering = dyn_cast<ConstantInt>(Inst->getArgOperand(2));
@@ -1019,7 +1018,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
 bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                             Intrinsic::ID IID) const {
   switch (IID) {
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
@@ -1041,7 +1039,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                     Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::amdgcn_ds_fadd:
   case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_fmax: {
     const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
