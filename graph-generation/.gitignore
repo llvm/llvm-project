@@ -1,5 +1,4 @@
 .gdb_history
-output.json
 
 *.o
 *.path-gen-ast
