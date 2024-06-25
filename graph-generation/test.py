@@ -19,9 +19,9 @@ def update_paths(root):
     src = '/home/thebesttv/vul/llvm-project/graph-generation'
     dst = root
     logging.info(f'Updating paths: {src} -> {dst}')
-    cmd = '''
-    sed -i 's|{src}|{dst}|g' $(find {dst} -type f -name '*.json')
-'''.format(src=src, dst=dst)
+    cmd = f'''
+    sed -i 's|{src}|{dst}|g' $(find {dst} -type f -name '*.json' | grep -v {dst}/{REAL_WORLD_DIR})
+'''
     subprocess.run(cmd, shell=True, check=True)
 
 def get_directories(root):
