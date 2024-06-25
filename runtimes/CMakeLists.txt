@@ -183,14 +183,18 @@ message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(print_target_triple ${CMAKE_CXX_COMPILER} --target=${LLVM_RUNTIME_TRIPLE} -print-target-triple)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(option_prefix "")
+  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
   execute_process(COMMAND ${print_target_triple}
     RESULT_VARIABLE result
     OUTPUT_VARIABLE output
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(result EQUAL 0)
-    set(LLVM_RUNTIME_TRIPLE ${output})
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
   else()
     string(REPLACE ";" " " print_target_triple "${print_target_triple}")
     message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
