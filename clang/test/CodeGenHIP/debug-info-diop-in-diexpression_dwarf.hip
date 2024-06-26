@@ -1,6 +1,8 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -o - %s | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK,CHECK-DIEXPR %s
+// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpr -mllvm -stop-after=amdgpu-isel -o - %s | llc -x mir -verify-machineinstrs -start-after=amdgpu-isel -filetype=obj -o - - | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK,CHECK-DIEXPR %s
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpression -o - %s | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK,CHECK-DIEXPRESSION %s
+// RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -emit-obj -fcuda-is-device -debug-info-kind=limited -gheterogeneous-dwarf=diexpression -mllvm -stop-after=amdgpu-isel -o - %s | llc -x mir -verify-machineinstrs -start-after=amdgpu-isel -filetype=obj -o - - | llvm-dwarfdump --diff - | FileCheck --check-prefixes=CHECK,CHECK-DIEXPRESSION %s
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
