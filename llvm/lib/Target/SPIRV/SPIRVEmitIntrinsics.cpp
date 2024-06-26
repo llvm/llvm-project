@@ -375,7 +375,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"to_private", 0},
         {"__spirv_GenericCastToPtr_ToGlobal", 0},
         {"__spirv_GenericCastToPtr_ToLocal", 0},
-        {"__spirv_GenericCastToPtr_ToPrivate", 0}};
+        {"__spirv_GenericCastToPtr_ToPrivate", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToGlobal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
