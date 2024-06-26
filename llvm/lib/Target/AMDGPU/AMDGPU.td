@@ -933,10 +933,10 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
-def FeatureGFX1211DGEMMInsts : SubtargetFeature<"gfx1211-dgemm-insts",
-  "HasGFX1211DGEMMInsts",
+def FeatureGFX1211GEMMInsts : SubtargetFeature<"gfx1211-gemm-insts",
+  "HasGFX1211GEMMInsts",
   "true",
-  "Has v_wmma_f64_16x16x4_f64, v_wmma_f64_16x16x8_f64 instructions"
+  "Has additional gfx1211 DGEMM and F16 GEMM instructions"
 >;
 
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
@@ -1914,7 +1914,7 @@ def FeatureISAVersion12_10 : FeatureSet<
 def FeatureISAVersion12_11 : FeatureSet<
   !listconcat(FeatureISAVersion12_10.Features,
   [FeatureDPALU_DPP,
-   FeatureGFX1211DGEMMInsts])>;
+   FeatureGFX1211GEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2591,9 +2591,9 @@ def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
-def HasGFX1211DGEMMInsts
-  : Predicate<"Subtarget->hasGFX1211DGEMMInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1211DGEMMInsts)>;
+def HasGFX1211GEMMInsts
+  : Predicate<"Subtarget->hasGFX1211GEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX1211GEMMInsts)>;
 
 def HasDefaultComponentZero
   : Predicate<"Subtarget->hasDefaultComponentZero()">,
