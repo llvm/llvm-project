@@ -20,8 +20,6 @@
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/Execution.h"
-#include "llvm/Support/Mutex.h"
-#include <unordered_set>
 
 using namespace clang::comments;
 using namespace clang::tooling;
@@ -55,7 +53,6 @@ private:
                                     const ASTContext &Context) const;
 
   ClangDocContext CDCtx;
-
 };
 
 } // namespace doc

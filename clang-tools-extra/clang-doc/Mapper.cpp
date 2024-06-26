@@ -12,7 +12,8 @@
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/Mutex.h"
+#include <unordered_set>
 
 namespace clang {
 namespace doc {
@@ -57,10 +58,6 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
                                getLine(D, D->getASTContext()), File,
                                IsFileInRootDir, CDCtx.PublicOnly);
 
-  // Bitcode
-  if (CDCtx.NoBitcode) {
-    return true;
-  }
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
