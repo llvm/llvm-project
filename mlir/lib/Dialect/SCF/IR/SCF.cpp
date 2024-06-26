@@ -629,9 +629,9 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   llvm::append_range(inits, newInitOperands);
   scf::ForallOp newLoop = rewriter.create<scf::ForallOp>(
       getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
-      inits, getMapping());
+      inits, getMapping(),
+      /*bodyBuilderFn =*/[](OpBuilder &, Location, ValueRange) {});
 
-  rewriter.eraseOp(newLoop.getTerminator());
   // Move the loop body to the new op.
   rewriter.mergeBlocks(getBody(), newLoop.getBody(),
                        newLoop.getBody()->getArguments().take_front(

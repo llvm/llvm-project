@@ -1124,7 +1124,6 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
       },
       [&](RewriterBase &b, LoopLikeOpInterface source,
           LoopLikeOpInterface &target, IRMapping mapping) {
-        auto sourceFor = cast<scf::ForOp>(source);
         auto targetFor = cast<scf::ForOp>(target);
         auto newTerm = b.clone(*targetFor.getBody()->getTerminator(), mapping);
         b.replaceOp(targetFor.getBody()->getTerminator(), newTerm);
@@ -1151,8 +1150,9 @@ scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
 
   rewriter.setInsertionPoint(source);
   auto fusedLoop = rewriter.create<scf::ParallelOp>(
-      source.getLoc(), source.getLowerBound(), source.getUpperBound(),
-      source.getStep(), newInitVars);
+      rewriter.getFusedLoc(target.getLoc(), source.getLoc()),
+      source.getLowerBound(), source.getUpperBound(), source.getStep(),
+      newInitVars);
   Block *newBlock = fusedLoop.getBody();
   rewriter.inlineBlockBefore(block2, newBlock, newBlock->begin(),
                              newBlock->getArguments());
@@ -1168,8 +1168,8 @@ scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
     SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
     newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
 
-    auto newReduceOp =
-        rewriter.create<scf::ReduceOp>(term2.getLoc(), newReduceArgs);
+    auto newReduceOp = rewriter.create<scf::ReduceOp>(
+        rewriter.getFusedLoc(term1.getLoc(), term2.getLoc()), newReduceArgs);
 
     for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
              term1.getReductions(), term2.getReductions()))) {
