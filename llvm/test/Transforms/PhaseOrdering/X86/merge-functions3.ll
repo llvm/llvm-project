@@ -43,5 +43,3 @@ sw.epilog:                                        ; preds = %entry, %switch.look
   %x.addr.0 = phi i32 [ %switch.load, %switch.lookup ], [ 0, %entry ]
   ret i32 %x.addr.0
 }
-
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cmov,+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
