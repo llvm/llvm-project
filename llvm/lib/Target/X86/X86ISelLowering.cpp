@@ -55721,9 +55721,9 @@ static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
 
 // Helper to determine if we can convert an integer comparison to a float
 // comparison byt casting the operands.
-static std::optional<unsigned> CastIntSETCCtoFP(MVT VT, ISD::CondCode CC,
-                                                const KnownBits &LHS,
-                                                const KnownBits &RHS) {
+static std::optional<unsigned>
+CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
+                 unsigned NumSignificantBitsRHS) {
   MVT SVT = VT.getScalarType();
   assert(SVT == MVT::f32 && "Only tested for float so far");
   const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(SVT);
@@ -55732,20 +55732,10 @@ static std::optional<unsigned> CastIntSETCCtoFP(MVT VT, ISD::CondCode CC,
 
   // TODO: Handle bitcastable integers.
 
-  // For cvt + signed compare we need:
-  // abs(lhs) < MaxConvertableCvt and abs(rhs) < MaxConvertableCvt
-  auto OpInAbsRange = [](const KnownBits &Known, const APInt &Bound) {
-    if (Known.isUnknown() ||
-        !KnownBits::slt(Known, KnownBits::makeConstant(Bound)) ||
-        !KnownBits::sgt(Known, KnownBits::makeConstant(-Bound)))
-      return false;
-    return true;
-  };
-  APInt MaxConvertableCvt = APInt::getOneBitSet(
-      SVT.getScalarSizeInBits(), APFloat::semanticsPrecision(Sem));
-
-  if (OpInAbsRange(RHS, MaxConvertableCvt) &&
-      OpInAbsRange(LHS, MaxConvertableCvt))
+  // For cvt + signed compare we need lhs and rhs to be exactly representable as
+  // a fp value.
+  unsigned FPPrec = APFloat::semanticsPrecision(Sem);
+  if (FPPrec >= NumSignificantBitsLHS && FPPrec >= NumSignificantBitsRHS)
     return ISD::SINT_TO_FP;
 
   return std::nullopt;
@@ -56153,17 +56143,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
         // Without AVX2, see if we can cast the values to v8f32 and use fcmp.
         // TODO: Handle v4f64 as well?
-        KnownBits KnownLHS(EltSizeInBits), KnownRHS(EltSizeInBits);
-        KnownLHS.One.setAllBits();
-        KnownRHS.One.setAllBits();
-        KnownLHS.Zero.setAllBits();
-        KnownRHS.Zero.setAllBits();
+        unsigned MaxSigBitsLHS = 0, MaxSigBitsRHS = 0;
         for (unsigned I = 0; I != NumOps; ++I) {
-          KnownBits LHS = DAG.computeKnownBits(Ops[I].getOperand(0));
-          KnownBits RHS = DAG.computeKnownBits(Ops[I].getOperand(1));
-          KnownLHS = KnownLHS.intersectWith(LHS);
-          KnownRHS = KnownRHS.intersectWith(RHS);
-          if (KnownLHS.isUnknown() && KnownRHS.isUnknown())
+          MaxSigBitsLHS =
+              std::max(MaxSigBitsLHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(0)));
+          MaxSigBitsRHS =
+              std::max(MaxSigBitsRHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(1)));
+          if (MaxSigBitsLHS == EltSizeInBits && MaxSigBitsRHS == EltSizeInBits)
             break;
         }
 
@@ -56176,7 +56164,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         MVT FpVT = VT.changeVectorElementType(FpSVT);
 
         if (std::optional<unsigned> CastOpc =
-                CastIntSETCCtoFP(FpVT, ICC, KnownLHS, KnownRHS)) {
+                CastIntSETCCtoFP(FpVT, ICC, MaxSigBitsLHS, MaxSigBitsRHS)) {
           SDValue LHS = ConcatSubOperand(VT, Ops, 0);
           SDValue RHS = ConcatSubOperand(VT, Ops, 1);
           LHS = DAG.getNode(*CastOpc, DL, FpVT, LHS);
