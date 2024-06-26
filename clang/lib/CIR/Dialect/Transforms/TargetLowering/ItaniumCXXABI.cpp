@@ -48,7 +48,7 @@ public:
 } // namespace
 
 bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
-  const StructType RD = FI.getReturnType().dyn_cast<StructType>();
+  const StructType RD = dyn_cast<StructType>(FI.getReturnType());
   if (!RD)
     return false;
 

@@ -305,7 +305,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     // frequently return an empty Attribute, to signal we want to codegen
     // some trivial ctor calls and whatnots.
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    if (constant && !constant.isa<mlir::cir::ZeroAttr>() &&
+    if (constant && !mlir::isa<mlir::cir::ZeroAttr>(constant) &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
       llvm_unreachable("NYI");
@@ -333,7 +333,7 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   }
 
   // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
-  auto typedConstant = constant.dyn_cast<mlir::TypedAttr>();
+  auto typedConstant = mlir::dyn_cast<mlir::TypedAttr>(constant);
   assert(typedConstant && "expected typed attribute");
   if (!emission.IsConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.
@@ -533,7 +533,7 @@ mlir::cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     const VarDecl &D, mlir::cir::GlobalOp GV, mlir::cir::GetGlobalOp GVAddr) {
   ConstantEmitter emitter(*this);
   mlir::TypedAttr Init =
-      emitter.tryEmitForInitializer(D).dyn_cast<mlir::TypedAttr>();
+      mlir::dyn_cast<mlir::TypedAttr>(emitter.tryEmitForInitializer(D));
   assert(Init && "Expected typed attribute");
 
   // If constant emission failed, then this should be a C++ static
@@ -1141,7 +1141,8 @@ void CIRGenFunction::emitDestroy(Address addr, QualType type,
   // But if the array length is constant, we can suppress that.
   auto constantCount = dyn_cast<mlir::cir::ConstantOp>(length.getDefiningOp());
   if (constantCount) {
-    auto constIntAttr = constantCount.getValue().dyn_cast<mlir::cir::IntAttr>();
+    auto constIntAttr =
+        mlir::dyn_cast<mlir::cir::IntAttr>(constantCount.getValue());
     // ...and if it's constant zero, we can just skip the entire thing.
     if (constIntAttr && constIntAttr.getUInt() == 0)
       return;

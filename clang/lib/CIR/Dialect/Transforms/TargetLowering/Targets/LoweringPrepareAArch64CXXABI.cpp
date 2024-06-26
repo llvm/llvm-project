@@ -63,9 +63,9 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   auto opResTy = op.getType();
   // front end should not produce non-scalar type of VAArgOp
   bool isSupportedType =
-      opResTy.isa<mlir::cir::IntType, mlir::cir::SingleType,
-                  mlir::cir::PointerType, mlir::cir::BoolType,
-                  mlir::cir::DoubleType, mlir::cir::ArrayType>();
+      mlir::isa<mlir::cir::IntType, mlir::cir::SingleType,
+                mlir::cir::PointerType, mlir::cir::BoolType,
+                mlir::cir::DoubleType, mlir::cir::ArrayType>(opResTy);
 
   // Homogenous Aggregate type not supported and indirect arg
   // passing not supported yet. And for these supported types,
@@ -82,7 +82,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   // but it depends on arg type indirectness and coercion defined by ABI.
   auto baseTy = opResTy;
 
-  if (baseTy.isa<mlir::cir::ArrayType>()) {
+  if (mlir::isa<mlir::cir::ArrayType>(baseTy)) {
     llvm_unreachable("ArrayType VAArg loweing NYI");
   }
   // numRegs may not be 1 if ArrayType is supported.
@@ -340,7 +340,7 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
   builder.setInsertionPoint(op);
   contBlock->addArgument(onStackPtr.getType(), loc);
   auto resP = contBlock->getArgument(0);
-  assert(resP.getType().isa<mlir::cir::PointerType>());
+  assert(mlir::isa<mlir::cir::PointerType>(resP.getType()));
   auto opResPTy = mlir::cir::PointerType::get(builder.getContext(), opResTy);
   auto castResP = builder.createBitcast(resP, opResPTy);
   auto res = builder.create<mlir::cir::LoadOp>(loc, castResP);

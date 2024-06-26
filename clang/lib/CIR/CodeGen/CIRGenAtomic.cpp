@@ -302,7 +302,7 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
 }
 
 Address AtomicInfo::castToAtomicIntPointer(Address addr) const {
-  auto intTy = addr.getElementType().dyn_cast<mlir::cir::IntType>();
+  auto intTy = mlir::dyn_cast<mlir::cir::IntType>(addr.getElementType());
   // Don't bother with int casts if the integer size is the same.
   if (intTy && intTy.getWidth() == AtomicSizeInBits)
     return addr;
@@ -342,8 +342,8 @@ static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
   while (auto c = dyn_cast<mlir::cir::CastOp>(op))
     op = c.getOperand().getDefiningOp();
   if (auto c = dyn_cast<mlir::cir::ConstantOp>(op)) {
-    if (c.getType().isa<mlir::cir::IntType>())
-      constVal = c.getValue().cast<mlir::cir::IntAttr>();
+    if (mlir::isa<mlir::cir::IntType>(c.getType()))
+      constVal = mlir::cast<mlir::cir::IntAttr>(c.getValue());
   }
   return constVal;
 }
@@ -376,7 +376,8 @@ static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
   auto cmp = builder.createNot(cmpxchg.getCmp());
   builder.create<mlir::cir::IfOp>(
       loc, cmp, false, [&](mlir::OpBuilder &, mlir::Location) {
-        auto ptrTy = Val1.getPointer().getType().cast<mlir::cir::PointerType>();
+        auto ptrTy =
+            mlir::cast<mlir::cir::PointerType>(Val1.getPointer().getType());
         if (Val1.getElementType() != ptrTy.getPointee()) {
           Val1 = Val1.withPointer(builder.createPtrBitcast(
               Val1.getPointer(), Val1.getElementType()));
@@ -494,7 +495,8 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
     // TODO(cir): this logic should be part of createStore, but doing so
     // currently breaks CodeGen/union.cpp and CodeGen/union.cpp.
-    auto ptrTy = Dest.getPointer().getType().cast<mlir::cir::PointerType>();
+    auto ptrTy =
+        mlir::cast<mlir::cir::PointerType>(Dest.getPointer().getType());
     if (Dest.getElementType() != ptrTy.getPointee()) {
       Dest = Dest.withPointer(
           builder.createPtrBitcast(Dest.getPointer(), Dest.getElementType()));
@@ -659,7 +661,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
 
   // TODO(cir): this logic should be part of createStore, but doing so currently
   // breaks CodeGen/union.cpp and CodeGen/union.cpp.
-  auto ptrTy = Dest.getPointer().getType().cast<mlir::cir::PointerType>();
+  auto ptrTy = mlir::cast<mlir::cir::PointerType>(Dest.getPointer().getType());
   if (Dest.getElementType() != ptrTy.getPointee()) {
     Dest = Dest.withPointer(
         builder.createPtrBitcast(Dest.getPointer(), Dest.getElementType()));

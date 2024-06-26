@@ -294,7 +294,7 @@ static void buildAsmStores(CIRGenFunction &CGF, const AsmStmt &S,
 
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
-      if (TruncTy.isa<mlir::FloatType>())
+      if (mlir::isa<mlir::FloatType>(TruncTy))
         Tmp = Builder.createFloatingCast(Tmp, TruncTy);
       else if (isa<mlir::cir::PointerType>(TruncTy) &&
                isa<mlir::cir::IntType>(Tmp.getType())) {
@@ -652,7 +652,7 @@ mlir::LogicalResult CIRGenFunction::buildAsmStmt(const AsmStmt &S) {
     for (auto typ : ArgElemTypes) {
       if (typ) {
         auto op = Args[i++];
-        assert(op.getType().isa<mlir::cir::PointerType>() &&
+        assert(mlir::isa<mlir::cir::PointerType>(op.getType()) &&
                "pointer type expected");
         assert(cast<mlir::cir::PointerType>(op.getType()).getPointee() == typ &&
                "element type differs from pointee type!");

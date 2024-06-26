@@ -24,7 +24,7 @@ ConstantInitBuilderBase::ConstantInitBuilderBase(CIRGenModule &CGM)
 mlir::Type ConstantInitFuture::getType() const {
   assert(Data && "dereferencing null future");
   if (Data.is<mlir::Attribute>()) {
-    auto attr = Data.get<mlir::Attribute>().dyn_cast<mlir::TypedAttr>();
+    auto attr = mlir::dyn_cast<mlir::TypedAttr>(Data.get<mlir::Attribute>());
     assert(attr && "expected typed attribute");
     return attr.getType();
   } else {
@@ -34,7 +34,7 @@ mlir::Type ConstantInitFuture::getType() const {
 
 void ConstantInitFuture::abandon() {
   assert(Data && "abandoning null future");
-  if (auto builder = Data.dyn_cast<ConstantInitBuilderBase *>()) {
+  if (auto builder = mlir::dyn_cast<ConstantInitBuilderBase *>(Data)) {
     builder->abandon(0);
   }
   Data = nullptr;

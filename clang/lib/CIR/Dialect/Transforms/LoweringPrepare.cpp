@@ -570,11 +570,9 @@ void LoweringPreparePass::lowerArrayDtor(ArrayDtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   auto eltTy = op->getRegion(0).getArgument(0).getType();
-  auto arrayLen = op.getAddr()
-                      .getType()
-                      .cast<mlir::cir::PointerType>()
-                      .getPointee()
-                      .cast<mlir::cir::ArrayType>()
+  auto arrayLen = mlir::cast<mlir::cir::ArrayType>(
+                      mlir::cast<mlir::cir::PointerType>(op.getAddr().getType())
+                          .getPointee())
                       .getSize();
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
 }
@@ -584,11 +582,9 @@ void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
   builder.setInsertionPointAfter(op.getOperation());
 
   auto eltTy = op->getRegion(0).getArgument(0).getType();
-  auto arrayLen = op.getAddr()
-                      .getType()
-                      .cast<mlir::cir::PointerType>()
-                      .getPointee()
-                      .cast<mlir::cir::ArrayType>()
+  auto arrayLen = mlir::cast<mlir::cir::ArrayType>(
+                      mlir::cast<mlir::cir::PointerType>(op.getAddr().getType())
+                          .getPointee())
                       .getSize();
   lowerArrayDtorCtorIntoLoop(builder, op, eltTy, op.getAddr(), arrayLen);
 }

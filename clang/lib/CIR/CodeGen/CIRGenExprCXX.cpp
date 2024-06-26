@@ -1088,7 +1088,7 @@ void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
 static mlir::Value buildDynamicCastToNull(CIRGenFunction &CGF,
                                           mlir::Location Loc, QualType DestTy) {
   mlir::Type DestCIRTy = CGF.ConvertType(DestTy);
-  assert(DestCIRTy.isa<mlir::cir::PointerType>() &&
+  assert(mlir::isa<mlir::cir::PointerType>(DestCIRTy) &&
          "result of dynamic_cast should be a ptr");
 
   mlir::Value NullPtrValue = CGF.getBuilder().getNullPtr(DestCIRTy, Loc);
@@ -1136,7 +1136,7 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
   if (DCE->isAlwaysNull())
     return buildDynamicCastToNull(*this, loc, destTy);
 
-  auto destCirTy = ConvertType(destTy).cast<mlir::cir::PointerType>();
+  auto destCirTy = mlir::cast<mlir::cir::PointerType>(ConvertType(destTy));
   return CGM.getCXXABI().buildDynamicCast(*this, loc, srcRecordTy, destRecordTy,
                                           destCirTy, isRefCast,
                                           ThisAddr.getPointer());

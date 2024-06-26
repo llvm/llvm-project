@@ -44,11 +44,12 @@ public:
   // `useABI` is `true` if not using prefered alignment.
   unsigned getAlignment(mlir::Type ty, bool useABI) const {
     if (llvm::isa<mlir::cir::StructType>(ty)) {
-      auto sTy = ty.cast<mlir::cir::StructType>();
+      auto sTy = mlir::cast<mlir::cir::StructType>(ty);
       if (sTy.getPacked() && useABI)
         return 1;
     } else if (llvm::isa<mlir::cir::ArrayType>(ty)) {
-      return getAlignment(ty.cast<mlir::cir::ArrayType>().getEltType(), useABI);
+      return getAlignment(mlir::cast<mlir::cir::ArrayType>(ty).getEltType(),
+                          useABI);
     }
 
     return useABI ? layout.getTypeABIAlignment(ty)
@@ -86,7 +87,7 @@ public:
   }
 
   unsigned getPointerTypeSizeInBits(mlir::Type Ty) const {
-    assert(Ty.isa<mlir::cir::PointerType>() &&
+    assert(mlir::isa<mlir::cir::PointerType>(Ty) &&
            "This should only be called with a pointer type");
     return layout.getTypeSizeInBits(Ty);
   }
@@ -96,7 +97,7 @@ public:
   }
 
   mlir::Type getIntPtrType(mlir::Type Ty) const {
-    assert(Ty.isa<mlir::cir::PointerType>() && "Expected pointer type");
+    assert(mlir::isa<mlir::cir::PointerType>(Ty) && "Expected pointer type");
     auto IntTy = mlir::cir::IntType::get(Ty.getContext(),
                                          getPointerTypeSizeInBits(Ty), false);
     return IntTy;

@@ -1485,9 +1485,11 @@ static mlir::Value maybeBuildArrayDecay(mlir::OpBuilder &builder,
                                         mlir::Location loc,
                                         mlir::Value arrayPtr,
                                         mlir::Type eltTy) {
-  auto arrayPtrTy = arrayPtr.getType().dyn_cast<::mlir::cir::PointerType>();
+  auto arrayPtrTy =
+      ::mlir::dyn_cast<::mlir::cir::PointerType>(arrayPtr.getType());
   assert(arrayPtrTy && "expected pointer type");
-  auto arrayTy = arrayPtrTy.getPointee().dyn_cast<::mlir::cir::ArrayType>();
+  auto arrayTy =
+      ::mlir::dyn_cast<::mlir::cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
     mlir::cir::PointerType flatPtrTy =
@@ -1513,17 +1515,18 @@ Address CIRGenFunction::buildArrayToPointerDecay(const Expr *E,
   // If the array type was an incomplete type, we need to make sure
   // the decay ends up being the right type.
   auto lvalueAddrTy =
-      Addr.getPointer().getType().dyn_cast<mlir::cir::PointerType>();
+      mlir::dyn_cast<mlir::cir::PointerType>(Addr.getPointer().getType());
   assert(lvalueAddrTy && "expected pointer");
 
   if (E->getType()->isVariableArrayType())
     return Addr;
 
-  auto pointeeTy = lvalueAddrTy.getPointee().dyn_cast<mlir::cir::ArrayType>();
+  auto pointeeTy =
+      mlir::dyn_cast<mlir::cir::ArrayType>(lvalueAddrTy.getPointee());
   assert(pointeeTy && "expected array");
 
   mlir::Type arrayTy = convertType(E->getType());
-  assert(arrayTy.isa<mlir::cir::ArrayType>() && "expected array");
+  assert(mlir::isa<mlir::cir::ArrayType>(arrayTy) && "expected array");
   assert(pointeeTy == arrayTy);
 
   // The result of this decay conversion points to an array element within the
@@ -1600,7 +1603,7 @@ static bool isPreserveAIArrayBase(CIRGenFunction &CGF, const Expr *ArrayBase) {
 static mlir::IntegerAttr getConstantIndexOrNull(mlir::Value idx) {
   // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
   if (auto constantOp = dyn_cast<mlir::cir::ConstantOp>(idx.getDefiningOp()))
-    return constantOp.getValue().dyn_cast<mlir::IntegerAttr>();
+    return mlir::dyn_cast<mlir::IntegerAttr>(constantOp.getValue());
   return {};
 }
 
@@ -1718,8 +1721,8 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
       llvm_unreachable("array bounds sanitizer is NYI");
 
     // Extend or truncate the index type to 32 or 64-bits.
-    auto ptrTy = Idx.getType().dyn_cast<mlir::cir::PointerType>();
-    if (Promote && ptrTy && ptrTy.getPointee().isa<mlir::cir::IntType>())
+    auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(Idx.getType());
+    if (Promote && ptrTy && mlir::isa<mlir::cir::IntType>(ptrTy.getPointee()))
       llvm_unreachable("index type cast is NYI");
 
     return Idx;
@@ -2361,7 +2364,7 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
       builder.restoreInsertionPoint(toInsert);
 
       // Block does not return: build empty yield.
-      if (yieldTy.isa<mlir::cir::VoidType>()) {
+      if (mlir::isa<mlir::cir::VoidType>(yieldTy)) {
         builder.create<mlir::cir::YieldOp>(loc);
       } else { // Block returns: set null yield value.
         mlir::Value op0 = builder.getNullValue(yieldTy, loc);
@@ -2805,7 +2808,7 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
   }
 
   auto Ptr = Addr.getPointer();
-  if (ElemTy.isa<mlir::cir::VoidType>()) {
+  if (mlir::isa<mlir::cir::VoidType>(ElemTy)) {
     ElemTy = mlir::cir::IntType::get(builder.getContext(), 8, true);
     auto ElemPtrTy = mlir::cir::PointerType::get(builder.getContext(), ElemTy);
     Ptr = builder.create<mlir::cir::CastOp>(Loc, ElemPtrTy,
@@ -3104,7 +3107,7 @@ CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   // somewhat heavy refactoring...)
   auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
                                                result.Val, resultType);
-  mlir::TypedAttr cstToEmit = C.dyn_cast_or_null<mlir::TypedAttr>();
+  mlir::TypedAttr cstToEmit = mlir::dyn_cast_if_present<mlir::TypedAttr>(C);
   assert(cstToEmit && "expect a typed attribute");
 
   // Make sure we emit a debug reference to the global variable.

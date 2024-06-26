@@ -467,7 +467,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   for (uint64_t i = 0; i != NumInitElements; ++i) {
     if (i == 1)
       one = CGF.getBuilder().getConstInt(
-          loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+          loc, mlir::cast<mlir::cir::IntType>(CGF.PtrDiffTy), 1);
 
     // Advance to the next element.
     if (i > 0) {
@@ -502,8 +502,8 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
 
     // Advance to the start of the rest of the array.
     if (NumInitElements) {
-      auto one =
-          builder.getConstInt(loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+      auto one = builder.getConstInt(
+          loc, mlir::cast<mlir::cir::IntType>(CGF.PtrDiffTy), 1);
       element = builder.create<mlir::cir::PtrStrideOp>(loc, cirElementPtrType,
                                                        element, one);
 
@@ -519,7 +519,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
 
     // Compute the end of array
     auto numArrayElementsConst = builder.getConstInt(
-        loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), NumArrayElements);
+        loc, mlir::cast<mlir::cir::IntType>(CGF.PtrDiffTy), NumArrayElements);
     mlir::Value end = builder.create<mlir::cir::PtrStrideOp>(
         loc, cirElementPtrType, begin, numArrayElementsConst);
 
@@ -554,7 +554,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
 
           // Advance pointer and store them to temporary variable
           auto one = builder.getConstInt(
-              loc, CGF.PtrDiffTy.cast<mlir::cir::IntType>(), 1);
+              loc, mlir::cast<mlir::cir::IntType>(CGF.PtrDiffTy), 1);
           auto nextElement = builder.create<mlir::cir::PtrStrideOp>(
               loc, cirElementPtrType, currentElement, one);
           CGF.buildStoreThroughLValue(RValue::get(nextElement), tmpLV);

@@ -358,7 +358,7 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
 // NOTE(cir): This method has partial parity to CodeGenFunction's GetUndefRValue
 // defined in CGExpr.cpp.
 Value LowerFunction::getUndefRValue(Type Ty) {
-  if (Ty.isa<VoidType>())
+  if (isa<VoidType>(Ty))
     return nullptr;
 
   llvm::outs() << "Missing undef handler for value type: " << Ty << "\n";

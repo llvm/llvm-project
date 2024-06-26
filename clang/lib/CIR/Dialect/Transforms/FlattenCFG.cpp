@@ -330,7 +330,7 @@ public:
     // Digest the case statements values and bodies.
     for (size_t i = 0; i < op.getCases()->size(); ++i) {
       auto &region = op.getRegion(i);
-      auto caseAttr = op.getCases()->getValue()[i].cast<mlir::cir::CaseAttr>();
+      auto caseAttr = cast<mlir::cir::CaseAttr>(op.getCases()->getValue()[i]);
 
       // Found default case: save destination and operands.
       switch (caseAttr.getKind().getValue()) {
@@ -342,8 +342,8 @@ public:
         assert(caseAttr.getValue().size() == 2 &&
                "Case range should have 2 case value");
         rangeValues.push_back(
-            {caseAttr.getValue()[0].cast<mlir::cir::IntAttr>().getValue(),
-             caseAttr.getValue()[1].cast<mlir::cir::IntAttr>().getValue()});
+            {cast<mlir::cir::IntAttr>(caseAttr.getValue()[0]).getValue(),
+             cast<mlir::cir::IntAttr>(caseAttr.getValue()[1]).getValue()});
         rangeDestinations.push_back(&region.front());
         rangeOperands.push_back(region.getArguments());
         break;
@@ -351,7 +351,7 @@ public:
       case mlir::cir::CaseOpKind::Equal:
         // AnyOf cases kind can have multiple values, hence the loop below.
         for (auto &value : caseAttr.getValue()) {
-          caseValues.push_back(value.cast<mlir::cir::IntAttr>().getValue());
+          caseValues.push_back(cast<mlir::cir::IntAttr>(value).getValue());
           caseOperands.push_back(region.getArguments());
           caseDestinations.push_back(&region.front());
         }

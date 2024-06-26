@@ -1614,7 +1614,8 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
   auto constantCount =
       dyn_cast<mlir::cir::ConstantOp>(numElements.getDefiningOp());
   if (constantCount) {
-    auto constIntAttr = constantCount.getValue().dyn_cast<mlir::cir::IntAttr>();
+    auto constIntAttr =
+        mlir::dyn_cast<mlir::cir::IntAttr>(constantCount.getValue());
     // Just skip out if the constant count is zero.
     if (constIntAttr && constIntAttr.getUInt() == 0)
       return;
@@ -1623,7 +1624,8 @@ void CIRGenFunction::buildCXXAggrConstructorCall(
     llvm_unreachable("NYI");
   }
 
-  auto arrayTy = arrayBase.getElementType().dyn_cast<mlir::cir::ArrayType>();
+  auto arrayTy =
+      mlir::dyn_cast<mlir::cir::ArrayType>(arrayBase.getElementType());
   assert(arrayTy && "expected array type");
   auto elementType = arrayTy.getEltType();
   auto ptrToElmType = builder.getPointerTo(elementType);

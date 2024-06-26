@@ -302,7 +302,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
     mlir::Type getElementTy() {
-      return getBase().getType().cast<mlir::cir::PointerType>().getPointee();
+      return mlir::cast<mlir::cir::PointerType>(getBase().getType()).getPointee();
     }
   }];
 
@@ -343,7 +343,7 @@ def ConstantOp : CIR_Op<"const",
 
   let extraClassDeclaration = [{
      bool isNullPtr() {
-      if (const auto ptrAttr = getValue().dyn_cast<mlir::cir::ConstPtrAttr>())
+      if (const auto ptrAttr = mlir::dyn_cast<mlir::cir::ConstPtrAttr>(getValue()))
        return ptrAttr.isNullValue();
       return false;
      }
@@ -389,7 +389,7 @@ class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
 def AllocaOp : CIR_Op<"alloca", [
   AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
                  "addr", "allocaType",
-                 "$_self.cast<PointerType>().getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">]> {
   let summary = "Defines a scope-local variable";
   let description = [{
     The `cir.alloca` operation defines a scope-local variable.
@@ -449,7 +449,7 @@ def AllocaOp : CIR_Op<"alloca", [
 
   let extraClassDeclaration = [{
     // Whether the alloca input type is a pointer.
-    bool isPointerType() { return getAllocaType().isa<::mlir::cir::PointerType>(); }
+    bool isPointerType() { return ::mlir::isa<::mlir::cir::PointerType>(getAllocaType()); }
 
     bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
@@ -473,7 +473,7 @@ def AllocaOp : CIR_Op<"alloca", [
 def LoadOp : CIR_Op<"load", [
   TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
                  "addr", "result",
-                 "$_self.cast<PointerType>().getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">]> {
 
   let summary = "Load value from memory adddress";
   let description = [{
@@ -531,7 +531,7 @@ def LoadOp : CIR_Op<"load", [
 def StoreOp : CIR_Op<"store", [
   TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
                  "addr", "value",
-                 "$_self.cast<PointerType>().getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">]> {
 
   let summary = "Store value to memory address";
   let description = [{
@@ -1459,7 +1459,7 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 
     /// Determine whether this three-way comparison compares integral operands.
     bool isIntegralComparison() {
-      return getLhs().getType().isa<mlir::cir::IntType>();
+      return mlir::isa<mlir::cir::IntType>(getLhs().getType());
     }
   }];
 }
@@ -2269,7 +2269,7 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the result type.
     mlir::cir::PointerType getResultTy() {
-      return getResult().getType().cast<mlir::cir::PointerType>();
+      return mlir::cast<mlir::cir::PointerType>(getResult().getType());
     }
   }];
 
@@ -2339,7 +2339,7 @@ def GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 
 def VecInsertOp : CIR_Op<"vec.insert", [Pure,
   TypesMatchWith<"argument type matches vector element type", "vec", "value",
-                 "$_self.cast<VectorType>().getEltType()">,
+                 "cast<VectorType>($_self).getEltType()">,
   AllTypesMatch<["result", "vec"]>]> {
 
   let summary = "Insert one element into a vector object";
@@ -2366,7 +2366,7 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
 
 def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   TypesMatchWith<"type of 'result' matches element type of 'vec'", "vec",
-                 "result", "$_self.cast<VectorType>().getEltType()">]> {
+                 "result", "cast<VectorType>($_self).getEltType()">]> {
 
   let summary = "Extract one element from a vector object";
   let description = [{
@@ -2419,7 +2419,7 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
 
 def VecSplatOp : CIR_Op<"vec.splat", [Pure,
   TypesMatchWith<"type of 'value' matches element type of 'result'", "result",
-                 "value", "$_self.cast<VectorType>().getEltType()">]> {
+                 "value", "cast<VectorType>($_self).getEltType()">]> {
 
   let summary = "Convert a scalar into a vector";
   let description = [{
@@ -2834,7 +2834,7 @@ def CallOp : CIR_CallOp<"call"> {
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
-      if (resType && !resType.isa<VoidType>())
+      if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>,
     OpBuilder<(ins "Value":$ind_target,
@@ -3427,7 +3427,7 @@ def VAArgOp : CIR_Op<"va.arg">,
 def AllocException : CIR_Op<"alloc_exception", [
   AllocaTypesMatchWith<"'allocType' matches pointee type of 'addr'",
                  "addr", "allocType",
-                 "$_self.cast<PointerType>().getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">]> {
   let summary = "Defines a scope-local variable";
   let description = [{
     Implements a slightly higher level __cxa_allocate_exception:

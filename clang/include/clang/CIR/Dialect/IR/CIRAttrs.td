@@ -125,11 +125,11 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
     AttrBuilderWithInferredContext<(ins "mlir::cir::ArrayType":$type,
                                         "Attribute":$elts), [{
       int zeros = 0;
-      auto typeSize = type.cast<mlir::cir::ArrayType>().getSize();
-      if (auto str = elts.dyn_cast<mlir::StringAttr>())
+      auto typeSize = mlir::cast<mlir::cir::ArrayType>(type).getSize();
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
         zeros = typeSize - str.size();
       else
-        zeros = typeSize - elts.cast<mlir::ArrayAttr>().size();
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
 
       return $_get(type.getContext(), type, elts, zeros);
     }]>
@@ -200,7 +200,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilderWithInferredContext<(ins "Type":$type, "int64_t":$value), [{
-      IntType intType = type.cast<IntType>();
+      IntType intType = mlir::cast<IntType>(type);
       mlir::APInt apValue(intType.getWidth(), value, intType.isSigned());
       return $_get(intType.getContext(), intType, apValue);
     }]>,
@@ -209,7 +209,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
     int64_t getSInt() const { return getValue().getSExtValue(); }
     uint64_t getUInt() const { return getValue().getZExtValue(); }
     bool isNullValue() const { return getValue() == 0; }
-    uint64_t getBitWidth() const { return getType().cast<IntType>().getWidth(); }
+    uint64_t getBitWidth() const { return mlir::cast<IntType>(getType()).getWidth(); }
   }];
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
@@ -257,11 +257,11 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
   }];
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type, "mlir::IntegerAttr":$value), [{
-      return $_get(type.getContext(), type.cast<mlir::cir::PointerType>(), value);
+      return $_get(type.getContext(), mlir::cast<mlir::cir::PointerType>(type), value);
     }]>,
     AttrBuilder<(ins "Type":$type,
                      "mlir::IntegerAttr":$value), [{
-      return $_get($_ctxt, type.cast<mlir::cir::PointerType>(), value);
+      return $_get($_ctxt, mlir::cast<mlir::cir::PointerType>(type), value);
     }]>,
   ];
   let extraClassDeclaration = [{

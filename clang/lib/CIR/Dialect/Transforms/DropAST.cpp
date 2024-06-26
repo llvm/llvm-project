@@ -33,7 +33,7 @@ void DropASTPass::runOnOperation() {
   op->walk([&](Operation *op) {
     if (auto alloca = dyn_cast<AllocaOp>(op)) {
       alloca.removeAstAttr();
-      auto ty = alloca.getAllocaType().dyn_cast<mlir::cir::StructType>();
+      auto ty = mlir::dyn_cast<mlir::cir::StructType>(alloca.getAllocaType());
       if (!ty)
         return;
       ty.dropAst();

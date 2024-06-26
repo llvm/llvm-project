@@ -553,7 +553,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::Direct: {
-      if (!ArgInfo.getCoerceToType().isa<mlir::cir::StructType>() &&
+      if (!mlir::isa<mlir::cir::StructType>(ArgInfo.getCoerceToType()) &&
           ArgInfo.getCoerceToType() == convertType(info_it->type) &&
           ArgInfo.getDirectOffset() == 0) {
         assert(NumCIRArgs == 1);
@@ -567,7 +567,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
         // We might have to widen integers, but we should never truncate.
         if (ArgInfo.getCoerceToType() != V.getType() &&
-            V.getType().isa<mlir::cir::IntType>())
+            mlir::isa<mlir::cir::IntType>(V.getType()))
           llvm_unreachable("NYI");
 
         // If the argument doesn't match, perform a bitcast to coerce it. This
@@ -733,9 +733,9 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
     } else {
       [[maybe_unused]] auto resultTypes = CalleePtr->getResultTypes();
       [[maybe_unused]] auto FuncPtrTy =
-          resultTypes.front().dyn_cast<mlir::cir::PointerType>();
+          mlir::dyn_cast<mlir::cir::PointerType>(resultTypes.front());
       assert((resultTypes.size() == 1) && FuncPtrTy &&
-             FuncPtrTy.getPointee().isa<mlir::cir::FuncType>() &&
+             mlir::isa<mlir::cir::FuncType>(FuncPtrTy.getPointee()) &&
              "expected pointer to function");
 
       indirectFuncTy = CIRFuncTy;
@@ -946,7 +946,7 @@ void CIRGenFunction::buildCallArgs(
   // First, if a prototype was provided, use those argument types.
   bool IsVariadic = false;
   if (Prototype.P) {
-    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
+    const auto *MD = mlir::dyn_cast<const ObjCMethodDecl *>(Prototype.P);
     assert(!MD && "ObjCMethodDecl NYI");
 
     const auto *FPT = Prototype.P.get<const FunctionProtoType *>();

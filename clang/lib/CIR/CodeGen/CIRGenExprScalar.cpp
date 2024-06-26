@@ -178,7 +178,7 @@ public:
   }
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *E) {
     mlir::Type Ty = CGF.getCIRType(E->getType());
-    assert(Ty.isa<mlir::cir::CIRFPTypeInterface>() &&
+    assert(mlir::isa<mlir::cir::CIRFPTypeInterface>(Ty) &&
            "expect floating-point type");
     return Builder.create<mlir::cir::ConstantOp>(
         CGF.getLoc(E->getExprLoc()), Ty,
@@ -435,8 +435,9 @@ public:
 
         // TODO(cir): Currently, we store bitwidths in CIR types only for
         // integers. This might also be required for other types.
-        auto srcCirTy = ConvertType(type).dyn_cast<mlir::cir::IntType>();
-        auto promotedCirTy = ConvertType(type).dyn_cast<mlir::cir::IntType>();
+        auto srcCirTy = mlir::dyn_cast<mlir::cir::IntType>(ConvertType(type));
+        auto promotedCirTy =
+            mlir::dyn_cast<mlir::cir::IntType>(ConvertType(type));
         assert(srcCirTy && promotedCirTy && "Expected integer type");
 
         assert(
@@ -499,7 +500,8 @@ public:
       if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType)
         llvm_unreachable("__fp16 type NYI");
 
-      if (value.getType().isa<mlir::cir::SingleType, mlir::cir::DoubleType>()) {
+      if (mlir::isa<mlir::cir::SingleType, mlir::cir::DoubleType>(
+              value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
         auto kind =
@@ -514,11 +516,11 @@ public:
         const llvm::fltSemantics *FS;
         // Don't use getFloatTypeSemantics because Half isn't
         // necessarily represented using the "half" LLVM type.
-        if (value.getType().isa<mlir::cir::LongDoubleType>())
+        if (mlir::isa<mlir::cir::LongDoubleType>(value.getType()))
           FS = &CGF.getTarget().getLongDoubleFormat();
-        else if (value.getType().isa<mlir::cir::FP16Type>())
+        else if (mlir::isa<mlir::cir::FP16Type>(value.getType()))
           FS = &CGF.getTarget().getHalfFormat();
-        else if (value.getType().isa<mlir::cir::BF16Type>())
+        else if (mlir::isa<mlir::cir::BF16Type>(value.getType()))
           FS = &CGF.getTarget().getBFloat16Format();
         else
           llvm_unreachable("fp128 / ppc_fp128 NYI");
@@ -932,8 +934,8 @@ public:
 
         // Unsigned integers and pointers.
         if (CGF.CGM.getCodeGenOpts().StrictVTablePointers &&
-            LHS.getType().isa<mlir::cir::PointerType>() &&
-            RHS.getType().isa<mlir::cir::PointerType>()) {
+            mlir::isa<mlir::cir::PointerType>(LHS.getType()) &&
+            mlir::isa<mlir::cir::PointerType>(RHS.getType())) {
           llvm_unreachable("NYI");
         }
 
@@ -982,7 +984,7 @@ public:
     if (SrcType->isIntegerType())
       return buildIntToBoolConversion(Src, loc);
 
-    assert(Src.getType().isa<::mlir::cir::PointerType>());
+    assert(::mlir::isa<::mlir::cir::PointerType>(Src.getType()));
     return buildPointerToBoolConversion(Src, SrcType);
   }
 
@@ -1203,7 +1205,7 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
   Expr *indexOperand = expr->getRHS();
 
   // In a subtraction, the LHS is always the pointer.
-  if (!isSubtraction && !pointer.getType().isa<mlir::cir::PointerType>()) {
+  if (!isSubtraction && !mlir::isa<mlir::cir::PointerType>(pointer.getType())) {
     std::swap(pointer, index);
     std::swap(pointerOperand, indexOperand);
   }
@@ -1337,8 +1339,8 @@ mlir::Value ScalarExprEmitter::buildRem(const BinOpInfo &Ops) {
 }
 
 mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
-  if (Ops.LHS.getType().isa<mlir::cir::PointerType>() ||
-      Ops.RHS.getType().isa<mlir::cir::PointerType>())
+  if (mlir::isa<mlir::cir::PointerType>(Ops.LHS.getType()) ||
+      mlir::isa<mlir::cir::PointerType>(Ops.RHS.getType()))
     return buildPointerArithmetic(CGF, Ops, /*isSubtraction=*/false);
   if (Ops.CompType->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
@@ -1381,7 +1383,7 @@ mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
 
 mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   // The LHS is always a pointer if either side is.
-  if (!Ops.LHS.getType().isa<mlir::cir::PointerType>()) {
+  if (!mlir::isa<mlir::cir::PointerType>(Ops.LHS.getType())) {
     if (Ops.CompType->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined: {
@@ -1424,7 +1426,7 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
 
   // If the RHS is not a pointer, then we have normal pointer
   // arithmetic.
-  if (!Ops.RHS.getType().isa<mlir::cir::PointerType>())
+  if (!mlir::isa<mlir::cir::PointerType>(Ops.RHS.getType()))
     return buildPointerArithmetic(CGF, Ops, /*isSubtraction=*/true);
 
   // Otherwise, this is a pointer subtraction
@@ -1463,7 +1465,7 @@ mlir::Value ScalarExprEmitter::buildShl(const BinOpInfo &Ops) {
   if (CGF.getLangOpts().OpenCL)
     llvm_unreachable("NYI");
   else if ((SanitizeBase || SanitizeExponent) &&
-           Ops.LHS.getType().isa<mlir::cir::IntType>()) {
+           mlir::isa<mlir::cir::IntType>(Ops.LHS.getType())) {
     llvm_unreachable("NYI");
   }
 
@@ -1485,7 +1487,7 @@ mlir::Value ScalarExprEmitter::buildShr(const BinOpInfo &Ops) {
   if (CGF.getLangOpts().OpenCL)
     llvm_unreachable("NYI");
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
-           Ops.LHS.getType().isa<mlir::cir::IntType>()) {
+           mlir::isa<mlir::cir::IntType>(Ops.LHS.getType())) {
     llvm_unreachable("NYI");
   }
 
@@ -1648,7 +1650,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
     assert(!MPT->isMemberFunctionPointerType() && "NYI");
 
-    auto Ty = CGF.getCIRType(DestTy).cast<mlir::cir::DataMemberType>();
+    auto Ty = mlir::cast<mlir::cir::DataMemberType>(CGF.getCIRType(DestTy));
     return Builder.getNullDataMemberPtr(Ty, CGF.getLoc(E->getExprLoc()));
   }
   case CK_ReinterpretMemberPointer:
@@ -1849,7 +1851,7 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     assert(!MissingFeatures::scalableVectors() && "NYI: scalable vector init");
     assert(!MissingFeatures::vectorConstants() && "NYI: vector constants");
     auto VectorType =
-        CGF.getCIRType(E->getType()).dyn_cast<mlir::cir::VectorType>();
+        mlir::dyn_cast<mlir::cir::VectorType>(CGF.getCIRType(E->getType()));
     SmallVector<mlir::Value, 16> Elements;
     for (Expr *init : E->inits()) {
       Elements.push_back(Visit(init));
@@ -1891,9 +1893,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
 
   // ZExt result to the expr type.
   auto dstTy = ConvertType(E->getType());
-  if (dstTy.isa<mlir::cir::IntType>())
+  if (mlir::isa<mlir::cir::IntType>(dstTy))
     return Builder.createBoolToInt(boolVal, dstTy);
-  if (dstTy.isa<mlir::cir::BoolType>())
+  if (mlir::isa<mlir::cir::BoolType>(dstTy))
     return boolVal;
 
   llvm_unreachable("destination type for logical-not unary operator is NYI");
@@ -1908,28 +1910,29 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     mlir::Type DstTy, ScalarConversionOpts Opts) {
   assert(!SrcType->isMatrixType() && !DstType->isMatrixType() &&
          "Internal error: matrix types not handled by this function.");
-  if (SrcTy.isa<mlir::IntegerType>() || DstTy.isa<mlir::IntegerType>())
+  if (mlir::isa<mlir::IntegerType>(SrcTy) ||
+      mlir::isa<mlir::IntegerType>(DstTy))
     llvm_unreachable("Obsolete code. Don't use mlir::IntegerType with CIR.");
 
   mlir::Type FullDstTy = DstTy;
-  if (SrcTy.isa<mlir::cir::VectorType>() &&
-      DstTy.isa<mlir::cir::VectorType>()) {
+  if (mlir::isa<mlir::cir::VectorType>(SrcTy) &&
+      mlir::isa<mlir::cir::VectorType>(DstTy)) {
     // Use the element types of the vectors to figure out the CastKind.
-    SrcTy = SrcTy.dyn_cast<mlir::cir::VectorType>().getEltType();
-    DstTy = DstTy.dyn_cast<mlir::cir::VectorType>().getEltType();
+    SrcTy = mlir::dyn_cast<mlir::cir::VectorType>(SrcTy).getEltType();
+    DstTy = mlir::dyn_cast<mlir::cir::VectorType>(DstTy).getEltType();
   }
-  assert(!SrcTy.isa<mlir::cir::VectorType>() &&
-         !DstTy.isa<mlir::cir::VectorType>() &&
+  assert(!mlir::isa<mlir::cir::VectorType>(SrcTy) &&
+         !mlir::isa<mlir::cir::VectorType>(DstTy) &&
          "buildScalarCast given a vector type and a non-vector type");
 
   std::optional<mlir::cir::CastKind> CastKind;
 
-  if (SrcTy.isa<mlir::cir::BoolType>()) {
+  if (mlir::isa<mlir::cir::BoolType>(SrcTy)) {
     if (Opts.TreatBooleanAsSigned)
       llvm_unreachable("NYI: signed bool");
     if (CGF.getBuilder().isInt(DstTy)) {
       CastKind = mlir::cir::CastKind::bool_to_int;
-    } else if (DstTy.isa<mlir::cir::CIRFPTypeInterface>()) {
+    } else if (mlir::isa<mlir::cir::CIRFPTypeInterface>(DstTy)) {
       CastKind = mlir::cir::CastKind::bool_to_float;
     } else {
       llvm_unreachable("Internal error: Cast to unexpected type");
@@ -1937,12 +1940,12 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   } else if (CGF.getBuilder().isInt(SrcTy)) {
     if (CGF.getBuilder().isInt(DstTy)) {
       CastKind = mlir::cir::CastKind::integral;
-    } else if (DstTy.isa<mlir::cir::CIRFPTypeInterface>()) {
+    } else if (mlir::isa<mlir::cir::CIRFPTypeInterface>(DstTy)) {
       CastKind = mlir::cir::CastKind::int_to_float;
     } else {
       llvm_unreachable("Internal error: Cast to unexpected type");
     }
-  } else if (SrcTy.isa<mlir::cir::CIRFPTypeInterface>()) {
+  } else if (mlir::isa<mlir::cir::CIRFPTypeInterface>(SrcTy)) {
     if (CGF.getBuilder().isInt(DstTy)) {
       // If we can't recognize overflow as undefined behavior, assume that
       // overflow saturates. This protects against normal optimizations if we
@@ -1952,7 +1955,7 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
       if (Builder.getIsFPConstrained())
         llvm_unreachable("NYI");
       CastKind = mlir::cir::CastKind::float_to_int;
-    } else if (DstTy.isa<mlir::cir::CIRFPTypeInterface>()) {
+    } else if (mlir::isa<mlir::cir::CIRFPTypeInterface>(DstTy)) {
       // TODO: split this to createFPExt/createFPTrunc
       return Builder.createFloatingCast(Src, FullDstTy);
     } else {
@@ -2354,7 +2357,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       builder.restoreInsertionPoint(toInsert);
 
       // Block does not return: build empty yield.
-      if (yieldTy.isa<mlir::cir::VoidType>()) {
+      if (mlir::isa<mlir::cir::VoidType>(yieldTy)) {
         builder.create<mlir::cir::YieldOp>(loc);
       } else { // Block returns: set null yield value.
         mlir::Value op0 = builder.getNullValue(yieldTy, loc);
@@ -2516,7 +2519,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
     }
     // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
     if (!CGF.ContainsLabel(E->getRHS())) {
-      if (auto intTy = ResTy.dyn_cast<mlir::cir::IntType>())
+      if (auto intTy = mlir::dyn_cast<mlir::cir::IntType>(ResTy))
         return Builder.getConstInt(Loc, intTy, 1);
       else
         return Builder.getBool(true, Loc);
@@ -2545,11 +2548,11 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
             Loc, RHSCondV, /*trueBuilder*/
             [&](mlir::OpBuilder &B, mlir::Location Loc) {
               SmallVector<mlir::Location, 2> Locs;
-              if (Loc.isa<mlir::FileLineColLoc>()) {
+              if (mlir::isa<mlir::FileLineColLoc>(Loc)) {
                 Locs.push_back(Loc);
                 Locs.push_back(Loc);
-              } else if (Loc.isa<mlir::FusedLoc>()) {
-                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+              } else if (mlir::isa<mlir::FusedLoc>(Loc)) {
+                auto fusedLoc = mlir::cast<mlir::FusedLoc>(Loc);
                 Locs.push_back(fusedLoc.getLocations()[0]);
                 Locs.push_back(fusedLoc.getLocations()[1]);
               }
@@ -2565,11 +2568,11 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
             /*falseBuilder*/
             [&](mlir::OpBuilder &b, mlir::Location Loc) {
               SmallVector<mlir::Location, 2> Locs;
-              if (Loc.isa<mlir::FileLineColLoc>()) {
+              if (mlir::isa<mlir::FileLineColLoc>(Loc)) {
                 Locs.push_back(Loc);
                 Locs.push_back(Loc);
-              } else if (Loc.isa<mlir::FusedLoc>()) {
-                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
+              } else if (mlir::isa<mlir::FusedLoc>(Loc)) {
+                auto fusedLoc = mlir::cast<mlir::FusedLoc>(Loc);
                 Locs.push_back(fusedLoc.getLocations()[0]);
                 Locs.push_back(fusedLoc.getLocations()[1]);
               }

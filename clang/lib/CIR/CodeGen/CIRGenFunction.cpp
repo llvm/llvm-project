@@ -1688,14 +1688,16 @@ CIRGenFunction::buildArrayLength(const clang::ArrayType *origArrayType,
 
   // llvm::ArrayType *llvmArrayType =
   //     dyn_cast<llvm::ArrayType>(addr.getElementType());
-  auto cirArrayType = addr.getElementType().dyn_cast<mlir::cir::ArrayType>();
+  auto cirArrayType =
+      mlir::dyn_cast<mlir::cir::ArrayType>(addr.getElementType());
 
   while (cirArrayType) {
     assert(isa<ConstantArrayType>(arrayType));
     countFromCLAs *= cirArrayType.getSize();
     eltType = arrayType->getElementType();
 
-    cirArrayType = cirArrayType.getEltType().dyn_cast<mlir::cir::ArrayType>();
+    cirArrayType =
+        mlir::dyn_cast<mlir::cir::ArrayType>(cirArrayType.getEltType());
 
     arrayType = getContext().getAsArrayType(arrayType->getElementType());
     assert((!cirArrayType || arrayType) &&

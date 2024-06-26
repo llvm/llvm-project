@@ -64,7 +64,7 @@ public:
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
                                               bool IsVariadic) const {
-  if (RetTy.isa<VoidType>())
+  if (isa<VoidType>(RetTy))
     return ABIArgInfo::getIgnore();
 
   llvm_unreachable("NYI");
