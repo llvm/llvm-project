@@ -8,8 +8,8 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = {{[^@]+}}call ptr @llvm.wasm.memory.randomtag(ptr [[INDEX:%.*]])
 // CHECK-NEXT:    ret ptr %0
 //
-void* test_builtin_wasm_memory_randomtag(void *p) {
-  return __builtin_wasm_memory_randomtag(p);
+void* test_builtin_wasm_memtag_random(void *p) {
+  return __builtin_wasm_memtag_random(p);
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_builtin_wasm_memory_copytag
