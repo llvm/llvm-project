@@ -851,6 +851,21 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   CurContext->addDecl(D);
   PushDeclContext(S, D);
 
+  if (getLangOpts().HLSL) {
+    // exported functions cannot be in an unnamed namespace
+    for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
+      if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
+        if (ND->isAnonymousNamespace()) {
+          Diag(ExportLoc, diag::err_export_within_anonymous_namespace);
+          Diag(ND->getLocation(), diag::note_anonymous_namespace);
+          D->setInvalidDecl();
+          return D;
+        }
+      }
+    }
+    return D;
+  }
+
   // C++2a [module.interface]p1:
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
@@ -923,6 +938,23 @@ static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
 
 /// Check that it's valid to export \p D.
 static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
+
+  // HLSL: export declaration is valid only on functions
+  if (S.getLangOpts().HLSL) {
+    auto *FD = dyn_cast<FunctionDecl>(D);
+    if (!FD) {
+      if (auto *ED2 = dyn_cast<ExportDecl>(D)) {
+        S.Diag(ED2->getBeginLoc(), diag::err_export_within_export);
+        if (auto *ED1 = dyn_cast<ExportDecl>(D->getDeclContext()))
+          S.Diag(ED1->getBeginLoc(), diag::note_export);
+      }
+      else {
+        S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
+      }
+      D->setInvalidDecl();
+      return false;
+    }
+  }
 
   //  C++20 [module.interface]p3:
   //   [...] it shall not declare a name with internal linkage.
