@@ -10,7 +10,8 @@ typedef half  __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 
 // CHECK-LABEL: test_flat_add_f32
-// CHECK: call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr %{{.*}}, float %{{.*}})
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+
 // GFX940-LABEL:  test_flat_add_f32
 // GFX940: flat_atomic_add_f32
 half2 test_flat_add_f32(__generic float *addr, float x) {
