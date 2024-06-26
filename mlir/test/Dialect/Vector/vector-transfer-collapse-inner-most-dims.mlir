@@ -85,9 +85,9 @@ func.func @contiguous_inner_most_dynamic_outer(%a: index, %b: index, %memref: me
 // CHECK:        %[[D0:.+]] = memref.dim %[[SRC]], %[[C0]]
 // CHECK:        %[[D1:.+]] = memref.dim %[[SRC]], %[[C1]]
 // CHECK:        %[[VIEW:.+]] = memref.subview %[[SRC]][0, 0, 0, 0] [%[[D0]], %[[D1]], 8, 1] [1, 1, 1, 1]
-// CHECK-SAME:     memref<?x?x8x1xf32> to memref<?x?x8xf32, strided<[?, 8, 1], offset: ?>>
+// CHECK-SAME:     memref<?x?x8x1xf32> to memref<?x?x8xf32, strided<[?, 8, 1]>>
 // CHECK:        %[[VEC:.+]] = vector.transfer_read %[[VIEW]]
-// CHECK-SAME:     memref<?x?x8xf32, strided<[?, 8, 1], offset: ?>>, vector<8xf32>
+// CHECK-SAME:     memref<?x?x8xf32, strided<[?, 8, 1]>>, vector<8xf32>
 // CHECK:        %[[RESULT:.+]] = vector.shape_cast %[[VEC]]
 // CHECK:        return %[[RESULT]]
 
@@ -105,10 +105,10 @@ func.func @contiguous_inner_most_outer_dim_dyn_scalable_inner_dim(%a: index, %b:
 // CHECK-SAME:   %[[IDX0:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[IDX1:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[SRC:[a-zA-Z0-9]+]]
-// CHECK:         %[[VIEW:.+]] = memref.subview %[[SRC]]{{.*}} memref<?x?x8x1xf32> to memref<?x?x8xf32, strided<[?, 8, 1], offset: ?>>
+// CHECK:         %[[VIEW:.+]] = memref.subview %[[SRC]]{{.*}} memref<?x?x8x1xf32> to memref<?x?x8xf32, strided<[?, 8, 1]>>
 // CHECK:         %[[VEC_READ:.+]] = vector.transfer_read %[[VIEW]]
 // CHECK-SAME:    {in_bounds = [true]}
-// CHECK-SAME:     memref<?x?x8xf32, strided<[?, 8, 1], offset: ?>>, vector<[8]xf32>
+// CHECK-SAME:     memref<?x?x8xf32, strided<[?, 8, 1]>>, vector<[8]xf32>
 // CHECK:         vector.shape_cast %[[VEC_READ]]
 
 // -----
@@ -340,9 +340,9 @@ func.func @contiguous_inner_most_dynamic_outer(%a: index, %b: index, %arg0: memr
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIM0:.*]] = memref.dim %[[MEM]], %[[C0]] : memref<?x?x16x1xf32>
 // CHECK:           %[[DIM1:.*]] = memref.dim %[[MEM]], %[[C1]] : memref<?x?x16x1xf32>
-// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0, 0, 0] {{\[}}%[[DIM0]], %[[DIM1]], 16, 1] [1, 1, 1, 1] : memref<?x?x16x1xf32> to memref<?x?x16xf32, strided<[?, 16, 1], offset: ?>>
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0, 0, 0] {{\[}}%[[DIM0]], %[[DIM1]], 16, 1] [1, 1, 1, 1] : memref<?x?x16x1xf32> to memref<?x?x16xf32, strided<[?, 16, 1]>>
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
-// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX_0]], %[[IDX_1]], %[[C0]]] {in_bounds = [true]} : vector<8xf32>, memref<?x?x16xf32, strided<[?, 16, 1], offset: ?>>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX_0]], %[[IDX_1]], %[[C0]]] {in_bounds = [true]} : vector<8xf32>, memref<?x?x16xf32, strided<[?, 16, 1]>>
 
 // Same as the top example within this split, but with the outer vector
 // dim scalable. Note that this example only makes sense when "8 = [8]" (i.e.
@@ -361,9 +361,9 @@ func.func @contiguous_inner_most_dynamic_outer_scalable_inner_dim(%a: index, %b:
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIM0:.*]] = memref.dim %[[MEM]], %[[C0]] : memref<?x?x16x1xf32>
 // CHECK:           %[[DIM1:.*]] = memref.dim %[[MEM]], %[[C1]] : memref<?x?x16x1xf32>
-// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0, 0, 0] {{\[}}%[[DIM0]], %[[DIM1]], 16, 1] [1, 1, 1, 1] : memref<?x?x16x1xf32> to memref<?x?x16xf32, strided<[?, 16, 1], offset: ?>>
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0, 0, 0] {{\[}}%[[DIM0]], %[[DIM1]], 16, 1] [1, 1, 1, 1] : memref<?x?x16x1xf32> to memref<?x?x16xf32, strided<[?, 16, 1]>>
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<[8]x1xf32> to vector<[8]xf32>
-// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX_0]], %[[IDX_1]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf32>, memref<?x?x16xf32, strided<[?, 16, 1], offset: ?>>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX_0]], %[[IDX_1]], %[[C0]]] {in_bounds = [true]} : vector<[8]xf32>, memref<?x?x16xf32, strided<[?, 16, 1]>>
 
 // -----
 
