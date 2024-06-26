@@ -4879,18 +4879,18 @@ SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
   return RemainderBB;
 }
 
-// Do a v_movrels_b32 or v_movreld_b32 for each unique value of \p IdxReg in the
+// Generate a waterfall loop to get each unique value of \p IdxReg in the
 // wavefront. If the value is uniform and just happens to be in a VGPR, this
 // will only do one iteration. In the worst case, this will loop 64 times.
 //
 // TODO: Just use v_readlane_b32 if we know the VGPR has a uniform value.
 static MachineBasicBlock::iterator
-emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
-                       MachineBasicBlock &OrigBB, MachineBasicBlock &LoopBB,
-                       const DebugLoc &DL, const MachineOperand &Idx,
-                       unsigned InitReg, unsigned ResultReg, unsigned PhiReg,
-                       unsigned InitSaveExecReg, int Offset, bool UseGPRIdxMode,
-                       Register &SGPRIdxReg) {
+emitScalarIdxFromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
+                          MachineBasicBlock &OrigBB, MachineBasicBlock &LoopBB,
+                          const DebugLoc &DL, const MachineOperand &Idx,
+                          unsigned InitReg, unsigned ResultReg, unsigned PhiReg,
+                          unsigned InitSaveExecReg, int Offset,
+                          bool UseGPRIdxMode, Register &SGPRIdxReg) {
 
   MachineFunction *MF = OrigBB.getParent();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -4903,11 +4903,13 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   Register CurrentIdxReg = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
   Register CondReg = MRI.createVirtualRegister(BoolRC);
 
-  BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiReg)
-    .addReg(InitReg)
-    .addMBB(&OrigBB)
-    .addReg(ResultReg)
-    .addMBB(&LoopBB);
+  if (PhiReg > 0) {
+    BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiReg)
+        .addReg(InitReg)
+        .addMBB(&OrigBB)
+        .addReg(ResultReg)
+        .addMBB(&LoopBB);
+  }
 
   BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiExec)
     .addReg(InitSaveExecReg)
@@ -4919,7 +4921,7 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), CurrentIdxReg)
       .addReg(Idx.getReg(), getUndefRegState(Idx.isUndef()));
 
-  // Compare the just read M0 value to all possible Idx values.
+  // Compare the just-read scalar value to all possible Idx values.
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), CondReg)
       .addReg(CurrentIdxReg)
       .addReg(Idx.getReg(), 0, Idx.getSubReg());
@@ -5006,9 +5008,9 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
 
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
-  auto InsPt = emitLoadM0FromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, *Idx,
-                                      InitResultReg, DstReg, PhiReg, TmpExec,
-                                      Offset, UseGPRIdxMode, SGPRIdxReg);
+  auto InsPt = emitScalarIdxFromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, *Idx,
+                                         InitResultReg, DstReg, PhiReg, TmpExec,
+                                         Offset, UseGPRIdxMode, SGPRIdxReg);
 
   MachineBasicBlock* LandingPad = MF->CreateMachineBasicBlock();
   MachineFunction::iterator MBBI(LoopBB);
@@ -5383,6 +5385,50 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
+static MachineBasicBlock::iterator extractIdxFromVGPR(const SIInstrInfo *TII,
+                                                      MachineBasicBlock &MBB,
+                                                      MachineInstr &MI,
+                                                      Register &SGPRIdxReg) {
+  MachineFunction *MF = MBB.getParent();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock::iterator I(&MI);
+
+  const auto *BoolXExecRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
+  Register TmpExec = MRI.createVirtualRegister(BoolXExecRC);
+  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  unsigned MovExecOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+
+  BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), TmpExec);
+
+  // Save the EXEC mask
+  BuildMI(MBB, I, DL, TII->get(MovExecOpc), SaveExec).addReg(Exec);
+
+  MachineBasicBlock *LoopBB;
+  MachineBasicBlock *RemainderBB;
+  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, MBB, false);
+
+  const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+
+  auto InsPt = emitScalarIdxFromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, *Idx, 0, 0,
+                                         0, TmpExec, 0, true, SGPRIdxReg);
+
+  MachineBasicBlock *LandingPad = MF->CreateMachineBasicBlock();
+  MachineFunction::iterator MBBI(LoopBB);
+  ++MBBI;
+  MF->insert(MBBI, LandingPad);
+  LoopBB->removeSuccessor(RemainderBB);
+  LandingPad->addSuccessor(RemainderBB);
+  LoopBB->addSuccessor(LandingPad);
+  MachineBasicBlock::iterator First = LandingPad->begin();
+  BuildMI(*LandingPad, First, DL, TII->get(MovExecOpc), Exec).addReg(SaveExec);
+
+  return InsPt;
+}
+
 static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
                                              MachineBasicBlock &MBB,
                                              const GCNSubtarget &ST) {
@@ -5431,7 +5477,36 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
     return Offset;
   };
 
-  // IDX0 is reserved as the base of per-wave VGPR base.
+  // common code to adjust IDX in VADDR-waterfall loop
+  auto adjustIdxOffset = [&](MachineInstr &MI,
+                             MachineBasicBlock::iterator InsPt,
+                             Register SAddrReg) {
+    MachineBasicBlock *LoopBB = InsPt->getParent();
+    int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+    int CPol = TII->getNamedOperand(MI, AMDGPU::OpName::cpol)->getImm();
+    assert((CPol & AMDGPU::CPol::SCAL) == 0 && "missing scale-offset support");
+    Register IdxReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+    // index should be in the unit of dword
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_LSHR_B32), IdxReg)
+        .addReg(SAddrReg)
+        .addImm(2u);
+    if (Offset >= 0 && Offset < (int)ST.getAddressableNumVGPRs() * 4) {
+      Offset = Offset >> 2;
+    } else {
+      Register AddReg = MRI.createVirtualRegister(MRI.getRegClass(SAddrReg));
+      BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), AddReg)
+          .addReg(IdxReg)
+          .addImm(Offset >> 2);
+      Offset = 0;
+      IdxReg = AddReg;
+    }
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32),
+            AMDGPU::IDX1)
+        .addReg(IdxReg);
+    return Offset;
+  };
+
+  // IDX0 is reserved as the base of per-wave VGPR access.
   // IDX1 is used in ISEL for accessing lane-shared VGPR.
   // TODO-GFX13: we may want a virtual idx-reg instead of physical IDX1.
   switch (MI.getOpcode()) {
@@ -5493,6 +5568,43 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
 
     MI.eraseFromParent();
     return &MBB;
+  }
+  // non-uniform indexing, need waterfall loop
+  case AMDGPU::SCRATCH_LOAD_DWORD:
+  case AMDGPU::SCRATCH_LOAD_DWORDX2:
+  case AMDGPU::SCRATCH_LOAD_DWORDX3:
+  case AMDGPU::SCRATCH_LOAD_DWORDX4: {
+    Register Dst = MI.getOperand(0).getReg();
+    Register SGPRIdxReg;
+    auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
+    int Offset = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
+    MachineBasicBlock *LoopBB = InsPt->getParent();
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared
+
+    MI.eraseFromParent();
+    return LoopBB;
+  }
+  case AMDGPU::SCRATCH_STORE_DWORD:
+  case AMDGPU::SCRATCH_STORE_DWORDX2:
+  case AMDGPU::SCRATCH_STORE_DWORDX3:
+  case AMDGPU::SCRATCH_STORE_DWORDX4: {
+    Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+
+    Register SGPRIdxReg;
+    auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
+    int Offset = adjustIdxOffset(MI, InsPt, SGPRIdxReg);
+    MachineBasicBlock *LoopBB = InsPt->getParent();
+    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_STORE_IDX))
+        .addReg(Dst)
+        .addReg(AMDGPU::IDX1)
+        .addImm(Offset)
+        .addImm(1u); // indicates lane-shared
+
+    MI.eraseFromParent();
+    return LoopBB;
   }
   default:
     assert(false && "missing conversion to v_load/store_idx");
