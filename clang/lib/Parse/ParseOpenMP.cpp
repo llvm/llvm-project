@@ -2378,6 +2378,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_simd:
   case OMPD_tile:
   case OMPD_unroll:
+  case OMPD_reverse:
   case OMPD_task:
   case OMPD_taskyield:
   case OMPD_barrier:
@@ -2792,6 +2793,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_simd:
   case OMPD_tile:
   case OMPD_unroll:
+  case OMPD_reverse:
   case OMPD_for:
   case OMPD_for_simd:
   case OMPD_sections:
