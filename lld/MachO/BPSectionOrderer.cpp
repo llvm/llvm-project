@@ -76,6 +76,7 @@ static void constructNodesForCompression(
     std::vector<BPFunctionNode> &nodes,
     DenseMap<unsigned, SmallVector<unsigned>> &duplicateSectionIdxs,
     BPFunctionNode::UtilityNodeT &maxUN) {
+  TimeTraceScope timeScope("Build nodes for compression");
 
   SmallVector<std::pair<unsigned, SmallVector<uint64_t>>> sectionHashes;
   sectionHashes.reserve(sectionIdxs.size());
@@ -271,9 +272,11 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
       continue;
     const auto *isec = sections[sectionIdx];
     if (isCodeSection(isec)) {
-      sectionIdxsForFunctionCompression.push_back(sectionIdx);
+      if (forFunctionCompression)
+        sectionIdxsForFunctionCompression.push_back(sectionIdx);
     } else {
-      sectionIdxsForDataCompression.push_back(sectionIdx);
+      if (forDataCompression)
+        sectionIdxsForDataCompression.push_back(sectionIdx);
     }
   }
 
@@ -283,18 +286,12 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
   // section indices (not ordered for compression).
   DenseMap<unsigned, SmallVector<unsigned>> duplicateFunctionSectionIdxs,
       duplicateDataSectionIdxs;
-  if (forFunctionCompression) {
-    TimeTraceScope timeScope("Build nodes for function compression");
-    constructNodesForCompression(
-        sections, sectionToIdx, sectionIdxsForFunctionCompression,
-        nodesForFunctionCompression, duplicateFunctionSectionIdxs, maxUN);
-  }
-  if (forDataCompression) {
-    TimeTraceScope timeScope("Build nodes for data compression");
-    constructNodesForCompression(
-        sections, sectionToIdx, sectionIdxsForDataCompression,
-        nodesForDataCompression, duplicateDataSectionIdxs, maxUN);
-  }
+  constructNodesForCompression(
+      sections, sectionToIdx, sectionIdxsForFunctionCompression,
+      nodesForFunctionCompression, duplicateFunctionSectionIdxs, maxUN);
+  constructNodesForCompression(
+      sections, sectionToIdx, sectionIdxsForDataCompression,
+      nodesForDataCompression, duplicateDataSectionIdxs, maxUN);
 
   // Sort nodes by their Id (which is the section index) because the input
   // linker order tends to be not bad
