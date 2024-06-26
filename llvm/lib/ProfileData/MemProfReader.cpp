@@ -677,11 +677,10 @@ llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
 RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
   if (MemprofRawVersion == 3ULL)
     return readMemInfoBlocksV3(Ptr);
-  else if (MemprofRawVersion == 4ULL)
+  if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
-  else
-    assert(false &&
-           "Panic: Unsupported version number when reading MemInfoBlocks");
+  llvm_unreachable(
+      "Panic: Unsupported version number when reading MemInfoBlocks");
 }
 
 Error RawMemProfReader::readRawProfile(
