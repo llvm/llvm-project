@@ -444,31 +444,60 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       return NameSpace ? std::string(NameSpace) : std::string("");
     };
 
+    // Preprocessing YamlBFs to minimize the number of BFs to process.
+    std::unordered_map<std::string, std::set<uint32_t>>
+      NamespaceToProfiledBFSizes;
+    NamespaceToProfiledBFSizes.reserve(YamlBP.Functions.size());
+    std::vector<std::string> ProfileBFDemangledNames;
+    ProfileBFDemangledNames.reserve(YamlBP.Functions.size());
+    std::vector<std::string> ProfiledBFNamespaces;
+    ProfiledBFNamespaces.reserve(YamlBP.Functions.size());
+
+    for (auto &YamlBF : YamlBP.Functions) {
+      std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
+      ProfileBFDemangledNames.push_back(YamlBFDemangledName);
+      std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
+      ProfiledBFNamespaces.push_back(YamlBFNamespace);
+      NamespaceToProfiledBFSizes[YamlBFNamespace].insert(YamlBF.NumBasicBlocks);
+    }
+
     std::unordered_map<std::string, std::vector<BinaryFunction *>>
         NamespaceToBFs;
-
     NamespaceToBFs.reserve(BC.getBinaryFunctions().size());
 
+    // Maps namespaces to BFs disincluding binary functions with no equal sized
+    // profiled functions belonging to the same namespace.
     for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
       std::string DemangledName = BF->getDemangledName();
       std::string Namespace = DeriveNameSpace(DemangledName);
-      auto It = NamespaceToBFs.find(Namespace);
-      if (It == NamespaceToBFs.end())
+
+      auto NamespaceToProfiledBFSizesIt = NamespaceToProfiledBFSizes.find(Namespace);
+      if (NamespaceToProfiledBFSizesIt == NamespaceToProfiledBFSizes.end())
+        continue;
+      if (NamespaceToProfiledBFSizesIt->second.count(BF->size()) == 0)
+        continue;
+      auto NamespaceToBFsIt = NamespaceToBFs.find(Namespace);
+      if (NamespaceToBFsIt == NamespaceToBFs.end())
         NamespaceToBFs[Namespace] = {BF};
       else
-        It->second.push_back(BF);
+        NamespaceToBFsIt->second.push_back(BF);
     }
 
-    for (auto YamlBF : YamlBP.Functions) {
+    // Iterates through all profiled functions and binary functions belonging to
+    // the same namespace and matches based on edit distance thresehold.
+    assert(YamlBP.Functions.size() == ProfiledBFNamespaces.size()
+      && ProfiledBFNamespaces.size() == ProfileBFDemangledNames.size());
+    for (size_t I = 0; I < YamlBP.Functions.size(); ++I) {
+      yaml::bolt::BinaryFunctionProfile &YamlBF = YamlBP.Functions[I];
+      std::string &YamlBFNamespace = ProfiledBFNamespaces[I];
       if (YamlBF.Used)
         continue;
-      std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
-      std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
       auto It = NamespaceToBFs.find(YamlBFNamespace);
       if (It == NamespaceToBFs.end())
         continue;
-      std::vector<BinaryFunction *> BFs = It->second;
 
+      std::string &YamlBFDemangledName = ProfileBFDemangledNames[I];
+      std::vector<BinaryFunction *> BFs = It->second;
       unsigned MinEditDistance = UINT_MAX;
       BinaryFunction *ClosestNameBF = nullptr;
 
