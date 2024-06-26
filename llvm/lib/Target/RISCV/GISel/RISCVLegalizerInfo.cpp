@@ -410,9 +410,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS)
       .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
 
-  getActionDefinitionsBuilder(G_FCONSTANT)
-      .legalIf(typeIsScalarFPArith(0, ST))
-      .lowerFor({s32, s64});
+  auto &FConstantActions = getActionDefinitionsBuilder(G_FCONSTANT)
+                               .legalIf(typeIsScalarFPArith(0, ST));
+  if (ST.hasStdExtZfh())
+    FConstantActions.legalFor({s16});
+  FConstantActions.lowerFor({s32, s64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
