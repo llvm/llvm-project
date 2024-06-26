@@ -119,7 +119,8 @@ static constexpr inline unsigned_count_t GetHUGE(int kind) {
 template <typename Unused = void>
 count_t GetSystemClockCount(int kind, fallback_implementation) {
   unsigned_count_t timestamp;
-  timestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  timestamp =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
   if (timestamp == static_cast<unsigned_count_t>(-1)) {
     // Return -HUGE(COUNT) to represent failure.
     return -static_cast<count_t>(GetHUGE(kind));
@@ -156,7 +157,7 @@ template <typename T = int, typename U = struct timespec>
 count_t GetSystemClockCount(int kind, preferred_implementation,
     // We need some dummy parameters to pass to decltype(clock_gettime).
     T ClockId = 0, U *Timespec = nullptr,
-      decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
+    decltype(clock_gettime(ClockId, Timespec)) *Enabled = nullptr) {
   struct timespec tspec;
   const unsigned_count_t huge{GetHUGE(kind)};
   if (clock_gettime(CLOCKID_ELAPSED_TIME, &tspec) != 0) {
