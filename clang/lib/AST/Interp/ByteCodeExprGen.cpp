@@ -2930,6 +2930,39 @@ bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   return this->delegate(E->getSubExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXStdInitializerListExpr(
+    const CXXStdInitializerListExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  const ConstantArrayType *ArrayType =
+      Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
+  const Record *R = getRecord(E->getType());
+  assert(Initializing);
+  assert(SubExpr->isGLValue());
+
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+
+  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  if (isIntegralType(SecondFieldT)) {
+    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
+                         SecondFieldT, E))
+      return false;
+    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+  }
+  assert(SecondFieldT == PT_Ptr);
+
+  if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+    return false;
+  if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+    return false;
+  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);

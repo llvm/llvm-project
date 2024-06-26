@@ -177,6 +177,7 @@ public:
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
+  bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
