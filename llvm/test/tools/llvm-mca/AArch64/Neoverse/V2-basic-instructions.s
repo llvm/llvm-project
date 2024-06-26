@@ -1404,16 +1404,16 @@ drps
 # CHECK-NEXT:  1      1     0.17                        sub	w4, w20, #546, lsl #12
 # CHECK-NEXT:  1      1     0.17                        sub	sp, sp, #288
 # CHECK-NEXT:  1      1     0.17                        sub	wsp, w19, #16
-# CHECK-NEXT:  1      1     0.17                        adds	w13, w23, #291, lsl #12
-# CHECK-NEXT:  1      1     0.17                        cmn	w2, #4095
-# CHECK-NEXT:  1      1     0.17                        adds	w20, wsp, #0
-# CHECK-NEXT:  1      1     0.17                        cmn	x3, #1, lsl #12
-# CHECK-NEXT:  1      1     0.17                        cmp	sp, #20, lsl #12
-# CHECK-NEXT:  1      1     0.17                        cmp	x30, #4095
-# CHECK-NEXT:  1      1     0.17                        subs	x4, sp, #3822
-# CHECK-NEXT:  1      1     0.17                        cmn	w3, #291, lsl #12
-# CHECK-NEXT:  1      1     0.17                        cmn	wsp, #1365
-# CHECK-NEXT:  1      1     0.17                        cmn	sp, #1092, lsl #12
+# CHECK-NEXT:  1      1     0.25                        adds	w13, w23, #291, lsl #12
+# CHECK-NEXT:  1      1     0.25                        cmn	w2, #4095
+# CHECK-NEXT:  1      1     0.25                        adds	w20, wsp, #0
+# CHECK-NEXT:  1      1     0.25                        cmn	x3, #1, lsl #12
+# CHECK-NEXT:  1      1     0.25                        cmp	sp, #20, lsl #12
+# CHECK-NEXT:  1      1     0.25                        cmp	x30, #4095
+# CHECK-NEXT:  1      1     0.25                        subs	x4, sp, #3822
+# CHECK-NEXT:  1      1     0.25                        cmn	w3, #291, lsl #12
+# CHECK-NEXT:  1      1     0.25                        cmn	wsp, #1365
+# CHECK-NEXT:  1      1     0.25                        cmn	sp, #1092, lsl #12
 # CHECK-NEXT:  1      1     0.17                        mov	sp, x30
 # CHECK-NEXT:  1      1     0.17                        mov	wsp, w20
 # CHECK-NEXT:  1      1     0.17                        mov	x11, sp
@@ -1699,30 +1699,30 @@ drps
 # CHECK-NEXT:  1      1     0.50                        b.ne	#4
 # CHECK-NEXT:  1      1     0.50                        b.ge	#1048572
 # CHECK-NEXT:  1      1     0.50                        b.ge	#-4
-# CHECK-NEXT:  1      1     0.17                        ccmp	w1, #31, #0, eq
-# CHECK-NEXT:  1      1     0.17                        ccmp	w3, #0, #15, hs
-# CHECK-NEXT:  1      1     0.17                        ccmp	wzr, #15, #13, hs
-# CHECK-NEXT:  1      1     0.17                        ccmp	x9, #31, #0, le
-# CHECK-NEXT:  1      1     0.17                        ccmp	x3, #0, #15, gt
-# CHECK-NEXT:  1      1     0.17                        ccmp	xzr, #5, #7, ne
-# CHECK-NEXT:  1      1     0.17                        ccmn	w1, #31, #0, eq
-# CHECK-NEXT:  1      1     0.17                        ccmn	w3, #0, #15, hs
-# CHECK-NEXT:  1      1     0.17                        ccmn	wzr, #15, #13, hs
-# CHECK-NEXT:  1      1     0.17                        ccmn	x9, #31, #0, le
-# CHECK-NEXT:  1      1     0.17                        ccmn	x3, #0, #15, gt
-# CHECK-NEXT:  1      1     0.17                        ccmn	xzr, #5, #7, ne
-# CHECK-NEXT:  1      1     0.17                        ccmp	w1, wzr, #0, eq
-# CHECK-NEXT:  1      1     0.17                        ccmp	w3, w0, #15, hs
-# CHECK-NEXT:  1      1     0.17                        ccmp	wzr, w15, #13, hs
-# CHECK-NEXT:  1      1     0.17                        ccmp	x9, xzr, #0, le
-# CHECK-NEXT:  1      1     0.17                        ccmp	x3, x0, #15, gt
-# CHECK-NEXT:  1      1     0.17                        ccmp	xzr, x5, #7, ne
-# CHECK-NEXT:  1      1     0.17                        ccmn	w1, wzr, #0, eq
-# CHECK-NEXT:  1      1     0.17                        ccmn	w3, w0, #15, hs
-# CHECK-NEXT:  1      1     0.17                        ccmn	wzr, w15, #13, hs
-# CHECK-NEXT:  1      1     0.17                        ccmn	x9, xzr, #0, le
-# CHECK-NEXT:  1      1     0.17                        ccmn	x3, x0, #15, gt
-# CHECK-NEXT:  1      1     0.17                        ccmn	xzr, x5, #7, ne
+# CHECK-NEXT:  1      1     0.25                        ccmp	w1, #31, #0, eq
+# CHECK-NEXT:  1      1     0.25                        ccmp	w3, #0, #15, hs
+# CHECK-NEXT:  1      1     0.25                        ccmp	wzr, #15, #13, hs
+# CHECK-NEXT:  1      1     0.25                        ccmp	x9, #31, #0, le
+# CHECK-NEXT:  1      1     0.25                        ccmp	x3, #0, #15, gt
+# CHECK-NEXT:  1      1     0.25                        ccmp	xzr, #5, #7, ne
+# CHECK-NEXT:  1      1     0.25                        ccmn	w1, #31, #0, eq
+# CHECK-NEXT:  1      1     0.25                        ccmn	w3, #0, #15, hs
+# CHECK-NEXT:  1      1     0.25                        ccmn	wzr, #15, #13, hs
+# CHECK-NEXT:  1      1     0.25                        ccmn	x9, #31, #0, le
+# CHECK-NEXT:  1      1     0.25                        ccmn	x3, #0, #15, gt
+# CHECK-NEXT:  1      1     0.25                        ccmn	xzr, #5, #7, ne
+# CHECK-NEXT:  1      1     0.25                        ccmp	w1, wzr, #0, eq
+# CHECK-NEXT:  1      1     0.25                        ccmp	w3, w0, #15, hs
+# CHECK-NEXT:  1      1     0.25                        ccmp	wzr, w15, #13, hs
+# CHECK-NEXT:  1      1     0.25                        ccmp	x9, xzr, #0, le
+# CHECK-NEXT:  1      1     0.25                        ccmp	x3, x0, #15, gt
+# CHECK-NEXT:  1      1     0.25                        ccmp	xzr, x5, #7, ne
+# CHECK-NEXT:  1      1     0.25                        ccmn	w1, wzr, #0, eq
+# CHECK-NEXT:  1      1     0.25                        ccmn	w3, w0, #15, hs
+# CHECK-NEXT:  1      1     0.25                        ccmn	wzr, w15, #13, hs
+# CHECK-NEXT:  1      1     0.25                        ccmn	x9, xzr, #0, le
+# CHECK-NEXT:  1      1     0.25                        ccmn	x3, x0, #15, gt
+# CHECK-NEXT:  1      1     0.25                        ccmn	xzr, x5, #7, ne
 # CHECK-NEXT:  1      1     0.17                        csel	w1, w0, w19, ne
 # CHECK-NEXT:  1      1     0.17                        csel	wzr, w5, w9, eq
 # CHECK-NEXT:  1      1     0.17                        csel	w9, wzr, w30, gt
@@ -2585,7 +2585,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.00  165.00 165.00 326.58 181.58 109.58 109.58 91.83  91.83  190.00 146.00 30.00  10.00
+# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.00  165.00 165.00 329.42 184.42 112.42 112.42 86.17  86.17  190.00 146.00 30.00  10.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -2604,16 +2604,16 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     sub	w4, w20, #546, lsl #12
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     sub	sp, sp, #288
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     sub	wsp, w19, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     adds	w13, w23, #291, lsl #12
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmn	w2, #4095
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     adds	w20, wsp, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmn	x3, #1, lsl #12
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmp	sp, #20, lsl #12
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmp	x30, #4095
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     subs	x4, sp, #3822
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmn	w3, #291, lsl #12
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmn	wsp, #1365
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cmn	sp, #1092, lsl #12
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     adds	w13, w23, #291, lsl #12
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmn	w2, #4095
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     adds	w20, wsp, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmn	x3, #1, lsl #12
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmp	sp, #20, lsl #12
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmp	x30, #4095
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     subs	x4, sp, #3822
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmn	w3, #291, lsl #12
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmn	wsp, #1365
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     cmn	sp, #1092, lsl #12
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	sp, x30
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	wsp, w20
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     mov	x11, sp
@@ -2899,30 +2899,30 @@ drps
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b.ne	#4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b.ge	#1048572
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     b.ge	#-4
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	w1, #31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	w3, #0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	wzr, #15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	x9, #31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	x3, #0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	xzr, #5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	w1, #31, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	w3, #0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	wzr, #15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	x9, #31, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	x3, #0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	xzr, #5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	w1, wzr, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	w3, w0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	wzr, w15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	x9, xzr, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	x3, x0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmp	xzr, x5, #7, ne
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	w1, wzr, #0, eq
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	w3, w0, #15, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	wzr, w15, #13, hs
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	x9, xzr, #0, le
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	x3, x0, #15, gt
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     ccmn	xzr, x5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	w1, #31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	w3, #0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	wzr, #15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	x9, #31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	x3, #0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	xzr, #5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	w1, #31, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	w3, #0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	wzr, #15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	x9, #31, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	x3, #0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	xzr, #5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	w1, wzr, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	w3, w0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	wzr, w15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	x9, xzr, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	x3, x0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmp	xzr, x5, #7, ne
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	w1, wzr, #0, eq
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	w3, w0, #15, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	wzr, w15, #13, hs
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	x9, xzr, #0, le
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	x3, x0, #15, gt
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     ccmn	xzr, x5, #7, ne
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     csel	w1, w0, w19, ne
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     csel	wzr, w5, w9, eq
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     csel	w9, wzr, w30, gt
