@@ -18955,22 +18955,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(IID, {ArgTy, Addr->getType(), Val->getType()});
     return Builder.CreateCall(F, {Addr, Val});
   }
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_global_atomic_fadd_v2bf16;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
-      IID = Intrinsic::amdgcn_flat_atomic_fadd_v2bf16;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Function *F = CGM.getIntrinsic(IID, {Addr->getType()});
-    return Builder.CreateCall(F, {Addr, Val});
-  }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
@@ -19352,7 +19336,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64: {
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19374,6 +19360,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
     case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+    case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+    case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
@@ -19418,7 +19406,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
-      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
+      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16 ||
+          BuiltinID == AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16) {
         llvm::Type *V2BF16Ty = FixedVectorType::get(
             llvm::Type::getBFloatTy(Builder.getContext()), 2);
         Val = Builder.CreateBitCast(Val, V2BF16Ty);
