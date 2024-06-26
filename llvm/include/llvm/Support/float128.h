@@ -11,7 +11,8 @@
 
 namespace llvm {
 
-#if defined(__aarch64__)
+#if !defined(__LONG_DOUBLE_IBM128__) && (__SIZEOF_LONG_DOUBLE__ == 16) &&      \
+    (__SIZEOF_INT128__ == 16) && (__LDBL_MANT_DIG__ == 113)
 #define HAS_IEE754_FLOAT128
 #if (defined(__GNUC__) && __GNUC__ > 12)
 typedef _Float128 float128;
