@@ -220,12 +220,12 @@
 #ifndef DBL_NORM_MAX
   #error "Mandatory macro DBL_NORM_MAX is missing."
 #else
-  _Static_assert(DBL_NORM_MAX >= 1.0E+37F, "Mandatory macro DBL_NORM_MAX is invalid.");
+  _Static_assert(DBL_NORM_MAX >= 1.0E+37, "Mandatory macro DBL_NORM_MAX is invalid.");
 #endif
 #ifndef LDBL_NORM_MAX
   #error "Mandatory macro LDBL_NORM_MAX is missing."
 #else
-  _Static_assert(LDBL_NORM_MAX >= 1.0E+37F, "Mandatory macro LDBL_NORM_MAX is invalid.");
+  _Static_assert(LDBL_NORM_MAX >= 1.0E+37L, "Mandatory macro LDBL_NORM_MAX is invalid.");
 #endif
 #endif
 
