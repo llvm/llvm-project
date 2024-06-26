@@ -733,3 +733,69 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+define ptr @no_binary_operator(ptr %start, ptr %end, i8 %value) {
+; CHECK-LABEL: @no_binary_operator(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[END_I:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[START_I:%.*]] = ptrtoint ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[DELTA_I:%.*]] = sub i64 [[END_I]], [[START_I]]
+; CHECK-NEXT:    [[DELTA:%.*]] = trunc i64 [[DELTA_I]] to i32
+; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[DELTA]], 0
+; CHECK-NEXT:    br i1 [[COND1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[END_I]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[START_I]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[NEW_ADDR:%.*]], [[FOR_LATCH:%.*]] ], [ [[START]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[DATA:%.*]] = load i8, ptr [[ADDR]], align 1
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[DATA]], [[VALUE:%.*]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE:%.*]], label [[FOR_LATCH]]
+; CHECK:       for.latch:
+; CHECK-NEXT:    [[NEW_ADDR]] = getelementptr i8, ptr [[ADDR]], i64 1
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[NEW_ADDR]], [[SCEVGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END_LOOPEXITSPLIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end.loopexitsplit:
+; CHECK-NEXT:    [[NEW_ADDR_LCSSA:%.*]] = phi ptr [ [[NEW_ADDR]], [[FOR_LATCH]] ]
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.body.for.end.loopexit_crit_edge:
+; CHECK-NEXT:    [[ADDR_LCSSA:%.*]] = phi ptr [ [[ADDR]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    [[RETV_PH:%.*]] = phi ptr [ [[ADDR_LCSSA]], [[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE]] ], [ [[NEW_ADDR_LCSSA]], [[FOR_END_LOOPEXITSPLIT]] ]
+; CHECK-NEXT:    br label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[RETV:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ], [ [[RETV_PH]], [[FOR_END_LOOPEXIT]] ]
+; CHECK-NEXT:    ret ptr [[RETV]]
+;
+entry:
+  %end_i = ptrtoint ptr %end to i64
+  %start_i = ptrtoint ptr %start to i64
+  %delta_i = sub i64 %end_i, %start_i
+  %delta = trunc i64 %delta_i to i32
+  %cond1 = icmp sgt i32 %delta, 0
+  br i1 %cond1, label %for.body, label %for.end
+
+for.body:                                                ; preds = %entry, %for.latch
+  %trip_count = phi i32 [ %new_trip_count, %for.latch ], [ %delta, %entry ]
+  %addr = phi ptr [ %new_addr, %for.latch ], [ %start, %entry ]
+  %data = load i8, ptr %addr, align 1
+  %cond2 = icmp eq i8 %data, %value
+  br i1 %cond2, label %for.end, label %for.latch
+
+for.latch:                                               ; preds = %for.body
+  %new_addr = getelementptr inbounds i8, ptr %addr, i64 1
+  %new_trip_count = add nsw i32 %trip_count, -1
+  %cond3 = icmp sgt i32 %trip_count, 1
+  br i1 %cond3, label %for.body, label %for.end
+
+for.end:                                               ; preds = %for.body, %for.latch, %entry
+  %retv = phi ptr [ %start, %entry ], [ %new_addr, %for.latch ], [ %addr, %for.body ]
+  ret ptr %retv
+}
