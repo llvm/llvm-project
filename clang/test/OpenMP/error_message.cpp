@@ -81,15 +81,12 @@ if (1)
 // expected-error@+1 {{ERROR}}
 #pragma omp error severity(fatal) severity(fatal) // expected-error {{directive '#pragma omp error' cannot contain more than one 'severity' clause}}
 
-// expected-warning@+2 {{WARNING}}
 // expected-warning@+1 {{WARNING}}
 #pragma omp error severity(warning) severity(warning) // expected-error {{directive '#pragma omp error' cannot contain more than one 'severity' clause}}
 
-// expected-warning@+1 {{WARNING}}
 #pragma omp error severity(warning) // expected-warning {{WARNING}}
 #pragma omp error severity(fatal) // expected-error {{ERROR}}
 
-// expected-warning@+1 {{WARNING}}
 #pragma omp error at(compilation) severity(warning) // expected-warning {{WARNING}}
 #pragma omp error at(execution) severity(warning) // no error, diagnosic at runtime
 #pragma omp error at(compilation) severity(fatal) // expected-error {{ERROR}}
@@ -98,10 +95,8 @@ if (1)
 #pragma omp error message("GPU compiler is needed.") // expected-error {{GPU compiler is needed}}
 #pragma omp error at(compilation) message("GPU compiler is needed.") // expected-error {{GPU compiler is needed}}
 #pragma omp error at(execution) message("GPU compiler is needed.") // no error
-// expected-warning@+1 {{GPU compiler is needed.}}
 #pragma omp error severity(warning) message("GPU compiler is needed.") // expected-warning {{GPU compiler is needed.}}
 #pragma omp error severity(fatal) message("GPU compiler is needed.") // expected-error {{GPU compiler is needed}}
-// expected-warning@+1 {{GPU compiler is needed.}}
 #pragma omp error at(compilation) severity(warning) message("GPU compiler is needed.") // expected-warning {{GPU compiler is needed.}}
 #pragma omp error at(compilation) severity(fatal) message("GPU compiler is needed.") // expected-error {{GPU compiler is needed.}}
 #pragma omp error at(execution) severity(warning) message("GPU compiler is needed.") // no warning warning will emit at runtime.

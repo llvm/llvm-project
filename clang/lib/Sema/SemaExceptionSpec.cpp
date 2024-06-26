@@ -1451,6 +1451,8 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::OMPMaskedTaskLoopDirectiveClass:
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
   case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPOpaqueBlockDirectiveClass:
+  case Stmt::OMPOpaqueLoopDirectiveClass:
   case Stmt::OMPOrderedDirectiveClass:
   case Stmt::OMPCanonicalLoopClass:
   case Stmt::OMPParallelDirectiveClass:

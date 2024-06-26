@@ -1520,6 +1520,7 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPSimdDirectiveClass ||
            T->getStmtClass() == OMPForDirectiveClass ||
+           T->getStmtClass() == OMPOpaqueLoopDirectiveClass ||
            T->getStmtClass() == OMPForSimdDirectiveClass ||
            T->getStmtClass() == OMPParallelForDirectiveClass ||
            T->getStmtClass() == OMPParallelForSimdDirectiveClass ||
@@ -1556,6 +1557,187 @@ public:
                OMPTargetTeamsDistributeParallelForSimdDirectiveClass ||
            T->getStmtClass() == OMPTargetTeamsDistributeDirectiveClass ||
            T->getStmtClass() == OMPTargetTeamsDistributeSimdDirectiveClass;
+  }
+};
+
+/// This represents any executable OpenMP directive that is not loop-
+/// associated (usually block-associated).
+class OMPOpaqueBlockDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// true if current directive has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Region for cancel/cancellation-point directives.
+  OpenMPDirectiveKind CancelRegion = llvm::omp::OMPD_unknown;
+
+  /// Name of the directive for the "critical" directive.
+  DeclarationNameInfo DirName;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param Kind The OpenMP directive kind.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPOpaqueBlockDirective(OpenMPDirectiveKind Kind, SourceLocation StartLoc,
+                          SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPOpaqueBlockDirectiveClass, Kind, StartLoc,
+                               EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param Kind The OpenMP directive kind.
+  ///
+  explicit OMPOpaqueBlockDirective(OpenMPDirectiveKind Kind)
+      : OMPExecutableDirective(OMPOpaqueBlockDirectiveClass, Kind,
+                               SourceLocation(), SourceLocation()) {}
+
+  /// Sets special task reduction descriptor.
+  void setTaskReductionRefExpr(Expr *E) { Data->getChildren()[0] = E; }
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+  /// Set cancellation region.
+  void setCancelRegion(OpenMPDirectiveKind CR) { CancelRegion = CR; }
+
+  /// Set directive name.
+  void setDirectiveName(const DeclarationNameInfo &Name) { DirName = Name; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Kind The OpenMP directive kind.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param TaskRedRef Task reduction special reference expression to handle
+  /// taskgroup descriptor.
+  /// \param HasCancel true if current directive has inner cancel directive.
+  /// \param CancelRegion Cancellation region, applicable for cancel or
+  /// cancellation-point directives.
+  /// \param DirName Name of the directive (used if DKind is OMPD_critical).
+  static OMPOpaqueBlockDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, Expr *TaskRedRef, bool HasCancel,
+         OpenMPDirectiveKind CancelRegion, const DeclarationNameInfo &DirName);
+
+  /// Creates an empty directive with the place for \a NumClauses
+  /// clauses.
+  ///
+  /// \param C AST context.
+  /// \param Kind The OpenMP directive kind.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPOpaqueBlockDirective *
+  CreateEmpty(const ASTContext &C, OpenMPDirectiveKind Kind,
+              unsigned NumClauses, bool HasAssociatedStmt, EmptyShell);
+
+  /// Returns special task reduction reference expression.
+  Expr *getTaskReductionRefExpr() const {
+    return cast_or_null<Expr>(Data->getChildren()[0]);
+  }
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  /// Return cancellation region.
+  OpenMPDirectiveKind getCancelRegion() const { return CancelRegion; }
+
+  /// Return the directive name (valid for "critical" only).
+  DeclarationNameInfo getDirectiveName() const { return DirName; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPOpaqueBlockDirectiveClass;
+  }
+};
+
+/// This represents any executable, loop-associated OpenMP directive.
+class OMPOpaqueLoopDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// true if current directive has inner cancel directive.
+  bool HasCancel = false;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param Kind The OpenMP directive kind.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPOpaqueLoopDirective(OpenMPDirectiveKind Kind, SourceLocation StartLoc,
+                         SourceLocation EndLoc, unsigned CollapsedNum)
+      : OMPLoopDirective(OMPOpaqueLoopDirectiveClass, Kind, StartLoc, EndLoc,
+                         CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param Kind The OpenMP directive kind.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPOpaqueLoopDirective(OpenMPDirectiveKind Kind,
+                                  unsigned CollapsedNum)
+      : OMPLoopDirective(OMPOpaqueLoopDirectiveClass, Kind, SourceLocation(),
+                         SourceLocation(), CollapsedNum) {}
+
+  /// Sets special task reduction descriptor.
+  void setTaskReductionRefExpr(Expr *E) {
+    size_t Index = numLoopChildren(getLoopsNumber(), getDirectiveKind());
+    Data->getChildren()[Index] = E;
+  }
+
+  /// Set cancel state.
+  void setHasCancel(bool Has) { HasCancel = Has; }
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Kind The OpenMP directive kind.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  ///
+  static OMPOpaqueLoopDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         OpenMPDirectiveKind Kind, unsigned CollapsedNum,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+         const HelperExprs &Exprs, Expr *TaskRedRef, bool HasCancel);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param Kind The OpenMP directive kind.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPOpaqueLoopDirective *CreateEmpty(const ASTContext &C,
+                                             OpenMPDirectiveKind Kind,
+                                             unsigned NumClauses,
+                                             unsigned CollapsedNum, EmptyShell);
+
+  /// Returns special task reduction reference expression.
+  Expr *getTaskReductionRefExpr() const {
+    size_t Index = numLoopChildren(getLoopsNumber(), getDirectiveKind());
+    return cast_or_null<Expr>(Data->getChildren()[Index]);
+  }
+
+  /// Return true if current directive has inner cancel directive.
+  bool hasCancel() const { return HasCancel; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPOpaqueLoopDirectiveClass;
   }
 };
 

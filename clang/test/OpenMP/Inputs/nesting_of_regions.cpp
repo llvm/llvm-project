@@ -19565,5 +19565,5 @@ void foo() {
     bar();
   }
 
-  return foo<int>();
+  return foo<int>(); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
 }
