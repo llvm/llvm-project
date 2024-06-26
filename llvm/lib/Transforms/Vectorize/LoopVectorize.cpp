@@ -1459,8 +1459,8 @@ public:
       return true;
     }
     if (IsVectorizing && InterleaveInfo.requiresScalarEpilogue()) {
-      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: vectorizable "
-                           "interleaved group\n");
+      LLVM_DEBUG(dbgs() << "LV: Loop requires scalar epilogue: "
+                           "interleaved group requires scalar epilogue\n");
       return true;
     }
     LLVM_DEBUG(dbgs() << "LV: Loop does not require scalar epilogue\n");
