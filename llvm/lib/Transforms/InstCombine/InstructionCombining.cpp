@@ -2787,9 +2787,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
-  // intrinsic. This has better support in BasicAA.
-  if (GEPEltType->isScalableTy()) {
+  // Canonicalize
+  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
+  //    This has better support in BasicAA.
+  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
+  //    multiplies together.
+  if (GEPEltType->isScalableTy() ||
+      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
+       match(GEP.getOperand(1),
+             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                  m_Shl(m_Value(), m_ConstantInt())))))) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     return replaceInstUsesWith(
         GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
