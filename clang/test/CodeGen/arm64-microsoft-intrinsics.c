@@ -129,6 +129,8 @@ void check__break() {
 
 void check__hlt() {
   __hlt(0);
+  __hlt(1, 2, 3, 4, 5);
+  int x = __hlt(0);
 }
 
 // CHECK-MSVC: call void @llvm.aarch64.hlt(i32 0)
