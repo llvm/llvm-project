@@ -16,7 +16,7 @@ RVV adds 32 ``VLEN`` sized registers, where ``VLEN`` is an unknown constant to t
 Scalable vector types are of the form ``<vscale x n x ty>``, which indicate a vector with a multiple of ``n`` elements of type ``ty``. ``n`` and ``ty`` then end up controlling LMUL and SEW respectively.
 
 LLVM supports only ``ELEN=32`` or ``ELEN=64``, so ``vscale`` is defined as ``VLEN/64`` (see ``RISCV::RVVBitsPerBlock``).
-This makes the LLVM IR types stable between the two ``ELEN`` s considered, i.e. every LLVM IR scalable vector type has exactly one corresponding pair of element type and LMUL, and vice-versa.
+This makes the LLVM IR types stable between the two ``ELEN`` s considered, i.e., every LLVM IR scalable vector type has exactly one corresponding pair of element type and LMUL, and vice-versa.
 
 +-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
 |                   | LMUL=⅛        | LMUL=¼         | LMUL=½           | LMUL=1            | LMUL=2            | LMUL=4            | LMUL=8            |
@@ -83,7 +83,7 @@ Vector instructions can be represented in three main ways in LLVM IR:
 
    .. code-block:: llvm
 
-       %c = call @llvm.riscv.vadd.nxv4i32.nxv4i32(
+       %c = call @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
               <vscale x 4 x i32> %passthru,
 	      <vscale x 4 x i32> %a,
 	      <vscale x 4 x i32> %b,
@@ -110,13 +110,15 @@ Vector instructions can be represented in three main ways in LLVM IR:
 SelectionDAG lowering
 =====================
 
-For regular **scalable** vector LLVM IR instructions, their corresponding SelectionDAG nodes are legal on RISC-V and don't require any custom lowering.
+For most regular **scalable** vector LLVM IR instructions, their corresponding SelectionDAG nodes are legal on RISC-V and don't require any custom lowering.
 
 .. code-block::
 
    t5: nxv4i32 = add t2, t4
 
-RISC-V vector intrinsics are also always scalable and so don't need custom lowering:
+This is because the TableGen patterns for RVV are only defined for scalable vector types.
+
+RISC-V vector intrinsics only support scalable vector types, so they are also legal.
 
 .. code-block::
 
@@ -125,10 +127,11 @@ RISC-V vector intrinsics are also always scalable and so don't need custom lower
 Fixed length vectors
 --------------------
 
-The only legal vector MVTs on RISC-V are scalable, so fixed length vectors need to be custom lowered and performed in a scalable container type:
+Because there are no fixed length vector patterns, fixed length vectors need to be custom lowered and performed in a scalable "container" type:
 
-1. The fixed length vector operands are inserted into scalable containers via ``insert_subvector``. The container size is chosen to have a minimum size big enough to fit the fixed length vector (see ``getContainerForFixedLengthVector``).
-2. The operation is then performed via a scalable **VL (vector length) node**. These are custom nodes that contain an AVL operand which is set to the size of the fixed length vector, and are defined in RISCVInstrInfoVVLPatterns.td.
+1. The fixed length vector operands are inserted into scalable containers with ``insert_subvector`` nodes. The container type is chosen such that its minimum size will fit the fixed length vector (see ``getContainerForFixedLengthVector``).
+2. The operation is then performed on the container type via a **VL (vector length) node**. These are custom nodes defined in ``RISCVInstrInfoVVLPatterns.td`` that mirror target agnostic SelectionDAG nodes, as well as some RVV instructions. They contain an AVL operand, which is set to the number of elements in the fixed length vector.
+   Some nodes also have a passthru or mask operand, which will usually be set to undef and all ones when lowering fixed length vectors.
 3. The result is put back into a fixed length vector via ``extract_subvector``.
 
 .. code-block::
@@ -149,7 +152,7 @@ The only legal vector MVTs on RISC-V are scalable, so fixed length vectors need 
 
 VL nodes often have a passthru or mask operand, which are usually set to undef and all ones for fixed length vectors.
 
-The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrapping and unwrapping will get combined away, and eventually we will lower all fixed vector types to scalable. Note that the vectors at the interface of a function are always scalable vectors.
+The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrapping and unwrapping will get combined away, and eventually we will lower all fixed vector types to scalable. Note that fixed length vectors at the interface of a function are passed in a scalable vector container.
 
 .. note::
 
@@ -158,7 +161,7 @@ The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrappin
 Vector predication intrinsics
 -----------------------------
 
-VP intrinsics also get custom lowered via VL nodes in order to set the EVL and mask.
+VP intrinsics also get custom lowered via VL nodes.
 
 .. code-block::
 
@@ -168,11 +171,12 @@ VP intrinsics also get custom lowered via VL nodes in order to set the EVL and m
 
    t18: nxv2i32 = RISCVISD::ADD_VL t2, t4, undef:nxv2i32, t6, Constant:i64<8>
 
+The VP EVL and mask are used for the VL node's AVL and mask respectively, whilst the passthru is set to undef. A passthru can be emulated to get tail/mask undisturbed behaviour by using ``@llvm.vp.merge``. It will get lowered as a ``vmerge``, but will likely be merged back into the underlying instruction's mask via ``RISCVDAGToDAGISel::performCombineVMergeAndVOps``.
 
 Instruction selection
 =====================
 
-VL and VTYPE need to be configured correctly, so we can't just directly select the underlying vector MachineInstrs. Instead a layer of pseudo instructions get selected which carry the extra information needed to emit the necessary ``vsetvli`` instructions later.
+VL and VTYPE need to be configured correctly, so we can't just directly select the underlying vector MachineInstrs. Instead pseudo instructions are selected, which carry the extra information needed to emit the necessary vsetvlis later.
 
 .. code-block::
 
@@ -192,7 +196,7 @@ There are patterns for target agnostic SelectionDAG nodes in ``RISCVInstrInfoVSD
 Mask patterns
 -------------
 
-For the VL patterns we only match to masked pseudos to reduce the size of the match table, even if the node's mask is all ones and could be an unmasked pseudo. The ``RISCVDAGToDAGISel::doPeepholeMaskedRVV`` will detects that the mask is all ones during post-processing and convert it into its unmasked form.
+For the VL patterns we only match to masked pseudos to reduce the size of the match table, even if the node's mask is all ones and could be an unmasked pseudo. ``RISCVFoldMasks::convertToUnmasked`` will detect if the mask is all ones and convert it into its unmasked form.
 
 .. code-block::
 
