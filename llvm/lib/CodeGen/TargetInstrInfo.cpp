@@ -1383,11 +1383,6 @@ bool TargetInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
     return true;
 
-  // Frame setup and destory can't be scheduled around.
-  if (MI.getFlag(MachineInstr::FrameSetup) ||
-      MI.getFlag(MachineInstr::FrameDestroy))
-    return true;
-
   // Don't attempt to schedule around any instruction that defines
   // a stack-oriented pointer, as it's unlikely to be profitable. This
   // saves compile time, because it doesn't require every single
