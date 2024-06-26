@@ -12058,6 +12058,43 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
+static void maybeNoteImplicitDeductionGuide(Sema &S,
+                                            CXXDeductionGuideDecl *DG) {
+  // We want to always print synthesized deduction guides for type aliases.
+  // They would retain the explicit bit of the corresponding constructor.
+  TemplateDecl *OriginTemplate =
+      DG->getDeclName().getCXXDeductionGuideTemplate();
+  if (!DG->isImplicit() && (!OriginTemplate || !OriginTemplate->isTypeAlias()))
+    return;
+  std::string FunctionProto;
+  llvm::raw_string_ostream OS(FunctionProto);
+  FunctionTemplateDecl *Template = DG->getDescribedFunctionTemplate();
+  if (!Template) {
+    // This also could be an instantiation. Find out the primary template.
+    FunctionDecl *Pattern =
+        DG->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+    if (!Pattern) {
+      // The implicit deduction guide is built on an explicit non-template
+      // deduction guide. Currently, this might be the case only for type
+      // aliases.
+      // FIXME: Add a test once https://github.com/llvm/llvm-project/pull/96686
+      // gets merged.
+      assert(OriginTemplate->isTypeAlias() &&
+            "Only deduction guides for type aliases can have no template Decls");
+      DG->print(OS);
+      S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+          << FunctionProto;
+      return;
+    }
+    Template = Pattern->getDescribedFunctionTemplate();
+    assert(Template && "Cannot find the associated function template of "
+                       "CXXDeductionGuideDecl?");
+  }
+  Template->print(OS);
+  S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+      << FunctionProto;
+}
+
 /// Generates a 'note' diagnostic for an overload candidate.  We've
 /// already generated a primary error at the call site.
 ///
@@ -12128,27 +12165,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
     if (!DG)
       return;
-    // We want to always print synthesized deduction guides for type aliases.
-    // They would retain the explicit bit of the corresponding constructor.
-    if (TemplateDecl *OriginTemplate =
-            DG->getDeclName().getCXXDeductionGuideTemplate();
-        !DG->isImplicit() &&
-        (!OriginTemplate || !OriginTemplate->isTypeAlias()))
-      return;
-    std::string FunctionProto;
-    llvm::raw_string_ostream OS(FunctionProto);
-    FunctionTemplateDecl *Template = DG->getDescribedFunctionTemplate();
-    // This also could be an instantiation. Find out the primary template.
-    if (!Template) {
-      FunctionDecl *Pattern = DG->getTemplateInstantiationPattern();
-      assert(Pattern && Pattern->getDescribedFunctionTemplate() &&
-             "Cannot find the associated function template of "
-             "CXXDeductionGuideDecl?");
-      Template = Pattern->getDescribedFunctionTemplate();
-    }
-    Template->print(OS);
-    S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
-        << FunctionProto;
+    maybeNoteImplicitDeductionGuide(S, DG);
   });
 
   switch (Cand->FailureKind) {
