@@ -358,12 +358,7 @@ static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
 
 void SemaHLSL::handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL) {
   // FIXME: support semantic on field.
-  // See https://github.com/llvm/llvm-project/issues/57889.
-  if (isa<FieldDecl>(D)) {
-    Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_ast_node)
-        << AL << "parameter";
-    return;
-  }
+  // See https://github.com/llvm/llvm-project/issues/57889.  
 
   auto *VD = cast<ValueDecl>(D);
   if (!isLegalTypeForHLSLSV_DispatchThreadID(VD->getType())) {
