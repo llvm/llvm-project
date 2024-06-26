@@ -641,7 +641,14 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    PatternRewriter &rewriter) {
   SmallVector<int64_t> innerTileSizes = packOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-  ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+  auto numOuterDims =
+      dyn_cast<RankedTensorType>(packOp.getDpsInputs()[0].getType())
+          .getShape()
+          .size();
+  SmallVector<int64_t> outerDimsPerm =
+      packOp.getOuterDimsPerm().empty()
+          ? llvm::to_vector(llvm::seq<int64_t>(0, numOuterDims))
+          : SmallVector<int64_t>(packOp.getOuterDimsPerm());
 
   ArrayRef<int64_t> srcShape = collapseOp.getSrcType().getShape();
   SmallVector<ReassociationIndices> reassocIndices =
@@ -885,8 +892,12 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
                                    PatternRewriter &rewriter) {
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
-  ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
-
+  auto numOuterDims =
+      dyn_cast<RankedTensorType>(unPackOp.getType()).getShape().size();
+  SmallVector<int64_t> outerDimsPerm =
+      unPackOp.getOuterDimsPerm().empty()
+          ? llvm::to_vector(llvm::seq<int64_t>(0, numOuterDims))
+          : SmallVector<int64_t>(unPackOp.getOuterDimsPerm());
   auto expandTy = dyn_cast<RankedTensorType>(expandOp.getType());
   if (!expandTy)
     return failure();
