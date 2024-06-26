@@ -374,9 +374,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     for (auto &[_, BF] : BC.getBinaryFunctions())
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
   else if (!opts::IgnoreHash)
-    for (BinaryFunction *BF : ProfileBFs)
+    for (BinaryFunction *BF : ProfileBFs) {
+      if (!BF)
+        continue;
       BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
-
+    }
   // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
     if (!BF)
