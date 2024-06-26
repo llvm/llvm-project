@@ -457,7 +457,7 @@ static unsigned updateImpliedFeaturesImpl() {
   return 0;
 }
 
-void updateImpliedFeatures() {
+static void updateImpliedFeatures() {
   unsigned Changed = 1;
 
   while (Changed)
