@@ -709,10 +709,20 @@ function(add_libc_hermetic test_name)
       $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
+    DEPENDS ${fq_target_name}-cmd
+  )
+
+  add_custom_command(
+    OUTPUT ${fq_target_name}-cmd
     COMMAND ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running hermetic test ${fq_target_name}"
     ${LIBC_HERMETIC_TEST_JOB_POOL}
+  )
+
+  set_source_files_properties(${fq_target_name}-cmd
+    PROPERTIES
+      SYMBOLIC "TRUE"
   )
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
