@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding < %s | FileCheck -check-prefixes=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding < %s | FileCheck -check-prefixes=GFX13,GFX13-W32 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding < %s | FileCheck -check-prefix=GFX13 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding < %s 2>&1 | FileCheck -check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
 
