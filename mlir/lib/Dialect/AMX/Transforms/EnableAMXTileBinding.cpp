@@ -51,7 +51,7 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TileBindingAnalysis)
   explicit TileBindingAnalysis(Operation *);
   bool isValid() const { return isValidAnalysis; }
-  void setValid(bool v) { isValidAnalysis = v; }
+  // void setValid(bool v) { isValidAnalysis = v; }
   int getBinding(Value val) const {
     auto iter = bindings.find(val);
     if (iter == bindings.end())
@@ -164,6 +164,102 @@ TileBindingAnalysis::TileBindingAnalysis(Operation *root) {
   });
 }
 
+// A class for analyzing tile configuration domination (a.k.a. tile scope)
+class TileScopeAnalysis {
+private:
+  typedef llvm::iterator_range<Block::iterator, Block::iterator> BlockSeg;
+  typedef SmallVector<SmallVector<int, 2>, 8> Palette;
+  struct TileScope {
+    BlockSeg seg;
+    Palette palette;
+  };
+
+  bool isValidAnalysis;
+  // Storing Ops that would break tile context & scope (usually parallel Ops)
+  DenseSet<Operation *> scopeBreaker;
+  DenseMap<Operation *, BlockSeg> tileUsage;
+  SmallVector<TileScope, 10> tileScopes;
+
+  void addScopeBreaker(Operation *op) { scopeBreaker.insert(op); }
+  bool isScopeBreaker(Operation *op) {
+    return scopeBreaker.find(op) == scopeBreaker.end();
+  }
+
+  void setTileUsage(Operation *op, BlockSeg seg);
+  BlockSeg getTileUsage();
+  void doTileScope(Block &block);
+  void doTileScope(BlockSeg seg);
+  void doTileScope(Operation *op);
+
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TileScopeAnalysis)
+  explicit TileScopeAnalysis(Operation *);
+  bool isValid() const { return isValidAnalysis; }
+};
+
+static bool isTileOp(Operation *op) {
+  return llvm::isa<TileZeroOp>(op) || llvm::isa<TileLoadOp>(op) ||
+         llvm::isa<TileMulFOp>(op) || llvm::isa<TileMulIOp>(op) ||
+         llvm::isa<TileStoreOp>(op);
+}
+
+TileScopeAnalysis::TileScopeAnalysis(Operation *root) {
+  isValidAnalysis = false;
+  func::FuncOp func = dyn_cast_or_null<func::FuncOp>(root);
+  if (!func)
+    return;
+
+  isValidAnalysis = true;
+  // 0. First walk to mark tile scope breakers
+  func->walk<WalkOrder::PostOrder>([this](Operation *op) {
+    if (!isScopeBreaker(op))
+      return;
+
+    if (llvm::isa<scf::ForallOp>(op) || llvm::isa<scf::ParallelOp>(op) ||
+        llvm::isa<omp::ParallelOp>(op) || llvm::isa<omp::WsloopOp>(op)) {
+      while (op != root) {
+        addScopeBreaker(op);
+        op = op->getParentOp();
+      }
+    }
+  });
+
+  // 1. Second walk to analyse usage scope for each tile Op
+  func->walk<WalkOrder::PreOrder>([this](Operation *op) {
+    if (!isValidAnalysis)
+      return;
+    if (!isTileOp(op))
+      return;
+    Operation *lastUser = nullptr;
+    for (auto user : op->getUsers())
+      lastUser = user;
+    while (lastUser && op->getBlock() != lastUser->getBlock()) {
+      lastUser = lastUser->getParentOp();
+      if (!lastUser)
+        isValidAnalysis = false;
+    }
+    setTileUsage(op, BlockSeg(Block::iterator(op), Block::iterator(lastUser)));
+  });
+  if (!isValidAnalysis)
+    return;
+
+  // 2. Tile scoping for each segmented region in a recursive manner
+  doTileScope(func.getRegion(0).front());
+}
+
+void TileScopeAnalysis::doTileScope(Block &block) {
+  doTileScope(BlockSeg(block.begin(), block.end()));
+}
+
+void TileScopeAnalysis::doTileScope(BlockSeg seg) {
+  if (seg.empty())
+    return;
+  for (auto probe = seg.begin(); probe < seg.end(); probe++) {
+  }
+}
+
+void TileScopeAnalysis::doTileScope(Operation *op) {}
+
 //===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
@@ -274,8 +370,8 @@ struct EnableAMXTileBindingPass
   void runOnOperation() override {
     // 0. Get AnalyseInfo for each concerned Value (Does not allow mixed used of
     // tmul & normal vector operations)
-    TileBindingAnalysis &analysis = getAnalysis<TileBindingAnalysis>();
-    if (!analysis.isValid())
+    TileBindingAnalysis &bindingAna = getAnalysis<TileBindingAnalysis>();
+    if (!bindingAna.isValid())
       return;
 
     // 1. Set propagated binding info to AMX Ops
@@ -285,13 +381,14 @@ struct EnableAMXTileBindingPass
     patterns.add<TileMulIBindingRewriter>(&getContext(), analysis);
     FrozenRewritePatternSet patternSet(std::move(patterns));
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet))) {
-      analysis.setValid(false);
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
       return;
-    }
 
     // 2. Analyse tile scopes & expand them maximally
-    //
+    TileScopeAnalysis &scopeAna = getAnalysis<TileScopeAnalysis>();
+    if (!scopeAna.isValid())
+      return;
+
     // 3. insert tile config/release according to tile scopes
   }
 };
