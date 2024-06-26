@@ -11,14 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
-#include "EHFrameSupportImpl.h"
-#include "ELFLinkGraphBuilder.h"
-#include "JITLinkGeneric.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
+
+#include "DefineExternalSectionStartAndEndSymbols.h"
+#include "EHFrameSupportImpl.h"
+#include "ELFLinkGraphBuilder.h"
+#include "JITLinkGeneric.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -47,6 +49,7 @@ class ELFLinkGraphBuilder_aarch64 : public ELFLinkGraphBuilder<ELFT> {
 private:
   enum ELFAArch64RelocationKind : Edge::Kind {
     ELFCall26 = Edge::FirstRelocation,
+    ELFLdrLo19,
     ELFAdrLo21,
     ELFAdrPage21,
     ELFAddAbs12,
@@ -80,6 +83,8 @@ private:
     case ELF::R_AARCH64_CALL26:
     case ELF::R_AARCH64_JUMP26:
       return ELFCall26;
+    case ELF::R_AARCH64_LD_PREL_LO19:
+      return ELFLdrLo19;
     case ELF::R_AARCH64_ADR_PREL_LO21:
       return ELFAdrLo21;
     case ELF::R_AARCH64_ADR_PREL_PG_HI21:
@@ -187,6 +192,15 @@ private:
     switch (*RelocKind) {
     case ELFCall26: {
       Kind = aarch64::Branch26PCRel;
+      break;
+    }
+    case ELFLdrLo19: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isLDRLiteral(Instr))
+        return make_error<JITLinkError>(
+            "R_AARCH64_LDR_PREL_LO19 target is not an LDR Literal instruction");
+
+      Kind = aarch64::LDRLiteral19;
       break;
     }
     case ELFAdrLo21: {
@@ -610,6 +624,11 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyELFSectionStartAndEndSymbols));
 
     // Add an in-place GOT/TLS/Stubs build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_aarch64);

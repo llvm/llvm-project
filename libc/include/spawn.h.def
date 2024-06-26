@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SPAWN_H
 #define LLVM_LIBC_SPAWN_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
 %%public_api()
 
-#endif // LLVM_LIBC_SPAWN_H 
+#endif // LLVM_LIBC_SPAWN_H

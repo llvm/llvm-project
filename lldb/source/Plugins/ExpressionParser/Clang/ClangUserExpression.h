@@ -106,8 +106,8 @@ public:
   ///     definitions to be included when the expression is parsed.
   ///
   /// \param[in] language
-  ///     If not eLanguageTypeUnknown, a language to use when parsing
-  ///     the expression.  Currently restricted to those languages
+  ///     If not unknown, a language to use when parsing the
+  ///     expression.  Currently restricted to those languages
   ///     supported by Clang.
   ///
   /// \param[in] desired_type
@@ -122,7 +122,7 @@ public:
   ///     must be evaluated. For details see the comment to
   ///     `UserExpression::Evaluate`.
   ClangUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                      llvm::StringRef prefix, lldb::LanguageType language,
+                      llvm::StringRef prefix, SourceLanguage language,
                       ResultType desired_type,
                       const EvaluateExpressionOptions &options,
                       ValueObject *ctx_obj);
@@ -185,9 +185,9 @@ private:
   /// The parameter have the same meaning as in ClangUserExpression::Parse.
   /// \see ClangUserExpression::Parse
   bool TryParse(DiagnosticManager &diagnostic_manager,
-                ExecutionContextScope *exe_scope, ExecutionContext &exe_ctx,
-                lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
-                bool generate_debug_info);
+                ExecutionContext &exe_ctx,
+                lldb_private::ExecutionPolicy execution_policy,
+                bool keep_result_in_memory, bool generate_debug_info);
 
   void SetupCppModuleImports(ExecutionContext &exe_ctx);
 

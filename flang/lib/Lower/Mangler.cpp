@@ -110,7 +110,7 @@ std::string Fortran::lower::mangle::mangleName(
     return fir::NameUniquer::doVariable(modules, procs, blockId, symbolName);
   };
 
-  return std::visit(
+  return Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::semantics::MainProgramDetails &) {
             return fir::NameUniquer::doProgramEntry().str();
@@ -182,7 +182,8 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                    bool underscoring) {
   assert((symbol.owner().kind() !=
               Fortran::semantics::Scope::Kind::BlockConstruct ||
-          symbol.has<Fortran::semantics::SubprogramDetails>()) &&
+          symbol.has<Fortran::semantics::SubprogramDetails>() ||
+          Fortran::semantics::IsBindCProcedure(symbol)) &&
          "block object mangling must specify a scopeBlockIdMap");
   ScopeBlockIdMap scopeBlockIdMap;
   return mangleName(symbol, scopeBlockIdMap, keepExternalInScope, underscoring);

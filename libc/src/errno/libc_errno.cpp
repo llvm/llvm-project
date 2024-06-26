@@ -1,4 +1,4 @@
-//===-- Implementation of errno -------------------------------------------===//
+//===-- Implementation of libc_errno --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,35 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/attributes.h"
-#include "src/__support/macros/properties/architectures.h"
+#include "libc_errno.h"
+
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+// LIBC_THREAD_LOCAL on GPU currently does nothing.  So essentially this is just
+// a global errno for gpu to use for now.
+extern "C" {
+LIBC_THREAD_LOCAL int __llvmlibc_gpu_errno;
+}
+
+void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_gpu_errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_gpu_errno; }
+
+#elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
+// This mode is for unit testing.  We just use our internal errno.
+LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
+
+void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_internal_errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_internal_errno; }
+
+#elif defined(LIBC_FULL_BUILD)
+// This mode is for public libc archive, hermetic, and integration tests.
+// In full build mode, we provide the errno storage ourselves.
+extern "C" {
+LIBC_THREAD_LOCAL int __llvmlibc_errno;
+}
+
+void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
+
+#else
+void LIBC_NAMESPACE::Errno::operator=(int a) { errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return errno; }
+
+#endif // LIBC_FULL_BUILD
 
 namespace LIBC_NAMESPACE {
-
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-struct ErrnoConsumer {
-  void operator=(int) {}
-};
-#endif
-
-extern "C" {
-#ifdef LIBC_COPT_PUBLIC_PACKAGING
-// TODO: Declare __llvmlibc_errno only under LIBC_COPT_PUBLIC_PACKAGING and
-// __llvmlibc_internal_errno otherwise.
-// In overlay mode, this will be an unused thread local variable as libc_errno
-// will resolve to errno from the system libc's errno.h. In full build mode
-// however, libc_errno will resolve to this thread local variable via the errno
-// macro defined in LLVM libc's public errno.h header file.
-// TODO: Use a macro to distinguish full build and overlay build which can be
-//       used to exclude __llvmlibc_errno under overlay build.
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-ErrnoConsumer __llvmlibc_errno;
-#else
-LIBC_THREAD_LOCAL int __llvmlibc_errno;
-#endif // LIBC_TARGET_ARCH_IS_GPU
-#else
-LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
-#endif
-} // extern "C"
-
+// Define the global `libc_errno` instance.
+Errno libc_errno;
 } // namespace LIBC_NAMESPACE

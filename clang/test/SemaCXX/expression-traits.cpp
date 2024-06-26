@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify -fcxx-exceptions %s -fexperimental-new-constant-interpreter
 
 //
 // Tests for "expression traits" intrinsics such as __is_lvalue_expr.

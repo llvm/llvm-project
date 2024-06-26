@@ -842,7 +842,7 @@ class JSONImporterPrinterLegacyPass final : public ScopPass {
 public:
   static char ID;
 
-  JSONImporterPrinterLegacyPass() : JSONImporterPrinterLegacyPass(outs()){};
+  JSONImporterPrinterLegacyPass() : JSONImporterPrinterLegacyPass(outs()) {}
   explicit JSONImporterPrinterLegacyPass(llvm::raw_ostream &OS)
       : ScopPass(ID), OS(OS) {}
 

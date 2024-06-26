@@ -112,7 +112,8 @@ PointerType *getBinDescPtrTy(Module &M) {
 ///
 /// Global variable that represents BinDesc is returned.
 GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
-                              EntryArrayTy EntryArray, StringRef Suffix) {
+                              EntryArrayTy EntryArray, StringRef Suffix,
+                              bool Relocatable) {
   LLVMContext &C = M.getContext();
   auto [EntriesB, EntriesE] = EntryArray;
 
@@ -129,7 +130,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                                      GlobalVariable::InternalLinkage, Data,
                                      ".omp_offloading.device_image" + Suffix);
     Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    Image->setSection(".llvm.offloading");
+    Image->setSection(Relocatable ? ".llvm.offloading.relocatable"
+                                  : ".llvm.offloading");
     Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
     StringRef Binary(Buf.data(), Buf.size());
@@ -184,36 +186,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                             ".omp_offloading.descriptor" + Suffix);
 }
 
-void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix) {
-  LLVMContext &C = M.getContext();
-  auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_reg" + Suffix, &M);
-  Func->setSection(".text.startup");
-
-  // Get __tgt_register_lib function declaration.
-  auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
-                                      /*isVarArg*/ false);
-  FunctionCallee RegFuncC =
-      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
-
-  // Construct function body
-  IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
-  Builder.CreateCall(RegFuncC, BinDesc);
-  Builder.CreateRetVoid();
-
-  // Add this function to constructors.
-  // Set priority to 1 so that __tgt_register_lib is executed AFTER
-  // __tgt_register_requires (we want to know what requirements have been
-  // asked for before we load a libomptarget plugin so that by the time the
-  // plugin is loaded it can report how many devices there are which can
-  // satisfy these requirements).
-  appendToGlobalCtors(M, Func, /*Priority*/ 1);
-}
-
-void createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                              StringRef Suffix) {
+Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
+                                   StringRef Suffix) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func =
@@ -232,9 +206,43 @@ void createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
   Builder.CreateCall(UnRegFuncC, BinDesc);
   Builder.CreateRetVoid();
 
-  // Add this function to global destructors.
-  // Match priority of __tgt_register_lib
-  appendToGlobalDtors(M, Func, /*Priority*/ 1);
+  return Func;
+}
+
+void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
+                            StringRef Suffix) {
+  LLVMContext &C = M.getContext();
+  auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
+  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                                ".omp_offloading.descriptor_reg" + Suffix, &M);
+  Func->setSection(".text.startup");
+
+  // Get __tgt_register_lib function declaration.
+  auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
+                                      /*isVarArg*/ false);
+  FunctionCallee RegFuncC =
+      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
+
+  auto *AtExitTy = FunctionType::get(
+      Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
+  FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+
+  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix);
+
+  // Construct function body
+  IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
+
+  Builder.CreateCall(RegFuncC, BinDesc);
+
+  // Register the destructors with 'atexit'. This is expected by the CUDA
+  // runtime and ensures that we clean up before dynamic objects are destroyed.
+  // This needs to be done after plugin initialization to ensure that it is
+  // called before the plugin runtime is destroyed.
+  Builder.CreateCall(AtExit, UnregFunc);
+  Builder.CreateRetVoid();
+
+  // Add this function to constructors.
+  appendToGlobalCtors(M, Func, /*Priority=*/101);
 }
 
 // struct fatbin_wrapper {
@@ -576,19 +584,19 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   DtorBuilder.CreateRetVoid();
 
   // Add this function to constructors.
-  appendToGlobalCtors(M, CtorFunc, /*Priority*/ 1);
+  appendToGlobalCtors(M, CtorFunc, /*Priority=*/101);
 }
 } // namespace
 
 Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
                                      EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix) {
-  GlobalVariable *Desc = createBinDesc(M, Images, EntryArray, Suffix);
+                                     llvm::StringRef Suffix, bool Relocatable) {
+  GlobalVariable *Desc =
+      createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
   createRegisterFunction(M, Desc, Suffix);
-  createUnregisterFunction(M, Desc, Suffix);
   return Error::success();
 }
 

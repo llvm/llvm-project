@@ -90,6 +90,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   mlir::DialectRegistry registry;
   fir::support::registerDialects(registry);
+  fir::support::addFIRExtensions(registry);
   mlir::MLIRContext context(registry);
   fir::support::loadDialects(context);
   fir::support::registerLLVMTranslation(context);
@@ -139,6 +140,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);
     } else {
       // Run tco with O2 by default.
+      fir::registerDefaultInlinerPass(config);
       fir::createMLIRToLLVMPassPipeline(pm, config);
     }
     fir::addLLVMDialectToLLVMPass(pm, out.os());

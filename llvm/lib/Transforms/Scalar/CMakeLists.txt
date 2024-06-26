@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMScalarOpts
   InferAlignment.cpp
   InstSimplifyPass.cpp
   JumpThreading.cpp
+  JumpTableToSwitch.cpp
   LICM.cpp
   LoopAccessAnalysisPrinter.cpp
   LoopBoundSplit.cpp
@@ -40,7 +41,6 @@ add_llvm_component_library(LLVMScalarOpts
   LoopLoadElimination.cpp
   LoopPassManager.cpp
   LoopPredication.cpp
-  LoopRerollPass.cpp
   LoopRotation.cpp
   LoopSimplifyCFG.cpp
   LoopStrengthReduce.cpp

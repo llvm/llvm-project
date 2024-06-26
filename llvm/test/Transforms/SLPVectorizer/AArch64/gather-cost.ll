@@ -61,16 +61,16 @@ define void @gather_load(ptr noalias %ptr) {
 ; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 6
 ; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 1, i64 0), align 1
+; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @data, i64 258), align 1
 ; CHECK-NEXT:    [[CONV150:%.*]] = zext i8 [[L0]] to i16
 ; CHECK-NEXT:    [[ADD152:%.*]] = add nuw nsw i16 [[CONV150]], 10
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 2, i64 1), align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @data, i64 517), align 1
 ; CHECK-NEXT:    [[CONV156:%.*]] = zext i8 [[L1]] to i16
 ; CHECK-NEXT:    [[ADD158:%.*]] = add nuw nsw i16 [[CONV156]], 20
-; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 3, i64 2), align 1
+; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @data, i64 776), align 1
 ; CHECK-NEXT:    [[CONV162:%.*]] = zext i8 [[L2]] to i16
 ; CHECK-NEXT:    [[ADD164:%.*]] = add nuw nsw i16 [[CONV162]], 30
-; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 4, i64 3), align 1
+; CHECK-NEXT:    [[L3:%.*]] = load i8, ptr getelementptr inbounds (i8, ptr @data, i64 1035), align 1
 ; CHECK-NEXT:    [[CONV168:%.*]] = zext i8 [[L3]] to i16
 ; CHECK-NEXT:    [[ADD170:%.*]] = add nuw nsw i16 [[CONV168]], 40
 ; CHECK-NEXT:    store i16 [[ADD152]], ptr [[ARRAYIDX182]], align 2

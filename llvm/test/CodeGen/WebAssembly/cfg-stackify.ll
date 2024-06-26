@@ -92,7 +92,7 @@ back:
 ; CHECK: end_loop
 ; CHECK: end_block
 ; CHECK: return{{$}}
-define void @test2(double* nocapture %p, i32 %n) {
+define void @test2(ptr nocapture %p, i32 %n) {
 entry:
   %cmp.4 = icmp sgt i32 %n, 0
   br i1 %cmp.4, label %for.body.preheader, label %for.end
@@ -102,10 +102,10 @@ for.body.preheader:
 
 for.body:
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds double, double* %p, i32 %i.05
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %p, i32 %i.05
+  %0 = load double, ptr %arrayidx, align 8
   %mul = fmul double %0, 3.200000e+00
-  store double %mul, double* %arrayidx, align 8
+  store double %mul, ptr %arrayidx, align 8
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.end.loopexit, label %for.body
@@ -133,26 +133,26 @@ for.end:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-define i32 @doublediamond(i32 %a, i32 %b, i32* %p) {
+define i32 @doublediamond(i32 %a, i32 %b, ptr %p) {
 entry:
   %c = icmp eq i32 %a, 0
   %d = icmp eq i32 %b, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %false
 true:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %exit
 false:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   br i1 %d, label %ft, label %ff
 ft:
-  store volatile i32 3, i32* %p
+  store volatile i32 3, ptr %p
   br label %exit
 ff:
-  store volatile i32 4, i32* %p
+  store volatile i32 4, ptr %p
   br label %exit
 exit:
-  store volatile i32 5, i32* %p
+  store volatile i32 5, ptr %p
   ret i32 0
 }
 
@@ -161,16 +161,16 @@ exit:
 ; CHECK: br_if 0, $1{{$}}
 ; CHECK: .LBB{{[0-9]+}}_2:
 ; CHECK: return
-define i32 @triangle(i32* %p, i32 %a) {
+define i32 @triangle(ptr %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %exit
 true:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %exit
 exit:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   ret i32 0
 }
 
@@ -183,28 +183,28 @@ exit:
 ; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-define i32 @diamond(i32* %p, i32 %a) {
+define i32 @diamond(ptr %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %false
 true:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %exit
 false:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   br label %exit
 exit:
-  store volatile i32 3, i32* %p
+  store volatile i32 3, ptr %p
   ret i32 0
 }
 
 ; CHECK-LABEL: single_block:
 ; CHECK-NOT: br
 ; CHECK: return $pop{{[0-9]+}}{{$}}
-define i32 @single_block(i32* %p) {
+define i32 @single_block(ptr %p) {
 entry:
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   ret i32 0
 }
 
@@ -215,12 +215,12 @@ entry:
 ; CHECK: i32.store 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: br 0{{$}}
 ; CHECK: .LBB{{[0-9]+}}_2:
-define i32 @minimal_loop(i32* %p) {
+define i32 @minimal_loop(ptr %p) {
 entry:
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br label %loop
 loop:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %loop
 }
 
@@ -232,16 +232,16 @@ loop:
 ; CHECK-NEXT: end_loop{{$}}
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-define i32 @simple_loop(i32* %p, i32 %a) {
+define i32 @simple_loop(ptr %p, i32 %a) {
 entry:
   %c = icmp eq i32 %a, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br label %loop
 loop:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br i1 %c, label %loop, label %exit
 exit:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   ret i32 0
 }
 
@@ -253,23 +253,23 @@ exit:
 ; CHECK: .LBB{{[0-9]+}}_3:
 ; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: return
-define i32 @doubletriangle(i32 %a, i32 %b, i32* %p) {
+define i32 @doubletriangle(i32 %a, i32 %b, ptr %p) {
 entry:
   %c = icmp eq i32 %a, 0
   %d = icmp eq i32 %b, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %exit
 true:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   br i1 %d, label %tt, label %tf
 tt:
-  store volatile i32 3, i32* %p
+  store volatile i32 3, ptr %p
   br label %tf
 tf:
-  store volatile i32 4, i32* %p
+  store volatile i32 4, ptr %p
   br label %exit
 exit:
-  store volatile i32 5, i32* %p
+  store volatile i32 5, ptr %p
   ret i32 0
 }
 
@@ -283,23 +283,23 @@ exit:
 ; CHECK: .LBB{{[0-9]+}}_4:
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK-NEXT: return $pop{{[0-9]+}}{{$}}
-define i32 @ifelse_earlyexits(i32 %a, i32 %b, i32* %p) {
+define i32 @ifelse_earlyexits(i32 %a, i32 %b, ptr %p) {
 entry:
   %c = icmp eq i32 %a, 0
   %d = icmp eq i32 %b, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %false
 true:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %exit
 false:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   br i1 %d, label %ft, label %exit
 ft:
-  store volatile i32 3, i32* %p
+  store volatile i32 3, ptr %p
   br label %exit
 exit:
-  store volatile i32 4, i32* %p
+  store volatile i32 4, ptr %p
   ret i32 0
 }
 
@@ -318,28 +318,28 @@ exit:
 ; CHECK: br              0{{$}}
 ; CHECK: .LBB{{[0-9]+}}_6:
 ; CHECK-NEXT: end_loop{{$}}
-define i32 @doublediamond_in_a_loop(i32 %a, i32 %b, i32* %p) {
+define i32 @doublediamond_in_a_loop(i32 %a, i32 %b, ptr %p) {
 entry:
   br label %header
 header:
   %c = icmp eq i32 %a, 0
   %d = icmp eq i32 %b, 0
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br i1 %c, label %true, label %false
 true:
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   br label %exit
 false:
-  store volatile i32 2, i32* %p
+  store volatile i32 2, ptr %p
   br i1 %d, label %ft, label %ff
 ft:
-  store volatile i32 3, i32* %p
+  store volatile i32 3, ptr %p
   br label %exit
 ff:
-  store volatile i32 4, i32* %p
+  store volatile i32 4, ptr %p
   br label %exit
 exit:
-  store volatile i32 5, i32* %p
+  store volatile i32 5, ptr %p
   br label %header
 }
 
@@ -431,19 +431,19 @@ entry:
   br label %header
 
 header:
-  store volatile i32 0, i32* null
+  store volatile i32 0, ptr null
   br i1 %p, label %more, label %alt
 
 more:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   br i1 %q, label %header, label %return
 
 alt:
-  store volatile i32 2, i32* null
+  store volatile i32 2, ptr null
   ret void
 
 return:
-  store volatile i32 3, i32* null
+  store volatile i32 3, ptr null
   ret void
 }
 
@@ -477,27 +477,27 @@ entry:
   br label %header
 
 header:
-  store volatile i32 0, i32* null
+  store volatile i32 0, ptr null
   br i1 %p, label %more, label %second
 
 more:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   br i1 %q, label %evenmore, label %first
 
 evenmore:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   br i1 %q, label %header, label %return
 
 return:
-  store volatile i32 2, i32* null
+  store volatile i32 2, ptr null
   ret void
 
 first:
-  store volatile i32 3, i32* null
+  store volatile i32 3, ptr null
   br label %second
 
 second:
-  store volatile i32 4, i32* null
+  store volatile i32 4, ptr null
   ret void
 }
 
@@ -523,27 +523,27 @@ second:
 ; CHECK:       unreachable
 define void @test7(i1 %tobool2, i1 %tobool9) {
 entry:
-  store volatile i32 0, i32* null
+  store volatile i32 0, ptr null
   br label %loop
 
 loop:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   br i1 %tobool2, label %l1, label %l0
 
 l0:
-  store volatile i32 2, i32* null
+  store volatile i32 2, ptr null
   br i1 %tobool9, label %loop, label %u0
 
 l1:
-  store volatile i32 3, i32* null
+  store volatile i32 3, ptr null
   br i1 %tobool9, label %loop, label %u1
 
 u0:
-  store volatile i32 4, i32* null
+  store volatile i32 4, ptr null
   unreachable
 
 u1:
-  store volatile i32 5, i32* null
+  store volatile i32 5, ptr null
   unreachable
 }
 
@@ -605,31 +605,31 @@ bb3:
 declare i1 @a()
 define void @test9() {
 entry:
-  store volatile i32 0, i32* null
+  store volatile i32 0, ptr null
   br label %header
 
 header:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   %call4 = call i1 @a()
   br i1 %call4, label %header2, label %end
 
 header2:
-  store volatile i32 2, i32* null
+  store volatile i32 2, ptr null
   %call = call i1 @a()
   br i1 %call, label %if.then, label %if.else
 
 if.then:
-  store volatile i32 3, i32* null
+  store volatile i32 3, ptr null
   %call3 = call i1 @a()
   br i1 %call3, label %header2, label %header
 
 if.else:
-  store volatile i32 4, i32* null
+  store volatile i32 4, ptr null
   %call2 = call i1 @a()
   br i1 %call2, label %header2, label %header
 
 end:
-  store volatile i32 5, i32* null
+  store volatile i32 5, ptr null
   ret void
 }
 
@@ -732,31 +732,31 @@ bb6:
 ; CHECK:       return{{$}}
 define void @test11() {
 bb0:
-  store volatile i32 0, i32* null
+  store volatile i32 0, ptr null
   br i1 undef, label %bb1, label %bb4
 bb1:
-  store volatile i32 1, i32* null
+  store volatile i32 1, ptr null
   br i1 undef, label %bb3, label %bb2
 bb2:
-  store volatile i32 2, i32* null
+  store volatile i32 2, ptr null
   br i1 undef, label %bb3, label %bb7
 bb3:
-  store volatile i32 3, i32* null
+  store volatile i32 3, ptr null
   ret void
 bb4:
-  store volatile i32 4, i32* null
+  store volatile i32 4, ptr null
   br i1 undef, label %bb8, label %bb5
 bb5:
-  store volatile i32 5, i32* null
+  store volatile i32 5, ptr null
   br i1 undef, label %bb6, label %bb7
 bb6:
-  store volatile i32 6, i32* null
+  store volatile i32 6, ptr null
   ret void
 bb7:
-  store volatile i32 7, i32* null
+  store volatile i32 7, ptr null
   ret void
 bb8:
-  store volatile i32 8, i32* null
+  store volatile i32 8, ptr null
   ret void
 }
 
@@ -778,14 +778,14 @@ bb8:
 ; CHECK-NEXT:  end_loop{{$}}
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  return{{$}}
-define void @test12(i8* %arg) {
+define void @test12(ptr %arg) {
 bb:
   br label %bb1
 
 bb1:
   %tmp = phi i32 [ 0, %bb ], [ %tmp5, %bb4 ]
-  %tmp2 = getelementptr i8, i8* %arg, i32 %tmp
-  %tmp3 = load i8, i8* %tmp2
+  %tmp2 = getelementptr i8, ptr %arg, i32 %tmp
+  %tmp3 = load i8, ptr %tmp2
   switch i8 %tmp3, label %bb7 [
     i8 42, label %bb4
     i8 76, label %bb4
@@ -933,23 +933,23 @@ bb:
   br i1 %tmp1, label %bb2, label %bb14
 
 bb2:
-  %tmp3 = phi %0** [ %tmp6, %bb5 ], [ null, %bb ]
+  %tmp3 = phi ptr [ %tmp6, %bb5 ], [ null, %bb ]
   %tmp4 = icmp eq i32 0, 11
   br i1 %tmp4, label %bb5, label %bb8
 
 bb5:
-  %tmp = bitcast i8* null to %0**
-  %tmp6 = getelementptr %0*, %0** %tmp3, i32 1
-  %tmp7 = icmp eq %0** %tmp6, null
+  %tmp = bitcast ptr null to ptr
+  %tmp6 = getelementptr ptr, ptr %tmp3, i32 1
+  %tmp7 = icmp eq ptr %tmp6, null
   br i1 %tmp7, label %bb10, label %bb2
 
 bb8:
-  %tmp9 = icmp eq %0** null, undef
+  %tmp9 = icmp eq ptr null, undef
   br label %bb10
 
 bb10:
-  %tmp11 = phi %0** [ null, %bb8 ], [ %tmp, %bb5 ]
-  %tmp12 = icmp eq %0** null, %tmp11
+  %tmp11 = phi ptr [ null, %bb8 ], [ %tmp, %bb5 ]
+  %tmp12 = icmp eq ptr null, %tmp11
   br i1 %tmp12, label %bb15, label %bb13
 
 bb13:

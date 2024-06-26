@@ -100,6 +100,12 @@ void AttributePool::takePool(AttributePool &pool) {
   pool.Attrs.clear();
 }
 
+void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
+  assert(&Pool != this && "AttributePool can't take attributes from itself");
+  llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
+}
+
 namespace {
 
 #include "clang/Sema/AttrParsedAttrImpl.inc"

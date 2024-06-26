@@ -257,6 +257,9 @@ SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
 std::pair<AffineExpr, SmallVector<OpFoldResult>>
 computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<OpFoldResult> strides,
                    ArrayRef<OpFoldResult> indices);
+std::pair<AffineExpr, SmallVector<OpFoldResult>>
+computeLinearIndex(OpFoldResult sourceOffset, ArrayRef<int64_t> strides,
+                   ArrayRef<Value> indices);
 
 //===----------------------------------------------------------------------===//
 // Utilities for decomposing larger shapes
@@ -283,6 +286,8 @@ public:
     else
       return getDynamicTileOffsets(linearIndex);
   }
+
+  size_t getRank() const { return tileShape.size(); }
 
 private:
   /// The sub-shape that divides the larger outer shape (which is provided to
@@ -384,6 +389,9 @@ public:
 
   /// Returns the total number of tiles that fit in the larger shape.
   size_t size() const { return params.getMaxLinearIndex(); }
+
+  /// Returns rank of the iterator's shape.
+  size_t getRank() const { return params.getRank(); }
 
 private:
   const ParamsTy params;

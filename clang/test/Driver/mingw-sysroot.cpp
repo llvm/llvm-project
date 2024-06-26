@@ -33,7 +33,7 @@
 // directory to the path - this would end up including /usr/include for
 // cross toolchains installed in /usr.
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s --implicit-check-not="\"{{.*}}/testroot-gcc{{/|\\\\}}include\""
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %clang --target=x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s --implicit-check-not="\"{{.*}}/testroot-gcc{{/|\\\\}}include\""
 // CHECK_TESTROOT_GCC: "-internal-isystem" "[[BASE:[^"]+]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++"
 // CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}x86_64-w64-mingw32"
 // CHECK_TESTROOT_GCC-SAME: {{^}} "-internal-isystem" "[[BASE]]/testroot-gcc{{/|\\\\}}lib{{/|\\\\}}gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}10.2-posix{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}backward"
@@ -45,15 +45,17 @@
 
 // If we pass --sysroot explicitly, then we do include <sysroot>/include
 // even when cross compiling.
-// RUN: %clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="%T/testroot-gcc" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC_EXPLICIT %s
+// RUN: %clang --target=x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="%T/testroot-gcc" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC_EXPLICIT %s
 
 // CHECK_TESTROOT_GCC_EXPLICIT: "-internal-isystem" "{{[^"]+}}/testroot-gcc{{/|\\\\}}include"
 
 
-// If there's a matching sysroot next to the clang binary itself, prefer that
+// If -no-canonical-prefixes and there's a matching sysroot next to the clang binary itself, prefer that
 // over a gcc in the path:
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang -target x86_64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG %s
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang --target=x86_64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC2 %s
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang --target=x86_64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s -no-canonical-prefixes 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG %s
+// CHECK_TESTROOT_GCC2: "{{[^"]+}}/testroot-gcc{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
 // CHECK_TESTROOT_CLANG: "{{[^"]+}}/testroot-clang{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
 
 
@@ -61,7 +63,7 @@
 // happens to be in the same directory as gcc, make sure we still can pick up
 // the libgcc directory:
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-gcc/bin/x86_64-w64-mingw32-clang -target x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-gcc/bin/x86_64-w64-mingw32-clang --target=x86_64-w64-mingw32 -rtlib=platform -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_GCC %s
 
 
 // If we're executing clang from a directory with what looks like a mingw sysroot,
@@ -82,7 +84,7 @@
 // that indicates that we did choose the right base, even if this particular directory
 // actually doesn't exist here.
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang-native/bin/clang -target x86_64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_NATIVE %s
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang-native/bin/clang -no-canonical-prefixes --target=x86_64-w64-mingw32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_NATIVE %s
 // CHECK_TESTROOT_CLANG_NATIVE: "{{[^"]+}}/testroot-clang-native{{/|\\\\}}x86_64-w64-mingw32{{/|\\\\}}include"
 
 
@@ -93,12 +95,12 @@
 // that defaults to x86_64 mingw, but it's easier to test this in cross setups
 // with symlinks, like the other tests here.)
 
-// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang --target=x86_64-w64-mingw32 -m32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_I686 %s
+// RUN: env "PATH=%T/testroot-gcc/bin:%PATH%" %T/testroot-clang/bin/x86_64-w64-mingw32-clang -no-canonical-prefixes --target=x86_64-w64-mingw32 -m32 -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CLANG_I686 %s
 // CHECK_TESTROOT_CLANG_I686: "{{[^"]+}}/testroot-clang{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include"
 
 
 // If the user calls clang with a custom literal triple, make sure this maps
 // to sysroots with the matching spelling.
 
-// RUN: %T/testroot-custom-triple/bin/clang --target=x86_64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
+// RUN: %T/testroot-custom-triple/bin/clang -no-canonical-prefixes --target=x86_64-w64-mingw32foo -rtlib=compiler-rt -stdlib=libstdc++ --sysroot="" -c -### %s 2>&1 | FileCheck -check-prefix=CHECK_TESTROOT_CUSTOM_TRIPLE %s
 // CHECK_TESTROOT_CUSTOM_TRIPLE: "{{[^"]+}}/testroot-custom-triple{{/|\\\\}}x86_64-w64-mingw32foo{{/|\\\\}}include"

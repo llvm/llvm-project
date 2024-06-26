@@ -17,7 +17,7 @@
     ret <4 x i32> %result
 
   .Lunwind:                                         ; preds = %0
-    %lp = landingpad { i8*, i32 }
+    %lp = landingpad { ptr, i32 }
             cleanup
     ret <4 x i32> %v
   }

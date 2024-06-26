@@ -66,15 +66,14 @@ public:
   struct FMinFMaxLegacyInfo {
     Register LHS;
     Register RHS;
-    Register True;
-    Register False;
     CmpInst::Predicate Pred;
   };
 
   // TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
-  bool matchFMinFMaxLegacy(MachineInstr &MI, FMinFMaxLegacyInfo &Info) const;
-  void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
-                                         const FMinFMaxLegacyInfo &Info) const;
+  bool matchFMinFMaxLegacy(MachineInstr &MI, MachineInstr &FCmp,
+                           FMinFMaxLegacyInfo &Info) const;
+  void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
+                                       const FMinFMaxLegacyInfo &Info) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -82,6 +81,9 @@ public:
   bool
   matchRcpSqrtToRsq(MachineInstr &MI,
                     std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
+  bool matchFDivSqrtToRsqF16(MachineInstr &MI) const;
+  void applyFDivSqrtToRsqF16(MachineInstr &MI, const Register &X) const;
 
   // FIXME: Should be able to have 2 separate matchdatas rather than custom
   // struct boilerplate.
@@ -98,7 +100,7 @@ public:
   bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
-  // signed buffer laod instructions.
+  // signed buffer load instructions.
   bool matchCombineSignExtendInReg(
       MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
   void applyCombineSignExtendInReg(
@@ -106,11 +108,10 @@ public:
 
   // Find the s_mul_u64 instructions where the higher bits are either
   // zero-extended or sign-extended.
-  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
   // Replace the s_mul_u64 instructions with S_MUL_I64_I32_PSEUDO if the higher
   // 33 bits are sign extended and with S_MUL_U64_U32_PSEUDO if the higher 32
   // bits are zero extended.
-  void applyCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
+  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -158,86 +159,47 @@ bool AMDGPUPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
-    MachineInstr &MI, FMinFMaxLegacyInfo &Info) const {
-  // FIXME: Type predicate on pattern
-  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
+    MachineInstr &MI, MachineInstr &FCmp, FMinFMaxLegacyInfo &Info) const {
+  if (!MRI.hasOneNonDBGUse(FCmp.getOperand(0).getReg()))
     return false;
 
-  Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
-      !mi_match(Cond, MRI,
-                m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
-    return false;
-
-  Info.True = MI.getOperand(2).getReg();
-  Info.False = MI.getOperand(3).getReg();
+  Info.Pred =
+      static_cast<CmpInst::Predicate>(FCmp.getOperand(1).getPredicate());
+  Info.LHS = FCmp.getOperand(2).getReg();
+  Info.RHS = FCmp.getOperand(3).getReg();
+  Register True = MI.getOperand(2).getReg();
+  Register False = MI.getOperand(3).getReg();
 
   // TODO: Handle case where the the selected value is an fneg and the compared
   // constant is the negation of the selected value.
-  if (!(Info.LHS == Info.True && Info.RHS == Info.False) &&
-      !(Info.LHS == Info.False && Info.RHS == Info.True))
+  if ((Info.LHS != True || Info.RHS != False) &&
+      (Info.LHS != False || Info.RHS != True))
     return false;
 
-  switch (Info.Pred) {
-  case CmpInst::FCMP_FALSE:
-  case CmpInst::FCMP_OEQ:
-  case CmpInst::FCMP_ONE:
-  case CmpInst::FCMP_ORD:
-  case CmpInst::FCMP_UNO:
-  case CmpInst::FCMP_UEQ:
-  case CmpInst::FCMP_UNE:
-  case CmpInst::FCMP_TRUE:
-    return false;
-  default:
-    return true;
-  }
+  // Invert the predicate if necessary so that the apply function can assume
+  // that the select operands are the same as the fcmp operands.
+  // (select (fcmp P, L, R), R, L) -> (select (fcmp !P, L, R), L, R)
+  if (Info.LHS != True)
+    Info.Pred = CmpInst::getInversePredicate(Info.Pred);
+
+  // Only match </<=/>=/> not ==/!= etc.
+  return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
+void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinFMaxLegacy(
     MachineInstr &MI, const FMinFMaxLegacyInfo &Info) const {
-  B.setInstrAndDebugLoc(MI);
-  auto buildNewInst = [&MI, this](unsigned Opc, Register X, Register Y) {
-    B.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
-  };
-
-  switch (Info.Pred) {
-  case CmpInst::FCMP_ULT:
-  case CmpInst::FCMP_ULE:
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    break;
-  case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_OLT: {
+  unsigned Opc = (Info.Pred & CmpInst::FCMP_OGT) ? AMDGPU::G_AMDGPU_FMAX_LEGACY
+                                                 : AMDGPU::G_AMDGPU_FMIN_LEGACY;
+  Register X = Info.LHS;
+  Register Y = Info.RHS;
+  if (Info.Pred == CmpInst::getUnorderedPredicate(Info.Pred)) {
     // We need to permute the operands to get the correct NaN behavior. The
     // selected operand is the second one based on the failing compare with NaN,
     // so permute it based on the compare type the hardware uses.
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    break;
+    std::swap(X, Y);
   }
-  case CmpInst::FCMP_UGE:
-  case CmpInst::FCMP_UGT: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    break;
-  }
-  case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    break;
-  }
-  default:
-    llvm_unreachable("predicate should not have matched");
-  }
+
+  B.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
 
   MI.eraseFromParent();
 }
@@ -264,8 +226,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
 
 void AMDGPUPostLegalizerCombinerImpl::applyUCharToFloat(
     MachineInstr &MI) const {
-  B.setInstrAndDebugLoc(MI);
-
   const LLT S32 = LLT::scalar(32);
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -334,6 +294,26 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
   return false;
 }
 
+bool AMDGPUPostLegalizerCombinerImpl::matchFDivSqrtToRsqF16(
+    MachineInstr &MI) const {
+  Register Sqrt = MI.getOperand(2).getReg();
+  return MRI.hasOneNonDBGUse(Sqrt);
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
+    MachineInstr &MI, const Register &X) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Y = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  uint32_t Flags = MI.getFlags();
+  Register RSQ = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {DstTy})
+                     .addUse(X)
+                     .setMIFlags(Flags)
+                     .getReg(0);
+  B.buildFMul(Dst, RSQ, Y, Flags);
+  MI.eraseFromParent();
+}
+
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
     MachineInstr &MI, CvtF32UByteMatchInfo &MatchInfo) const {
   Register SrcReg = MI.getOperand(1).getReg();
@@ -364,7 +344,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
 
 void AMDGPUPostLegalizerCombinerImpl::applyCvtF32UByteN(
     MachineInstr &MI, const CvtF32UByteMatchInfo &MatchInfo) const {
-  B.setInstrAndDebugLoc(MI);
   unsigned NewOpc = AMDGPU::G_AMDGPU_CVT_F32_UBYTE0 + MatchInfo.ShiftOffset / 8;
 
   const LLT S32 = LLT::scalar(32);
@@ -456,11 +435,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
   return false;
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
-    MachineInstr &MI, unsigned &NewOpcode) const {
-  Helper.replaceOpcodeWith(MI, NewOpcode);
-}
-
 // Pass boilerplate
 // ================
 
@@ -491,8 +465,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -520,7 +494,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());

@@ -6,17 +6,17 @@
 
   @x = dso_local global i32 -32768, align 4
 
-  define dso_local i32 @check_sext_not_lost(i32* %ptr) {
+  define dso_local i32 @check_sext_not_lost(ptr %ptr) {
   entry:
-    %ptr.addr = alloca i32*, align 8
-    store i32* %ptr, i32** %ptr.addr, align 8
-    %0 = load i32*, i32** %ptr.addr, align 8
-    %1 = load i32, i32* @x, align 4
+    %ptr.addr = alloca ptr, align 8
+    store ptr %ptr, ptr %ptr.addr, align 8
+    %0 = load ptr, ptr %ptr.addr, align 8
+    %1 = load i32, ptr @x, align 4
     %sub = sub nsw i32 %1, 32768
     %conv = trunc i32 %sub to i16
     %idxprom = sext i16 %conv to i64
-    %arrayidx = getelementptr inbounds i32, i32* %0, i64 %idxprom
-    %2 = load i32, i32* %arrayidx, align 4
+    %arrayidx = getelementptr inbounds i32, ptr %0, i64 %idxprom
+    %2 = load i32, ptr %arrayidx, align 4
     ret i32 %2
   }
 

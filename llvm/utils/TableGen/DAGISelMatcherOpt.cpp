@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "DAGISelMatcher.h"
-#include "SDNodeProperties.h"
+#include "Basic/SDNodeProperties.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/DAGISelMatcher.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -99,7 +99,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       const PatternToMatch &Pattern = CM->getPattern();
 
       if (!EN->hasChain() &&
-          Pattern.getSrcPattern()->NodeHasProperty(SDNPHasChain, CGP))
+          Pattern.getSrcPattern().NodeHasProperty(SDNPHasChain, CGP))
         ResultsMatch = false;
 
       // If the matched node has glue and the output root doesn't, we can't
@@ -109,7 +109,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &MatcherPtr,
       // because the code in the pattern generator doesn't handle it right.  We
       // do it anyway for thoroughness.
       if (!EN->hasOutGlue() &&
-          Pattern.getSrcPattern()->NodeHasProperty(SDNPOutGlue, CGP))
+          Pattern.getSrcPattern().NodeHasProperty(SDNPOutGlue, CGP))
         ResultsMatch = false;
 
 #if 0
@@ -311,10 +311,9 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
         // Don't print if it's obvious nothing extract could be merged anyway.
         std::next(J) != E) {
       LLVM_DEBUG(errs() << "Couldn't merge this:\n"; Optn->print(errs(), 4);
-                 errs() << "into this:\n";
-                 (*J)->print(errs(), 4);
+                 errs() << "into this:\n"; (*J)->print(errs(), 4);
                  (*std::next(J))->printOne(errs());
-                 if (std::next(J, 2) != E) (*std::next(J, 2))->printOne(errs());
+                 if (std::next(J, 2) != E)(*std::next(J, 2))->printOne(errs());
                  errs() << "\n");
     }
 
@@ -426,7 +425,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(OptionsToMatch[i]);
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      Cases.push_back(std::make_pair(&COM->getOpcode(), COM->takeNext()));
+      Cases.push_back(std::pair(&COM->getOpcode(), COM->takeNext()));
       delete COM;
     }
 
@@ -463,7 +462,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       }
 
       Entry = Cases.size() + 1;
-      Cases.push_back(std::make_pair(CTMTy, MatcherWithoutCTM));
+      Cases.push_back(std::pair(CTMTy, MatcherWithoutCTM));
     }
 
     // Make sure we recursively factor any scopes we may have created.

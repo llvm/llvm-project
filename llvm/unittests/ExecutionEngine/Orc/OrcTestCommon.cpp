@@ -22,3 +22,18 @@ ModuleBuilder::ModuleBuilder(LLVMContext &Context, StringRef Triple,
   if (Triple != "")
     M->setTargetTriple(Triple);
 }
+
+void llvm::orc::CoreAPIsBasedStandardTest::OverridableDispatcher::dispatch(
+    std::unique_ptr<Task> T) {
+  if (Parent.DispatchOverride)
+    Parent.DispatchOverride(std::move(T));
+  else
+    InPlaceTaskDispatcher::dispatch(std::move(T));
+}
+
+std::unique_ptr<llvm::orc::ExecutorProcessControl>
+llvm::orc::CoreAPIsBasedStandardTest::makeEPC(
+    std::shared_ptr<SymbolStringPool> SSP) {
+  return std::make_unique<UnsupportedExecutorProcessControl>(
+      std::move(SSP), std::make_unique<OverridableDispatcher>(*this));
+}

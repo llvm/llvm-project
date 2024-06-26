@@ -238,7 +238,7 @@ define float @vreduce_ord_fadd_nxv4f32(<vscale x 4 x float> %v, float %s) {
 
 define float @vreduce_fwadd_nxv4f32(<vscale x 4 x half> %v, float %s) {
 ; CHECK-LABEL: 'vreduce_fwadd_nxv4f32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 4 x half> %v to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = fpext <vscale x 4 x half> %v to <vscale x 4 x float>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %red = call reassoc float @llvm.vector.reduce.fadd.nxv4f32(float %s, <vscale x 4 x float> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float %red
 ;
@@ -254,7 +254,7 @@ define float @vreduce_fwadd_nxv4f32(<vscale x 4 x half> %v, float %s) {
 
 define float @vreduce_ord_fwadd_nxv4f32(<vscale x 4 x half> %v, float %s) {
 ; CHECK-LABEL: 'vreduce_ord_fwadd_nxv4f32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 4 x half> %v to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = fpext <vscale x 4 x half> %v to <vscale x 4 x float>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %red = call float @llvm.vector.reduce.fadd.nxv4f32(float %s, <vscale x 4 x float> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret float %red
 ;
@@ -358,7 +358,7 @@ define double @vreduce_ord_fadd_nxv2f64(<vscale x 2 x double> %v, double %s) {
 
 define double @vreduce_fwadd_nxv2f64(<vscale x 2 x float> %v, double %s) {
 ; CHECK-LABEL: 'vreduce_fwadd_nxv2f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 2 x float> %v to <vscale x 2 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = fpext <vscale x 2 x float> %v to <vscale x 2 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %red = call reassoc double @llvm.vector.reduce.fadd.nxv2f64(double %s, <vscale x 2 x double> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %red
 ;
@@ -374,7 +374,7 @@ define double @vreduce_fwadd_nxv2f64(<vscale x 2 x float> %v, double %s) {
 
 define double @vreduce_ord_fwadd_nxv2f64(<vscale x 2 x float> %v, double %s) {
 ; CHECK-LABEL: 'vreduce_ord_fwadd_nxv2f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 2 x float> %v to <vscale x 2 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %e = fpext <vscale x 2 x float> %v to <vscale x 2 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %red = call double @llvm.vector.reduce.fadd.nxv2f64(double %s, <vscale x 2 x double> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %red
 ;
@@ -418,7 +418,7 @@ define double @vreduce_ord_fadd_nxv4f64(<vscale x 4 x double> %v, double %s) {
 
 define double @vreduce_fwadd_nxv4f64(<vscale x 4 x float> %v, double %s) {
 ; CHECK-LABEL: 'vreduce_fwadd_nxv4f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 4 x float> %v to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %e = fpext <vscale x 4 x float> %v to <vscale x 4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %red = call reassoc double @llvm.vector.reduce.fadd.nxv4f64(double %s, <vscale x 4 x double> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %red
 ;
@@ -434,7 +434,7 @@ define double @vreduce_fwadd_nxv4f64(<vscale x 4 x float> %v, double %s) {
 
 define double @vreduce_ord_fwadd_nxv4f64(<vscale x 4 x float> %v, double %s) {
 ; CHECK-LABEL: 'vreduce_ord_fwadd_nxv4f64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = fpext <vscale x 4 x float> %v to <vscale x 4 x double>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %e = fpext <vscale x 4 x float> %v to <vscale x 4 x double>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %red = call double @llvm.vector.reduce.fadd.nxv4f64(double %s, <vscale x 4 x double> %e)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %red
 ;

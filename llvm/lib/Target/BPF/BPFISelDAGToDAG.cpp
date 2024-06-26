@@ -46,12 +46,10 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
   const BPFSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   BPFDAGToDAGISel() = delete;
 
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
-      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -94,11 +92,18 @@ private:
   // Mapping from ConstantStruct global value to corresponding byte-list values
   std::map<const void *, val_vec_type> cs_vals_;
 };
+
+class BPFDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  BPFDAGToDAGISelLegacy(BPFTargetMachine &TM)
+      : SelectionDAGISelLegacy(ID, std::make_unique<BPFDAGToDAGISel>(TM)) {}
+};
 } // namespace
 
-char BPFDAGToDAGISel::ID = 0;
+char BPFDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(BPFDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(BPFDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 // ComplexPattern used on BPF Load/Store instructions
 bool BPFDAGToDAGISel::SelectAddr(SDValue Addr, SDValue &Base, SDValue &Offset) {
@@ -242,7 +247,9 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
   bool to_replace = false;
   SDLoc DL(Node);
   const LoadSDNode *LD = cast<LoadSDNode>(Node);
-  uint64_t size = LD->getMemOperand()->getSize();
+  if (!LD->getMemOperand()->getSize().hasValue())
+    return;
+  uint64_t size = LD->getMemOperand()->getSize().getValue();
 
   if (!size || size > 8 || (size & (size - 1)) || !LD->isSimple())
     return;
@@ -487,5 +494,5 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 }
 
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {
-  return new BPFDAGToDAGISel(TM);
+  return new BPFDAGToDAGISelLegacy(TM);
 }

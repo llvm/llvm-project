@@ -13,13 +13,15 @@ declare i32 @fn2()
 
 declare i32 @fn3()
 
+declare void @llvm.memcpy.p0i8.p0i8.i64(ptr, ptr, i64, i1) local_unnamed_addr
+
 define void @stores_single_use_gep_constexpr() {
 ; CHECK-LABEL: @stores_single_use_gep_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store ptr @fn0, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 0), align 8
+  store ptr @fn0, ptr @global.20ptr, align 8
   store ptr @fn1, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 1), align 8
   store ptr @fn2, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 2), align 8
   store ptr @fn3, ptr getelementptr inbounds (%struct.global.20ptr, ptr @global.20ptr, i64 0, i32 3), align 8
@@ -50,4 +52,90 @@ define void @stores_ptrtoint_constexpr() {
 entry:
   store i32 0, ptr inttoptr (i64 ptrtoint (ptr @global.20ptr to i64) to ptr), align 8
   ret void
+}
+
+@gv = internal unnamed_addr global [3 x ptr] zeroinitializer, align 16
+@gv2 = internal unnamed_addr global i32 0, align 4
+
+;; This is a negative test which includes a load from @gv. No stores
+;; or memintrinsics with destination @gv should be removed.
+define i32 @load_from_gv_no_remove() local_unnamed_addr {
+; CHECK-LABEL: @load_from_gv_no_remove(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store ptr [[E]], ptr getelementptr inbounds ([3 x ptr], ptr @gv, i64 0, i64 2), align 16
+; CHECK-NEXT:    [[LOAD_B:%.*]] = load ptr, ptr getelementptr inbounds ([3 x ptr], ptr @gv, i64 0, i64 2), align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @gv, ptr @gv2, i64 8, i1 false)
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %e = alloca i32, align 4
+  store ptr %e, ptr getelementptr inbounds ([3 x ptr], ptr @gv, i64 0, i64 2), align 16
+  %load.b = load ptr, ptr getelementptr inbounds ([3 x ptr], ptr @gv, i64 0, i64 2), align 16
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr getelementptr inbounds ([3 x ptr], ptr @gv, i64 0, i64 0), ptr @gv2, i64 8, i1 false)
+  ret i32 0
+}
+
+@a = internal unnamed_addr global i32 0, align 4
+@b = internal unnamed_addr global [3 x ptr] zeroinitializer, align 16
+
+;; This test is extracted from the issue reported in #64680, with an
+;; additional memcpy and a memset. Ensure all stores and memintrinsics with
+;; destination @b are removed as @b is dead.
+define i32 @load_gv_from_op_remove_store(ptr %p) local_unnamed_addr {
+; CHECK-LABEL: @load_gv_from_op_remove_store(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[E:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DOTPR:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[DOTPR]], 3
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i32 8, ptr [[E]], align 4
+; CHECK-NEXT:    call void @fn1()
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E]], align 4
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @fn0()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    store ptr [[E]], ptr getelementptr inbounds ([3 x ptr], ptr @b, i64 0, i64 2), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @a, align 4
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr @a, align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 2
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr @b, ptr [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %e = alloca i32, align 4
+  %.pr = load i32, ptr @a, align 4
+  %cmp1 = icmp slt i32 %.pr, 3
+  br i1 %cmp1, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %if.end
+  store i32 8, ptr %e, align 4
+  call void @fn1()
+  %0 = load i32, ptr %e, align 4
+  %tobool.not = icmp eq i32 %0, 0
+  br i1 %tobool.not, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  call void @fn0()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  store ptr %e, ptr getelementptr inbounds ([3 x ptr], ptr @b, i64 0, i64 2), align 16
+  %1 = load i32, ptr @a, align 4
+  %inc = add nsw i32 %1, 1
+  store i32 %inc, ptr @a, align 4
+  %cmp = icmp slt i32 %1, 2
+  call void @llvm.memset.p0i8.i64(ptr getelementptr inbounds ([3 x ptr], ptr @b, i64 0, i64 0), i8 0, i64 8, i1 false)
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %if.end, %entry
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr getelementptr inbounds ([3 x ptr], ptr @b, i64 0, i64 0), ptr %p, i64 8, i1 false)
+  ret i32 0
 }

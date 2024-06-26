@@ -133,7 +133,8 @@ public:
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef /*File*/, StringRef SearchPath,
                           StringRef /*RelativePath*/,
-                          const Module * /*Imported*/,
+                          const Module * /*SuggestedModule*/,
+                          bool /*ModuleImported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
     if (auto FileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,

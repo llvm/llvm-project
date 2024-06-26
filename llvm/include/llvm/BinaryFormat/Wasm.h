@@ -58,15 +58,16 @@ enum : unsigned {
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_NULLFUNCREF = 0x73,
   WASM_TYPE_NULLEXTERNREF = 0x72,
+  WASM_TYPE_NULLEXNREF = 0x74,
   WASM_TYPE_NULLREF = 0x71,
   WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXTERNREF = 0x6F,
+  WASM_TYPE_EXNREF = 0x69,
   WASM_TYPE_ANYREF = 0x6E,
   WASM_TYPE_EQREF = 0x6D,
   WASM_TYPE_I31REF = 0x6C,
   WASM_TYPE_STRUCTREF = 0x6B,
   WASM_TYPE_ARRAYREF = 0x6A,
-  WASM_TYPE_EXNREF = 0x69,
   WASM_TYPE_NONNULLABLE = 0x64,
   WASM_TYPE_NULLABLE = 0x63,
   WASM_TYPE_FUNC = 0x60,
@@ -216,6 +217,7 @@ enum WasmSymbolType : unsigned {
 enum WasmSegmentFlag : unsigned {
   WASM_SEG_FLAG_STRINGS = 0x1,
   WASM_SEG_FLAG_TLS = 0x2,
+  WASM_SEG_FLAG_RETAIN = 0x4,
 };
 
 // Kinds of tag attributes.
@@ -260,8 +262,9 @@ enum class ValType {
   V128 = WASM_TYPE_V128,
   FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
+  EXNREF = WASM_TYPE_EXNREF,
   // Unmodeled value types include ref types with heap types other than
-  // func or extern, and type-specialized funcrefs
+  // func, extern or exn, and type-specialized funcrefs
   OTHERREF = 0xff,
 };
 
@@ -350,6 +353,8 @@ struct WasmGlobal {
   WasmGlobalType Type;
   WasmInitExpr InitExpr;
   StringRef SymbolName; // from the "linking" section
+  uint32_t Offset; // Offset of the definition in the binary's Global section
+  uint32_t Size;   // Size of the definition in the binary's Global section
 };
 
 struct WasmTag {
@@ -407,7 +412,8 @@ struct WasmDataSegment {
 // 1) Does not model passive or declarative segments (Segment will end up with
 // an Offset field of i32.const 0)
 // 2) Does not model init exprs (Segment will get an empty Functions list)
-// 2) Does not model types other than basic funcref/externref (see ValType)
+// 3) Does not model types other than basic funcref/externref/exnref (see
+// ValType)
 struct WasmElemSegment {
   uint32_t Flags;
   uint32_t TableNumber;
@@ -467,11 +473,15 @@ struct WasmDebugName {
   StringRef Name;
 };
 
+// Info from the linking metadata section of a wasm object file.
 struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
-  std::vector<WasmSymbolInfo> SymbolTable;
+  // The linking section also contains a symbol table. This info (represented
+  // in a WasmSymbolInfo struct) is stored inside the WasmSymbol object instead
+  // of in this structure; this allows vectors of WasmSymbols and
+  // WasmLinkingDatas to be reallocated.
 };
 
 struct WasmSignature {

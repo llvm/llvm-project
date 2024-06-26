@@ -1,9 +1,11 @@
-// RUN: not llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN: not llvm-tblgen -I %S/Inputs -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -combiners=MyCombiner %s 2>&1| \
 // RUN: FileCheck %s -implicit-check-not=error:
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
+
+include "test-intrinsics.td"
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
@@ -248,6 +250,13 @@ def miflags_in_builtin : GICombineRule<
   (match (COPY $x, $y)),
   (apply (GIReplaceReg $x, $y, (MIFlags FmArcp)))>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: matching/writing MIFlags is only allowed on CodeGenInstruction patterns
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceReg ?:$x, ?:$y, (MIFlags FmArcp))'
+def miflags_in_intrin : GICombineRule<
+  (defs root:$x),
+  (match (int_1in_1out $x, $y)),
+  (apply (GIReplaceReg $x, $y, (MIFlags FmArcp)))>;
+
 // CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: 'match' patterns cannot refer to flags from other instructions
 // CHECK: :[[@LINE+1]]:{{[0-9]+}}: note: MIFlags in 'mi' refer to: impostor
 def using_flagref_in_match : GICombineRule<
@@ -260,6 +269,19 @@ def badflagref_in_apply : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT $dst, $src):$mi),
   (apply (G_MUL $dst, $src, $src, (MIFlags $impostor)))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'apply' patterns cannot mix C++ code with other types of patterns
+def mixed_cxx_apply : GICombineRule<
+  (defs root:$dst),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src), "APPLY")>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: GIDefMatchData can only be used if 'apply' in entirely written in C++
+def dummy_md : GIDefMatchData<"unsigned">;
+def matchdata_without_cxx_apply : GICombineRule<
+  (defs root:$dst, dummy_md:$md),
+  (match (G_ZEXT $dst, $src):$mi),
+  (apply (G_MUL $dst, $src, $src))>;
 
 // CHECK: error: Failed to parse one or more rules
 
@@ -300,6 +322,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   not_miflagenum_1,
   not_miflagenum_2,
   miflags_in_builtin,
+  miflags_in_intrin,
   using_flagref_in_match,
-  badflagref_in_apply
+  badflagref_in_apply,
+  mixed_cxx_apply,
+  matchdata_without_cxx_apply
 ]>;

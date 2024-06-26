@@ -1,8 +1,10 @@
+.. _printf_behavior:
+
 ====================================
 Printf Behavior Under All Conditions
 ====================================
 
-Introduction: 
+Introduction:
 =============
 On the "defining undefined behavior" page, I said you should write down your
 decisions regarding undefined behavior in your functions. This is that document
@@ -62,6 +64,13 @@ When set, this flag disables support for floating point numbers and all their
 conversions (%a, %f, %e, %g); any floating point number conversion will be
 treated as invalid. This reduces code size.
 
+LIBC_COPT_PRINTF_DISABLE_FIXED_POINT
+------------------------------------
+When set, this flag disables support for fixed point numbers and all their
+conversions (%r, %k); any fixed point number conversion will be treated as
+invalid. This reduces code size. This has no effect if the current compiler does
+not support fixed point numbers.
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
 When set, this flag disables the nullptr checks in %n and %s.
@@ -102,7 +111,7 @@ behavior.
 LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 -------------------------------------------------
 When set, the float to string decimal conversion algorithm will use a larger
-table to accelerate long double conversions. This larger table is around 5MB of 
+table to accelerate long double conversions. This larger table is around 5MB of
 size when compiled.
 
 LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT
@@ -164,6 +173,10 @@ If a number passed as a min width or precision value is out of range for an int,
 then it will be treated as the largest or smallest value in the int range
 (e.g. "%-999999999999.999999999999s" is the same as "%-2147483648.2147483647s").
 
+If a number passed as a bit width is less than or equal to zero, the conversion
+is considered invalid. If the provided bit width is larger than the width of
+uintmax_t, it will be clamped to the width of uintmax_t.
+
 ----------
 Conversion
 ----------
@@ -191,3 +204,8 @@ original conversion.
 The %p conversion will display a null pointer as if it was the string
 "(nullptr)" passed to a "%s" conversion, with all other options remaining the
 same as the original conversion.
+
+The %r, %R, %k, and %K fixed point number format specifiers are accepted as
+defined in ISO/IEC TR 18037 (the fixed point number extension). These are
+available when the compiler is detected as having support for fixed point
+numbers and the LIBC_COPT_PRINTF_DISABLE_FIXED_POINT flag is not set.

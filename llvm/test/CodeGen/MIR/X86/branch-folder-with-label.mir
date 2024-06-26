@@ -50,15 +50,15 @@
     ret i32 %a
   }
   
-  define i32 @baz(i32* %out) local_unnamed_addr !dbg !4 {
+  define i32 @baz(ptr %out) local_unnamed_addr !dbg !4 {
   entry:
-    %0 = load i32, i32* %out, align 4
+    %0 = load i32, ptr %out, align 4
     %call = tail call i32 @foo(i32 %0), !dbg !9
     %cmp = icmp slt i32 %call, 0
     br i1 %cmp, label %cleanup, label %if.then1
   
   if.then1:                                         ; preds = %entry
-    store i32 1, i32* %out, align 4
+    store i32 1, ptr %out, align 4
     br label %cleanup
   
   cleanup:                                          ; preds = %if.then1, %entry
@@ -66,11 +66,11 @@
     ret i32 %retval.0
   }
   
-  define i32 @test(%struct.bar* nocapture readonly %s) local_unnamed_addr !dbg !11 {
+  define i32 @test(ptr nocapture readonly %s) local_unnamed_addr !dbg !11 {
   entry:
     %idx = alloca i32, align 4
     call void @llvm.dbg.label(metadata !20), !dbg !21
-    %call58 = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %call58 = call i32 @baz(ptr nonnull %idx), !dbg !22
     %cmp69 = icmp slt i32 %call58, 0
     br i1 %cmp69, label %if.then, label %do.cond.lr.ph.lr.ph
   
@@ -79,7 +79,7 @@
   
   retry.loopexit:                                   ; preds = %lor.rhs
     call void @llvm.dbg.label(metadata !20), !dbg !21
-    %call5 = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %call5 = call i32 @baz(ptr nonnull %idx), !dbg !22
     %cmp6 = icmp slt i32 %call5, 0
     br i1 %cmp6, label %if.then, label %do.cond
   
@@ -88,18 +88,18 @@
     ret i32 %call.lcssa
   
   do.cond:                                          ; preds = %retry.loopexit, %do.body.backedge, %do.cond.lr.ph.lr.ph
-    %0 = load i32, i32* %idx, align 4
+    %0 = load i32, ptr %idx, align 4
     %cmp1 = icmp slt i32 %0, 0
     br i1 %cmp1, label %do.body.backedge, label %lor.rhs
   
   lor.rhs:                                          ; preds = %do.cond
-    %1 = bitcast %struct.bar* %s to i32*
-    %2 = load i32, i32* %1, align 4
+    %1 = bitcast ptr %s to ptr
+    %2 = load i32, ptr %1, align 4
     %tobool = icmp eq i32 %2, 0
     br i1 %tobool, label %do.body.backedge, label %retry.loopexit
   
   do.body.backedge:                                 ; preds = %lor.rhs, %do.cond
-    %call = call i32 @baz(i32* nonnull %idx), !dbg !22
+    %call = call i32 @baz(ptr nonnull %idx), !dbg !22
     %cmp = icmp slt i32 %call, 0
     br i1 %cmp, label %if.then, label %do.cond
   }
@@ -108,7 +108,7 @@
   declare void @llvm.dbg.label(metadata) #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { nounwind }

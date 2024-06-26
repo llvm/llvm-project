@@ -9,9 +9,11 @@ alias == func
 DecoratedFunction@4
 
 ; CHECK:      Name type: name
+; CHECK-NEXT: Export name: func
 ; CHECK-NEXT: Symbol: __imp_func
 ; CHECK-NEXT: Symbol: func
 ; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: DecoratedFunction
 ; CHECK-NEXT: Symbol: __imp_DecoratedFunction@4
 ; CHECK-NEXT: Symbol: DecoratedFunction@4
 

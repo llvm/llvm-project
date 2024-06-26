@@ -17,7 +17,7 @@
 //
 // If the library was built in c++23 mode, this test would succeed.
 //
-// Older CMake passed -std:c++latest to set C++ 20 mode on clang-cl, which
+// Older CMake passed -std:c++latest to set C++20 mode on clang-cl, which
 // hid this issue. With newer CMake versions, it passes -std:c++20 which
 // makes this fail.
 //

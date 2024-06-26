@@ -37,8 +37,7 @@ struct ARM64 : ARM64Common {
                             uint64_t entryAddr) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                            uint64_t &stubOffset, uint64_t selrefsVA,
-                            uint64_t selectorIndex,
+                            uint64_t &stubOffset, uint64_t selrefVA,
                             Symbol *objcMsgSend) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
@@ -124,8 +123,7 @@ static constexpr uint32_t objcStubsSmallCode[] = {
 };
 
 void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                                 uint64_t &stubOffset, uint64_t selrefsVA,
-                                 uint64_t selectorIndex,
+                                 uint64_t &stubOffset, uint64_t selrefVA,
                                  Symbol *objcMsgSend) const {
   uint64_t objcMsgSendAddr;
   uint64_t objcStubSize;
@@ -136,8 +134,8 @@ void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
     objcMsgSendAddr = in.got->addr;
     objcMsgSendIndex = objcMsgSend->gotIndex;
     ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
-                                     stubOffset, selrefsVA, selectorIndex,
-                                     objcMsgSendAddr, objcMsgSendIndex);
+                                     stubOffset, selrefVA, objcMsgSendAddr,
+                                     objcMsgSendIndex);
   } else {
     assert(config->objcStubsMode == ObjCStubsMode::small);
     objcStubSize = target->objcStubsSmallSize;
@@ -149,8 +147,8 @@ void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
       objcMsgSendIndex = objcMsgSend->stubsIndex;
     }
     ::writeObjCMsgSendSmallStub<LP64>(buf, objcStubsSmallCode, sym, stubsAddr,
-                                      stubOffset, selrefsVA, selectorIndex,
-                                      objcMsgSendAddr, objcMsgSendIndex);
+                                      stubOffset, selrefVA, objcMsgSendAddr,
+                                      objcMsgSendIndex);
   }
   stubOffset += objcStubSize;
 }

@@ -6,15 +6,6 @@
 // RUN:   --entry-point-result=void \
 // RUN:  | FileCheck %s
 
-// Basic PTX check to make sure we are generating the right instructions.
-
-// CHECK-PTX: mbarrier.init.shared.b64
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
-// CHECK-PTX: cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
-// CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
-// CHECK-PTX: mbarrier.try_wait.parity.shared.b64
-
 // RUN: mlir-opt %s --convert-nvgpu-to-nvvm \
 // RUN:         -gpu-kernel-outlining \
 // RUN:         -convert-nvvm-to-llvm \
@@ -96,7 +87,8 @@ module @mymod {
       } else {
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c0 : <memorySpace = #gpu.address_space<workgroup>>
       }
-      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : <memorySpace = #gpu.address_space<workgroup>>
+      %phase_c0 = arith.constant 0 : i1
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %phase_c0, %c10000000 : <memorySpace = #gpu.address_space<workgroup>>
       scf.if %10 {
         %11 = memref.load %7[%c45, %c7] : memref<64x8xf32, 3>
         %12 = memref.load %8[%c7, %c0] : memref<8x128xf32, 3>

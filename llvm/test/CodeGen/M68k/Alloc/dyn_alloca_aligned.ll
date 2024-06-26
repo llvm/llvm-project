@@ -24,6 +24,6 @@ define i32 @A(i32 %Size) {
 ; CHECK-NEXT:    unlk %a6
 ; CHECK-NEXT:    rts
   %A = alloca i8, i32 %Size, align 128
-  %A_addr = ptrtoint i8* %A to i32
+  %A_addr = ptrtoint ptr %A to i32
   ret i32 %A_addr
 }

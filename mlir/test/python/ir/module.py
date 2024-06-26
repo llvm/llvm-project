@@ -105,6 +105,10 @@ def testModuleOperation():
     assert ctx._get_live_module_count() == 1
     op1 = module.operation
     assert ctx._get_live_operation_count() == 1
+    live_ops = ctx._get_live_operation_objects()
+    assert len(live_ops) == 1
+    assert live_ops[0] is op1
+    live_ops = None
     # CHECK: module @successfulParse
     print(op1)
 

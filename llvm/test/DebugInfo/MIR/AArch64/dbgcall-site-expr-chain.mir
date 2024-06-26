@@ -20,7 +20,7 @@
 
   define dso_local i64 @foo() local_unnamed_addr !dbg !12 {
   entry:
-    %0 = load i64, i64* @global, align 8, !dbg !17
+    %0 = load i64, ptr @global, align 8, !dbg !17
     call void @llvm.dbg.value(metadata i64 %0, metadata !16, metadata !DIExpression()), !dbg !17
     %add = add nsw i64 %0, 123, !dbg !17
     %sub = add nsw i64 %0, -456, !dbg !17
@@ -105,7 +105,7 @@ body:             |
 
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location (DW_OP_reg2 W2)
-# CHECK-NEXT: DW_AT_GNU_call_site_value (DW_OP_breg19 W19+700, DW_OP_plus_uconst 0x9, DW_OP_plus_uconst 0x50)
+# CHECK-NEXT: DW_AT_GNU_call_site_value (DW_OP_breg19 W19+789)
 
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location (DW_OP_reg1 W1)
@@ -113,4 +113,4 @@ body:             |
 
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location (DW_OP_reg0 W0)
-# CHECK-NEXT: DW_AT_GNU_call_site_value (DW_OP_breg19 W19+100, DW_OP_plus_uconst 0x17)
+# CHECK-NEXT: DW_AT_GNU_call_site_value (DW_OP_breg19 W19+123)

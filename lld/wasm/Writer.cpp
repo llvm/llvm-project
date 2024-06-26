@@ -473,6 +473,7 @@ void Writer::layoutMemory() {
     WasmSym::heapEnd->setVA(memoryPtr);
   }
 
+  uint64_t maxMemory = 0;
   if (config->maxMemory != 0) {
     if (config->maxMemory != alignTo(config->maxMemory, WasmPageSize))
       error("maximum memory must be " + Twine(WasmPageSize) + "-byte aligned");
@@ -481,20 +482,23 @@ void Writer::layoutMemory() {
     if (config->maxMemory > maxMemorySetting)
       error("maximum memory too large, cannot be greater than " +
             Twine(maxMemorySetting));
+
+    maxMemory = config->maxMemory;
+  } else if (config->noGrowableMemory) {
+    maxMemory = memoryPtr;
   }
 
-  // Check max if explicitly supplied or required by shared memory
-  if (config->maxMemory != 0 || config->sharedMemory) {
-    uint64_t max = config->maxMemory;
-    if (max == 0) {
-      // If no maxMemory config was supplied but we are building with
-      // shared memory, we need to pick a sensible upper limit.
-      if (ctx.isPic)
-        max = maxMemorySetting;
-      else
-        max = memoryPtr;
-    }
-    out.memorySec->maxMemoryPages = max / WasmPageSize;
+  // If no maxMemory config was supplied but we are building with
+  // shared memory, we need to pick a sensible upper limit.
+  if (config->sharedMemory && maxMemory == 0) {
+    if (ctx.isPic)
+      maxMemory = maxMemorySetting;
+    else
+      maxMemory = memoryPtr;
+  }
+
+  if (maxMemory != 0) {
+    out.memorySec->maxMemoryPages = maxMemory / WasmPageSize;
     log("mem: max pages   = " + Twine(out.memorySec->maxMemoryPages));
   }
 }
@@ -935,6 +939,8 @@ static void finalizeIndirectFunctionTable() {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
     limits.Maximum = limits.Minimum;
   }
+  if (config->is64.value_or(false))
+    limits.Flags |= WASM_LIMITS_FLAG_IS_64;
   WasmSym::indirectFunctionTable->setLimits(limits);
 }
 
@@ -1687,12 +1693,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic) {
-    if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVA(config->tableBase);
-    if (WasmSym::definedTableBase32)
-      WasmSym::definedTableBase32->setVA(config->tableBase);
-  }
+  if (!ctx.isPic && WasmSym::definedTableBase)
+    WasmSym::definedTableBase->setVA(config->tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();

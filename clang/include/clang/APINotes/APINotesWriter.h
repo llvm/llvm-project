@@ -5,7 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+//
+// This file defines the \c APINotesWriter class that writes out source
+// API notes data providing additional information about source code as
+// a separate input, such as the non-nil/nilable annotations for
+// method parameters.
+//
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_APINOTES_WRITER_H
 #define LLVM_CLANG_APINOTES_WRITER_H
 
@@ -20,11 +26,16 @@ namespace clang {
 class FileEntry;
 
 namespace api_notes {
+
+/// A class that writes API notes data to a binary representation that can be
+/// read by the \c APINotesReader.
 class APINotesWriter {
   class Implementation;
   std::unique_ptr<Implementation> Implementation;
 
 public:
+  /// Create a new API notes writer with the given module name and
+  /// (optional) source file.
   APINotesWriter(llvm::StringRef ModuleName, const FileEntry *SF);
   ~APINotesWriter();
 

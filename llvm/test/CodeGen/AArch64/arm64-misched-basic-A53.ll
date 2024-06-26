@@ -24,55 +24,55 @@ entry:
   %i = alloca i32, align 4
   %xx = alloca i32, align 4
   %yy = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = bitcast [8 x i32]* %x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast ([8 x i32]* @main.x to i8*), i64 32, i1 false)
-  %1 = bitcast [8 x i32]* %y to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast ([8 x i32]* @main.y to i8*), i64 32, i1 false)
-  store i32 0, i32* %xx, align 4
-  store i32 0, i32* %yy, align 4
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %retval
+  %0 = bitcast ptr %x to ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @main.x, i64 32, i1 false)
+  %1 = bitcast ptr %y to ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 @main.y, i64 32, i1 false)
+  store i32 0, ptr %xx, align 4
+  store i32 0, ptr %yy, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %2 = load i32, i32* %i, align 4
+  %2 = load i32, ptr %i, align 4
   %cmp = icmp slt i32 %2, 8
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %3 = load i32, i32* %i, align 4
+  %3 = load i32, ptr %i, align 4
   %idxprom = sext i32 %3 to i64
-  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %x, i32 0, i64 %idxprom
-  %4 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [8 x i32], ptr %x, i32 0, i64 %idxprom
+  %4 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %4, 1
-  store i32 %add, i32* %xx, align 4
-  %5 = load i32, i32* %xx, align 4
+  store i32 %add, ptr %xx, align 4
+  %5 = load i32, ptr %xx, align 4
   %add1 = add nsw i32 %5, 12
-  store i32 %add1, i32* %xx, align 4
-  %6 = load i32, i32* %xx, align 4
+  store i32 %add1, ptr %xx, align 4
+  %6 = load i32, ptr %xx, align 4
   %add2 = add nsw i32 %6, 23
-  store i32 %add2, i32* %xx, align 4
-  %7 = load i32, i32* %xx, align 4
+  store i32 %add2, ptr %xx, align 4
+  %7 = load i32, ptr %xx, align 4
   %add3 = add nsw i32 %7, 34
-  store i32 %add3, i32* %xx, align 4
-  %8 = load i32, i32* %i, align 4
+  store i32 %add3, ptr %xx, align 4
+  %8 = load i32, ptr %i, align 4
   %idxprom4 = sext i32 %8 to i64
-  %arrayidx5 = getelementptr inbounds [8 x i32], [8 x i32]* %y, i32 0, i64 %idxprom4
-  %9 = load i32, i32* %arrayidx5, align 4
-  %10 = load i32, i32* %yy, align 4
+  %arrayidx5 = getelementptr inbounds [8 x i32], ptr %y, i32 0, i64 %idxprom4
+  %9 = load i32, ptr %arrayidx5, align 4
+  %10 = load i32, ptr %yy, align 4
   %mul = mul nsw i32 %10, %9
-  store i32 %mul, i32* %yy, align 4
+  store i32 %mul, ptr %yy, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %11 = load i32, i32* %i, align 4
+  %11 = load i32, ptr %i, align 4
   %inc = add nsw i32 %11, 1
-  store i32 %inc, i32* %i, align 4
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %12 = load i32, i32* %xx, align 4
-  %13 = load i32, i32* %yy, align 4
+  %12 = load i32, ptr %xx, align 4
+  %13 = load i32, ptr %yy, align 4
   %add6 = add nsw i32 %12, %13
   ret i32 %add6
 }
@@ -105,7 +105,7 @@ define <4 x float> @neon4xfloat(<4 x float> %A, <4 x float> %B) {
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }
@@ -115,14 +115,14 @@ attributes #1 = { nounwind }
 ;   [ARM64] Cortex-a53 schedule mode can't handle NEON post-increment load
 ;
 ; Nothing explicit to check other than llc not crashing.
-define { <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld2(i8* %A, i8** %ptr) {
-  %ld2 = tail call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0i8(i8* %A)
-  %tmp = getelementptr i8, i8* %A, i32 32
-  store i8* %tmp, i8** %ptr
+define { <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld2(ptr %A, ptr %ptr) {
+  %ld2 = tail call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr %A)
+  %tmp = getelementptr i8, ptr %A, i32 32
+  store ptr %tmp, ptr %ptr
   ret { <16 x i8>, <16 x i8> } %ld2
 }
 
-declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0i8(i8*)
+declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr)
 
 ; Regression Test for PR20057.
 ;
@@ -133,7 +133,7 @@ declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0i8(i8*)
 ; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: BRK
 ; CHECK: ********** INTERVALS **********
-define void @testResourceConflict(float* %ptr) {
+define void @testResourceConflict(ptr %ptr) {
 entry:
   %add1 = fadd float undef, undef
   %mul2 = fmul float undef, undef
@@ -152,22 +152,22 @@ entry:
   %mul13 = fmul float %add1, %mul9
   %mul21 = fmul float %add5, %mul11
   %add22 = fadd float %mul13, %mul21
-  store float %add22, float* %ptr, align 4
+  store float %add22, ptr %ptr, align 4
   %mul28 = fmul float %add1, %mul10
   %mul33 = fmul float %add5, %mul12
   %add34 = fadd float %mul33, %mul28
-  store float %add34, float* %ptr, align 4
+  store float %add34, ptr %ptr, align 4
   %mul240 = fmul float undef, %mul9
   %add246 = fadd float %mul240, undef
-  store float %add246, float* %ptr, align 4
+  store float %add246, ptr %ptr, align 4
   %mul52 = fmul float undef, %mul10
   %mul57 = fmul float undef, %mul12
   %add58 = fadd float %mul57, %mul52
-  store float %add58, float* %ptr, align 4
+  store float %add58, ptr %ptr, align 4
   %mul27 = fmul float 0.000000e+00, %mul9
   %mul81 = fmul float undef, %mul10
   %add82 = fadd float %mul27, %mul81
-  store float %add82, float* %ptr, align 4
+  store float %add82, ptr %ptr, align 4
   call void @llvm.trap()
   unreachable
 }
@@ -187,18 +187,18 @@ entry:
   br label %loop
 
 loop:
-  %0 = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0i8(i8* null)
-  %ptr = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> %v, <2 x i64>* %ptr, align 4
-  %ptr1 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> %v, <2 x i64>* %ptr1, align 4
-  %ptr2 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> %v, <2 x i64>* %ptr2, align 4
-  %ptr3 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> %v, <2 x i64>* %ptr3, align 4
-  %ptr4 = bitcast i8* undef to <2 x i64>*
-  store <2 x i64> %v, <2 x i64>* %ptr4, align 4
+  %0 = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0(ptr null)
+  %ptr = bitcast ptr undef to ptr
+  store <2 x i64> %v, ptr %ptr, align 4
+  %ptr1 = bitcast ptr undef to ptr
+  store <2 x i64> %v, ptr %ptr1, align 4
+  %ptr2 = bitcast ptr undef to ptr
+  store <2 x i64> %v, ptr %ptr2, align 4
+  %ptr3 = bitcast ptr undef to ptr
+  store <2 x i64> %v, ptr %ptr3, align 4
+  %ptr4 = bitcast ptr undef to ptr
+  store <2 x i64> %v, ptr %ptr4, align 4
   br label %loop
 }
 
-declare { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0i8(i8*)
+declare { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4.v2i64.p0(ptr)

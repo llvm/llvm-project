@@ -5,7 +5,7 @@
 define void @foo(i16 %a) {
   ; CHECK: error: invalid operand in inline asm: 'jl ${0:l}'
   %i.addr = alloca i32, align 4
-  call void asm sideeffect "jl ${0:l}", "*m"(i32* elementtype(i32) %i.addr)
+  call void asm sideeffect "jl ${0:l}", "*m"(ptr elementtype(i32) %i.addr)
 
   ret void
 }

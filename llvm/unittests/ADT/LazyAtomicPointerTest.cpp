@@ -18,7 +18,7 @@ namespace {
 TEST(LazyAtomicPointer, loadOrGenerate) {
   int Value = 0;
   LazyAtomicPointer<int> Ptr;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
   for (unsigned I = 0; I < 4; ++I)
     Threads.async([&]() {
       Ptr.loadOrGenerate([&]() {
@@ -38,7 +38,7 @@ TEST(LazyAtomicPointer, loadOrGenerate) {
 TEST(LazyAtomicPointer, BusyState) {
   int Value = 0;
   LazyAtomicPointer<int> Ptr;
-  ThreadPool Threads;
+  DefaultThreadPool Threads;
 
   std::mutex BusyLock, EndLock;
   std::condition_variable Busy, End;

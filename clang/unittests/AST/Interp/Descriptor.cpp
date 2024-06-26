@@ -22,9 +22,10 @@ TEST(Descriptor, Primitives) {
       "  char s[4];\n"
       "  A a[3];\n"
       "  short l[3][3];\n"
+      "  int EmptyA[0];\n"
       "};\n"
       "constexpr S d = {0.0, \"foo\", {{true, false}, {false, true}, {false, false}},\n"
-      "  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}};\n";
+      "  {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, {}};\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
@@ -52,7 +53,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_FALSE(GlobalDesc->asRecordDecl());
 
   // Still true because this is a global variable.
-  ASSERT_TRUE(GlobalDesc->getMetadataSize() == 0);
+  ASSERT_TRUE(GlobalDesc->getMetadataSize() == sizeof(GlobalInlineDescriptor));
   ASSERT_FALSE(GlobalDesc->isPrimitiveArray());
   ASSERT_FALSE(GlobalDesc->isCompositeArray());
   ASSERT_FALSE(GlobalDesc->isZeroSizeArray());
@@ -64,7 +65,7 @@ TEST(Descriptor, Primitives) {
   // Test the Record for the struct S.
   const Record *SRecord = GlobalDesc->ElemRecord;
   ASSERT_TRUE(SRecord);
-  ASSERT_TRUE(SRecord->getNumFields() == 4);
+  ASSERT_TRUE(SRecord->getNumFields() == 5);
   ASSERT_TRUE(SRecord->getNumBases() == 0);
   ASSERT_FALSE(SRecord->getDestructor());
 
@@ -113,8 +114,18 @@ TEST(Descriptor, Primitives) {
   ASSERT_TRUE(F4->Desc->getElemSize() > 0);
   ASSERT_TRUE(F4->Desc->ElemDesc->isPrimitiveArray());
 
+  // Fifth field. Zero-size array.
+  const Record::Field *F5 = SRecord->getField(4u);
+  ASSERT_TRUE(F5);
+  ASSERT_FALSE(F5->isBitField());
+  ASSERT_TRUE(F5->Desc->isArray());
+  ASSERT_FALSE(F5->Desc->isCompositeArray());
+  ASSERT_TRUE(F5->Desc->isPrimitiveArray());
+  ASSERT_FALSE(F5->Desc->isPrimitive());
+  ASSERT_EQ(F5->Desc->getNumElems(), 0u);
+
   // Check pointer stuff.
-  // Global variables have no inline descriptor (yet).
+  // Global variables have an inline descriptor.
   ASSERT_TRUE(GlobalPtr.isRoot());
   ASSERT_TRUE(GlobalPtr.isLive());
   ASSERT_FALSE(GlobalPtr.isZero());
@@ -381,5 +392,14 @@ TEST(Descriptor, Primitives) {
     ASSERT_EQ(PE3.deref<short>(), 9);
     ASSERT_EQ(PE3.getArray(), NE3);
     ASSERT_EQ(PE3.getIndex(), 2u);
+  }
+
+  // Zero-size array.
+  {
+    const Pointer &PF5 = GlobalPtr.atField(F5->Offset);
+
+    ASSERT_TRUE(PF5.isZeroSizeArray());
+    ASSERT_FALSE(PF5.isOnePastEnd());
+    ASSERT_FALSE(PF5.isElementPastEnd());
   }
 }

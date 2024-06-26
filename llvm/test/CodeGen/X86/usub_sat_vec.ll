@@ -1093,22 +1093,56 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 }
 
 define void @PR48223(ptr %p0) {
-; SSE-LABEL: PR48223:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE-NEXT:    movdqa 48(%rdi), %xmm3
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
-; SSE-NEXT:    psubusw %xmm4, %xmm1
-; SSE-NEXT:    psubusw %xmm4, %xmm0
-; SSE-NEXT:    psubusw %xmm4, %xmm3
-; SSE-NEXT:    psubusw %xmm4, %xmm2
-; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
-; SSE-NEXT:    movdqa %xmm3, 48(%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: PR48223:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa (%rdi), %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE2-NEXT:    psubusw %xmm4, %xmm1
+; SSE2-NEXT:    psubusw %xmm4, %xmm0
+; SSE2-NEXT:    psubusw %xmm4, %xmm3
+; SSE2-NEXT:    psubusw %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE2-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdi)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR48223:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa (%rdi), %xmm0
+; SSSE3-NEXT:    movdqa 16(%rdi), %xmm1
+; SSSE3-NEXT:    movdqa 32(%rdi), %xmm2
+; SSSE3-NEXT:    movdqa 48(%rdi), %xmm3
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSSE3-NEXT:    psubusw %xmm4, %xmm1
+; SSSE3-NEXT:    psubusw %xmm4, %xmm0
+; SSSE3-NEXT:    psubusw %xmm4, %xmm3
+; SSSE3-NEXT:    psubusw %xmm4, %xmm2
+; SSSE3-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSSE3-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSSE3-NEXT:    movdqa %xmm0, (%rdi)
+; SSSE3-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR48223:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa (%rdi), %xmm0
+; SSE41-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqa 32(%rdi), %xmm2
+; SSE41-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [64,64,64,64,64,64,64,64]
+; SSE41-NEXT:    psubusw %xmm4, %xmm1
+; SSE41-NEXT:    psubusw %xmm4, %xmm0
+; SSE41-NEXT:    psubusw %xmm4, %xmm3
+; SSE41-NEXT:    psubusw %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE41-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE41-NEXT:    movdqa %xmm0, (%rdi)
+; SSE41-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR48223:
 ; AVX1:       # %bb.0:

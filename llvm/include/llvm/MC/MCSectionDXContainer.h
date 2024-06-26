@@ -24,11 +24,11 @@ class MCSectionDXContainer final : public MCSection {
   friend class MCContext;
 
   MCSectionDXContainer(StringRef Name, SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_DXContainer, Name, K, Begin) {}
+      : MCSection(SV_DXContainer, Name, K.isText(), Begin) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &, const Triple &, raw_ostream &,
-                            const MCExpr *) const override;
+                            uint32_t) const override;
   bool useCodeAlign() const override { return false; }
   bool isVirtualSection() const override { return false; }
 };

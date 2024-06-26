@@ -102,7 +102,7 @@ def truncstorei16_addrspace : PatFrag<(ops node:$val, node:$ptr),
 // GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
 def : Pat <
   (truncstore GPR32:$src0, GPR32:$src1),
   (inst_c GPR32:$src0, GPR32:$src1)

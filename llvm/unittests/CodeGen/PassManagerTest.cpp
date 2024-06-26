@@ -5,13 +5,18 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// Test that the various MachineFunction pass managers, adaptors, analyses, and
+// analysis managers work.
+//===----------------------------------------------------------------------===//
 
+#include "llvm/IR/PassManager.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -34,14 +39,9 @@ public:
     int InstructionCount;
   };
 
-  /// Run the analysis pass over the function and return a result.
+  /// The number of instructions in the Function.
   Result run(Function &F, FunctionAnalysisManager &AM) {
-    int Count = 0;
-    for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE; ++BBI)
-      for (BasicBlock::iterator II = BBI->begin(), IE = BBI->end(); II != IE;
-           ++II)
-        ++Count;
-    return Result(Count);
+    return Result(F.getInstructionCount());
   }
 
 private:
@@ -59,13 +59,12 @@ public:
     int InstructionCount;
   };
 
-  /// Run the analysis pass over the machine function and return a result.
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager::Base &AM) {
-    auto &MFAM = static_cast<MachineFunctionAnalysisManager &>(AM);
-    // Query function analysis result.
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &AM) {
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+            .getManager();
     TestFunctionAnalysis::Result &FAR =
-        MFAM.getResult<TestFunctionAnalysis>(MF.getFunction());
-    // + 5
+        FAM.getResult<TestFunctionAnalysis>(MF.getFunction());
     return FAR.InstructionCount;
   }
 
@@ -76,89 +75,63 @@ private:
 
 AnalysisKey TestMachineFunctionAnalysis::Key;
 
-const std::string DoInitErrMsg = "doInitialization failed";
-const std::string DoFinalErrMsg = "doFinalization failed";
-
 struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
-  TestMachineFunctionPass(int &Count, std::vector<int> &BeforeInitialization,
-                          std::vector<int> &BeforeFinalization,
-                          std::vector<int> &MachineFunctionPassCount)
-      : Count(Count), BeforeInitialization(BeforeInitialization),
-        BeforeFinalization(BeforeFinalization),
-        MachineFunctionPassCount(MachineFunctionPassCount) {}
-
-  Error doInitialization(Module &M, MachineFunctionAnalysisManager &MFAM) {
-    // Force doInitialization fail by starting with big `Count`.
-    if (Count > 10000)
-      return make_error<StringError>(DoInitErrMsg, inconvertibleErrorCode());
-
-    // + 1
-    ++Count;
-    BeforeInitialization.push_back(Count);
-    return Error::success();
-  }
-  Error doFinalization(Module &M, MachineFunctionAnalysisManager &MFAM) {
-    // Force doFinalization fail by starting with big `Count`.
-    if (Count > 1000)
-      return make_error<StringError>(DoFinalErrMsg, inconvertibleErrorCode());
-
-    // + 1
-    ++Count;
-    BeforeFinalization.push_back(Count);
-    return Error::success();
-  }
+  TestMachineFunctionPass(int &Count, std::vector<int> &Counts)
+      : Count(Count), Counts(Counts) {}
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-    // Query function analysis result.
+    FunctionAnalysisManager &FAM =
+        MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+            .getManager();
     TestFunctionAnalysis::Result &FAR =
-        MFAM.getResult<TestFunctionAnalysis>(MF.getFunction());
-    // 3 + 1 + 1 = 5
+        FAM.getResult<TestFunctionAnalysis>(MF.getFunction());
     Count += FAR.InstructionCount;
 
-    // Query module analysis result.
-    MachineModuleInfo &MMI =
-        MFAM.getResult<MachineModuleAnalysis>(*MF.getFunction().getParent());
-    // 1 + 1 + 1 = 3
-    Count += (MMI.getModule() == MF.getFunction().getParent());
-
-    // Query machine function analysis result.
     TestMachineFunctionAnalysis::Result &MFAR =
         MFAM.getResult<TestMachineFunctionAnalysis>(MF);
-    // 3 + 1 + 1 = 5
     Count += MFAR.InstructionCount;
 
-    MachineFunctionPassCount.push_back(Count);
+    Counts.push_back(Count);
 
     return PreservedAnalyses::none();
   }
 
   int &Count;
-  std::vector<int> &BeforeInitialization;
-  std::vector<int> &BeforeFinalization;
-  std::vector<int> &MachineFunctionPassCount;
+  std::vector<int> &Counts;
 };
 
 struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
-  TestMachineModulePass(int &Count, std::vector<int> &MachineModulePassCount)
-      : Count(Count), MachineModulePassCount(MachineModulePassCount) {}
+  TestMachineModulePass(int &Count, std::vector<int> &Counts)
+      : Count(Count), Counts(Counts) {}
 
-  Error run(Module &M, MachineFunctionAnalysisManager &MFAM) {
-    MachineModuleInfo &MMI = MFAM.getResult<MachineModuleAnalysis>(M);
-    // + 1
-    Count += (MMI.getModule() == &M);
-    MachineModulePassCount.push_back(Count);
-    return Error::success();
-  }
-
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &AM) {
-    llvm_unreachable(
-        "This should never be reached because this is machine module pass");
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
+    FunctionAnalysisManager &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    MachineFunctionAnalysisManager &MFAM =
+        MAM.getResult<MachineFunctionAnalysisManagerModuleProxy>(M)
+            .getManager();
+    for (Function &F : M) {
+      MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
+      Count += FAM.getResult<TestFunctionAnalysis>(F).InstructionCount;
+      Count += MFAM.getResult<TestMachineFunctionAnalysis>(MF).InstructionCount;
+    }
+    Counts.push_back(Count);
+    return PreservedAnalyses::all();
   }
 
   int &Count;
-  std::vector<int> &MachineModulePassCount;
+  std::vector<int> &Counts;
+};
+
+struct ReportWarningPass : public PassInfoMixin<ReportWarningPass> {
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+    auto &Ctx = MF.getContext();
+    Ctx.reportWarning(SMLoc(), "Test warning message.");
+    return PreservedAnalyses::all();
+  }
 };
 
 std::unique_ptr<Module> parseIR(LLVMContext &Context, const char *IR) {
@@ -209,102 +182,86 @@ TEST_F(PassManagerTest, Basic) {
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
+  MachineModuleInfo MMI(LLVMTM);
+
+  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   PassBuilder PB(TM.get());
   PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
   FAM.registerPass([&] { return TestFunctionAnalysis(); });
-  FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-  MAM.registerPass([&] { return MachineModuleAnalysis(LLVMTM); });
-  MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-
-  MachineFunctionAnalysisManager MFAM;
-  {
-    // Test move assignment.
-    MachineFunctionAnalysisManager NestedMFAM(FAM, MAM);
-    NestedMFAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-    NestedMFAM.registerPass([&] { return TestMachineFunctionAnalysis(); });
-    MFAM = std::move(NestedMFAM);
-  }
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+  MFAM.registerPass([&] { return TestMachineFunctionAnalysis(); });
 
   int Count = 0;
-  std::vector<int> BeforeInitialization[2];
-  std::vector<int> BeforeFinalization[2];
-  std::vector<int> TestMachineFunctionCount[2];
-  std::vector<int> TestMachineModuleCount[2];
+  std::vector<int> Counts;
 
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
-  {
-    // Test move assignment.
-    MachineFunctionPassManager NestedMFPM;
-    NestedMFPM.addPass(TestMachineModulePass(Count, TestMachineModuleCount[0]));
-    NestedMFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[0],
-                                               BeforeFinalization[0],
-                                               TestMachineFunctionCount[0]));
-    NestedMFPM.addPass(TestMachineModulePass(Count, TestMachineModuleCount[1]));
-    NestedMFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[1],
-                                               BeforeFinalization[1],
-                                               TestMachineFunctionCount[1]));
-    MFPM = std::move(NestedMFPM);
-  }
+  MPM.addPass(TestMachineModulePass(Count, Counts));
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(
+      TestMachineFunctionPass(Count, Counts)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.addPass(TestMachineModulePass(Count, Counts));
+  MFPM.addPass(TestMachineFunctionPass(Count, Counts));
+  FPM = FunctionPassManager();
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-  ASSERT_FALSE(errorToBool(MFPM.run(*M, MFAM)));
+  testing::internal::CaptureStderr();
+  MPM.run(*M, MAM);
+  std::string Output = testing::internal::GetCapturedStderr();
 
-  // Check first machine module pass
-  EXPECT_EQ(1u, TestMachineModuleCount[0].size());
-  EXPECT_EQ(3, TestMachineModuleCount[0][0]);
+  EXPECT_EQ((std::vector<int>{10, 16, 18, 20, 30, 36, 38, 40}), Counts);
+  EXPECT_EQ(40, Count);
+}
 
-  // Check first machine function pass
-  EXPECT_EQ(1u, BeforeInitialization[0].size());
-  EXPECT_EQ(1, BeforeInitialization[0][0]);
-  EXPECT_EQ(3u, TestMachineFunctionCount[0].size());
-  EXPECT_EQ(10, TestMachineFunctionCount[0][0]);
-  EXPECT_EQ(13, TestMachineFunctionCount[0][1]);
-  EXPECT_EQ(16, TestMachineFunctionCount[0][2]);
-  EXPECT_EQ(1u, BeforeFinalization[0].size());
-  EXPECT_EQ(31, BeforeFinalization[0][0]);
+TEST_F(PassManagerTest, DiagnosticHandler) {
+  if (!TM)
+    GTEST_SKIP();
 
-  // Check second machine module pass
-  EXPECT_EQ(1u, TestMachineModuleCount[1].size());
-  EXPECT_EQ(17, TestMachineModuleCount[1][0]);
+  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
+  M->setDataLayout(TM->createDataLayout());
 
-  // Check second machine function pass
-  EXPECT_EQ(1u, BeforeInitialization[1].size());
-  EXPECT_EQ(2, BeforeInitialization[1][0]);
-  EXPECT_EQ(3u, TestMachineFunctionCount[1].size());
-  EXPECT_EQ(24, TestMachineFunctionCount[1][0]);
-  EXPECT_EQ(27, TestMachineFunctionCount[1][1]);
-  EXPECT_EQ(30, TestMachineFunctionCount[1][2]);
-  EXPECT_EQ(1u, BeforeFinalization[1].size());
-  EXPECT_EQ(32, BeforeFinalization[1][0]);
+  MachineModuleInfo MMI(LLVMTM);
 
-  EXPECT_EQ(32, Count);
+  LoopAnalysisManager LAM;
+  MachineFunctionAnalysisManager MFAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB(TM.get());
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
-  // doInitialization returns error
-  Count = 10000;
-  MFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[1],
-                                       BeforeFinalization[1],
-                                       TestMachineFunctionCount[1]));
-  std::string Message;
-  llvm::handleAllErrors(MFPM.run(*M, MFAM), [&](llvm::StringError &Error) {
-    Message = Error.getMessage();
-  });
-  EXPECT_EQ(Message, DoInitErrMsg);
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  // doFinalization returns error
-  Count = 1000;
-  MFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[1],
-                                       BeforeFinalization[1],
-                                       TestMachineFunctionCount[1]));
-  llvm::handleAllErrors(MFPM.run(*M, MFAM), [&](llvm::StringError &Error) {
-    Message = Error.getMessage();
-  });
-  EXPECT_EQ(Message, DoFinalErrMsg);
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
+  MachineFunctionPassManager MFPM;
+  MPM.addPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
+  MFPM.addPass(ReportWarningPass());
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  testing::internal::CaptureStderr();
+  MPM.run(*M, MAM);
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  EXPECT_TRUE(Output.find("warning: <unknown>:0: Test warning message.") !=
+              std::string::npos);
 }
 
 } // namespace

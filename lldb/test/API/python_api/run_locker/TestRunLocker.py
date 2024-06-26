@@ -15,6 +15,8 @@ class TestRunLocker(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"])
+    # Is flaky on Linux AArch64 buildbot.
+    @skipIf(oslist=["linux"], archs=["aarch64"])
     def test_run_locker(self):
         """Test that the run locker is set correctly when we launch"""
         self.build()
@@ -83,6 +85,13 @@ class TestRunLocker(TestBase):
         # you aren't supposed to do while running, and that we get some
         # actual error:
         val = target.EvaluateExpression("SomethingToCall()")
+        # There was a bug [#93313] in the printing that would cause repr to crash, so I'm
+        # testing that separately.
+        self.assertIn(
+            "can't evaluate expressions when the process is running",
+            repr(val),
+            "repr works"
+        )
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")
         self.assertIn(

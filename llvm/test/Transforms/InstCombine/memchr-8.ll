@@ -15,10 +15,10 @@ declare ptr @memrchr(ptr, i32, i64)
 
 define ptr @call_a_pi32max_p1() {
 ; CHECK-LABEL: @call_a_pi32max_p1(
-; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(2147483647) getelementptr inbounds (<{ i8, [4294967295 x i8] }>, ptr @a, i64 0, i32 1, i64 2147483647), i32 0, i64 2147483647)
+; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(2147483647) getelementptr inbounds (i8, ptr @a, i64 2147483648), i32 0, i64 2147483647)
 ; CHECK-NEXT:    ret ptr [[CHR]]
 ;
-  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, <{ i8, [4294967295 x i8] }>* @a, i32 0, i32 1, i32 2147483647
+  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, ptr @a, i32 0, i32 1, i32 2147483647
   %chr = tail call ptr @memrchr(ptr %ptr, i32 0, i64 2147483647)
   ret ptr %chr
 }
@@ -28,10 +28,10 @@ define ptr @call_a_pi32max_p1() {
 
 define ptr @call_a_pi32max() {
 ; CHECK-LABEL: @call_a_pi32max(
-; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(2147483647) getelementptr inbounds (<{ i8, [4294967295 x i8] }>, ptr @a, i64 0, i32 1, i64 2147483648), i32 0, i64 2147483647)
+; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(2147483647) getelementptr inbounds (i8, ptr @a, i64 2147483649), i32 0, i64 2147483647)
 ; CHECK-NEXT:    ret ptr [[CHR]]
 ;
-  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, <{ i8, [4294967295 x i8] }>* @a, i32 0, i32 1, i64 2147483648
+  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, ptr @a, i32 0, i32 1, i64 2147483648
   %chr = tail call ptr @memrchr(ptr %ptr, i32 0, i64 2147483647)
   ret ptr %chr
 }
@@ -42,10 +42,10 @@ define ptr @call_a_pi32max() {
 
 define ptr @call_a_pui32max() {
 ; CHECK-LABEL: @call_a_pui32max(
-; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(4294967295) getelementptr inbounds (<{ i8, [4294967295 x i8] }>, ptr @a, i64 0, i32 1, i64 0), i32 0, i64 4294967295)
+; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(4294967295) getelementptr inbounds (i8, ptr @a, i64 1), i32 0, i64 4294967295)
 ; CHECK-NEXT:    ret ptr [[CHR]]
 ;
-  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, <{ i8, [4294967295 x i8] }>* @a, i32 0, i32 1, i32 0
+  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, ptr @a, i32 0, i32 1, i32 0
   %chr = tail call ptr @memrchr(ptr %ptr, i32 0, i64 4294967295)
   ret ptr %chr
 }
@@ -57,7 +57,7 @@ define ptr @call_a_puimax_p1() {
 ; CHECK-NEXT:    [[CHR:%.*]] = tail call ptr @memrchr(ptr noundef nonnull dereferenceable(4294967296) @a, i32 0, i64 4294967296)
 ; CHECK-NEXT:    ret ptr [[CHR]]
 ;
-  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, <{ i8, [4294967295 x i8] }>* @a, i32 0, i32 0
+  %ptr = getelementptr <{ i8, [4294967295 x i8] }>, ptr @a, i32 0, i32 0
   %chr = tail call ptr @memrchr(ptr %ptr, i32 0, i64 4294967296)
   ret ptr %chr
 }

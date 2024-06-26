@@ -13,8 +13,10 @@ def WriteShiftImm   : SchedWrite;    // 32 or 64-bit shift by immediate operatio
 def WriteShiftImm32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
 def WriteShiftReg   : SchedWrite;    // 32 or 64-bit shift by immediate operations
 def WriteShiftReg32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
-def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide and remainder
-def WriteIDiv32     : SchedWrite;    // 32-bit divide and remainder on RV64I
+def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide
+def WriteIDiv32     : SchedWrite;    // 32-bit divide on RV64I
+def WriteIRem       : SchedWrite;    // 32-bit or 64-bit remainder
+def WriteIRem32     : SchedWrite;    // 32-bit remainder on RV64I
 def WriteIMul       : SchedWrite;    // 32-bit or 64-bit multiply
 def WriteIMul32     : SchedWrite;    // 32-bit multiply on RV64I
 def WriteJmp        : SchedWrite;    // Jump
@@ -30,6 +32,8 @@ def WriteSTB        : SchedWrite;    // Store byte
 def WriteSTH        : SchedWrite;    // Store half-word
 def WriteSTW        : SchedWrite;    // Store word
 def WriteSTD        : SchedWrite;    // Store double-word
+def WriteAtomicB    : SchedWrite;    //Atomic memory operation byte size
+def WriteAtomicH    : SchedWrite;    //Atomic memory operation halfword size
 def WriteAtomicW    : SchedWrite;    //Atomic memory operation word size
 def WriteAtomicD    : SchedWrite;    //Atomic memory operation double word size
 def WriteAtomicLDW  : SchedWrite;    // Atomic load word
@@ -133,8 +137,14 @@ def ReadShiftReg    : SchedRead;
 def ReadShiftReg32  : SchedRead;    // 32-bit shift by register operations on RV64Ix
 def ReadIDiv        : SchedRead;
 def ReadIDiv32      : SchedRead;
+def ReadIRem        : SchedRead;
+def ReadIRem32      : SchedRead;
 def ReadIMul        : SchedRead;
 def ReadIMul32      : SchedRead;
+def ReadAtomicBA    : SchedRead;
+def ReadAtomicBD    : SchedRead;
+def ReadAtomicHA    : SchedRead;
+def ReadAtomicHD    : SchedRead;
 def ReadAtomicWA    : SchedRead;
 def ReadAtomicWD    : SchedRead;
 def ReadAtomicDA    : SchedRead;
@@ -247,6 +257,90 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 } // Unsupported = true
 }
 
+multiclass UnsupportedSchedF {
+let Unsupported = true in {
+def : WriteRes<WriteFST32, []>;
+def : WriteRes<WriteFLD32, []>;
+def : WriteRes<WriteFAdd32, []>;
+def : WriteRes<WriteFSGNJ32, []>;
+def : WriteRes<WriteFMinMax32, []>;
+def : WriteRes<WriteFCvtI32ToF32, []>;
+def : WriteRes<WriteFCvtI64ToF32, []>;
+def : WriteRes<WriteFCvtF32ToI32, []>;
+def : WriteRes<WriteFCvtF32ToI64, []>;
+def : WriteRes<WriteFClass32, []>;
+def : WriteRes<WriteFCmp32, []>;
+def : WriteRes<WriteFMovF32ToI32, []>;
+def : WriteRes<WriteFMovI32ToF32, []>;
+def : WriteRes<WriteFMul32, []>;
+def : WriteRes<WriteFMA32, []>;
+def : WriteRes<WriteFDiv32, []>;
+def : WriteRes<WriteFSqrt32, []>;
+
+def : ReadAdvance<ReadFAdd32, 0>;
+def : ReadAdvance<ReadFMul32, 0>;
+def : ReadAdvance<ReadFMA32, 0>;
+def : ReadAdvance<ReadFMA32Addend, 0>;
+def : ReadAdvance<ReadFDiv32, 0>;
+def : ReadAdvance<ReadFSqrt32, 0>;
+def : ReadAdvance<ReadFCmp32, 0>;
+def : ReadAdvance<ReadFSGNJ32, 0>;
+def : ReadAdvance<ReadFMinMax32, 0>;
+def : ReadAdvance<ReadFCvtF32ToI32, 0>;
+def : ReadAdvance<ReadFCvtF32ToI64, 0>;
+def : ReadAdvance<ReadFCvtI32ToF32, 0>;
+def : ReadAdvance<ReadFCvtI64ToF32, 0>;
+def : ReadAdvance<ReadFMovF32ToI32, 0>;
+def : ReadAdvance<ReadFMovI32ToF32, 0>;
+def : ReadAdvance<ReadFClass32, 0>;
+def : ReadAdvance<ReadFStoreData, 0>;
+def : ReadAdvance<ReadFMemBase, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedD {
+let Unsupported = true in {
+def : WriteRes<WriteFST64, []>;
+def : WriteRes<WriteFLD64, []>;
+def : WriteRes<WriteFAdd64, []>;
+def : WriteRes<WriteFSGNJ64, []>;
+def : WriteRes<WriteFMinMax64, []>;
+def : WriteRes<WriteFCvtI32ToF64, []>;
+def : WriteRes<WriteFCvtI64ToF64, []>;
+def : WriteRes<WriteFCvtF64ToI32, []>;
+def : WriteRes<WriteFCvtF64ToI64, []>;
+def : WriteRes<WriteFCvtF32ToF64, []>;
+def : WriteRes<WriteFCvtF64ToF32, []>;
+def : WriteRes<WriteFClass64, []>;
+def : WriteRes<WriteFCmp64, []>;
+def : WriteRes<WriteFMovF64ToI64, []>;
+def : WriteRes<WriteFMovI64ToF64, []>;
+def : WriteRes<WriteFMul64, []>;
+def : WriteRes<WriteFMA64, []>;
+def : WriteRes<WriteFDiv64, []>;
+def : WriteRes<WriteFSqrt64, []>;
+
+def : ReadAdvance<ReadFAdd64, 0>;
+def : ReadAdvance<ReadFMul64, 0>;
+def : ReadAdvance<ReadFMA64, 0>;
+def : ReadAdvance<ReadFMA64Addend, 0>;
+def : ReadAdvance<ReadFDiv64, 0>;
+def : ReadAdvance<ReadFSqrt64, 0>;
+def : ReadAdvance<ReadFCmp64, 0>;
+def : ReadAdvance<ReadFSGNJ64, 0>;
+def : ReadAdvance<ReadFMinMax64, 0>;
+def : ReadAdvance<ReadFCvtF64ToI32, 0>;
+def : ReadAdvance<ReadFCvtF64ToI64, 0>;
+def : ReadAdvance<ReadFCvtI32ToF64, 0>;
+def : ReadAdvance<ReadFCvtI64ToF64, 0>;
+def : ReadAdvance<ReadFCvtF32ToF64, 0>;
+def : ReadAdvance<ReadFCvtF64ToF32, 0>;
+def : ReadAdvance<ReadFMovF64ToI64, 0>;
+def : ReadAdvance<ReadFMovI64ToF64, 0>;
+def : ReadAdvance<ReadFClass64, 0>;
+} // Unsupported = true
+}
+
 multiclass UnsupportedSchedSFB {
 let Unsupported = true in {
 def : WriteRes<WriteSFB, []>;
@@ -271,6 +365,40 @@ def : ReadAdvance<ReadFRoundF16, 0>;
 } // Unsupported = true
 }
 
+multiclass UnsupportedSchedZabha {
+let Unsupported = true in {
+def : WriteRes<WriteAtomicB, []>;
+def : WriteRes<WriteAtomicH, []>;
+
+def : ReadAdvance<ReadAtomicBA, 0>;
+def : ReadAdvance<ReadAtomicBD, 0>;
+def : ReadAdvance<ReadAtomicHA, 0>;
+def : ReadAdvance<ReadAtomicHD, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedA {
+let Unsupported = true in {
+def : WriteRes<WriteAtomicW, []>;
+def : WriteRes<WriteAtomicD, []>;
+def : WriteRes<WriteAtomicLDW, []>;
+def : WriteRes<WriteAtomicLDD, []>;
+def : WriteRes<WriteAtomicSTW, []>;
+def : WriteRes<WriteAtomicSTD, []>;
+
+def : ReadAdvance<ReadAtomicWA, 0>;
+def : ReadAdvance<ReadAtomicWD, 0>;
+def : ReadAdvance<ReadAtomicDA, 0>;
+def : ReadAdvance<ReadAtomicDD, 0>;
+def : ReadAdvance<ReadAtomicLDW, 0>;
+def : ReadAdvance<ReadAtomicLDD, 0>;
+def : ReadAdvance<ReadAtomicSTW, 0>;
+def : ReadAdvance<ReadAtomicSTD, 0>;
+} // Unsupported = true
+}
+
 // Include the scheduler resources for other instruction extensions.
 include "RISCVScheduleZb.td"
 include "RISCVScheduleV.td"
+include "RISCVScheduleXSf.td"
+include "RISCVScheduleZvk.td"

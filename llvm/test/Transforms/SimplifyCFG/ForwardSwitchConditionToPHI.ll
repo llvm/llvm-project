@@ -2,22 +2,16 @@
 ; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -forward-switch-cond=false -switch-range-to-icmp -S | FileCheck %s --check-prefix=NO_FWD
 ; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -forward-switch-cond=true  -switch-range-to-icmp -S | FileCheck %s --check-prefix=FWD
 
-; RUN: opt < %s -passes='simplifycfg<no-forward-switch-cond;switch-range-to-icmp>' -S | FileCheck %s --check-prefix=NO_FWD
-; RUN: opt < %s -passes='simplifycfg<forward-switch-cond;switch-range-to-icmp>' -S | FileCheck %s --check-prefix=FWD
-
 ; PR10131
 
-target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32"
-target triple = "i386-pc-linux-gnu"
-
-define i32 @t(i32 %m) nounwind readnone {
-; NO_FWD-LABEL: @t(
+define i32 @forward_multiple(i32 %m) {
+; NO_FWD-LABEL: @forward_multiple(
 ; NO_FWD-NEXT:  entry:
 ; NO_FWD-NEXT:    switch i32 [[M:%.*]], label [[SW_BB4:%.*]] [
-; NO_FWD-NEXT:    i32 0, label [[RETURN:%.*]]
-; NO_FWD-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; NO_FWD-NEXT:    i32 2, label [[SW_BB2:%.*]]
-; NO_FWD-NEXT:    i32 3, label [[SW_BB3:%.*]]
+; NO_FWD-NEXT:      i32 0, label [[RETURN:%.*]]
+; NO_FWD-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; NO_FWD-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; NO_FWD-NEXT:      i32 3, label [[SW_BB3:%.*]]
 ; NO_FWD-NEXT:    ]
 ; NO_FWD:       sw.bb1:
 ; NO_FWD-NEXT:    br label [[RETURN]]
@@ -31,7 +25,7 @@ define i32 @t(i32 %m) nounwind readnone {
 ; NO_FWD-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 4, [[SW_BB4]] ], [ 3, [[SW_BB3]] ], [ 2, [[SW_BB2]] ], [ 1, [[SW_BB1]] ], [ 0, [[ENTRY:%.*]] ]
 ; NO_FWD-NEXT:    ret i32 [[RETVAL_0]]
 ;
-; FWD-LABEL: @t(
+; FWD-LABEL: @forward_multiple(
 ; FWD-NEXT:  entry:
 ; FWD-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[M:%.*]], 4
 ; FWD-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[SWITCH]], i32 [[M]], i32 4
@@ -73,9 +67,9 @@ define i32 @PR34471(i32 %x) {
 ; NO_FWD-LABEL: @PR34471(
 ; NO_FWD-NEXT:  entry:
 ; NO_FWD-NEXT:    switch i32 [[X:%.*]], label [[ELSE3:%.*]] [
-; NO_FWD-NEXT:    i32 17, label [[RETURN:%.*]]
-; NO_FWD-NEXT:    i32 19, label [[IF19:%.*]]
-; NO_FWD-NEXT:    i32 42, label [[IF42:%.*]]
+; NO_FWD-NEXT:      i32 17, label [[RETURN:%.*]]
+; NO_FWD-NEXT:      i32 19, label [[IF19:%.*]]
+; NO_FWD-NEXT:      i32 42, label [[IF42:%.*]]
 ; NO_FWD-NEXT:    ]
 ; NO_FWD:       if19:
 ; NO_FWD-NEXT:    br label [[RETURN]]
@@ -90,9 +84,9 @@ define i32 @PR34471(i32 %x) {
 ; FWD-LABEL: @PR34471(
 ; FWD-NEXT:  entry:
 ; FWD-NEXT:    switch i32 [[X:%.*]], label [[ELSE3:%.*]] [
-; FWD-NEXT:    i32 17, label [[RETURN:%.*]]
-; FWD-NEXT:    i32 19, label [[RETURN]]
-; FWD-NEXT:    i32 42, label [[RETURN]]
+; FWD-NEXT:      i32 17, label [[RETURN:%.*]]
+; FWD-NEXT:      i32 19, label [[RETURN]]
+; FWD-NEXT:      i32 42, label [[RETURN]]
 ; FWD-NEXT:    ]
 ; FWD:       else3:
 ; FWD-NEXT:    br label [[RETURN]]

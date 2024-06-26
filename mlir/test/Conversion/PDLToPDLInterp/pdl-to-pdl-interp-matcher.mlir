@@ -79,6 +79,57 @@ module @constraints {
 
 // -----
 
+// CHECK-LABEL: module @constraint_with_result
+module @constraint_with_result {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: %[[ATTR:.*]] = pdl_interp.apply_constraint "check_op_and_get_attr_constr"(%[[ROOT]]
+  // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter(%[[ROOT]], %[[ATTR]] : !pdl.operation, !pdl.attribute)
+  pdl.pattern : benefit(1) {
+    %root = operation
+    %attr = pdl.apply_native_constraint "check_op_and_get_attr_constr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"(%attr : !pdl.attribute)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @constraint_with_unused_result
+module @constraint_with_unused_result {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: %[[ATTR:.*]] = pdl_interp.apply_constraint "check_op_and_get_attr_constr"(%[[ROOT]]
+  // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter(%[[ROOT]] : !pdl.operation)
+  pdl.pattern : benefit(1) {
+    %root = operation
+    %attr = pdl.apply_native_constraint "check_op_and_get_attr_constr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @constraint_with_result_multiple
+module @constraint_with_result_multiple {
+  // check that native constraints work as expected even when multiple identical constraints are fused
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: %[[ATTR:.*]] = pdl_interp.apply_constraint "check_op_and_get_attr_constr"(%[[ROOT]]
+  // CHECK-NOT: pdl_interp.apply_constraint "check_op_and_get_attr_constr"
+  // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter_0(%[[ROOT]], %[[ATTR]]  : !pdl.operation, !pdl.attribute)
+  // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter(%[[ROOT]], %[[ATTR]] : !pdl.operation, !pdl.attribute)
+  pdl.pattern : benefit(1) {
+    %root = operation
+    %attr = pdl.apply_native_constraint "check_op_and_get_attr_constr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"(%attr : !pdl.attribute)
+  }
+  pdl.pattern : benefit(1) {
+    %root = operation
+    %attr = pdl.apply_native_constraint "check_op_and_get_attr_constr"(%root : !pdl.operation) : !pdl.attribute
+    rewrite %root with "rewriter"(%attr : !pdl.attribute)
+  }
+}
+
+// -----
+
 // CHECK-LABEL: module @negated_constraint
 module @negated_constraint {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
@@ -537,7 +588,7 @@ module @variadic_results_all {
   // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
   // CHECK-DAG: pdl_interp.foreach %[[OP:.*]] : !pdl.operation in %[[OPS]]
   // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands of %[[OP]]
-  // CHECK-DAG    pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:    pdl_interp.are_equal %[[OPERANDS]], %[[VALS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
   // CHECK-DAG:   pdl_interp.is_not_null %[[OP]]
   // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is 0
   pdl.pattern @variadic_results_all : benefit(1) {
@@ -650,7 +701,7 @@ module @common_connector {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OP]], %[[VAL0]] : !pdl.value
   // CHECK-DAG:     %[[ROOTB_OP:.*]] = pdl_interp.get_operand 0 of %[[ROOTB]]
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OP]], %[[VAL0]] : !pdl.value
-  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  // CHECK-DAG:    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector : benefit(1) {
       %type = type
       %op = operation -> (%type, %type : !pdl.type, !pdl.type)
@@ -691,7 +742,7 @@ module @common_connector_range {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OPS]], %[[VALS0]] : !pdl.range<value>
   // CHECK-DAG:     %[[ROOTB_OPS:.*]] = pdl_interp.get_operands of %[[ROOTB]]
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OPS]], %[[VALS0]] : !pdl.range<value>
-  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  // CHECK-DAG:    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector_range : benefit(1) {
     %types = types
     %op = operation -> (%types, %types : !pdl.range<type>, !pdl.range<type>)

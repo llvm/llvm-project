@@ -49,4 +49,4 @@
 //
 // Have a stricter check for no-archdir - that the driver doesn't add any
 // subdirectory from the provided resource directory.
-// NO-ARCHDIR-NOT: -L[[FILE_PATH]]/Inputs/resource_dir
+// NO-ARCHDIR-NOT: -L[[FILE_PATH]]/Inputs/resource_dir"

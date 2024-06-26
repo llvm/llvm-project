@@ -150,9 +150,7 @@ static void MarkBlocksLiveIn(BasicBlock *BB,
   if (!LiveBBs.insert(BB).second)
     return; // already been here.
 
-  df_iterator_default_set<BasicBlock*> Visited;
-
-  for (BasicBlock *B : inverse_depth_first_ext(BB, Visited))
+  for (BasicBlock *B : inverse_depth_first(BB))
     LiveBBs.insert(B);
 }
 
@@ -204,7 +202,7 @@ SjLjEHPrepareImpl::setupFunctionContext(Function &F,
   auto &DL = F.getParent()->getDataLayout();
   const Align Alignment = DL.getPrefTypeAlign(FunctionContextTy);
   FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
-                           Alignment, "fn_context", &EntryBB->front());
+                           Alignment, "fn_context", EntryBB->begin());
 
   // Fill in the function context structure.
   for (LandingPadInst *LPI : LPads) {
@@ -273,7 +271,7 @@ void SjLjEHPrepareImpl::lowerIncomingArguments(Function &F) {
     Value *TrueValue = ConstantInt::getTrue(F.getContext());
     Value *UndefValue = UndefValue::get(Ty);
     Instruction *SI = SelectInst::Create(
-        TrueValue, &AI, UndefValue, AI.getName() + ".tmp", &*AfterAllocaInsPt);
+        TrueValue, &AI, UndefValue, AI.getName() + ".tmp", AfterAllocaInsPt);
     AI.replaceAllUsesWith(SI);
 
     // Reset the operand, because it  was clobbered by the RAUW above.
@@ -388,7 +386,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       if (Function *Callee = II->getCalledFunction())
         if (Callee->getIntrinsicID() == Intrinsic::donothing) {
           // Remove the NOP invoke.
-          BranchInst::Create(II->getNormalDest(), II);
+          BranchInst::Create(II->getNormalDest(), II->getIterator());
           II->eraseFromParent();
           continue;
         }
@@ -447,7 +445,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
 
     // Record the call site value for the back end so it stays associated with
     // the invoke.
-    CallInst::Create(CallSiteFn, CallSiteNum, "", Invokes[I]);
+    CallInst::Create(CallSiteFn, CallSiteNum, "", Invokes[I]->getIterator());
   }
 
   // Mark call instructions that aren't nounwind as no-action (call_site ==
@@ -464,8 +462,8 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   }
 
   // Register the function context and make sure it's known to not throw
-  CallInst *Register =
-      CallInst::Create(RegisterFn, FuncCtx, "", EntryBB->getTerminator());
+  CallInst *Register = CallInst::Create(
+      RegisterFn, FuncCtx, "", EntryBB->getTerminator()->getIterator());
   Register->setDoesNotThrow();
 
   // Following any allocas not in the entry block, update the saved SP in the
@@ -482,7 +480,8 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
       }
       Instruction *StackAddr = CallInst::Create(StackAddrFn, "sp");
       StackAddr->insertAfter(&I);
-      new StoreInst(StackAddr, StackPtr, true, StackAddr->getNextNode());
+      new StoreInst(StackAddr, StackPtr, true,
+                    std::next(StackAddr->getIterator()));
     }
   }
 
@@ -492,7 +491,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
     Instruction *InsertPoint = Return;
     if (CallInst *CI = Return->getParent()->getTerminatingMustTailCall())
       InsertPoint = CI;
-    CallInst::Create(UnregisterFn, FuncCtx, "", InsertPoint);
+    CallInst::Create(UnregisterFn, FuncCtx, "", InsertPoint->getIterator());
   }
 
   return true;

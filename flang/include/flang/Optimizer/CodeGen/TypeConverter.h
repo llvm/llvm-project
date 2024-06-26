@@ -94,8 +94,8 @@ public:
   // to LLVM IR dialect here.
   //
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C> mlir::Type convertComplexType(C cmplx) const {
-    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
+  template <typename C>
+  mlir::Type convertComplexType(C cmplx) const {
     auto eleTy = cmplx.getElementType();
     return convertType(specifics->complexMemoryType(eleTy));
   }
@@ -123,10 +123,16 @@ public:
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const;
 
+  const mlir::DataLayout &getDataLayout() const {
+    assert(dataLayout && "must be set in ctor");
+    return *dataLayout;
+  }
+
 private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
   std::unique_ptr<TBAABuilder> tbaaBuilder;
+  const mlir::DataLayout *dataLayout;
 };
 
 } // namespace fir

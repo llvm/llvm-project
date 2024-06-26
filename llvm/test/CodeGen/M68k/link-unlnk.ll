@@ -59,8 +59,8 @@ entry:
   %arr = alloca [8 x i32], align 4
   %s0 = getelementptr i32, ptr %arr, i32 0
   %s1 = getelementptr i32, ptr %arr, i32 1
-  store i32 %a, i32* %s0
-  store i32 %b, i32* %s1
+  store i32 %a, ptr %s0
+  store i32 %b, ptr %s1
 
   %ptr0 = getelementptr i32, ptr %arr, i32 0
   %ptr1 = getelementptr i32, ptr %arr, i32 1
@@ -71,26 +71,26 @@ entry:
   %ptr6 = getelementptr i32, ptr %arr, i32 6
   %ptr7 = getelementptr i32, ptr %arr, i32 7
 
-  %res0 = load i32, i32 * %ptr0
-  %res1 = load i32, i32 * %ptr1
+  %res0 = load i32, ptr %ptr0
+  %res1 = load i32, ptr %ptr1
 
   %res2 = add i32 %res0, %res1
-  store i32 %res2, i32 * %ptr2
+  store i32 %res2, ptr %ptr2
 
   %res3 = add i32 %res1, %res2
-  store i32 %res3, i32 * %ptr3
+  store i32 %res3, ptr %ptr3
 
   %res4 = add i32 %res2, %res3
-  store i32 %res4, i32 * %ptr4
+  store i32 %res4, ptr %ptr4
 
   %res5 = add i32 %res3, %res4
-  store i32 %res5, i32 * %ptr5
+  store i32 %res5, ptr %ptr5
 
   %res6 = add i32 %res4, %res5
-  store i32 %res6, i32 * %ptr6
+  store i32 %res6, ptr %ptr6
 
   %res7 = add i32 %res5, %res6
-  store i32 %res7, i32 * %ptr7
+  store i32 %res7, ptr %ptr7
 
   ret i32 %res7
 }
@@ -105,7 +105,7 @@ define i32 @test_gep() {
 ; FP-NEXT:    .cfi_def_cfa_register %a6
 ; FP-NEXT:    move.l #21, (-4,%a6)
 ; FP-NEXT:    move.l #12, (-256,%a6)
-; FP-NEXT:    move.l #0, %d0
+; FP-NEXT:    moveq #0, %d0
 ; FP-NEXT:    unlk %a6
 ; FP-NEXT:    rts
 ;
@@ -116,14 +116,14 @@ define i32 @test_gep() {
 ; NO-FP-NEXT:    .cfi_def_cfa_offset -260
 ; NO-FP-NEXT:    move.l #21, (252,%sp)
 ; NO-FP-NEXT:    move.l #12, (0,%sp)
-; NO-FP-NEXT:    move.l #0, %d0
+; NO-FP-NEXT:    moveq #0, %d0
 ; NO-FP-NEXT:    adda.l #256, %sp
 ; NO-FP-NEXT:    rts
 entry:
   %arr = alloca [8 x [8 x i32]]
   %ptr1 = getelementptr [8 x i32], ptr %arr, i64 0, i64 0
-  store i32 12, i32 * %ptr1
+  store i32 12, ptr %ptr1
   %ptr2 = getelementptr [8 x i32], ptr %arr, i64 7, i64 7
-  store i32 21, i32 * %ptr2
+  store i32 21, ptr %ptr2
   ret i32 0
 }

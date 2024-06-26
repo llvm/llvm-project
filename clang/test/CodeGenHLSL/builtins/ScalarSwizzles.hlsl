@@ -55,7 +55,7 @@ vector<uint64_t,4> FillOneUnsignedLong(){
 // CHECK: [[vec2:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <2 x i32> zeroinitializer
 // CHECK: ret <2 x double> [[vec2]]
 double2 FillTwoPointFive(){
-  return 2.5.rr;
+  return 2.5l.rr;
 }
 
 // CHECK-LABEL: FillOneHalf
@@ -65,7 +65,7 @@ double2 FillTwoPointFive(){
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
 // CHECK: ret <3 x double> [[vec3]]
 double3 FillOneHalf(){
-  return .5.rrr;
+  return .5l.rrr;
 }
 
 // CHECK-LABEL: FillTwoPointFiveFloat
@@ -85,7 +85,9 @@ float4 FillTwoPointFiveFloat(){
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
 // CHECK: store <1 x float> <float 5.000000e-01>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
-// CHECK: [[vec1Ret:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <1 x i32> zeroinitializer
+// CHECK: [[el0:%.*]] = extractelement <1 x float> [[vec1]], i32 0
+// CHECK: [[vec1Splat:%.*]] = insertelement <1 x float> poison, float [[el0]], i64 0
+// CHECK: [[vec1Ret:%.*]] = shufflevector <1 x float> [[vec1Splat]], <1 x float> poison, <1 x i32> zeroinitializer
 // CHECK: ret <1 x float> [[vec1Ret]]
 vector<float, 1> FillOneHalfFloat(){
   return .5f.r;
@@ -108,38 +110,30 @@ float2 HowManyFloats(float V) {
   return V.rr.rr;
 }
 
-// This codegen is gnarly because `1.` is a double, so this creates double
+// This codegen is gnarly because `1.l` is a double, so this creates double
 // vectors that need to be truncated down to floats. The optimizer cleans this
 // up nicely too.
 
 // CHECK-LABEL: AllRighty
-// CHECK: [[XTmp:%.*]] = alloca <1 x double>, align 8
-// CHECK: [[YTmp:%.*]] = alloca <1 x double>, align 8
-// CHECK: [[ZTmp:%.*]] = alloca <1 x double>, align 8
+// CHECK: [[Tmp:%.*]] = alloca <1 x double>, align 8
+// CHECK: store <1 x double> <double 1.000000e+00>, ptr [[Tmp]], align 8
+// CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[Tmp]], align 8
+// CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
+// CHECK: [[vec3f:%.*]] = fptrunc <3 x double> [[vec3]] to <3 x float>
+// CHECK: ret <3 x float> [[vec3f]]
 
-// CHECK: store <1 x double> <double 1.000000e+00>, ptr [[XTmp]], align 8
-// CHECK: [[XVec:%.*]] = load <1 x double>, ptr [[XTmp]], align 8
-// CHECK: [[XVec3:%.*]] = shufflevector <1 x double> [[XVec]], <1 x double> poison, <3 x i32> zeroinitializer
-// CHECK: [[XVal:%.*]] = extractelement <3 x double> [[XVec3]], i32 0
-// CHECK: [[XValF:%.*]] = fptrunc double [[XVal]] to float
-// CHECK: [[Vec3F1:%.*]] = insertelement <3 x float> poison, float [[XValF]], i32 0
-
-// CHECK: store <1 x double> <double 1.000000e+00>, ptr [[YTmp]], align 8
-// CHECK: [[YVec:%.*]] = load <1 x double>, ptr [[YTmp]], align 8
-// CHECK: [[YVec3:%.*]] = shufflevector <1 x double> [[YVec]], <1 x double> poison, <3 x i32> zeroinitializer
-// CHECK: [[YVal:%.*]] = extractelement <3 x double> [[YVec3]], i32 1
-// CHECK: [[YValF:%.*]] = fptrunc double [[YVal]] to float
-// CHECK: [[Vec3F2:%.*]] = insertelement <3 x float> [[Vec3F1]], float [[YValF]], i32 1
-
-// CHECK: store <1 x double> <double 1.000000e+00>, ptr [[ZTmp]], align 8
-// CHECK: [[ZVec:%.*]] = load <1 x double>, ptr [[ZTmp]], align 8
-// CHECK: [[ZVec3:%.*]] = shufflevector <1 x double> [[ZVec]], <1 x double> poison, <3 x i32> zeroinitializer
-// CHECK: [[ZVal:%.*]] = extractelement <3 x double> [[ZVec3]], i32 2
-// CHECK: [[ZValF:%.*]] = fptrunc double [[ZVal]] to float
-// CHECK: [[Vec3F3:%.*]] = insertelement <3 x float> [[Vec3F2]], float [[ZValF]], i32 2
-
-// ret <3 x float> [[Vec3F3]]
 float3 AllRighty() {
+  return 1.l.rrr;
+}
+
+// CHECK-LABEL: AllRighty2
+// CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
+// CHECK: store <1 x float> <float 1.000000e+00>, ptr [[vec1Ptr]], align 4
+// CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
+// CHECK: [[vec3:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <3 x i32>
+// CHECK: ret <3 x float> [[vec3]]
+
+float3 AllRighty2() {
   return 1..rrr;
 }
 

@@ -97,10 +97,14 @@ private:
   friend class __wrap_iter;
   template <class _CharT, class _Traits, class _Alloc>
   friend class basic_string;
+  template <class _CharT, class _Traits>
+  friend class basic_string_view;
   template <class _Tp, class _Alloc>
   friend class _LIBCPP_TEMPLATE_VIS vector;
   template <class _Tp, size_t>
   friend class _LIBCPP_TEMPLATE_VIS span;
+  template <class _Tp, size_t _Size>
+  friend struct array;
 };
 
 template <class _Iter1>
@@ -182,8 +186,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
     operator-(const __wrap_iter<_Iter1>& __x,
               const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
-    typename __wrap_iter<_Iter1>::difference_type
-    operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+typename __wrap_iter<_Iter1>::difference_type
+operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
 {
   return __x.base() - __y.base();

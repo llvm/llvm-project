@@ -245,7 +245,7 @@ This operation takes zero operands, a
 `value` to represent the constant value, and returns a single result of
 [RankedTensorType](../../Dialects/Builtin.md/#rankedtensortype). An operation class 
 inherits from the [CRTP](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern)
-`mlir::Op` class which also takes some optional [*traits*](../../Traits.md) to
+`mlir::Op` class which also takes some optional [*traits*](../../Traits) to
 customize its behavior. `Traits` are a mechanism with which we can inject
 additional behavior into an Operation, such as additional accessors,
 verification, and more. Let's look below at a possible definition for the

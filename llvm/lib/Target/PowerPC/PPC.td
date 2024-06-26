@@ -296,8 +296,7 @@ def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
 def FeaturePrefixInstrs : SubtargetFeature<"prefix-instrs", "HasPrefixInstrs",
                                            "true",
                                            "Enable prefixed instructions",
-                                           [FeatureISA3_0, FeatureP8Vector,
-                                            FeatureP9Altivec]>;
+                                           [FeatureISA3_1]>;
 def FeaturePCRelativeMemops :
   SubtargetFeature<"pcrelative-memops", "HasPCRelativeMemops", "true",
                    "Enable PC relative Memory Ops",
@@ -328,6 +327,21 @@ def FeatureAIXLocalExecTLS :
   SubtargetFeature<"aix-small-local-exec-tls", "HasAIXSmallLocalExecTLS", "true",
                    "Produce a TOC-free local-exec TLS sequence for this function "
                    "for 64-bit AIX">;
+
+// Specifies that local-dynamic TLS accesses in any function with this target
+// attribute should use the optimized sequence (where the offset is an immediate
+// off the module-handle for which the linker might add fix-up code for if the
+// immediate is too large).
+def FeatureAIXLocalDynamicTLS :
+  SubtargetFeature<"aix-small-local-dynamic-tls", "HasAIXSmallLocalDynamicTLS",
+                   "true", "Produce a faster local-dynamic TLS sequence for this "
+                   "function for 64-bit AIX">;
+
+def FeatureAIXSharedLibTLSModelOpt :
+  SubtargetFeature<"aix-shared-lib-tls-model-opt",
+                   "HasAIXShLibTLSModelOpt", "true",
+                   "Tune TLS model at function level in shared library loaded "
+                   "with the main program (for 64-bit AIX only)">;
 
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",

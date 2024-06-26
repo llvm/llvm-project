@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
 
 void test_alignas_operand() {
   alignas(8) char dummy;
@@ -58,13 +58,10 @@ static_assert(pointerAssign2() == 12, "");
 
 constexpr int unInitLocal() {
   int a;
-  return a; // ref-note {{read of uninitialized object}} \
-            // expected-note {{read of uninitialized object}}
+  return a; // both-note {{read of uninitialized object}}
 }
-static_assert(unInitLocal() == 0, ""); // ref-error {{not an integral constant expression}} \
-                                       // ref-note {{in call to 'unInitLocal()'}} \
-                                       // expected-error {{not an integral constant expression}} \
-                                       // expected-note {{in call to 'unInitLocal()'}} \
+static_assert(unInitLocal() == 0, ""); // both-error {{not an integral constant expression}} \
+                                       // both-note {{in call to 'unInitLocal()'}}
 
 constexpr int initializedLocal() {
   int a;
@@ -75,25 +72,19 @@ static_assert(initializedLocal() == 20);
 
 constexpr int initializedLocal2() {
   int a[2];
-  return *a; // expected-note {{read of uninitialized object is not allowed in a constant expression}} \
-             // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+  return *a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
-static_assert(initializedLocal2() == 20); // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to}} \
-                                          // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to}}
+static_assert(initializedLocal2() == 20); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
 
 
 struct Int { int a; };
 constexpr int initializedLocal3() {
   Int i;
-  return i.a; // ref-note {{read of uninitialized object is not allowed in a constant expression}} \
-              // expected-note {{read of uninitialized object}}
+  return i.a; // both-note {{read of uninitialized object is not allowed in a constant expression}}
 }
-static_assert(initializedLocal3() == 20); // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to}} \
-                                          // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to}}
+static_assert(initializedLocal3() == 20); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
 
 
 
@@ -137,22 +128,16 @@ static_assert(!b4); // ref-error {{not an integral constant expression}} \
 namespace UninitializedFields {
   class A {
   public:
-    int a; // expected-note 4{{subobject declared here}} \
-           // ref-note 4{{subobject declared here}}
+    int a; // both-note 4{{subobject declared here}}
     constexpr A() {}
   };
-  constexpr A a; // expected-error {{must be initialized by a constant expression}} \
-                 // expected-note {{subobject 'a' is not initialized}} \
-                 // ref-error {{must be initialized by a constant expression}} \
-                 // ref-note {{subobject 'a' is not initialized}}
-  constexpr A aarr[2]; // expected-error {{must be initialized by a constant expression}} \
-                       // expected-note {{subobject 'a' is not initialized}} \
-                       // ref-error {{must be initialized by a constant expression}} \
-                       // ref-note {{subobject 'a' is not initialized}}
+  constexpr A a; // both-error {{must be initialized by a constant expression}} \
+                 // both-note {{subobject 'a' is not initialized}}
+  constexpr A aarr[2]; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{subobject 'a' is not initialized}}
   class F {
     public:
-      int f; // expected-note 3{{subobject declared here}} \
-             // ref-note 3{{subobject declared here}}
+      int f; // both-note 3{{subobject declared here}}
 
       constexpr F() {}
       constexpr F(bool b) {
@@ -161,26 +146,19 @@ namespace UninitializedFields {
       }
   };
 
-  constexpr F foo[2] = {true}; // expected-error {{must be initialized by a constant expression}} \
-                               // expected-note {{subobject 'f' is not initialized}} \
-                               // ref-error {{must be initialized by a constant expression}} \
-                               // ref-note {{subobject 'f' is not initialized}}
-  constexpr F foo2[3] = {true, false, true}; // expected-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{subobject 'f' is not initialized}} \
-                                             // ref-error {{must be initialized by a constant expression}} \
-                                             // ref-note {{subobject 'f' is not initialized}}
-  constexpr F foo3[3] = {true, true, F()}; // expected-error {{must be initialized by a constant expression}} \
-                                           // expected-note {{subobject 'f' is not initialized}} \
-                                           // ref-error {{must be initialized by a constant expression}} \
-                                           // ref-note {{subobject 'f' is not initialized}}
+  constexpr F foo[2] = {true}; // both-error {{must be initialized by a constant expression}} \
+                               // both-note {{subobject 'f' is not initialized}}
+  constexpr F foo2[3] = {true, false, true}; // both-error {{must be initialized by a constant expression}} \
+                                             // both-note {{subobject 'f' is not initialized}}
+  constexpr F foo3[3] = {true, true, F()}; // both-error {{must be initialized by a constant expression}} \
+                                           // both-note {{subobject 'f' is not initialized}}
 
 
 
   class Base {
   public:
     bool b;
-    int a; // expected-note {{subobject declared here}} \
-           // ref-note {{subobject declared here}}
+    int a; // both-note {{subobject declared here}}
     constexpr Base() : b(true) {}
   };
 
@@ -188,58 +166,44 @@ namespace UninitializedFields {
   public:
     constexpr Derived() : Base() {}   };
 
-  constexpr Derived D; // expected-error {{must be initialized by a constant expression}} \
-                       // expected-note {{subobject 'a' is not initialized}} \
-                       // ref-error {{must be initialized by a constant expression}} \
-                       // ref-note {{subobject 'a' is not initialized}}
+  constexpr Derived D; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{subobject 'a' is not initialized}}
 
   class C2 {
   public:
     A a;
     constexpr C2() {}   };
-  constexpr C2 c2; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{subobject 'a' is not initialized}} \
-                   // ref-error {{must be initialized by a constant expression}} \
-                   // ref-note {{subobject 'a' is not initialized}}
+  constexpr C2 c2; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{subobject 'a' is not initialized}}
 
   class C3 {
   public:
     A a[2];
     constexpr C3() {}
   };
-  constexpr C3 c3; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{subobject 'a' is not initialized}} \
-                   // ref-error {{must be initialized by a constant expression}} \
-                   // ref-note {{subobject 'a' is not initialized}}
+  constexpr C3 c3; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{subobject 'a' is not initialized}}
 
   class C4 {
   public:
-    bool B[2][3]; // expected-note {{subobject declared here}} \
-                  // ref-note {{subobject declared here}}
+    bool B[2][3]; // both-note {{subobject declared here}}
     constexpr C4(){}
   };
-  constexpr C4 c4; // expected-error {{must be initialized by a constant expression}} \
-                   // expected-note {{subobject 'B' is not initialized}} \
-                   // ref-error {{must be initialized by a constant expression}} \
-                   // ref-note {{subobject 'B' is not initialized}}
+  constexpr C4 c4; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{subobject 'B' is not initialized}}
 };
 
 namespace ConstThis {
   class Foo {
-    const int T = 12; // expected-note {{declared const here}} \
-                      // ref-note {{declared const here}}
+    const int T = 12; // both-note {{declared const here}}
     int a;
   public:
-    constexpr Foo() { // expected-note {{declared here}}
+    constexpr Foo() {
       this->a = 10;
-      T = 13; // expected-error {{cannot assign to non-static data member 'T' with const-qualified type}} \
-              // ref-error {{cannot assign to non-static data member 'T' with const-qualified type}}
+      T = 13; // both-error {{cannot assign to non-static data member 'T' with const-qualified type}}
     }
   };
-  constexpr Foo F; // expected-error {{must be initialized by a constant expression}} \
-                   // FIXME: The following note is wrong. \
-                   // expected-note {{undefined constructor 'Foo' cannot be used in a constant expression}} \
-                   // ref-error {{must be initialized by a constant expression}}
+  constexpr Foo F; // both-error {{must be initialized by a constant expression}}
 
 
   class FooDtor {
@@ -266,8 +230,7 @@ namespace ConstThis {
     constexpr ctor_test() {
       if (Good)
         a = 10;
-      int local = 100 / a; // expected-note {{division by zero}} \
-                           // ref-note {{division by zero}}
+      int local = 100 / a; // both-note {{division by zero}}
     }
   };
 
@@ -279,22 +242,17 @@ namespace ConstThis {
     constexpr ~dtor_test() {
       if (Good)
         a = 10;
-      int local = 100 / a; // expected-note {{division by zero}} \
-                           // ref-note {{division by zero}}
+      int local = 100 / a; // both-note {{division by zero}}
     }
   };
 
   constexpr ctor_test<true> good_ctor;
   constexpr dtor_test<true> good_dtor;
 
-  constexpr ctor_test<false> bad_ctor; // expected-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{in call to}} \
-                                       // ref-error {{must be initialized by a constant expression}} \
-                                       // ref-note {{in call to}}
-  constexpr dtor_test<false> bad_dtor; // expected-error {{must have constant destruction}} \
-                                       // expected-note {{in call to}} \
-                                       // ref-error {{must have constant destruction}} \
-                                       // ref-note {{in call to}}
+  constexpr ctor_test<false> bad_ctor; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{in call to}}
+  constexpr dtor_test<false> bad_dtor; // both-error {{must have constant destruction}} \
+                                       // both-note {{in call to}}
 };
 
 namespace BaseInit {
@@ -313,10 +271,8 @@ namespace BaseInit {
   };
 
   static_assert(Final{1, 2, 3}.c == 3, ""); // OK
-  static_assert(Final{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                            // expected-note {{read of uninitialized object}} \
-                                            // ref-error {{not an integral constant expression}} \
-                                            // ref-note {{read of uninitialized object}}
+  static_assert(Final{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{read of uninitialized object}}
 
 
   struct Mixin  {
@@ -335,10 +291,8 @@ namespace BaseInit {
 
   static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
-  static_assert(Final2{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{read of uninitialized object}} \
-                                             // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{read of uninitialized object}}
+  static_assert(Final2{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
+                                             // both-note {{read of uninitialized object}}
 
 
   struct Mixin3  {
@@ -354,10 +308,8 @@ namespace BaseInit {
 
   static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
-  static_assert(Final3{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{read of uninitialized object}} \
-                                             // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{read of uninitialized object}}
+  static_assert(Final3{1, 2, 3}.a == 0, ""); // both-error {{not an integral constant expression}} \
+                                             // both-note {{read of uninitialized object}}
 };
 
 namespace Destructors {
@@ -635,16 +587,13 @@ namespace ImplicitFunction {
 
    /// The operator= call here will fail and the diagnostics should be fine.
    b = a; // ref-note {{subobject 'a' is not initialized}} \
-          // ref-note {{in call to}} \
           // expected-note {{read of uninitialized object}} \
-          // expected-note {{in call to}}
+          // both-note {{in call to}}
 
    return 1;
   }
-  static_assert(callMe() == 1, ""); // ref-error {{not an integral constant expression}} \
-                                    // ref-note {{in call to 'callMe()'}} \
-                                    // expected-error {{not an integral constant expression}} \
-                                    // expected-note {{in call to 'callMe()'}}
+  static_assert(callMe() == 1, ""); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to 'callMe()'}}
 }
 
 /// FIXME: Unfortunately, the similar tests in test/SemaCXX/{compare-cxx2a.cpp use member pointers,
@@ -682,8 +631,7 @@ namespace ThreeWayCmp {
   static_assert(1.0 <=> 2.f == -1, "");
   static_assert(1.0 <=> 1.0 == 0, "");
   static_assert(2.0 <=> 1.0 == 1, "");
-  constexpr int k = (1 <=> 1, 0); // expected-warning {{comparison result unused}} \
-                                  // ref-warning {{comparison result unused}}
+  constexpr int k = (1 <=> 1, 0); // both-warning {{comparison result unused}}
   static_assert(k== 0, "");
 
   /// Pointers.
@@ -692,10 +640,8 @@ namespace ThreeWayCmp {
   constexpr const int *pa1 = &a[1];
   constexpr const int *pa2 = &a[2];
   constexpr const int *pb1 = &b[1];
-  static_assert(pa1 <=> pb1 != 0, ""); // expected-error {{not an integral constant expression}} \
-                                       // expected-note {{has unspecified value}} \
-                                       // ref-error {{not an integral constant expression}} \
-                                       // ref-note {{has unspecified value}}
+  static_assert(pa1 <=> pb1 != 0, ""); // both-error {{not an integral constant expression}} \
+                                       // both-note {{has unspecified value}} \
   static_assert(pa1 <=> pa1 == 0, "");
   static_assert(pa1 <=> pa2 == -1, "");
   static_assert(pa2 <=> pa1 == 1, "");
@@ -751,4 +697,133 @@ namespace TryCatch {
     return a;
   }
   static_assert(foo() == 11);
+}
+
+namespace IgnoredConstantExpr {
+  consteval int immediate() { return 0;}
+  struct ReferenceToNestedMembers {
+    int m;
+    int a = ((void)immediate(), m);
+    int b = ((void)immediate(), this->m);
+  };
+  struct ReferenceToNestedMembersTest {
+    void* m = nullptr;
+    ReferenceToNestedMembers j{0};
+  } test_reference_to_nested_members;
+}
+
+namespace RewrittenBinaryOperators {
+  template <class T, T Val>
+  struct Conv {
+    constexpr operator T() const { return Val; }
+    operator T() { return Val; }
+  };
+
+  struct X {
+    constexpr const Conv<int, -1> operator<=>(X) { return {}; }
+  };
+  static_assert(X() < X(), "");
+}
+
+namespace GH61417 {
+struct A {
+  unsigned x : 1;
+  unsigned   : 0;
+  unsigned y : 1;
+
+  constexpr A() : x(0), y(0) {}
+  bool operator==(const A& rhs) const noexcept = default;
+};
+
+void f1() {
+  constexpr A a, b;
+  constexpr bool c = (a == b); // no diagnostic, we should not be comparing the
+                               // unnamed bit-field which is indeterminate
+}
+
+void f2() {
+    A a, b;
+    bool c = (a == b); // no diagnostic nor crash during codegen attempting to
+                       // access info for unnamed bit-field
+}
+}
+
+namespace FailingDestructor {
+  struct D {
+    int n;
+    bool can_destroy;
+
+    constexpr ~D() {
+      if (!can_destroy)
+        throw "oh no";
+    }
+  };
+  template<D d>
+  void f() {} // both-note {{invalid explicitly-specified argument}}
+
+  void g() {
+    f<D{0, false}>(); // both-error {{no matching function}}
+  }
+}
+
+
+void overflowInSwitchCase(int n) {
+  switch (n) {
+  case (int)(float)1e300: // both-error {{constant expression}} \
+                          // both-note {{value +Inf is outside the range of representable values of type 'int'}}
+    break;
+  }
+}
+
+namespace APValues {
+  int g;
+  struct A { union { int n, m; }; int *p; int A::*q; char buffer[32]; };
+  template<A a> constexpr const A &get = a;
+  constexpr const A &v = get<A{}>;
+  constexpr const A &w = get<A{1, &g, &A::n, "hello"}>;
+}
+
+namespace self_referencing {
+  struct S {
+    S* ptr = nullptr;
+    constexpr S(int i) : ptr(this) {
+      if (this == ptr && i)
+        ptr = nullptr;
+    }
+    constexpr ~S() {}
+  };
+
+  void test() {
+    S s(1);
+  }
+}
+
+namespace GH64949 {
+  struct f {
+    int g; // both-note {{subobject declared here}}
+    constexpr ~f() {}
+  };
+
+  class h {
+  public:
+    consteval h(char *) {}
+    f i;
+  };
+
+  void test() { h{nullptr}; } // both-error {{call to consteval function 'GH64949::h::h' is not a constant expression}} \
+                              // both-note {{subobject 'g' is not initialized}} \
+                              // both-warning {{expression result unused}}
+}
+
+/// This used to cause an assertion failure inside EvaluationResult::checkFullyInitialized.
+namespace CheckingNullPtrForInitialization {
+  struct X {
+    consteval operator const char *() const {
+      return nullptr;
+    }
+  };
+  const char *f() {
+    constexpr X x;
+    return x;
+  }
 }

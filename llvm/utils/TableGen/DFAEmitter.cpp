@@ -21,7 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DFAEmitter.h"
-#include "SequenceToOffsetTable.h"
+#include "Basic/SequenceToOffsetTable.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/UniqueVector.h"
@@ -76,12 +76,11 @@ void DfaEmitter::visitDfaState(const DfaState &DS) {
       continue;
     // Sort and unique.
     sort(NewStates);
-    NewStates.erase(std::unique(NewStates.begin(), NewStates.end()),
-                    NewStates.end());
+    NewStates.erase(llvm::unique(NewStates), NewStates.end());
     sort(TI);
-    TI.erase(std::unique(TI.begin(), TI.end()), TI.end());
+    TI.erase(llvm::unique(TI), TI.end());
     unsigned ToId = DfaStates.insert(NewStates);
-    DfaTransitions.emplace(std::make_pair(FromId, A), std::make_pair(ToId, TI));
+    DfaTransitions.emplace(std::pair(FromId, A), std::pair(ToId, TI));
   }
 }
 
@@ -147,8 +146,8 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
 
   OS << "// A table of DFA transitions, ordered by {FromDfaState, Action}.\n";
   OS << "// The initial state is 1, not zero.\n";
-  OS << "const std::array<" << Name << "Transition, "
-     << DfaTransitions.size() << "> " << Name << "Transitions = {{\n";
+  OS << "const std::array<" << Name << "Transition, " << DfaTransitions.size()
+     << "> " << Name << "Transitions = {{\n";
   for (auto &KV : DfaTransitions) {
     dfa_state_type From = KV.first.first;
     dfa_state_type To = KV.second.first;
@@ -284,7 +283,7 @@ void Automaton::emit(raw_ostream &OS) {
   }
   LLVM_DEBUG(dbgs() << "  NFA automaton has " << SeenStates.size()
                     << " states with " << NumTransitions << " transitions.\n");
-  (void) NumTransitions;
+  (void)NumTransitions;
 
   const auto &ActionTypes = Transitions.back().getTypes();
   OS << "// The type of an action in the " << Name << " automaton.\n";
@@ -346,16 +345,14 @@ bool Transition::canTransitionFrom(uint64_t State) {
   return false;
 }
 
-uint64_t Transition::transitionFrom(uint64_t State) {
-  return State | NewState;
-}
+uint64_t Transition::transitionFrom(uint64_t State) { return State | NewState; }
 
 void CustomDfaEmitter::printActionType(raw_ostream &OS) { OS << TypeName; }
 
 void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
   const ActionTuple &AT = Actions[A];
   if (AT.size() > 1)
-    OS << "std::make_tuple(";
+    OS << "std::tuple(";
   ListSeparator LS;
   for (const auto &SingleAction : AT) {
     OS << LS;

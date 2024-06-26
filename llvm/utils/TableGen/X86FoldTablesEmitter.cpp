@@ -11,11 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -33,10 +32,8 @@ struct ManualMapEntry {
 };
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {
-    "MOVDQA",    "MOVAPS",     "MOVAPD",     "MOVNTPS",    "MOVNTPD",
-    "MOVNTDQ",   "MOVNTDQA",   "SHA1MSG1",   "SHA1MSG2",   "SHA1NEXTE",
-    "SHA1RNDS4", "SHA256MSG1", "SHA256MSG2", "SHA256RNDS2"};
+const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
+                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
 const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
@@ -97,7 +94,7 @@ class X86FoldTablesEmitter {
                       const CodeGenInstruction *MemInst)
         : RegInst(RegInst), MemInst(MemInst) {}
 
-    void print(formatted_raw_ostream &OS) const {
+    void print(raw_ostream &OS) const {
       OS.indent(2);
       OS << "{X86::" << RegInst->TheDef->getName() << ", ";
       OS << "X86::" << MemInst->TheDef->getName() << ", ";
@@ -171,8 +168,8 @@ class X86FoldTablesEmitter {
       assert(LHS && RHS && "LHS and RHS shouldn't be nullptr");
       const auto &D1 = *LHS->TheDef;
       const auto &D2 = *RHS->TheDef;
-      return std::make_tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
-             std::make_tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+      return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
+             std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
     }
   };
 
@@ -224,7 +221,7 @@ private:
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
-                  formatted_raw_ostream &OS) {
+                  raw_ostream &OS) {
     OS << "static const X86FoldTableEntry " << TableName << "[] = {\n";
 
     for (auto &E : Table)
@@ -372,22 +369,20 @@ public:
       return false;
 
     // Return false if any of the following fields of does not match.
-    if (std::make_tuple(RegRI.Encoding, RegRI.Opcode, RegRI.OpPrefix,
-                        RegRI.OpMap, RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W,
-                        RegRI.HasVEX_4V, RegRI.HasVEX_L, RegRI.IgnoresVEX_L,
-                        RegRI.IgnoresW, RegRI.HasEVEX_K, RegRI.HasEVEX_KZ,
-                        RegRI.HasEVEX_L2, RegRI.HasEVEX_NF,
-                        RegRec->getValueAsBit("hasEVEX_RC"),
-                        RegRec->getValueAsBit("hasLockPrefix"),
-                        RegRec->getValueAsBit("hasNoTrackPrefix")) !=
-        std::make_tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix,
-                        MemRI.OpMap, MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W,
-                        MemRI.HasVEX_4V, MemRI.HasVEX_L, MemRI.IgnoresVEX_L,
-                        MemRI.IgnoresW, MemRI.HasEVEX_K, MemRI.HasEVEX_KZ,
-                        MemRI.HasEVEX_L2, MemRI.HasEVEX_NF,
-                        MemRec->getValueAsBit("hasEVEX_RC"),
-                        MemRec->getValueAsBit("hasLockPrefix"),
-                        MemRec->getValueAsBit("hasNoTrackPrefix")))
+    if (std::tuple(RegRI.Encoding, RegRI.Opcode, RegRI.OpPrefix, RegRI.OpMap,
+                   RegRI.OpSize, RegRI.AdSize, RegRI.HasREX_W, RegRI.HasVEX_4V,
+                   RegRI.HasVEX_L, RegRI.IgnoresVEX_L, RegRI.IgnoresW,
+                   RegRI.HasEVEX_K, RegRI.HasEVEX_KZ, RegRI.HasEVEX_L2,
+                   RegRI.HasEVEX_NF, RegRec->getValueAsBit("hasEVEX_RC"),
+                   RegRec->getValueAsBit("hasLockPrefix"),
+                   RegRec->getValueAsBit("hasNoTrackPrefix")) !=
+        std::tuple(MemRI.Encoding, MemRI.Opcode, MemRI.OpPrefix, MemRI.OpMap,
+                   MemRI.OpSize, MemRI.AdSize, MemRI.HasREX_W, MemRI.HasVEX_4V,
+                   MemRI.HasVEX_L, MemRI.IgnoresVEX_L, MemRI.IgnoresW,
+                   MemRI.HasEVEX_K, MemRI.HasEVEX_KZ, MemRI.HasEVEX_L2,
+                   MemRI.HasEVEX_NF, MemRec->getValueAsBit("hasEVEX_RC"),
+                   MemRec->getValueAsBit("hasLockPrefix"),
+                   MemRec->getValueAsBit("hasNoTrackPrefix")))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.
@@ -452,8 +447,6 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
   Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
-
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -462,21 +455,6 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   if (IsManual) {
     Table[RegInst] = Result;
     return;
-  }
-
-  // Only table0 entries should explicitly specify a load or store flag.
-  if (&Table == &Table0) {
-    unsigned MemInOpsNum = MemRec->getValueAsDag("InOperandList")->getNumArgs();
-    unsigned RegInOpsNum = RegRec->getValueAsDag("InOperandList")->getNumArgs();
-    // If the instruction writes to the folded operand, it will appear as an
-    // output in the register form instruction and as an input in the memory
-    // form instruction.
-    // If the instruction reads from the folded operand, it well appear as in
-    // input in both forms.
-    if (MemInOpsNum == RegInOpsNum)
-      Result.FoldLoad = true;
-    else
-      Result.FoldStore = true;
   }
 
   Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
@@ -575,6 +553,11 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     return;
   }
 
+  // Only table0 entries should explicitly specify a load or store flag.
+  // If the instruction writes to the folded operand, it will appear as
+  // an output in the register form instruction and as an input in the
+  // memory form instruction. If the instruction reads from the folded
+  // operand, it will appear as in input in both forms.
   if (MemInSize == RegInSize && MemOutSize == RegOutSize) {
     // Load-Folding cases.
     // If the i'th register form operand is a register and the i'th memory form
@@ -590,7 +573,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
         switch (I) {
         case 0:
           assert(!IsBroadcast && "BroadcastTable0 needs to be added");
-          addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
+          addEntryWithFlags(Table0, RegInst, MemInst, S | TB_FOLDED_LOAD, 0,
+                            IsManual);
           return;
         case 1:
           IsBroadcast
@@ -628,14 +612,13 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec)) {
       assert(!IsBroadcast && "Store can not be broadcast");
-      addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
+      addEntryWithFlags(Table0, RegInst, MemInst, S | TB_FOLDED_STORE, 0,
+                        IsManual);
     }
   }
 }
 
-void X86FoldTablesEmitter::run(raw_ostream &O) {
-  formatted_raw_ostream OS(O);
-
+void X86FoldTablesEmitter::run(raw_ostream &OS) {
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
   // Holds all register instructions - divided according to opcode.

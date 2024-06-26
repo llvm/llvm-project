@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
@@ -13,6 +15,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -56,14 +59,17 @@ private:
 
 } // namespace
 
-FailureOr<BoundType> parseBoundType(std::string type) {
-  if (type == "EQ")
-    return BoundType::EQ;
-  if (type == "LB")
-    return BoundType::LB;
-  if (type == "UB")
-    return BoundType::UB;
-  return failure();
+static ValueBoundsConstraintSet::ComparisonOperator
+invertComparisonOperator(ValueBoundsConstraintSet::ComparisonOperator cmp) {
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::LT)
+    return ValueBoundsConstraintSet::ComparisonOperator::GE;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::LE)
+    return ValueBoundsConstraintSet::ComparisonOperator::GT;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::GT)
+    return ValueBoundsConstraintSet::ComparisonOperator::LE;
+  if (cmp == ValueBoundsConstraintSet::ComparisonOperator::GE)
+    return ValueBoundsConstraintSet::ComparisonOperator::LT;
+  llvm_unreachable("unsupported comparison operator");
 }
 
 /// Look for "test.reify_bound" ops in the input and replace their results with
@@ -72,142 +78,120 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
                                           bool reifyToFuncArgs,
                                           bool useArithOps) {
   IRRewriter rewriter(funcOp.getContext());
-  WalkResult result = funcOp.walk([&](Operation *op) {
-    // Look for test.reify_bound ops.
-    if (op->getName().getStringRef() == "test.reify_bound" ||
-        op->getName().getStringRef() == "test.reify_constant_bound") {
-      if (op->getNumOperands() != 1 || op->getNumResults() != 1 ||
-          !op->getResultTypes()[0].isIndex()) {
-        op->emitOpError("invalid op");
-        return WalkResult::skip();
-      }
-      Value value = op->getOperand(0);
-      if (isa<IndexType>(value.getType()) !=
-          !op->hasAttrOfType<IntegerAttr>("dim")) {
-        // Op should have "dim" attribute if and only if the operand is an
-        // index-typed value.
-        op->emitOpError("invalid op");
-        return WalkResult::skip();
-      }
+  WalkResult result = funcOp.walk([&](test::ReifyBoundOp op) {
+    auto boundType = op.getBoundType();
+    Value value = op.getVar();
+    std::optional<int64_t> dim = op.getDim();
+    bool constant = op.getConstant();
+    bool scalable = op.getScalable();
 
-      // Get bound type.
-      std::string boundTypeStr = "EQ";
-      if (auto boundTypeAttr = op->getAttrOfType<StringAttr>("type"))
-        boundTypeStr = boundTypeAttr.str();
-      auto boundType = parseBoundType(boundTypeStr);
-      if (failed(boundType)) {
-        op->emitOpError("invalid op");
-        return WalkResult::interrupt();
-      }
-
-      // Get shape dimension (if any).
-      auto dim = value.getType().isIndex()
-                     ? std::nullopt
-                     : std::make_optional<int64_t>(
-                           op->getAttrOfType<IntegerAttr>("dim").getInt());
-
-      // Check if a constant was requested.
-      bool constant =
-          op->getName().getStringRef() == "test.reify_constant_bound";
-
-      // Prepare stop condition. By default, reify in terms of the op's
-      // operands. No stop condition is used when a constant was requested.
-      std::function<bool(Value, std::optional<int64_t>)> stopCondition =
-          [&](Value v, std::optional<int64_t> d) {
-            // Reify in terms of SSA values that are different from `value`.
-            return v != value;
-          };
-      if (reifyToFuncArgs) {
-        // Reify in terms of function block arguments.
-        stopCondition = stopCondition = [](Value v, std::optional<int64_t> d) {
-          auto bbArg = dyn_cast<BlockArgument>(v);
-          if (!bbArg)
-            return false;
-          return isa<FunctionOpInterface>(
-              bbArg.getParentBlock()->getParentOp());
+    // Prepare stop condition. By default, reify in terms of the op's
+    // operands. No stop condition is used when a constant was requested.
+    std::function<bool(Value, std::optional<int64_t>,
+                       ValueBoundsConstraintSet & cstr)>
+        stopCondition = [&](Value v, std::optional<int64_t> d,
+                            ValueBoundsConstraintSet &cstr) {
+          // Reify in terms of SSA values that are different from `value`.
+          return v != value;
         };
-      }
+    if (reifyToFuncArgs) {
+      // Reify in terms of function block arguments.
+      stopCondition = [](Value v, std::optional<int64_t> d,
+                         ValueBoundsConstraintSet &cstr) {
+        auto bbArg = dyn_cast<BlockArgument>(v);
+        if (!bbArg)
+          return false;
+        return isa<FunctionOpInterface>(bbArg.getParentBlock()->getParentOp());
+      };
+    }
 
-      // Reify value bound
-      rewriter.setInsertionPointAfter(op);
-      FailureOr<OpFoldResult> reified = failure();
-      if (constant) {
-        auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
-            *boundType, value, dim, /*stopCondition=*/nullptr);
-        if (succeeded(reifiedConst))
-          reified =
-              FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
-      } else {
-        if (dim) {
-          if (useArithOps) {
-            reified = arith::reifyShapedValueDimBound(
-                rewriter, op->getLoc(), *boundType, value, *dim, stopCondition);
-          } else {
-            reified = reifyShapedValueDimBound(
-                rewriter, op->getLoc(), *boundType, value, *dim, stopCondition);
-          }
-        } else {
-          if (useArithOps) {
-            reified = arith::reifyIndexValueBound(
-                rewriter, op->getLoc(), *boundType, value, stopCondition);
-          } else {
-            reified = reifyIndexValueBound(rewriter, op->getLoc(), *boundType,
-                                           value, stopCondition);
-          }
+    // Reify value bound
+    rewriter.setInsertionPointAfter(op);
+    FailureOr<OpFoldResult> reified = failure();
+    if (constant) {
+      auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
+          boundType, {value, dim}, /*stopCondition=*/nullptr);
+      if (succeeded(reifiedConst))
+        reified = FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
+    } else if (scalable) {
+      auto loc = op->getLoc();
+      auto reifiedScalable =
+          vector::ScalableValueBoundsConstraintSet::computeScalableBound(
+              value, dim, *op.getVscaleMin(), *op.getVscaleMax(), boundType);
+      if (succeeded(reifiedScalable)) {
+        SmallVector<std::pair<Value, std::optional<int64_t>>, 1> vscaleOperand;
+        if (reifiedScalable->map.getNumInputs() == 1) {
+          // The only possible input to the bound is vscale.
+          vscaleOperand.push_back(std::make_pair(
+              rewriter.create<vector::VectorScaleOp>(loc), std::nullopt));
         }
+        reified = affine::materializeComputedBound(
+            rewriter, loc, reifiedScalable->map, vscaleOperand);
       }
-      if (failed(reified)) {
-        op->emitOpError("could not reify bound");
-        return WalkResult::interrupt();
+    } else {
+      if (useArithOps) {
+        reified = arith::reifyValueBound(rewriter, op->getLoc(), boundType,
+                                         op.getVariable(), stopCondition);
+      } else {
+        reified = reifyValueBound(rewriter, op->getLoc(), boundType,
+                                  op.getVariable(), stopCondition);
       }
+    }
+    if (failed(reified)) {
+      op->emitOpError("could not reify bound");
+      return WalkResult::interrupt();
+    }
 
-      // Replace the op with the reified bound.
-      if (auto val = llvm::dyn_cast_if_present<Value>(*reified)) {
-        rewriter.replaceOp(op, val);
-        return WalkResult::skip();
-      }
-      Value constOp = rewriter.create<arith::ConstantIndexOp>(
-          op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
-      rewriter.replaceOp(op, constOp);
+    // Replace the op with the reified bound.
+    if (auto val = llvm::dyn_cast_if_present<Value>(*reified)) {
+      rewriter.replaceOp(op, val);
       return WalkResult::skip();
     }
-    return WalkResult::advance();
+    Value constOp = rewriter.create<arith::ConstantIndexOp>(
+        op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
+    rewriter.replaceOp(op, constOp);
+    return WalkResult::skip();
   });
   return failure(result.wasInterrupted());
 }
 
-/// Look for "test.are_equal" ops and emit errors/remarks.
+/// Look for "test.compare" ops and emit errors/remarks.
 static LogicalResult testEquality(func::FuncOp funcOp) {
   IRRewriter rewriter(funcOp.getContext());
-  WalkResult result = funcOp.walk([&](Operation *op) {
-    // Look for test.are_equal ops.
-    if (op->getName().getStringRef() == "test.are_equal") {
-      if (op->getNumOperands() != 2 || !op->getOperand(0).getType().isIndex() ||
-          !op->getOperand(1).getType().isIndex()) {
-        op->emitOpError("invalid op");
-        return WalkResult::skip();
+  WalkResult result = funcOp.walk([&](test::CompareOp op) {
+    auto cmpType = op.getComparisonOperator();
+    if (op.getCompose()) {
+      if (cmpType != ValueBoundsConstraintSet::EQ) {
+        op->emitOpError(
+            "comparison operator must be EQ when 'composed' is specified");
+        return WalkResult::interrupt();
       }
-      if (op->hasAttr("compose")) {
-        FailureOr<int64_t> delta = affine::fullyComposeAndComputeConstantDelta(
-            op->getOperand(0), op->getOperand(1));
-        if (failed(delta)) {
-          op->emitError("could not determine equality");
-        } else if (*delta == 0) {
-          op->emitRemark("equal");
-        } else {
-          op->emitRemark("different");
-        }
+      FailureOr<int64_t> delta = affine::fullyComposeAndComputeConstantDelta(
+          op->getOperand(0), op->getOperand(1));
+      if (failed(delta)) {
+        op->emitError("could not determine equality");
+      } else if (*delta == 0) {
+        op->emitRemark("equal");
       } else {
-        FailureOr<bool> equal = ValueBoundsConstraintSet::areEqual(
-            op->getOperand(0), op->getOperand(1));
-        if (failed(equal)) {
-          op->emitError("could not determine equality");
-        } else if (*equal) {
-          op->emitRemark("equal");
-        } else {
-          op->emitRemark("different");
-        }
+        op->emitRemark("different");
       }
+      return WalkResult::advance();
+    }
+
+    auto compare = [&](ValueBoundsConstraintSet::ComparisonOperator cmp) {
+      return ValueBoundsConstraintSet::compare(op.getLhs(), cmp, op.getRhs());
+    };
+    if (compare(cmpType)) {
+      op->emitRemark("true");
+    } else if (cmpType != ValueBoundsConstraintSet::EQ &&
+               compare(invertComparisonOperator(cmpType))) {
+      op->emitRemark("false");
+    } else if (cmpType == ValueBoundsConstraintSet::EQ &&
+               (compare(ValueBoundsConstraintSet::ComparisonOperator::LT) ||
+                compare(ValueBoundsConstraintSet::ComparisonOperator::GT))) {
+      op->emitRemark("false");
+    } else {
+      op->emitError("unknown");
     }
     return WalkResult::advance();
   });
