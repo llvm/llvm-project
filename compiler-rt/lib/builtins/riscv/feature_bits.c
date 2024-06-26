@@ -93,15 +93,9 @@ typedef struct {
 } cpu_set_t;
 
 #define __NR_riscv_hwprobe 258
-static long sys_riscv_hwprobe(struct riscv_hwprobe *pairs, unsigned pair_count,
-                              unsigned cpu_count, cpu_set_t *cpus,
-                              unsigned int flags) {
-  return syscall_impl_5_args(__NR_riscv_hwprobe, (long)pairs, pair_count,
-                             cpu_count, (long)cpus, flags);
-}
-
 static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
-  return sys_riscv_hwprobe(Hwprobes, len, 0, (cpu_set_t *)((void *)0), 0);
+  return syscall_impl_5_args(__NR_riscv_hwprobe, (long)Hwprobes, len, 0,
+                             (long)(cpu_set_t *)((void *)0), 0);
 }
 
 #define RISCV_FEATURE_BITS_LENGTH 2
