@@ -3497,12 +3497,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   else if (auto CPA = dyn_cast<ConstantPtrAuth>(&C)) {
     Register Addr = getOrCreateVReg(*CPA->getPointer());
     Register AddrDisc = getOrCreateVReg(*CPA->getAddrDiscriminator());
-    EntryBuilder->buildInstr(TargetOpcode::G_PTRAUTH_GLOBAL_VALUE)
-        .addDef(Reg)
-        .addUse(Addr)
-        .addImm(CPA->getKey()->getZExtValue())
-        .addUse(AddrDisc)
-        .addImm(CPA->getDiscriminator()->getZExtValue());
+    EntryBuilder->buildConstantPtrAuth(Reg, CPA, Addr, AddrDisc);
   } else if (auto CAZ = dyn_cast<ConstantAggregateZero>(&C)) {
     if (!isa<FixedVectorType>(CAZ->getType()))
       return false;
