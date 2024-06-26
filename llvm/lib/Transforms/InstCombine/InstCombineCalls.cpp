@@ -2511,13 +2511,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fabs: {
     Value *Cond, *TVal, *FVal;
-    Value* Arg = II->getArgOperand(0);
-    Value* X;
+    Value *Arg = II->getArgOperand(0);
+    Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-      CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X);
-      Fabs->copyFastMathFlags(II);
-      return replaceInstUsesWith(CI, Fabs);
+        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+        return replaceInstUsesWith(CI, Fabs);
     }
 
     if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {

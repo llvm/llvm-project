@@ -62,10 +62,11 @@ define float @fabs_copysign_nnan(float %x, float %y) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %copysign = call nnan float @llvm.copysign.f32(float %x, float %y)
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
   %fabs = call nnan float @llvm.fabs.f32(float %copysign)
   ret float %fabs
 }
+
 
 define float @fabs_copysign_ninf(float %x, float %y) {
 ; CHECK-LABEL: define float @fabs_copysign_ninf(
@@ -73,7 +74,7 @@ define float @fabs_copysign_ninf(float %x, float %y) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %copysign = call ninf float @llvm.copysign.f32(float %x, float %y)
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
   %fabs = call ninf float @llvm.fabs.f32(float %copysign)
   ret float %fabs
 }
@@ -84,7 +85,41 @@ define float @fabs_copysign_nsz(float %x, float %y) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
-  %copysign = call nsz float @llvm.copysign.f32(float %x, float %y)
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
+  %fabs = call nsz float @llvm.fabs.f32(float %copysign)
+  ret float %fabs
+}
+
+define float @fabs_copysign_nnan_negative(float %x, float %y) {
+; CHECK-LABEL: define float @fabs_copysign_nnan_negative(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
+  %fabs = call nnan float @llvm.fabs.f32(float %copysign)
+  ret float %fabs
+}
+
+
+define float @fabs_copysign_ninf_negative(float %x, float %y) {
+; CHECK-LABEL: define float @fabs_copysign_ninf_negative(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call ninf float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
+  %fabs = call ninf float @llvm.fabs.f32(float %copysign)
+  ret float %fabs
+}
+
+define float @fabs_copysign_nsz_negative(float %x, float %y) {
+; CHECK-LABEL: define float @fabs_copysign_nsz_negative(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %copysign = call float @llvm.copysign.f32(float %x, float %y)
   %fabs = call nsz float @llvm.fabs.f32(float %copysign)
   ret float %fabs
 }
@@ -146,4 +181,6 @@ define float @fabs_fneg_multi_use(float %x) {
   %fabs = call float @llvm.fabs.f32(float %neg)
   ret float %fabs
 }
+
+
 
