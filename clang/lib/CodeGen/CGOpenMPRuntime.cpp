@@ -9484,14 +9484,14 @@ llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
   }
   return DynCGroupMem;
 }
-static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
-                       const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
-                       llvm::OpenMPIRBuilder &OMPBuilder,
-                       MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
-  // Get mappable expression information.
-  MappableExprsHandler MEHandler(D, CGF);
-  llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
-  llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
+static void genMapInfoForCaptures(
+    MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
+    const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+    llvm::OpenMPIRBuilder &OMPBuilder,
+    llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers,
+    llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
+    MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
+
   CodeGenModule &CGM = CGF.CGM;
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
@@ -9559,9 +9559,18 @@ static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
   MEHandler.adjustMemberOfForLambdaCaptures(
       OMPBuilder, LambdaPointers, CombinedInfo.BasePointers,
       CombinedInfo.Pointers, CombinedInfo.Types);
+}
+static void
+genMapInfo(MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
+           MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
+           llvm::OpenMPIRBuilder &OMPBuilder,
+           const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkippedVarSet =
+               llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) {
+
+  CodeGenModule &CGM = CGF.CGM;
   // Map any list items in a map clause that were not captures because they
   // weren't referenced within the construct.
-  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, MappedVarSet);
+  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, SkippedVarSet);
 
   auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
     return emitMappingInformation(CGF, OMPBuilder, MapExpr);
@@ -9572,6 +9581,21 @@ static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
     llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
                     FillInfoMap);
   }
+}
+
+static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
+                       const CapturedStmt &CS,
+                       llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+                       llvm::OpenMPIRBuilder &OMPBuilder,
+                       MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
+  // Get mappable expression information.
+  MappableExprsHandler MEHandler(D, CGF);
+  llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
+
+  genMapInfoForCaptures(MEHandler, CGF, CS, CapturedVars, OMPBuilder,
+                        LambdaPointers, MappedVarSet, CombinedInfo);
+  genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
 }
 static void emitTargetCallKernelLaunch(
     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
