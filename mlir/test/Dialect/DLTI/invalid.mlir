@@ -155,16 +155,3 @@ module attributes {
             #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">,
             #dlti.dl_entry<"L1_cache_size_in_bytes", "8192">>
   >} {}
-
-// -----
-
-module attributes {
-  // Repeated DLTI entry
-  //
-  // expected-error@+4 {{dlti.target_device_spec supports values of StringAttr type only.}}
-  // expected-error@+5 {{Error in parsing target device spec}}
-  // expected-error@+4 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
-  dlti.target_system_spec = #dlti.target_system_spec<
-    "CPU": #dlti.target_device_spec<
-            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>>
-  >} {}

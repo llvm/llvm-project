@@ -468,7 +468,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
     StaticInterfaceMethod<
       /*description=*/"Returns the value of the property, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<StringAttr>",
+      /*retTy=*/"std::optional<Attribute>",
       /*methodName=*/"getDevicePropertyValue",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",

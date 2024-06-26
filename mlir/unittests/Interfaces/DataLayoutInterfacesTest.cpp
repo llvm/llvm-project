@@ -613,11 +613,11 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/,
                 Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
-            std::optional<StringAttr>(Builder(&ctx).getStringAttr("4096")));
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("4096")));
   EXPECT_EQ(layout.getDevicePropertyValue(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/,
                 Builder(&ctx).getStringAttr("max_vector_op_width")),
-            std::optional<StringAttr>(Builder(&ctx).getStringAttr("128")));
+            std::optional<Attribute>(Builder(&ctx).getStringAttr("128")));
 }
 
 TEST(DataLayout, Caching) {

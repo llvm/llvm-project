@@ -293,12 +293,12 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
-std::optional<StringAttr>
+std::optional<Attribute>
 mlir::detail::getDevicePropertyValue(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return std::nullopt;
 
-  return cast<StringAttr>(entry.getValue());
+  return entry.getValue();
 }
 
 DataLayoutEntryList
@@ -660,7 +660,7 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
-std::optional<StringAttr> mlir::DataLayout::getDevicePropertyValue(
+std::optional<Attribute> mlir::DataLayout::getDevicePropertyValue(
     TargetSystemSpecInterface::DeviceID deviceID,
     StringAttr propertyName) const {
   checkValid();
