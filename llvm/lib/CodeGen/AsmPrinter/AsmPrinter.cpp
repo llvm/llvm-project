@@ -158,18 +158,10 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
-const char DbgTimerName[] = "emit";
-const char DbgTimerDescription[] = "Debug Info Emission";
 const char EHTimerName[] = "write_exception";
 const char EHTimerDescription[] = "DWARF Exception Writer";
 const char CFGuardName[] = "Control Flow Guard";
 const char CFGuardDescription[] = "Control Flow Guard";
-const char CodeViewLineTablesGroupName[] = "linetables";
-const char CodeViewLineTablesGroupDescription[] = "CodeView Line Tables";
-const char PPTimerName[] = "emit";
-const char PPTimerDescription[] = "Pseudo Probe Emission";
-const char PPGroupName[] = "pseudo probe";
-const char PPGroupDescription[] = "Pseudo Probe Emission";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -552,28 +544,19 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isOSWindows()) {
-      Handlers.emplace_back(std::make_unique<CodeViewDebug>(this),
-                            DbgTimerName, DbgTimerDescription,
-                            CodeViewLineTablesGroupName,
-                            CodeViewLineTablesGroupDescription);
-    }
+    if (EmitCodeView && TM.getTargetTriple().isOSWindows())
+      DebugHandlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       assert(MMI && "MMI could not be nullptr here!");
       if (MMI->hasDebugInfo()) {
         DD = new DwarfDebug(this);
-        Handlers.emplace_back(std::unique_ptr<DwarfDebug>(DD), DbgTimerName,
-                              DbgTimerDescription, DWARFGroupName,
-                              DWARFGroupDescription);
+        DebugHandlers.push_back(std::unique_ptr<DwarfDebug>(DD));
       }
     }
   }
 
-  if (M.getNamedMetadata(PseudoProbeDescMetadataName)) {
-    PP = new PseudoProbeHandler(this);
-    Handlers.emplace_back(std::unique_ptr<PseudoProbeHandler>(PP), PPTimerName,
-                          PPTimerDescription, PPGroupName, PPGroupDescription);
-  }
+  if (M.getNamedMetadata(PseudoProbeDescMetadataName))
+    PP = std::make_unique<PseudoProbeHandler>(this);
 
   switch (MAI->getExceptionHandlingType()) {
   case ExceptionHandling::None:
@@ -640,6 +623,8 @@ bool AsmPrinter::doInitialization(Module &M) {
                           CFGuardDescription, DWARFGroupName,
                           DWARFGroupDescription);
 
+  for (auto &DH : DebugHandlers)
+    DH->beginModule(&M);
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -791,12 +776,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   const Align Alignment = getGVAlignment(GV, DL);
 
-  for (const HandlerInfo &HI : Handlers) {
-    NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
-                       HI.TimerGroupName, HI.TimerGroupDescription,
-                       TimePassesIsEnabled);
-    HI.Handler->setSymbolSize(GVSym, Size);
-  }
+  for (auto &DH : DebugHandlers)
+    DH->setSymbolSize(GVSym, Size);
 
   // Handle common symbols
   if (GVKind.isCommon()) {
@@ -1067,6 +1048,10 @@ void AsmPrinter::emitFunctionHeader() {
   }
 
   // Emit pre-function debug and/or EH information.
+  for (auto &DH : DebugHandlers) {
+    DH->beginFunction(MF);
+    DH->beginBasicBlockSection(MF->front());
+  }
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -1770,11 +1755,8 @@ void AsmPrinter::emitFunctionBody() {
       if (MDNode *MD = MI.getPCSections())
         emitPCSectionsLabel(*MF, *MD);
 
-      for (const HandlerInfo &HI : Handlers) {
-        NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                           HI.TimerGroupDescription, TimePassesIsEnabled);
-        HI.Handler->beginInstruction(&MI);
-      }
+      for (auto &DH : DebugHandlers)
+        DH->beginInstruction(&MI);
 
       if (isVerbose())
         emitComments(MI, OutStreamer->getCommentOS());
@@ -1868,11 +1850,8 @@ void AsmPrinter::emitFunctionBody() {
       if (MCSymbol *S = MI.getPostInstrSymbol())
         OutStreamer->emitLabel(S);
 
-      for (const HandlerInfo &HI : Handlers) {
-        NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
-                           HI.TimerGroupDescription, TimePassesIsEnabled);
-        HI.Handler->endInstruction();
-      }
+      for (auto &DH : DebugHandlers)
+        DH->endInstruction();
     }
 
     // We must emit temporary symbol for the end of this basic block, if either
@@ -2003,6 +1982,8 @@ void AsmPrinter::emitFunctionBody() {
   // Call endBasicBlockSection on the last block now, if it wasn't already
   // called.
   if (!MF->back().isEndSection()) {
+    for (auto &DH : DebugHandlers)
+      DH->endBasicBlockSection(MF->back());
     for (const HandlerInfo &HI : Handlers) {
       NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                          HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -2022,6 +2003,8 @@ void AsmPrinter::emitFunctionBody() {
   emitJumpTableInfo();
 
   // Emit post-function debug and/or EH information.
+  for (auto &DH : DebugHandlers)
+    DH->endFunction(MF);
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -2463,6 +2446,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitGlobalIFunc(M, IFunc);
 
   // Finalize debug and EH information.
+  for (auto &DH : DebugHandlers)
+    DH->endModule();
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
@@ -2473,6 +2458,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // keeping all the user-added handlers alive until the AsmPrinter is
   // destroyed.
   Handlers.erase(Handlers.begin() + NumUserHandlers, Handlers.end());
+  DebugHandlers.clear();
   DD = nullptr;
 
   // If the target wants to know about weak references, print them all.
@@ -4059,17 +4045,23 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // With BB sections, each basic block must handle CFI information on its own
   // if it begins a section (Entry block call is handled separately, next to
   // beginFunction).
-  if (MBB.isBeginSection() && !MBB.isEntryBlock())
+  if (MBB.isBeginSection() && !MBB.isEntryBlock()) {
+    for (auto &DH : DebugHandlers)
+      DH->beginBasicBlockSection(MBB);
     for (const HandlerInfo &HI : Handlers)
       HI.Handler->beginBasicBlockSection(MBB);
+  }
 }
 
 void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   // Check if CFI information needs to be updated for this MBB with basic block
   // sections.
-  if (MBB.isEndSection())
+  if (MBB.isEndSection()) {
+    for (auto &DH : DebugHandlers)
+      DH->endBasicBlockSection(MBB);
     for (const HandlerInfo &HI : Handlers)
       HI.Handler->endBasicBlockSection(MBB);
+  }
 }
 
 void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,

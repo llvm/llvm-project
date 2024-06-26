@@ -420,8 +420,6 @@ public:
     return DIToIdMap[Ty];
   }
 
-  void setSymbolSize(const MCSymbol *Symbol, uint64_t Size) override {}
-
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
 

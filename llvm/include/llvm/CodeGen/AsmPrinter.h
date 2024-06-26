@@ -40,6 +40,7 @@ class Constant;
 class ConstantArray;
 class ConstantPtrAuth;
 class DataLayout;
+class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
@@ -208,6 +209,9 @@ protected:
   std::vector<HandlerInfo> Handlers;
   size_t NumUserHandlers = 0;
 
+  /// Debuginfo handler. Protected so that targets can add their own.
+  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
+
   StackMaps SM;
 
 private:
@@ -222,7 +226,7 @@ private:
 
   /// A handler that supports pseudo probe emission with embedded inline
   /// context.
-  PseudoProbeHandler *PP = nullptr;
+  std::unique_ptr<PseudoProbeHandler> PP;
 
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
