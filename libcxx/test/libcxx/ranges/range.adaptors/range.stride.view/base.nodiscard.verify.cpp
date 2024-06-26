@@ -18,12 +18,13 @@ void test() {
   const int range[] = {1, 2, 3};
 
   std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-      range, 2); 
-  range | std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-              2); 
+      range,
+      2);
+  range |
+      std::views::stride( // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+          2);
   std::views::all | // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-      std::views::stride(
-          1); 
+      std::views::stride(1);
 
   auto sv             = std::views::stride(range, 2);
   const auto const_sv = std::views::stride(range, 2);
@@ -34,10 +35,10 @@ void test() {
 
   const_sv.stride(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  const_sv.begin();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  const_sv.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   unsimple_sv.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  const_sv.end();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  const_sv.end();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   unsimple_sv.end(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   sv.size();       // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
