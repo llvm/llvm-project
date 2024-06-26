@@ -17,6 +17,9 @@ module real_tests
   !WARN: warning: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
+ !WARN: warning: argument is out of range [-1., 1.]
+  real(4), parameter :: nan_r4_acos1 = acos(1.1)
+  TEST_ISNAN(nan_r4_acos1)
   real(4), parameter :: ok_r4_gamma = gamma(-1.1)
   real(4), parameter :: ok_r4_log_gamma = log_gamma(-2.001)
 
