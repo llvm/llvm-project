@@ -183,19 +183,19 @@ void test_ds_fminf(__attribute__((address_space(3))) float *out, float src) {
   *out = __builtin_amdgcn_ds_fminf(out, src, 0, 0, true);
 
   // Test all orders.
-  *out = __builtin_amdgcn_ds_fminf(out, src, 1, 0, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 2, 0, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 3, 0, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 4, 0, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 5, 0, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 5, 0, false); // invalid
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_CONSUME, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM, false); // invalid
 
   // Test all syncscopes.
-  *out = __builtin_amdgcn_ds_fminf(out, src, 0, 1, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 0, 2, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 0, 3, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 0, 4, false);
-  *out = __builtin_amdgcn_ds_fminf(out, src, 0, 5, false); // invalid
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_WRKGRP, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_WVFRNT, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE, false);
+  *out = __builtin_amdgcn_ds_fminf(out, src, __ATOMIC_RELAXED, 5, false); // invalid
 }
 
 // CHECK-LABEL: @test_ds_fmax
@@ -224,19 +224,19 @@ void test_ds_fmaxf(__attribute__((address_space(3))) float *out, float src) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, true);
 
   // Test all orders.
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 1, 0, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 2, 0, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 3, 0, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 4, 0, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 5, 0, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 5, 0, false); // invalid
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_CONSUME, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_ACQUIRE, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM, false); // invalid
 
   // Test all syncscopes.
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 1, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 2, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 3, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 4, false);
-  *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 5, false); // invalid
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_WRKGRP, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_WVFRNT, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELAXED, __MEMORY_SCOPE_SINGLE, false);
+  *out = __builtin_amdgcn_ds_fmaxf(out, src, __ATOMIC_RELAXED, 5, false); // invalid
 }
 
 // CHECK-LABEL: @test_s_memtime
