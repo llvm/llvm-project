@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__linux__)
+
 static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
                                 long arg4, long arg5) {
   register long a7 __asm__("a7") = number;
@@ -492,6 +494,8 @@ static void updateImpliedFeatures() {
     Changed = updateImpliedFeaturesImpl();
 }
 
+#endif // defined(__linux__)
+
 static int FeaturesBitCached = 0;
 
 void __init_riscv_features_bit() {
@@ -501,6 +505,7 @@ void __init_riscv_features_bit() {
 
   FeaturesBitCached = 1;
 
+#if defined(__linux__)
   struct riscv_hwprobe Hwprobes[HWPROBE_LENGTH];
   Hwprobes[0].key = RISCV_HWPROBE_KEY_BASE_BEHAVIOR;
   Hwprobes[1].key = RISCV_HWPROBE_KEY_IMA_EXT_0;
@@ -509,4 +514,5 @@ void __init_riscv_features_bit() {
 
   initRISCVFeature(Hwprobes);
   updateImpliedFeatures();
+#endif // defined(__linux__)
 }
