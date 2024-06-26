@@ -2701,14 +2701,14 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Mask, PatternMatch::m_SExt(PatternMatch::m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
-      assert(Mask->getType()->getPrimitiveSizeInBits() ==
-                 II.getType()->getPrimitiveSizeInBits() &&
+      auto *MaskTy = cast<FixedVectorType>(Mask->getType());
+      auto *OpTy = cast<FixedVectorType>(II.getType());
+      assert(MaskTy->getPrimitiveSizeInBits() ==
+                 OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
 
-      unsigned NumMaskElts =
-          cast<FixedVectorType>(Mask->getType())->getNumElements();
-      unsigned NumOperandElts =
-          cast<FixedVectorType>(II.getType())->getNumElements();
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
       }
@@ -2716,8 +2716,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // If the mask has less elements than the operands, each mask bit maps to
       // multiple elements of the operands. Bitcast back and forth.
       if (NumMaskElts < NumOperandElts) {
-        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, Mask->getType());
-        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, Mask->getType());
+        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, MaskTy);
+        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, MaskTy);
         Value *Sel = IC.Builder.CreateSelect(BoolVec, CastOp1, CastOp0);
         return new BitCastInst(Sel, II.getType());
       }
