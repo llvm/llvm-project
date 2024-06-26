@@ -5089,6 +5089,12 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX1210Insts])
     return true;
 
+  unsigned Opc = Inst.getOpcode();
+  // DS_READ_B96_TR_B6 is the only DS instruction in GFX950, that allows
+  // unaligned VGPR. All others only allow even aligned VGPRs.
+  if (FB[AMDGPU::FeatureGFX90AInsts] && Opc == AMDGPU::DS_READ_B96_TR_B6_vi)
+    return true;
+
   const MCRegisterInfo *MRI = getMRI();
   const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
   const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
@@ -8848,7 +8854,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 ///           max(expr, ...)
 ///
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
-  using AGVK = AMDGPUVariadicMCExpr::VariadicKind;
+  using AGVK = AMDGPUMCExpr::VariantKind;
 
   if (isToken(AsmToken::Identifier)) {
     StringRef TokenId = getTokenStr();
@@ -8878,7 +8884,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   "mismatch of commas in " + Twine(TokenId) + " expression");
             return true;
           }
-          Res = AMDGPUVariadicMCExpr::create(VK, Exprs, getContext());
+          Res = AMDGPUMCExpr::create(VK, Exprs, getContext());
           return false;
         }
         const MCExpr *Expr;

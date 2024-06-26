@@ -93,7 +93,7 @@ __attribute__((no_sanitize("all"))) int test_no_sanitize_all(int *x, int *y) {
 // CHECK: attributes #1 = { mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #2 = { disable_sanitizer_instrumentation mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // CHECK: attributes #3 = { mustprogress nofree norecurse nounwind willreturn memory(write, argmem: readwrite, inaccessiblemem: none) "min-legal-vector-width"="0" "no-trapping-math"="true" "no_sanitize_thread" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #4 = { nounwind }
+// CHECK: attributes #4 = { nounwind "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
 // CHECK: !2 = !{!"sanmd_covered!C", !3}
 // CHECK: !3 = !{i64 0}

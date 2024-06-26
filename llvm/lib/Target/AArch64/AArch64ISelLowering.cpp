@@ -423,7 +423,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addQRType(MVT::v8bf16);
   }
 
-  if (Subtarget->hasSVEorSME()) {
+  if (Subtarget->isSVEorStreamingSVEAvailable()) {
     // Add legal sve predicate types
     addRegisterClass(MVT::nxv1i1, &AArch64::PPRRegClass);
     addRegisterClass(MVT::nxv2i1, &AArch64::PPRRegClass);
@@ -1408,7 +1408,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   // FIXME: Move lowering for more nodes here if those are common between
   // SVE and SME.
-  if (Subtarget->hasSVEorSME()) {
+  if (Subtarget->isSVEorStreamingSVEAvailable()) {
     for (auto VT :
          {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1, MVT::nxv1i1}) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
@@ -1484,7 +1484,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       if (!Subtarget->isLittleEndian())
         setOperationAction(ISD::BITCAST, VT, Expand);
 
-      if (Subtarget->hasSVE2orSME())
+      if (Subtarget->hasSVE2() ||
+          (Subtarget->hasSME() && Subtarget->isStreaming()))
         // For SLI/SRI.
         setOperationAction(ISD::OR, VT, Custom);
     }
@@ -1785,6 +1786,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   IsStrictFPEnabled = true;
   setMaxAtomicSizeInBitsSupported(128);
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget->isTargetWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
+  // LegalizeDAG currently can't expand fp16 LDEXP/FREXP on targets where i16
+  // isn't legal.
+  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+    if (isOperationExpand(Op, MVT::f16))
+      setOperationAction(Op, MVT::f16, Promote);
+
   if (Subtarget->isWindowsArm64EC()) {
     // FIXME: are there intrinsics we need to exclude from this?
     for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
@@ -1937,7 +1952,7 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  if (!Subtarget->hasSVEorSME())
+  if (!Subtarget->isSVEorStreamingSVEAvailable())
     return true;
 
   // We can only use the BRKB + CNTP sequence with legal predicate types. We can
@@ -2961,18 +2976,25 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                    MachineInstr &MI,
-                                   MachineBasicBlock *BB, bool HasTile) const {
+                                   MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
   unsigned StartIdx = 0;
 
+  bool HasTile = BaseReg != AArch64::ZA;
+  bool HasZPROut = HasTile && MI.getOperand(0).isReg();
+  if (HasZPROut) {
+    MIB.add(MI.getOperand(0)); // Output ZPR
+    ++StartIdx;
+  }
   if (HasTile) {
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm());
-    StartIdx = 1;
-  } else
+    MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm(),
+               RegState::Define);                           // Output ZA Tile
+    MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
+    StartIdx++;
+  } else {
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
-
+  }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
@@ -3081,17 +3103,17 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
         TII->get(MI.getOpcode()).TSFlags & AArch64::SMEMatrixTypeMask;
     switch (SMEMatrixType) {
     case (AArch64::SMEMatrixArray):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB, /*HasTile*/ false);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB);
     case (AArch64::SMEMatrixTileB):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB);
     case (AArch64::SMEMatrixTileH):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB);
     case (AArch64::SMEMatrixTileS):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB);
     case (AArch64::SMEMatrixTileD):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB);
     case (AArch64::SMEMatrixTileQ):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB);
     }
   }
 
@@ -14527,7 +14549,9 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
-    if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+    if (VT.isScalableVector() &&
+        (Subtarget->hasSVE2() ||
+         (Subtarget->hasSME() && Subtarget->isStreaming()))) {
       SDValue RShOperand;
       unsigned ShiftValue;
       if (canLowerSRLToRoundingShiftForVT(Op, VT, DAG, ShiftValue, RShOperand))
@@ -16234,15 +16258,13 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  if (!VecTy->isScalableTy() && !Subtarget->isNeonAvailable() &&
-      !Subtarget->useSVEForFixedLengthVectors())
+  if (isa<FixedVectorType>(VecTy) && !Subtarget->isNeonAvailable() &&
+      (!Subtarget->useSVEForFixedLengthVectors() ||
+       !getSVEPredPatternFromNumElements(MinElts)))
     return false;
 
-  if (VecTy->isScalableTy() && !Subtarget->hasSVEorSME())
-    return false;
-
-  // Ensure that the predicate for this number of elements is available.
-  if (Subtarget->hasSVE() && !getSVEPredPatternFromNumElements(MinElts))
+  if (isa<ScalableVectorType>(VecTy) &&
+      !Subtarget->isSVEorStreamingSVEAvailable())
     return false;
 
   // Ensure the number of vector elements is greater than 1.

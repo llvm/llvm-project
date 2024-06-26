@@ -852,8 +852,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
 
     { ISD::MUL,   MVT::v16i8,   {  4, 12, 4, 5 } }, // extend/pmullw/trunc
-    { ISD::MUL,   MVT::v32i8,   {  6, 11,10,11 } }, // extend/pmullw/trunc
-    { ISD::MUL,   MVT::v64i8,   {  6, 12,10,11 } }, // unpack/pmullw
+    { ISD::MUL,   MVT::v32i8,   {  3, 10, 7,10 } }, // pmaddubsw
+    { ISD::MUL,   MVT::v64i8,   {  3, 11, 7,10 } }, // pmaddubsw
     { ISD::MUL,   MVT::v32i16,  {  1,  5, 1, 1 } }, // pmullw
 
     { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
@@ -1119,7 +1119,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
     { ISD::MUL,  MVT::v16i8,   {  5, 18, 6,12 } }, // extend/pmullw/pack
-    { ISD::MUL,  MVT::v32i8,   {  6, 11,10,20 } }, // unpack/pmullw
+    { ISD::MUL,  MVT::v32i8,   {  4,  8, 8,16 } }, // pmaddubsw
     { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 2 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
@@ -1170,8 +1170,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
-    { ISD::MUL,     MVT::v32i8,   { 12, 12, 22, 23 } }, // unpack/pmullw + split
-    { ISD::MUL,     MVT::v16i8,   {  5,  6, 10, 12 } }, // unpack/pmullw
+    { ISD::MUL,     MVT::v32i8,   { 10, 11, 18, 19 } }, // pmaddubsw + split
+    { ISD::MUL,     MVT::v16i8,   {  5,  6,  8, 12 } }, // 2*pmaddubsw/3*and/psllw/or
     { ISD::MUL,     MVT::v16i16,  {  4,  8,  5,  6 } }, // pmullw + split
     { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
@@ -1311,12 +1311,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8, 17, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v16i8,  {  6, 18,10,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v4i32,  {  2, 11, 1, 1 } }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSSE3CostTable[] = {
+    { ISD::MUL,  MVT::v16i8,  {  5, 18,10,12 } }, // 2*pmaddubsw/3*and/psllw/or
+  };
+
+  if (ST->hasSSSE3())
+    if (const auto *Entry = CostTableLookup(SSSE3CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 

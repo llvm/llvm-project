@@ -26,6 +26,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
+    "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/textmate/mlir.json",
 ])
 
@@ -1031,6 +1032,7 @@ cc_library(
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
+        ":config",
         ":MLIRBindingsPythonHeaders",
         ":Support",
         "//llvm:Support",
@@ -2198,6 +2200,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
         "//llvm:Support",

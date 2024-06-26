@@ -112,7 +112,7 @@ class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
         !if(P.HasOMod,
             [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
                                                   i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node P.Src0RC32:$src0))]
+            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
         )
     );
 }
@@ -260,10 +260,15 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: There is VOP3 encoding also
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
-                                       getVOP1Pat<int_amdgcn_readfirstlane,
-                                                  VOP_READFIRSTLANE>.ret, 1> {
+                                       [], 1> {
   let isConvergent = 1;
   let IsInvalidSingleUseConsumer = 1;
+}
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (int_amdgcn_readfirstlane (vt VRegOrLdsSrc_32:$src0))),
+        (V_READFIRSTLANE_B32 (vt VRegOrLdsSrc_32:$src0))
+  >;
 }
 
 let isReMaterializable = 1 in {
@@ -833,9 +838,7 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      getVOP1Pat<int_amdgcn_permlane64,
-                                                 VOP_MOVRELS>.ret,
-                                      /*VOP1Only=*/ 1> {
+                                      [], /*VOP1Only=*/ 1> {
     let IsInvalidSingleUseConsumer = 1;
     let IsInvalidSingleUseProducer = 1;
   }
@@ -858,6 +861,12 @@ defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP
 let SubtargetPredicate = HasPermlane32Swap in {
 defm V_PERMLANE32_SWAP_B32 : VOP1Inst<"v_permlane32_swap_b32", VOP_PERMLANE_SWAP>;
 }
+}
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
+        (vt (V_PERMLANE64_B32 (vt VRegSrc_32:$src0)))
+  >;
 }
 
 //===----------------------------------------------------------------------===//
