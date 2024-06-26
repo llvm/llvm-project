@@ -423,16 +423,19 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     FConstantActions.legalFor({s16});
   FConstantActions.lowerFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen)
-      .libcall();
+  auto &FPToIActions =
+      getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
+          .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)));
+  if (ST.hasStdExtZfh())
+    FPToIActions.legalFor({{s32, s16}, {sXLen, s16}});
+  FPToIActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).libcall();
 
-  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})))
-      .widenScalarToNextPow2(1)
-      .clampScalar(1, s32, sXLen);
+  auto &IToFPActions =
+      getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+          .legalIf(all(typeIsScalarFPArith(0, ST), typeInSet(1, {s32, sXLen})));
+  if (ST.hasStdExtZfh())
+    IToFPActions.legalFor({{s16, s32}, {s16, sXLen}});
+  IToFPActions.widenScalarToNextPow2(1).clampScalar(1, s32, sXLen);
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
