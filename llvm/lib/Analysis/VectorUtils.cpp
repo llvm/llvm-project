@@ -1481,20 +1481,19 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   if (!requiresScalarEpilogue())
     return;
 
-  bool ReleasedGroup = false;
   // Release groups requiring scalar epilogues. Note that this also removes them
   // from InterleaveGroups.
-  for (auto *Group : make_early_inc_range(InterleaveGroups)) {
+  bool ReleasedGroup = InterleaveGroups.remove_if([&](auto *Group) {
     if (!Group->requiresScalarEpilogue())
-      continue;
+      return false;
     LLVM_DEBUG(
         dbgs()
         << "LV: Invalidate candidate interleaved group due to gaps that "
            "require a scalar epilogue (not allowed under optsize) and cannot "
            "be masked (not enabled). \n");
-    releaseGroup(Group);
-    ReleasedGroup = true;
-  }
+    releaseGroupWithoutRemovingFromSet(Group);
+    return true;
+  });
   assert(ReleasedGroup && "At least one group must be invalidated, as a "
                           "scalar epilogue was required");
   (void)ReleasedGroup;
