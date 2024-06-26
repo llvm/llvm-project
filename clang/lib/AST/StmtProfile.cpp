@@ -967,6 +967,16 @@ StmtProfiler::VisitOMPExecutableDirective(const OMPExecutableDirective *S) {
       P.Visit(*I);
 }
 
+void StmtProfiler::VisitOMPOpaqueBlockDirective(
+    const OMPOpaqueBlockDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPOpaqueLoopDirective(
+    const OMPOpaqueLoopDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
 void StmtProfiler::VisitOMPCanonicalLoop(const OMPCanonicalLoop *L) {
   VisitStmt(L);
 }

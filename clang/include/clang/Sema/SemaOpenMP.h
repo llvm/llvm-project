@@ -849,6 +849,17 @@ public:
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
+  StmtResult ActOnOpenMPOpaqueBlockDirective(
+      OpenMPDirectiveKind Kind, ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
+      OpenMPDirectiveKind CancelRegion, const DeclarationNameInfo &DirName,
+      SourceLocation StartLoc, SourceLocation EndLoc);
+
+  StmtResult
+  ActOnOpenMPOpaqueLoopDirective(OpenMPDirectiveKind Kind,
+                                 ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
+                                 SourceLocation StartLoc, SourceLocation EndLoc,
+                                 VarsWithInheritedDSAType &VarsWithImplicitDSA);
+
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
