@@ -41,3 +41,17 @@ TEST(LlvmLibcMMapTest, Error_InvalidSize) {
 
   EXPECT_THAT(LIBC_NAMESPACE::munmap(0, 0), Fails(EINVAL));
 }
+
+TEST(LlvmLibcMMapTest, Error_NegativeOffset) {
+  LIBC_NAMESPACE::libc_errno = 0;
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, 128, PROT_READ,
+                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, -42);
+  EXPECT_THAT(addr, Fails(EINVAL, MAP_FAILED));
+}
+
+TEST(LlvmLibcMMapTest, Error_NonPageSizeMultipleOffset) {
+  LIBC_NAMESPACE::libc_errno = 0;
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, 128, PROT_READ,
+                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 7);
+  EXPECT_THAT(addr, Fails(EINVAL, MAP_FAILED));
+}

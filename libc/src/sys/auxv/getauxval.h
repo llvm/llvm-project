@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 #define LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 
-#include <sys/auxv.h>
-
 namespace LIBC_NAMESPACE {
 
 unsigned long getauxval(unsigned long id);
