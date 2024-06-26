@@ -6886,8 +6886,8 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
          ++Stage) {
       std::deque<SUnit *> Instrs =
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
-      std::sort(Instrs.begin(), Instrs.end(),
-                [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
+      llvm::sort(Instrs,
+                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
       for (SUnit *SU : Instrs)
         ProposedSchedule.push_back(SU);
     }
