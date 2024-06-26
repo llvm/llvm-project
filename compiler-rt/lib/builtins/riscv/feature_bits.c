@@ -301,87 +301,115 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBC) {
     __riscv_feature_bits.features[ZBC_GROUPID] |= ZBC_BITMASK;
   }
+
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKB) {
     __riscv_feature_bits.features[ZBKB_GROUPID] |= ZBKB_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKC) {
     __riscv_feature_bits.features[ZBKC_GROUPID] |= ZBKC_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKX) {
     __riscv_feature_bits.features[ZBKX_GROUPID] |= ZBKX_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKND) {
     __riscv_feature_bits.features[ZKND_GROUPID] |= ZKND_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKNE) {
     __riscv_feature_bits.features[ZKNE_GROUPID] |= ZKNE_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKNH) {
     __riscv_feature_bits.features[ZKNH_GROUPID] |= ZKNH_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKSED) {
     __riscv_feature_bits.features[ZKSED_GROUPID] |= ZKSED_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKSH) {
     __riscv_feature_bits.features[ZKSH_GROUPID] |= ZKSH_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKT) {
     __riscv_feature_bits.features[ZKT_GROUPID] |= ZKT_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBB) {
     __riscv_feature_bits.features[ZVBB_GROUPID] |= ZVBB_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBC) {
     __riscv_feature_bits.features[ZVBC_GROUPID] |= ZVBC_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKB) {
     __riscv_feature_bits.features[ZVKB_GROUPID] |= ZVKB_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKG) {
     __riscv_feature_bits.features[ZVKG_GROUPID] |= ZVKG_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNED) {
     __riscv_feature_bits.features[ZVKNED_GROUPID] |= ZVKNED_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNHA) {
     __riscv_feature_bits.features[ZVKNHA_GROUPID] |= ZVKNHA_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNHB) {
     __riscv_feature_bits.features[ZVKNHB_GROUPID] |= ZVKNHB_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKSED) {
     __riscv_feature_bits.features[ZVKSED_GROUPID] |= ZVKSED_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKSH) {
     __riscv_feature_bits.features[ZVKSH_GROUPID] |= ZVKSH_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKT) {
     __riscv_feature_bits.features[ZVKT_GROUPID] |= ZVKT_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFH) {
     __riscv_feature_bits.features[ZFH_GROUPID] |= ZFH_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFHMIN) {
     __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZIHINTNTL) {
     __riscv_feature_bits.features[ZIHINTNTL_GROUPID] |= ZIHINTNTL_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFH) {
     __riscv_feature_bits.features[ZVFH_GROUPID] |= ZVFH_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFHMIN) {
     __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFA) {
     __riscv_feature_bits.features[ZFA_GROUPID] |= ZFA_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZTSO) {
     __riscv_feature_bits.features[ZTSO_GROUPID] |= ZTSO_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZACAS) {
     __riscv_feature_bits.features[ZACAS_GROUPID] |= ZACAS_BITMASK;
   }
+  
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZICOND) {
     __riscv_feature_bits.features[ZICOND_GROUPID] |= ZICOND_BITMASK;
   }
