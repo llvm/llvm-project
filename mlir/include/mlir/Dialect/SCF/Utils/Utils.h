@@ -120,13 +120,13 @@ LogicalResult loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
-/// This structure is to pass and return sets of loop parameters without
-/// confusing the order.
-struct LoopParams {
-  OpFoldResult lowerBound;
-  OpFoldResult upperBound;
-  OpFoldResult step;
-};
+/// Unrolls and jams this `scf.for` operation by the specified unroll factor.
+/// Returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. In case of unroll factor of 1, the function
+/// bails out without doing anything (returns success). Currently, only constant
+/// trip count that are divided by the unroll factor is supported. Currently,
+/// for operations with results are not supported.
+LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
 
 /// Transform a loop with a strictly positive step
 ///   for %i = %lb to %ub step %s
@@ -137,9 +137,9 @@ struct LoopParams {
 /// expected to be either `loop` or another loop perfectly nested under `loop`.
 /// Insert the definition of new bounds immediate before `outer`, which is
 /// expected to be either `loop` or its parent in the loop nest.
-LoopParams emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
-                                    OpFoldResult lb, OpFoldResult ub,
-                                    OpFoldResult step);
+Range emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
+                               OpFoldResult lb, OpFoldResult ub,
+                               OpFoldResult step);
 
 /// Get back the original induction variable values after loop normalization.
 void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,

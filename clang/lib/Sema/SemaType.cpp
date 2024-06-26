@@ -31,6 +31,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
@@ -149,6 +150,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
   case ParsedAttr::AT_NSReturnsRetained:                                       \
   case ParsedAttr::AT_NoReturn:                                                \
+  case ParsedAttr::AT_NonBlocking:                                             \
+  case ParsedAttr::AT_NonAllocating:                                           \
+  case ParsedAttr::AT_Blocking:                                                \
+  case ParsedAttr::AT_Allocating:                                              \
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_CmseNSCall:                                              \
   case ParsedAttr::AT_ArmStreaming:                                            \
@@ -7522,6 +7527,111 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
+std::optional<FunctionEffectMode>
+Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName) {
+  if (CondExpr->isTypeDependent() || CondExpr->isValueDependent())
+    return FunctionEffectMode::Dependent;
+
+  std::optional<llvm::APSInt> ConditionValue =
+      CondExpr->getIntegerConstantExpr(Context);
+  if (!ConditionValue) {
+    // FIXME: err_attribute_argument_type doesn't quote the attribute
+    // name but needs to; users are inconsistent.
+    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
+        << AttributeName << AANT_ArgumentIntegerConstant
+        << CondExpr->getSourceRange();
+    return std::nullopt;
+  }
+  return !ConditionValue->isZero() ? FunctionEffectMode::True
+                                   : FunctionEffectMode::False;
+}
+
+static bool
+handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
+                                       ParsedAttr &PAttr, QualType &QT,
+                                       FunctionTypeUnwrapper &Unwrapped) {
+  // Delay if this is not a function type.
+  if (!Unwrapped.isFunctionType())
+    return false;
+
+  Sema &S = TPState.getSema();
+
+  // Require FunctionProtoType.
+  auto *FPT = Unwrapped.get()->getAs<FunctionProtoType>();
+  if (FPT == nullptr) {
+    S.Diag(PAttr.getLoc(), diag::err_func_with_effects_no_prototype)
+        << PAttr.getAttrName()->getName();
+    return true;
+  }
+
+  // Parse the new  attribute.
+  // non/blocking or non/allocating? Or conditional (computed)?
+  bool IsNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
+                       PAttr.getKind() == ParsedAttr::AT_Blocking;
+
+  FunctionEffectMode NewMode = FunctionEffectMode::None;
+  Expr *CondExpr = nullptr; // only valid if dependent
+
+  if (PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
+      PAttr.getKind() == ParsedAttr::AT_NonAllocating) {
+    if (!PAttr.checkAtMostNumArgs(S, 1)) {
+      PAttr.setInvalid();
+      return true;
+    }
+
+    // Parse the condition, if any.
+    if (PAttr.getNumArgs() == 1) {
+      CondExpr = PAttr.getArgAsExpr(0);
+      std::optional<FunctionEffectMode> MaybeMode =
+          S.ActOnEffectExpression(CondExpr, PAttr.getAttrName()->getName());
+      if (!MaybeMode) {
+        PAttr.setInvalid();
+        return true;
+      }
+      NewMode = *MaybeMode;
+      if (NewMode != FunctionEffectMode::Dependent)
+        CondExpr = nullptr;
+    } else {
+      NewMode = FunctionEffectMode::True;
+    }
+  } else {
+    // This is the `blocking` or `allocating` attribute.
+    if (S.CheckAttrNoArgs(PAttr)) {
+      // The attribute has been marked invalid.
+      return true;
+    }
+    NewMode = FunctionEffectMode::False;
+  }
+
+  const FunctionEffect::Kind FEKind =
+      (NewMode == FunctionEffectMode::False)
+          ? (IsNonBlocking ? FunctionEffect::Kind::Blocking
+                           : FunctionEffect::Kind::Allocating)
+          : (IsNonBlocking ? FunctionEffect::Kind::NonBlocking
+                           : FunctionEffect::Kind::NonAllocating);
+  const FunctionEffectWithCondition NewEC{FunctionEffect(FEKind),
+                                          EffectConditionExpr(CondExpr)};
+
+  if (S.diagnoseConflictingFunctionEffect(FPT->getFunctionEffects(), NewEC,
+                                          PAttr.getLoc())) {
+    PAttr.setInvalid();
+    return true;
+  }
+
+  // Add the effect to the FunctionProtoType.
+  FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+  FunctionEffectSet FX(EPI.FunctionEffects);
+  FunctionEffectSet::Conflicts Errs;
+  [[maybe_unused]] bool Success = FX.insert(NewEC, Errs);
+  assert(Success && "effect conflicts should have been diagnosed above");
+  EPI.FunctionEffects = FunctionEffectsRef(FX);
+
+  QualType NewType = S.Context.getFunctionType(FPT->getReturnType(),
+                                               FPT->getParamTypes(), EPI);
+  QT = Unwrapped.wrap(S, NewType->getAs<FunctionType>());
+  return true;
+}
+
 static bool checkMutualExclusion(TypeProcessingState &state,
                                  const FunctionProtoType::ExtProtoInfo &EPI,
                                  ParsedAttr &Attr,
@@ -7834,6 +7944,13 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     return true;
   }
 
+  if (attr.getKind() == ParsedAttr::AT_NonBlocking ||
+      attr.getKind() == ParsedAttr::AT_NonAllocating ||
+      attr.getKind() == ParsedAttr::AT_Blocking ||
+      attr.getKind() == ParsedAttr::AT_Allocating) {
+    return handleNonBlockingNonAllocatingTypeAttr(state, attr, type, unwrapped);
+  }
+
   // Delay if the type didn't work out to a function.
   if (!unwrapped.isFunctionType()) return false;
 
@@ -8086,23 +8203,19 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
-  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
-        S.Context.getTargetInfo().hasFeature("mve") ||
-        S.Context.getTargetInfo().hasFeature("sve") ||
-        S.Context.getTargetInfo().hasFeature("sme") ||
-        IsTargetCUDAAndHostARM) &&
-      VecKind == VectorKind::Neon) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'neon', 'mve', 'sve' or 'sme'";
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
+      VecKind == VectorKind::Neon &&
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
+        << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }
-  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
-        S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM) &&
-      VecKind == VectorKind::NeonPoly) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'neon' or 'mve'";
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
+      VecKind == VectorKind::NeonPoly &&
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
+        << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }
@@ -8769,6 +8882,20 @@ void Sema::completeExprArrayBound(Expr *E) {
         // may also require instantiations or diagnostics if it remains
         // incomplete.
       }
+    }
+  }
+  if (const auto CastE = dyn_cast<ExplicitCastExpr>(E)) {
+    QualType DestType = CastE->getTypeAsWritten();
+    if (const auto *IAT = Context.getAsIncompleteArrayType(DestType)) {
+      // C++20 [expr.static.cast]p.4: ... If T is array of unknown bound,
+      // this direct-initialization defines the type of the expression
+      // as U[1]
+      QualType ResultType = Context.getConstantArrayType(
+          IAT->getElementType(),
+          llvm::APInt(Context.getTypeSize(Context.getSizeType()), 1),
+          /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
+          /*IndexTypeQuals=*/0);
+      E->setType(ResultType);
     }
   }
 }

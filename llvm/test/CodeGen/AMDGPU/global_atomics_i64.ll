@@ -6515,7 +6515,7 @@ define amdgpu_kernel void @atomic_load_i64_neg_offset(ptr addrspace(1) %in, ptr 
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; CI-NEXT:    s_mov_b32 s7, 0xf000
-; CI-NEXT:    v_mov_b32_e32 v0, 0xffffffe0
+; CI-NEXT:    v_not_b32_e32 v0, 31
 ; CI-NEXT:    v_mov_b32_e32 v1, -1
 ; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)

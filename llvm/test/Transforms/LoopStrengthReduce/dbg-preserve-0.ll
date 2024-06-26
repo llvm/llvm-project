@@ -23,12 +23,12 @@ for.body:                                         ; preds = %entry, %for.body
   %p.addr.05 = phi ptr [ %p, %entry ], [ %add.ptr, %for.body ]
   call void @llvm.dbg.value(metadata i8 %i.06, metadata !14, metadata !DIExpression()), !dbg !17
   call void @llvm.dbg.value(metadata ptr %p.addr.05, metadata !13, metadata !DIExpression()), !dbg !16
-; CHECK-NOT: call void @llvm.dbg.value(metadata ptr undef
-; CHECK: all void @llvm.dbg.value(metadata ptr %lsr.iv, metadata ![[MID_p:[0-9]+]],  metadata !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value))
+; CHECK-NOT: #dbg_value(ptr undef
+; CHECK: #dbg_value(ptr %lsr.iv, ![[MID_p:[0-9]+]],  !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value),
   %add.ptr = getelementptr inbounds i8, ptr %p.addr.05, i64 3, !dbg !20
   call void @llvm.dbg.value(metadata ptr %add.ptr, metadata !13, metadata !DIExpression()), !dbg !16
-; CHECK-NOT: call void @llvm.dbg.value(metadata ptr undef
-; CHECK: call void @llvm.dbg.value(metadata ptr %lsr.iv, metadata ![[MID_p]], metadata !DIExpression())
+; CHECK-NOT: #dbg_value(ptr undef
+; CHECK: #dbg_value(ptr %lsr.iv, ![[MID_p]], !DIExpression(),
   store i8 %i.06, ptr %add.ptr, align 1, !dbg !23, !tbaa !24
   %inc = add nuw nsw i8 %i.06, 1, !dbg !27
   call void @llvm.dbg.value(metadata i8 %inc, metadata !14, metadata !DIExpression()), !dbg !17

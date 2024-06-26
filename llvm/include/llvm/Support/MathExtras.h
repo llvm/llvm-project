@@ -385,6 +385,8 @@ inline uint64_t PowerOf2Ceil(uint64_t A) {
 ///   alignTo(~0LL, 8) = 0
 ///   alignTo(321, 255) = 510
 /// \endcode
+///
+/// May overflow.
 inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
   assert(Align != 0u && "Align can't be 0.");
   return (Value + Align - 1) / Align * Align;
@@ -424,33 +426,38 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   return (Value + Align - 1) / Align * Align;
 }
 
-/// Returns the integer ceil(Numerator / Denominator). Unsigned integer version.
+/// Returns the integer ceil(Numerator / Denominator). Unsigned version.
+/// Guaranteed to never overflow.
 inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
-  return alignTo(Numerator, Denominator) / Denominator;
+  assert(Denominator && "Division by zero");
+  uint64_t Bias = (Numerator != 0);
+  return (Numerator - Bias) / Denominator + Bias;
 }
 
-/// Returns the integer ceil(Numerator / Denominator). Signed integer version.
+/// Returns the integer ceil(Numerator / Denominator). Signed version.
+/// Guaranteed to never overflow.
 inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
   assert(Denominator && "Division by zero");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
-  int64_t X = (Denominator > 0) ? -1 : 1;
-  bool SameSign = (Numerator > 0) == (Denominator > 0);
-  return SameSign ? ((Numerator + X) / Denominator) + 1
+  int64_t Bias = (Denominator >= 0 ? 1 : -1);
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
+  return SameSign ? (Numerator - Bias) / Denominator + 1
                   : Numerator / Denominator;
 }
 
-/// Returns the integer floor(Numerator / Denominator). Signed integer version.
+/// Returns the integer floor(Numerator / Denominator). Signed version.
+/// Guaranteed to never overflow.
 inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
   assert(Denominator && "Division by zero");
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
-  int64_t X = (Denominator > 0) ? -1 : 1;
-  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  int64_t Bias = Denominator >= 0 ? -1 : 1;
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
   return SameSign ? Numerator / Denominator
-                  : -((-Numerator + X) / Denominator) - 1;
+                  : (Numerator - Bias) / Denominator - 1;
 }
 
 /// Returns the remainder of the Euclidean division of LHS by RHS. Result is
@@ -461,9 +468,12 @@ inline int64_t mod(int64_t Numerator, int64_t Denominator) {
   return Mod < 0 ? Mod + Denominator : Mod;
 }
 
-/// Returns the integer nearest(Numerator / Denominator).
+/// Returns (Numerator / Denominator) rounded by round-half-up. Guaranteed to
+/// never overflow.
 inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
-  return (Numerator + (Denominator / 2)) / Denominator;
+  assert(Denominator && "Division by zero");
+  uint64_t Mod = Numerator % Denominator;
+  return (Numerator / Denominator) + (Mod > (Denominator - 1) / 2);
 }
 
 /// Returns the largest uint64_t less than or equal to \p Value and is

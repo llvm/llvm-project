@@ -11,11 +11,11 @@ set(LLVM_LINK_COMPONENTS
 
 foreach(t ${LLVM_EXEGESIS_TARGETS})
   string(STRIP ${t} t)
-  list(APPEND LLVM_LINK_COMPONTENTS "LLVM${t}AsmParser")
-  list(APPEND LLVM_LINK_COMPONTENTS "LLVM${t}CodeGen")
-  list(APPEND LLVM_LINK_COMPONTENTS "LLVM${t}Desc")
-  list(APPEND LLVM_LINK_COMPONTENTS "LLVM${t}Disassembler")
-  list(APPEND LLVM_LINK_COMPONTENTS "LLVM${t}Info")
+  list(APPEND LLVM_LINK_COMPONENTS "${t}AsmParser")
+  list(APPEND LLVM_LINK_COMPONENTS "${t}CodeGen")
+  list(APPEND LLVM_LINK_COMPONENTS "${t}Desc")
+  list(APPEND LLVM_LINK_COMPONENTS "${t}Disassembler")
+  list(APPEND LLVM_LINK_COMPONENTS "${t}Info")
 endforeach()
 
 add_llvm_tool(llvm-exegesis

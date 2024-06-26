@@ -197,6 +197,10 @@ struct APFloatBase {
     // types, there are no infinity or NaN values. The format is detailed in
     // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
     S_Float6E2M3FN,
+    // 4-bit floating point number with bit layout S1E2M1. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float4E2M1FN,
 
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -219,6 +223,7 @@ struct APFloatBase {
   static const fltSemantics &FloatTF32() LLVM_READNONE;
   static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
   static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
+  static const fltSemantics &Float4E2M1FN() LLVM_READNONE;
   static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
@@ -639,6 +644,7 @@ private:
   APInt convertFloatTF32APFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
+  APInt convertFloat4E2M1FNAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
   void initFromHalfAPInt(const APInt &api);
@@ -656,6 +662,7 @@ private:
   void initFromFloatTF32APInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
+  void initFromFloat4E2M1FNAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -1067,6 +1074,7 @@ public:
     // Below Semantics do not support {NaN or Inf}
     case APFloat::S_Float6E3M2FN:
     case APFloat::S_Float6E2M3FN:
+    case APFloat::S_Float4E2M1FN:
       return false;
     }
   }
@@ -1475,6 +1483,19 @@ inline APFloat minimum(const APFloat &A, const APFloat &B) {
   return B < A ? B : A;
 }
 
+/// Implements IEEE 754-2019 minimumNumber semantics. Returns the smaller
+/// of 2 arguments, not propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat minimumnum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return B.isNaN() ? B.makeQuiet() : B;
+  if (B.isNaN())
+    return A;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
+  return B < A ? B : A;
+}
+
 /// Implements IEEE 754-2019 maximum semantics. Returns the larger of 2
 /// arguments, propagating NaNs and treating -0 as less than +0.
 LLVM_READONLY
@@ -1483,6 +1504,19 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return A;
   if (B.isNaN())
     return B;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
+  return A < B ? B : A;
+}
+
+/// Implements IEEE 754-2019 maximumNumber semantics. Returns the larger
+/// of 2 arguments, not propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return B.isNaN() ? B.makeQuiet() : B;
+  if (B.isNaN())
+    return A;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
   return A < B ? B : A;
