@@ -1482,7 +1482,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
     Newlines = 0;
 
   // Remove empty lines after "{".
-  if (!Style.KeepEmptyLinesAtTheStartOfBlocks && PreviousLine &&
+  if (!Style.KeepEmptyLines.AtStartOfBlock && PreviousLine &&
       PreviousLine->Last->is(tok::l_brace) &&
       !PreviousLine->startsWithNamespace() &&
       !(PrevPrevLine && PrevPrevLine->startsWithNamespace() &&
@@ -1554,9 +1554,9 @@ void UnwrappedLineFormatter::formatFirstToken(
     unsigned NewlineIndent) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
-    unsigned Newlines =
-        std::min(RootToken.NewlinesBefore,
-                 Style.KeepEmptyLinesAtEOF ? Style.MaxEmptyLinesToKeep + 1 : 1);
+    unsigned Newlines = std::min(
+        RootToken.NewlinesBefore,
+        Style.KeepEmptyLines.AtEndOfFile ? Style.MaxEmptyLinesToKeep + 1 : 1);
     unsigned TokenIndent = Newlines ? NewlineIndent : 0;
     Whitespaces->replaceWhitespace(RootToken, Newlines, TokenIndent,
                                    TokenIndent);

@@ -163,7 +163,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   auto CustomStyle = getLLVMStyle();
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
-  CustomStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -389,7 +389,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
-  Style.KeepEmptyLinesAtTheStartOfBlocks = false;
+  Style.KeepEmptyLines.AtStartOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
@@ -27230,7 +27230,7 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
 TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   FormatStyle Style = getLLVMStyle();
-  Style.KeepEmptyLinesAtEOF = true;
+  Style.KeepEmptyLines.AtEndOfFile = true;
 
   const StringRef Code{"int i;\n\n"};
   verifyNoChange(Code, Style);
