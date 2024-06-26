@@ -1466,8 +1466,10 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
     using Key = PointerAuthSchema::ARM8_3Key;
     using Discrimination = PointerAuthSchema::Discrimination;
     // If you change anything here, be sure to update <ptrauth.h>.
-    Opts.FunctionPointers =
-        PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+    Opts.FunctionPointers = PointerAuthSchema(
+        Key::ASIA, false,
+        LangOpts.FunctionPointerTypeDiscrimination ? Discrimination::Type
+                                                   : Discrimination::None);
 
     Opts.CXXVTablePointers = PointerAuthSchema(
         Key::ASDA, LangOpts.PointerAuthVTPtrAddressDiscrimination,
@@ -3398,6 +3400,8 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_vtable_pointer_type_discrimination);
   if (Opts.PointerAuthInitFini)
     GenerateArg(Consumer, OPT_fptrauth_init_fini);
+  if (Opts.FunctionPointerTypeDiscrimination)
+    GenerateArg(Consumer, OPT_fptrauth_function_pointer_type_discrimination);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -4778,6 +4782,9 @@ bool CompilerInvocation::CreateFromArgsImpl(
                 Diags);
   if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     LangOpts.ObjCExceptions = 1;
+
+  LangOpts.FunctionPointerTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
 
   for (auto Warning : Res.getDiagnosticOpts().Warnings) {
     if (Warning == "misexpect" &&

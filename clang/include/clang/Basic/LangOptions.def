@@ -470,6 +470,9 @@ ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
 
+BENIGN_LANGOPT(FunctionPointerTypeDiscrimination, 1, 0,
+               "Use type discrimination when signing function pointers")
+
 ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAddressScopeKind::None,
              "Scope of return address signing")
 ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddressKeyKind::AKey,

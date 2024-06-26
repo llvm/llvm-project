@@ -2220,6 +2220,11 @@ llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
 
   // The assertions here are all checked by Sema.
   assert(Result.Val.isLValue());
+  auto *Base = Result.Val.getLValueBase().get<const ValueDecl *>();
+  if (auto *Decl = dyn_cast_or_null<FunctionDecl>(Base)) {
+    assert(Result.Val.getLValueOffset().isZero());
+    return CGM.getRawFunctionPointer(Decl);
+  }
   return ConstantEmitter(CGM, Emitter.CGF)
       .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
 }
