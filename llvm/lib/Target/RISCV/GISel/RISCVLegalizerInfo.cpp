@@ -384,15 +384,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
 
+  // FIXME: Use Zfhmin.
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
         return (ST.hasStdExtD() && typeIs(0, s32)(Query) &&
+                typeIs(1, s64)(Query)) ||
+               (ST.hasStdExtZfh() && typeIs(0, s16)(Query) &&
+                typeIs(1, s32)(Query)) ||
+               (ST.hasStdExtZfh() && ST.hasStdExtD() && typeIs(0, s16)(Query) &&
                 typeIs(1, s64)(Query));
       });
   getActionDefinitionsBuilder(G_FPEXT).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
         return (ST.hasStdExtD() && typeIs(0, s64)(Query) &&
-                typeIs(1, s32)(Query));
+                typeIs(1, s32)(Query)) ||
+               (ST.hasStdExtZfh() && typeIs(0, s32)(Query) &&
+                typeIs(1, s16)(Query)) ||
+               (ST.hasStdExtZfh() && ST.hasStdExtD() && typeIs(0, s64)(Query) &&
+                typeIs(1, s16)(Query));
       });
 
   getActionDefinitionsBuilder(G_FCMP)
