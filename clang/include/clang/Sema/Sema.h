@@ -473,6 +473,63 @@ enum class TagUseKind {
   Friend       // Friend declaration:  'friend struct foo;'
 };
 
+/// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
+enum class FunctionEffectMode : uint8_t {
+  None,     // effect is not present.
+  False,    // effect(false).
+  True,     // effect(true).
+  Dependent // effect(expr) where expr is dependent.
+};
+
+struct FunctionEffectDiff {
+  enum class Kind { Added, Removed, ConditionMismatch };
+
+  FunctionEffect::Kind EffectKind;
+  Kind DiffKind;
+  FunctionEffectWithCondition Old; // invalid when Added.
+  FunctionEffectWithCondition New; // invalid when Removed.
+
+  StringRef effectName() const {
+    if (Old.Effect.kind() != FunctionEffect::Kind::None)
+      return Old.Effect.name();
+    return New.Effect.name();
+  }
+
+  /// Describes the result of effects differing between a base class's virtual
+  /// method and an overriding method in a subclass.
+  enum class OverrideResult {
+    NoAction,
+    Warn,
+    Merge // Merge missing effect from base to derived.
+  };
+
+  /// Return true if adding or removing the effect as part of a type conversion
+  /// should generate a diagnostic.
+  bool shouldDiagnoseConversion(QualType SrcType,
+                                const FunctionEffectsRef &SrcFX,
+                                QualType DstType,
+                                const FunctionEffectsRef &DstFX) const;
+
+  /// Return true if adding or removing the effect in a redeclaration should
+  /// generate a diagnostic.
+  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                   const FunctionEffectsRef &OldFX,
+                                   const FunctionDecl &NewFunction,
+                                   const FunctionEffectsRef &NewFX) const;
+
+  /// Return true if adding or removing the effect in a C++ virtual method
+  /// override should generate a diagnostic.
+  OverrideResult shouldDiagnoseMethodOverride(
+      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+};
+
+struct FunctionEffectDifferences : public SmallVector<FunctionEffectDiff> {
+  /// Caller should short-circuit by checking for equality first.
+  FunctionEffectDifferences(const FunctionEffectsRef &Old,
+                            const FunctionEffectsRef &New);
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -782,6 +839,28 @@ public:
 
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
+
+  // ----- function effects ---
+
+  /// Warn when implicitly changing function effects.
+  void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
+                                        SourceLocation Loc);
+
+  /// Warn and return true if adding an effect to a set would create a conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
+  void
+  diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
+                                       SourceLocation NewLoc,
+                                       SourceLocation OldLoc);
+
+  /// Try to parse the conditional expression attached to an effect attribute
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty
+  /// optional on error.
+  std::optional<FunctionEffectMode>
+  ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
@@ -4612,7 +4691,7 @@ public:
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 
-  bool CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+  bool CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                          const CXXMethodDecl *Old);
 
   /// CheckOverridingFunctionReturnType - Checks whether the return types are

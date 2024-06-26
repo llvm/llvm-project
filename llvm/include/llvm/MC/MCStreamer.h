@@ -116,7 +116,7 @@ public:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(const MCSection *CurSection, MCSection *Section,
-                             const MCExpr *SubSection, raw_ostream &OS);
+                             uint32_t SubSection, raw_ostream &OS);
 
   virtual void emitValue(const MCExpr *Value);
 
@@ -411,7 +411,7 @@ public:
   ///
   /// This is called by popSection and switchSection, if the current
   /// section changes.
-  virtual void changeSection(MCSection *, const MCExpr *);
+  virtual void changeSection(MCSection *, uint32_t);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {
@@ -425,15 +425,12 @@ public:
   /// Returns false if the stack was empty.
   bool popSection();
 
-  bool subSection(const MCExpr *Subsection);
-
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
   ///
   /// This corresponds to assembler directives like .section, .text, etc.
-  virtual void switchSection(MCSection *Section,
-                             const MCExpr *Subsection = nullptr);
-  void switchSection(MCSection *Section, uint32_t Subsec);
+  virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
+  bool switchSection(MCSection *Section, const MCExpr *);
 
   /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call

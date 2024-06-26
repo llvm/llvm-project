@@ -257,7 +257,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 }
 // For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
 %typemap(in) (const void *buf, size_t size),
-             (const void *data, size_t data_len) {
+             (const void *data, size_t data_len),
+             (const void *buf, uint64_t size) {
   if (PythonString::Check($input)) {
     PythonString str(PyRefType::Borrowed, $input);
     $1 = (void *)str.GetString().data();

@@ -716,16 +716,8 @@ EndStmt:
       (Section->getFlags() & ELF::SHF_ALLOC) &&
       (Section->getFlags() & ELF::SHF_EXECINSTR)) {
     bool InsertResult = getContext().addGenDwarfSection(Section);
-    if (InsertResult) {
-      if (getContext().getDwarfVersion() <= 2)
-        Warning(loc, "DWARF2 only supports one section per compilation unit");
-
-      if (!Section->getBeginSymbol()) {
-        MCSymbol *SectionStartSymbol = getContext().createTempSymbol();
-        getStreamer().emitLabel(SectionStartSymbol);
-        Section->setBeginSymbol(SectionStartSymbol);
-      }
-    }
+    if (InsertResult && getContext().getDwarfVersion() <= 2)
+      Warning(loc, "DWARF2 only supports one section per compilation unit");
   }
 
   return false;
@@ -927,7 +919,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   Lex();
 
-  return getStreamer().subSection(Subsection);
+  return getStreamer().switchSection(getStreamer().getCurrentSectionOnly(),
+                                     Subsection);
 }
 
 bool ELFAsmParser::ParseDirectiveCGProfile(StringRef S, SMLoc Loc) {
