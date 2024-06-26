@@ -11,7 +11,7 @@ This guide gives an overview of how RVV is modelled in LLVM IR and how the backe
 Mapping to LLVM IR types
 ========================
 
-RVV adds 32 ``VLEN`` sized registers, where ``VLEN`` is an unknown constant to the compiler. To be able to represent ``VLEN`` sized values, the RISC-V backend takes the same approach as AArch64's SVE and uses `scalable vector types <https://lists.llvm.org/pipermail/llvm-dev/2018-July/124396.html>`_.
+RVV adds 32 ``VLEN`` sized registers, where ``VLEN`` is an unknown constant to the compiler. To be able to represent ``VLEN`` sized values, the RISC-V backend takes the same approach as AArch64's SVE and uses `scalable vector types <https://llvm.org/docs/LangRef.html#t-vector>`_.
 
 Scalable vector types are of the form ``<vscale x n x ty>``, which indicate a vector with a multiple of ``n`` elements of type ``ty``. ``n`` and ``ty`` then end up controlling LMUL and SEW respectively.
 
@@ -125,7 +125,7 @@ RISC-V vector intrinsics are also always scalable and so don't need custom lower
 Fixed length vectors
 --------------------
 
-The only legal vector MVTs on RISC-V are scalable, so fixed length vectors need to be custom lowered performed in a scalable container type.
+The only legal vector MVTs on RISC-V are scalable, so fixed length vectors need to be custom lowered and performed in a scalable container type:
 
 1. The fixed length vector operands are inserted into scalable containers via ``insert_subvector``. The container size is chosen to have a minimum size big enough to fit the fixed length vector (see ``getContainerForFixedLengthVector``).
 2. The operation is then performed via a scalable **VL (vector length) node**. These are custom nodes that contain an AVL operand which is set to the size of the fixed length vector, and are defined in RISCVInstrInfoVVLPatterns.td.
