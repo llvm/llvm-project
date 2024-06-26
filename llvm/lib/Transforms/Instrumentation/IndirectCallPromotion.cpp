@@ -122,10 +122,10 @@ static cl::opt<float> ICPVTablePercentageThreshold(
 // Although comparing vtables can save a vtable load, we may need to compare
 // vtable pointer with multiple vtable address points due to class inheritance.
 // Comparing with multiple vtables inserts additional instructions on hot code
-// path; and doing so for earlier candidate of one icall can affect later
-// function candidate in an undesired way. We allow multiple vtable comparison
-// for the last function candidate and use the option below to cap the number
-// of vtables.
+// path, and doing so for an earlier candidate delays the comparisons for later
+// candidates. For the last candidate, only the fallback path is affected.
+// We allow multiple vtable comparison for the last function candidate and use
+// the option below to cap the number of vtables.
 static cl::opt<int> ICPMaxNumVTableLastCandidate(
     "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
     cl::desc("The maximum number of vtable for the last candidate."));
@@ -157,8 +157,8 @@ using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t, 16>;
 
 // Returns the address point offset of the given compatible type.
 //
-// Type metadata of a vtable specifies the types that can container a pointer to
-// this vtable, for example, `Base*` can be a pointer to an instantiated type
+// Type metadata of a vtable specifies the types that can contain a pointer to
+// this vtable, for example, `Base*` can be a pointer to an derived type
 // but not vice versa. See also https://llvm.org/docs/TypeMetadata.html
 static std::optional<uint64_t>
 getAddressPointOffset(const GlobalVariable &VTableVar,
@@ -191,7 +191,7 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
-// Returns the basic block in which `Inst` is used via its `UserInst`.
+// Returns the basic block in which Use `U` is used via its `UserInst`.
 static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
   if (PHINode *PN = dyn_cast<PHINode>(UserInst))
     return PN->getIncomingBlock(U);
@@ -209,10 +209,8 @@ static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
   BasicBlock *BB = Inst->getParent();
   assert(Inst->getParent() != DestBB &&
          BB->getTerminator()->getNumSuccessors() == 2 &&
+         DestBB->getUniquePredecessor() == BB &&
          "Guaranteed by ICP transformation");
-  // Do not sink across a critical edge for simplicity.
-  if (DestBB->getUniquePredecessor() != BB)
-    return false;
 
   // Now we know BB dominates DestBB.
   BasicBlock *UserBB = nullptr;
@@ -286,6 +284,9 @@ static bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 static int tryToSinkInstructions(BasicBlock *OriginalBB,
                                  BasicBlock *IndirectCallBB) {
   int SinkCount = 0;
+  // Do not sink across a critical edge for simplicity.
+  if (IndirectCallBB->getUniquePredecessor() != OriginalBB)
+    return SinkCount;
   // Sink all eligible instructions in OriginalBB in reverse order.
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(*OriginalBB))))
@@ -373,8 +374,8 @@ private:
   // pointer if type profiles exist.
   // - Populate `VTableGUIDCounts` with <vtable-guid, count> using !prof
   // metadata attached on the vtable pointer.
-  // - For each function candidate, finds out the vtables from which it get
-  // called and stores the <vtable-guid, count> there.
+  // - For each function candidate, finds out the vtables from which it gets
+  // called and stores the <vtable-guid, count> in promotion candidate.
   Instruction *computeVTableInfos(const CallBase *CB,
                                   VTableGUIDCountsMap &VTableGUIDCounts,
                                   std::vector<PromotionCandidate> &Candidates);
@@ -537,6 +538,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
   if (Iter == VirtualCSInfo.end())
     return nullptr;
 
+  LLVM_DEBUG(dbgs() << "\nComputing vtable infos for callsite #"
+                    << NumOfPGOICallsites << "\n");
+
   const auto &VirtualCallInfo = Iter->second;
   Instruction *VPtr = VirtualCallInfo.VPtr;
 
@@ -558,7 +562,7 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     GUIDCountsMap[VTableVal] = VTableValueDataArray[j].Count;
     GlobalVariable *VTableVar = Symtab->getGlobalVariable(VTableVal);
     if (!VTableVar) {
-      LLVM_DEBUG(dbgs() << "Cannot find vtable definition for " << VTableVal
+      LLVM_DEBUG(dbgs() << "  Cannot find vtable definition for " << VTableVal
                         << "; maybe the vtable isn't imported\n");
       continue;
     }
@@ -731,15 +735,28 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     int SinkCount = tryToSinkInstructions(OriginalBB, CB.getParent());
 
     ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "Promoted", &CB)
-             << "Promote indirect call to "
+      OptimizationRemark Remark(DEBUG_TYPE, "Promoted", &CB);
+
+      const auto &VTableGUIDAndCounts = Candidate.VTableGUIDAndCounts;
+      Remark << "Promote indirect call to "
              << ore::NV("DirectCallee", Candidate.TargetFunction)
              << " with count " << ore::NV("Count", Candidate.Count)
-             << " out of " << ore::NV("TotalCount", TotalFuncCount)
-             << ", compare "
-             << ore::NV("VTable", Candidate.VTableGUIDAndCounts.size())
-             << " vtables and sink " << ore::NV("SinkCount", SinkCount)
-             << " instructions";
+             << " out of " << ore::NV("TotalCount", TotalFuncCount) << ", sink "
+             << ore::NV("SinkCount", SinkCount)
+             << " instruction(s) and compare "
+             << ore::NV("VTable", VTableGUIDAndCounts.size())
+             << " vtable(s): {";
+
+      for (auto Iter = VTableGUIDAndCounts.begin();
+           Iter != VTableGUIDAndCounts.end(); Iter++) {
+        if (Iter != VTableGUIDAndCounts.begin())
+          Remark << ", ";
+        Remark << ore::NV("VTable", Symtab->getGlobalVariable(Iter->first));
+      }
+
+      Remark << "}";
+
+      return Remark;
     });
 
     PromotedFuncCount.push_back(Candidate.Count);
@@ -747,7 +764,7 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     assert(TotalFuncCount >= Candidate.Count &&
            "Within one prof metadata, total count is the sum of counts from "
            "individual <target, count> pairs");
-    // Use std::min since 'TotalFuncCount' is the saturating sum of individual
+    // Use std::min since 'TotalFuncCount' is the saturated sum of individual
     // counts, see
     // https://github.com/llvm/llvm-project/blob/abedb3b8356d5d56f1c575c4f7682fba2cb19787/llvm/lib/ProfileData/InstrProf.cpp#L1281-L1288
     TotalFuncCount -= std::min(TotalFuncCount, Candidate.Count);
@@ -816,26 +833,37 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   return Changed;
 }
 
-// TODO: Returns false if the function addressing and vtable load instructions
+// TODO: Return false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
     const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
     uint64_t TotalCount) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
+  LLVM_DEBUG(dbgs() << "\nEvaluating vtable profitability for callsite #"
+                    << NumOfPGOICallsites << CB << "\n");
   uint64_t RemainingVTableCount = TotalCount;
   const size_t CandidateSize = Candidates.size();
   for (size_t I = 0; I < CandidateSize; I++) {
     auto &Candidate = Candidates[I];
+    auto &VTableGUIDAndCounts = Candidate.VTableGUIDAndCounts;
+
+    LLVM_DEBUG(dbgs() << "  Candidate " << I << " FunctionCount: "
+                      << Candidate.Count << ", VTableCounts:");
+    for (auto &[GUID, Count] : VTableGUIDAndCounts)
+      LLVM_DEBUG(dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName()
+                        << ", " << Count << "}");
+    LLVM_DEBUG(dbgs() << "\n");
+
     uint64_t CandidateVTableCount = 0;
-    for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
+    for (auto &[GUID, Count] : VTableGUIDAndCounts)
       CandidateVTableCount += Count;
 
     if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
-      LLVM_DEBUG(dbgs() << "For callsite #" << NumOfPGOICallsites << CB << I
-                        << "-th candidate, function count " << Candidate.Count
-                        << " and its vtable count " << CandidateVTableCount
-                        << " have discrepancies\n");
+      LLVM_DEBUG(
+          dbgs() << "    function count " << Candidate.Count
+                 << " and its vtable sum count " << CandidateVTableCount
+                 << " have discrepancies. Bail out vtable comparison.\n");
       return false;
     }
 
@@ -844,7 +872,7 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     // 'MaxNumVTable' limits the number of vtables to make vtable comparison
     // profitable. Comparing multiple vtables for one function candidate will
     // insert additional instructions on the hot path, and allowing more than
-    // one vtable for non last candidates may or may not elongates dependency
+    // one vtable for non last candidates may or may not elongate the dependency
     // chain for the subsequent candidates. Set its value to 1 for non-last
     // candidate and allow option to override it for the last candidate.
     int MaxNumVTable = 1;
@@ -852,14 +880,20 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
       MaxNumVTable = ICPMaxNumVTableLastCandidate;
 
     if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
+      LLVM_DEBUG(dbgs() << "    allow at most " << MaxNumVTable << " and got "
+                        << Candidate.AddressPoints.size()
+                        << " vtables. Bail out for vtable comparison.\n");
       return false;
     }
   }
 
   // If the indirect fallback is not cold, don't compare vtables.
   if (PSI && PSI->hasProfileSummary() &&
-      !PSI->isColdCount(RemainingVTableCount))
+      !PSI->isColdCount(RemainingVTableCount)) {
+    LLVM_DEBUG(dbgs() << "    Indirect fallback basic block is not cold. Bail "
+                         "out for vtable comparison.\n");
     return false;
+  }
 
   return true;
 }

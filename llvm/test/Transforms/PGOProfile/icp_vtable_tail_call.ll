@@ -3,8 +3,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; REMARK: remark: <unknown>:0:0: Promote indirect call to _ZN7Derived5func1Eii with count 900 out of 1600, compare 1 vtables and sink 1 instruction
-; REMARK: remark: <unknown>:0:0: Promote indirect call to _ZN4Base5func1Eii with count 700 out of 700, compare 1 vtables and sink 1 instructions
+; REMARK: remark: <unknown>:0:0: Promote indirect call to _ZN7Derived5func1Eii with count 900 out of 1600, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV7Derived}
+; REMARK: remark: <unknown>:0:0: Promote indirect call to _ZN4Base5func1Eii with count 700 out of 700, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV4Base}
 
 @_ZTV7Derived = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN7Derived5func1Eii] }, !type !0, !type !1, !type !2, !type !3
 @_ZTV4Base = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN4Base5func1Eii] }, !type !0, !type !1

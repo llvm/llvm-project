@@ -1432,11 +1432,12 @@ MDNode *getPGOFuncNameMetadata(const Function &F) {
 
 static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
                                   StringRef PGOName) {
-  // For internal linkage objects, its name is not the same as its PGO name.
+  // Only for internal linkage functions or global variables. The name is not
+  // the same as PGO name for these global objects.
   if (GO.getName() == PGOName)
     return;
 
-  // Don't created duplicated metadata.
+  // Don't create duplicated metadata.
   if (GO.getMetadata(MetadataName))
     return;
 

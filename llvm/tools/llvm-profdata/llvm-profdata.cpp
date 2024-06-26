@@ -767,13 +767,6 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
-  const InstrProfSymtab &symtab = Reader->getSymtab();
-  const auto &VTableNames = symtab.getVTableNames();
-
-  for (const auto &kv : VTableNames) {
-    WC->Writer.addVTableName(kv.getKey());
-  }
-
   if (Reader->hasTemporalProfile()) {
     auto &Traces = Reader->getTemporalProfTraces(Input.Weight);
     if (!Traces.empty())

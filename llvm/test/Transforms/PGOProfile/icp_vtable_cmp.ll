@@ -14,9 +14,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @Derived2 = constant { [3 x ptr], [3 x ptr], [4 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @Base3_foo], [3 x ptr] [ptr null, ptr null, ptr @Base2_foo], [4 x ptr] [ptr null, ptr null, ptr @Base1_foo, ptr @Derived2_bar] }, !type !4, !type !5, !type !6, !type !7
 @Derived3 = constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @Base1_foo, ptr @Base1_bar] }, !type !0, !type !8
 
-; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived1_bar with count 600 out of 1600, compare 1 vtables and sink 2 instructions
-; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived2_bar with count 500 out of 1000, compare 1 vtables and sink 2 instructions
-; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Base1_bar with count 400 out of 500, compare 2 vtables and sink 2 instructions
+; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived1_bar with count 600 out of 1600, sink 2 instruction(s) and compare 1 vtable(s): {Derived1}
+; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Derived2_bar with count 500 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {Derived2}
+; VTABLE-CMP: remark: <unknown>:0:0: Promote indirect call to Base1_bar with count 400 out of 500, sink 2 instruction(s) and compare 2 vtable(s): {Base1, Derived3}
 
 define void @test(ptr %d) {
 ; VTABLE-CMP-LABEL: define void @test(
