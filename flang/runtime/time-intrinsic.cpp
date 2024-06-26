@@ -19,10 +19,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <chrono>
 #ifdef _WIN32
 #include "flang/Common/windows-include.h"
 #else
-#include <chrono>
 #include <sys/time.h> // gettimeofday
 #include <sys/times.h>
 #include <unistd.h>
@@ -132,7 +132,7 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
 
 template <typename Unused = void>
 count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-  return CLOCKS_PER_SEC;
+  return std::chrono::high_resolution_clock::period::den;
 }
 
 template <typename Unused = void>
