@@ -687,9 +687,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     // stupid, create a new node if there are none left.
     BinaryOperator *NewOp;
     if (NodesToRewrite.empty()) {
-      Constant *Undef = UndefValue::get(I->getType());
-      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Undef,
-                                     Undef, "", I->getIterator());
+      Constant *Poison = PoisonValue::get(I->getType());
+      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Poison,
+                                     Poison, "", I->getIterator());
       if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {

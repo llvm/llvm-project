@@ -2041,10 +2041,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return ConstantLValue(C);
     };
 
-    if (auto FD = dyn_cast<FunctionDecl>(D))
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
       return PtrAuthSign(CGM.getRawFunctionPointer(FD));
 
-    if (auto VD = dyn_cast<VarDecl>(D)) {
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
       if (!VD->hasLocalStorage()) {
         if (VD->isFileVarDecl() || VD->hasExternalStorage())
@@ -2057,13 +2057,13 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    if (auto *GD = dyn_cast<MSGuidDecl>(D))
+    if (const auto *GD = dyn_cast<MSGuidDecl>(D))
       return CGM.GetAddrOfMSGuidDecl(GD);
 
-    if (auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
+    if (const auto *GCD = dyn_cast<UnnamedGlobalConstantDecl>(D))
       return CGM.GetAddrOfUnnamedGlobalConstantDecl(GCD);
 
-    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
+    if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(D))
       return CGM.GetAddrOfTemplateParamObject(TPO);
 
     return nullptr;

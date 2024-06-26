@@ -571,7 +571,6 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
 
-def int_amdgcn_ds_fadd : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
@@ -2043,26 +2042,23 @@ def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
-  ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.
 def int_amdgcn_readlane :
-  ClangBuiltin<"__builtin_amdgcn_readlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The value to write and lane select arguments must be uniform across the
 // currently active threads of the current wave. Otherwise, the result is
 // undefined.
 def int_amdgcn_writelane :
-  ClangBuiltin<"__builtin_amdgcn_writelane">,
-  Intrinsic<[llvm_i32_ty], [
-    llvm_i32_ty,    // uniform value to write: returned by the selected lane
-    llvm_i32_ty,    // uniform lane select
-    llvm_i32_ty     // returned by all lanes other than the selected one
+  Intrinsic<[llvm_any_ty], [
+    LLVMMatchType<0>,   // uniform value to write: returned by the selected lane
+    llvm_i32_ty,        // uniform lane select
+    LLVMMatchType<0>    // returned by all lanes other than the selected one
   ],
   [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
@@ -2930,10 +2926,6 @@ multiclass AMDGPUMFp8SmfmacIntrinsic<LLVMType DestTy> {
 // bf16 atomics use v2i16 argument since there is no bf16 data type in the llvm.
 def int_amdgcn_global_atomic_fadd_v2bf16 : AMDGPUAtomicRtn<llvm_v2i16_ty>;
 def int_amdgcn_flat_atomic_fadd_v2bf16   : AMDGPUAtomicRtn<llvm_v2i16_ty>;
-def int_amdgcn_ds_fadd_v2bf16 : DefaultAttrsIntrinsic<
-    [llvm_v2i16_ty],
-    [LLVMQualPointerType<3>, llvm_v2i16_ty],
-    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
 defset list<Intrinsic> AMDGPUMFMAIntrinsics940 = {
 def int_amdgcn_mfma_i32_16x16x32_i8     : AMDGPUMfmaIntrinsic<llvm_v4i32_ty,  llvm_i64_ty>;

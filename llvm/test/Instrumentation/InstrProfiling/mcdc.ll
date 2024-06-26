@@ -1,5 +1,6 @@
 ; Check that MC/DC intrinsics are properly lowered
 ; RUN: opt < %s -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,BASIC
+; RUN: opt < %s -passes=instrprof -S -instrprof-atomic-counter-update-all | FileCheck %s --check-prefixes=CHECK,ATOMIC
 ; RUN: opt < %s -passes=instrprof -S -runtime-counter-relocation | FileCheck %s --check-prefixes=CHECK,RELOC
 
 target triple = "x86_64-unknown-linux-gnu"
@@ -7,6 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @__profn_test = private constant [4 x i8] c"test"
 
 ; BASIC: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
+; ATOMIC: [[PROFBM_ADDR:@__profbm_test]] = private global [1 x i8] zeroinitializer, section "__llvm_prf_bits", comdat, align 1
 
 define dso_local void @test(i32 noundef %A) {
 entry:
@@ -44,7 +46,16 @@ entry:
 ; RELOC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
 ; BASIC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
 ; RELOC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
+; ATOMIC-NEXT: %[[MASKED:.+]] = and i8 %[[BITS]], %[[ARGVAL]]
+; ATOMIC-NEXT: %[[SHOULDWRITE:.+]] = icmp ne i8 %[[MASKED]], %[[ARGVAL]]
+; ATOMIC-NEXT: br i1 %[[SHOULDWRITE]], label %[[WRITE:.+]], label %[[SKIP:.+]], !prof ![[MDPROF:[0-9]+]]
+; ATOMIC: [[WRITE]]:
+; ATOMIC-NEXT: %{{.+}} = atomicrmw or ptr %[[ARGPTR]], i8 %[[ARGVAL]] monotonic, align 1
+; ATOMIC-NEXT: ret void
+; ATOMIC: [[SKIP]]:
 ; CHECK-NEXT: ret void
+
+; ATOMIC: ![[MDPROF]] = !{!"branch_weights", i32 1, i32 1048575}
 
 declare void @llvm.instrprof.cover(ptr, i64, i32, i32)
 
