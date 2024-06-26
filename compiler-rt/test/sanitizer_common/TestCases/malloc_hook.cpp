@@ -12,7 +12,6 @@
 
 extern "C" {
 const volatile void *global_ptr;
-int ignore_free = 0;
 
 #define WRITE(s) write(1, s, sizeof(s))
 
@@ -27,13 +26,6 @@ void __sanitizer_malloc_hook(const volatile void *ptr, size_t sz) {
 void __sanitizer_free_hook(const volatile void *ptr) {
   if (__sanitizer_get_ownership(ptr) && ptr == global_ptr)
     WRITE("FreeHook\n");
-}
-int __sanitizer_ignore_free_hook(const volatile void *ptr) {
-  if (__sanitizer_get_ownership(ptr) && ignore_free) {
-    WRITE("IgnoreFreeHook\n");
-    return 1;
-  }
-  return 0;
 }
 }  // extern "C"
 
@@ -72,13 +64,6 @@ int main() {
 
   x[0] = 0;
   x[127] = -1;
-  ignore_free = 1;
-  free((void *)x);
-  // CHECK: IgnoreFreeHook
-
-  // Check that the memory is still valid now and hasn't been poisoned.
-  x[0] = 99;
-  ignore_free = 0;
   free((void *)x);
   // CHECK: FH1
   // CHECK: FH2
