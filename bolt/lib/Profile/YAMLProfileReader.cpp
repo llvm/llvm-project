@@ -484,7 +484,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   BC.setNumUnusedProfiledObjects(NumUnused);
 
-  if (opts::Lite)
+  if (opts::Lite && opts::MatchProfileWithFunctionHash)
     for (BinaryFunction *BF : BC.getAllBinaryFunctions())
       if (!BF->hasProfile())
         BF->setIgnored();
