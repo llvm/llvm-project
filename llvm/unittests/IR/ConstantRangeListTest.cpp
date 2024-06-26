@@ -94,4 +94,116 @@ TEST_F(ConstantRangeListTest, Insert) {
   EXPECT_TRUE(CRL == Expected);
 }
 
+ConstantRangeList GetCRL(ArrayRef<std::pair<APInt, APInt>> Pairs) {
+  SmallVector<ConstantRange, 2> Ranges;
+  for (auto &[Start, End] : Pairs)
+    Ranges.push_back(ConstantRange(Start, End));
+  return ConstantRangeList(Ranges);
+}
+
+TEST_F(ConstantRangeListTest, Union) {
+  APInt APN4 = APInt(64, -4, /*isSigned=*/true);
+  APInt APN2 = APInt(64, -2, /*isSigned=*/true);
+  APInt AP0 = APInt(64, 0, /*isSigned=*/true);
+  APInt AP2 = APInt(64, 2, /*isSigned=*/true);
+  APInt AP4 = APInt(64, 4, /*isSigned=*/true);
+  APInt AP6 = APInt(64, 6, /*isSigned=*/true);
+  APInt AP7 = APInt(64, 7, /*isSigned=*/true);
+  APInt AP8 = APInt(64, 8, /*isSigned=*/true);
+  APInt AP10 = APInt(64, 10, /*isSigned=*/true);
+  APInt AP11 = APInt(64, 11, /*isSigned=*/true);
+  APInt AP12 = APInt(64, 12, /*isSigned=*/true);
+  APInt AP16 = APInt(64, 16, /*isSigned=*/true);
+  APInt AP18 = APInt(64, 18, /*isSigned=*/true);
+  ConstantRangeList CRL = GetCRL({{AP0, AP4}, {AP8, AP12}});
+
+  // Union with a subset.
+  ConstantRangeList Empty;
+  EXPECT_EQ(CRL.unionWith(Empty), CRL);
+  EXPECT_EQ(Empty.unionWith(CRL), CRL);
+
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP0, AP2}})), CRL);
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP10, AP12}})), CRL);
+
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP0, AP2}, {AP8, AP10}})), CRL);
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP0, AP2}, {AP10, AP12}})), CRL);
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP2, AP4}, {AP8, AP10}})), CRL);
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP2, AP4}, {AP10, AP12}})), CRL);
+
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP0, AP4}, {AP8, AP10}, {AP11, AP12}})),
+            CRL);
+
+  EXPECT_EQ(CRL.unionWith(CRL), CRL);
+
+  // Union with new ranges.
+  EXPECT_EQ(CRL.unionWith(GetCRL({{APN4, APN2}})),
+            GetCRL({{APN4, APN2}, {AP0, AP4}, {AP8, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP6, AP7}})),
+            GetCRL({{AP0, AP4}, {AP6, AP7}, {AP8, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP16, AP18}})),
+            GetCRL({{AP0, AP4}, {AP8, AP12}, {AP16, AP18}}));
+
+  EXPECT_EQ(CRL.unionWith(GetCRL({{APN2, AP2}})),
+            GetCRL({{APN2, AP4}, {AP8, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP2, AP6}})),
+            GetCRL({{AP0, AP6}, {AP8, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP10, AP16}})),
+            GetCRL({{AP0, AP4}, {AP8, AP16}}));
+
+  EXPECT_EQ(CRL.unionWith(GetCRL({{APN2, AP10}})), GetCRL({{APN2, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP2, AP10}})), GetCRL({{AP0, AP12}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{AP4, AP16}})), GetCRL({{AP0, AP16}}));
+  EXPECT_EQ(CRL.unionWith(GetCRL({{APN2, AP16}})), GetCRL({{APN2, AP16}}));
+}
+
+TEST_F(ConstantRangeListTest, Intersect) {
+  APInt APN2 = APInt(64, -2, /*isSigned=*/true);
+  APInt AP0 = APInt(64, 0, /*isSigned=*/true);
+  APInt AP2 = APInt(64, 2, /*isSigned=*/true);
+  APInt AP4 = APInt(64, 4, /*isSigned=*/true);
+  APInt AP6 = APInt(64, 6, /*isSigned=*/true);
+  APInt AP7 = APInt(64, 7, /*isSigned=*/true);
+  APInt AP8 = APInt(64, 8, /*isSigned=*/true);
+  APInt AP10 = APInt(64, 10, /*isSigned=*/true);
+  APInt AP11 = APInt(64, 11, /*isSigned=*/true);
+  APInt AP12 = APInt(64, 12, /*isSigned=*/true);
+  APInt AP16 = APInt(64, 16, /*isSigned=*/true);
+  ConstantRangeList CRL = GetCRL({{AP0, AP4}, {AP8, AP12}});
+
+  // No intersection.
+  ConstantRangeList Empty;
+  EXPECT_EQ(CRL.intersectWith(Empty), Empty);
+  EXPECT_EQ(Empty.intersectWith(CRL), Empty);
+
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP0}})), Empty);
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP6, AP8}})), Empty);
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP12, AP16}})), Empty);
+
+  // Single intersect range.
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP2}})), GetCRL({{AP0, AP2}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP6}})), GetCRL({{AP0, AP4}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP4}})), GetCRL({{AP2, AP4}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP6}})), GetCRL({{AP2, AP4}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP6, AP10}})), GetCRL({{AP8, AP10}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP6, AP16}})), GetCRL({{AP8, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP10, AP12}})), GetCRL({{AP10, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP10, AP16}})), GetCRL({{AP10, AP12}}));
+
+  // Multiple intersect ranges.
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP10}})),
+            GetCRL({{AP0, AP4}, {AP8, AP10}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP16}})), CRL);
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP10}})),
+            GetCRL({{AP2, AP4}, {AP8, AP10}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP16}})),
+            GetCRL({{AP2, AP4}, {AP8, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP2}, {AP6, AP10}})),
+            GetCRL({{AP0, AP2}, {AP8, AP10}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{AP2, AP6}, {AP10, AP16}})),
+            GetCRL({{AP2, AP4}, {AP10, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(GetCRL({{APN2, AP2}, {AP7, AP10}, {AP11, AP16}})),
+            GetCRL({{AP0, AP2}, {AP8, AP10}, {AP11, AP12}}));
+  EXPECT_EQ(CRL.intersectWith(CRL), CRL);
+}
+
 } // anonymous namespace
