@@ -33,41 +33,48 @@
 # LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset: 0x78
 # LLVM-NEXT:     Size: 0x20
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: GNU
 # LLVM-NEXT:       Data size: 0x10
 # LLVM-NEXT:       Type: NT_GNU_ABI_TAG (ABI version tag)
 # LLVM-NEXT:       OS: Linux
 # LLVM-NEXT:       ABI: 2.6.32
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.gnu.build-id
 # LLVM-NEXT:     Offset: 0x98
 # LLVM-NEXT:     Size: 0x20
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: GNU
 # LLVM-NEXT:       Data size: 0x10
 # LLVM-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
 # LLVM-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.gnu.gold-version
 # LLVM-NEXT:     Offset: 0xB8
 # LLVM-NEXT:     Size: 0x1C
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: GNU
 # LLVM-NEXT:       Data size: 0x9
 # LLVM-NEXT:       Type: NT_GNU_GOLD_VERSION (gold version)
 # LLVM-NEXT:       Version: gold 1.11
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.gnu.unknown
 # LLVM-NEXT:     Offset: 0xD4
 # LLVM-NEXT:     Size: 0x14
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: GNU
 # LLVM-NEXT:       Data size: 0x4
 # LLVM-NEXT:       Type: Unknown (0x0000abcd)
@@ -75,6 +82,7 @@
 # LLVM-NEXT:         0000: 61626364                             |abcd|
 # LLVM-NEXT:       )
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
@@ -84,12 +92,14 @@
 # LLVM-STRIPPED-NEXT:     Name: <?>
 # LLVM-STRIPPED-NEXT:     Offset: 0x78
 # LLVM-STRIPPED-NEXT:     Size: 0x20
-# LLVM-STRIPPED-NEXT:     Note {
+# LLVM-STRIPPED-NEXT:     Notes [
+# LLVM-STRIPPED-NEXT:     {
 # LLVM-STRIPPED-NEXT:       Owner: GNU
 # LLVM-STRIPPED-NEXT:       Data size: 0x10
 # LLVM-STRIPPED-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
 # LLVM-STRIPPED-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 # LLVM-STRIPPED-NEXT:     }
+# LLVM-STRIPPED-NEXT:    ]
 # LLVM-STRIPPED-NEXT:   }
 # LLVM-STRIPPED-NEXT: ]
 
@@ -149,7 +159,9 @@ ProgramHeaders:
 # ERR1-LLVM-NEXT:     Name:   .note
 # ERR1-LLVM-NEXT:     Offset: 0xFFFF0000
 # ERR1-LLVM-NEXT:     Size:   0x0
+# ERR1-LLVM-NEXT:     Notes [
 # ERR1-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
+# ERR1-LLVM-NEXT:    ]
 # ERR1-LLVM-NEXT:   }
 # ERR1-LLVM-NEXT: ]
 
@@ -182,7 +194,9 @@ Sections:
 # ERR2-LLVM-NEXT:     Name: .note
 # ERR2-LLVM-NEXT:     Offset: 0x40
 # ERR2-LLVM-NEXT:     Size: 0xFFFF0000
+# ERR2-LLVM-NEXT:     Notes [
 # ERR2-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
+# ERR2-LLVM-NEXT:    ]
 # ERR2-LLVM-NEXT:   }
 # ERR2-LLVM-NEXT: ]
 
@@ -203,7 +217,9 @@ Sections:
 # ERR3-LLVM-NEXT:     Name: <?>
 # ERR3-LLVM-NEXT:     Offset: 0xFFFF0000
 # ERR3-LLVM-NEXT:     Size: 0x0
+# ERR3-LLVM-NEXT:     Notes [
 # ERR3-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
+# ERR3-LLVM-NEXT:    ]
 # ERR3-LLVM-NEXT:   }
 # ERR3-LLVM-NEXT: ]
 
@@ -234,7 +250,9 @@ ProgramHeaders:
 # ERR4-LLVM-NEXT:     Name: <?>
 # ERR4-LLVM-NEXT:     Offset: 0x0
 # ERR4-LLVM-NEXT:     Size: 0xFFFF0000
+# ERR4-LLVM-NEXT:     Notes [
 # ERR4-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
+# ERR4-LLVM-NEXT:    ]
 # ERR4-LLVM-NEXT:   }
 # ERR4-LLVM-NEXT: ]
 
