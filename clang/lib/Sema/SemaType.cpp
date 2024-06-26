@@ -7623,6 +7623,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   FunctionEffectSet FX(EPI.FunctionEffects);
   FunctionEffectSet::Conflicts Errs;
   bool Success = FX.insert(NewEC, Errs);
+  (void)Success;
   assert(Success && "effect conflicts should have been diagnosed above");
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
