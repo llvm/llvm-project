@@ -185,6 +185,29 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getChar();
 
   // Handle pointers and references.
+  //
+  // C has a very strict rule for pointer aliasing. C23 6.7.6.1p2:
+  //     For two pointer types to be compatible, both shall be identically
+  //     qualified and both shall be pointers to compatible types.
+  //
+  // This rule is impractically strict; we want to at least ignore CVR
+  // qualifiers. Distinguishing by CVR qualifiers would make it UB to
+  // e.g. cast a `char **` to `const char * const *` and dereference it,
+  // which is too common and useful to invalidate. C++'s similar types
+  // rule permits qualifier differences in these nested positions; in fact,
+  // C++ even allows that cast as an implicit conversion.
+  //
+  // Other qualifiers could theoretically be distinguished, especially if
+  // they involve a significant representation difference.  We don't
+  // currently do so, however.
+  //
+  // Computing the pointee type string recursively is implicitly more
+  // forgiving than the standards require.  Effectively, we are turning
+  // the question "are these types compatible/similar" into "are
+  // accesses to these types allowed to alias".  In both C and C++,
+  // the latter question has special carve-outs for signedness
+  // mismatches that only apply at the top level.  As a result, we are
+  // allowing e.g. `int *` l-values to access `unsigned *` objects.
   if (Ty->isPointerType() || Ty->isReferenceType()) {
     llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
     if (CodeGenOpts.RelaxedPointerAliasing)
@@ -195,7 +218,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     do {
       PtrDepth++;
       Ty = Ty->getPointeeType().getTypePtr();
-    } while (Ty->isPointerType() || Ty->isReferenceType());
+    } while (Ty->isPointerType());
     // TODO: Implement C++'s type "similarity" and consider dis-"similar"
     // pointers distinct for non-builtin types.
     if (isa<BuiltinType>(Ty)) {
