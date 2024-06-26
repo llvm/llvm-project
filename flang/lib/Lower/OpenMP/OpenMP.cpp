@@ -1037,6 +1037,7 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processDistSchedule(stmtCtx, clauseOps);
+  cp.processOrder(clauseOps);
   // TODO Support delayed privatization.
 }
 

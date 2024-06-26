@@ -395,15 +395,14 @@ bool ClauseProcessor::processNumThreads(
 }
 
 bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
-  if (auto *clause = findUniqueClause<omp::clause::Order>()) {
+  using Order = omp::clause::Order;
+  if (auto *clause = findUniqueClause<Order>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
         firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
-    using Order = omp::clause::Order;
     const auto &modifier =
         std::get<std::optional<Order::OrderModifier>>(clause->t);
-    if (modifier &&
-        *modifier == omp::clause::Order::OrderModifier::Unconstrained) {
+    if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
       result.orderModAttr = mlir::omp::OrderModifierAttr::get(
           firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
     } else {

@@ -54,9 +54,23 @@ end subroutine do_simd_order
 subroutine do_simd_order_parallel
    !CHECK: omp.parallel {
    !CHECK: omp.wsloop order(reproducible:concurrent) {
-   !$omp parallel
-   !$omp do simd order(reproducible:concurrent)
+   !$omp parallel do simd order(reproducible:concurrent)
    do i = 1, 10
    end do
-   !$omp end parallel
 end subroutine do_simd_order_parallel
+
+
+subroutine distribute_order
+   !CHECK: omp.distribute order(reproducible:concurrent) {
+   !$omp teams distribute order(concurrent)
+   do i=1,10
+   end do
+   !CHECK: omp.distribute order(reproducible:concurrent) {
+   !$omp teams distribute order(reproducible:concurrent)
+   do i=1,10
+   end do
+   !CHECK: omp.distribute order(unconstrained:concurrent) {
+   !$omp teams distribute order(unconstrained:concurrent)
+   do i = 1, 10
+   end do
+  end subroutine
