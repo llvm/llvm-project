@@ -124,6 +124,12 @@ static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
+static cl::opt<unsigned> MaxDepthOutOfLoop(
+    "indvars-max-depth-out-of-loop", cl::Hidden, cl::init(1),
+    cl::desc(
+        "Strict upper bound for the number of successive out-of-loop blocks "
+        "when traversing use-def chains. 0 enables full traversal"));
+
 namespace {
 
 class IndVarSimplify {
@@ -624,8 +630,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      const auto &[C, U] = simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts,
-                                             Rewriter, &Visitor);
+      const auto &[C, U] =
+          simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
+                            MaxDepthOutOfLoop, &Visitor);
 
       Changed |= C;
       RunUnswitching |= U;
