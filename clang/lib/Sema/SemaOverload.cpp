@@ -12079,8 +12079,9 @@ static void maybeNoteImplicitDeductionGuide(Sema &S,
       // aliases.
       // FIXME: Add a test once https://github.com/llvm/llvm-project/pull/96686
       // gets merged.
-      assert(OriginTemplate->isTypeAlias() &&
-            "Only deduction guides for type aliases can have no template Decls");
+      assert(
+          OriginTemplate->isTypeAlias() &&
+          "Only deduction guides for type aliases can have no template Decls");
       DG->print(OS);
       S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
           << FunctionProto;
