@@ -48,7 +48,7 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override {
+                            uint32_t Subsection) const override {
     llvm_unreachable("unsupported from CAS");
   }
 
