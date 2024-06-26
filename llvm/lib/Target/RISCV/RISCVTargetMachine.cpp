@@ -101,6 +101,11 @@ static cl::opt<bool> EnableVSETVLIAfterRVVRegAlloc(
     cl::desc("Insert vsetvls after vector register allocation"),
     cl::init(true));
 
+static cl::opt<bool>
+    EnableSelectOpt("riscv-select-opt", cl::Hidden,
+                    cl::desc("Enable select to branch optimizations"),
+                    cl::init(true));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -425,6 +430,9 @@ void RISCVPassConfig::addIRPasses() {
   }
 
   TargetPassConfig::addIRPasses();
+
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSelectOpt)
+    addPass(createSelectOptimizePass());
 }
 
 bool RISCVPassConfig::addPreISel() {
