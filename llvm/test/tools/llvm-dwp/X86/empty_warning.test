@@ -123,7 +123,7 @@ main:                                   # @main
 .Linfo_string1:
         .asciz  "main.c"                        # string offset=104
 .Linfo_string2:
-        .asciz  "/data02/home/huangjinjie/origin-llvm-project/llvm-project/build" # string offset=111
+        .asciz  "xxx/xxx/xxx" # string offset=111
 .Linfo_string3:
         .asciz  "main"                          # string offset=175
 .Linfo_string4:
