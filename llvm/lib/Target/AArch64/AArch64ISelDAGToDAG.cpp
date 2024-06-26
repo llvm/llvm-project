@@ -4359,7 +4359,9 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   //   N1 = SRL_PRED true, V, splat(imm)  --> rotr amount
   //   N0 = SHL_PRED true, V, splat(bits-imm)
   //   V = (xor x, y)
-  if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+  if (VT.isScalableVector() &&
+      (Subtarget->hasSVE2() ||
+       (Subtarget->hasSME() && Subtarget->isStreaming()))) {
     if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
         N1.getOpcode() != AArch64ISD::SRL_PRED)
       std::swap(N0, N1);

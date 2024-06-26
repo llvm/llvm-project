@@ -89,8 +89,8 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
 
 ArrayRef<InstrProfValueData>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
-    const Instruction *I, uint32_t &NumVals, uint64_t &TotalCount,
-    uint32_t &NumCandidates) {
+    const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates) {
+  uint32_t NumVals;
   auto Res = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
                                       MaxNumPromotions, NumVals, TotalCount);
   if (!Res) {

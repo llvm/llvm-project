@@ -193,8 +193,6 @@ public:
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
-  void createMemtagRelocs(MCAssembler &Asm);
-
   void writeSectionHeader(const MCAsmLayout &Layout,
                           const SectionIndexMapTy &SectionIndexMap,
                           const SectionOffsetsTy &SectionOffsets);
@@ -614,23 +612,6 @@ bool ELFWriter::isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
     return false;
 
   return true;
-}
-
-void ELFWriter::createMemtagRelocs(MCAssembler &Asm) {
-  MCSectionELF *MemtagRelocs = nullptr;
-  for (const MCSymbol &Sym : Asm.symbols()) {
-    const auto &SymE = cast<MCSymbolELF>(Sym);
-    if (!SymE.isMemtag())
-      continue;
-    if (MemtagRelocs == nullptr) {
-      MemtagRelocs = OWriter.TargetObjectWriter->getMemtagRelocsSection(Asm.getContext());
-      if (MemtagRelocs == nullptr)
-        report_fatal_error("Tagged globals are not available on this architecture.");
-      Asm.registerSection(*MemtagRelocs);
-    }
-    ELFRelocationEntry Rec(0, &SymE, ELF::R_AARCH64_NONE, 0, nullptr, 0);
-    OWriter.Relocations[MemtagRelocs].push_back(Rec);
-  }
 }
 
 void ELFWriter::computeSymbolTable(
@@ -1093,8 +1074,6 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
   MCSectionELF *StrtabSection =
       Ctx.getELFSection(".strtab", ELF::SHT_STRTAB, 0);
   StringTableIndex = addToSectionTable(StrtabSection);
-
-  createMemtagRelocs(Asm);
 
   RevGroupMapTy RevGroupMap;
   SectionIndexMapTy SectionIndexMap;

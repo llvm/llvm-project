@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -222,9 +224,8 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 
   if (!DryRun)
     if (sys::ExecuteAndWait(ExecutablePath, Args))
-      return createStringError(inconvertibleErrorCode(),
-                               "'" + sys::path::filename(ExecutablePath) + "'" +
-                                   " failed");
+      return createStringError(
+          "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
   return Error::success();
 }
 
@@ -257,7 +258,6 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   if (Triple.isOSWindows())
     return createStringError(
-        inconvertibleErrorCode(),
         "Relocatable linking is not supported on COFF targets");
 
   Expected<std::string> ObjcopyPath =
@@ -270,8 +270,7 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   auto BufferOrErr = DryRun ? MemoryBuffer::getMemBuffer("")
                             : MemoryBuffer::getFileOrSTDIN(Output);
   if (!BufferOrErr)
-    return createStringError(inconvertibleErrorCode(), "Failed to open %s",
-                             Output.str().c_str());
+    return createStringError("Failed to open %s", Output.str().c_str());
   std::string Suffix = "_" + getHash((*BufferOrErr)->getBuffer());
 
   SmallVector<StringRef> ObjcopyArgs = {
@@ -490,8 +489,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
         file_magic Magic;
         if (auto EC = identify_magic(Arg->getValue(), Magic))
-          return createStringError(inconvertibleErrorCode(),
-                                   "Failed to open %s", Arg->getValue());
+          return createStringError("Failed to open %s", Arg->getValue());
         if (Magic != file_magic::archive &&
             Magic != file_magic::elf_shared_object)
           continue;
@@ -566,9 +564,8 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::systemz:
     return generic::clang(InputFiles, Args);
   default:
-    return createStringError(inconvertibleErrorCode(),
-                             Triple.getArchName() +
-                                 " linking is not supported");
+    return createStringError(Triple.getArchName() +
+                             " linking is not supported");
   }
 }
 
@@ -879,15 +876,13 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return Err;
 
   if (LTOError)
-    return createStringError(inconvertibleErrorCode(),
-                             "Errors encountered inside the LTO pipeline.");
+    return createStringError("Errors encountered inside the LTO pipeline.");
 
   // If we are embedding bitcode we only need the intermediate output.
   bool SingleOutput = Files.size() == 1;
   if (Args.hasArg(OPT_embed_bitcode)) {
     if (BitcodeOutput.size() != 1 || !SingleOutput)
-      return createStringError(inconvertibleErrorCode(),
-                               "Cannot embed bitcode with multiple files.");
+      return createStringError("Cannot embed bitcode with multiple files.");
     OutputFiles.push_back(Args.MakeArgString(BitcodeOutput.front()));
     return Error::success();
   }
@@ -934,7 +929,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
-    return createStringError(inconvertibleErrorCode(), Msg);
+    return createStringError(Msg);
 
   auto Options =
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(M.getTargetTriple()));
@@ -964,8 +959,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to execute host backend");
+    return createStringError("Failed to execute host backend");
   CodeGenPasses.run(M);
 
   return *TempFileOrErr;
@@ -1010,9 +1004,8 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       return std::move(Err);
     break;
   default:
-    return createStringError(inconvertibleErrorCode(),
-                             getOffloadKindName(Kind) +
-                                 " wrapping is not supported");
+    return createStringError(getOffloadKindName(Kind) +
+                             " wrapping is not supported");
   }
 
   if (Args.hasArg(OPT_print_wrapped_module))
@@ -1107,9 +1100,8 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
   case OFK_HIP:
     return bundleHIP(Images, Args);
   default:
-    return createStringError(inconvertibleErrorCode(),
-                             getOffloadKindName(Kind) +
-                                 " bundling is not supported");
+    return createStringError(getOffloadKindName(Kind) +
+                             " bundling is not supported");
   }
 }
 
@@ -1151,7 +1143,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
 Error handleOverrideImages(
     const InputArgList &Args,
-    DenseMap<OffloadKind, SmallVector<OffloadingImage>> &Images) {
+    MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> &Images) {
   for (StringRef Arg : Args.getAllArgValues(OPT_override_image)) {
     OffloadKind Kind = getOffloadKind(Arg.split("=").first);
     StringRef Filename = Arg.split("=").second;
@@ -1190,7 +1182,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
   std::mutex ImageMtx;
-  DenseMap<OffloadKind, SmallVector<OffloadingImage>> Images;
+  MapVector<OffloadKind, SmallVector<OffloadingImage, 0>> Images;
 
   // Initialize the images with any overriding inputs.
   if (Args.hasArg(OPT_override_image))
@@ -1207,7 +1199,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     StringSaver Saver(Alloc);
     auto BaseArgs =
         Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [](StringRef Err) {
-          reportError(createStringError(inconvertibleErrorCode(), Err));
+          reportError(createStringError(Err));
         });
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
@@ -1508,9 +1500,8 @@ getDeviceInput(const ArgList &Args) {
             : std::string(Arg->getValue());
 
     if (!Filename && Arg->getOption().matches(OPT_library))
-      reportError(createStringError(inconvertibleErrorCode(),
-                                    "unable to find library -l%s",
-                                    Arg->getValue()));
+      reportError(
+          createStringError("unable to find library -l%s", Arg->getValue()));
 
     if (!Filename || !sys::fs::exists(*Filename) ||
         sys::fs::is_directory(*Filename))
@@ -1539,7 +1530,7 @@ getDeviceInput(const ArgList &Args) {
   }
 
   // Link all standard input files and update the list of symbols.
-  DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile>> InputFiles;
+  MapVector<OffloadFile::TargetID, SmallVector<OffloadFile, 0>> InputFiles;
   DenseMap<OffloadFile::TargetID, DenseMap<StringRef, Symbol>> Syms;
   for (OffloadFile &Binary : ObjectFilesToExtract) {
     if (!Binary.getBinary())
@@ -1644,7 +1635,7 @@ int main(int Argc, char **Argv) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   auto Args = Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [&](StringRef Err) {
-    reportError(createStringError(inconvertibleErrorCode(), Err));
+    reportError(createStringError(Err));
   });
 
   if (Args.hasArg(OPT_help) || Args.hasArg(OPT_help_hidden)) {
@@ -1689,9 +1680,9 @@ int main(int Argc, char **Argv) {
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
     unsigned Threads = 0;
     if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
-      reportError(createStringError(
-          inconvertibleErrorCode(), "%s: expected a positive integer, got '%s'",
-          Arg->getSpelling().data(), Arg->getValue()));
+      reportError(createStringError("%s: expected a positive integer, got '%s'",
+                                    Arg->getSpelling().data(),
+                                    Arg->getValue()));
     parallel::strategy = hardware_concurrency(Threads);
   }
 

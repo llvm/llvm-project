@@ -74,7 +74,7 @@ class RABasic : public MachineFunctionPass,
   void LRE_WillShrinkVirtReg(Register) override;
 
 public:
-  RABasic(const RegClassFilterFunc F = allocateAllRegClasses);
+  RABasic(const RegClassFilterFunc F = nullptr);
 
   /// Return the pass name.
   StringRef getPassName() const override { return "Basic Register Allocator"; }

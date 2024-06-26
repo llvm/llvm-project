@@ -1153,6 +1153,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::USUBSAT:
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
+  case ISD::SCMP:
+  case ISD::UCMP:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
@@ -3884,6 +3886,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::SSUBSAT:
   case ISD::USUBSAT:
     Results.push_back(TLI.expandAddSubSat(Node, DAG));
+    break;
+  case ISD::SCMP:
+  case ISD::UCMP:
+    Results.push_back(TLI.expandCMP(Node, DAG));
     break;
   case ISD::SSHLSAT:
   case ISD::USHLSAT:
