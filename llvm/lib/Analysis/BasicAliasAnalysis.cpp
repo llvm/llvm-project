@@ -555,9 +555,9 @@ struct BasicAAResult::DecomposedGEP {
   APInt Offset;
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
-  // Are all operations inbounds GEPs or non-indexing operations?
+  // Nowrap flags common to all GEP operations involved in expression.
   // (std::nullopt iff expression doesn't involve any geps)
-  std::optional<bool> InBounds;
+  std::optional<GEPNoWrapFlags> NWFlags;
 
   void dump() const {
     print(dbgs());
@@ -644,12 +644,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       return Decomposed;
     }
 
-    // Track whether we've seen at least one in bounds gep, and if so, whether
-    // all geps parsed were in bounds.
-    if (Decomposed.InBounds == std::nullopt)
-      Decomposed.InBounds = GEPOp->isInBounds();
-    else if (!GEPOp->isInBounds())
-      Decomposed.InBounds = false;
+    // Track the common nowrap flags for all GEPs we see.
+    if (Decomposed.NWFlags == std::nullopt)
+      Decomposed.NWFlags = GEPOp->getNoWrapFlags();
+    else
+      *Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
@@ -1120,7 +1119,7 @@ AliasResult BasicAAResult::aliasGEP(
   // for the two to alias, then we can assume noalias.
   // TODO: Remove !isScalable() once BasicAA fully support scalable location
   // size
-  if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
+  if (DecompGEP1.NWFlags->isInBounds() && DecompGEP1.VarIndices.empty() &&
       V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
@@ -1128,7 +1127,7 @@ AliasResult BasicAAResult::aliasGEP(
 
   if (isa<GEPOperator>(V2)) {
     // Symmetric case to above.
-    if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
+    if (DecompGEP2.NWFlags->isInBounds() && DecompGEP1.VarIndices.empty() &&
         V1Size.hasValue() && !V1Size.isScalable() &&
         DecompGEP1.Offset.sle(-V1Size.getValue()) &&
         isBaseOfObject(DecompGEP1.Base))
@@ -1237,6 +1236,32 @@ AliasResult BasicAAResult::aliasGEP(
           Scale.abs().uge(VLeftSize.getValue().getKnownMinValue()))
         return AliasResult::NoAlias;
     }
+  }
+
+  // If the difference between pointers is Offset +<nuw> Indices (the variable
+  // indices all come from nuw GEPs) then we know that the addition does not
+  // wrap the pointer index type (add nuw) and the constant Offset is a lower
+  // bound on the distance between the pointers. We can then prove NoAlias via
+  // Offset u>= VLeftSize.
+  //    +                +                     +
+  //    | BaseOffset     |   +<nuw> Indices    |
+  //    ---------------->|-------------------->|
+  //    |-->VLeftSize    |                     |-------> VRightSize
+  //   LHS                                    RHS
+  if (!DecompGEP1.VarIndices.empty() &&
+      llvm::all_of(DecompGEP1.VarIndices, [&](const VariableGEPIndex &V) {
+        return V.IsNegated == DecompGEP1.VarIndices.front().IsNegated;
+      })) {
+    APInt Off = DecompGEP1.Offset;
+    bool Swapped = Off.isNegative();
+    LocationSize VLeftSize = Swapped ? V1Size : V2Size;
+    DecomposedGEP &DecompRight = Swapped ? DecompGEP2 : DecompGEP1;
+
+    bool IndicesFromRight = DecompGEP1.VarIndices.front().IsNegated == Swapped;
+    if (IndicesFromRight && DecompRight.NWFlags->hasNoUnsignedWrap())
+      if (!VLeftSize.isScalable() && VLeftSize.hasValue() &&
+          Off.abs().uge(VLeftSize.getValue()))
+        return AliasResult::NoAlias;
   }
 
   // Bail on analysing scalable LocationSize
