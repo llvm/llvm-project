@@ -176,10 +176,6 @@ private:
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::less, 12);
 
-    // If this angle is in the context of an expression, we need to be more
-    // hesitant to detect it as opening template parameters.
-    bool InExprContext = Contexts.back().IsExpression;
-
     Contexts.back().IsExpression = false;
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
@@ -231,11 +227,8 @@ private:
         next();
         continue;
       }
-      if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
-          (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           !Style.isCSharp() && !Style.isProto())) {
+      if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
         return false;
-      }
       // If a && or || is found and interpreted as a binary operator, this set
       // of angles is likely part of something like "a < b && c > d". If the
       // angles are inside an expression, the ||/&& might also be a binary
