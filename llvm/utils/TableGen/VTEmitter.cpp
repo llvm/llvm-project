@@ -61,9 +61,13 @@ static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
       break;
     }
     OS << "Type::get" << FloatTy << "(Context)";
-  } else if (OutputVT->getValueAsBit("isInteger"))
-    OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
-  else
+  } else if (OutputVT->getValueAsBit("isInteger")) {
+    // We only have Type::getInt1Ty, Int8, Int16, Int32, and Int64
+    if ((isPowerOf2_64(OutputVTSize) && OutputVTSize > 8) || OutputVTSize == 1)
+      OS << "Type::getInt" << OutputVTSize << "Ty(Context)";
+    else
+      OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
+  } else
     llvm_unreachable("Unhandled case");
 
   if (IsVector)
