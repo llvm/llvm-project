@@ -220,10 +220,9 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
 
     // If ActiveFD equals -1 or CancelFD has data to be read then the operation
     // has been canceled by another thread
-    if (getActiveFD() == -1 || FD[1].revents & POLLIN)
+    if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
       return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::operation_canceled),
-          "Accept canceled");
+          std::make_error_code(std::errc::operation_canceled));
 #if _WIN32
     if (PollStatus == SOCKET_ERROR) {
 #else
@@ -236,8 +235,7 @@ static llvm::Error manageTimeout(std::chrono::milliseconds Timeout,
     }
     if (PollStatus == 0)
       return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::timed_out),
-          "No client requests within timeout window");
+          std::make_error_code(std::errc::timed_out));
 
     if (FD[0].revents & POLLNVAL)
       return llvm::make_error<StringError>(
