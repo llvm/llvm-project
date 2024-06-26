@@ -314,7 +314,7 @@ Using ``--offload-arch=amdgcnspirv``
   the SPIR-V Back-end.
 
 - **Clang Offload Bundler**: The resulting SPIR-V is embedded in the Clang
-  offload bundler with the bundle ID ``hipv4-hip-spirv64-amd-amdhsa-generic``.
+  offload bundler with the bundle ID ``hipv4-spirv64-amd-amdhsa-generic``.
 
 Mixed with Normal ``--offload-arch``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
