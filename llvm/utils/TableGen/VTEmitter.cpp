@@ -27,6 +27,8 @@ public:
   void run(raw_ostream &OS);
 };
 
+} // End anonymous namespace.
+
 static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
   bool IsVector = VT->getValueAsBit("isVector");
   if (IsVector)
@@ -67,8 +69,6 @@ static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
   if (IsVector)
     OS << ", " << VT->getValueAsInt("nElem") << ")";
 }
-
-} // End anonymous namespace.
 
 void VTEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
