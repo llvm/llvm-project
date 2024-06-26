@@ -165,6 +165,38 @@ template <AllocationKind AK> struct AllocationTracker {
     return Ptr;
   }
 
+  [[clang::disable_sanitizer_instrumentation]] static void
+  lifetimeStart(void *P, uint64_t Length) {
+    AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
+    uint32_t ThreadId = 0, BlockId = 0;
+    if constexpr (AK == AllocationKind::LOCAL) {
+      ThreadId = __kmpc_get_hardware_thread_id_in_block();
+      BlockId = ompx_block_id(0);
+    }
+    auto &AllocArr =
+        Allocations[ThreadId +
+                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &A = AllocArr.Arr[AP.AllocationId];
+    // TODO: Check length
+    A.Length = Length;
+  }
+
+  [[clang::disable_sanitizer_instrumentation]] static void
+  lifetimeEnd(void *P, uint64_t Length) {
+    AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
+    uint32_t ThreadId = 0, BlockId = 0;
+    if constexpr (AK == AllocationKind::LOCAL) {
+      ThreadId = __kmpc_get_hardware_thread_id_in_block();
+      BlockId = ompx_block_id(0);
+    }
+    auto &AllocArr =
+        Allocations[ThreadId +
+                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &A = AllocArr.Arr[AP.AllocationId];
+    // TODO: Check length
+    A.Length = 0;
+  }
+
   [[clang::disable_sanitizer_instrumentation]] static void leakCheck() {
     static_assert(AK == AllocationKind::GLOBAL, "");
     auto &AllocArr = Allocations[0];
@@ -288,6 +320,17 @@ ompx_unpack_local(void *P, uint64_t PC) {
   gnu::used, gnu::retain]] void *
 ompx_unpack_global(void *P, uint64_t PC) {
   return AllocationTracker<AllocationKind::GLOBAL>::unpack(P, PC);
+}
+
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] void
+ompx_lifetime_start(void *P, uint64_t Length) {
+  AllocationTracker<AllocationKind::LOCAL>::lifetimeStart(P, Length);
+}
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] void
+ompx_lifetime_end(void *P, uint64_t Length) {
+  AllocationTracker<AllocationKind::LOCAL>::lifetimeEnd(P, Length);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,

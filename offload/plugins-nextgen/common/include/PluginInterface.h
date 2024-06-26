@@ -739,6 +739,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                          void *&FakeHstPtr) {
     if (auto Err = GPUSan.notifyDataMapped(DevicePtr, Size, FakeHstPtr))
       return Err;
+    if (!HstPtr)
+      return Error::success();
     return PinnedAllocs.lockMappedHostBuffer(HstPtr, Size);
   }
 
@@ -748,6 +750,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error notifyDataUnmapped(void *HstPtr, void *FakeHstPtr) {
     if (auto Err = GPUSan.notifyDataUnmapped(FakeHstPtr))
       return Err;
+    if (!HstPtr)
+      return Error::success();
     return PinnedAllocs.unlockUnmappedHostBuffer(HstPtr);
   }
 

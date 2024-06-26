@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -135,6 +136,14 @@ private:
     return getOrCreateFn(UnpackFn[PO], "ompx_unpack" + getSuffix(PO), PtrTy,
                          {PtrTy, Int64Ty});
   }
+  FunctionCallee getLifetimeStart() {
+    return getOrCreateFn(LifetimeStartFn, "ompx_lifetime_start", VoidTy,
+                         {PtrTy, Int64Ty});
+  }
+  FunctionCallee getLifetimeEnd() {
+    return getOrCreateFn(LifetimeEndFn, "ompx_lifetime_end", VoidTy,
+                         {PtrTy, Int64Ty});
+  }
   FunctionCallee getLeakCheckFn() {
     FunctionCallee LeakCheckFn;
     return getOrCreateFn(LeakCheckFn, "ompx_leak_check", VoidTy, {});
@@ -159,6 +168,8 @@ private:
   FunctionCallee FreeFn[3];
   FunctionCallee CheckFn[3];
   FunctionCallee UnpackFn[3];
+  FunctionCallee LifetimeEndFn;
+  FunctionCallee LifetimeStartFn;
   FunctionCallee FreeNLocal;
 
   StringMap<Value *> GlobalStringMap;
@@ -268,18 +279,35 @@ bool GPUSanImpl::instrumentGlobals() {
 
 Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
                                         FunctionCallee Fn) {
-  IRBuilder<> IRB(&*I.getParent()->getFirstNonPHIOrDbgOrAlloca());
+  IRBuilder<> IRB(I.getNextNode());
   Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, PtrTy);
   static int AllocationId = 1;
   auto *CB = IRB.CreateCall(
       Fn,
       {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++), getPC(IRB)},
       I.getName() + ".san");
-  I.replaceUsesWithIf(IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()),
-                      [=](Use &U) {
-                        return U.getUser() != PlainI && U.getUser() != CB &&
-                               !isa<LifetimeIntrinsic>(U.getUser());
-                      });
+  SmallVector<LifetimeIntrinsic *> Lifetimes;
+  I.replaceUsesWithIf(
+      IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()), [&](Use &U) {
+        if (auto *LT = dyn_cast<LifetimeIntrinsic>(U.getUser())) {
+          Lifetimes.push_back(LT);
+          return false;
+        }
+        return U.getUser() != PlainI && U.getUser() != CB;
+      });
+  if (Lifetimes.empty())
+    return CB;
+
+  CB->setArgOperand(1, ConstantInt::get(Int64Ty, 0));
+  for (auto *LT : Lifetimes) {
+    if (LT->getIntrinsicID() == Intrinsic::lifetime_start) {
+      IRB.SetInsertPoint(LT);
+      IRB.CreateCall(getLifetimeStart(), {CB, LT->getArgOperand(0)});
+    } else {
+      IRB.SetInsertPoint(LT);
+      IRB.CreateCall(getLifetimeEnd(), {CB, LT->getArgOperand(0)});
+    }
+  }
   return CB;
 }
 
@@ -455,6 +483,7 @@ PreservedAnalyses GPUSanPass::run(Module &M, ModuleAnalysisManager &AM) {
   GPUSanImpl Lowerer(M, FAM);
   if (!Lowerer.instrument())
     return PreservedAnalyses::all();
+  LLVM_DEBUG(M.dump());
 
   return PreservedAnalyses::none();
 }

@@ -443,7 +443,10 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   Rc = DeviceOrErr->allocData(Size, nullptr, Kind);
   DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(Rc));
-  return Rc;
+  void *FakeHstPtr;
+  if (DeviceOrErr->notifyDataMapped(nullptr, Rc, Size, FakeHstPtr))
+    return nullptr;
+  return FakeHstPtr;
 }
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
@@ -468,6 +471,8 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
 
   if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
     FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr");
+
+  DeviceOrErr->notifyDataUnmapped(nullptr, DevicePtr);
 
   DP("omp_target_free deallocated device ptr\n");
 }

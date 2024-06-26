@@ -2207,10 +2207,10 @@ void GPUSanTy::checkAndReportError() {
   if (FunctionName.starts_with("__omp_offloading_")) {
     FunctionName = FunctionName.drop_front(sizeof("__omp_offloading_"));
     auto It = FunctionName.find_first_of("_");
-    if (It != StringRef::npos)
+    if (It != StringRef::npos && It + 1 < FunctionName.size())
       FunctionName = FunctionName.drop_front(It + 1);
     It = FunctionName.find_first_of("_");
-    if (It != StringRef::npos)
+    if (It != StringRef::npos && It + 1 < FunctionName.size())
       FunctionName = FunctionName.drop_front(It + 1);
   }
 
@@ -2219,7 +2219,7 @@ void GPUSanTy::checkAndReportError() {
         FunctionName.drop_back(sizeof("debug___omp_outlined_debug__"));
 
   auto It = FunctionName.find_last_of("_");
-  if (It != StringRef::npos) {
+  if (It != StringRef::npos && It + 1 < FunctionName.size()) {
     if (FunctionName[It + 1] == 'l') {
       int64_t KernelLineNo = 0;
       FunctionName
@@ -2240,42 +2240,44 @@ void GPUSanTy::checkAndReportError() {
   case SanitizerTrapInfoTy::None:
     llvm_unreachable("Unexpected exception");
   case SanitizerTrapInfoTy::ExceedsLength:
-    fprintf(stderr, "%sERROR: OffloadSanitizer %s%s\n", Red(), "exceeds length",
+    fprintf(stderr, "%sERROR: OffloadSanitizer %s\n%s", Red(), "exceeds length",
             Default());
     break;
   case SanitizerTrapInfoTy::ExceedsSlots:
-    fprintf(stderr, "%sERROR: OffloadSanitizer %s%s\n", Red(), "exceeds slots",
+    fprintf(stderr, "%sERROR: OffloadSanitizer %s\n%s", Red(), "exceeds slots",
             Default());
     break;
   case SanitizerTrapInfoTy::OutOfBounds: {
     void *PC = reinterpret_cast<void *>(STI.PC);
     void *Addr = utils::advancePtr(STI.AllocationStart, STI.PtrOffset);
     fprintf(stderr,
-            "%sERROR: OffloadSanitizer %s on address %p at pc "
-            "%p%s\n",
-            Red(), "out-of-bounds access", Addr, PC, Default());
-    fprintf(
-        stderr,
-        "%s%s of size %u at %p thread <%u, %u, %u> block <%lu, %lu, %lu>%s\n",
-        Blue(), STI.AccessId > 0 ? "WRITE" : "READ", STI.AccessSize, Addr,
-        STI.ThreadId[0], STI.ThreadId[1], STI.ThreadId[2], STI.BlockId[0],
-        STI.BlockId[1], STI.BlockId[2], Default());
+            "%sERROR: OffloadSanitizer %s on address " DPxMOD " at pc " DPxMOD
+            "\n%s",
+            Red(), "out-of-bounds access", DPxPTR(Addr), DPxPTR(PC), Default());
+    fprintf(stderr,
+            "%s%s of size %u at " DPxMOD
+            " thread <%u, %u, %u> block <%lu, %lu, %lu>\n%s",
+            Blue(), STI.AccessId > 0 ? "WRITE" : "READ", STI.AccessSize,
+            DPxPTR(Addr), STI.ThreadId[0], STI.ThreadId[1], STI.ThreadId[2],
+            STI.BlockId[0], STI.BlockId[1], STI.BlockId[2], Default());
     fprintf(stderr, "    #0 %p %s in %s:%lu\n\n", PC,
             FunctionName.str().c_str(), FileName.data(), STI.LineNo);
-    fprintf(stderr,
-            "%s%p is located %lu bytes inside of a %lu-byte region [%p,%p)%s\n",
-            Green(), Addr, STI.PtrOffset, STI.AllocationLength,
-            STI.AllocationStart,
-            utils::advancePtr(STI.AllocationStart, STI.AllocationLength),
-            Default());
+    fprintf(
+        stderr,
+        "%s" DPxMOD " is located %lu bytes inside of a %lu-byte region [" DPxMOD
+        "," DPxMOD ")\n%s",
+        Green(), DPxPTR(Addr), STI.PtrOffset, STI.AllocationLength,
+        DPxPTR(STI.AllocationStart),
+        DPxPTR(utils::advancePtr(STI.AllocationStart, STI.AllocationLength)),
+        Default());
     break;
   }
   case SanitizerTrapInfoTy::UseAfterFree:
-    fprintf(stderr, "%sERROR: OffloadSanitizer %s%s\n", Red(), "use-after-free",
+    fprintf(stderr, "%sERROR: OffloadSanitizer %s\n%s", Red(), "use-after-free",
             Default());
     break;
   case SanitizerTrapInfoTy::MemoryLeak:
-    fprintf(stderr, "%sERROR: OffloadSanitizer %s%s\n", Red(), "memory leak",
+    fprintf(stderr, "%sERROR: OffloadSanitizer %s\n%s", Red(), "memory leak",
             Default());
     break;
   }
