@@ -90,11 +90,11 @@ typedef struct {
   unsigned long int __bits[__CPU_SETSIZE / __NCPUBITS];
 } cpu_set_t;
 
-#define SYS_riscv_hwprobe 258
+#define __NR_riscv_hwprobe 258
 static long sys_riscv_hwprobe(struct riscv_hwprobe *pairs, unsigned pair_count,
                               unsigned cpu_count, cpu_set_t *cpus,
                               unsigned int flags) {
-  return syscall_impl_5_args(SYS_riscv_hwprobe, (long)pairs, pair_count,
+  return syscall_impl_5_args(__NR_riscv_hwprobe, (long)pairs, pair_count,
                              cpu_count, (long)cpus, flags);
 }
 
