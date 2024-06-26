@@ -1468,7 +1468,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
   ParallelOp::build(builder, state, clauses.ifVar, clauses.numThreadsVar,
                     clauses.allocateVars, clauses.allocatorVars,
                     clauses.reductionVars,
-                    makeDenseBoolArrayAttr(ctx, clauses.reduceVarByRef),
+                    makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
                     makeArrayAttr(ctx, clauses.reductionDeclSymbols),
                     clauses.procBindKindAttr, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privatizers));
@@ -1566,7 +1566,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                  clauses.numTeamsUpperVar, clauses.ifVar,
                  clauses.threadLimitVar, clauses.allocateVars,
                  clauses.allocatorVars, clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reduceVarByRef),
+                 makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
                  makeArrayAttr(ctx, clauses.reductionDeclSymbols));
 }
 
@@ -1611,7 +1611,7 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: reductionByRefAttr, privateVars, privatizers.
   SectionsOp::build(builder, state, clauses.reductionVars,
-                    makeDenseBoolArrayAttr(ctx, clauses.reduceVarByRef),
+                    makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
                     makeArrayAttr(ctx, clauses.reductionDeclSymbols),
                     clauses.allocateVars, clauses.allocatorVars,
                     clauses.nowaitAttr);
@@ -1712,7 +1712,7 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
   // privatizers.
   WsloopOp::build(builder, state, clauses.linearVars, clauses.linearStepVars,
                   clauses.reductionVars,
-                  makeDenseBoolArrayAttr(ctx, clauses.reduceVarByRef),
+                  makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
                   makeArrayAttr(ctx, clauses.reductionDeclSymbols),
                   clauses.scheduleValAttr, clauses.scheduleChunkVar,
                   clauses.scheduleModAttr, clauses.scheduleSimdAttr,
@@ -1911,7 +1911,7 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
   TaskOp::build(
       builder, state, clauses.ifVar, clauses.finalVar, clauses.untiedAttr,
       clauses.mergeableAttr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReduceVarByRef),
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionVarsByRef),
       makeArrayAttr(ctx, clauses.inReductionDeclSymbols), clauses.priorityVar,
       makeArrayAttr(ctx, clauses.dependTypeAttrs), clauses.dependVars,
       clauses.allocateVars, clauses.allocatorVars);
@@ -1958,9 +1958,9 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
   TaskloopOp::build(
       builder, state, clauses.ifVar, clauses.finalVar, clauses.untiedAttr,
       clauses.mergeableAttr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReduceVarByRef),
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionVarsByRef),
       makeArrayAttr(ctx, clauses.inReductionDeclSymbols), clauses.reductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.reduceVarByRef),
+      makeDenseBoolArrayAttr(ctx, clauses.reductionVarsByRef),
       makeArrayAttr(ctx, clauses.reductionDeclSymbols), clauses.priorityVar,
       clauses.allocateVars, clauses.allocatorVars, clauses.grainsizeVar,
       clauses.numTasksVar, clauses.nogroupAttr);

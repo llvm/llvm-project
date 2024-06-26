@@ -94,7 +94,7 @@ struct IfClauseOps {
 
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
-  llvm::SmallVector<bool> inReduceVarByRef;
+  llvm::SmallVector<bool> inReductionVarsByRef;
   llvm::SmallVector<Attribute> inReductionDeclSymbols;
 };
 
@@ -178,7 +178,7 @@ struct ProcBindClauseOps {
 
 struct ReductionClauseOps {
   llvm::SmallVector<Value> reductionVars;
-  llvm::SmallVector<bool> reduceVarByRef;
+  llvm::SmallVector<bool> reductionVarsByRef;
   llvm::SmallVector<Attribute> reductionDeclSymbols;
 };
 
