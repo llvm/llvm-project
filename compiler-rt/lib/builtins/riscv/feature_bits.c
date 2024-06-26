@@ -500,11 +500,12 @@ void __init_riscv_features_bit() {
   FeaturesBitCached = 1;
 
 #if defined(__linux__)
-  struct riscv_hwprobe Hwprobes[HWPROBE_LENGTH];
-  Hwprobes[0].key = RISCV_HWPROBE_KEY_BASE_BEHAVIOR;
-  Hwprobes[1].key = RISCV_HWPROBE_KEY_IMA_EXT_0;
-  Hwprobes[2].key = RISCV_HWPROBE_KEY_MVENDORID;
-  initHwProbe(Hwprobes, HWPROBE_LENGTH);
+  struct riscv_hwprobe Hwprobes[] = {
+      {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0},
+      {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
+      {RISCV_HWPROBE_KEY_MVENDORID, 0},
+  };
+  initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0]));
 
   initRISCVFeature(Hwprobes);
   updateImpliedFeatures();
