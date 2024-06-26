@@ -58,7 +58,9 @@
 
 // Check __has_constexpr_builtin
 #if  !__has_constexpr_builtin(__builtin_fmax) || \
-     !__has_constexpr_builtin(__builtin_fmin)
+     !__has_constexpr_builtin(__builtin_fmin) || \
+     !__has_constexpr_builtin(__builtin_fmaximum_num) || \
+     !__has_constexpr_builtin(__builtin_fmaximum_num)
 #error Clang should have these constexpr builtins
 #endif
 
