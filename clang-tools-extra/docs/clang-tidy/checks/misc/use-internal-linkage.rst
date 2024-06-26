@@ -31,7 +31,7 @@ Options
 
 .. option:: FixMode
 
-  Selects the fix mode when fixing automatically.
+  Selects what kind of a fix the check should provide.
 
   ``None``
     Don't fix automatically.
