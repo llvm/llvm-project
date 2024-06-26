@@ -588,7 +588,7 @@ parseReductionVarList(OpAsmParser &parser,
         return success();
       })))
     return failure();
-  isByRef = DenseBoolArrayAttr::get(parser.getContext(), isByRefVec);
+  isByRef = makeDenseBoolArrayAttr(parser.getContext(), isByRefVec);
   SmallVector<Attribute> reductions(reductionVec.begin(), reductionVec.end());
   redcuctionSymbols = ArrayAttr::get(parser.getContext(), reductions);
   return success();
