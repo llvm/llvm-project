@@ -2541,6 +2541,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
     BuiltinID = mutateLongDoubleBuiltin(BuiltinID);
 
+  // Mutate the printf builtin ID so that we use the same CodeGen path for
+  // HIP and OpenCL with AMDGPU targets.
+  if (getTarget().getTriple().isAMDGCN() && BuiltinID == AMDGPU::BIprintf)
+    BuiltinID = Builtin::BIprintf;
+
   // If the builtin has been declared explicitly with an assembler label,
   // disable the specialized emitting below. Ideally we should communicate the
   // rename in IR, or at least avoid generating the intrinsic calls that are
@@ -5893,7 +5898,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         return EmitOpenMPDevicePrintfCallExpr(E);
       if (getTarget().getTriple().isNVPTX())
         return EmitNVPTXDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isAMDGCN() && getLangOpts().HIP)
+      if (getTarget().getTriple().isAMDGCN() &&
+          (getLangOpts().HIP || getLangOpts().OpenCL))
         return EmitAMDGPUDevicePrintfCallExpr(E);
     }
 
