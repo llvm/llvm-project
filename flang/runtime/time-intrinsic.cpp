@@ -22,6 +22,7 @@
 #ifdef _WIN32
 #include "flang/Common/windows-include.h"
 #else
+#include <chrono>
 #include <sys/time.h> // gettimeofday
 #include <sys/times.h>
 #include <unistd.h>
@@ -114,26 +115,18 @@ static constexpr inline unsigned_count_t GetHUGE(int kind) {
   return (unsigned_count_t{1} << ((8 * kind) - 1)) - 1;
 }
 
-// This is the fallback implementation, which should work everywhere. Note that
-// in general we can't recover after std::clock has reached its maximum value.
+// This is the fallback implementation, which should work everywhere.
 template <typename Unused = void>
 count_t GetSystemClockCount(int kind, fallback_implementation) {
-  std::clock_t timestamp{std::clock()};
-  if (timestamp == static_cast<std::clock_t>(-1)) {
+  unsigned_count_t timestamp;
+  timestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  if (timestamp == static_cast<unsigned_count_t>(-1)) {
     // Return -HUGE(COUNT) to represent failure.
     return -static_cast<count_t>(GetHUGE(kind));
   }
-  // Convert the timestamp to std::uint64_t with wrap-around. The timestamp is
-  // most likely a floating-point value (since C'11), so compute the modulus
-  // carefully when one is required.
-  constexpr auto maxUnsignedCount{std::numeric_limits<unsigned_count_t>::max()};
-  if constexpr (std::numeric_limits<std::clock_t>::max() > maxUnsignedCount) {
-    timestamp -= maxUnsignedCount * std::floor(timestamp / maxUnsignedCount);
-  }
-  unsigned_count_t unsignedCount{static_cast<unsigned_count_t>(timestamp)};
   // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
   // The result is a signed integer but never negative.
-  return static_cast<count_t>(unsignedCount % (GetHUGE(kind) + 1));
+  return static_cast<count_t>(timestamp % (GetHUGE(kind) + 1));
 }
 
 template <typename Unused = void>
