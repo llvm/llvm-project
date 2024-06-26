@@ -100,11 +100,13 @@ enum class IndexMatchResult {
   Mismatch    // none of the above.
 };
 
-// Consider the A matrix in `C[M,N] = A[M,K] * B[K,N]`. Below, we
-// check whether the index map of A is identity (match), transposed, or
-// something completely different (mis-match).
+// Matches position of indices appearing the affine map of operand
+// with what is expected in non-transposed case. e.g.
+//  consider the A matrix in `C[M,N] = A[M,K] * B[K,N]`. Below, we
+//  check whether the index map of A is identity (match), transposed, or
+//  something completely different (mis-match).
 // The naming and explanation is in terms of A, but the function checks
-// effectively maps for all A, B, C i.e. <M,N>, <M, K>, <K,N>.
+// effectively maps for all A, B, C i.e. C<M,N>, A<M, K>, B<K,N>.
 static IndexMatchResult matchOperandMap(AffineMap map, unsigned batchSize,
                                         unsigned expectedPosOfM,
                                         unsigned expectedPosOfK) {
@@ -129,11 +131,13 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned batchSize,
   return IndexMatchResult::Mismatch;
 }
 
-//  All the variants `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-//  have same number of input/output.
-template <typename Variant>
+// Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
+//  All the variants expressed as pseudo regular expression:
+//      `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
+//  have same number of ins/out, so its easy to stamp different versions.
+template <typename NamedOpTy>
 static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op) {
-  LinalgOp namedOp = rewriter.replaceOpWithNewOp<Variant>(
+  LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]});
   return namedOp;
@@ -156,16 +160,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return failure();
 
-  //  matmul contractions are of the form:
-  //  %0 = <elemwise>(permutation-of(cu(block-argument-0),
-  //                                 cu(block-argument-1)))
-  //  %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
-  //
-  //  where <elemwise> and <reduce> are binary operations constituting a
-  //  contraction (in the canonical case, <elemwise> is a multiplication and
-  //  <reduce> is an addition). All operands of all operations may be supplied
-  //  through a chain of side effect-free unary operations, such as casts,
-  //  which is denoted as `cu` above.
   if (!mlir::linalg::detail::isContractionBody(
           *genericOp.getBlock(), [](Operation *first, Operation *second) {
             if ((isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
@@ -176,20 +170,12 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
           }))
     return failure();
 
-  // Finds 2 parallel (m and n) and 1 reduction (k) dimension candidates that
-  // form a matmul subcomputation. These dimensions are such that:
-  //   1. The m dimension is involved in an outer-product along LHS
-  //      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
-  //   2. The n dimension is involved in an outer-product along RHS
-  //      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
-  //   3. The k dimension appears as a permutation on LHS and RHS.
-  //   4. m, n and k appear only once in any given indexing.
-  //   5. Optional batch dimensions that appear in all operands are captured.
   auto res = inferContractionDims(genericOp);
   assert(succeeded(res) && "unexpected failure to infer contraction dims");
   auto dims = *res;
 
   // Other than `batch`, other dim sizes must be 1 for linalg.*_matmul_*.
+  // Note that linalg contraction can have more than one contraction dimension.
   if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
     return failure();
 
