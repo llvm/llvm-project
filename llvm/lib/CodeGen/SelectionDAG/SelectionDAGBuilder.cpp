@@ -4788,8 +4788,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
-      (!IsCompressing && TTI.hasConditionalLoadStoreForType(
-                             I.getArgOperand(0)->getType()->getScalarType()))
+      !IsCompressing && TTI.hasConditionalLoadStoreForType(
+                            I.getArgOperand(0)->getType()->getScalarType())
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
