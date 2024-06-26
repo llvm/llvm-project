@@ -5,7 +5,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-apple-macosx12.0.0"
 
 ; Function Attrs: noinline nounwind optsize ssp uwtable
-define i32 @f(i32 noundef %x) #0 {
+define i32 @f(i32 noundef %x) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @f(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -46,7 +46,7 @@ sw.epilog:                                        ; preds = %sw.default, %sw.bb
 }
 
 ; Function Attrs: noinline nounwind optsize ssp uwtable
-define i32 @g(i32 noundef %x) #0 {
+define i32 @g(i32 noundef %x) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @g(
 ; CHECK-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call range(i32 0, 2) i32 @f(i32 noundef [[TMP0]]) #[[ATTR0]]

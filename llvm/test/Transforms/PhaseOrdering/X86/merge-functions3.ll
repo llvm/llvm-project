@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx12.0.0"
 @switch.table.g = private unnamed_addr constant [8 x i32] [i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 1], align 4
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable
-define range(i32 0, 2) i32 @f(i32 noundef %x) local_unnamed_addr #0 {
+define range(i32 0, 2) i32 @f(i32 noundef %x) local_unnamed_addr {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @f(
 ; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -39,7 +39,7 @@ sw.epilog:                                        ; preds = %entry, %switch.look
 }
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable
-define range(i32 0, 2) i32 @g(i32 noundef %x) local_unnamed_addr #0 {
+define range(i32 0, 2) i32 @g(i32 noundef %x) local_unnamed_addr {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @g(
 ; CHECK-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call range(i32 0, 2) i32 @f(i32 noundef [[TMP0]]) #[[ATTR0]]
