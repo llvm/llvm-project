@@ -136,15 +136,6 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
-uint64_t AMDGPUAsmPrinter::getMCExprValue(const MCExpr *Value, MCContext &Ctx) {
-  int64_t Val;
-  if (!Value->evaluateAsAbsolute(Val)) {
-    Ctx.reportError(SMLoc(), "could not resolve expression when required.");
-    return 0;
-  }
-  return static_cast<uint64_t>(Val);
-}
-
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Init target streamer if it has not yet happened
   if (!IsTargetStreamerInitialized)
@@ -249,14 +240,14 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
       STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
-      getMCExprValue(CurrentProgramInfo.NumVGPRsForWavesPerEU, Context),
-      getMCExprValue(CurrentProgramInfo.NumSGPRsForWavesPerEU, Context) -
-          IsaInfo::getNumExtraSGPRs(
-              &STM, getMCExprValue(CurrentProgramInfo.VCCUsed, Context),
-              getMCExprValue(CurrentProgramInfo.FlatUsed, Context),
-              getTargetStreamer()->getTargetID()->isXnackOnOrAny()),
-      getMCExprValue(CurrentProgramInfo.VCCUsed, Context),
-      getMCExprValue(CurrentProgramInfo.FlatUsed, Context));
+      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      MCBinaryExpr::createSub(
+          CurrentProgramInfo.NumSGPRsForWavesPerEU,
+          AMDGPUMCExpr::createExtraSGPRs(
+              CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
+              getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Context),
+          Context),
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
 }
@@ -431,9 +422,10 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
                               false);
 }
 
-uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
+const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
 
@@ -470,11 +462,19 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
 
-  if (getMCExprValue(CurrentProgramInfo.DynamicCallStack, MF.getContext()) &&
-      CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK;
+  // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
+  // un-evaluatable at this point so it cannot be conditionally checked here.
+  // Instead, we'll directly shift the possibly unknown MCExpr into its place
+  // and bitwise-or it into KernelCodeProperties.
+  const MCExpr *KernelCodePropExpr =
+      MCConstantExpr::create(KernelCodeProperties, Ctx);
+  const MCExpr *OrValue = MCConstantExpr::create(
+      amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT, Ctx);
+  OrValue = MCBinaryExpr::createShl(CurrentProgramInfo.DynamicCallStack,
+                                    OrValue, Ctx);
+  KernelCodePropExpr = MCBinaryExpr::createOr(KernelCodePropExpr, OrValue, Ctx);
 
-  return KernelCodeProperties;
+  return KernelCodePropExpr;
 }
 
 MCKernelDescriptor
@@ -497,11 +497,15 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 
   KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM, Ctx);
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
-  KernelDescriptor.kernel_code_properties =
-      MCConstantExpr::create(getAmdhsaKernelCodeProperties(MF), Ctx);
+  KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
-  assert(STM.hasGFX90AInsts() ||
-         getMCExprValue(CurrentProgramInfo.ComputePGMRSrc3GFX90A, Ctx) == 0);
+  int64_t PGRM_Rsrc3 = 1;
+  bool EvaluatableRsrc3 =
+      CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(PGRM_Rsrc3);
+  (void)PGRM_Rsrc3;
+  (void)EvaluatableRsrc3;
+  assert(STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
+         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3GFX90A;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
