@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_70 -o - 2>&1  | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx83 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx83 | %ptxas-verify -arch=sm_70 %}
 
 target triple = "nvptx64-nvidia-cuda"
 
@@ -13,8 +14,8 @@ target triple = "nvptx64-nvidia-cuda"
 @v64 = internal addrspace(1) global ptr null, align 8
 
 ; Function Attrs: alwaysinline convergent mustprogress willreturn
-define void @_Z6kernelv() {
-  ; CHECK-LABEL: _Z6kernelv
+define void @test_corner_values() {
+  ; CHECK-LABEL: test_corner_values
   ; CHECK: mov.u64 [[U64_MAX:%rd[0-9]+]], -1; 
   ; CHECK: mov.b128 [[U128_MAX:%rq[0-9]+]], {[[U64_MAX]], [[U64_MAX]]}; 
   ; CHECK: mov.u64 [[I64_MAX:%rd[0-9]+]], 9223372036854775807;

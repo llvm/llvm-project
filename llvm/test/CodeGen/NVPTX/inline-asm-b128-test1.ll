@@ -1,12 +1,13 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_70 -o - 2>&1  | FileCheck %s
+; RUN: llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx83 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_70 -mattr=+ptx83 | %ptxas-verify -arch=sm_70 %}
 
 target triple = "nvptx64-nvidia-cuda"
 
 @value = internal addrspace(1) global i128 0, align 16
 
 ; Function Attrs: alwaysinline convergent mustprogress willreturn
-define void @_Z7kernel1v() {
-  ; CHECK-LABEL: _Z7kernel1v
+define void @test_b128_input_from_const() {
+  ; CHECK-LABEL: test_b128_input_from_const
   ; CHECK: mov.u64    [[REG_HI:%rd[0-9]+]], 0;
   ; CHECK: mov.u64    [[REG_LO:%rd[0-9]+]], 42;
   ; CHECK: mov.b128   [[REG_128:%rq[0-9]+]], {[[REG_LO]], [[REG_HI]]};
@@ -17,8 +18,8 @@ define void @_Z7kernel1v() {
 }
 
 ; Function Attrs: alwaysinline convergent mustprogress willreturn
-define void @_Z7kernel2Pn(ptr nocapture readonly %data) {
-  ; CHECK-LABEL: _Z7kernel2Pn
+define void @test_b128_input_from_load(ptr nocapture readonly %data) {
+  ; CHECK-LABEL: test_b128_input_from_load
   ; CHECK: ld.global.u64 [[REG_HI:%rd[0-9]+]], [[[REG_Addr:%r[0-9]+]]+8];
   ; CHECK: ld.global.u64 [[REG_LO:%rd[0-9]+]], [[[REG_Addr]]];
   ; CHECK: mov.b128   [[REG_128:%rq[0-9]+]], {[[REG_LO]], [[REG_HI]]};
@@ -32,8 +33,8 @@ define void @_Z7kernel2Pn(ptr nocapture readonly %data) {
 }
 
 ; Function Attrs: alwaysinline convergent mustprogress willreturn
-define void @_Z7kernel3Pb(ptr nocapture readonly %flag) {
-  ; CHECK-LABEL: _Z7kernel3Pb
+define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
+  ; CHECK-LABEL: test_b128_input_from_select
   ; CHECK: selp.b64   [[REG_LO:%rd[0-9]+]], 24, 42, {{%p[0-9]+}};
   ; CHECK: mov.u64    [[REG_HI:%rd[0-9]+]], 0;
   ; CHECK: mov.b128   [[REG_128:%rq[0-9]+]], {[[REG_LO]], [[REG_HI]]};
@@ -48,10 +49,10 @@ define void @_Z7kernel3Pb(ptr nocapture readonly %flag) {
 }
 
 ; Function Attrs: alwaysinline mustprogress willreturn memory(write, argmem: none, inaccessiblemem: none)
-define void @_Z7kernel4v() {
-  ; CHECK-LABEL: _Z7kernel4v
-  ; CHECK-O3: { mov.b128 [[REG_128:%rq[0-9]+]], 41; }
-  ; CHECK-O3: mov.b128   {%rd{{[0-9]+}}, %rd{{[0-9]+}}}, [[REG_128]];
+define void @test_store_b128_output() {
+  ; CHECK-LABEL: test_store_b128_output
+  ; CHECK: { mov.b128 [[REG_128:%rq[0-9]+]], 41; }
+  ; CHECK: mov.b128   {%rd{{[0-9]+}}, %rd{{[0-9]+}}}, [[REG_128]];
   
   %1 = tail call i128 asm "{ mov.b128 $0, 41; }", "=q"()
   %add = add nsw i128 %1, 1
@@ -61,12 +62,13 @@ define void @_Z7kernel4v() {
 }
 
 ; Function Attrs: alwaysinline mustprogress willreturn memory(write, argmem: read, inaccessiblemem: none)
-define void @_Z7kernel5Pn(ptr nocapture readonly %data) {
-  ; CHECK-LABEL: _Z7kernel5Pn
-  ; CHECK-O3: ld.global.v2.u64 {[[REG_LO_IN:%rd[0-9]+]], [[REG_HI_IN:%rd[0-9]+]]}, [{{%rd[0-9]+}}];
-  ; CHECK-O3: mov.b128   [[REG_128_IN:%rq[0-9]+]], {[[REG_LO_IN]], [[REG_HI_IN]]};
-  ; CHECK-O3: { mov.b128 [[REG_128_OUT:%rq[0-9]+]], [[REG_128_IN]]; }
-  ; CHECK-O3: mov.b128   {%rd{{[0-9]+}}, %rd{{[0-9]+}}}, [[REG_128_OUT]];
+define void @test_use_of_b128_output(ptr nocapture readonly %data) {
+  ; CHECK-LABEL: test_use_of_b128_output
+  ; CHECK: ld.global.u64 [[REG_HI:%rd[0-9]+]], [[[REG_Addr:%r[0-9]+]]+8];
+  ; CHECK: ld.global.u64 [[REG_LO:%rd[0-9]+]], [[[REG_Addr]]];
+  ; CHECK: mov.b128   [[REG_128_IN:%rq[0-9]+]], {[[REG_LO]], [[REG_HI]]};
+  ; CHECK: { mov.b128 [[REG_128_OUT:%rq[0-9]+]], [[REG_128_IN]]; }
+  ; CHECK: mov.b128   {%rd{{[0-9]+}}, %rd{{[0-9]+}}}, [[REG_128_OUT]];
 
   %1 = addrspacecast ptr %data to ptr addrspace(1)
   %2 = load <2 x i64>, ptr addrspace(1) %1, align 16
