@@ -3021,12 +3021,13 @@ static bool finishLinearClauses(Sema &SemaRef, ArrayRef<OMPClause *> Clauses,
 
   // Finalize the clauses that need pre-built expressions for CodeGen.
   for (OMPClause *C : Clauses) {
-    if (auto *LC = dyn_cast<OMPLinearClause>(C)) {
-      if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
-                                   B.NumIterations, SemaRef,
-                                   SemaRef.getCurScope(), Stack))
-        return true;
-    }
+    auto *LC = dyn_cast<OMPLinearClause>(C);
+    if (!LC)
+      continue;
+    if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                 B.NumIterations, SemaRef,
+                                 SemaRef.getCurScope(), Stack))
+      return true;
   }
 
   return false;
