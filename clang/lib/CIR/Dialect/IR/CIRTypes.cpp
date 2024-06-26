@@ -111,7 +111,7 @@ void BoolType::print(mlir::AsmPrinter &printer) const {}
 Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getLargestMember();
+  return mlir::cast<mlir::cir::StructLayoutAttr>(layoutInfo).getLargestMember();
 }
 
 Type StructType::parse(mlir::AsmParser &parser) {
@@ -194,8 +194,8 @@ Type StructType::parse(mlir::AsmParser &parser) {
     type = getChecked(eLoc, context, membersRef, name, packed, kind);
     // If the record has a self-reference, its type already exists in a
     // incomplete state. In this case, we must complete it.
-    if (type.cast<StructType>().isIncomplete())
-      type.cast<StructType>().complete(membersRef, packed, ast);
+    if (mlir::cast<StructType>(type).isIncomplete())
+      mlir::cast<StructType>(type).complete(membersRef, packed, ast);
   } else if (!name && !incomplete) { // anonymous & complete
     type = getChecked(eLoc, context, membersRef, packed, kind);
   } else { // anonymous & incomplete
@@ -456,7 +456,7 @@ StructType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
   if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
   return llvm::TypeSize::getFixed(
-      layoutInfo.cast<mlir::cir::StructLayoutAttr>().getSize() * 8);
+      mlir::cast<mlir::cir::StructLayoutAttr>(layoutInfo).getSize() * 8);
 }
 
 uint64_t
@@ -464,7 +464,7 @@ StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
   if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getAlignment();
+  return mlir::cast<mlir::cir::StructLayoutAttr>(layoutInfo).getAlignment();
 }
 
 uint64_t
@@ -476,7 +476,7 @@ StructType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
 bool StructType::isPadded(const ::mlir::DataLayout &dataLayout) const {
   if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getPadded();
+  return mlir::cast<mlir::cir::StructLayoutAttr>(layoutInfo).getPadded();
 }
 
 uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
@@ -484,8 +484,9 @@ uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
   assert(idx < getMembers().size() && "access not valid");
   if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  auto offsets = layoutInfo.cast<mlir::cir::StructLayoutAttr>().getOffsets();
-  auto intAttr = offsets[idx].cast<mlir::IntegerAttr>();
+  auto offsets =
+      mlir::cast<mlir::cir::StructLayoutAttr>(layoutInfo).getOffsets();
+  auto intAttr = mlir::cast<mlir::IntegerAttr>(offsets[idx]);
   return intAttr.getInt();
 }
 
@@ -512,7 +513,7 @@ void StructType::computeSizeAndAlignment(
     auto ty = members[i];
 
     // Found a nested union: recurse into it to fetch its largest member.
-    auto structMember = ty.dyn_cast<StructType>();
+    auto structMember = mlir::dyn_cast<StructType>(ty);
     if (structMember && structMember.isUnion()) {
       auto candidate = structMember.getLargestMember(dataLayout);
       if (dataLayout.getTypeSize(candidate) > largestMemberSize) {
@@ -581,9 +582,9 @@ Type IntType::parse(mlir::AsmParser &parser) {
   llvm::StringRef sign;
   if (parser.parseKeyword(&sign))
     return {};
-  if (sign.equals_insensitive("s"))
+  if (sign == "s")
     isSigned = true;
-  else if (sign.equals_insensitive("u"))
+  else if (sign == "u")
     isSigned = false;
   else {
     parser.emitError(loc, "expected 's' or 'u'");
@@ -754,38 +755,35 @@ FP80Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 const llvm::fltSemantics &LongDoubleType::getFloatSemantics() const {
-  return getUnderlying()
-      .cast<mlir::cir::CIRFPTypeInterface>()
+  return mlir::cast<mlir::cir::CIRFPTypeInterface>(getUnderlying())
       .getFloatSemantics();
 }
 
 llvm::TypeSize
 LongDoubleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
-  return getUnderlying()
-      .cast<mlir::DataLayoutTypeInterface>()
+  return mlir::cast<mlir::DataLayoutTypeInterface>(getUnderlying())
       .getTypeSizeInBits(dataLayout, params);
 }
 
 uint64_t
 LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                 mlir::DataLayoutEntryListRef params) const {
-  return getUnderlying().cast<mlir::DataLayoutTypeInterface>().getABIAlignment(
-      dataLayout, params);
+  return mlir::cast<mlir::DataLayoutTypeInterface>(getUnderlying())
+      .getABIAlignment(dataLayout, params);
 }
 
 uint64_t LongDoubleType::getPreferredAlignment(
     const ::mlir::DataLayout &dataLayout,
     mlir::DataLayoutEntryListRef params) const {
-  return getUnderlying()
-      .cast<mlir::DataLayoutTypeInterface>()
+  return mlir::cast<mlir::DataLayoutTypeInterface>(getUnderlying())
       .getPreferredAlignment(dataLayout, params);
 }
 
 LogicalResult
 LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
                        mlir::Type underlying) {
-  if (!underlying.isa<DoubleType, FP80Type>()) {
+  if (!mlir::isa<DoubleType, FP80Type>(underlying)) {
     emitError() << "invalid underlying type for long double";
     return failure();
   }
@@ -810,7 +808,7 @@ bool mlir::cir::isFPOrFPVectorTy(mlir::Type t) {
 
   if (isa<mlir::cir::VectorType>(t)) {
     return isAnyFloatingPointType(
-        t.dyn_cast<mlir::cir::VectorType>().getEltType());
+        mlir::dyn_cast<mlir::cir::VectorType>(t).getEltType());
   }
   return isAnyFloatingPointType(t);
 }
@@ -872,7 +870,7 @@ llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
   return static_cast<detail::FuncTypeStorage *>(getImpl())->returnType;
 }
 
-bool FuncType::isVoid() const { return getReturnType().isa<VoidType>(); }
+bool FuncType::isVoid() const { return mlir::isa<VoidType>(getReturnType()); }
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect

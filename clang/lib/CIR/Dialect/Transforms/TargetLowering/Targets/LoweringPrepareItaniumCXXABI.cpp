@@ -66,7 +66,7 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
                         dynCastFuncArgs)
           .getResult();
 
-  assert(castedPtr.getType().isa<mlir::cir::PointerType>() &&
+  assert(mlir::isa<mlir::cir::PointerType>(castedPtr.getType()) &&
          "the return value of __dynamic_cast should be a ptr");
 
   /// C++ [expr.dynamic.cast]p9:

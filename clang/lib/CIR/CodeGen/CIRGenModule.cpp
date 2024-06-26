@@ -970,7 +970,7 @@ mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *VD) {
   }
 
   mlir::Type DeclTy = getTypes().convertTypeForMem(VD->getType());
-  if (DeclTy.isa<mlir::cir::FuncType>()) {
+  if (mlir::isa<mlir::cir::FuncType>(DeclTy)) {
     auto F = GetOrCreateCIRFunction(AA->getAliasee(), DeclTy,
                                     GlobalDecl(cast<FunctionDecl>(VD)),
                                     /*ForVtable=*/false);
@@ -1111,23 +1111,23 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   //
   // TODO(cir): create another attribute to contain the final type and abstract
   // away SymbolRefAttr.
-  if (auto symAttr = Init.dyn_cast<mlir::SymbolRefAttr>()) {
+  if (auto symAttr = mlir::dyn_cast<mlir::SymbolRefAttr>(Init)) {
     auto cstGlobal = mlir::SymbolTable::lookupSymbolIn(theModule, symAttr);
     assert(isa<mlir::cir::GlobalOp>(cstGlobal) &&
            "unaware of other symbol providers");
     auto g = cast<mlir::cir::GlobalOp>(cstGlobal);
-    auto arrayTy = g.getSymType().dyn_cast<mlir::cir::ArrayType>();
+    auto arrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(g.getSymType());
     // TODO(cir): pointer to array decay. Should this be modeled explicitly in
     // CIR?
     if (arrayTy)
       InitType = mlir::cir::PointerType::get(builder.getContext(),
                                              arrayTy.getEltType());
   } else {
-    assert(Init.isa<mlir::TypedAttr>() && "This should have a type");
-    auto TypedInitAttr = Init.cast<mlir::TypedAttr>();
+    assert(mlir::isa<mlir::TypedAttr>(Init) && "This should have a type");
+    auto TypedInitAttr = mlir::cast<mlir::TypedAttr>(Init);
     InitType = TypedInitAttr.getType();
   }
-  assert(!InitType.isa<mlir::NoneType>() && "Should have a type by now");
+  assert(!mlir::isa<mlir::NoneType>(InitType) && "Should have a type by now");
 
   auto Entry = buildGlobal(D, InitType, ForDefinition_t(!IsTentative));
   // TODO(cir): Strip off pointer casts from Entry if we get them?
@@ -1306,11 +1306,11 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     return builder.getString(Str, eltTy, finalSize);
   }
 
-  auto arrayTy =
-      getTypes().ConvertType(E->getType()).dyn_cast<mlir::cir::ArrayType>();
+  auto arrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(
+      getTypes().ConvertType(E->getType()));
   assert(arrayTy && "string literals must be emitted as an array type");
 
-  auto arrayEltTy = arrayTy.getEltType().dyn_cast<mlir::cir::IntType>();
+  auto arrayEltTy = mlir::dyn_cast<mlir::cir::IntType>(arrayTy.getEltType());
   assert(arrayEltTy &&
          "string literal elements must be emitted as integral type");
 
@@ -1429,7 +1429,7 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
     assert(!cir::MissingFeatures::reportGlobalToASan() && "NYI");
   }
 
-  auto ArrayTy = GV.getSymType().dyn_cast<mlir::cir::ArrayType>();
+  auto ArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(GV.getSymType());
   assert(ArrayTy && "String literal must be array");
   auto PtrTy =
       mlir::cir::PointerType::get(builder.getContext(), ArrayTy.getEltType());
@@ -2377,8 +2377,8 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
   bool IsIncompleteFunction = false;
 
   mlir::cir::FuncType FTy;
-  if (Ty.isa<mlir::cir::FuncType>()) {
-    FTy = Ty.cast<mlir::cir::FuncType>();
+  if (mlir::isa<mlir::cir::FuncType>(Ty)) {
+    FTy = mlir::cast<mlir::cir::FuncType>(Ty);
   } else {
     assert(false && "NYI");
     // FTy = mlir::FunctionType::get(VoidTy, false);

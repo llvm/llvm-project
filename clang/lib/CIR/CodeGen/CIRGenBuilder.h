@@ -145,7 +145,7 @@ public:
   }
 
   mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
-    assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
+    assert(mlir::isa<mlir::cir::PointerType>(t) && "expected cir.ptr");
     return getConstPtrAttr(t, 0);
   }
 
@@ -184,13 +184,13 @@ public:
                                            bool packed = false,
                                            mlir::Type type = {}) {
     llvm::SmallVector<mlir::Type, 8> members;
-    auto structTy = type.dyn_cast<mlir::cir::StructType>();
+    auto structTy = mlir::dyn_cast<mlir::cir::StructType>(type);
     assert(structTy && "expected cir.struct");
 
     // Collect members and check if they are all zero.
     bool isZero = true;
     for (auto &attr : arrayAttr) {
-      const auto typedAttr = attr.dyn_cast<mlir::TypedAttr>();
+      const auto typedAttr = mlir::dyn_cast<mlir::TypedAttr>(attr);
       members.push_back(typedAttr.getType());
       isZero &= isNullValue(typedAttr);
     }
@@ -212,7 +212,7 @@ public:
                                                 mlir::Type ty = {}) {
     llvm::SmallVector<mlir::Type, 4> members;
     for (auto &f : arrayAttr) {
-      auto ta = f.dyn_cast<mlir::TypedAttr>();
+      auto ta = mlir::dyn_cast<mlir::TypedAttr>(f);
       assert(ta && "expected typed attribute member");
       members.push_back(ta.getType());
     }
@@ -220,7 +220,7 @@ public:
     if (!ty)
       ty = getAnonStructTy(members, packed);
 
-    auto sTy = ty.dyn_cast<mlir::cir::StructType>();
+    auto sTy = mlir::dyn_cast<mlir::cir::StructType>(ty);
     assert(sTy && "expected struct type");
     return mlir::cir::ConstStructAttr::get(sTy, arrayAttr);
   }
@@ -255,23 +255,23 @@ public:
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
-    if (ty.isa<mlir::cir::IntType>())
+    if (mlir::isa<mlir::cir::IntType>(ty))
       return mlir::cir::IntAttr::get(ty, 0);
-    if (auto fltType = ty.dyn_cast<mlir::cir::SingleType>())
+    if (auto fltType = mlir::dyn_cast<mlir::cir::SingleType>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = ty.dyn_cast<mlir::cir::DoubleType>())
+    if (auto fltType = mlir::dyn_cast<mlir::cir::DoubleType>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = ty.dyn_cast<mlir::cir::FP16Type>())
+    if (auto fltType = mlir::dyn_cast<mlir::cir::FP16Type>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
-    if (auto fltType = ty.dyn_cast<mlir::cir::BF16Type>())
+    if (auto fltType = mlir::dyn_cast<mlir::cir::BF16Type>(ty))
       return mlir::cir::FPAttr::getZero(fltType);
-    if (auto arrTy = ty.dyn_cast<mlir::cir::ArrayType>())
+    if (auto arrTy = mlir::dyn_cast<mlir::cir::ArrayType>(ty))
       return getZeroAttr(arrTy);
-    if (auto ptrTy = ty.dyn_cast<mlir::cir::PointerType>())
+    if (auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
-    if (auto structTy = ty.dyn_cast<mlir::cir::StructType>())
+    if (auto structTy = mlir::dyn_cast<mlir::cir::StructType>(ty))
       return getZeroAttr(structTy);
-    if (ty.isa<mlir::cir::BoolType>()) {
+    if (mlir::isa<mlir::cir::BoolType>(ty)) {
       return getCIRBoolAttr(false);
     }
     llvm_unreachable("Zero initializer for given type is NYI");
@@ -280,22 +280,22 @@ public:
   // TODO(cir): Once we have CIR float types, replace this by something like a
   // NullableValueInterface to allow for type-independent queries.
   bool isNullValue(mlir::Attribute attr) const {
-    if (attr.isa<mlir::cir::ZeroAttr>())
+    if (mlir::isa<mlir::cir::ZeroAttr>(attr))
       return true;
-    if (const auto ptrVal = attr.dyn_cast<mlir::cir::ConstPtrAttr>())
+    if (const auto ptrVal = mlir::dyn_cast<mlir::cir::ConstPtrAttr>(attr))
       return ptrVal.isNullValue();
 
-    if (attr.isa<mlir::cir::GlobalViewAttr>())
+    if (mlir::isa<mlir::cir::GlobalViewAttr>(attr))
       return false;
 
     // TODO(cir): introduce char type in CIR and check for that instead.
-    if (const auto intVal = attr.dyn_cast<mlir::cir::IntAttr>())
+    if (const auto intVal = mlir::dyn_cast<mlir::cir::IntAttr>(attr))
       return intVal.isNullValue();
 
-    if (const auto boolVal = attr.dyn_cast<mlir::cir::BoolAttr>())
+    if (const auto boolVal = mlir::dyn_cast<mlir::cir::BoolAttr>(attr))
       return !boolVal.getValue();
 
-    if (auto fpAttr = attr.dyn_cast<mlir::cir::FPAttr>()) {
+    if (auto fpAttr = mlir::dyn_cast<mlir::cir::FPAttr>(attr)) {
       auto fpVal = fpAttr.getValue();
       bool ignored;
       llvm::APFloat FV(+0.0);
@@ -304,10 +304,11 @@ public:
       return FV.bitwiseIsEqual(fpVal);
     }
 
-    if (const auto structVal = attr.dyn_cast<mlir::cir::ConstStructAttr>()) {
+    if (const auto structVal =
+            mlir::dyn_cast<mlir::cir::ConstStructAttr>(attr)) {
       for (const auto elt : structVal.getMembers()) {
         // FIXME(cir): the struct's ID should not be considered a member.
-        if (elt.isa<mlir::StringAttr>())
+        if (mlir::isa<mlir::StringAttr>(elt))
           continue;
         if (!isNullValue(elt))
           return false;
@@ -315,10 +316,10 @@ public:
       return true;
     }
 
-    if (const auto arrayVal = attr.dyn_cast<mlir::cir::ConstArrayAttr>()) {
-      if (arrayVal.getElts().isa<mlir::StringAttr>())
+    if (const auto arrayVal = mlir::dyn_cast<mlir::cir::ConstArrayAttr>(attr)) {
+      if (mlir::isa<mlir::StringAttr>(arrayVal.getElts()))
         return false;
-      for (const auto elt : arrayVal.getElts().cast<mlir::ArrayAttr>()) {
+      for (const auto elt : mlir::cast<mlir::ArrayAttr>(arrayVal.getElts())) {
         if (!isNullValue(elt))
           return false;
       }
@@ -386,7 +387,7 @@ public:
   bool isInt64Ty(mlir::Type i) {
     return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
   }
-  bool isInt(mlir::Type i) { return i.isa<mlir::cir::IntType>(); }
+  bool isInt(mlir::Type i) { return mlir::isa<mlir::cir::IntType>(i); }
 
   mlir::cir::LongDoubleType
   getLongDoubleTy(const llvm::fltSemantics &format) const {
@@ -495,7 +496,7 @@ public:
                         const clang::RecordDecl *ast = nullptr) {
     llvm::SmallVector<mlir::Type, 8> members;
     for (auto &attr : fields) {
-      const auto typedAttr = attr.dyn_cast<mlir::TypedAttr>();
+      const auto typedAttr = mlir::dyn_cast<mlir::TypedAttr>(attr);
       members.push_back(typedAttr.getType());
     }
 
@@ -510,9 +511,9 @@ public:
   }
 
   bool isSized(mlir::Type ty) {
-    if (ty.isa<mlir::cir::PointerType, mlir::cir::StructType,
-               mlir::cir::ArrayType, mlir::cir::BoolType, mlir::cir::IntType,
-               mlir::cir::CIRFPTypeInterface>())
+    if (mlir::isa<mlir::cir::PointerType, mlir::cir::StructType,
+                  mlir::cir::ArrayType, mlir::cir::BoolType, mlir::cir::IntType,
+                  mlir::cir::CIRFPTypeInterface>(ty))
       return true;
     assert(0 && "Unimplemented size for type");
     return false;
@@ -553,7 +554,7 @@ public:
 
   mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::Type t,
                                     uint64_t C) {
-    auto intTy = t.dyn_cast<mlir::cir::IntType>();
+    auto intTy = mlir::dyn_cast<mlir::cir::IntType>(t);
     assert(intTy && "expected mlir::cir::IntType");
     return create<mlir::cir::ConstantOp>(loc, intTy,
                                          mlir::cir::IntAttr::get(t, C));
@@ -583,9 +584,9 @@ public:
 
   mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {
     // TODO: dispatch creation for primitive types.
-    assert(
-        (ty.isa<mlir::cir::StructType>() || ty.isa<mlir::cir::ArrayType>()) &&
-        "NYI for other types");
+    assert((mlir::isa<mlir::cir::StructType>(ty) ||
+            mlir::isa<mlir::cir::ArrayType>(ty)) &&
+           "NYI for other types");
     return create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
   }
 
@@ -617,7 +618,7 @@ public:
 
   mlir::Value createNeg(mlir::Value value) {
 
-    if (auto intTy = value.getType().dyn_cast<mlir::cir::IntType>()) {
+    if (auto intTy = mlir::dyn_cast<mlir::cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
@@ -776,7 +777,8 @@ public:
   }
 
   mlir::Value createLoad(mlir::Location loc, Address addr) {
-    auto ptrTy = addr.getPointer().getType().dyn_cast<mlir::cir::PointerType>();
+    auto ptrTy =
+        mlir::dyn_cast<mlir::cir::PointerType>(addr.getPointer().getType());
     if (addr.getElementType() != ptrTy.getPointee())
       addr = addr.withPointer(
           createPtrBitcast(addr.getPointer(), addr.getElementType()));
@@ -788,7 +790,7 @@ public:
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,
                                 mlir::Value ptr, llvm::MaybeAlign align,
                                 bool isVolatile) {
-    if (ty != ptr.getType().cast<mlir::cir::PointerType>().getPointee())
+    if (ty != mlir::cast<mlir::cir::PointerType>(ptr.getType()).getPointee())
       ptr = createPtrBitcast(ptr, ty);
     uint64_t alignment = align ? align->value() : 0;
     return CIRBaseBuilderTy::createLoad(loc, ptr, isVolatile, alignment);
@@ -877,17 +879,17 @@ public:
 
     mlir::Type SubType;
 
-    if (auto ArrayTy = Ty.dyn_cast<mlir::cir::ArrayType>()) {
+    if (auto ArrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(Ty)) {
       auto EltSize = Layout.getTypeAllocSize(ArrayTy.getEltType());
       Indices.push_back(Offset / EltSize);
       SubType = ArrayTy.getEltType();
       Offset %= EltSize;
-    } else if (auto PtrTy = Ty.dyn_cast<mlir::cir::PointerType>()) {
+    } else if (auto PtrTy = mlir::dyn_cast<mlir::cir::PointerType>(Ty)) {
       auto EltSize = Layout.getTypeAllocSize(PtrTy.getPointee());
       Indices.push_back(Offset / EltSize);
       SubType = PtrTy.getPointee();
       Offset %= EltSize;
-    } else if (auto StructTy = Ty.dyn_cast<mlir::cir::StructType>()) {
+    } else if (auto StructTy = mlir::dyn_cast<mlir::cir::StructType>(Ty)) {
       auto Elts = StructTy.getMembers();
       unsigned Pos = 0;
       for (size_t I = 0; I < Elts.size(); ++I) {
@@ -963,7 +965,8 @@ public:
   mlir::cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,
                                                         mlir::Value objectPtr,
                                                         mlir::Value memberPtr) {
-    auto memberPtrTy = memberPtr.getType().cast<mlir::cir::DataMemberType>();
+    auto memberPtrTy =
+        mlir::cast<mlir::cir::DataMemberType>(memberPtr.getType());
 
     // TODO(cir): consider address space.
     assert(!MissingFeatures::addressSpace());

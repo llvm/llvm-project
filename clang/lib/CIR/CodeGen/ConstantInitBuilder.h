@@ -405,7 +405,7 @@ public:
                                  bool forVTable = false) {
     assert(!this->Parent && "finishing non-root builder");
     mlir::Attribute init = asImpl().finishImpl(global.getContext());
-    auto initCSA = init.dyn_cast<mlir::cir::ConstStructAttr>();
+    auto initCSA = mlir::dyn_cast<mlir::cir::ConstStructAttr>(init);
     assert(initCSA &&
            "expected #cir.const_struct attribute to represent vtable data");
     return this->Builder.setGlobalInitializer(

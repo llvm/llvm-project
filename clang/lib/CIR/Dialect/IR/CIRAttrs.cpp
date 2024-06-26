@@ -140,7 +140,7 @@ static ParseResult parseStructMembers(mlir::AsmParser &parser,
 LogicalResult ConstStructAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     mlir::Type type, ArrayAttr members) {
-  auto sTy = type.dyn_cast_or_null<mlir::cir::StructType>();
+  auto sTy = mlir::dyn_cast_if_present<mlir::cir::StructType>(type);
   if (!sTy) {
     emitError() << "expected !cir.struct type";
     return failure();
@@ -153,7 +153,7 @@ LogicalResult ConstStructAttr::verify(
 
   unsigned attrIdx = 0;
   for (auto &member : sTy.getMembers()) {
-    auto m = members[attrIdx].dyn_cast_or_null<TypedAttr>();
+    auto m = dyn_cast_if_present<TypedAttr>(members[attrIdx]);
     if (!m) {
       emitError() << "expected mlir::TypedAttr attribute";
       return failure();
@@ -175,7 +175,7 @@ LogicalResult StructLayoutAttr::verify(
     unsigned alignment, bool padded, mlir::Type largest_member,
     mlir::ArrayAttr offsets) {
   if (not std::all_of(offsets.begin(), offsets.end(), [](mlir::Attribute attr) {
-        return attr.isa<mlir::IntegerAttr>();
+        return mlir::isa<mlir::IntegerAttr>(attr);
       })) {
     return emitError() << "all index values must be integers";
   }
@@ -245,9 +245,9 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
 Attribute IntAttr::parse(AsmParser &parser, Type odsType) {
   mlir::APInt APValue;
 
-  if (!odsType.isa<IntType>())
+  if (!mlir::isa<IntType>(odsType))
     return {};
-  auto type = odsType.cast<IntType>();
+  auto type = mlir::cast<IntType>(odsType);
 
   // Consume the '<' symbol.
   if (parser.parseLess())
@@ -282,7 +282,7 @@ Attribute IntAttr::parse(AsmParser &parser, Type odsType) {
 }
 
 void IntAttr::print(AsmPrinter &printer) const {
-  auto type = getType().cast<IntType>();
+  auto type = mlir::cast<IntType>(getType());
   printer << '<';
   if (type.isSigned())
     printer << getSInt();
@@ -293,12 +293,12 @@ void IntAttr::print(AsmPrinter &printer) const {
 
 LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                               Type type, APInt value) {
-  if (!type.isa<IntType>()) {
+  if (!mlir::isa<IntType>(type)) {
     emitError() << "expected 'simple.int' type";
     return failure();
   }
 
-  auto intType = type.cast<IntType>();
+  auto intType = mlir::cast<IntType>(type);
   if (value.getBitWidth() != intType.getWidth()) {
     emitError() << "type and value bitwidth mismatch: " << intType.getWidth()
                 << " != " << value.getBitWidth();
@@ -329,7 +329,7 @@ parseFloatLiteral(mlir::AsmParser &parser,
   auto losesInfo = false;
   value.emplace(rawValue);
 
-  auto tyFpInterface = ty.dyn_cast<cir::CIRFPTypeInterface>();
+  auto tyFpInterface = dyn_cast<cir::CIRFPTypeInterface>(ty);
   if (!tyFpInterface) {
     // Parsing of the current floating-point literal has succeeded, but the
     // given attribute type is invalid. This error will be reported later when
@@ -343,14 +343,14 @@ parseFloatLiteral(mlir::AsmParser &parser,
 }
 
 cir::FPAttr cir::FPAttr::getZero(mlir::Type type) {
-  return get(type,
-             APFloat::getZero(
-                 type.cast<cir::CIRFPTypeInterface>().getFloatSemantics()));
+  return get(
+      type, APFloat::getZero(
+                mlir::cast<cir::CIRFPTypeInterface>(type).getFloatSemantics()));
 }
 
 LogicalResult cir::FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                   Type type, APFloat value) {
-  auto fltTypeInterface = type.dyn_cast<cir::CIRFPTypeInterface>();
+  auto fltTypeInterface = mlir::dyn_cast<cir::CIRFPTypeInterface>(type);
   if (!fltTypeInterface) {
     emitError() << "expected floating-point type";
     return failure();
@@ -477,11 +477,11 @@ LogicalResult DynamicCastInfoAttr::verify(
   auto isRttiPtr = [](mlir::Type ty) {
     // RTTI pointers are !cir.ptr<!u8i>.
 
-    auto ptrTy = ty.dyn_cast<mlir::cir::PointerType>();
+    auto ptrTy = mlir::dyn_cast<mlir::cir::PointerType>(ty);
     if (!ptrTy)
       return false;
 
-    auto pointeeIntTy = ptrTy.getPointee().dyn_cast<mlir::cir::IntType>();
+    auto pointeeIntTy = mlir::dyn_cast<mlir::cir::IntType>(ptrTy.getPointee());
     if (!pointeeIntTy)
       return false;
 

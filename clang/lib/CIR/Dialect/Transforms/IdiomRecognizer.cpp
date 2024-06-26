@@ -116,8 +116,8 @@ static bool isIteratorLikeType(mlir::Type t) {
   // TODO: some iterators are going to be represented with structs,
   // in which case we could look at ASTRecordDeclInterface for more
   // information.
-  auto pTy = t.dyn_cast<PointerType>();
-  if (!pTy || !pTy.getPointee().isa<mlir::cir::IntType>())
+  auto pTy = dyn_cast<PointerType>(t);
+  if (!pTy || !mlir::isa<mlir::cir::IntType>(pTy.getPointee()))
     return false;
   return true;
 }
@@ -144,7 +144,7 @@ bool IdiomRecognizerPass::raiseIteratorBeginEnd(CallOp call) {
     return false;
 
   // First argument is the container "this" pointer.
-  auto thisPtr = call.getOperand(0).getType().dyn_cast<PointerType>();
+  auto thisPtr = dyn_cast<PointerType>(call.getOperand(0).getType());
   if (!thisPtr || !isIteratorInStdContainter(thisPtr.getPointee()))
     return false;
 

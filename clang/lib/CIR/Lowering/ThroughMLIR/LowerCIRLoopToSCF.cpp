@@ -71,7 +71,7 @@ private:
 
 static int64_t getConstant(mlir::cir::ConstantOp op) {
   auto attr = op->getAttrs().front().getValue();
-  const auto IntAttr = attr.dyn_cast<mlir::cir::IntAttr>();
+  const auto IntAttr = mlir::dyn_cast<mlir::cir::IntAttr>(attr);
   return IntAttr.getValue().getSExtValue();
 }
 
@@ -143,7 +143,7 @@ mlir::cir::CmpOp SCFLoop::findCmpOp() {
     llvm_unreachable("Can't find loop CmpOp");
 
   auto type = cmpOp.getLhs().getType();
-  if (!type.isa<mlir::cir::IntType>())
+  if (!mlir::isa<mlir::cir::IntType>(type))
     llvm_unreachable("Non-integer type IV is not supported");
 
   auto lhsDefOp = cmpOp.getLhs().getDefiningOp();

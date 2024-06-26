@@ -31,13 +31,12 @@ LowerModule createLowerModule(FuncOp op, PatternRewriter &rewriter) {
   auto module = op->getParentOfType<mlir::ModuleOp>();
 
   // Fetch the LLVM data layout string.
-  auto dataLayoutStr =
-      module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())
-          .cast<StringAttr>();
+  auto dataLayoutStr = cast<StringAttr>(
+      module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
 
   // Fetch target information.
   llvm::Triple triple(
-      module->getAttr("cir.triple").cast<StringAttr>().getValue());
+      cast<StringAttr>(module->getAttr("cir.triple")).getValue());
   clang::TargetOptions targetOptions;
   targetOptions.Triple = triple.str();
   auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
@@ -122,7 +121,7 @@ void CallConvLoweringPass::runOnOperation() {
   config.strictMode = GreedyRewriteStrictness::ExistingOps;
 
   // Apply patterns.
-  if (failed(applyOpPatternsAndFold(ops, std::move(patterns), config)))
+  if (failed(applyOpPatternsGreedily(ops, std::move(patterns), config)))
     signalPassFailure();
 }
 

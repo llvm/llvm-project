@@ -2165,9 +2165,9 @@ void CIRGenItaniumCXXABI::buildThrow(CIRGenFunction &CGF,
   CGF.buildAnyExprToExn(E->getSubExpr(), Address(exceptionPtr, exnAlign));
 
   // Get the RTTI symbol address.
-  auto typeInfo = CGM.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
-                                              /*ForEH=*/true)
-                      .dyn_cast_or_null<mlir::cir::GlobalViewAttr>();
+  auto typeInfo = mlir::dyn_cast_if_present<mlir::cir::GlobalViewAttr>(
+      CGM.getAddrOfRTTIDescriptor(subExprLoc, clangThrowType,
+                                  /*ForEH=*/true));
   assert(typeInfo && "expected GlobalViewAttr typeinfo");
   assert(!typeInfo.getIndices() && "expected no indirection");
 
@@ -2303,10 +2303,10 @@ static mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF,
 static mlir::cir::DynamicCastInfoAttr
 buildDynamicCastInfo(CIRGenFunction &CGF, mlir::Location Loc,
                      QualType SrcRecordTy, QualType DestRecordTy) {
-  auto srcRtti = CGF.CGM.getAddrOfRTTIDescriptor(Loc, SrcRecordTy)
-                     .cast<mlir::cir::GlobalViewAttr>();
-  auto destRtti = CGF.CGM.getAddrOfRTTIDescriptor(Loc, DestRecordTy)
-                      .cast<mlir::cir::GlobalViewAttr>();
+  auto srcRtti = mlir::cast<mlir::cir::GlobalViewAttr>(
+      CGF.CGM.getAddrOfRTTIDescriptor(Loc, SrcRecordTy));
+  auto destRtti = mlir::cast<mlir::cir::GlobalViewAttr>(
+      CGF.CGM.getAddrOfRTTIDescriptor(Loc, DestRecordTy));
 
   auto runtimeFuncOp = getItaniumDynamicCastFn(CGF);
   auto badCastFuncOp = getBadCastFn(CGF);

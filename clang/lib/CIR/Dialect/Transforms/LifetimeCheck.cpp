@@ -498,7 +498,7 @@ static std::string getVarNameFromValue(mlir::Value v) {
 }
 
 static Location getEndLoc(Location loc, int idx = 1) {
-  auto fusedLoc = loc.dyn_cast<FusedLoc>();
+  auto fusedLoc = dyn_cast<FusedLoc>(loc);
   if (!fusedLoc)
     return loc;
   return fusedLoc.getLocations()[idx];
@@ -867,9 +867,9 @@ void LifetimeCheckPass::checkIf(IfOp ifOp) {
 }
 
 template <class T> bool isStructAndHasAttr(mlir::Type ty) {
-  if (!ty.isa<mlir::cir::StructType>())
+  if (!mlir::isa<mlir::cir::StructType>(ty))
     return false;
-  return hasAttr<T>(ty.cast<mlir::cir::StructType>().getAst());
+  return hasAttr<T>(mlir::cast<mlir::cir::StructType>(ty).getAst());
 }
 
 static bool isOwnerType(mlir::Type ty) {
@@ -901,12 +901,12 @@ static bool isOwnerType(mlir::Type ty) {
 static bool containsPointerElts(mlir::cir::StructType s) {
   auto members = s.getMembers();
   return std::any_of(members.begin(), members.end(), [](mlir::Type t) {
-    return t.isa<mlir::cir::PointerType>();
+    return mlir::isa<mlir::cir::PointerType>(t);
   });
 }
 
 static bool isAggregateType(LifetimeCheckPass *pass, mlir::Type agg) {
-  auto t = agg.dyn_cast<mlir::cir::StructType>();
+  auto t = mlir::dyn_cast<mlir::cir::StructType>(agg);
   if (!t)
     return false;
   // Lambdas have their special handling, and shall not be considered as
@@ -956,7 +956,7 @@ static bool isPointerType(mlir::Type t) {
   // library headers, the following well- known standard types are treated as-if
   // annotated as Pointers, in addition to raw pointers and references: ref-
   // erence_wrapper, and vector<bool>::reference.
-  if (t.isa<mlir::cir::PointerType>())
+  if (mlir::isa<mlir::cir::PointerType>(t))
     return true;
   return isStructAndHasAttr<clang::PointerAttr>(t);
 }
@@ -1017,7 +1017,7 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
       break;
 
     // Map values for members to it's index in the aggregate.
-    auto members = t.cast<mlir::cir::StructType>().getMembers();
+    auto members = mlir::cast<mlir::cir::StructType>(t).getMembers();
     SmallVector<mlir::Value, 4> fieldVals;
     fieldVals.assign(members.size(), {});
 
@@ -1035,7 +1035,7 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
         return;
 
       auto eltTy =
-          eltAddr.getType().cast<mlir::cir::PointerType>().getPointee();
+          mlir::cast<mlir::cir::PointerType>(eltAddr.getType()).getPointee();
 
       // Classify exploded types. Keep alloca original location.
       classifyAndInitTypeCategories(eltAddr, eltTy, loc, ++nestLevel);
@@ -1139,12 +1139,12 @@ void LifetimeCheckPass::updatePointsToForConstStruct(
   assert(aggregates.count(addr) && "expected association with aggregate");
   int memberIdx = 0;
   for (auto &attr : value.getMembers()) {
-    auto ta = attr.dyn_cast<mlir::TypedAttr>();
+    auto ta = mlir::dyn_cast<mlir::TypedAttr>(attr);
     assert(ta && "expected typed attribute");
     auto fieldAddr = aggregates[addr][memberIdx];
     // Unseen fields are not tracked.
-    if (fieldAddr && ta.getType().isa<mlir::cir::PointerType>()) {
-      assert(ta.isa<mlir::cir::ConstPtrAttr>() &&
+    if (fieldAddr && mlir::isa<mlir::cir::PointerType>(ta.getType())) {
+      assert(mlir::isa<mlir::cir::ConstPtrAttr>(ta) &&
              "other than null not implemented");
       markPsetNull(fieldAddr, loc);
     }
@@ -1160,7 +1160,7 @@ void LifetimeCheckPass::updatePointsToForZeroStruct(mlir::Value addr,
   for (auto &t : sTy.getMembers()) {
     auto fieldAddr = aggregates[addr][memberIdx];
     // Unseen fields are not tracked.
-    if (fieldAddr && t.isa<mlir::cir::PointerType>()) {
+    if (fieldAddr && mlir::isa<mlir::cir::PointerType>(t)) {
       markPsetNull(fieldAddr, loc);
     }
     memberIdx++;
@@ -1217,13 +1217,13 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     // individual exploded fields.
     if (aggregates.count(addr)) {
       if (auto constStruct =
-              cstOp.getValue().dyn_cast<mlir::cir::ConstStructAttr>()) {
+              mlir::dyn_cast<mlir::cir::ConstStructAttr>(cstOp.getValue())) {
         updatePointsToForConstStruct(addr, constStruct, loc);
         return;
       }
 
-      if (auto zero = cstOp.getValue().dyn_cast<mlir::cir::ZeroAttr>()) {
-        if (auto zeroStructTy = zero.getType().dyn_cast<StructType>()) {
+      if (auto zero = mlir::dyn_cast<mlir::cir::ZeroAttr>(cstOp.getValue())) {
+        if (auto zeroStructTy = dyn_cast<StructType>(zero.getType())) {
           updatePointsToForZeroStruct(addr, zeroStructTy, loc);
           return;
         }
@@ -1682,11 +1682,11 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
     if (aggregates.count(arg)) {
       int memberIdx = 0;
       auto sTy =
-          arg.getType().cast<PointerType>().getPointee().dyn_cast<StructType>();
+          dyn_cast<StructType>(cast<PointerType>(arg.getType()).getPointee());
       assert(sTy && "expected struct type");
       for (auto m : sTy.getMembers()) {
         auto ptrMemberAddr = aggregates[arg][memberIdx];
-        if (m.isa<PointerType>() && ptrMemberAddr) {
+        if (isa<PointerType>(m) && ptrMemberAddr) {
           ptrsToDeref.insert(ptrMemberAddr);
         }
         memberIdx++;
@@ -1732,7 +1732,7 @@ bool LifetimeCheckPass::isLambdaType(mlir::Type ty) {
     return IsLambdaTyCache[ty];
 
   IsLambdaTyCache[ty] = false;
-  auto taskTy = ty.dyn_cast<mlir::cir::StructType>();
+  auto taskTy = mlir::dyn_cast<mlir::cir::StructType>(ty);
   if (!taskTy)
     return false;
   if (taskTy.getAst().isLambda())
@@ -1747,7 +1747,7 @@ bool LifetimeCheckPass::isTaskType(mlir::Value taskVal) {
     return IsTaskTyCache[ty];
 
   bool result = [&] {
-    auto taskTy = taskVal.getType().dyn_cast<mlir::cir::StructType>();
+    auto taskTy = mlir::dyn_cast<mlir::cir::StructType>(taskVal.getType());
     if (!taskTy)
       return false;
     return taskTy.getAst().hasPromiseType();

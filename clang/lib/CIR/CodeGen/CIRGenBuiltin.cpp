@@ -838,7 +838,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
         E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
-    auto ResType = ConvertType(E->getType()).dyn_cast<mlir::cir::IntType>();
+    auto ResType =
+        mlir::dyn_cast<mlir::cir::IntType>(ConvertType(E->getType()));
     assert(ResType && "not sure what to do?");
 
     // We pass this builtin onto the optimizer so that it can figure out the
@@ -969,14 +970,14 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // inlining.
       return RValue::get(
           builder.getConstInt(getLoc(E->getSourceRange()),
-                              ResultType.cast<mlir::cir::IntType>(), 0));
+                              mlir::cast<mlir::cir::IntType>(ResultType), 0));
 
     if (Arg->HasSideEffects(getContext()))
       // The argument is unevaluated, so be conservative if it might have
       // side-effects.
       return RValue::get(
           builder.getConstInt(getLoc(E->getSourceRange()),
-                              ResultType.cast<mlir::cir::IntType>(), 0));
+                              mlir::cast<mlir::cir::IntType>(ResultType), 0));
 
     mlir::Value ArgValue = buildScalarExpr(Arg);
     if (ArgType->isObjCObjectPointerType())
@@ -1085,7 +1086,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto EncompassingCIRTy = mlir::cir::IntType::get(
         builder.getContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
     auto ResultCIRTy =
-        CGM.getTypes().ConvertType(ResultQTy).cast<mlir::cir::IntType>();
+        mlir::cast<mlir::cir::IntType>(CGM.getTypes().ConvertType(ResultQTy));
 
     mlir::Value Left = buildScalarExpr(LeftArg);
     mlir::Value Right = buildScalarExpr(RightArg);
@@ -1196,7 +1197,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     clang::QualType ResultQTy =
         ResultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
     auto ResultCIRTy =
-        CGM.getTypes().ConvertType(ResultQTy).cast<mlir::cir::IntType>();
+        mlir::cast<mlir::cir::IntType>(CGM.getTypes().ConvertType(ResultQTy));
 
     auto Loc = getLoc(E->getSourceRange());
     auto ArithResult =
@@ -1266,7 +1267,7 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   if (auto V = buildTargetBuiltinExpr(BuiltinID, E, ReturnValue)) {
     switch (EvalKind) {
     case TEK_Scalar:
-      if (V.getType().isa<mlir::cir::VoidType>())
+      if (mlir::isa<mlir::cir::VoidType>(V.getType()))
         return RValue::get(nullptr);
       return RValue::get(V);
     case TEK_Aggregate:
@@ -1424,7 +1425,7 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     llvm_unreachable("NYI");
 
   auto Ptr = EmittedE ? EmittedE : buildScalarExpr(E);
-  assert(Ptr.getType().isa<mlir::cir::PointerType>() &&
+  assert(mlir::isa<mlir::cir::PointerType>(Ptr.getType()) &&
          "Non-pointer passed to __builtin_object_size?");
 
   // LLVM intrinsics (which CIR lowers to at some point, only supports 0

@@ -81,7 +81,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
   // FIXME(cir): There's currently no direct way to identify if a type is a
   // builtin.
   if (/*isBuitinType=*/true) {
-    if (Ty.isa<VoidType>()) {
+    if (isa<VoidType>(Ty)) {
       Current = Class::NoClass;
     } else {
       llvm::outs() << "Missing X86 classification for type " << Ty << "\n";

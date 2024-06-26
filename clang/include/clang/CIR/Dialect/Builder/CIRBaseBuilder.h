@@ -133,7 +133,7 @@ public:
   }
 
   mlir::Value createShift(mlir::Value lhs, unsigned bits, bool isShiftLeft) {
-    auto width = lhs.getType().dyn_cast<mlir::cir::IntType>().getWidth();
+    auto width = mlir::dyn_cast<mlir::cir::IntType>(lhs.getType()).getWidth();
     auto shift = llvm::APInt(width, bits);
     return createShift(lhs, shift, isShiftLeft);
   }
@@ -197,7 +197,7 @@ public:
                                  mlir::Value dst, bool _volatile = false,
                                  ::mlir::IntegerAttr align = {},
                                  ::mlir::cir::MemOrderAttr order = {}) {
-    if (dst.getType().cast<mlir::cir::PointerType>().getPointee() !=
+    if (mlir::cast<mlir::cir::PointerType>(dst.getType()).getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
     return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, align, order);
@@ -312,11 +312,12 @@ public:
   mlir::Value createGetMemberOp(mlir::Location &loc, mlir::Value structPtr,
                                 const char *fldName, unsigned idx) {
 
-    assert(structPtr.getType().isa<mlir::cir::PointerType>());
+    assert(mlir::isa<mlir::cir::PointerType>(structPtr.getType()));
     auto structBaseTy =
-        structPtr.getType().cast<mlir::cir::PointerType>().getPointee();
-    assert(structBaseTy.isa<mlir::cir::StructType>());
-    auto fldTy = structBaseTy.cast<mlir::cir::StructType>().getMembers()[idx];
+        mlir::cast<mlir::cir::PointerType>(structPtr.getType()).getPointee();
+    assert(mlir::isa<mlir::cir::StructType>(structBaseTy));
+    auto fldTy =
+        mlir::cast<mlir::cir::StructType>(structBaseTy).getMembers()[idx];
     auto fldPtrTy = ::mlir::cir::PointerType::get(getContext(), fldTy);
     return create<mlir::cir::GetMemberOp>(loc, fldPtrTy, structPtr, fldName,
                                           idx);
@@ -340,7 +341,8 @@ public:
     if (srcTy == newTy)
       return src;
 
-    if (srcTy.isa<mlir::cir::BoolType>() && newTy.isa<mlir::cir::IntType>())
+    if (mlir::isa<mlir::cir::BoolType>(srcTy) &&
+        mlir::isa<mlir::cir::IntType>(newTy))
       return createBoolToInt(src, newTy);
 
     llvm_unreachable("unhandled extension cast");
@@ -360,7 +362,8 @@ public:
   }
 
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
-    assert(src.getType().isa<mlir::cir::PointerType>() && "expected ptr src");
+    assert(mlir::isa<mlir::cir::PointerType>(src.getType()) &&
+           "expected ptr src");
     return createBitcast(src, getPointerTo(newPointeeTy));
   }
 
@@ -430,8 +433,8 @@ public:
   mlir::TypedAttr getConstPtrAttr(mlir::Type t, int64_t v) {
     auto val =
         mlir::IntegerAttr::get(mlir::IntegerType::get(t.getContext(), 64), v);
-    return mlir::cir::ConstPtrAttr::get(getContext(),
-                                        t.cast<mlir::cir::PointerType>(), val);
+    return mlir::cir::ConstPtrAttr::get(
+        getContext(), mlir::cast<mlir::cir::PointerType>(t), val);
   }
 
   // Creates constant nullptr for pointer type ty.

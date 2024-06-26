@@ -58,7 +58,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
-    if (auto structType = type.dyn_cast<StructType>()) {
+    if (auto structType = dyn_cast<StructType>(type)) {
       if (!structType.getName()) {
         os << "ty_anon_" << structType.getKindAsStr();
         return AliasResult::OverridableAlias;
@@ -66,7 +66,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << "ty_" << structType.getName();
       return AliasResult::OverridableAlias;
     }
-    if (auto intType = type.dyn_cast<IntType>()) {
+    if (auto intType = dyn_cast<IntType>(type)) {
       // We only provide alias for standard integer types (i.e. integer types
       // whose width is divisible by 8).
       if (intType.getWidth() % 8 != 0)
@@ -74,7 +74,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << intType.getAlias();
       return AliasResult::OverridableAlias;
     }
-    if (auto voidType = type.dyn_cast<VoidType>()) {
+    if (auto voidType = dyn_cast<VoidType>(type)) {
       os << voidType.getAlias();
       return AliasResult::OverridableAlias;
     }
@@ -83,26 +83,26 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   }
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
-    if (auto boolAttr = attr.dyn_cast<mlir::cir::BoolAttr>()) {
+    if (auto boolAttr = mlir::dyn_cast<mlir::cir::BoolAttr>(attr)) {
       os << (boolAttr.getValue() ? "true" : "false");
       return AliasResult::FinalAlias;
     }
-    if (auto bitfield = attr.dyn_cast<mlir::cir::BitfieldInfoAttr>()) {
+    if (auto bitfield = mlir::dyn_cast<mlir::cir::BitfieldInfoAttr>(attr)) {
       os << "bfi_" << bitfield.getName().str();
       return AliasResult::FinalAlias;
     }
     if (auto extraFuncAttr =
-            attr.dyn_cast<mlir::cir::ExtraFuncAttributesAttr>()) {
+            mlir::dyn_cast<mlir::cir::ExtraFuncAttributesAttr>(attr)) {
       os << "fn_attr";
       return AliasResult::FinalAlias;
     }
     if (auto cmpThreeWayInfoAttr =
-            attr.dyn_cast<mlir::cir::CmpThreeWayInfoAttr>()) {
+            mlir::dyn_cast<mlir::cir::CmpThreeWayInfoAttr>(attr)) {
       os << cmpThreeWayInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
     if (auto dynCastInfoAttr =
-            attr.dyn_cast<mlir::cir::DynamicCastInfoAttr>()) {
+            mlir::dyn_cast<mlir::cir::DynamicCastInfoAttr>(attr)) {
       os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
@@ -303,33 +303,33 @@ LogicalResult ConditionOp::verify() {
 
 static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
                                         mlir::Attribute attrType) {
-  if (attrType.isa<ConstPtrAttr>()) {
-    if (opType.isa<::mlir::cir::PointerType>())
+  if (isa<ConstPtrAttr>(attrType)) {
+    if (::mlir::isa<::mlir::cir::PointerType>(opType))
       return success();
     return op->emitOpError("nullptr expects pointer type");
   }
 
-  if (attrType.isa<DataMemberAttr>()) {
+  if (isa<DataMemberAttr>(attrType)) {
     // More detailed type verifications are already done in
     // DataMemberAttr::verify. Don't need to repeat here.
     return success();
   }
 
-  if (attrType.isa<ZeroAttr>()) {
-    if (opType.isa<::mlir::cir::StructType, ::mlir::cir::ArrayType>())
+  if (isa<ZeroAttr>(attrType)) {
+    if (::mlir::isa<::mlir::cir::StructType, ::mlir::cir::ArrayType>(opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
 
-  if (attrType.isa<mlir::cir::BoolAttr>()) {
-    if (!opType.isa<mlir::cir::BoolType>())
+  if (mlir::isa<mlir::cir::BoolAttr>(attrType)) {
+    if (!mlir::isa<mlir::cir::BoolType>(opType))
       return op->emitOpError("result type (")
              << opType << ") must be '!cir.bool' for '" << attrType << "'";
     return success();
   }
 
-  if (attrType.isa<mlir::cir::IntAttr, mlir::cir::FPAttr>()) {
-    auto at = attrType.cast<TypedAttr>();
+  if (mlir::isa<mlir::cir::IntAttr, mlir::cir::FPAttr>(attrType)) {
+    auto at = cast<TypedAttr>(attrType);
     if (at.getType() != opType) {
       return op->emitOpError("result type (")
              << opType << ") does not match value type (" << at.getType()
@@ -338,24 +338,24 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (attrType.isa<SymbolRefAttr>()) {
-    if (opType.isa<::mlir::cir::PointerType>())
+  if (isa<SymbolRefAttr>(attrType)) {
+    if (::mlir::isa<::mlir::cir::PointerType>(opType))
       return success();
     return op->emitOpError("symbolref expects pointer type");
   }
 
-  if (attrType.isa<mlir::cir::GlobalViewAttr>() ||
-      attrType.isa<mlir::cir::TypeInfoAttr>() ||
-      attrType.isa<mlir::cir::ConstArrayAttr>() ||
-      attrType.isa<mlir::cir::ConstStructAttr>() ||
-      attrType.isa<mlir::cir::VTableAttr>())
+  if (mlir::isa<mlir::cir::GlobalViewAttr>(attrType) ||
+      mlir::isa<mlir::cir::TypeInfoAttr>(attrType) ||
+      mlir::isa<mlir::cir::ConstArrayAttr>(attrType) ||
+      mlir::isa<mlir::cir::ConstStructAttr>(attrType) ||
+      mlir::isa<mlir::cir::VTableAttr>(attrType))
     return success();
-  if (attrType.isa<mlir::cir::IntAttr>())
+  if (mlir::isa<mlir::cir::IntAttr>(attrType))
     return success();
 
-  assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
+  assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
-         << attrType.cast<TypedAttr>().getType() << " not supported";
+         << cast<TypedAttr>(attrType).getType() << " not supported";
 }
 
 LogicalResult ConstantOp::verify() {
@@ -385,43 +385,44 @@ LogicalResult CastOp::verify() {
   auto resType = getResult().getType();
   auto srcType = getSrc().getType();
 
-  if (srcType.isa<mlir::cir::VectorType>() &&
-      resType.isa<mlir::cir::VectorType>()) {
+  if (mlir::isa<mlir::cir::VectorType>(srcType) &&
+      mlir::isa<mlir::cir::VectorType>(resType)) {
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
-    srcType = srcType.dyn_cast<mlir::cir::VectorType>().getEltType();
-    resType = resType.dyn_cast<mlir::cir::VectorType>().getEltType();
+    srcType = mlir::dyn_cast<mlir::cir::VectorType>(srcType).getEltType();
+    resType = mlir::dyn_cast<mlir::cir::VectorType>(resType).getEltType();
   }
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
-    if (!resType.isa<mlir::cir::BoolType>())
+    if (!mlir::isa<mlir::cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!mlir::isa<mlir::cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
     return success();
   }
   case cir::CastKind::ptr_to_bool: {
-    if (!resType.isa<mlir::cir::BoolType>())
+    if (!mlir::isa<mlir::cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
-    if (!srcType.isa<mlir::cir::PointerType>())
+    if (!mlir::isa<mlir::cir::PointerType>(srcType))
       return emitOpError() << "requires !cir.ptr type for source";
     return success();
   }
   case cir::CastKind::integral: {
-    if (!resType.isa<mlir::cir::IntType>())
+    if (!mlir::isa<mlir::cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!mlir::isa<mlir::cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
     return success();
   }
   case cir::CastKind::array_to_ptrdecay: {
-    auto arrayPtrTy = srcType.dyn_cast<mlir::cir::PointerType>();
-    auto flatPtrTy = resType.dyn_cast<mlir::cir::PointerType>();
+    auto arrayPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(srcType);
+    auto flatPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(resType);
     if (!arrayPtrTy || !flatPtrTy)
       return emitOpError() << "requires !cir.ptr type for source and result";
 
-    auto arrayTy = arrayPtrTy.getPointee().dyn_cast<mlir::cir::ArrayType>();
+    auto arrayTy =
+        mlir::dyn_cast<mlir::cir::ArrayType>(arrayPtrTy.getPointee());
     if (!arrayTy)
       return emitOpError() << "requires !cir.array pointee";
 
@@ -433,72 +434,72 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::bitcast: {
     // This is the only cast kind where we don't want vector types to decay
     // into the element type.
-    if ((!getSrc().getType().isa<mlir::cir::PointerType>() ||
-         !getResult().getType().isa<mlir::cir::PointerType>()) &&
-        (!getSrc().getType().isa<mlir::cir::VectorType>() ||
-         !getResult().getType().isa<mlir::cir::VectorType>()))
+    if ((!mlir::isa<mlir::cir::PointerType>(getSrc().getType()) ||
+         !mlir::isa<mlir::cir::PointerType>(getResult().getType())) &&
+        (!mlir::isa<mlir::cir::VectorType>(getSrc().getType()) ||
+         !mlir::isa<mlir::cir::VectorType>(getResult().getType())))
       return emitOpError()
              << "requires !cir.ptr or !cir.vector type for source and result";
     return success();
   }
   case cir::CastKind::floating: {
-    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>() ||
-        !resType.isa<mlir::cir::CIRFPTypeInterface>())
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(srcType) ||
+        !mlir::isa<mlir::cir::CIRFPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for source and result";
     return success();
   }
   case cir::CastKind::float_to_int: {
-    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>())
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
-    if (!resType.dyn_cast<mlir::cir::IntType>())
+    if (!mlir::dyn_cast<mlir::cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
   case cir::CastKind::int_to_ptr: {
-    if (!srcType.dyn_cast<mlir::cir::IntType>())
+    if (!mlir::dyn_cast<mlir::cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
-    if (!resType.dyn_cast<mlir::cir::PointerType>())
+    if (!mlir::dyn_cast<mlir::cir::PointerType>(resType))
       return emitOpError() << "requires !cir.ptr type for result";
     return success();
   }
   case cir::CastKind::ptr_to_int: {
-    if (!srcType.dyn_cast<mlir::cir::PointerType>())
+    if (!mlir::dyn_cast<mlir::cir::PointerType>(srcType))
       return emitOpError() << "requires !cir.ptr type for source";
-    if (!resType.dyn_cast<mlir::cir::IntType>())
+    if (!mlir::dyn_cast<mlir::cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
   case cir::CastKind::float_to_bool: {
-    if (!srcType.isa<mlir::cir::CIRFPTypeInterface>())
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
-    if (!resType.isa<mlir::cir::BoolType>())
+    if (!mlir::isa<mlir::cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
     return success();
   }
   case cir::CastKind::bool_to_int: {
-    if (!srcType.isa<mlir::cir::BoolType>())
+    if (!mlir::isa<mlir::cir::BoolType>(srcType))
       return emitOpError() << "requires !cir.bool type for source";
-    if (!resType.isa<mlir::cir::IntType>())
+    if (!mlir::isa<mlir::cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
   case cir::CastKind::int_to_float: {
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!mlir::isa<mlir::cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
-    if (!resType.isa<mlir::cir::CIRFPTypeInterface>())
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
   case cir::CastKind::bool_to_float: {
-    if (!srcType.isa<mlir::cir::BoolType>())
+    if (!mlir::isa<mlir::cir::BoolType>(srcType))
       return emitOpError() << "requires !cir.bool type for source";
-    if (!resType.isa<mlir::cir::CIRFPTypeInterface>())
+    if (!mlir::isa<mlir::cir::CIRFPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
   case cir::CastKind::address_space: {
-    auto srcPtrTy = srcType.dyn_cast<mlir::cir::PointerType>();
-    auto resPtrTy = resType.dyn_cast<mlir::cir::PointerType>();
+    auto srcPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(srcType);
+    auto resPtrTy = mlir::dyn_cast<mlir::cir::PointerType>(resType);
     if (!srcPtrTy || !resPtrTy)
       return emitOpError() << "requires !cir.ptr type for source and result";
     if (srcPtrTy.getPointee() != resPtrTy.getPointee())
@@ -537,8 +538,9 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DynamicCastOp::verify() {
-  auto resultPointeeTy = getType().cast<mlir::cir::PointerType>().getPointee();
-  if (!resultPointeeTy.isa<mlir::cir::VoidType, mlir::cir::StructType>())
+  auto resultPointeeTy =
+      mlir::cast<mlir::cir::PointerType>(getType()).getPointee();
+  if (!mlir::isa<mlir::cir::VoidType, mlir::cir::StructType>(resultPointeeTy))
     return emitOpError()
            << "cir.dyn_cast must produce a void ptr or struct ptr";
 
@@ -579,7 +581,7 @@ LogicalResult VecTernaryOp::verify() {
   // other operands.  (The automatic verification already checked that all
   // operands are vector types and that the second and third operands are the
   // same type.)
-  if (getCond().getType().cast<mlir::cir::VectorType>().getSize() !=
+  if (mlir::cast<mlir::cir::VectorType>(getCond().getType()).getSize() !=
       getVec1().getType().getSize()) {
     return emitOpError() << ": the number of elements in "
                          << getCond().getType() << " and "
@@ -608,7 +610,7 @@ LogicalResult VecShuffleOp::verify() {
   // The indices must all be integer constants
   if (not std::all_of(getIndices().begin(), getIndices().end(),
                       [](mlir::Attribute attr) {
-                        return attr.isa<mlir::cir::IntAttr>();
+                        return mlir::isa<mlir::cir::IntAttr>(attr);
                       })) {
     return emitOpError() << "all index values must be integers";
   }
@@ -622,7 +624,7 @@ LogicalResult VecShuffleOp::verify() {
 LogicalResult VecShuffleDynamicOp::verify() {
   // The number of elements in the two input vectors must match.
   if (getVec().getType().getSize() !=
-      getIndices().getType().cast<mlir::cir::VectorType>().getSize()) {
+      mlir::cast<mlir::cir::VectorType>(getIndices().getType()).getSize()) {
     return emitOpError() << ": the number of elements in " << getVec().getType()
                          << " and " << getIndices().getType() << " don't match";
   }
@@ -991,7 +993,7 @@ mlir::SuccessorOperands BrCondOp::getSuccessorOperands(unsigned index) {
 }
 
 Block *BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
-  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
+  if (IntegerAttr condAttr = dyn_cast_if_present<IntegerAttr>(operands.front()))
     return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
   return nullptr;
 }
@@ -1175,7 +1177,7 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
   for (auto &r : regions) {
     p << "case (";
 
-    auto attr = casesAttr[idx].cast<CaseAttr>();
+    auto attr = cast<CaseAttr>(casesAttr[idx]);
     auto kind = attr.getKind().getValue();
     assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal ||
             kind == CaseOpKind::Anyof || kind == CaseOpKind::Range) &&
@@ -1188,8 +1190,8 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     switch (kind) {
     case cir::CaseOpKind::Equal: {
       p << ", ";
-      auto intAttr = attr.getValue()[0].cast<cir::IntAttr>();
-      auto intAttrTy = intAttr.getType().cast<cir::IntType>();
+      auto intAttr = cast<cir::IntAttr>(attr.getValue()[0]);
+      auto intAttrTy = cast<cir::IntType>(intAttr.getType());
       (intAttrTy.isSigned() ? p << intAttr.getSInt() : p << intAttr.getUInt());
       break;
     }
@@ -1200,13 +1202,13 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     case cir::CaseOpKind::Anyof: {
       p << ", [";
       llvm::interleaveComma(attr.getValue(), p, [&](const Attribute &a) {
-        auto intAttr = a.cast<cir::IntAttr>();
-        auto intAttrTy = intAttr.getType().cast<cir::IntType>();
+        auto intAttr = cast<cir::IntAttr>(a);
+        auto intAttrTy = cast<cir::IntType>(intAttr.getType());
         (intAttrTy.isSigned() ? p << intAttr.getSInt()
                               : p << intAttr.getUInt());
       });
       p << "] : ";
-      auto typedAttr = attr.getValue()[0].dyn_cast<TypedAttr>();
+      auto typedAttr = dyn_cast<TypedAttr>(attr.getValue()[0]);
       assert(typedAttr && "this should never not have a type!");
       p.printType(typedAttr.getType());
       break;
@@ -1357,7 +1359,7 @@ static void printSwitchFlatOpCases(OpAsmPrinter &p, SwitchFlatOp op,
       [&](auto i) {
         p << "  ";
         mlir::Attribute a = std::get<0>(i);
-        p << a.cast<mlir::cir::IntAttr>().getValue();
+        p << mlir::cast<mlir::cir::IntAttr>(a).getValue();
         p << ": ";
         p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
       },
@@ -1457,7 +1459,7 @@ void printCatchOp(OpAsmPrinter &p, CatchOp op,
     p.increaseIndent();
     auto exRtti = a;
 
-    if (a.isa<mlir::cir::CatchUnwindAttr>()) {
+    if (mlir::isa<mlir::cir::CatchUnwindAttr>(a)) {
       p.printAttribute(a);
     } else if (!exRtti) {
       p << "all";
@@ -1622,9 +1624,9 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
       if (parseConstantValue(parser, initialValueAttr).failed())
         return failure();
 
-      assert(initialValueAttr.isa<mlir::TypedAttr>() &&
+      assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
              "Non-typed attrs shouldn't appear here.");
-      auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
+      auto typedAttr = mlir::cast<mlir::TypedAttr>(initialValueAttr);
       opTy = typedAttr.getType();
     }
 
@@ -1810,7 +1812,7 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   else
     llvm_unreachable("shall not get here");
 
-  auto resultType = getAddr().getType().dyn_cast<PointerType>();
+  auto resultType = dyn_cast<PointerType>(getAddr().getType());
   if (!resultType || symTy != resultType.getPointee())
     return emitOpError("result type pointee type '")
            << resultType.getPointee() << "' does not match type " << symTy
@@ -2188,7 +2190,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // getNumArguments hook not failing.
 LogicalResult cir::FuncOp::verifyType() {
   auto type = getFunctionType();
-  if (!type.isa<cir::FuncType>())
+  if (!isa<cir::FuncType>(type))
     return emitOpError("requires '" + getFunctionTypeAttrName().str() +
                        "' attribute of function type");
   if (!getNoProto() && type.isVarArg() && type.getNumInputs() == 0)
@@ -2706,12 +2708,12 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::mlir::Type type, Attribute attr, int trailingZerosNum) {
 
-  if (!(attr.isa<mlir::ArrayAttr>() || attr.isa<mlir::StringAttr>()))
+  if (!(mlir::isa<mlir::ArrayAttr>(attr) || mlir::isa<mlir::StringAttr>(attr)))
     return emitError() << "constant array expects ArrayAttr or StringAttr";
 
-  if (auto strAttr = attr.dyn_cast<mlir::StringAttr>()) {
-    mlir::cir::ArrayType at = type.cast<mlir::cir::ArrayType>();
-    auto intTy = at.getEltType().dyn_cast<cir::IntType>();
+  if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(attr)) {
+    mlir::cir::ArrayType at = mlir::cast<mlir::cir::ArrayType>(type);
+    auto intTy = mlir::dyn_cast<cir::IntType>(at.getEltType());
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8) {
@@ -2722,9 +2724,9 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
     return success();
   }
 
-  assert(attr.isa<mlir::ArrayAttr>());
-  auto arrayAttr = attr.cast<mlir::ArrayAttr>();
-  auto at = type.cast<ArrayType>();
+  assert(mlir::isa<mlir::ArrayAttr>(attr));
+  auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr);
+  auto at = mlir::cast<ArrayType>(type);
 
   // Make sure both number of elements and subelement types match type.
   if (at.getSize() != arrayAttr.size() + trailingZerosNum)
@@ -2735,7 +2737,7 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
         // Once we find a mismatch, stop there.
         if (eltTypeCheck.failed())
           return;
-        auto typedAttr = attr.dyn_cast<TypedAttr>();
+        auto typedAttr = mlir::dyn_cast<TypedAttr>(attr);
         if (!typedAttr || typedAttr.getType() != at.getEltType()) {
           eltTypeCheck = failure();
           emitError()
@@ -2767,7 +2769,7 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
   }
 
   // ArrayAttrrs have per-element type, not the type of the array...
-  if (resultVal->dyn_cast<ArrayAttr>()) {
+  if (mlir::dyn_cast<ArrayAttr>(*resultVal)) {
     // Array has implicit type: infer from const array type.
     if (parser.parseOptionalColon().failed()) {
       resultTy = type;
@@ -2782,10 +2784,10 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
       }
     }
   } else {
-    assert(resultVal->isa<TypedAttr>() && "IDK");
-    auto ta = resultVal->cast<TypedAttr>();
+    assert(mlir::isa<TypedAttr>(*resultVal) && "IDK");
+    auto ta = mlir::cast<TypedAttr>(*resultVal);
     resultTy = ta.getType();
-    if (resultTy->isa<mlir::NoneType>()) {
+    if (mlir::isa<mlir::NoneType>(*resultTy)) {
       parser.emitError(parser.getCurrentLocation(),
                        "expected type declaration for string literal");
       return {};
@@ -2795,12 +2797,13 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
   auto zeros = 0;
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
-      auto typeSize = resultTy.value().cast<mlir::cir::ArrayType>().getSize();
+      auto typeSize =
+          mlir::cast<mlir::cir::ArrayType>(resultTy.value()).getSize();
       auto elts = resultVal.value();
-      if (auto str = elts.dyn_cast<mlir::StringAttr>())
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
         zeros = typeSize - str.size();
       else
-        zeros = typeSize - elts.cast<mlir::ArrayAttr>().size();
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
     } else {
       return {};
     }
@@ -2871,7 +2874,7 @@ LogicalResult TypeInfoAttr::verify(
 LogicalResult
 VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
                    ::mlir::Type type, ::mlir::ArrayAttr vtableData) {
-  auto sTy = type.dyn_cast_or_null<mlir::cir::StructType>();
+  auto sTy = mlir::dyn_cast_if_present<mlir::cir::StructType>(type);
   if (!sTy) {
     emitError() << "expected !cir.struct type result";
     return failure();
@@ -2883,8 +2886,9 @@ VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
 
   for (size_t i = 0; i < sTy.getMembers().size(); ++i) {
 
-    auto arrayTy = sTy.getMembers()[i].dyn_cast<mlir::cir::ArrayType>();
-    auto constArrayAttr = vtableData[i].dyn_cast<mlir::cir::ConstArrayAttr>();
+    auto arrayTy = mlir::dyn_cast<mlir::cir::ArrayType>(sTy.getMembers()[i]);
+    auto constArrayAttr =
+        mlir::dyn_cast<mlir::cir::ConstArrayAttr>(vtableData[i]);
     if (!arrayTy || !constArrayAttr) {
       emitError() << "expected struct type with one array element";
       return failure();
@@ -2895,10 +2899,11 @@ VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
       return failure();
 
     LogicalResult eltTypeCheck = success();
-    if (auto arrayElts = constArrayAttr.getElts().dyn_cast<ArrayAttr>()) {
+    if (auto arrayElts = mlir::dyn_cast<ArrayAttr>(constArrayAttr.getElts())) {
       arrayElts.walkImmediateSubElements(
           [&](Attribute attr) {
-            if (attr.isa<GlobalViewAttr>() || attr.isa<ConstPtrAttr>())
+            if (mlir::isa<GlobalViewAttr>(attr) ||
+                mlir::isa<ConstPtrAttr>(attr))
               return;
             emitError() << "expected GlobalViewAttr attribute";
             eltTypeCheck = failure();
@@ -2952,7 +2957,7 @@ LogicalResult MemCpyOp::verify() {
 
 LogicalResult GetMemberOp::verify() {
 
-  const auto recordTy = getAddrTy().getPointee().dyn_cast<StructType>();
+  const auto recordTy = dyn_cast<StructType>(getAddrTy().getPointee());
   if (!recordTy)
     return emitError() << "expected pointer to a record type";
 
@@ -2974,7 +2979,7 @@ LogicalResult GetMemberOp::verify() {
 
 LogicalResult GetRuntimeMemberOp::verify() {
   auto recordTy =
-      getAddr().getType().cast<PointerType>().getPointee().cast<StructType>();
+      cast<StructType>(cast<PointerType>(getAddr().getType()).getPointee());
   auto memberPtrTy = getMember().getType();
 
   if (recordTy != memberPtrTy.getClsTy()) {
@@ -3179,7 +3184,7 @@ LogicalResult AtomicFetch::verify() {
       getBinop() == mlir::cir::AtomicFetchKind::Sub)
     return mlir::success();
 
-  if (!getVal().getType().isa<mlir::cir::IntType>())
+  if (!mlir::isa<mlir::cir::IntType>(getVal().getType()))
     return emitError() << "only operates on integer values";
 
   return mlir::success();

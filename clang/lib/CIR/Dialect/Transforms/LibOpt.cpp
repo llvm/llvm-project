@@ -131,7 +131,7 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
   auto first = findOp.getOperand(0);
   auto last = findOp.getOperand(1);
   auto value = findOp->getOperand(2);
-  if (!first.getType().isa<PointerType>() || !last.getType().isa<PointerType>())
+  if (!isa<PointerType>(first.getType()) || !isa<PointerType>(last.getType()))
     return;
 
   // Transformation:
@@ -139,9 +139,9 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
   //   - Assert the Iterator is a pointer to primitive type.
   //   - Check IterBeginOp is char sized. TODO: add other types that map to
   //   char size.
-  auto iterResTy = findOp.getType().dyn_cast<PointerType>();
+  auto iterResTy = dyn_cast<PointerType>(findOp.getType());
   assert(iterResTy && "expected pointer type for iterator");
-  auto underlyingDataTy = iterResTy.getPointee().dyn_cast<IntType>();
+  auto underlyingDataTy = dyn_cast<IntType>(iterResTy.getPointee());
   if (!underlyingDataTy || underlyingDataTy.getWidth() != 8)
     return;
 
@@ -149,7 +149,7 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
   //   - Check it's a pointer type.
   //   - Load the pattern from memory
   //   - cast it to `int`.
-  auto patternAddrTy = value.getType().dyn_cast<PointerType>();
+  auto patternAddrTy = dyn_cast<PointerType>(value.getType());
   if (!patternAddrTy || patternAddrTy.getPointee() != underlyingDataTy)
     return;
 
@@ -178,7 +178,7 @@ void LibOptPass::xformStdFindIntoMemchr(StdFindOp findOp) {
 
       // Look at this pointer to retrieve container information.
       auto thisPtr =
-          iterBegin.getOperand().getType().cast<PointerType>().getPointee();
+          cast<PointerType>(iterBegin.getOperand().getType()).getPointee();
       auto containerTy = dyn_cast<StructType>(thisPtr);
 
       unsigned staticSize = 0;

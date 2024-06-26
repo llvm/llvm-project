@@ -1089,7 +1089,7 @@ public:
 
     mlir::TypedAttr getValue() const {
       assert(!isReference());
-      return ValueAndIsReference.getPointer().cast<mlir::TypedAttr>();
+      return mlir::cast<mlir::TypedAttr>(ValueAndIsReference.getPointer());
     }
   };
 
@@ -1923,7 +1923,7 @@ public:
         Depth++;
 
       // Has multiple locations: overwrite with separate start and end locs.
-      if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+      if (const auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
         assert(fusedLoc.getLocations().size() == 2 && "too many locations");
         BeginLoc = fusedLoc.getLocations()[0];
         EndLoc = fusedLoc.getLocations()[1];

@@ -44,11 +44,11 @@ public:
     if (!func)
       return mlir::success();
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
-    if (auto extraAttr = attribute.getValue()
-                             .dyn_cast<mlir::cir::ExtraFuncAttributesAttr>()) {
+    if (auto extraAttr = mlir::dyn_cast<mlir::cir::ExtraFuncAttributesAttr>(
+            attribute.getValue())) {
       for (auto attr : extraAttr.getElements()) {
         if (auto inlineAttr =
-                attr.getValue().dyn_cast<mlir::cir::InlineAttr>()) {
+                mlir::dyn_cast<mlir::cir::InlineAttr>(attr.getValue())) {
           if (inlineAttr.isNoInline())
             llvmFunc->addFnAttr(llvm::Attribute::NoInline);
           else if (inlineAttr.isAlwaysInline())
@@ -57,9 +57,9 @@ public:
             llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
           else
             llvm_unreachable("Unknown inline kind");
-        } else if (attr.getValue().dyn_cast<mlir::cir::OptNoneAttr>()) {
+        } else if (mlir::dyn_cast<mlir::cir::OptNoneAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
-        } else if (attr.getValue().dyn_cast<mlir::cir::NoThrowAttr>()) {
+        } else if (mlir::dyn_cast<mlir::cir::NoThrowAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
         }
       }

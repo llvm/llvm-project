@@ -293,7 +293,7 @@ public:
 
     LValue R;
     R.LVType = Simple;
-    assert(address.getPointer().getType().cast<mlir::cir::PointerType>());
+    assert(mlir::cast<mlir::cir::PointerType>(address.getPointer().getType()));
     R.V = address.getPointer();
     R.ElementType = address.getElementType();
     R.Initialize(type, qs, address.getAlignment(),
