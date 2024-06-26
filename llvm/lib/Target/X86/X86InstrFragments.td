@@ -15,11 +15,11 @@ def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
 def SDTX86Ccmp    : SDTypeProfile<1, 5,
                                   [SDTCisVT<3, i8>, SDTCisVT<4, i8>, SDTCisVT<5, i32>]>;
 
-// res, chain = CLOAD inchain, ptr, passthru, cond, flags
+// RES = op PTR, PASSTHRU, COND, EFLAGS
 def SDTX86Cload    : SDTypeProfile<1, 4,
                                   [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisSameAs<0, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
-// chain = CSTORE inchain, val, ptr, cond, flags
+// op VAL, PTR, COND, EFLAGS
 def SDTX86Cstore    : SDTypeProfile<0, 4,
                                   [SDTCisInt<0>, SDTCisPtrTy<1>,
                                    SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
