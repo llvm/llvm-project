@@ -1494,6 +1494,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(N.isDistinct(), "subprogram definitions must be distinct", &N);
     CheckDI(Unit, "subprogram definitions must have a compile unit", &N);
     CheckDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+    if (auto *CU = dyn_cast_or_null<DICompileUnit>(Unit))
+      CurrentSourceLang = (dwarf::SourceLanguage)CU->getSourceLanguage();
     // There's no good way to cross the CU boundary to insert a nested
     // DISubprogram definition in one CU into a type defined in another CU.
     auto *CT = dyn_cast_or_null<DICompositeType>(N.getRawScope());
