@@ -42,9 +42,10 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   ]> {
   let summary = "pointer type";
   let description = [{
-    The `ptr` type is an opaque pointer type. This type typically represents
-    a handle to an object in memory. Pointers are optionally parameterized
-    by a memory space.
+    The `ptr` type is an opaque pointer type. This type typically represents a
+    handle to an object in memory or target-dependent values like `nullptr`.
+    Pointers are optionally parameterized by a memory space.
+
     Syntax:
 
     ```mlir
