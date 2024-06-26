@@ -12,8 +12,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) {
-  rand_next.store(seed, cpp::MemoryOrder::RELAXED);
-}
+LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) { rand_next = seed; }
 
 } // namespace LIBC_NAMESPACE

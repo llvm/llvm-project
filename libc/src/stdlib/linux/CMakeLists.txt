@@ -1,3 +1,7 @@
+if(NOT LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 add_entrypoint_object(
   abort
   SRCS

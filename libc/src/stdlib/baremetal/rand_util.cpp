@@ -1,4 +1,4 @@
-//===-- Implementation of srand -------------------------------------------===//
+//===-- Shared utility for rand -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/srand.h"
-#include "src/__support/common.h"
 #include "src/stdlib/rand_util.h"
+#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) {
-  rand_next.store(seed, cpp::MemoryOrder::RELAXED);
-}
+//  C standard 7.10p2: If 'rand' is called before 'srand' it is to
+// proceed as if the 'srand' function was called with a value of '1'.
+unsigned long rand_next = 1;
 
 } // namespace LIBC_NAMESPACE

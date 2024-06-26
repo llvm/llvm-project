@@ -1,3 +1,7 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
 add_entrypoint_object(
   atoi
   SRCS
@@ -285,38 +289,55 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
-add_object_library(
-  rand_util
-  SRCS
-    rand_util.cpp
-  HDRS
-    rand_util.h
-  DEPENDS
-    libc.src.__support.common
-)
 
-add_entrypoint_object(
-  rand
-  SRCS
-    rand.cpp
-  HDRS
-    rand.h
-  DEPENDS
-    .rand_util
-    libc.include.stdlib
-    libc.src.__support.threads.sleep
-)
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  add_object_library(
+    rand_util
+    SRCS
+      rand_util.cpp
+    HDRS
+      rand_util.h
+    DEPENDS
+      libc.src.__support.common
+  )
 
-add_entrypoint_object(
-  srand
-  SRCS
-    srand.cpp
-  HDRS
-    srand.h
-  DEPENDS
-    .rand_util
-    libc.include.stdlib
-)
+  add_entrypoint_object(
+    rand
+    SRCS
+      rand.cpp
+    HDRS
+      rand.h
+    DEPENDS
+      .rand_util
+      libc.include.stdlib
+      libc.src.__support.threads.sleep
+  )
+
+  add_entrypoint_object(
+    srand
+    SRCS
+      srand.cpp
+    HDRS
+      srand.h
+    DEPENDS
+      .rand_util
+      libc.include.stdlib
+  )
+else()
+  add_entrypoint_object(
+    rand
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.rand
+  )
+
+  add_entrypoint_object(
+    srand
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.srand
+  )
+endif()
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -411,14 +432,6 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       aligned_alloc
     )
   endif()
-endif()
-
-if(NOT LLVM_LIBC_FULL_BUILD)
-  return()
-endif()
-
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
