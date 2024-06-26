@@ -8,8 +8,8 @@ define i32 @f(i32 noundef %x) #0 {
 ; CHECK-LABEL: @f(
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, ptr %x.addr, align 4, !tbaa !5
-  %0 = load i32, ptr %x.addr, align 4, !tbaa !5
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   switch i32 %0, label %sw.default [
     i32 0, label %sw.bb
     i32 2, label %sw.bb
@@ -19,15 +19,15 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry, %entry, %entry, %entry, %entry
-  store i32 1, ptr %x.addr, align 4, !tbaa !5
+  store i32 1, ptr %x.addr, align 4
   br label %sw.epilog
 
 sw.default:                                       ; preds = %entry
-  store i32 0, ptr %x.addr, align 4, !tbaa !5
+  store i32 0, ptr %x.addr, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.default, %sw.bb
-  %1 = load i32, ptr %x.addr, align 4, !tbaa !5
+  %1 = load i32, ptr %x.addr, align 4
   ret i32 %1
 }
 
@@ -38,8 +38,8 @@ define i32 @g(i32 noundef %x) #0 {
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, ptr %x.addr, align 4, !tbaa !5
-  %0 = load i32, ptr %x.addr, align 4, !tbaa !5
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   switch i32 %0, label %sw.default [
     i32 0, label %sw.bb
     i32 2, label %sw.bb
@@ -49,19 +49,14 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry, %entry, %entry, %entry, %entry
-  store i32 1, ptr %x.addr, align 4, !tbaa !5
+  store i32 1, ptr %x.addr, align 4
   br label %sw.epilog
 
 sw.default:                                       ; preds = %entry
-  store i32 0, ptr %x.addr, align 4, !tbaa !5
+  store i32 0, ptr %x.addr, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.default, %sw.bb
-  %1 = load i32, ptr %x.addr, align 4, !tbaa !5
+  %1 = load i32, ptr %x.addr, align 4
   ret i32 %1
 }
-
-!5 = !{!6, !6, i64 0}
-!6 = !{!"int", !7, i64 0}
-!7 = !{!"omnipotent char", !8, i64 0}
-!8 = !{!"Simple C/C++ TBAA"}
