@@ -49,6 +49,8 @@ addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
     Flags.setNest();
   if (AttrFn(Attribute::ByVal))
     Flags.setByVal();
+  if (AttrFn(Attribute::ByRef))
+    Flags.setByRef();
   if (AttrFn(Attribute::Preallocated))
     Flags.setPreallocated();
   if (AttrFn(Attribute::InAlloca))
@@ -221,17 +223,26 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   }
 
   Align MemAlign = DL.getABITypeAlign(Arg.Ty);
-  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
+  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated() ||
+      Flags.isByRef()) {
     assert(OpIdx >= AttributeList::FirstArgIndex);
     unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
 
     Type *ElementTy = FuncInfo.getParamByValType(ParamIdx);
     if (!ElementTy)
+      ElementTy = FuncInfo.getParamByRefType(ParamIdx);
+    if (!ElementTy)
       ElementTy = FuncInfo.getParamInAllocaType(ParamIdx);
     if (!ElementTy)
       ElementTy = FuncInfo.getParamPreallocatedType(ParamIdx);
+
     assert(ElementTy && "Must have byval, inalloca or preallocated type");
-    Flags.setByValSize(DL.getTypeAllocSize(ElementTy));
+
+    uint64_t MemSize = DL.getTypeAllocSize(ElementTy);
+    if (Flags.isByRef())
+      Flags.setByRefSize(MemSize);
+    else
+      Flags.setByValSize(MemSize);
 
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
