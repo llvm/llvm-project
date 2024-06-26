@@ -363,7 +363,6 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
@@ -2164,8 +2163,7 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
       C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
-      C.getArgs().hasArg(options::OPT_print_supported_extensions) ||
-      C.getArgs().hasArg(options::OPT_print_enabled_extensions)) {
+      C.getArgs().hasArg(options::OPT_print_supported_extensions)) {
     PrintVersion(C, llvm::errs());
     SuppressMissingInputWarning = true;
   }
@@ -4349,14 +4347,13 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
-                   options::OPT_print_supported_extensions,
-                   options::OPT_print_enabled_extensions}) {
+                   options::OPT_print_supported_extensions}) {
     // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
     // custom Compile phase that prints out supported cpu models and quits.
     //
-    // If either --print-supported-extensions or --print-enabled-extensions is
-    // specified, call the corresponding helper function that prints out the
-    // supported/enabled extensions and quits.
+    // If --print-supported-extensions is specified, call the helper function
+    // RISCVMarchHelp in RISCVISAInfo.cpp that prints out supported extensions
+    // and quits.
     if (Arg *A = Args.getLastArg(Opt)) {
       if (Opt == options::OPT_print_supported_extensions &&
           !C.getDefaultToolChain().getTriple().isRISCV() &&
@@ -4364,12 +4361,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
           !C.getDefaultToolChain().getTriple().isARM()) {
         C.getDriver().Diag(diag::err_opt_not_valid_on_target)
             << "--print-supported-extensions";
-        return;
-      }
-      if (Opt == options::OPT_print_enabled_extensions &&
-          !C.getDefaultToolChain().getTriple().isAArch64()) {
-        C.getDriver().Diag(diag::err_opt_not_valid_on_target)
-            << "--print-enabled-extensions";
         return;
       }
 

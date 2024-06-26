@@ -22,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <array>
-#include <set>
 #include <vector>
 
 namespace llvm {
@@ -117,18 +116,12 @@ using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-  StringRef UserVisibleName;      // Human readable name used in -march, -cpu
-                                  // and target func attribute, e.g. "profile".
+  StringRef Name;                 // Human readable name, e.g. "profile".
   std::optional<StringRef> Alias; // An alias for this extension, if one exists.
   ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
                                   // extensions representation in the bitfield.
-  StringRef ArchFeatureName;      // The feature name defined by the
-                                  // Architecture, e.g. FEAT_AdvSIMD.
-  StringRef Description;          // The textual description of the extension.
-  StringRef PosTargetFeature;     // -target-feature/-mattr enable string,
-                                  // e.g. "+spe".
-  StringRef NegTargetFeature;     // -target-feature/-mattr disable string,
-                                  // e.g. "-spe".
+  StringRef Feature;              // -mattr enable string, e.g. "+spe"
+  StringRef NegFeature;           // -mattr disable string, e.g. "-spe"
 };
 
 #define EMIT_EXTENSIONS
@@ -293,12 +286,12 @@ struct ExtensionSet {
       Features.emplace_back(T(BaseArch->ArchFeature));
 
     for (const auto &E : Extensions) {
-      if (E.PosTargetFeature.empty() || !Touched.test(E.ID))
+      if (E.Feature.empty() || !Touched.test(E.ID))
         continue;
       if (Enabled.test(E.ID))
-        Features.emplace_back(T(E.PosTargetFeature));
+        Features.emplace_back(T(E.Feature));
       else
-        Features.emplace_back(T(E.NegTargetFeature));
+        Features.emplace_back(T(E.NegFeature));
     }
   }
 
@@ -350,9 +343,7 @@ bool isX18ReservedByDefault(const Triple &TT);
 // themselves, they are sequential (0, 1, 2, 3, ...).
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
-void PrintSupportedExtensions();
-
-void printEnabledExtensions(std::set<StringRef> EnabledFeatureNames);
+void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace AArch64
 } // namespace llvm
