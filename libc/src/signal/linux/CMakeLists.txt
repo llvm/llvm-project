@@ -125,7 +125,7 @@ add_entrypoint_object(
     ../signal.h
   DEPENDS
     .sigaction
-    libc.include.signal
+    libc.hdr.signal_macros
 )
 
 add_entrypoint_object(
