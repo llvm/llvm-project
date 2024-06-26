@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-elf     -fptrauth-intrinsics -emit-llvm %s  -o - | FileCheck %s
+//
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-intrinsics -emit-llvm %s  -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-elf     -fptrauth-intrinsics -emit-llvm %s  -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 void (*fnptr)(void);
 long int_discriminator;
