@@ -4183,6 +4183,16 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
+  // For example, hardware may intially release with two states that softwware
+  // can read from a register field:
+  // 0 = startup, 1 = running
+  // If in a future hardware release, the designers added a pre-startup state:
+  // 0 = startup, 1 = running, 2 = pre-startup
+  // Now it makes more sense to list them in this logical order as opposed to
+  // numerical order:
+  // 2 = pre-startup, 1 = startup, 0 = startup
+  // This only matters for "register info" but let's trust what the server
+  // chose regardless.
   std::map<uint64_t, FieldEnum::Enumerator> enumerators;
 
   enum_node.ForEachChildElementWithName(
