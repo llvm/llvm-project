@@ -661,7 +661,7 @@ TEST(RangeSelectorTest, ConstructExprArgs) {
     }
   )cc";
   const char *ID = "id";
-  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
 }
 
@@ -689,7 +689,7 @@ TEST(RangeSelectorTest, ConstructExprNoArgs) {
     }
   )cc";
   const char *ID = "id";
-  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
   EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue(""));
 }
 
