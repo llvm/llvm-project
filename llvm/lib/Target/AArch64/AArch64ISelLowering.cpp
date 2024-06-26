@@ -2942,23 +2942,6 @@ AArch64TargetLowering::EmitTileLoad(unsigned Opc, unsigned BaseReg,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitTileMovaz(unsigned Opc, unsigned BaseReg,
-                                     MachineInstr &MI,
-                                     MachineBasicBlock *BB) const {
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
-
-  MIB.add(MI.getOperand(0)); // Output ZPR
-  MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
-             RegState::Define);                    // Output ZA Tile
-  MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // Input Za Tile
-  MIB.add(MI.getOperand(2));                       // slice index register
-  MIB.add(MI.getOperand(3));                       // slice index offset
-  MI.eraseFromParent();                            // The pseudo is gone now.
-  return BB;
-}
-
-MachineBasicBlock *
 AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB =
@@ -3001,17 +2984,8 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
   bool HasTile = BaseReg != AArch64::ZA;
   bool HasZPROut = HasTile && MI.getOperand(0).isReg();
   if (HasZPROut) {
-    if(HasTile){
-      MIB.add(MI.getOperand(0)); // Output ZPR
-      MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
-                 RegState::Define);                    // Output ZA Tile
-      MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // Input Za Tile
-      StartIdx += 2;
-    }
-    else{
-      MIB.add(MI.getOperand(0)); // Output ZPR
-      ++StartIdx;
-    }
+    MIB.add(MI.getOperand(StartIdx)); // Output ZPR
+    ++StartIdx;
   }
   if (HasTile) {
     MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm(),
@@ -3134,9 +3108,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
       return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB);
     case (AArch64::SMEMatrixTileH):
       return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB);
-      default:
-        return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB,
-      }
     case (AArch64::SMEMatrixTileS):
       return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB);
     case (AArch64::SMEMatrixTileD):
