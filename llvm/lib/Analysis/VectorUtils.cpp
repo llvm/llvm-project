@@ -418,6 +418,31 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                                SmallVectorImpl<int> &ScaledMask) {
+  unsigned NumSrcElts = Mask.size();
+  assert(NumSrcElts > 0 && NumDstElts > 0 && "Unexpected scaling factor");
+
+  // Fast-path: if no scaling, then it is just a copy.
+  if (NumSrcElts == NumDstElts) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return true;
+  }
+
+  // Ensure we can find a whole scale factor.
+  assert(((NumSrcElts % NumDstElts) == 0 || (NumDstElts % NumSrcElts) == 0) &&
+         "Unexpected scaling factor");
+
+  if (NumSrcElts > NumDstElts) {
+    int Scale = NumSrcElts / NumDstElts;
+    return widenShuffleMaskElts(Scale, Mask, ScaledMask);
+  }
+
+  int Scale = NumDstElts / NumSrcElts;
+  narrowShuffleMaskElts(Scale, Mask, ScaledMask);
+  return true;
+}
+
 void llvm::getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
                                         SmallVectorImpl<int> &ScaledMask) {
   std::array<SmallVector<int, 16>, 2> TmpMasks;

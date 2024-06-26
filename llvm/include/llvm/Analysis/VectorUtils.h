@@ -224,6 +224,13 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
+/// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
+/// Returns false on failure, and ScaledMask will be in an undefined state.
+bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                          SmallVectorImpl<int> &ScaledMask);
+
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
 void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
