@@ -1,4 +1,4 @@
-; REQUIRES: plugins
+; REQUIRES: plugins, x86-registered-target
 ; UNSUPPORTED: target={{.*windows.*}}
 
 ; RUN: not opt < %s -load-pass-plugin=%t/nonexistent.so -disable-output 2>&1 | FileCheck %s
