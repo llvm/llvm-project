@@ -4016,5 +4016,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
     return BinaryOperator::CreateXor(CondVal, FalseVal);
 
+  // select Cond, undef, X -> freeze(X)
+  // select Cond, X, undef -> freeze(X)
+  // The case where X is non-poison (or implies the condition is poison) is
+  // already handled by InstSimplify.
+  if (isa<UndefValue>(TrueVal))
+    return new FreezeInst(FalseVal);
+  if (isa<UndefValue>(FalseVal))
+    return new FreezeInst(TrueVal);
+
   return nullptr;
 }
