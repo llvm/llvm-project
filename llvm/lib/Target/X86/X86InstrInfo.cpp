@@ -8832,6 +8832,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       Opcode == X86::PLDTILECFGV)
     return true;
 
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
+    return true;
+
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }
 
