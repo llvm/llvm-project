@@ -11,9 +11,9 @@
 
 class Function:
     def __init__(
-        self, standard, return_type, name, arguments, guard=None, attributes=[]
+        self, standards, return_type, name, arguments, guard=None, attributes=[]
     ):
-        self.standard = standard
+        self.standard = standards
         self.return_type = return_type
         self.name = name
         self.arguments = [arg["type"] for arg in arguments]
