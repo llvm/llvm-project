@@ -70,9 +70,9 @@ struct __get_wider_signed {
 
 template <class _Start>
 using _IotaDiffT =
-    typename _If< (!integral<_Start> || sizeof(iter_difference_t<_Start>) > sizeof(_Start)),
-                  type_identity<iter_difference_t<_Start>>,
-                  __get_wider_signed<_Start> >::type;
+    typename conditional_t<(!integral<_Start> || sizeof(iter_difference_t<_Start>) > sizeof(_Start)),
+                           type_identity<iter_difference_t<_Start>>,
+                           __get_wider_signed<_Start> >::type;
 
 template <class _Iter>
 concept __decrementable = incrementable<_Iter> && requires(_Iter __i) {
@@ -107,13 +107,13 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
     friend class iota_view;
 
     using iterator_concept =
-        _If<__advanceable<_Start>,
-            random_access_iterator_tag,
-            _If<__decrementable<_Start>,
-                bidirectional_iterator_tag,
-                _If<incrementable<_Start>,
-                    forward_iterator_tag,
-                    /*Else*/ input_iterator_tag>>>;
+        conditional_t<__advanceable<_Start>,
+                      random_access_iterator_tag,
+                      conditional_t<__decrementable<_Start>,
+                                    bidirectional_iterator_tag,
+                                    conditional_t<incrementable<_Start>,
+                                                  forward_iterator_tag,
+                                                  /*Else*/ input_iterator_tag>>>;
 
     using value_type      = _Start;
     using difference_type = _IotaDiffT<_Start>;

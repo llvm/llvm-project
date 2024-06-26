@@ -75,7 +75,7 @@ struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag : public random_access_itera
 
 template <class _Iter>
 struct __iter_traits_cache {
-  using type = _If< __is_primary_template<iterator_traits<_Iter> >::value, _Iter, iterator_traits<_Iter> >;
+  using type = __conditional_t<__is_primary_template<iterator_traits<_Iter> >::value, _Iter, iterator_traits<_Iter> >;
 };
 template <class _Iter>
 using _ITER_TRAITS = typename __iter_traits_cache<_Iter>::type;

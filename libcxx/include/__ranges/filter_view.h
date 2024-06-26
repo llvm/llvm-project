@@ -61,7 +61,7 @@ class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS filter_view : public view_interface<f
   // We cache the result of begin() to allow providing an amortized O(1) begin() whenever
   // the underlying range is at least a forward_range.
   static constexpr bool _UseCache = forward_range<_View>;
-  using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _Cache                    = conditional_t<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
 
   class __iterator;
@@ -117,11 +117,11 @@ template <forward_range _View>
 struct __filter_iterator_category<_View> {
   using _Cat = typename iterator_traits<iterator_t<_View>>::iterator_category;
   using iterator_category =
-      _If<derived_from<_Cat, bidirectional_iterator_tag>,
-          bidirectional_iterator_tag,
-          _If<derived_from<_Cat, forward_iterator_tag>,
-              forward_iterator_tag,
-              /* else */ _Cat >>;
+      conditional_t<derived_from<_Cat, bidirectional_iterator_tag>,
+                    bidirectional_iterator_tag,
+                    conditional_t<derived_from<_Cat, forward_iterator_tag>,
+                                  forward_iterator_tag,
+                                  /* else */ _Cat >>;
 };
 
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
@@ -132,11 +132,11 @@ public:
   _LIBCPP_NO_UNIQUE_ADDRESS filter_view* __parent_       = nullptr;
 
   using iterator_concept =
-      _If<bidirectional_range<_View>,
-          bidirectional_iterator_tag,
-          _If<forward_range<_View>,
-              forward_iterator_tag,
-              /* else */ input_iterator_tag >>;
+      conditional_t<bidirectional_range<_View>,
+                    bidirectional_iterator_tag,
+                    conditional_t<forward_range<_View>,
+                                  forward_iterator_tag,
+                                  /* else */ input_iterator_tag >>;
   // using iterator_category = inherited;
   using value_type      = range_value_t<_View>;
   using difference_type = range_difference_t<_View>;

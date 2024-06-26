@@ -23,11 +23,6 @@ struct BOOM {
 using True = std::true_type;
 using False = std::false_type;
 
-void test_if() {
-  ASSERT_SAME_TYPE(std::_If<true, int, long>, int);
-  ASSERT_SAME_TYPE(std::_If<false, int, long>, long);
-}
-
 void test_and() {
   static_assert(std::_And<True>::value, "");
   static_assert(!std::_And<False>::value, "");

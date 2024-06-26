@@ -1117,8 +1117,8 @@ struct __narrowing_check {
 
 template <class _Dest, class _Source>
 using __check_for_narrowing _LIBCPP_NODEBUG =
-    typename _If< is_arithmetic<_Dest>::value, __narrowing_check, __no_narrowing_check >::template _Apply<_Dest,
-                                                                                                          _Source>;
+    typename conditional_t< is_arithmetic<_Dest>::value, __narrowing_check, __no_narrowing_check >::
+        template _Apply<_Dest, _Source>;
 
 template <class _Tp, size_t _Idx>
 struct __overload {

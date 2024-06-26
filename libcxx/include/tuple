@@ -827,8 +827,8 @@ public:
 
   // [tuple.assign]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
-  operator=(_If<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple)
-      noexcept(_And<is_nothrow_copy_assignable<_Tp>...>::value) {
+  operator=(__conditional_t<_And<is_copy_assignable<_Tp>...>::value, tuple, __nat> const& __tuple) noexcept(
+      _And<is_nothrow_copy_assignable<_Tp>...>::value) {
     std::__memberwise_copy_assign(*this, __tuple, typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
   }
@@ -851,8 +851,8 @@ public:
 #  endif // _LIBCPP_STD_VER >= 23
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 tuple&
-  operator=(_If<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple)
-      noexcept(_And<is_nothrow_move_assignable<_Tp>...>::value) {
+  operator=(__conditional_t<_And<is_move_assignable<_Tp>...>::value, tuple, __nat>&& __tuple) noexcept(
+      _And<is_nothrow_move_assignable<_Tp>...>::value) {
     std::__memberwise_forward_assign(
         *this, std::move(__tuple), __tuple_types<_Tp...>(), typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
@@ -972,7 +972,7 @@ public:
     std::__memberwise_forward_assign(
         *this,
         std::move(__array),
-        __tuple_types<_If<true, _Up, _Tp>...>(),
+        __tuple_types<__conditional_t<true, _Up, _Tp>...>(),
         typename __make_tuple_indices<sizeof...(_Tp)>::type());
     return *this;
   }

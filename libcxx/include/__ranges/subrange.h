@@ -232,7 +232,7 @@ template <class _Ip, class _Sp, subrange_kind _Kp>
 inline constexpr bool enable_borrowed_range<subrange<_Ip, _Sp, _Kp>> = true;
 
 template <range _Rp>
-using borrowed_subrange_t = _If<borrowed_range<_Rp>, subrange<iterator_t<_Rp>>, dangling>;
+using borrowed_subrange_t = conditional_t<borrowed_range<_Rp>, subrange<iterator_t<_Rp>>, dangling>;
 } // namespace ranges
 
 // [range.subrange.general]

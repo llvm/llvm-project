@@ -30,7 +30,7 @@ struct dangling {
 };
 
 template <range _Rp>
-using borrowed_iterator_t = _If<borrowed_range<_Rp>, iterator_t<_Rp>, dangling>;
+using borrowed_iterator_t = conditional_t<borrowed_range<_Rp>, iterator_t<_Rp>, dangling>;
 
 // borrowed_subrange_t defined in <__ranges/subrange.h>
 } // namespace ranges

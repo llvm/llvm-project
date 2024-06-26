@@ -52,9 +52,9 @@ template <class _Iter>
   requires requires { typename iterator_traits<_Iter>::iterator_category; }
 struct __move_iter_category_base<_Iter> {
   using iterator_category =
-      _If< derived_from<typename iterator_traits<_Iter>::iterator_category, random_access_iterator_tag>,
-           random_access_iterator_tag,
-           typename iterator_traits<_Iter>::iterator_category >;
+      __conditional_t<derived_from<typename iterator_traits<_Iter>::iterator_category, random_access_iterator_tag>,
+                      random_access_iterator_tag,
+                      typename iterator_traits<_Iter>::iterator_category>;
 };
 
 template <class _Iter, class _Sent>
@@ -96,9 +96,9 @@ public:
   using reference       = iter_rvalue_reference_t<_Iter>;
 #else
   typedef _Iter iterator_type;
-  typedef _If< __has_random_access_iterator_category<_Iter>::value,
-               random_access_iterator_tag,
-               typename iterator_traits<_Iter>::iterator_category >
+  typedef __conditional_t<__has_random_access_iterator_category<_Iter>::value,
+                          random_access_iterator_tag,
+                          typename iterator_traits<_Iter>::iterator_category >
       iterator_category;
   typedef typename iterator_traits<iterator_type>::value_type value_type;
   typedef typename iterator_traits<iterator_type>::difference_type difference_type;

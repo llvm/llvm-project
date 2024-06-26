@@ -51,9 +51,9 @@ struct __find_first_implemented<_Algorithm, __backend_configuration<>, _Executio
 
 template <template <class, class> class _Algorithm, class _B1, class... _Bn, class _ExecutionPolicy>
 struct __find_first_implemented<_Algorithm, __backend_configuration<_B1, _Bn...>, _ExecutionPolicy>
-    : _If<__is_implemented_v<_Algorithm, _B1, _ExecutionPolicy>,
-          __type_identity<_Algorithm<_B1, _ExecutionPolicy>>,
-          __find_first_implemented<_Algorithm, __backend_configuration<_Bn...>, _ExecutionPolicy> > {};
+    : __conditional_t<__is_implemented_v<_Algorithm, _B1, _ExecutionPolicy>,
+                      __type_identity<_Algorithm<_B1, _ExecutionPolicy>>,
+                      __find_first_implemented<_Algorithm, __backend_configuration<_Bn...>, _ExecutionPolicy>> {};
 
 template <template <class, class> class _Algorithm, class _BackendConfiguration, class _ExecutionPolicy>
 using __dispatch = typename __find_first_implemented<_Algorithm, _BackendConfiguration, _ExecutionPolicy>::type;

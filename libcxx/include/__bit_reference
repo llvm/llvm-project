@@ -824,7 +824,7 @@ public:
   // When _IsConst=true, the assignment operators are
   // implicitly generated and trivial.
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator&
-  operator=(const _If<_IsConst, struct __private_nat, __bit_iterator>& __it) {
+  operator=(const __conditional_t<_IsConst, struct __private_nat, __bit_iterator>& __it) {
     __seg_ = __it.__seg_;
     __ctz_ = __it.__ctz_;
     return *this;

@@ -282,8 +282,8 @@ struct __arrow_type_or_void<_Iter, _Sent> {
 
 template <input_iterator _Iter, class _Sent>
 struct iterator_traits<common_iterator<_Iter, _Sent>> {
-  using iterator_concept  = _If<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
-  using iterator_category = _If<__denotes_forward_iter<_Iter>, forward_iterator_tag, input_iterator_tag>;
+  using iterator_concept  = __conditional_t<forward_iterator<_Iter>, forward_iterator_tag, input_iterator_tag>;
+  using iterator_category = __conditional_t<__denotes_forward_iter<_Iter>, forward_iterator_tag, input_iterator_tag>;
   using pointer           = typename __arrow_type_or_void<_Iter, _Sent>::type;
   using value_type        = iter_value_t<_Iter>;
   using difference_type   = iter_difference_t<_Iter>;

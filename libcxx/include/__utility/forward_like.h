@@ -25,10 +25,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <class _Ap, class _Bp>
-using _CopyConst = _If<is_const_v<_Ap>, const _Bp, _Bp>;
+using _CopyConst = conditional_t<is_const_v<_Ap>, const _Bp, _Bp>;
 
 template <class _Ap, class _Bp>
-using _OverrideRef = _If<is_rvalue_reference_v<_Ap>, remove_reference_t<_Bp>&&, _Bp&>;
+using _OverrideRef = conditional_t<is_rvalue_reference_v<_Ap>, remove_reference_t<_Bp>&&, _Bp&>;
 
 template <class _Ap, class _Bp>
 using _ForwardLike = _OverrideRef<_Ap&&, _CopyConst<remove_reference_t<_Ap>, remove_reference_t<_Bp>>>;

@@ -76,15 +76,16 @@ public:
   using iterator_type = _Iter;
 
   using iterator_category =
-      _If<__has_random_access_iterator_category<_Iter>::value,
-          random_access_iterator_tag,
-          typename iterator_traits<_Iter>::iterator_category>;
+      __conditional_t<__has_random_access_iterator_category<_Iter>::value,
+                      random_access_iterator_tag,
+                      typename iterator_traits<_Iter>::iterator_category>;
   using pointer = typename iterator_traits<_Iter>::pointer;
 #if _LIBCPP_STD_VER >= 20
-  using iterator_concept = _If<random_access_iterator<_Iter>, random_access_iterator_tag, bidirectional_iterator_tag>;
-  using value_type       = iter_value_t<_Iter>;
-  using difference_type  = iter_difference_t<_Iter>;
-  using reference        = iter_reference_t<_Iter>;
+  using iterator_concept =
+      conditional_t<random_access_iterator<_Iter>, random_access_iterator_tag, bidirectional_iterator_tag>;
+  using value_type      = iter_value_t<_Iter>;
+  using difference_type = iter_difference_t<_Iter>;
+  using reference       = iter_reference_t<_Iter>;
 #else
   using value_type      = typename iterator_traits<_Iter>::value_type;
   using difference_type = typename iterator_traits<_Iter>::difference_type;

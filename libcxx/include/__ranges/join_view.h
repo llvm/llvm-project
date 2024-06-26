@@ -58,13 +58,13 @@ struct __join_view_iterator_category<_View> {
   using _OuterC = typename iterator_traits<iterator_t<_View>>::iterator_category;
   using _InnerC = typename iterator_traits<iterator_t<range_reference_t<_View>>>::iterator_category;
 
-  using iterator_category =
-      _If< derived_from<_OuterC, bidirectional_iterator_tag> && derived_from<_InnerC, bidirectional_iterator_tag> &&
-               common_range<range_reference_t<_View>>,
-           bidirectional_iterator_tag,
-           _If< derived_from<_OuterC, forward_iterator_tag> && derived_from<_InnerC, forward_iterator_tag>,
-                forward_iterator_tag,
-                input_iterator_tag > >;
+  using iterator_category = __conditional_t<
+      derived_from<_OuterC, bidirectional_iterator_tag> && derived_from<_InnerC, bidirectional_iterator_tag> &&
+          common_range<range_reference_t<_View>>,
+      bidirectional_iterator_tag,
+      __conditional_t<derived_from<_OuterC, forward_iterator_tag> && derived_from<_InnerC, forward_iterator_tag>,
+                      forward_iterator_tag,
+                      input_iterator_tag > >;
 };
 
 template <input_range _View>
@@ -85,11 +85,12 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   static constexpr bool _UseOuterCache = !forward_range<_View>;
-  using _OuterCache                    = _If<_UseOuterCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _OuterCache = conditional_t<_UseOuterCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _OuterCache __outer_;
 
   static constexpr bool _UseInnerCache = !is_reference_v<_InnerRange>;
-  using _InnerCache = _If<_UseInnerCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
+  using _InnerCache =
+      conditional_t<_UseInnerCache, __non_propagating_cache<remove_cvref_t<_InnerRange>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _InnerCache __inner_;
 
 public:
@@ -201,7 +202,7 @@ private:
   static constexpr bool __ref_is_glvalue = is_reference_v<range_reference_t<_Base>>;
 
   static constexpr bool _OuterPresent           = forward_range<_Base>;
-  using _OuterType                              = _If<_OuterPresent, _Outer, std::__empty>;
+  using _OuterType                              = conditional_t<_OuterPresent, _Outer, std::__empty>;
   _LIBCPP_NO_UNIQUE_ADDRESS _OuterType __outer_ = _OuterType();
 
   optional<_Inner> __inner_;
@@ -258,12 +259,12 @@ private:
 
 public:
   using iterator_concept =
-      _If< __ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> &&
-               common_range<range_reference_t<_Base>>,
-           bidirectional_iterator_tag,
-           _If< __ref_is_glvalue && forward_range<_Base> && forward_range<range_reference_t<_Base>>,
-                forward_iterator_tag,
-                input_iterator_tag > >;
+      conditional_t<__ref_is_glvalue && bidirectional_range<_Base> && bidirectional_range<range_reference_t<_Base>> &&
+                        common_range<range_reference_t<_Base>>,
+                    bidirectional_iterator_tag,
+                    conditional_t<__ref_is_glvalue && forward_range<_Base> && forward_range<range_reference_t<_Base>>,
+                                  forward_iterator_tag,
+                                  input_iterator_tag>>;
 
   using value_type = range_value_t<range_reference_t<_Base>>;
 

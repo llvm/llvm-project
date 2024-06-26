@@ -605,12 +605,14 @@ private:
       return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
     }
   };
+
   template <class _Up>
-  using _CheckOptionalArgsCtor =
-      _If< _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
-               (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
-           _CheckOptionalArgsConstructor,
-           __check_tuple_constructor_fail >;
+  using _CheckOptionalArgsCtor = __conditional_t<
+      _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
+          (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
+      _CheckOptionalArgsConstructor,
+      __check_tuple_constructor_fail>;
+
   template <class _QualUp>
   struct _CheckOptionalLikeConstructor {
     template <class _Up, class _Opt = optional<_Up>>
@@ -649,14 +651,14 @@ private:
 
   template <class _Up, class _QualUp>
   using _CheckOptionalLikeCtor =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+      conditional_t<_And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
+                    _CheckOptionalLikeConstructor<_QualUp>,
+                    __check_tuple_constructor_fail >;
   template <class _Up, class _QualUp>
   using _CheckOptionalLikeAssign =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+      conditional_t<_And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
+                    _CheckOptionalLikeConstructor<_QualUp>,
+                    __check_tuple_constructor_fail >;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional() noexcept {}

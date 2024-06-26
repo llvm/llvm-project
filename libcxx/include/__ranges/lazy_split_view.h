@@ -72,7 +72,7 @@ class lazy_split_view : public view_interface<lazy_split_view<_View, _Pattern>> 
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_       = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS _Pattern __pattern_ = _Pattern();
 
-  using _MaybeCurrent = _If<!forward_range<_View>, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _MaybeCurrent = conditional_t<!forward_range<_View>, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
 
   template <bool>
@@ -149,8 +149,8 @@ private:
     using _Parent = __maybe_const<_Const, lazy_split_view>;
     using _Base   = __maybe_const<_Const, _View>;
 
-    _Parent* __parent_                                 = nullptr;
-    using _MaybeCurrent                                = _If<forward_range<_View>, iterator_t<_Base>, __empty_cache>;
+    _Parent* __parent_  = nullptr;
+    using _MaybeCurrent = conditional_t<forward_range<_View>, iterator_t<_Base>, __empty_cache>;
     _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
     bool __trailing_empty_                             = false;
 
@@ -275,9 +275,9 @@ private:
   template <forward_range _Tp>
   struct __inner_iterator_category<_Tp> {
     using iterator_category =
-        _If< derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
-             forward_iterator_tag,
-             typename iterator_traits<iterator_t<_Tp>>::iterator_category >;
+        conditional_t<derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
+                      forward_iterator_tag,
+                      typename iterator_traits<iterator_t<_Tp>>::iterator_category >;
   };
 
   template <bool _Const>
