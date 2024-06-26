@@ -35,12 +35,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
-#define DEBUG_TYPE "clang-openmp-codegen"
 
 #define TTL_CODEGEN_TYPE "target-teams-loop-codegen"
 
@@ -5264,8 +5262,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     }
     BodyGen(CGF);
   };
-  LLVM_DEBUG(llvm::dbgs() << "Inputs to emitTaskOutineFunction\n");
-  LLVM_DEBUG(llvm::dbgs() << "PartID = " << **PartId << "\n");
   llvm::Function *OutlinedFn = CGM.getOpenMPRuntime().emitTaskOutlinedFunction(
       S, *I, *PartId, *TaskT, EKind, CodeGen, /*Tied=*/true,
       Data.NumberOfParts);
