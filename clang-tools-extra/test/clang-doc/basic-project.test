@@ -139,25 +139,25 @@
 // HTML-CALC-NEXT:     <div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">add</h3>
 // HTML-CALC-NEXT:       <p>public int add(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 4 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 3 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
 // HTML-CALC-NEXT:       <p>public int subtract(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 8 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 7 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">multiply</h3>
 // HTML-CALC-NEXT:       <p>public int multiply(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 12 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 11 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
 // HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">divide</h3>
 // HTML-CALC-NEXT:       <p>public double divide(int a, int b)</p>
-// HTML-CALC-NEXT:       <p>Defined at line 16 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <p>Defined at line 15 of file {{.*}}Calculator.cpp</p>
 // HTML-CALC-NEXT:       <div>
 // HTML-CALC-NEXT:         <div></div>
 // HTML-CALC-NEXT:       </div>
