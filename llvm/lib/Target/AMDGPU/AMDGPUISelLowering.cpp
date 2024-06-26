@@ -393,7 +393,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
-  setOperationAction(ISD::FROUND, {MVT::f32, MVT::f64}, Custom);
+  setOperationAction({ISD::FROUND, ISD::LROUND, ISD::LLROUND},
+                     {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(
       {ISD::FLOG, ISD::FLOG10, ISD::FEXP, ISD::FEXP2, ISD::FEXP10}, MVT::f32,
@@ -401,7 +402,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  setOperationAction(ISD::FRINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+  setOperationAction({ISD::FRINT, ISD::LRINT, ISD::LLRINT},
+                     {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
@@ -1385,10 +1387,17 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCEIL: return LowerFCEIL(Op, DAG);
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
-  case ISD::FNEARBYINT: return LowerFNEARBYINT(Op, DAG);
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    return LowerLRINT(Op, DAG);
+  case ISD::FNEARBYINT:
+    return LowerFNEARBYINT(Op, DAG);
   case ISD::FROUNDEVEN:
     return LowerFROUNDEVEN(Op, DAG);
   case ISD::FROUND: return LowerFROUND(Op, DAG);
+  case ISD::LROUND:
+  case ISD::LLROUND:
+    return LowerLROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG2:
     return LowerFLOG2(Op, DAG);
@@ -2493,6 +2502,14 @@ SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), VT, Arg);
 }
 
+SDValue AMDGPUTargetLowering::LowerLRINT(SDValue Op, SelectionDAG &DAG) const {
+  auto ResVT = Op.getValueType();
+  auto Arg = Op.getOperand(0u);
+  auto ArgVT = Arg.getValueType();
+  SDValue RoundNode = DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), ArgVT, Arg);
+  return DAG.getNode(ISD::FP_TO_SINT, SDLoc(Op), ResVT, RoundNode);
+}
+
 // XXX - May require not supporting f32 denormals?
 
 // Don't handle v2f16. The extra instructions to scalarize and repack around the
@@ -2501,7 +2518,7 @@ SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
 SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
-  EVT VT = Op.getValueType();
+  EVT VT = X.getValueType();
 
   SDValue T = DAG.getNode(ISD::FTRUNC, SL, VT, X);
 
@@ -2523,6 +2540,13 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue SignedOffset = DAG.getNode(ISD::FCOPYSIGN, SL, VT, OneOrZeroFP, X);
   return DAG.getNode(ISD::FADD, SL, VT, T, SignedOffset);
+}
+
+SDValue AMDGPUTargetLowering::LowerLROUND(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  EVT ResVT = Op.getValueType();
+  SDValue FRoundNode = LowerFROUND(Op, DAG);
+  return DAG.getNode(ISD::FP_TO_SINT, SL, ResVT, FRoundNode);
 }
 
 SDValue AMDGPUTargetLowering::LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const {

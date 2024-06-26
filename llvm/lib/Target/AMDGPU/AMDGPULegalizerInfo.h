@@ -55,6 +55,10 @@ public:
                      MachineIRBuilder &B, bool Signed) const;
   bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
+  bool legalizeLROUND(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &B) const;
+  bool legalizeLRINT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &B) const;
   bool legalizeMinNumMaxNum(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B) const;

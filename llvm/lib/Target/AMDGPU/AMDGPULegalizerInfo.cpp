@@ -1141,6 +1141,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .lower();
 
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .customFor({{S32, S16}, {S32, S32}, {S64, S64}, {S32, S64}, {S64, S32}})
+      .clampScalar(0, S16, S64)
+      .scalarize(0)
+      .lower();
+
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
+      .customFor({{S32, S16}, {S32, S32}, {S64, S64}, {S32, S64}, {S64, S32}})
+      .clampScalar(0, S16, S64)
+      .scalarize(0)
+      .lower();
+
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(
         {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
@@ -2156,6 +2168,12 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
     return legalizeFPTruncRound(MI, B);
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+    return legalizeLROUND(MI, MRI, B);
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
+    return legalizeLRINT(MI, MRI, B);
   case TargetOpcode::G_STACKSAVE:
     return legalizeStackSave(MI, B);
   case TargetOpcode::G_GET_FPENV:
@@ -7101,6 +7119,33 @@ bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
 
   MI.eraseFromParent();
 
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeLROUND(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  auto Round = B.buildInstr(TargetOpcode::G_INTRINSIC_ROUND, {SrcTy}, {SrcReg});
+  B.buildFPTOSI(DstReg, Round);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeLRINT(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &B) const {
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  auto Round = B.buildIntrinsicRoundeven(SrcTy, SrcReg);
+  B.buildFPTOSI(DstReg, Round);
+  MI.eraseFromParent();
   return true;
 }
 

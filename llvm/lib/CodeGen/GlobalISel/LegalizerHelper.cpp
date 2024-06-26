@@ -4656,6 +4656,10 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FCEIL:
   case G_FFLOOR:
   case G_FRINT:
+  case G_INTRINSIC_LRINT:
+  case G_INTRINSIC_LLRINT:
+  case G_LROUND:
+  case G_LLROUND:
   case G_INTRINSIC_ROUND:
   case G_INTRINSIC_ROUNDEVEN:
   case G_INTRINSIC_TRUNC:
