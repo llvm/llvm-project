@@ -3111,14 +3111,14 @@ SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
   SDNode *Node = Op.getNode();
   SDLoc DL(Node);
 
-  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Op->getOperand(2));
+  SDValue Cast = DAG.getBitcast(MVT::v2i64, Op->getOperand(2));
   SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
                            DAG.getIntPtrConstant(0, DL));
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
                            DAG.getIntPtrConstant(1, DL));
 
   SmallVector<SDValue, 5> NewOps(Op->getNumOperands() + 1);
-  SmallVector<EVT, 3> ResultsType(Node->value_begin(), Node->value_end());
+  SmallVector<EVT, 3> ResultsType(Node->values());
 
   NewOps[0] = Op->getOperand(0); // Chain
   NewOps[1] = Op->getOperand(1); // Dst Reg

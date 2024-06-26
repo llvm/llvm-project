@@ -103,26 +103,20 @@ define void @test_corner_values() {
 ; CHECK-NEXT:    // end inline asm
 ; CHECK-NEXT:    ret;
 
-  %tmp = load ptr, ptr addrspace(1) @v64, align 8
-  %add.ptr2 = getelementptr inbounds i64, ptr %tmp, i64 1
-  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 -1, ptr %tmp, ptr nonnull %add.ptr2, ptr nonnull addrspacecast (ptr addrspace(1) @v_u128_max to ptr))
-  %tmp3 = load ptr, ptr addrspace(1) @v64, align 8
-  %add.ptr4 = getelementptr inbounds i64, ptr %tmp3, i64 2
-  %add.ptr6 = getelementptr inbounds i64, ptr %tmp3, i64 3
-  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 170141183460469231731687303715884105727, ptr nonnull %add.ptr4, ptr nonnull %add.ptr6, ptr nonnull addrspacecast (ptr addrspace(1) @v_i128_max to ptr))
-  %tmp7 = load ptr, ptr addrspace(1) @v64, align 8
-  %add.ptr8 = getelementptr inbounds i64, ptr %tmp7, i64 4
-  %add.ptr10 = getelementptr inbounds i64, ptr %tmp7, i64 5
-  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 -170141183460469231731687303715884105728, ptr nonnull %add.ptr8, ptr nonnull %add.ptr10, ptr nonnull addrspacecast (ptr addrspace(1) @v_i128_min to ptr))
-  %tmp11 = load ptr, ptr addrspace(1) @v64, align 8
-  %add.ptr12 = getelementptr inbounds i64, ptr %tmp11, i64 6
-  %add.ptr14 = getelementptr inbounds i64, ptr %tmp11, i64 7
-  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 0, ptr nonnull %add.ptr12, ptr nonnull %add.ptr14, ptr nonnull addrspacecast (ptr addrspace(1) @v_u128_zero to ptr))
+  %1 = load ptr, ptr addrspace(1) @v64, align 8
+  %2 = getelementptr inbounds i64, ptr %1, i64 1
+  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 -1, ptr %1, ptr nonnull %2, ptr nonnull addrspacecast (ptr addrspace(1) @v_u128_max to ptr))
+  %3 = load ptr, ptr addrspace(1) @v64, align 8
+  %4 = getelementptr inbounds i64, ptr %3, i64 2
+  %5 = getelementptr inbounds i64, ptr %3, i64 3
+  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 170141183460469231731687303715884105727, ptr nonnull %4, ptr nonnull %5, ptr nonnull addrspacecast (ptr addrspace(1) @v_i128_max to ptr))
+  %6 = load ptr, ptr addrspace(1) @v64, align 8
+  %7 = getelementptr inbounds i64, ptr %6, i64 4
+  %8 = getelementptr inbounds i64, ptr %6, i64 5
+  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 -170141183460469231731687303715884105728, ptr nonnull %7, ptr nonnull %8, ptr nonnull addrspacecast (ptr addrspace(1) @v_i128_min to ptr))
+  %9 = load ptr, ptr addrspace(1) @v64, align 8
+  %10 = getelementptr inbounds i64, ptr %9, i64 6
+  %11 = getelementptr inbounds i64, ptr %9, i64 7
+  tail call void asm sideeffect "{\0A\09.reg .b64 hi;\0A\09.reg .b64 lo;\0A\09mov.b128 {lo, hi}, $0;\0A\09st.b64 [$1], lo;\0A\09st.b64 [$2], hi;\0A\09st.b128 [$3], $0;\0A\09}", "q,l,l,l"(i128 0, ptr nonnull %10, ptr nonnull %11, ptr nonnull addrspacecast (ptr addrspace(1) @v_u128_zero to ptr))
   ret void
 }
-
-
-!nvvmir.version = !{!2, !3, !2, !3, !3, !2, !2, !2, !3}
-
-!2 = !{i32 2, i32 0, i32 3, i32 1}
-!3 = !{i32 2, i32 0}
