@@ -227,19 +227,19 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
   OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
   for (const Record *Rec : Extensions) {
     unsigned GroupIDVal = Rec->getValueAsInt("GroupID");
-    unsigned BitmaskVal = Rec->getValueAsInt("Bitmask");
+    unsigned BitPosVal = Rec->getValueAsInt("BitPos");
 
     StringRef ExtName = Rec->getValueAsString("Name");
     ExtName.consume_front("experimental-");
 
 #ifndef NDEBUG
-    assert(Seen.insert(std::make_pair(GroupIDVal, BitmaskVal)).second &&
+    assert(Seen.insert(std::make_pair(GroupIDVal, BitPosVal)).second &&
            "duplicated bitmask");
 #endif
 
     OS << "    {"
        << "\"" << ExtName << "\""
-       << ", " << GroupIDVal << ", " << BitmaskVal << "ULL"
+       << ", " << GroupIDVal << ", " << BitPosVal << "ULL"
        << "},\n";
   }
   OS << "};\n";
