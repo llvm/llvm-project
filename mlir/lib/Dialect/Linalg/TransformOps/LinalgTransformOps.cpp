@@ -3489,17 +3489,21 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  auto maybeTransformed =
-      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
-          .Case([&](linalg::Conv2DNhwcFhwcOp op) {
-            return winogradConv2D(rewriter, op, getM(), getR());
-          })
-          .Default([&](Operation *op) {
-            return rewriter.notifyMatchFailure(op, "not supported");
-          });
+  FailureOr<Operation *> maybeTransformed = failure();
+  bool supported = TypeSwitch<Operation *, bool>(target)
+                       .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+                         maybeTransformed =
+                             winogradConv2D(rewriter, op, getM(), getR());
+                         return true;
+                       })
+                       .Default([&](Operation *op) {
+                         op->emitError("not supported");
+                         return false;
+                       });
 
-  if (failed(maybeTransformed))
-    return emitDefaultSilenceableFailure(target);
+  if (supported && failed(maybeTransformed)) {
+    return emitSilenceableError() << "apply Winograd Conv2D failed";
+  }
 
   results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();

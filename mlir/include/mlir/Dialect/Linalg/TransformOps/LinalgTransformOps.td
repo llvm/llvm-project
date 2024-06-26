@@ -2597,7 +2597,7 @@ def WinogradConv2DOp : Op<Transform_Dialect,
      TransformOpInterface, TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Winograd Conv2D algorithm will convert linalg Conv2D operator into batched
+    Winograd Conv2D algorithm will convert linalg Conv2D operation into batched
     matrix multiply. Before the matrix multiply, it will convert filter and
     input into a format suitable for batched matrix multiply. After the matrix
     multiply, it will convert output to the final result tensor.
@@ -2612,9 +2612,9 @@ def WinogradConv2DOp : Op<Transform_Dialect,
 
     #### Return modes:
 
-    This operation fails if `target` is unsupported. Otherwise, the operation
-    succeeds and returns a handle of the sequence that replaces the original
-    convolution.
+    This operation produces a silenceable failure if `target` is unsupported.
+    Otherwise, the operation succeeds and returns a handle of the sequence that
+    replaces the original convolution.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
