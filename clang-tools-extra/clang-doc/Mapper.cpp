@@ -17,6 +17,11 @@
 namespace clang {
 namespace doc {
 
+
+static std::unordered_set<std::string> USRVisited;
+
+static llvm::sys::Mutex USRVisitedGuard;
+
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
@@ -34,12 +39,28 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
     return true;
+
+  // Prevent Visiting USR twice
+  {
+    std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
+    std::string Visited = USR.str().str();
+    if (USRVisited.count(Visited)) {
+      return true;
+    }
+    USRVisited.insert(Visited);
+  }
+
   bool IsFileInRootDir;
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
                                getLine(D, D->getASTContext()), File,
                                IsFileInRootDir, CDCtx.PublicOnly);
+
+  // Bitcode
+  if (CDCtx.NoBitcode) {
+    return true;
+  }
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).

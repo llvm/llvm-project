@@ -18,12 +18,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "BitcodeWriter.h"
 #include "ClangDoc.h"
 #include "Generators.h"
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Driver/Options.h"
@@ -31,14 +28,11 @@
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
@@ -70,6 +64,11 @@ static llvm::cl::opt<std::string>
     OutDirectory("output",
                  llvm::cl::desc("Directory for outputting generated files."),
                  llvm::cl::init("docs"), llvm::cl::cat(ClangDocCategory));
+
+static llvm::cl::opt<bool> NoBitcode(
+     "nobitcode",
+     llvm::cl::desc("Do not emit bitcode for faster processing time"),
+     llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<bool>
     PublicOnly("public", llvm::cl::desc("Document only public declarations."),
@@ -267,6 +266,7 @@ Example usage for a project using a compile commands database:
       Executor->get()->getExecutionContext(),
       ProjectName,
       PublicOnly,
+      NoBitcode,
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
@@ -313,6 +313,7 @@ Example usage for a project using a compile commands database:
 
   // First reducing phase (reduce all decls into one info per decl).
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
+
   std::atomic<bool> Error;
   Error = false;
   llvm::sys::Mutex IndexMutex;
