@@ -611,24 +611,21 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                        COFF::IMAGE_SCN_MEM_READ));
 
   DwarfAbbrevSection = Ctx->getCOFFSection(
-      ".debug_abbrev",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_abbrev");
+      ".debug_abbrev", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                           COFF::IMAGE_SCN_MEM_READ);
   DwarfInfoSection = Ctx->getCOFFSection(
-      ".debug_info",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_info");
+      ".debug_info", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                         COFF::IMAGE_SCN_MEM_READ);
   DwarfLineSection = Ctx->getCOFFSection(
       ".debug_line", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                          COFF::IMAGE_SCN_MEM_READ);
   DwarfLineStrSection = Ctx->getCOFFSection(
-      ".debug_line_str",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "section_line_str");
+      ".debug_line_str", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                             COFF::IMAGE_SCN_MEM_READ);
   DwarfFrameSection = Ctx->getCOFFSection(
       ".debug_frame", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -738,19 +735,17 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                           COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                           COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelNamesSection = Ctx->getCOFFSection(
-      ".apple_names",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "names_begin");
+      ".apple_names", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                          COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelNamespaceSection = Ctx->getCOFFSection(
       ".apple_namespaces", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                                COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelTypesSection = Ctx->getCOFFSection(
-      ".apple_types",
-      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-          COFF::IMAGE_SCN_MEM_READ,
-      "types_begin");
+      ".apple_types", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                          COFF::IMAGE_SCN_MEM_READ);
   DwarfAccelObjCSection = Ctx->getCOFFSection(
       ".apple_objc", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
