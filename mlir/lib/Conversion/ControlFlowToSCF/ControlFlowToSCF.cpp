@@ -165,12 +165,14 @@ struct LiftControlFlowToSCF
 
     bool changed = false;
     Operation *op = getOperation();
-    WalkResult result = op->walk([&](func::FuncOp funcOp) {
-      if (funcOp.getBody().empty())
+    WalkResult result = op->walk([&](Region *region) {
+      if (region->empty())
         return WalkResult::advance();
 
-      auto &domInfo = funcOp != op ? getChildAnalysis<DominanceInfo>(funcOp)
-                                   : getAnalysis<DominanceInfo>();
+      Operation *regionParent = region->getParentOp();
+      auto &domInfo = regionParent != op
+                          ? getChildAnalysis<DominanceInfo>(regionParent)
+                          : getAnalysis<DominanceInfo>();
 
       auto visitor = [&](Operation *innerOp) -> WalkResult {
         for (Region &reg : innerOp->getRegions()) {
@@ -184,7 +186,7 @@ struct LiftControlFlowToSCF
         return WalkResult::advance();
       };
 
-      if (funcOp->walk<WalkOrder::PostOrder>(visitor).wasInterrupted())
+      if (region->walk<WalkOrder::PostOrder>(visitor).wasInterrupted())
         return WalkResult::interrupt();
 
       return WalkResult::advance();

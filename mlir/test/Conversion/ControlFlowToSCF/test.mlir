@@ -756,3 +756,27 @@ func.func @nested_region_outside_loop_use() {
 
 // CHECK: scf.execute_region
 // CHECK-NEXT: "test.foo"(%[[RES]])
+
+// -----
+
+"test.test5" () ({
+  %cond = "test.test1"() : () -> i1
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  "test.test2"() : () -> ()
+  cf.br ^bb3
+^bb2:
+  "test.test3"() : () -> ()
+  cf.br ^bb3
+^bb3:
+  "test.test4"() : () -> ()
+}) : () -> ()
+
+// CHECK-LABEL: test.test5
+// CHECK:         %[[COND:.*]] = "test.test1"
+// CHECK-NEXT:    scf.if %[[COND]]
+// CHECK-NEXT:      "test.test2"
+// CHECK-NEXT:    else
+// CHECK-NEXT:      "test.test3"
+// CHECK-NEXT:    }
+// CHECK-NEXT:    "test.test4"
