@@ -273,7 +273,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_nop 0
 ; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 syncscope("agent") monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -1075,7 +1075,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:  .LBB1_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -1337,7 +1337,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_one_as_scope
 ; GFX1132-DPP-NEXT:    s_nop 0
 ; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") monotonic
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -2140,7 +2140,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:  .LBB3_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -2403,7 +2403,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_default_scop
 ; GFX1132-DPP-NEXT:    s_nop 0
 ; GFX1132-DPP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float 4.0 monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -3205,7 +3205,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_div_value_default_scop
 ; GFX1132-DPP-NEXT:  .LBB5_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, float %divValue monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -4069,7 +4069,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_agent
 ; GFX1132-DPP-NEXT:  .LBB6_3:
 ; GFX1132-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -5474,7 +5474,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.double.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -5810,7 +5810,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_one_a
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB8_2
 ; GFX1132-DPP-NEXT:  .LBB8_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") monotonic
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -6772,7 +6772,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_one_a
 ; GFX1132-DPP-NEXT:  .LBB9_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.double.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue syncscope("one-as") monotonic
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -7636,7 +7636,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_uni_value_defau
 ; GFX1132-DPP-NEXT:  .LBB10_3:
 ; GFX1132-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double 4.0 monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -9041,7 +9041,7 @@ define amdgpu_kernel void @global_atomic_fmax_double_uni_address_div_value_defau
 ; GFX1132-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.double.value()
-  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue monotonic, align 4
+  %result = atomicrmw fmax ptr addrspace(1) %ptr, double %divValue monotonic, align 4, !amdgpu.no.fine.grained.memory !1
   ret void
 }
 
@@ -9569,7 +9569,7 @@ define amdgpu_kernel void @global_atomic_fmax_uni_address_uni_value_system_scope
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
+attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
