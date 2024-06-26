@@ -1,4 +1,4 @@
-//===-- Implementation of the cos function for x86_64 ---------------------===//
+//===-- Implementation header for f16divf -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/cos.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_F16DIVF_H
+#define LLVM_LIBC_SRC_MATH_F16DIVF_H
+
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(double, cos, (double x)) {
-  __asm__ __volatile__("fcos" : "+t"(x));
-  return x;
-}
+float16 f16divf(float x, float y);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_F16DIVF_H

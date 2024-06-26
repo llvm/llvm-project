@@ -5430,6 +5430,7 @@ bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
   return true;
 }
 
+// TODO: Fix pointer type handling
 bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                                          MachineInstr &MI,
                                          Intrinsic::ID IID) const {
