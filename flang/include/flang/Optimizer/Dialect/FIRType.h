@@ -487,10 +487,9 @@ std::string getTypeAsString(mlir::Type ty, const KindMapping &kindMap,
 /// target dependent type size inquiries in lowering. It would also not be
 /// straightforward given the need for a kind map that would need to be
 /// converted in terms of mlir::DataLayoutEntryKey.
-std::pair<std::uint64_t, unsigned short>
-getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
-                        const mlir::DataLayout &dl,
-                        const fir::KindMapping &kindMap);
+std::pair<std::uint64_t, unsigned short> getTypeSizeAndAlignment(
+    mlir::Location loc, mlir::Type ty, const mlir::DataLayout &dl,
+    const fir::KindMapping &kindMap, bool *success = nullptr);
 
 } // namespace fir
 

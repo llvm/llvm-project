@@ -16,6 +16,7 @@
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -44,8 +45,9 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
   return 0;
 }
 
-DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
-    : module(m), kindMapping(getKindMapping(m)) {
+DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
+                                       mlir::SymbolTable *symbolTable_)
+    : module(m), symbolTable(symbolTable_), kindMapping(getKindMapping(m)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   std::optional<mlir::DataLayout> dl =
@@ -152,6 +154,58 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
       dataLocation, /*rank=*/nullptr, allocated, associated);
+}
+
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
+    fir::RecordType Ty, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
+  mlir::MLIRContext *context = module.getContext();
+  auto result = fir::NameUniquer::deconstruct(Ty.getName());
+  if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
+    return genPlaceholderType(context);
+
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/true);
+  if (!dl) {
+    mlir::emitError(module.getLoc(), "Missing data layout attribute in module");
+    return genPlaceholderType(context);
+  }
+  unsigned line = 1;
+  mlir::LLVM::DITypeAttr parentTypeAttr = nullptr;
+  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
+  if (tiOp) {
+    line = getLineFromLoc(tiOp.getLoc());
+    if (fir::RecordType parentTy = tiOp.getIfParentType())
+      parentTypeAttr =
+          convertRecordType(parentTy, fileAttr, scope, tiOp.getLoc());
+  }
+
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
+  std::uint64_t offset = 0;
+  for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
+    bool success = true;
+    auto [byteSize, byteAlign] =
+        fir::getTypeSizeAndAlignment(loc, fieldTy, *dl, kindMapping, &success);
+    if (!success)
+      return genPlaceholderType(context);
+
+    mlir::LLVM::DITypeAttr elemTy = convertType(fieldTy, fileAttr, scope, loc);
+    offset = llvm::alignTo(offset, byteAlign);
+    mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
+        context, llvm::dwarf::DW_TAG_member,
+        mlir::StringAttr::get(context, fieldName), elemTy, byteSize * 8,
+        byteAlign * 8, offset * 8, /*optional<address space>=*/std::nullopt,
+        /*extra data=*/nullptr);
+    elements.push_back(tyAttr);
+    offset += llvm::alignTo(byteSize, byteAlign);
+  }
+
+  return mlir::LLVM::DICompositeTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_structure_type, /*recursive_id=*/{},
+      mlir::StringAttr::get(context, result.second.name), fileAttr, line, scope,
+      parentTypeAttr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
+      /*allocated=*/nullptr, /*associated=*/nullptr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
@@ -312,6 +366,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
+  } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
+    return convertRecordType(recTy, fileAttr, scope, loc);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))

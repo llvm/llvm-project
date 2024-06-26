@@ -72,13 +72,6 @@ private:
                     mlir::SymbolTable *symbolTable);
 };
 
-static uint32_t getLineFromLoc(mlir::Location loc) {
-  uint32_t line = 1;
-  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
-    line = fileLoc.getLine();
-  return line;
-}
-
 bool debugInfoIsAlreadySet(mlir::Location loc) {
   if (mlir::isa<mlir::FusedLoc>(loc)) {
     if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
@@ -166,11 +159,17 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
     return;
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
-  fir::DebugTypeGenerator typeGen(module);
+  fir::DebugTypeGenerator typeGen(module, symbolTable);
   mlir::OpBuilder builder(context);
 
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+    return;
+
+  // Discard entries that describe a derived type. Usually start with '.c.',
+  // '.dt.' or '.n.'. It would be better if result of the deconstruct had a flag
+  // for such values so that we dont have to look at string values.
+  if (!result.second.name.empty() && result.second.name[0] == '.')
     return;
 
   unsigned line = getLineFromLoc(globalOp.getLoc());
@@ -245,7 +244,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcName = mlir::StringAttr::get(context, result.second.name);
 
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
-  fir::DebugTypeGenerator typeGen(module);
+  fir::DebugTypeGenerator typeGen(module, symbolTable);
   for (auto resTy : funcOp.getResultTypes()) {
     auto tyAttr =
         typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
