@@ -157,6 +157,13 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+- Clang implemented improvements to BMI of C++20 Modules that can reduce
+  the number of rebuilds during incremental recompilation. We are seeking
+  feedback from Build System authors and other interested users, especially
+  when you feel Clang changes the BMI and missses an opportunity to avoid
+  recompilations or causes correctness issues. See StandardCPlusPlusModules
+  `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for more details.
+
 - The ``\par`` documentation comment command now supports an optional
   argument, which denotes the header of the paragraph started by
   an instance of the ``\par`` command comment. The implementation
@@ -228,10 +235,6 @@ C++20 Feature Support
   (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
   will now work.
   (#GH62925).
-
-- Clang refactored the BMI format to make it possible to support no transitive changes
-  mode for modules. See `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for
-  details.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

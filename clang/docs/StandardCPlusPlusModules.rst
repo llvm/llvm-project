@@ -655,8 +655,16 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
 Experimental No Transitive Change
 ---------------------------------
 
-Starting with clang19.x, we introduced an experimental feature: the non-transitive
-change for modules, aimed at reducing unnecessary recompilations. For example,
+This section is primarily for build system vendors. For end compiler users,
+if you don't want to read it all, this is helpful to reduce recompilations
+We encourage build system vendors and end users try this out and bring feedbacks
+
+Before Clang 19, a change in BMI of any (transitive) dependency would case the
+outputs of the BMI to change. Starting with Clang 19, changes to non-direct
+dependencies should not directly affect the output BMI, unless they affect the
+results of the compilations. We expect that there are many more opportunities
+for this optimization than we currently have realized and would appreaciate 
+feedback about missed optimization opportunities. For example,
 
 .. code-block:: c++
 
@@ -685,7 +693,7 @@ change for modules, aimed at reducing unnecessary recompilations. For example,
     return B();
   }
 
-Now let's compile the project (For brevity, some commands are omitted.):
+To compile the project (for brevity, some commands are omitted.):
 
 .. code-block:: console
 
@@ -696,7 +704,7 @@ Now let's compile the project (For brevity, some commands are omitted.):
   $ md5sum useBOnly.pcm
   07656bf4a6908626795729295f9608da  useBOnly.pcm
 
-then let's change the interface of ``m-partA.cppm`` to:
+If the interface of ``m-partA.cppm`` is changed to:
 
 .. code-block:: c++
 
@@ -704,7 +712,7 @@ then let's change the interface of ``m-partA.cppm`` to:
   export module m:partA;
   export int getA() { return 43; }
 
-Let's compile the BMI for `useBOnly` again:
+and the BMI for ``useBOnly`` is recompiled as in:
 
 .. code-block:: console
 
@@ -715,32 +723,27 @@ Let's compile the BMI for `useBOnly` again:
   $ md5sum useBOnly.pcm
   07656bf4a6908626795729295f9608da  useBOnly.pcm
 
-We observed that the contents of useBOnly.pcm remain unchanged.
-Consequently, if the build system bases recompilation decisions on directly imported modules only,
-it becomes possible to skip the recompilation of Use.cc.
-It should be fine because the altered interfaces do not affect Use.cc in any way.
-This concept is called as no transitive changes.
+then the contents of ``useBOnly.pcm`` remain unchanged.
+Consequently, if the build system only bases recompilation decisions on directly imported modules,
+it becomes possible to skip the recompilation of ``Use.cc``.
+It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
+there are no transitive changes.
 
 When clang generates a BMI, it records the hash values of all potentially contributory BMIs
-into the currently written BMI. This ensures that build systems are not required to consider
-transitively imported modules when deciding on recompilations.
+for the BMI being produced. This ensures that build systems are not required to consider
+transitively imported modules when deciding whether to recompile.
 
-The definition for potential contributory BMIs is implementation defined. We don't intend to
-display detailed rules for users. The contract is:
+What is considered to be a potential contributory BMIs is currently unspecified.
+However, it is a severe bug for a BMI to remain unchanged following an observable change
+that affects its consumers.
 
-1. It is a severe bug if a BMI remains unchanged erroneously following an observable change
-   that affects its users.
-2. It is an potential improvement opportunity if a BMI changes after an unobservable change
-   happens.
-
-We suggest build systems to support this feature as a configurable option for a long time.
-So that users can go back to the transitive change mode safely at any time.
+We recommend that build systems support this feature as a configurable option so that users
+can go back to the transitive change mode safely at any time.
 
 Interactions with Reduced BMI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With reduced BMI, the no transitive change feature can be more powerful if the change
-can be reduced. For example,
+With reduced BMI, the no transitive change feature can be more powerful. For example,
 
 .. code-block:: c++
 
@@ -779,6 +782,10 @@ and recompile the example:
 
 We should find the contents of ``B.pcm`` keeps the same. In such case, the build system is
 allowed to skip recompilations of TUs which solely and directly dependent on module B.
+
+This only happens with reduced BMI. Since with reduced BMI, we won't record the function body
+of ``int b()`` in the BMI for ``B`` so that the module A doesn't contribute to the BMI of ``B``
+and we have less dependencies.
 
 Performance Tips
 ----------------
