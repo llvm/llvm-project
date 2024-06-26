@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 
-#include "src/__support/macros/optimization.h" // For LIBC_LIKELY
+#include "src/__support/macros/optimization.h" // LIBC_LIKELY
 
 // Plaform specific routines, provides:
 // - OnceFlag definition
