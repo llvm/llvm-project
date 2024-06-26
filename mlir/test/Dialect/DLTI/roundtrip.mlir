@@ -58,16 +58,16 @@
 // CHECK: module attributes {
 // CHECK: dlti.target_system_spec = #dlti.target_system_spec<
 // CHECK:  "CPU" : #dlti.target_device_spec<
-// CHECK:   #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", "4096">>,
+// CHECK:   #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096 : ui32>>,
 // CHECK: "GPU" : #dlti.target_device_spec<
-// CHECK:   #dlti.dl_entry<"dlti.max_vector_op_width", "128">>
+// CHECK:   #dlti.dl_entry<"dlti.max_vector_op_width", 128 : ui32>>
 // CHECK: >} {
 // CHECK: }
 module attributes {
   dlti.target_system_spec = #dlti.target_system_spec<
     "CPU": #dlti.target_device_spec<
-      #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", "4096">>,
+      #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096 : ui32>>,
     "GPU": #dlti.target_device_spec<
-      #dlti.dl_entry<"dlti.max_vector_op_width", "128">>
+      #dlti.dl_entry<"dlti.max_vector_op_width", 128 : ui32>>
   >} {}
  

@@ -113,7 +113,7 @@ module attributes {
   // expected-error@+2 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
   dlti.target_system_spec = #dlti.target_system_spec<
     : #dlti.target_device_spec<
-      #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">>
+      #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
   >} {}
 
 // -----
@@ -126,7 +126,7 @@ module attributes {
   // expected-error@+2 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
   dlti.target_system_spec = #dlti.target_system_spec<
     0: #dlti.target_device_spec<
-        #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">>
+        #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : i32>>
   >} {}
 
 // -----
@@ -137,9 +137,9 @@ module attributes {
   // expected-error@below {{repeated Device ID in dlti.target_system_spec: "CPU"}}
   dlti.target_system_spec = #dlti.target_system_spec<
     "CPU": #dlti.target_device_spec<
-            #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">>,
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>>,
     "CPU": #dlti.target_device_spec<
-            #dlti.dl_entry<"L1_cache_size_in_bytes", "8192">>
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 8192>>
   >} {}
 
 // -----
@@ -152,6 +152,6 @@ module attributes {
   // expected-error@+5 {{failed to parse DLTI_TargetSystemSpecAttr parameter 'entries' which is to be a `::llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>`}}
   dlti.target_system_spec = #dlti.target_system_spec<
     "CPU": #dlti.target_device_spec<
-            #dlti.dl_entry<"L1_cache_size_in_bytes", "4096">,
-            #dlti.dl_entry<"L1_cache_size_in_bytes", "8192">>
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 4096>,
+            #dlti.dl_entry<"L1_cache_size_in_bytes", 8192>>
   >} {}
