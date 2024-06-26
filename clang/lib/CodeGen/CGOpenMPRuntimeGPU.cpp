@@ -1673,6 +1673,19 @@ void CGOpenMPRuntimeGPU::emitReduction(
     return;
   }
 
+  llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> VarFieldMap;
+  llvm::SmallVector<const ValueDecl *, 4> PrivatesReductions(Privates.size());
+  int Cnt = 0;
+  for (const Expr *DRE : Privates) {
+    PrivatesReductions[Cnt] = cast<DeclRefExpr>(DRE)->getDecl();
+    ++Cnt;
+  }
+  const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
+      CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap, 1);
+
+  if (TeamsReduction)
+    TeamsReductions.push_back(ReductionRec);
+
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
 

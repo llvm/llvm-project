@@ -2876,7 +2876,7 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
     Value *BufferVD =
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferArgVal, Idxs);
     Value *GlobVal = Builder.CreateConstInBoundsGEP2_32(
-        ReductionsBufferTy, BufferVD, 0, En.index(), "sum");
+        ReductionsBufferTy, BufferVD, 0, En.index());
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
@@ -2987,7 +2987,7 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
     // Global = Buffer.VD[Idx];
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
-        ReductionsBufferTy, BufferVD, 0, En.index(), "sum");
+        ReductionsBufferTy, BufferVD, 0, En.index());
     Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
   }
 
@@ -3066,7 +3066,7 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
     Value *BufferVD =
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
-        ReductionsBufferTy, BufferVD, 0, En.index(), "sum");
+        ReductionsBufferTy, BufferVD, 0, En.index());
 
     switch (RI.EvaluationKind) {
     case EvalKind::Scalar: {
@@ -3178,7 +3178,7 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
     Value *BufferVD =
         Builder.CreateInBoundsGEP(ReductionsBufferTy, BufferVal, Idxs);
     Value *GlobValPtr = Builder.CreateConstInBoundsGEP2_32(
-        ReductionsBufferTy, BufferVD, 0, En.index(), "sum");
+        ReductionsBufferTy, BufferVD, 0, En.index());
     Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
   }
 
