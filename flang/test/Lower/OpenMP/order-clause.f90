@@ -73,4 +73,4 @@ subroutine distribute_order
    !$omp teams distribute order(unconstrained:concurrent)
    do i = 1, 10
    end do
-  end subroutine
+end subroutine
