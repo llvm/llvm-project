@@ -1,10 +1,11 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios5.0.0"
 
 define void @selects_1(ptr nocapture %dst, i32 %A, i32 %B, i32 %C, i32 %N) {
+; CHECK: LV: Checking a loop in 'selects_1'
 ; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
 ; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
 ; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
@@ -12,6 +13,7 @@ define void @selects_1(ptr nocapture %dst, i32 %A, i32 %B, i32 %C, i32 %N) {
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond = select i1 %cmp1, i32 10, i32 %and
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond6 = select i1 %cmp2, i32 30, i32 %and
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %cond11 = select i1 %cmp7, i32 %cond, i32 %cond6
+; CHECK: LV: Selecting VF: 4
 
 entry:
   %cmp26 = icmp sgt i32 %N, 0
@@ -45,9 +47,11 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 }
 
 define i32 @multi_user_cmp(ptr readonly %a, i32 noundef %n) {
+; CHECK: LV: Checking a loop in 'multi_user_cmp'
 ; CHECK: LV: Found an estimated cost of 4 for VF 16 For instruction:   %cmp1 = fcmp olt float %load1, 0.000000e+00
 ; CHECK: LV: Found an estimated cost of 1 for VF 16 For instruction:   %.any.0.off0 = select i1 %cmp1, i1 true, i1 %any.0.off09
 ; CHECK: LV: Found an estimated cost of 1 for VF 16 For instruction:   %all.0.off0. = select i1 %cmp1, i1 %all.0.off010, i1 false
+; CHECK: LV: Selecting VF: 16.
 entry:
   %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
@@ -70,11 +74,3 @@ exit:
   %1 = select i1 %all.0.off0., i32 1, i32 %0
   ret i32 %1
 }
-
-; CHECK-LABEL: define void @selects_1(
-; CHECK:       vector.body:
-; CHECK:         select <4 x i1>
-
-; CHECK-LABEL: define i32 @multi_user_cmp(
-; CHECK:       vector.body:
-; CHECK:         %index = phi i64
