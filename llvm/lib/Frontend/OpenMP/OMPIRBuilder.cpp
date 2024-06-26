@@ -3248,16 +3248,8 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
     return false;
   };
 
-  while (true) {
-    bool Changed = false;
-    for (BasicBlock *BB : make_early_inc_range(BBsToErase)) {
-      if (HasRemainingUses(BB)) {
-        BBsToErase.erase(BB);
-        Changed = true;
-      }
-    }
-    if (!Changed)
-      break;
+  while (BBsToErase.remove_if(HasRemainingUses)) {
+    // Try again if anything was removed.
   }
 
   SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
