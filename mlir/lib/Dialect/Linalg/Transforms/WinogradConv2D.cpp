@@ -27,18 +27,18 @@ namespace linalg {
 
 namespace {
 
-// clang-format off
-// Winograd Conv2D uses a minimal 2D filtering algorithm to calculate its
-// result. The formula of minimal 2D filtering algorithm F(m x m, r x r),
-// m is the output dimension and r is the filter dimension, is
-//
-// Y = A^T x [ (G x g x G^T) x (B^T x d x B) ] x A
-//
-// g is filter and d is input data. We need to prepare 6 constant
-// transformation matrices, G, G^T, B^T, B, A^T, and A for this formula.
-//
-// The following tables define these constant transformation matrices for
-// F(2 x 2, 3 x 3), F(4 x 4, 3 x 3), and F(2 x 2, 5 x 5)
+/// clang-format off
+/// Winograd Conv2D uses a minimal 2D filtering algorithm to calculate its
+/// result. The formula of minimal 2D filtering algorithm F(m x m, r x r),
+/// m is the output dimension and r is the filter dimension, is
+///
+/// Y = A^T x [ (G x g x G^T) x (B^T x d x B) ] x A
+///
+/// g is filter and d is input data. We need to prepare 6 constant
+/// transformation matrices, G, G^T, B^T, B, A^T, and A for this formula.
+///
+/// The following tables define these constant transformation matrices for
+/// F(2 x 2, 3 x 3), F(4 x 4, 3 x 3), and F(2 x 2, 5 x 5)
 constexpr float G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
@@ -190,6 +190,7 @@ constexpr TransformMapKeyTy F_2_3{2, 3};
 constexpr TransformMapKeyTy F_4_3{4, 3};
 constexpr TransformMapKeyTy F_2_5{2, 5};
 
+/// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
   TransformMatrix(const float *table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
@@ -201,18 +202,20 @@ struct TransformMatrix {
   int64_t scalarFactor;
 };
 
-Value create2DTransformMatrix(RewriterBase &rewriter, Location loc,
+/// Utility function to convert constant array to arith.constant Value.
+Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform, Type type) {
-  ArrayRef<float> const_vec(transform.table, transform.rows * transform.cols);
+  ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
 
-  return rewriter.create<arith::ConstantOp>(
+  return builder.create<arith::ConstantOp>(
       loc, DenseFPElementsAttr::get(
                RankedTensorType::get(
                    SmallVector<int64_t>{transform.rows, transform.cols}, type),
-               const_vec));
+               constVec));
 }
 
-Value extract2DData(RewriterBase &rewriter, Location loc, Value source,
+/// Extract height x width data from 4D or 6D tensors.
+Value extract2DData(OpBuilder &builder, Location loc, Value source,
                     Value outLoopIndex, Value inLoopIndex, int64_t outLoopIdx,
                     int64_t inLoopIdx, int64_t heightIdx, int64_t widthIdx,
                     int64_t srcSize) {
@@ -222,84 +225,72 @@ Value extract2DData(RewriterBase &rewriter, Location loc, Value source,
   int64_t height = sourceShape[heightIdx];
   int64_t width = sourceShape[widthIdx];
 
-  auto zeroIndex = rewriter.getIndexAttr(0);
-  auto oneIndex = rewriter.getIndexAttr(1);
+  auto zeroIndex = builder.getIndexAttr(0);
+  auto oneIndex = builder.getIndexAttr(1);
   SmallVector<OpFoldResult, 6> offsets(srcSize, zeroIndex);
   offsets[outLoopIdx] = outLoopIndex;
   offsets[inLoopIdx] = inLoopIndex;
   SmallVector<OpFoldResult, 6> sizes(srcSize, oneIndex);
-  sizes[heightIdx] = rewriter.getIndexAttr(height);
-  sizes[widthIdx] = rewriter.getIndexAttr(width);
+  sizes[heightIdx] = builder.getIndexAttr(height);
+  sizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult, 6> strides(srcSize, oneIndex);
   SmallVector<int64_t> targetShape(srcSize, 1);
   targetShape[heightIdx] = height;
   targetShape[widthIdx] = width;
 
   auto targetType = RankedTensorType::get(targetShape, elementType);
-  auto extractFilterOp = rewriter.create<tensor::ExtractSliceOp>(
+  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
       loc, targetType, source, offsets, sizes, strides);
 
   auto extractFilterType = RankedTensorType::get({height, width}, elementType);
   auto extractFilter = tensor::createCanonicalRankReducingExtractSliceOp(
-      rewriter, loc, extractFilterOp, extractFilterType);
+      builder, loc, extractFilterOp, extractFilterType);
 
   return extractFilter;
 }
 
-Value insert2DData(RewriterBase &rewriter, Location loc, Value source,
-                   Value dest, Value outLoopIndex, Value inLoopIndex,
-                   int64_t height, int64_t width, int64_t outLoopIdx,
-                   int64_t inLoopIdx, int64_t heightIdx, int64_t widthIdx,
-                   int64_t destSize) {
+/// Insert transformed height x width data to 4D or 6D tensors which it is
+/// extracted from.
+Value insert2DData(OpBuilder &builder, Location loc, Value source, Value dest,
+                   Value outLoopIndex, Value inLoopIndex, int64_t height,
+                   int64_t width, int64_t outLoopIdx, int64_t inLoopIdx,
+                   int64_t heightIdx, int64_t widthIdx, int64_t destSize) {
   auto sourceType = cast<ShapedType>(source.getType());
   Type elementType = sourceType.getElementType();
   SmallVector<int64_t> sliceShape(destSize, 1);
   sliceShape[heightIdx] = height;
   sliceShape[widthIdx] = width;
-  auto init = rewriter.create<tensor::EmptyOp>(loc, sliceShape, elementType);
-  auto result = tensor::createCanonicalRankReducingInsertSliceOp(rewriter, loc,
+  auto init = builder.create<tensor::EmptyOp>(loc, sliceShape, elementType);
+  auto result = tensor::createCanonicalRankReducingInsertSliceOp(builder, loc,
                                                                  source, init);
 
-  auto zeroIndex = rewriter.getIndexAttr(0);
-  auto oneIndex = rewriter.getIndexAttr(1);
+  auto zeroIndex = builder.getIndexAttr(0);
+  auto oneIndex = builder.getIndexAttr(1);
   SmallVector<OpFoldResult, 6> retOffsets(destSize, zeroIndex);
   retOffsets[outLoopIdx] = outLoopIndex;
   retOffsets[inLoopIdx] = inLoopIndex;
   SmallVector<OpFoldResult, 6> retSizes(destSize, oneIndex);
-  retSizes[heightIdx] = rewriter.getIndexAttr(height);
-  retSizes[widthIdx] = rewriter.getIndexAttr(width);
+  retSizes[heightIdx] = builder.getIndexAttr(height);
+  retSizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult, 6> strides(destSize, oneIndex);
 
-  auto insertSliceOp = rewriter.create<tensor::InsertSliceOp>(
+  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
       loc, result, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
 }
 
-Value collapse2DData(RewriterBase &rewriter, Location loc, Value data) {
-  auto type = cast<ShapedType>(data.getType());
-  auto elementType = type.getElementType();
-  auto shape = type.getShape();
-  auto collapseType = RankedTensorType::get(
-      {shape[0] * shape[1] * shape[2] * shape[3], shape[4], shape[5]},
-      elementType);
-  SmallVector<ReassociationIndices> reassociation = {{0, 1, 2, 3}, {4}, {5}};
-  return rewriter.create<tensor::CollapseShapeOp>(loc, collapseType, data,
-                                                  reassociation);
-}
-
-// This function transforms the filter. The data layout of the filter is FHWC.
-// The transformation matrix is 2-dimension. We need to extract H x W from
-// FHWC first. We need to generate 2 levels of loops to iterate on F and C.
-// After the transformation, we get
-//
-// scf.for %f = lo_f to hi_f step 1
-//   scf.for %c = lo_c to hi_c step 1
-//     %extracted = extract filter<h x w> from filter<f x h x w x c>
-//     %ret = linalg.matmul G, %extracted
-//     %ret = linalg.matmul %ret, GT
-//     %inserted = insert %ret into filter<tile_h x tile_w x h x w x c x f>
-//
+/// This function transforms the filter. The data layout of the filter is FHWC.
+/// The transformation matrix is 2-dimension. We need to extract H x W from
+/// FHWC first. We need to generate 2 levels of loops to iterate on F and C.
+/// After the transformation, we get
+///
+/// scf.for %f = lo_f to hi_f step 1
+///   scf.for %c = lo_c to hi_c step 1
+///     %extracted = extract filter<h x w> from filter<f x h x w x c>
+///     %ret = linalg.matmul G, %extracted
+///     %ret = linalg.matmul %ret, GT
+///     %inserted = insert %ret into filter<h x w x c x f>
 Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
                       Value retValue, int64_t m, int64_t r,
                       bool leftTransform = true, bool rightTransform = true) {
@@ -332,100 +323,90 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
   if (filterW != r && filterW != 1)
     return Value();
 
-  // Return shape is <H x W x C x F>
+  auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
+                       ValueRange args) -> scf::ValueVector {
+    Value FIter = ivs[0];
+    Value CIter = ivs[1];
+
+    // Extract (H, W) from (F, H, W, C).
+    auto extractFilter = extract2DData(
+        builder, loc, filter, FIter, CIter, /*outLoopIdx=*/0,
+        /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
+
+    TransformMapKeyTy key = {m, r};
+    int64_t retRows = 1;
+    Value matmulRetValue = extractFilter;
+    if (leftTransform) {
+      // Get constant transform matrix G.
+      auto it = GMatrices.find(key);
+      if (it == GMatrices.end())
+        return {};
+      const TransformMatrix &GMatrix = it->second;
+
+      retRows = GMatrix.rows;
+      auto matmulType = RankedTensorType::get({retRows, filterW}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      Value G = create2DTransformMatrix(builder, loc, GMatrix, elementType);
+      // Multiply G x g.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{G, extractFilter}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    if (rightTransform) {
+      // Get constant transform matrix GT.
+      auto it = GTMatrices.find(key);
+      if (it == GTMatrices.end())
+        return {};
+      const TransformMatrix &GTMatrix = it->second;
+
+      auto matmulType =
+          RankedTensorType::get({retRows, GTMatrix.cols}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      Value GT = create2DTransformMatrix(builder, loc, GTMatrix, elementType);
+      // Multiply u = (G x g) x GT.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{matmulRetValue, GT}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    // Insert (H, W) to (H, W, C, F).
+    int64_t retHeight = leftTransform ? m + r - 1 : 1;
+    int64_t retWidth = rightTransform ? m + r - 1 : 1;
+    auto insertSliceOp = insert2DData(builder, loc, matmulRetValue, args[0],
+                                      FIter, CIter, retHeight, retWidth,
+                                      /*outLoopIdx=*/3, /*inLoopIdx=*/2,
+                                      /*heightIdx=*/0, /*widthIdx=*/1,
+                                      /*destSize=*/4);
+
+    return {insertSliceOp};
+  };
+
   auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterF);
   auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterC);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-  auto outerForOp =
-      rewriter.create<scf::ForOp>(loc, zeroIdx, fUpperBound, oneStep, retValue);
-  Block *outerForBody = outerForOp.getBody();
-  rewriter.setInsertionPointToStart(outerForBody);
-  Value FIter = outerForBody->getArgument(0);
-
-  auto innerForOp = rewriter.create<scf::ForOp>(
-      loc, zeroIdx, cUpperBound, oneStep, outerForOp.getRegionIterArgs()[0]);
-  Block *innerForBody = innerForOp.getBody();
-  rewriter.setInsertionPointToStart(innerForBody);
-  Value CIter = innerForBody->getArgument(0);
-
-  // Extract (H, W) from (F, H, W, C)
-  auto extractFilter = extract2DData(
-      rewriter, loc, filter, FIter, CIter, /*outLoopIdx=*/0,
-      /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
-
-  TransformMapKeyTy key = {m, r};
-  int64_t retRows = 1;
-  Value matmulRetValue = extractFilter;
-  if (leftTransform) {
-    // Get constant transform matrix G
-    auto it = GMatrices.find(key);
-    if (it == GMatrices.end())
-      return Value();
-    const TransformMatrix &GMatrix = it->second;
-
-    retRows = GMatrix.rows;
-    auto matmulType = RankedTensorType::get({retRows, filterW}, elementType);
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-
-    Value G = create2DTransformMatrix(rewriter, loc, GMatrix, elementType);
-    // Multiply G x g
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{G, extractFilter}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  if (rightTransform) {
-    // Get constant transform matrix GT
-    auto it = GTMatrices.find(key);
-    if (it == GTMatrices.end())
-      return Value();
-    const TransformMatrix &GTMatrix = it->second;
-
-    auto matmulType =
-        RankedTensorType::get({retRows, GTMatrix.cols}, elementType);
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-
-    Value GT = create2DTransformMatrix(rewriter, loc, GTMatrix, elementType);
-    // Multiply u = (G x g) x GT
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{matmulRetValue, GT}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  // Insert (H, W) to (1, 1, H, W, C, F)
-  Value iterArg = innerForOp.getRegionIterArgs()[0];
-  int64_t retHeight = leftTransform ? m + r - 1 : 1;
-  int64_t retWidth = rightTransform ? m + r - 1 : 1;
-  auto insertSliceOp = insert2DData(
-      rewriter, loc, matmulRetValue, iterArg, FIter, CIter, retHeight, retWidth,
-      /*outLoopIdx=*/5, /*inLoopIdx=*/4, /*heightIdx=*/2, /*widthIdx=*/3,
-      /*destSize=*/6);
-
-  rewriter.create<scf::YieldOp>(loc, insertSliceOp);
-
-  rewriter.setInsertionPointToEnd(outerForBody);
-  rewriter.create<scf::YieldOp>(loc, innerForOp.getResult(0));
-
-  rewriter.setInsertionPointAfter(outerForOp);
-
-  return outerForOp.getResult(0);
+  scf::LoopNest loops = scf::buildLoopNest(
+      rewriter, loc, {zeroIdx, zeroIdx}, {fUpperBound, cUpperBound},
+      {oneStep, oneStep}, {retValue}, buildBody);
+  return loops.results[0];
 }
 
-// This function transforms the input. The data layout of the input is NHWC.
-// The transformation matrix is 2-dimension. We need to extract H x W from
-// NHWC first. We need to generate 2 levels of loops to iterate on N and C.
-// After the transformation, we get
-//
-// scf.for %n = lo_n to hi_n step 1
-//   scf.for %c = lo_c to hi_c step 1
-//     %extracted = extract input<h x w> from input<n x h x w x c>
-//     %ret = linalg.matmul BT, %extracted
-//     %ret = linalg.matmul %ret, B
-//     %inserted = insert %ret into input<h x w x n x c>
-//
+/// This function transforms the input. The data layout of the input is NHWC.
+/// The transformation matrix is 2-dimension. We need to extract H x W from
+/// NHWC first. We need to generate 2 levels of loops to iterate on N and C.
+/// After the transformation, we get
+///
+/// scf.for %n = lo_n to hi_n step 1
+///   scf.for %c = lo_c to hi_c step 1
+///     %extracted = extract input<h x w> from input<n x h x w x c>
+///     %ret = linalg.matmul BT, %extracted
+///     %ret = linalg.matmul %ret, B
+///     %inserted = insert %ret into input<h x w x n x c>
 Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                      Value retValue, int64_t m, int64_t r,
                      bool leftTransform = true, bool rightTransform = true) {
@@ -460,87 +441,76 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   if (inputW != alphaW && inputW != 1)
     return Value();
 
+  auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
+                       ValueRange args) -> scf::ValueVector {
+    Value NIter = ivs[0];
+    Value CIter = ivs[1];
+
+    // Extract (H, W) from (N, H, W, C).
+    auto extractInput = extract2DData(
+        builder, loc, input, NIter, CIter, /*outLoopIdx=*/0,
+        /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
+
+    TransformMapKeyTy key = {m, r};
+    int64_t retRows = 1;
+    int64_t retCols = 1;
+    Value matmulRetValue = extractInput;
+    if (leftTransform) {
+      // Get constant transform matrix BT.
+      auto it = BTMatrices.find(key);
+      if (it == BTMatrices.end())
+        return {};
+      const TransformMatrix &BTMatrix = it->second;
+
+      retRows = BTMatrix.rows;
+      auto matmulType = RankedTensorType::get({retRows, inputW}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      Value BT =
+          create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
+      // Multiply BT x d.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{BT, matmulRetValue}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    if (rightTransform) {
+      // Get constant transform matrix B.
+      auto it = BMatrices.find(key);
+      if (it == BMatrices.end())
+        return {};
+      const TransformMatrix &BMatrix = it->second;
+
+      retCols = BMatrix.cols;
+      auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+      Value B =
+          create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
+      // Multiply v = (BT x d) x B.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{matmulRetValue, B}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    // Insert (H, W) to (H, W, 1, 1, N, C).
+    auto combinedVal = insert2DData(
+        builder, loc, matmulRetValue, args[0], NIter, CIter, retRows, retCols,
+        /*outLoopIdx=*/4, /*inLoopIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1,
+        /*destSize=*/6);
+
+    return {combinedVal};
+  };
+
   auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputN);
   auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputC);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-
-  auto outerForOp =
-      rewriter.create<scf::ForOp>(loc, zeroIdx, nUpperBound, oneStep, retValue);
-  Block *outerForBody = outerForOp.getBody();
-  rewriter.setInsertionPointToStart(outerForBody);
-  Value NIter = outerForBody->getArgument(0);
-
-  auto innerForOp = rewriter.create<scf::ForOp>(
-      loc, zeroIdx, cUpperBound, oneStep, outerForOp.getRegionIterArgs()[0]);
-  Block *innerForBody = innerForOp.getBody();
-  rewriter.setInsertionPointToStart(innerForBody);
-  Value CIter = innerForBody->getArgument(0);
-
-  // Extract (H, W) from (N, H, W, C)
-  auto extractInput = extract2DData(
-      rewriter, loc, input, NIter, CIter, /*outLoopIdx=*/0,
-      /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
-
-  TransformMapKeyTy key = {m, r};
-  int64_t retRows = 1;
-  int64_t retCols = 1;
-  Value matmulRetValue = extractInput;
-  if (leftTransform) {
-    // Get constant transform matrix BT
-    auto it = BTMatrices.find(key);
-    if (it == BTMatrices.end())
-      return Value();
-    const TransformMatrix &BTMatrix = it->second;
-
-    retRows = BTMatrix.rows;
-    auto matmulType = RankedTensorType::get({retRows, inputW}, elementType);
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-
-    Value BT =
-        create2DTransformMatrix(rewriter, loc, BTMatrix, rewriter.getF32Type());
-    // Multiply BT x d
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{BT, matmulRetValue}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  if (rightTransform) {
-    // Get constant transform matrix B
-    auto it = BMatrices.find(key);
-    if (it == BMatrices.end())
-      return Value();
-    const TransformMatrix &BMatrix = it->second;
-
-    retCols = BMatrix.cols;
-    auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-    Value B =
-        create2DTransformMatrix(rewriter, loc, BMatrix, rewriter.getF32Type());
-    // Multiply v = (BT x d) x B
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{matmulRetValue, B}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  // Insert v
-  // Insert (H, W) to (1, 1, H, W, N, C)
-  Value iterArg = innerForOp.getRegionIterArgs()[0];
-  auto combinedVal = insert2DData(
-      rewriter, loc, matmulRetValue, iterArg, NIter, CIter, retRows, retCols,
-      /*outLoopIdx=*/4, /*inLoopIdx=*/5, /*heightIdx=*/2, /*widthIdx=*/3,
-      /*destSize=*/6);
-
-  rewriter.create<scf::YieldOp>(loc, combinedVal);
-
-  rewriter.setInsertionPointToEnd(outerForBody);
-  rewriter.create<scf::YieldOp>(loc, innerForOp.getResult(0));
-
-  rewriter.setInsertionPointAfter(outerForOp);
-
-  return outerForOp.getResult(0);
+  scf::LoopNest loops = scf::buildLoopNest(
+      rewriter, loc, {zeroIdx, zeroIdx}, {nUpperBound, cUpperBound},
+      {oneStep, oneStep}, {retValue}, buildBody);
+  return loops.results[0];
 }
 
 /// This function generates linalg.batch_matmul to multiply input with filter.
@@ -614,18 +584,17 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
   return expandOutput;
 }
 
-// This function transforms the output. The data layout of the output is HWNF.
-// The transformation matrix is 2-dimension. We need to extract H x W from
-// HWNF first. We need to generate 2 levels of loops to iterate on N and F.
-// After the transformation, we get
-//
-// scf.for %n = lo_n to hi_n step 1
-//   scf.for %f = lo_f to hi_f step 1
-//     %extracted = extract input<h x w> from result<h x w x n x f>
-//     %ret = linalg.matmul AT, %extracted
-//     %ret = linalg.matmul %ret, A
-//     %inserted = insert %ret into ret<n x h x w x f>
-//
+/// This function transforms the output. The data layout of the output is HWNF.
+/// The transformation matrix is 2-dimension. We need to extract H x W from
+/// HWNF first. We need to generate 2 levels of loops to iterate on N and F.
+/// After the transformation, we get
+///
+/// scf.for %n = lo_n to hi_n step 1
+///   scf.for %f = lo_f to hi_f step 1
+///     %extracted = extract input<h x w> from result<h x w x n x f>
+///     %ret = linalg.matmul AT, %extracted
+///     %ret = linalg.matmul %ret, A
+///     %inserted = insert %ret into ret<n x h x w x f>
 Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                       Value output, int64_t m, int64_t r,
                       bool leftTransform = true, bool rightTransform = true) {
@@ -647,9 +616,9 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
-  auto valueShape = valueType.getShape(); // TileH, TileW, H, W, N, F
-  int64_t valueH = valueShape[2];
-  int64_t valueW = valueShape[3];
+  auto valueShape = valueType.getShape(); // H, W, TileH, TileW, N, F
+  int64_t valueH = valueShape[0];
+  int64_t valueW = valueShape[1];
   int64_t valueN = valueShape[4];
   int64_t valueF = valueShape[5];
   int64_t alphaH = leftTransform ? m + r - 1 : 1;
@@ -660,113 +629,93 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
   if (valueW != alphaW && valueW != 1)
     return Value();
 
+  auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
+                       ValueRange args) -> scf::ValueVector {
+    Value NIter = ivs[0];
+    Value FIter = ivs[1];
+
+    // Extract (H, W) from (H, W, 1, 1, N, F).
+    auto extractValue = extract2DData(
+        builder, loc, value, NIter, FIter, /*outLoopIdx=*/4,
+        /*inLoopIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1, /*srcSize=*/6);
+
+    TransformMapKeyTy key = {m, r};
+    int64_t retRows = 1;
+    int64_t retCols = 1;
+    int64_t leftScalarFactor = 1;
+    int64_t rightScalarFactor = 1;
+    Value matmulRetValue = extractValue;
+    if (leftTransform) {
+      // Get constant transform matrix AT.
+      auto it = ATMatrices.find(key);
+      if (it == ATMatrices.end())
+        return {};
+      const TransformMatrix &ATMatrix = it->second;
+
+      leftScalarFactor = ATMatrix.scalarFactor;
+      retRows = ATMatrix.rows;
+      auto matmulType = RankedTensorType::get({retRows, valueW}, elementType);
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      Value AT = create2DTransformMatrix(builder, loc, ATMatrix, elementType);
+      // Multiply AT x m.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{AT, matmulRetValue}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    if (rightTransform) {
+      // Get constant transform matrix T.
+      auto it = AMatrices.find(key);
+      if (it == AMatrices.end())
+        return {};
+      const TransformMatrix &AMatrix = it->second;
+
+      rightScalarFactor = AMatrix.scalarFactor;
+      auto matmulType =
+          RankedTensorType::get({retRows, AMatrix.cols}, elementType);
+      retCols = AMatrix.cols;
+      auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                  elementType);
+
+      Value A = create2DTransformMatrix(builder, loc, AMatrix, elementType);
+      // Multiply y = (AT x m) x A.
+      auto matmulOp = builder.create<linalg::MatmulOp>(
+          loc, matmulType, ValueRange{matmulRetValue, A}, ValueRange{init});
+      matmulRetValue = matmulOp.getResult(0);
+    }
+
+    // Multiply scalar factor.
+    Value scalarFactor = builder.create<arith::ConstantOp>(
+        loc, FloatAttr::get(elementType, leftScalarFactor * rightScalarFactor));
+    auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
+    auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
+                                                elementType);
+    Value broadcastedScalar =
+        builder.create<tensor::FromElementsOp>(loc, matmulType, scalarFactor);
+    auto scaledMatmul = builder.create<linalg::MulOp>(
+        loc, matmulType, ValueRange{broadcastedScalar, matmulRetValue},
+        ValueRange{init});
+
+    // Insert (H, W) to (N, H, W, F).
+    Value combinedVal = insert2DData(builder, loc, scaledMatmul.getResult(0),
+                                     args[0], NIter, FIter, retRows, retCols,
+                                     /*outLoopIdx=*/0,
+                                     /*inLoopIdx=*/3, /*heightIdx=*/1,
+                                     /*widthIdx=*/2, /*destSize=*/4);
+
+    return {combinedVal};
+  };
+
   auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueN);
   auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueF);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-
-  auto outerForOp =
-      rewriter.create<scf::ForOp>(loc, zeroIdx, nUpperBound, oneStep, output);
-  Block *outerForBody = outerForOp.getBody();
-  rewriter.setInsertionPointToStart(outerForBody);
-  Value NIter = outerForBody->getArgument(0);
-
-  auto innerForOp = rewriter.create<scf::ForOp>(
-      loc, zeroIdx, fUpperBound, oneStep, outerForOp.getRegionIterArgs()[0]);
-  Block *innerForBody = innerForOp.getBody();
-  rewriter.setInsertionPointToStart(innerForBody);
-  Value FIter = innerForBody->getArgument(0);
-
-  // Extract (H, W) from (1, 1, H, W, N, F)
-  auto extractValue = extract2DData(
-      rewriter, loc, value, NIter, FIter, /*outLoopIdx=*/4,
-      /*inLoopIdx=*/5, /*heightIdx=*/2, /*widthIdx=*/3, /*srcSize=*/6);
-
-  TransformMapKeyTy key = {m, r};
-  int64_t retRows = 1;
-  int64_t retCols = 1;
-  int64_t leftScalarFactor = 1;
-  int64_t rightScalarFactor = 1;
-  Value matmulRetValue = extractValue;
-  if (leftTransform) {
-    // Get constant transform matrix AT
-    auto it = ATMatrices.find(key);
-    if (it == ATMatrices.end())
-      return Value();
-    const TransformMatrix &ATMatrix = it->second;
-
-    leftScalarFactor = ATMatrix.scalarFactor;
-    retRows = ATMatrix.rows;
-    auto matmulType = RankedTensorType::get({retRows, valueW}, elementType);
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-
-    Value AT = create2DTransformMatrix(rewriter, loc, ATMatrix, elementType);
-    // Multiply AT x m
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{AT, matmulRetValue}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  if (rightTransform) {
-    // Get constant transform matrix T
-    auto it = AMatrices.find(key);
-    if (it == AMatrices.end())
-      return Value();
-    const TransformMatrix &AMatrix = it->second;
-
-    rightScalarFactor = AMatrix.scalarFactor;
-    auto matmulType =
-        RankedTensorType::get({retRows, AMatrix.cols}, elementType);
-    retCols = AMatrix.cols;
-    auto init = rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                 elementType);
-
-    Value A = create2DTransformMatrix(rewriter, loc, AMatrix, elementType);
-    // Multiply y = (AT x m) x A
-    auto matmulOp = rewriter.create<linalg::MatmulOp>(
-        loc, matmulType, ValueRange{matmulRetValue, A}, ValueRange{init});
-    matmulRetValue = matmulOp.getResult(0);
-  }
-
-  // Multiply scalar factor.
-  Value scalarFactor = rewriter.create<arith::ConstantOp>(
-      loc, FloatAttr::get(elementType, leftScalarFactor * rightScalarFactor));
-  auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
-  auto init =
-      rewriter.create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType);
-
-  auto identityAffineMap = rewriter.getMultiDimIdentityMap(2);
-  SmallVector<AffineMap> affineMaps = {AffineMap::get(2, 0, init.getContext()),
-                                       identityAffineMap, identityAffineMap};
-  auto scalarMatrixOp = rewriter.create<linalg::GenericOp>(
-      loc, matmulType, ValueRange{scalarFactor, matmulRetValue},
-      ValueRange{init}, affineMaps, tosa::getNParallelLoopsAttrs(2),
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
-        Value scalarVal = args[0];
-        Value matrixVal = args[1];
-        Value result = nestedBuilder.create<arith::MulFOp>(nestedLoc, scalarVal,
-                                                           matrixVal);
-        nestedBuilder.create<linalg::YieldOp>(nestedLoc, result);
-      });
-
-  // Insert slice y
-  // Insert (H, W) to (N, H, W, F)
-  Value iterArg = innerForOp.getRegionIterArgs()[0];
-  Value combinedVal = insert2DData(rewriter, loc, scalarMatrixOp.getResult(0),
-                                   iterArg, NIter, FIter, retRows, retCols,
-                                   /*outLoopIdx=*/0,
-                                   /*inLoopIdx=*/3, /*heightIdx=*/1,
-                                   /*widthIdx=*/2, /*destSize=*/4);
-
-  rewriter.create<scf::YieldOp>(loc, combinedVal);
-
-  rewriter.setInsertionPointToEnd(outerForBody);
-  rewriter.create<scf::YieldOp>(loc, innerForOp.getResult(0));
-
-  rewriter.setInsertionPointAfter(outerForOp);
-
-  return outerForOp.getResult(0);
+  scf::LoopNest loops = scf::buildLoopNest(
+      rewriter, loc, {zeroIdx, zeroIdx}, {nUpperBound, fUpperBound},
+      {oneStep, oneStep}, {output}, buildBody);
+  return loops.results[0];
 }
 
 /// Create an empty tensor with alignedType and insert the value into the
@@ -962,6 +911,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   return transformedOutput.getDefiningOp();
 }
 
+/// A helper function to decompose linalg.winograd_filter_transform.
 FailureOr<Operation *>
 decomposeWinogradFilterTransformHelper(RewriterBase &rewriter,
                                        linalg::WinogradFilterTransformOp op) {
@@ -987,6 +937,7 @@ decomposeWinogradFilterTransformHelper(RewriterBase &rewriter,
   return transformedFilter.getDefiningOp();
 }
 
+/// A helper function to decompose linalg.winograd_input_transform.
 FailureOr<Operation *>
 decomposeWinogradInputTransformHelper(RewriterBase &rewriter,
                                       linalg::WinogradInputTransformOp op) {
@@ -1012,6 +963,7 @@ decomposeWinogradInputTransformHelper(RewriterBase &rewriter,
   return transformedInput.getDefiningOp();
 }
 
+/// A helper function to decompose linalg.winograd_output_transform.
 FailureOr<Operation *>
 decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
                                        linalg::WinogradOutputTransformOp op) {
@@ -1019,8 +971,8 @@ decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
   Value value = op.getValue();
   auto valueType = cast<ShapedType>(value.getType());
   auto valueShape = valueType.getShape();
-  int64_t valueH = valueShape[2];
-  int64_t valueW = valueShape[3];
+  int64_t valueH = valueShape[0];
+  int64_t valueW = valueShape[1];
 
   // For F(m x 1, r x 1), we only need to do left side transform.
   bool leftTransform = valueH != 1;
@@ -1037,6 +989,7 @@ decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
   return transformedOutput.getDefiningOp();
 }
 
+/// A rewrite pattern to decompose linalg.winograd_filter_transform operations.
 class DecomposeWinogradFilterTransform final
     : public OpRewritePattern<linalg::WinogradFilterTransformOp> {
 public:
@@ -1044,13 +997,11 @@ public:
 
   LogicalResult matchAndRewrite(linalg::WinogradFilterTransformOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(decomposeWinogradFilterTransformHelper(rewriter, op)))
-      return failure();
-
-    return success();
+    return decomposeWinogradFilterTransformHelper(rewriter, op);
   }
 };
 
+/// A rewrite pattern to decompose linalg.winograd_input_transform operations.
 class DecomposeWinogradInputTransform final
     : public OpRewritePattern<linalg::WinogradInputTransformOp> {
 public:
@@ -1058,13 +1009,11 @@ public:
 
   LogicalResult matchAndRewrite(linalg::WinogradInputTransformOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(decomposeWinogradInputTransformHelper(rewriter, op)))
-      return failure();
-
-    return success();
+    return decomposeWinogradInputTransformHelper(rewriter, op);
   }
 };
 
+/// A rewrite pattern to decompose linalg.winograd_output_transform operations.
 class DecomposeWinogradOutputTransform final
     : public OpRewritePattern<linalg::WinogradOutputTransformOp> {
 public:
@@ -1072,10 +1021,7 @@ public:
 
   LogicalResult matchAndRewrite(linalg::WinogradOutputTransformOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(decomposeWinogradOutputTransformHelper(rewriter, op)))
-      return failure();
-
-    return success();
+    return decomposeWinogradOutputTransformHelper(rewriter, op);
   }
 };
 
@@ -1116,9 +1062,9 @@ void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
 
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
-  patterns.insert<DecomposeWinogradFilterTransform>(context);
-  patterns.insert<DecomposeWinogradInputTransform>(context);
-  patterns.insert<DecomposeWinogradOutputTransform>(context);
+  patterns
+      .insert<DecomposeWinogradFilterTransform, DecomposeWinogradInputTransform,
+              DecomposeWinogradOutputTransform>(context);
 }
 
 } // end namespace linalg
