@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
-#include "src/__support/macros/attributes.h"
-
 namespace LIBC_NAMESPACE {
 
 // We provide the baremetal version of `rand` without any thread-safety.

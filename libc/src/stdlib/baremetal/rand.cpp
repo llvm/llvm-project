@@ -8,13 +8,14 @@
 
 #include "src/stdlib/rand.h"
 #include "src/__support/common.h"
-#include "src/__support/threads/sleep.h"
 #include "src/stdlib/baremetal/rand_util.h"
 
 namespace LIBC_NAMESPACE {
 
 // An implementation of the xorshift64star pseudo random number generator. This
 // is a good general purpose generator for most non-cryptographics applications.
+// This function is *not* MT-safe, baremetal callers will need to provide
+// synchronization externally.
 LLVM_LIBC_FUNCTION(int, rand, (void)) {
   unsigned long x = rand_next;
   x ^= x >> 12;

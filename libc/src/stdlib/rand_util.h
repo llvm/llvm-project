@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STDLIB_RAND_UTIL_H
 
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE {
 

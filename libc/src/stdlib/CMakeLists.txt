@@ -324,6 +324,7 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
       libc.include.stdlib
   )
 else()
+  # Baremetal targets use a non MT-safe implementation.
   add_entrypoint_object(
     rand
     ALIAS
