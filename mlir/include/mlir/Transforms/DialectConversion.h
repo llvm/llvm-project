@@ -168,8 +168,8 @@ public:
     registerConversion(wrapCallback<T>(std::forward<FnT>(callback)));
   }
 
-  /// Register a materialization function, which must be convertible to the
-  /// following form:
+  /// All of the following materializations require function objects that are
+  /// convertible to the following form:
   ///   `std::optional<Value>(OpBuilder &, T, ValueRange, Location)`,
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
@@ -179,9 +179,11 @@ public:
   /// unrecoverable failure. It will only be called for (sub)types of `T`.
   /// Materialization functions must be provided when a type conversion may
   /// persist after the conversion has finished.
-  ///
+
   /// This method registers a materialization that will be called when
-  /// converting an illegal block argument type, to a legal type.
+  /// converting (potentially multiple) block arguments that were the result of
+  /// a signature conversion of a single block argument, to a single SSA value
+  /// of a legal type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {
@@ -189,8 +191,9 @@ public:
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
-  /// converting a legal type to an illegal source type. This is used when
-  /// conversions to an illegal type must persist beyond the main conversion.
+  /// converting a legal replacement value back to an illegal source type.
+  /// This is used when some uses of the original, illegal value must persist
+  /// beyond the main conversion.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
@@ -198,7 +201,7 @@ public:
         wrapMaterialization<T>(std::forward<FnT>(callback)));
   }
   /// This method registers a materialization that will be called when
-  /// converting type from an illegal, or source, type to a legal type.
+  /// converting an illegal (source) value to a legal (target) type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addTargetMaterialization(FnT &&callback) {

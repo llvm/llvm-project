@@ -938,6 +938,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}, VT,
                        Expand);
 
+    // [US]CMP default to expand
+    setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
+
     // Halving adds
     setOperationAction(
         {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
@@ -961,7 +964,7 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -1020,6 +1023,7 @@ void TargetLoweringBase::initActions() {
                       ISD::FTAN},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
+  setOperationAction(ISD::FTAN, MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 

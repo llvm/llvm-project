@@ -40,6 +40,8 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -55,6 +57,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stack>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -1391,7 +1394,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // Change the location to the outer alloca insertion point to create and
   // initialize the allocas we pass into the parallel region.
-  Builder.restoreIP(OuterAllocaIP);
+  InsertPointTy NewOuter(OuterAllocaBlock, OuterAllocaBlock->begin());
+  Builder.restoreIP(NewOuter);
   AllocaInst *TIDAddrAlloca = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
   AllocaInst *ZeroAddrAlloca =
       Builder.CreateAlloca(Int32, nullptr, "zero.addr");
@@ -2155,7 +2159,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   // values.
   unsigned NumReductions = ReductionInfos.size();
   Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
@@ -2556,7 +2560,8 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
+
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -3118,7 +3123,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -3243,16 +3248,8 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
     return false;
   };
 
-  while (true) {
-    bool Changed = false;
-    for (BasicBlock *BB : make_early_inc_range(BBsToErase)) {
-      if (HasRemainingUses(BB)) {
-        BBsToErase.erase(BB);
-        Changed = true;
-      }
-    }
-    if (!Changed)
-      break;
+  while (BBsToErase.remove_if(HasRemainingUses)) {
+    // Try again if anything was removed.
   }
 
   SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
@@ -5092,27 +5089,6 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-static void replaceConstatExprUsesInFuncWithInstr(ConstantExpr *ConstExpr,
-                                                  Function *Func) {
-  for (User *User : make_early_inc_range(ConstExpr->users())) {
-    if (auto *Instr = dyn_cast<Instruction>(User)) {
-      if (Instr->getFunction() == Func) {
-        Instruction *ConstInst = ConstExpr->getAsInstruction();
-        ConstInst->insertBefore(*Instr->getParent(), Instr->getIterator());
-        Instr->replaceUsesOfWith(ConstExpr, ConstInst);
-      }
-    }
-  }
-}
-
-static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,
-                                                    Function *Func) {
-  for (User *User : make_early_inc_range(Input->users()))
-    if (auto *Const = dyn_cast<Constant>(User))
-      if (auto *ConstExpr = dyn_cast<ConstantExpr>(Const))
-        replaceConstatExprUsesInFuncWithInstr(ConstExpr, Func);
-}
-
 static Function *createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
     SmallVectorImpl<Value *> &Inputs,
@@ -5180,6 +5156,36 @@ static Function *createOutlinedFunction(
           ? make_range(Func->arg_begin() + 1, Func->arg_end())
           : Func->args();
 
+  auto ReplaceValue = [](Value *Input, Value *InputCopy, Function *Func) {
+    // Things like GEP's can come in the form of Constants. Constants and
+    // ConstantExpr's do not have access to the knowledge of what they're
+    // contained in, so we must dig a little to find an instruction so we
+    // can tell if they're used inside of the function we're outlining. We
+    // also replace the original constant expression with a new instruction
+    // equivalent; an instruction as it allows easy modification in the
+    // following loop, as we can now know the constant (instruction) is
+    // owned by our target function and replaceUsesOfWith can now be invoked
+    // on it (cannot do this with constants it seems). A brand new one also
+    // allows us to be cautious as it is perhaps possible the old expression
+    // was used inside of the function but exists and is used externally
+    // (unlikely by the nature of a Constant, but still).
+    // NOTE: We cannot remove dead constants that have been rewritten to
+    // instructions at this stage, we run the risk of breaking later lowering
+    // by doing so as we could still be in the process of lowering the module
+    // from MLIR to LLVM-IR and the MLIR lowering may still require the original
+    // constants we have created rewritten versions of.
+    if (auto *Const = dyn_cast<Constant>(Input))
+      convertUsersOfConstantsToInstructions(Const, Func, false);
+
+    // Collect all the instructions
+    for (User *User : make_early_inc_range(Input->users()))
+      if (auto *Instr = dyn_cast<Instruction>(User))
+        if (Instr->getFunction() == Func)
+          Instr->replaceUsesOfWith(Input, InputCopy);
+  };
+
+  SmallVector<std::pair<Value *, Value *>> DeferredReplacement;
+
   // Rewrite uses of input valus to parameters.
   for (auto InArg : zip(Inputs, ArgRange)) {
     Value *Input = std::get<0>(InArg);
@@ -5189,26 +5195,35 @@ static Function *createOutlinedFunction(
     Builder.restoreIP(
         ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
 
-    // Things like GEP's can come in the form of Constants. Constants and
-    // ConstantExpr's do not have access to the knowledge of what they're
-    // contained in, so we must dig a little to find an instruction so we can
-    // tell if they're used inside of the function we're outlining. We also
-    // replace the original constant expression with a new instruction
-    // equivalent; an instruction as it allows easy modification in the
-    // following loop, as we can now know the constant (instruction) is owned by
-    // our target function and replaceUsesOfWith can now be invoked on it
-    // (cannot do this with constants it seems). A brand new one also allows us
-    // to be cautious as it is perhaps possible the old expression was used
-    // inside of the function but exists and is used externally (unlikely by the
-    // nature of a Constant, but still).
-    replaceConstantValueUsesInFuncWithInstr(Input, Func);
+    // In certain cases a Global may be set up for replacement, however, this
+    // Global may be used in multiple arguments to the kernel, just segmented
+    // apart, for example, if we have a global array, that is sectioned into
+    // multiple mappings (technically not legal in OpenMP, but there is a case
+    // in Fortran for Common Blocks where this is neccesary), we will end up
+    // with GEP's into this array inside the kernel, that refer to the Global
+    // but are technically seperate arguments to the kernel for all intents and
+    // purposes. If we have mapped a segment that requires a GEP into the 0-th
+    // index, it will fold into an referal to the Global, if we then encounter
+    // this folded GEP during replacement all of the references to the
+    // Global in the kernel will be replaced with the argument we have generated
+    // that corresponds to it, including any other GEP's that refer to the
+    // Global that may be other arguments. This will invalidate all of the other
+    // preceding mapped arguments that refer to the same global that may be
+    // seperate segments. To prevent this, we defer global processing until all
+    // other processing has been performed.
+    if (llvm::isa<llvm::GlobalValue>(std::get<0>(InArg)) ||
+        llvm::isa<llvm::GlobalObject>(std::get<0>(InArg)) ||
+        llvm::isa<llvm::GlobalVariable>(std::get<0>(InArg))) {
+      DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
+      continue;
+    }
 
-    // Collect all the instructions
-    for (User *User : make_early_inc_range(Input->users()))
-      if (auto *Instr = dyn_cast<Instruction>(User))
-        if (Instr->getFunction() == Func)
-          Instr->replaceUsesOfWith(Input, InputCopy);
+    ReplaceValue(Input, InputCopy, Func);
   }
+
+  // Replace all of our deferred Input values, currently just Globals.
+  for (auto Deferred : DeferredReplacement)
+    ReplaceValue(std::get<0>(Deferred), std::get<1>(Deferred), Func);
 
   // Restore insert point.
   Builder.restoreIP(OldInsertPoint);

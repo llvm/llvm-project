@@ -558,16 +558,21 @@ static Register buildMemSemanticsReg(Register SemanticsRegister,
 
 static bool buildOpFromWrapper(MachineIRBuilder &MIRBuilder, unsigned Opcode,
                                const SPIRV::IncomingCall *Call,
-                               Register TypeReg = Register(0)) {
+                               Register TypeReg,
+                               ArrayRef<uint32_t> ImmArgs = {}) {
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   auto MIB = MIRBuilder.buildInstr(Opcode);
   if (TypeReg.isValid())
     MIB.addDef(Call->ReturnRegister).addUse(TypeReg);
-  for (Register ArgReg : Call->Arguments) {
+  unsigned Sz = Call->Arguments.size() - ImmArgs.size();
+  for (unsigned i = 0; i < Sz; ++i) {
+    Register ArgReg = Call->Arguments[i];
     if (!MRI->getRegClassOrNull(ArgReg))
       MRI->setRegClass(ArgReg, &SPIRV::IDRegClass);
     MIB.addUse(ArgReg);
   }
+  for (uint32_t ImmArg : ImmArgs)
+    MIB.addImm(ImmArg);
   return true;
 }
 
@@ -575,7 +580,7 @@ static bool buildOpFromWrapper(MachineIRBuilder &MIRBuilder, unsigned Opcode,
 static bool buildAtomicInitInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpStore, Call);
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpStore, Call, Register(0));
 
   assert(Call->Arguments.size() == 2 &&
          "Need 2 arguments for atomic init translation");
@@ -633,7 +638,7 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call);
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -870,7 +875,7 @@ static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
                              MachineIRBuilder &MIRBuilder,
                              SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, Opcode, Call);
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   unsigned MemFlags = getIConstVal(Call->Arguments[0], MRI);
@@ -1015,7 +1020,35 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   const SPIRV::GroupBuiltin *GroupBuiltin =
       SPIRV::lookupGroupBuiltin(Builtin->Name);
+
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (Call->isSpirvOp()) {
+    if (GroupBuiltin->NoGroupOperation)
+      return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
+                                GR->getSPIRVTypeID(Call->ReturnType));
+
+    // Group Operation is a literal
+    Register GroupOpReg = Call->Arguments[1];
+    const MachineInstr *MI = getDefInstrMaybeConstant(GroupOpReg, MRI);
+    if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT)
+      report_fatal_error(
+          "Group Operation parameter must be an integer constant");
+    uint64_t GrpOp = MI->getOperand(1).getCImm()->getValue().getZExtValue();
+    Register ScopeReg = Call->Arguments[0];
+    if (!MRI->getRegClassOrNull(ScopeReg))
+      MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
+    Register ValueReg = Call->Arguments[2];
+    if (!MRI->getRegClassOrNull(ValueReg))
+      MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
+    MIRBuilder.buildInstr(GroupBuiltin->Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(ScopeReg)
+        .addImm(GrpOp)
+        .addUse(ValueReg);
+    return true;
+  }
+
   Register Arg0;
   if (GroupBuiltin->HasBoolArg) {
     Register ConstRegister = Call->Arguments[0];
@@ -1796,6 +1829,45 @@ static bool generateSelectInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateConstructInst(const SPIRV::IncomingCall *Call,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  return buildOpFromWrapper(MIRBuilder, SPIRV::OpCompositeConstruct, Call,
+                            GR->getSPIRVTypeID(Call->ReturnType));
+}
+
+static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
+                                 MachineIRBuilder &MIRBuilder,
+                                 SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  bool IsSet = Opcode != SPIRV::OpCooperativeMatrixStoreKHR;
+  unsigned ArgSz = Call->Arguments.size();
+  unsigned LiteralIdx = 0;
+  if (Opcode == SPIRV::OpCooperativeMatrixLoadKHR && ArgSz > 3)
+    LiteralIdx = 3;
+  else if (Opcode == SPIRV::OpCooperativeMatrixStoreKHR && ArgSz > 4)
+    LiteralIdx = 4;
+  SmallVector<uint32_t, 1> ImmArgs;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (LiteralIdx > 0)
+    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (Opcode == SPIRV::OpCooperativeMatrixLengthKHR) {
+    SPIRVType *CoopMatrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
+    if (!CoopMatrType)
+      report_fatal_error("Can't find a register's type definition");
+    MIRBuilder.buildInstr(Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(TypeReg)
+        .addUse(CoopMatrType->getOperand(0).getReg());
+    return true;
+  }
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                            IsSet ? TypeReg : Register(0), ImmArgs);
+}
+
 static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
                                      MachineIRBuilder &MIRBuilder,
                                      SPIRVGlobalRegistry *GR) {
@@ -1900,7 +1972,10 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
           .addDef(GlobalWorkSize)
           .addUse(GR->getSPIRVTypeID(SpvFieldTy))
           .addUse(GWSPtr);
-      Const = GR->getOrCreateConsIntArray(0, MIRBuilder, SpvFieldTy);
+      const SPIRVSubtarget &ST =
+          cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+      Const = GR->getOrCreateConstIntArray(0, Size, *MIRBuilder.getInsertPt(),
+                                           SpvFieldTy, *ST.getInstrInfo());
     } else {
       Const = GR->buildConstantInt(0, MIRBuilder, SpvTy);
     }
@@ -2354,6 +2429,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateSampleImageInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::Select:
     return generateSelectInst(Call.get(), MIRBuilder);
+  case SPIRV::Construct:
+    return generateConstructInst(Call.get(), MIRBuilder, GR);
   case SPIRV::SpecConstant:
     return generateSpecConstantInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Enqueue:
@@ -2372,6 +2449,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
   case SPIRV::KernelClock:
     return generateKernelClockInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::CoopMatr:
+    return generateCoopMatrInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -2390,7 +2469,7 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
   if (hasBuiltinTypePrefix(TypeStr)) {
     // OpenCL builtin types in demangled call strings have the following format:
     // e.g. ocl_image2d_ro
-    bool IsOCLBuiltinType = TypeStr.consume_front("ocl_");
+    [[maybe_unused]] bool IsOCLBuiltinType = TypeStr.consume_front("ocl_");
     assert(IsOCLBuiltinType && "Invalid OpenCL builtin prefix");
 
     // Check if this is pointer to a builtin type and not just pointer
@@ -2494,6 +2573,22 @@ static SPIRVType *getPipeType(const TargetExtType *ExtensionType,
   return GR->getOrCreateOpTypePipe(MIRBuilder,
                                    SPIRV::AccessQualifier::AccessQualifier(
                                        ExtensionType->getIntParameter(0)));
+}
+
+static SPIRVType *getCoopMatrType(const TargetExtType *ExtensionType,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumIntParameters() == 4 &&
+         "Invalid number of parameters for SPIR-V coop matrices builtin!");
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "SPIR-V coop matrices builtin type must have a type parameter!");
+  const SPIRVType *ElemType =
+      GR->getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder);
+  // Create or get an existing type from GlobalRegistry.
+  return GR->getOrCreateOpTypeCoopMatr(
+      MIRBuilder, ExtensionType, ElemType, ExtensionType->getIntParameter(0),
+      ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
+      ExtensionType->getIntParameter(3));
 }
 
 static SPIRVType *
@@ -2625,6 +2720,9 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
     break;
   case SPIRV::OpTypeSampledImage:
     TargetType = getSampledImageType(BuiltinType, MIRBuilder, GR);
+    break;
+  case SPIRV::OpTypeCooperativeMatrixKHR:
+    TargetType = getCoopMatrType(BuiltinType, MIRBuilder, GR);
     break;
   default:
     TargetType =

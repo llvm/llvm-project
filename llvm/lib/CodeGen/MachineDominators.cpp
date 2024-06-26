@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
@@ -54,6 +55,33 @@ template void ApplyUpdates<MBBDomTree>(MBBDomTree &DT, MBBDomTreeGraphDiff &,
 template bool Verify<MBBDomTree>(const MBBDomTree &DT,
                                  MBBDomTree::VerificationLevel VL);
 } // namespace DomTreeBuilder
+}
+
+bool MachineDominatorTree::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachineDominatorTreeAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
+}
+
+AnalysisKey MachineDominatorTreeAnalysis::Key;
+
+MachineDominatorTreeAnalysis::Result
+MachineDominatorTreeAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  return MachineDominatorTree(MF);
+}
+
+PreservedAnalyses
+MachineDominatorTreePrinterPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  OS << "MachineDominatorTree for machine function: " << MF.getName() << '\n';
+  MFAM.getResult<MachineDominatorTreeAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
 }
 
 char MachineDominatorTreeWrapperPass::ID = 0;
