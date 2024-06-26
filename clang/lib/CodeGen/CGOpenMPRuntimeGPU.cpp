@@ -1668,6 +1668,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
   if (Options.SimpleReduction) {
     assert(!TeamsReduction && !ParallelReduction &&
            "Invalid reduction selection in emitReduction.");
+    (void)ParallelReduction;
     CGOpenMPRuntime::emitReduction(CGF, Loc, Privates, LHSExprs, RHSExprs,
                                    ReductionOps, Options);
     return;
