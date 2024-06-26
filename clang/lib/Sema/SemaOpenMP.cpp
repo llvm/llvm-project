@@ -11039,7 +11039,8 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelGenericLoopDirective(
                                   DSAStack))
     return StmtError();
 
-  CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_parallel_loop, AStmt);
+  CapturedStmt *CS =
+      setBranchProtectedScope(SemaRef, OMPD_parallel_loop, AStmt);
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse', it will define the nested loops number.
