@@ -2403,7 +2403,7 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
 
   if (PtrTy->getAddressSpace() != 3) {
-    RMW->setMetadata("amdgpu.no.remote.memory",
+    RMW->setMetadata("amdgpu.no.fine.grained.memory",
                      MDNode::get(F->getContext(), {}));
   }
 
