@@ -3803,7 +3803,20 @@ add_entrypoint_object(
     ../f16addf.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.add
+    libc.src.__support.FPUtil.generic.add_sub
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16subf
+  SRCS
+    f16subf.cpp
+  HDRS
+    ../f16subf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.add_sub
   COMPILE_OPTIONS
     -O3
 )

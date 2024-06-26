@@ -1,4 +1,4 @@
-//===-- Implementation of f16addf function --------------------------------===//
+//===-- Implementation header for f16subf -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/f16addf.h"
-#include "src/__support/FPUtil/generic/add_sub.h"
-#include "src/__support/common.h"
+#ifndef LLVM_LIBC_SRC_MATH_F16SUBF_H
+#define LLVM_LIBC_SRC_MATH_F16SUBF_H
+
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(float16, f16addf, (float x, float y)) {
-  return fputil::generic::add<float16>(x, y);
-}
+float16 f16subf(float x, float y);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_F16SUBF_H

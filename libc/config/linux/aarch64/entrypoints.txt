@@ -514,6 +514,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.f16fmaf
     libc.src.math.f16sqrt
     libc.src.math.f16sqrtf
+    libc.src.math.f16subf
     libc.src.math.fabsf16
     libc.src.math.fdimf16
     libc.src.math.floorf16

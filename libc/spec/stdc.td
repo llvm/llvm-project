@@ -731,6 +731,8 @@ def StdC : StandardSpec<"stdc"> {
 
           GuardedFunctionSpec<"f16addf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
 
+          GuardedFunctionSpec<"f16subf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+
           GuardedFunctionSpec<"f16divf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,
 
           GuardedFunctionSpec<"f16sqrtf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,

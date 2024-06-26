@@ -50,9 +50,9 @@ add_header_library(
 )
 
 add_header_library(
-  add
+  add_sub
   HDRS
-    add.h
+    add_sub.h
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros

@@ -77,6 +77,7 @@ enum class Operation : int {
   Fmod,
   Hypot,
   Pow,
+  Sub,
   Fmul,
   EndBinaryOperationsSingleOutput,
 

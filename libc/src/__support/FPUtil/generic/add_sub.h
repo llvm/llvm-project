@@ -1,4 +1,4 @@
-//===-- Addition of IEEE 754 floating-point numbers -------------*- C++ -*-===//
+//===-- Add and subtract IEEE 754 floating-point numbers --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
@@ -24,12 +24,12 @@
 
 namespace LIBC_NAMESPACE::fputil::generic {
 
-template <typename OutType, typename InType>
+template <bool IsSub, typename OutType, typename InType>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                  cpp::is_floating_point_v<InType> &&
                                  sizeof(OutType) <= sizeof(InType),
                              OutType>
-add(InType x, InType y) {
+add_or_sub(InType x, InType y) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
   using InFPBits = FPBits<InType>;
@@ -44,6 +44,8 @@ add(InType x, InType y) {
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
+
+  bool is_effectively_add = (x_bits.sign() == y_bits.sign()) ^ IsSub;
 
   if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
                     x_bits.is_zero() || y_bits.is_zero())) {
@@ -72,7 +74,7 @@ add(InType x, InType y) {
 
     if (x_bits.is_inf()) {
       if (y_bits.is_inf()) {
-        if (x_bits.sign() != y_bits.sign()) {
+        if (!is_effectively_add) {
           raise_except_if_required(FE_INVALID);
           return OutFPBits::quiet_nan().get_val();
         }
@@ -106,7 +108,7 @@ add(InType x, InType y) {
   InType x_abs = x_bits.abs().get_val();
   InType y_abs = y_bits.abs().get_val();
 
-  if (x_abs == y_abs && x_bits.sign() != y_bits.sign()) {
+  if (x_abs == y_abs && !is_effectively_add) {
     switch (quick_get_round()) {
     case FE_DOWNWARD:
       return OutFPBits::zero(Sign::NEG).get_val();
@@ -117,12 +119,16 @@ add(InType x, InType y) {
 
   Sign result_sign = Sign::POS;
 
-  if (x_abs > y_abs)
+  if (x_abs > y_abs) {
     result_sign = x_bits.sign();
-  else if (x_abs < y_abs)
-    result_sign = y_bits.sign();
-  else if (x_bits.sign() == y_bits.sign())
+  } else if (x_abs < y_abs) {
+    if (is_effectively_add)
+      result_sign = y_bits.sign();
+    else if (y_bits.is_pos())
+      result_sign = Sign::NEG;
+  } else if (is_effectively_add) {
     result_sign = x_bits.sign();
+  }
 
   InFPBits max_bits(cpp::max(x_abs, y_abs));
   InFPBits min_bits(cpp::min(x_abs, y_abs));
@@ -131,7 +137,8 @@ add(InType x, InType y) {
 
   if (max_bits.is_subnormal()) {
     // min_bits must be subnormal too.
-    if (max_bits.sign() == min_bits.sign())
+
+    if (is_effectively_add)
       result_mant = max_bits.get_mantissa() + min_bits.get_mantissa();
     else
       result_mant = max_bits.get_mantissa() - min_bits.get_mantissa();
@@ -155,7 +162,7 @@ add(InType x, InType y) {
     else
       aligned_min_mant_sticky = true;
 
-    if (max_bits.sign() == min_bits.sign())
+    if (is_effectively_add)
       result_mant = max_mant + (aligned_min_mant | aligned_min_mant_sticky);
     else
       result_mant = max_mant - (aligned_min_mant | aligned_min_mant_sticky);
@@ -166,6 +173,24 @@ add(InType x, InType y) {
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
+template <typename OutType, typename InType>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                 cpp::is_floating_point_v<InType> &&
+                                 sizeof(OutType) <= sizeof(InType),
+                             OutType>
+add(InType x, InType y) {
+  return add_or_sub</*IsSub=*/false, OutType>(x, y);
+}
+
+template <typename OutType, typename InType>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                 cpp::is_floating_point_v<InType> &&
+                                 sizeof(OutType) <= sizeof(InType),
+                             OutType>
+sub(InType x, InType y) {
+  return add_or_sub</*IsSub=*/true, OutType>(x, y);
+}
+
 } // namespace LIBC_NAMESPACE::fputil::generic
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H

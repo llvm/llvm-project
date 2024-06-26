@@ -116,6 +116,8 @@ add_math_entrypoint_object(f16sqrtf)
 add_math_entrypoint_object(f16sqrtl)
 add_math_entrypoint_object(f16sqrtf128)
 
+add_math_entrypoint_object(f16subf)
+
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
