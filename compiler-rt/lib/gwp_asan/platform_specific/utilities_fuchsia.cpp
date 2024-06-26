@@ -21,10 +21,11 @@ void die(const char *Message) {
 }
 
 void dieWithErrorCode(const char *Message, int64_t ErrorCode) {
-  size_t buffer_size = strlen(Message) + 48;
+  const char *error_str =
+      zx_status_get_string(static_cast<zx_status_t>(ErrorCode));
+  size_t buffer_size = strlen(Message) + 32 + strlen(error_str);
   char *buffer = static_cast<char *>(alloca(buffer_size));
-  snprintf(buffer, buffer_size, "%s (Error Code: %" PRId64 ")", Message,
-           ErrorCode);
+  snprintf(buffer, buffer_size, "%s (Error Code: %s)", Message, error_str);
   __sanitizer_log_write(buffer, strlen(buffer));
   __builtin_trap();
 }
