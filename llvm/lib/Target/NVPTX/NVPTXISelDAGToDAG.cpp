@@ -3830,14 +3830,13 @@ void NVPTXDAGToDAGISel::SelectV2I64toI128(SDNode *N) {
   SDNode *Mov =
       CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128, {Lo, Hi});
 
-  SmallVector<EVT, 8> ResultsType(N->value_begin(), N->value_end());
-  SmallVector<SDValue, 8> NewOps(N->getNumOperands() - 1);
+  SmallVector<SDValue, 4> NewOps(N->getNumOperands() - 1);
   NewOps[0] = N->getOperand(0);
   NewOps[1] = Dst;
   NewOps[2] = SDValue(Mov, 0);
   if (N->getNumOperands() == 5)
     NewOps[3] = N->getOperand(4);
-  SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
+  SDValue NewValue = CurDAG->getNode(ISD::CopyToReg, DL, SmallVector<EVT>(N->values()), NewOps);
 
   ReplaceNode(N, NewValue.getNode());
 }

@@ -3117,8 +3117,8 @@ SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
   SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
                            DAG.getIntPtrConstant(1, DL));
 
-  SmallVector<SDValue, 8> NewOps(Op->getNumOperands() + 1);
-  SmallVector<EVT, 8> ResultsType(Node->value_begin(), Node->value_end());
+  SmallVector<SDValue, 5> NewOps(Op->getNumOperands() + 1);
+  SmallVector<EVT, 3> ResultsType(Node->value_begin(), Node->value_end());
 
   NewOps[0] = Op->getOperand(0); // Chain
   NewOps[1] = Op->getOperand(1); // Dst Reg
@@ -6333,16 +6333,9 @@ static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
 
   assert(Reg.getValueType() == MVT::i128 &&
          "Custom lowering for CopyFromReg with 128-bit reg only");
-  SmallVector<EVT, 8> ResultsType(4);
-  SmallVector<SDValue, 8> NewOps(3);
-  ResultsType[0] = MVT::i64;
-  ResultsType[1] = MVT::i64;
-  ResultsType[2] = N->getValueType(1);
-  ResultsType[3] = N->getValueType(2);
-
-  NewOps[0] = Chain;
-  NewOps[1] = Reg;
-  NewOps[2] = Glue;
+  SmallVector<EVT, 4> ResultsType = {MVT::i64, MVT::i64, N->getValueType(1),
+                                     N->getValueType(2)};
+  SmallVector<SDValue, 3> NewOps = {Chain, Reg, Glue};
 
   SDValue NewValue = DAG.getNode(ISD::CopyFromReg, DL, ResultsType, NewOps);
   SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128,
