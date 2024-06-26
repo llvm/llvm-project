@@ -5917,20 +5917,13 @@ bool X86TTIImpl::canMacroFuseCmp() {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
-  bool IsSingleElementVector =
-      isa<VectorType>(DataTy) &&
-      cast<FixedVectorType>(DataTy)->getNumElements() == 1;
   Type *ScalarTy = DataTy->getScalarType();
 
-  if (ST->hasCF() && IsSingleElementVector &&
-      hasConditionalLoadStoreForType(ScalarTy))
-    return true;
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
 
   if (!ST->hasAVX())
-    return false;
-
-  // The backend can't handle a single element vector w/o CFCMOV.
-  if (IsSingleElementVector)
     return false;
 
   if (ScalarTy->isPointerTy())

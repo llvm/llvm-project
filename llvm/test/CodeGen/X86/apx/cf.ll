@@ -53,6 +53,26 @@ entry:
   ret i64 %2
 }
 
+;; CFCMOV can use the flags produced by SUB directly.
+define i64 @reduced_data_dependency(i64 %a, i64 %b, ptr %c) {
+; CHECK-LABEL: reduced_data_dependency:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rcx
+; CHECK-NEXT:    subq %rsi, %rcx
+; CHECK-NEXT:    cfcmovnsq (%rdx), %rdi, %rax
+; CHECK-NEXT:    addq %rcx, %rax
+; CHECK-NEXT:    retq
+entry:
+  %sub = sub i64 %a, %b
+  %cond = icmp sge i64 %sub, 0
+  %0 = bitcast i1 %cond to <1 x i1>
+  %va = bitcast i64 %a to <1 x i64>
+  %1 = call <1 x i64> @llvm.masked.load.v1i64.p0(ptr %c, i32 4, <1 x i1> %0, <1 x i64> %va)
+  %2 = bitcast <1 x i64> %1 to i64
+  %3 = add i64 %2, %sub
+  ret i64 %3
+}
+
 ;; No need to optimize the generated assembly for cond_false/cond_true b/c it
 ;; should never be emitted by middle end. Add IR here just to check it's
 ;; legal to feed constant mask to backend.

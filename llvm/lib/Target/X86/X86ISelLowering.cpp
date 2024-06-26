@@ -55687,8 +55687,6 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
   // cload/cstore ..., cond_ne, flag2
   // ->
   // cload/cstore cc, flag
-  //
-  // if res has no users, where op is cload/cstore.
   if (N->getConstantOperandVal(3) != X86::COND_NE)
     return SDValue();
 
@@ -55696,15 +55694,15 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
   if (Sub->getOpcode() != X86ISD::SUB)
     return SDValue();
 
-  SDValue Op1 = Sub->getOperand(1);
+  SDValue SetCC = Sub->getOperand(1);
 
-  if (Sub->hasAnyUseOfValue(0) || !X86::isZeroNode(Sub->getOperand(0)) ||
-      Op1.getOpcode() != X86ISD::SETCC)
+  if (!X86::isZeroNode(Sub->getOperand(0)) ||
+      SetCC.getOpcode() != X86ISD::SETCC)
     return SDValue();
 
   SmallVector<SDValue, 5> Ops(N->op_values());
-  Ops[3] = Op1.getOperand(0);
-  Ops[4] = Op1.getOperand(1);
+  Ops[3] = SetCC.getOperand(0);
+  Ops[4] = SetCC.getOperand(1);
 
   return DAG.getMemIntrinsicNode(N->getOpcode(), SDLoc(N), N->getVTList(), Ops,
                                  cast<MemSDNode>(N)->getMemoryVT(),
