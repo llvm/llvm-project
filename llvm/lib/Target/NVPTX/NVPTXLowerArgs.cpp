@@ -95,7 +95,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -183,16 +185,16 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
     }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
       SmallVector<Value *, 4> Indices(GEP->indices());
-      auto *NewGEP = GetElementPtrInst::Create(GEP->getSourceElementType(),
-                                               I.NewParam, Indices,
-                                               GEP->getName(), GEP);
+      auto *NewGEP = GetElementPtrInst::Create(
+          GEP->getSourceElementType(), I.NewParam, Indices, GEP->getName(),
+          GEP->getIterator());
       NewGEP->setIsInBounds(GEP->isInBounds());
       return NewGEP;
     }
     if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
       auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
-                                 BC->getName(), BC);
+                                 BC->getName(), BC->getIterator());
     }
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
@@ -316,7 +318,7 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  Instruction *FirstInst = &(Func->getEntryBlock().front());
+  BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
   Type *StructType = Arg->getParamByValType();
   assert(StructType && "Missing byval type");
 
@@ -336,8 +338,9 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     while (!ValuesToCheck.empty()) {
       Value *V = ValuesToCheck.pop_back_val();
       if (!IsALoadChainInstr(V)) {
-        LLVM_DEBUG(dbgs() << "Need a copy of " << *Arg << " because of " << *V
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "Need a "
+                          << (isParamGridConstant(*Arg) ? "cast " : "copy ")
+                          << "of " << *Arg << " because of " << *V << "\n");
         (void)Arg;
         return false;
       }
@@ -366,27 +369,59 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     return;
   }
 
-  // Otherwise we have to create a temporary copy.
   const DataLayout &DL = Func->getParent()->getDataLayout();
   unsigned AS = DL.getAllocaAddrSpace();
-  AllocaInst *AllocA = new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
-  // Set the alignment to alignment of the byval parameter. This is because,
-  // later load/stores assume that alignment, and we are going to replace
-  // the use of the byval parameter with this alloca instruction.
-  AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                           .value_or(DL.getPrefTypeAlign(StructType)));
-  Arg->replaceAllUsesWith(AllocA);
+  if (isParamGridConstant(*Arg)) {
+    // Writes to a grid constant are undefined behaviour. We do not need a
+    // temporary copy. When a pointer might have escaped, conservatively replace
+    // all of its uses (which might include a device function call) with a cast
+    // to the generic address space.
+    // TODO: only cast byval grid constant parameters at use points that need
+    // generic address (e.g., merging parameter pointers with other address
+    // space, or escaping to call-sites, inline-asm, memory), and use the
+    // parameter address space for normal loads.
+    IRBuilder<> IRB(&Func->getEntryBlock().front());
 
-  Value *ArgInParam = new AddrSpaceCastInst(
-      Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
-      FirstInst);
-  // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
-  // addrspacecast preserves alignment.  Since params are constant, this load is
-  // definitely not volatile.
-  LoadInst *LI =
-      new LoadInst(StructType, ArgInParam, Arg->getName(),
-                   /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-  new StoreInst(LI, AllocA, FirstInst);
+    // Cast argument to param address space
+    auto *CastToParam =
+        cast<AddrSpaceCastInst>(IRB.CreateAddrSpaceCast(
+            Arg, IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getName() + ".param"));
+
+    // Cast param address to generic address space. We do not use an
+    // addrspacecast to generic here, because, LLVM considers `Arg` to be in the
+    // generic address space, and a `generic -> param` cast followed by a `param
+    // -> generic` cast will be folded away. The `param -> generic` intrinsic
+    // will be correctly lowered to `cvta.param`.
+    Value *CvtToGenCall = IRB.CreateIntrinsic(
+        IRB.getPtrTy(ADDRESS_SPACE_GENERIC), Intrinsic::nvvm_ptr_param_to_gen,
+        CastToParam, nullptr, CastToParam->getName() + ".gen");
+
+    Arg->replaceAllUsesWith(CvtToGenCall);
+
+    // Do not replace Arg in the cast to param space
+    CastToParam->setOperand(0, Arg);
+  } else {
+    // Otherwise we have to create a temporary copy.
+    AllocaInst *AllocA =
+        new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
+    // Set the alignment to alignment of the byval parameter. This is because,
+    // later load/stores assume that alignment, and we are going to replace
+    // the use of the byval parameter with this alloca instruction.
+    AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
+                             .value_or(DL.getPrefTypeAlign(StructType)));
+    Arg->replaceAllUsesWith(AllocA);
+
+    Value *ArgInParam = new AddrSpaceCastInst(
+        Arg, PointerType::get(Arg->getContext(), ADDRESS_SPACE_PARAM),
+        Arg->getName(), FirstInst);
+    // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
+    // addrspacecast preserves alignment.  Since params are constant, this load
+    // is definitely not volatile.
+    LoadInst *LI =
+        new LoadInst(StructType, ArgInParam, Arg->getName(),
+                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
+    new StoreInst(LI, AllocA, FirstInst);
+  }
 }
 
 void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
@@ -407,9 +442,9 @@ void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
       Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
-      Ptr->getName(), &*InsertPt);
+      Ptr->getName(), InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
-                                              Ptr->getName(), &*InsertPt);
+                                              Ptr->getName(), InsertPt);
   // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
   Ptr->replaceAllUsesWith(PtrInGeneric);
   PtrInGlobal->setOperand(0, Ptr);

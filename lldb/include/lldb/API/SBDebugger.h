@@ -43,11 +43,12 @@ public:
 class LLDB_API SBDebugger {
 public:
   FLAGS_ANONYMOUS_ENUM(){
-      eBroadcastBitProgress = (1 << 0),
-      eBroadcastBitWarning = (1 << 1),
-      eBroadcastBitError = (1 << 2),
+      eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
+      eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
+      eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
+      eBroadcastBitProgressCategory =
+          lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
   };
-
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);
@@ -55,6 +56,8 @@ public:
   ~SBDebugger();
 
   static const char *GetBroadcasterClass();
+
+  static bool SupportsLanguage(lldb::LanguageType language);
 
   lldb::SBBroadcaster GetBroadcaster();
 
@@ -327,8 +330,21 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+  /// Clear all previously added callbacks and only add the given one.
+  LLDB_DEPRECATED_FIXME("Use AddDestroyCallback and RemoveDestroyCallback",
+                        "AddDestroyCallback")
   void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                           void *baton);
+
+  /// Add a callback for when the debugger is destroyed. Return a token, which
+  /// can be used to remove said callback. Multiple callbacks can be added by
+  /// calling this function multiple times, and will be invoked in FIFO order.
+  lldb::callback_token_t
+  AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
+  /// Remove the specified callback. Return true if successful.
+  bool RemoveDestroyCallback(lldb::callback_token_t token);
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use DispatchInput(const void *, size_t)",

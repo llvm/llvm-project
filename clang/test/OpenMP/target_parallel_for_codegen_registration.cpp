@@ -210,10 +210,10 @@
 // TCHECK-DAG: [[ENTRY12:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR12]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 
 // We have 4 initializers, one for the 500 priority, another one for 501, or more for the default priority, and the last one for the offloading registration function.
-// CHECK: @llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [
+// CHECK: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [
 // CHECK-SAME: { i32, ptr, ptr } { i32 500, ptr [[P500:@[^,]+]], ptr null },
 // CHECK-SAME: { i32, ptr, ptr } { i32 501, ptr [[P501:@[^,]+]], ptr null },
-// CHECK-SAME: { i32, ptr, ptr } { i32 65535, ptr [[PMAX:@[^,]+]], ptr null },
+// CHECK-SAME: { i32, ptr, ptr } { i32 65535, ptr [[PMAX:@[^,]+]], ptr null }
 
 // CHECK-NTARGET: @llvm.global_ctors = appending global [3   x { i32, ptr, ptr }] [
 

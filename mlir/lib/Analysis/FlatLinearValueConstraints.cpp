@@ -9,13 +9,13 @@
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
 #include "mlir/Analysis/Presburger/LinearTransform.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,11 +35,12 @@ using namespace presburger;
 namespace {
 
 // See comments for SimpleAffineExprFlattener.
-// An AffineExprFlattener extends a SimpleAffineExprFlattener by recording
-// constraint information associated with mod's, floordiv's, and ceildiv's
-// in FlatLinearConstraints 'localVarCst'.
+// An AffineExprFlattenerWithLocalVars extends a SimpleAffineExprFlattener by
+// recording constraint information associated with mod's, floordiv's, and
+// ceildiv's in FlatLinearConstraints 'localVarCst'.
 struct AffineExprFlattener : public SimpleAffineExprFlattener {
-public:
+  using SimpleAffineExprFlattener::SimpleAffineExprFlattener;
+
   // Constraints connecting newly introduced local variables (for mod's and
   // div's) to existing (dimensional and symbolic) ones. These are always
   // inequalities.
@@ -47,7 +48,7 @@ public:
 
   AffineExprFlattener(unsigned nDims, unsigned nSymbols)
       : SimpleAffineExprFlattener(nDims, nSymbols),
-        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)) {}
+        localVarCst(PresburgerSpace::getSetSpace(nDims, nSymbols)) {};
 
 private:
   // Add a local variable (needed to flatten a mod, floordiv, ceildiv expr).
@@ -62,76 +63,144 @@ private:
     // Update localVarCst.
     localVarCst.addLocalFloorDiv(dividend, divisor);
   }
+
+  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
+                                     ArrayRef<int64_t> rhs,
+                                     AffineExpr localExpr) override {
+    // AffineExprFlattener does not support semi-affine expressions.
+    return failure();
+  }
+};
+
+// A SemiAffineExprFlattener is an AffineExprFlattenerWithLocalVars that adds
+// conservative bounds for semi-affine expressions (given assumptions hold). If
+// the assumptions required to add the semi-affine bounds are found not to hold
+// the final constraints set will be empty/inconsistent. If the assumptions are
+// never contradicted the final bounds still only will be correct if the
+// assumptions hold.
+struct SemiAffineExprFlattener : public AffineExprFlattener {
+  using AffineExprFlattener::AffineExprFlattener;
+
+  LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
+                                     ArrayRef<int64_t> rhs,
+                                     AffineExpr localExpr) override {
+    auto result =
+        SimpleAffineExprFlattener::addLocalIdSemiAffine(lhs, rhs, localExpr);
+    assert(succeeded(result) &&
+           "unexpected failure in SimpleAffineExprFlattener");
+    (void)result;
+
+    if (localExpr.getKind() == AffineExprKind::Mod) {
+      // Given two numbers a and b, division is defined as:
+      //
+      // a = bq + r
+      // 0 <= r < |b| (where |x| is the absolute value of x)
+      //
+      // q = a floordiv b
+      // r = a mod b
+
+      // Add a new local variable (r) to represent the mod.
+      unsigned rPos = localVarCst.appendVar(VarKind::Local);
+
+      // r >= 0 (Can ALWAYS be added)
+      localVarCst.addBound(BoundType::LB, rPos, 0);
+
+      // r < b (Can be added if b > 0, which we assume here)
+      ArrayRef<int64_t> b = rhs;
+      SmallVector<int64_t> bSubR(b);
+      bSubR.insert(bSubR.begin() + rPos, -1);
+      // Note: bSubR = b - r
+      // So this adds the bound b - r >= 1 (equivalent to r < b)
+      localVarCst.addBound(BoundType::LB, bSubR, 1);
+
+      // Note: The assumption of b > 0 is based on the affine expression docs,
+      // which state "RHS of mod is always a constant or a symbolic expression
+      // with a positive value." (see AffineExprKind in AffineExpr.h). If this
+      // assumption does not hold constraints (added above) are a contradiction.
+
+      return success();
+    }
+
+    // TODO: Support other semi-affine expressions.
+    return failure();
+  }
 };
 
 } // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
 // flattened. For example two specific cases:
-// 1. semi-affine expressions not handled yet.
+// 1. an unhandled semi-affine expressions is found.
 // 2. has poison expression (i.e., division by zero).
 static LogicalResult
 getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
                         unsigned numSymbols,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
-                        FlatLinearConstraints *localVarCst) {
+                        FlatLinearConstraints *localVarCst,
+                        bool addConservativeSemiAffineBounds = false) {
   if (exprs.empty()) {
     if (localVarCst)
       *localVarCst = FlatLinearConstraints(numDims, numSymbols);
     return success();
   }
 
-  AffineExprFlattener flattener(numDims, numSymbols);
-  // Use the same flattener to simplify each expression successively. This way
-  // local variables / expressions are shared.
-  for (auto expr : exprs) {
-    if (!expr.isPureAffine())
-      return failure();
-    // has poison expression
-    auto flattenResult = flattener.walkPostOrder(expr);
-    if (failed(flattenResult))
-      return failure();
+  auto flattenExprs = [&](AffineExprFlattener &flattener) -> LogicalResult {
+    // Use the same flattener to simplify each expression successively. This way
+    // local variables / expressions are shared.
+    for (auto expr : exprs) {
+      auto flattenResult = flattener.walkPostOrder(expr);
+      if (failed(flattenResult))
+        return failure();
+    }
+
+    assert(flattener.operandExprStack.size() == exprs.size());
+    flattenedExprs->clear();
+    flattenedExprs->assign(flattener.operandExprStack.begin(),
+                           flattener.operandExprStack.end());
+
+    if (localVarCst)
+      localVarCst->clearAndCopyFrom(flattener.localVarCst);
+
+    return success();
+  };
+
+  if (addConservativeSemiAffineBounds) {
+    SemiAffineExprFlattener flattener(numDims, numSymbols);
+    return flattenExprs(flattener);
   }
 
-  assert(flattener.operandExprStack.size() == exprs.size());
-  flattenedExprs->clear();
-  flattenedExprs->assign(flattener.operandExprStack.begin(),
-                         flattener.operandExprStack.end());
-
-  if (localVarCst)
-    localVarCst->clearAndCopyFrom(flattener.localVarCst);
-
-  return success();
+  AffineExprFlattener flattener(numDims, numSymbols);
+  return flattenExprs(flattener);
 }
 
 // Flattens 'expr' into 'flattenedExpr'. Returns failure if 'expr' was unable to
-// be flattened (semi-affine expressions not handled yet).
-LogicalResult
-mlir::getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
-                             unsigned numSymbols,
-                             SmallVectorImpl<int64_t> *flattenedExpr,
-                             FlatLinearConstraints *localVarCst) {
+// be flattened (an unhandled semi-affine was found).
+LogicalResult mlir::getFlattenedAffineExpr(
+    AffineExpr expr, unsigned numDims, unsigned numSymbols,
+    SmallVectorImpl<int64_t> *flattenedExpr, FlatLinearConstraints *localVarCst,
+    bool addConservativeSemiAffineBounds) {
   std::vector<SmallVector<int64_t, 8>> flattenedExprs;
-  LogicalResult ret = ::getFlattenedAffineExprs({expr}, numDims, numSymbols,
-                                                &flattenedExprs, localVarCst);
+  LogicalResult ret =
+      ::getFlattenedAffineExprs({expr}, numDims, numSymbols, &flattenedExprs,
+                                localVarCst, addConservativeSemiAffineBounds);
   *flattenedExpr = flattenedExprs[0];
   return ret;
 }
 
 /// Flattens the expressions in map. Returns failure if 'expr' was unable to be
-/// flattened (i.e., semi-affine expressions not handled yet).
+/// flattened (i.e., an unhandled semi-affine was found).
 LogicalResult mlir::getFlattenedAffineExprs(
     AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
-    FlatLinearConstraints *localVarCst) {
+    FlatLinearConstraints *localVarCst, bool addConservativeSemiAffineBounds) {
   if (map.getNumResults() == 0) {
     if (localVarCst)
       *localVarCst =
           FlatLinearConstraints(map.getNumDims(), map.getNumSymbols());
     return success();
   }
-  return ::getFlattenedAffineExprs(map.getResults(), map.getNumDims(),
-                                   map.getNumSymbols(), flattenedExprs,
-                                   localVarCst);
+  return ::getFlattenedAffineExprs(
+      map.getResults(), map.getNumDims(), map.getNumSymbols(), flattenedExprs,
+      localVarCst, addConservativeSemiAffineBounds);
 }
 
 LogicalResult mlir::getFlattenedAffineExprs(
@@ -640,9 +709,11 @@ void FlatLinearConstraints::getSliceBounds(unsigned offset, unsigned num,
 }
 
 LogicalResult FlatLinearConstraints::flattenAlignedMapAndMergeLocals(
-    AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs) {
+    AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
+    bool addConservativeSemiAffineBounds) {
   FlatLinearConstraints localCst;
-  if (failed(getFlattenedAffineExprs(map, flattenedExprs, &localCst))) {
+  if (failed(getFlattenedAffineExprs(map, flattenedExprs, &localCst,
+                                     addConservativeSemiAffineBounds))) {
     LLVM_DEBUG(llvm::dbgs()
                << "composition unimplemented for semi-affine maps\n");
     return failure();
@@ -663,9 +734,9 @@ LogicalResult FlatLinearConstraints::flattenAlignedMapAndMergeLocals(
   return success();
 }
 
-LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
-                                              AffineMap boundMap,
-                                              bool isClosedBound) {
+LogicalResult FlatLinearConstraints::addBound(
+    BoundType type, unsigned pos, AffineMap boundMap, bool isClosedBound,
+    AddConservativeSemiAffineBounds addSemiAffineBounds) {
   assert(boundMap.getNumDims() == getNumDimVars() && "dim mismatch");
   assert(boundMap.getNumSymbols() == getNumSymbolVars() && "symbol mismatch");
   assert(pos < getNumDimAndSymbolVars() && "invalid position");
@@ -679,7 +750,9 @@ LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
   bool lower = type == BoundType::LB || type == BoundType::EQ;
 
   std::vector<SmallVector<int64_t, 8>> flatExprs;
-  if (failed(flattenAlignedMapAndMergeLocals(boundMap, &flatExprs)))
+  if (failed(flattenAlignedMapAndMergeLocals(
+          boundMap, &flatExprs,
+          addSemiAffineBounds == AddConservativeSemiAffineBounds::Yes)))
     return failure();
   assert(flatExprs.size() == boundMap.getNumResults());
 
@@ -715,9 +788,11 @@ LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
   return success();
 }
 
-LogicalResult FlatLinearConstraints::addBound(BoundType type, unsigned pos,
-                                              AffineMap boundMap) {
-  return addBound(type, pos, boundMap, /*isClosedBound=*/type != BoundType::UB);
+LogicalResult FlatLinearConstraints::addBound(
+    BoundType type, unsigned pos, AffineMap boundMap,
+    AddConservativeSemiAffineBounds addSemiAffineBounds) {
+  return addBound(type, pos, boundMap,
+                  /*isClosedBound=*/type != BoundType::UB, addSemiAffineBounds);
 }
 
 /// Compute an explicit representation for local vars. For all systems coming
@@ -817,13 +892,11 @@ FlatLinearValueConstraints::FlatLinearValueConstraints(IntegerSet set,
                             set.getNumDims() + set.getNumSymbols() + 1,
                             set.getNumDims(), set.getNumSymbols(),
                             /*numLocals=*/0) {
-  // Populate values.
-  if (operands.empty()) {
-    values.resize(getNumDimAndSymbolVars(), std::nullopt);
-  } else {
-    assert(set.getNumInputs() == operands.size() && "operand count mismatch");
-    values.assign(operands.begin(), operands.end());
-  }
+  assert(operands.empty() ||
+         set.getNumInputs() == operands.size() && "operand count mismatch");
+  // Set the values for the non-local variables.
+  for (unsigned i = 0, e = operands.size(); i < e; ++i)
+    setValue(i, operands[i]);
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -873,11 +946,6 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
                                                unsigned num) {
   unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
 
-  if (kind != VarKind::Local) {
-    values.insert(values.begin() + absolutePos, num, std::nullopt);
-    assert(values.size() == getNumDimAndSymbolVars());
-  }
-
   return absolutePos;
 }
 
@@ -890,11 +958,10 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
   unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
 
   // If a Value is provided, insert it; otherwise use std::nullopt.
-  for (unsigned i = 0; i < num; ++i)
-    values.insert(values.begin() + absolutePos + i,
-                  vals[i] ? std::optional<Value>(vals[i]) : std::nullopt);
+  for (unsigned i = 0, e = vals.size(); i < e; ++i)
+    if (vals[i])
+      setValue(absolutePos + i, vals[i]);
 
-  assert(values.size() == getNumDimAndSymbolVars());
   return absolutePos;
 }
 
@@ -902,10 +969,14 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
 /// associated with the same set of variables, appearing in the same order.
 static bool areVarsAligned(const FlatLinearValueConstraints &a,
                            const FlatLinearValueConstraints &b) {
-  return a.getNumDimVars() == b.getNumDimVars() &&
-         a.getNumSymbolVars() == b.getNumSymbolVars() &&
-         a.getNumVars() == b.getNumVars() &&
-         a.getMaybeValues().equals(b.getMaybeValues());
+  if (a.getNumDomainVars() != b.getNumDomainVars() ||
+      a.getNumRangeVars() != b.getNumRangeVars() ||
+      a.getNumSymbolVars() != b.getNumSymbolVars())
+    return false;
+  SmallVector<std::optional<Value>> aMaybeValues = a.getMaybeValues(),
+                                    bMaybeValues = b.getMaybeValues();
+  return std::equal(aMaybeValues.begin(), aMaybeValues.end(),
+                    bMaybeValues.begin(), bMaybeValues.end());
 }
 
 /// Calls areVarsAligned to check if two constraint systems have the same set
@@ -928,12 +999,14 @@ static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
     return true;
 
   SmallPtrSet<Value, 8> uniqueVars;
-  ArrayRef<std::optional<Value>> maybeValues =
-      cst.getMaybeValues().slice(start, end - start);
-  for (std::optional<Value> val : maybeValues) {
+  SmallVector<std::optional<Value>, 8> maybeValuesAll = cst.getMaybeValues();
+  ArrayRef<std::optional<Value>> maybeValues = {maybeValuesAll.data() + start,
+                                                maybeValuesAll.data() + end};
+
+  for (std::optional<Value> val : maybeValues)
     if (val && !uniqueVars.insert(*val).second)
       return false;
-  }
+
   return true;
 }
 
@@ -1058,20 +1131,9 @@ void FlatLinearValueConstraints::mergeSymbolVars(
          "expected same number of symbols");
 }
 
-bool FlatLinearValueConstraints::hasConsistentState() const {
-  return IntegerPolyhedron::hasConsistentState() &&
-         values.size() == getNumDimAndSymbolVars();
-}
-
 void FlatLinearValueConstraints::removeVarRange(VarKind kind, unsigned varStart,
                                                 unsigned varLimit) {
   IntegerPolyhedron::removeVarRange(kind, varStart, varLimit);
-  unsigned offset = getVarKindOffset(kind);
-
-  if (kind != VarKind::Local) {
-    values.erase(values.begin() + varStart + offset,
-                 values.begin() + varLimit + offset);
-  }
 }
 
 AffineMap
@@ -1089,14 +1151,14 @@ FlatLinearValueConstraints::computeAlignedMap(AffineMap map,
 
   dims.reserve(getNumDimVars());
   syms.reserve(getNumSymbolVars());
-  for (unsigned i = getVarKindOffset(VarKind::SetDim),
-                e = getVarKindEnd(VarKind::SetDim);
-       i < e; ++i)
-    dims.push_back(values[i] ? *values[i] : Value());
-  for (unsigned i = getVarKindOffset(VarKind::Symbol),
-                e = getVarKindEnd(VarKind::Symbol);
-       i < e; ++i)
-    syms.push_back(values[i] ? *values[i] : Value());
+  for (unsigned i = 0, e = getNumVarKind(VarKind::SetDim); i < e; ++i) {
+    Identifier id = space.getId(VarKind::SetDim, i);
+    dims.push_back(id.hasValue() ? Value(id.getValue<Value>()) : Value());
+  }
+  for (unsigned i = 0, e = getNumVarKind(VarKind::Symbol); i < e; ++i) {
+    Identifier id = space.getId(VarKind::Symbol, i);
+    syms.push_back(id.hasValue() ? Value(id.getValue<Value>()) : Value());
+  }
 
   AffineMap alignedMap =
       alignAffineMapWithValues(map, operands, dims, syms, newSymsPtr);
@@ -1109,38 +1171,18 @@ FlatLinearValueConstraints::computeAlignedMap(AffineMap map,
 
 bool FlatLinearValueConstraints::findVar(Value val, unsigned *pos,
                                          unsigned offset) const {
-  unsigned i = offset;
-  for (const auto &mayBeVar :
-       ArrayRef<std::optional<Value>>(values).drop_front(offset)) {
-    if (mayBeVar && *mayBeVar == val) {
+  SmallVector<std::optional<Value>> maybeValues = getMaybeValues();
+  for (unsigned i = offset, e = maybeValues.size(); i < e; ++i)
+    if (maybeValues[i] && maybeValues[i].value() == val) {
       *pos = i;
       return true;
     }
-    i++;
-  }
   return false;
 }
 
 bool FlatLinearValueConstraints::containsVar(Value val) const {
-  return llvm::any_of(values, [&](const std::optional<Value> &mayBeVar) {
-    return mayBeVar && *mayBeVar == val;
-  });
-}
-
-void FlatLinearValueConstraints::swapVar(unsigned posA, unsigned posB) {
-  IntegerPolyhedron::swapVar(posA, posB);
-
-  if (getVarKindAt(posA) == VarKind::Local &&
-      getVarKindAt(posB) == VarKind::Local)
-    return;
-
-  // Treat value of a local variable as std::nullopt.
-  if (getVarKindAt(posA) == VarKind::Local)
-    values[posB] = std::nullopt;
-  else if (getVarKindAt(posB) == VarKind::Local)
-    values[posA] = std::nullopt;
-  else
-    std::swap(values[posA], values[posB]);
+  unsigned pos;
+  return findVar(val, &pos, 0);
 }
 
 void FlatLinearValueConstraints::addBound(BoundType type, Value val,
@@ -1180,31 +1222,6 @@ void FlatLinearValueConstraints::printSpace(raw_ostream &os) const {
   os << "const)\n";
 }
 
-void FlatLinearValueConstraints::clearAndCopyFrom(
-    const IntegerRelation &other) {
-
-  if (auto *otherValueSet =
-          dyn_cast<const FlatLinearValueConstraints>(&other)) {
-    *this = *otherValueSet;
-  } else {
-    *static_cast<IntegerRelation *>(this) = other;
-    values.clear();
-    values.resize(getNumDimAndSymbolVars(), std::nullopt);
-  }
-}
-
-void FlatLinearValueConstraints::fourierMotzkinEliminate(
-    unsigned pos, bool darkShadow, bool *isResultIntegerExact) {
-  SmallVector<std::optional<Value>, 8> newVals = values;
-  if (getVarKindAt(pos) != VarKind::Local)
-    newVals.erase(newVals.begin() + pos);
-  // Note: Base implementation discards all associated Values.
-  IntegerPolyhedron::fourierMotzkinEliminate(pos, darkShadow,
-                                             isResultIntegerExact);
-  values = newVals;
-  assert(values.size() == getNumDimAndSymbolVars());
-}
-
 void FlatLinearValueConstraints::projectOut(Value val) {
   unsigned pos;
   bool ret = findVar(val, &pos);
@@ -1216,9 +1233,12 @@ void FlatLinearValueConstraints::projectOut(Value val) {
 LogicalResult FlatLinearValueConstraints::unionBoundingBox(
     const FlatLinearValueConstraints &otherCst) {
   assert(otherCst.getNumDimVars() == getNumDimVars() && "dims mismatch");
-  assert(otherCst.getMaybeValues()
-             .slice(0, getNumDimVars())
-             .equals(getMaybeValues().slice(0, getNumDimVars())) &&
+  SmallVector<std::optional<Value>> maybeValues = getMaybeValues(),
+                                    otherMaybeValues =
+                                        otherCst.getMaybeValues();
+  assert(std::equal(maybeValues.begin(), maybeValues.begin() + getNumDimVars(),
+                    otherMaybeValues.begin(),
+                    otherMaybeValues.begin() + getNumDimVars()) &&
          "dim values mismatch");
   assert(otherCst.getNumLocalVars() == 0 && "local vars not supported here");
   assert(getNumLocalVars() == 0 && "local vars not supported yet here");
@@ -1297,7 +1317,8 @@ mlir::getMultiAffineFunctionFromMap(AffineMap map,
          "AffineMap cannot produce divs without local representation");
 
   // TODO: We shouldn't have to do this conversion.
-  Matrix<MPInt> mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
+  Matrix<DynamicAPInt> mat(map.getNumResults(),
+                           map.getNumInputs() + divs.getNumDivs() + 1);
   for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
     for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
       mat(i, j) = flattenedExprs[i][j];

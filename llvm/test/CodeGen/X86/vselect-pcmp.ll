@@ -531,8 +531,7 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm3, %xmm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
-; XOP-NEXT:    # xmm4 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0
@@ -861,8 +860,7 @@ define <4 x i64> @blend_splat_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm3, %xmm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
-; XOP-NEXT:    # xmm4 = mem[0,0]
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm4 = [18446744073709551553,18446744073709551553]
 ; XOP-NEXT:    vpshaq %xmm4, %xmm3, %xmm3
 ; XOP-NEXT:    vpsllq $62, %xmm0, %xmm0
 ; XOP-NEXT:    vpshaq %xmm4, %xmm0, %xmm0
@@ -1021,7 +1019,7 @@ define <2 x i64> @blend_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z
 ; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,4]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm3 = [1,4]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -1184,7 +1182,7 @@ define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,4,32768,1]
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} ymm3 = [2,4,32768,1]
 ; AVX512F-NEXT:    vptestnmq %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmq %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -1231,7 +1229,7 @@ define <8 x i32> @blend_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [1,2,8,4,8,1024,2,4096]
+; AVX512F-NEXT:    vpmovsxwd {{.*#+}} ymm3 = [1,2,8,4,8,1024,2,4096]
 ; AVX512F-NEXT:    vptestnmd %zmm3, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmd %zmm1, %zmm2, %zmm0 {%k1}
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -1365,6 +1363,282 @@ define <32 x i8> @blend_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z
   %c = icmp eq <32 x i8> %a, zeroinitializer
   %r = select <32 x i1> %c, <32 x i8> %y, <32 x i8> %z
   ret <32 x i8> %r
+}
+
+define void @store_blend_load_v4i64(ptr %a0, ptr %a1, ptr %a2) {
+; AVX1-LABEL: store_blend_load_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovapd (%rsi), %ymm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm1 = mem[0,0]
+; AVX1-NEXT:    vpxor 16(%rdi), %xmm1, %xmm2
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775815,9223372036854775815]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor (%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vblendvpd %ymm1, (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vmovapd %ymm0, (%rdx)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: store_blend_load_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-NEXT:    vmovapd (%rsi), %ymm1
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [9223372036854775815,9223372036854775815,9223372036854775815,9223372036854775815]
+; AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovapd %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: store_blend_load_v4i64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512F-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
+; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_blend_load_v4i64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512VL-NEXT:    vpcmpnleuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %k1
+; AVX512VL-NEXT:    vmovdqa64 %ymm0, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: store_blend_load_v4i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovapd (%rsi), %ymm0
+; XOP-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [7,7]
+; XOP-NEXT:    vpcomltuq 16(%rdi), %xmm1, %xmm2
+; XOP-NEXT:    vpcomltuq (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vblendvpd %ymm1, (%rdi), %ymm0, %ymm0
+; XOP-NEXT:    vmovapd %ymm0, (%rdx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
+  %v0 = load <4 x i64>, ptr %a0
+  %v1 = load <4 x i64>, ptr %a1
+  %cmp = icmp ugt <4 x i64> %v0, <i64 7, i64 7, i64 7, i64 7>
+  %res = select <4 x i1> %cmp, <4 x i64> %v0, <4 x i64> %v1
+  store <4 x i64> %res, ptr %a2
+  ret void
+}
+
+define void @store_blend_load_v8i32(ptr %a0, ptr %a1, ptr %a2) {
+; AVX1-LABEL: store_blend_load_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovaps (%rsi), %ymm0
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm1
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [8,8,8,8]
+; AVX1-NEXT:    vpmaxud %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpmaxud %xmm3, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vblendvps %ymm1, (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: store_blend_load_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-NEXT:    vmovaps (%rsi), %ymm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [8,8,8,8,8,8,8,8]
+; AVX2-NEXT:    vpmaxud %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vblendvps %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: store_blend_load_v8i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512F-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
+; AVX512F-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_blend_load_v8i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512VL-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k1
+; AVX512VL-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: store_blend_load_v8i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovaps (%rsi), %ymm0
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
+; XOP-NEXT:    vpcomltud 16(%rdi), %xmm1, %xmm2
+; XOP-NEXT:    vpcomltud (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vblendvps %ymm1, (%rdi), %ymm0, %ymm0
+; XOP-NEXT:    vmovaps %ymm0, (%rdx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
+  %v0 = load <8 x i32>, ptr %a0
+  %v1 = load <8 x i32>, ptr %a1
+  %cmp = icmp ugt <8 x i32> %v0, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  %res = select <8 x i1> %cmp, <8 x i32> %v0, <8 x i32> %v1
+  store <8 x i32> %res, ptr %a2
+  ret void
+}
+
+define void @store_blend_load_v16i16(ptr %a0, ptr %a1, ptr %a2) {
+; AVX1-LABEL: store_blend_load_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8]
+; AVX1-NEXT:    vpmaxuw %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxuw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm4
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm5
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdx)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: store_blend_load_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX2-NEXT:    vpmaxuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: store_blend_load_v16i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512F-NEXT:    vpmaxuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
+; AVX512F-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_blend_load_v16i16:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vpmaxuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512VL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpternlogq $202, (%rsi), %ymm0, %ymm1
+; AVX512VL-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: store_blend_load_v16i16:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovdqa (%rdi), %ymm0
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7]
+; XOP-NEXT:    vpcomltuw 16(%rdi), %xmm1, %xmm2
+; XOP-NEXT:    vpcomltuw (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
+; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
+  %v0 = load <16 x i16>, ptr %a0
+  %v1 = load <16 x i16>, ptr %a1
+  %cmp = icmp ugt <16 x i16> %v0, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+  %res = select <16 x i1> %cmp, <16 x i16> %v0, <16 x i16> %v1
+  store <16 x i16> %res, ptr %a2
+  ret void
+}
+
+define void @store_blend_load_v32i8(ptr %a0, ptr %a1, ptr %a2) {
+; AVX1-LABEL: store_blend_load_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+; AVX1-NEXT:    vpmaxub %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vpmaxub %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm4
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm5
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdx)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: store_blend_load_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX2-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: store_blend_load_v32i8:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-NEXT:    vmovdqa (%rsi), %ymm1
+; AVX512F-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
+; AVX512F-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm2
+; AVX512F-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: store_blend_load_v32i8:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512VL-NEXT:    vpmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512VL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpternlogq $202, (%rsi), %ymm0, %ymm1
+; AVX512VL-NEXT:    vmovdqa %ymm1, (%rdx)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: store_blend_load_v32i8:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovdqa (%rdi), %ymm0
+; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; XOP-NEXT:    vpcomltub 16(%rdi), %xmm1, %xmm2
+; XOP-NEXT:    vpcomltub (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
+; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
+  %v0 = load <32 x i8>, ptr %a0
+  %v1 = load <32 x i8>, ptr %a1
+  %cmp = icmp ugt <32 x i8> %v0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
+  %res = select <32 x i1> %cmp, <32 x i8> %v0, <32 x i8> %v1
+  store <32 x i8> %res, ptr %a2
+  ret void
 }
 
 define void @PR46531(ptr %x, ptr %y, ptr %z) {

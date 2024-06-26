@@ -71,6 +71,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fileno
+  SRCS
+    fileno.cpp
+  HDRS
+    ../fileno.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fflush
   SRCS
     fflush.cpp
@@ -91,7 +103,6 @@ add_entrypoint_object(
     ../fseek.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -104,7 +115,30 @@ add_entrypoint_object(
     ../ftell.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fseeko
+  SRCS
+    fseeko.cpp
+  HDRS
+    ../fseeko.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  ftello
+  SRCS
+    ftello.cpp
+  HDRS
+    ../ftello.h
+  DEPENDS
+    libc.src.errno.errno
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -327,6 +361,39 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+list(APPEND printf_deps
+      libc.src.__support.arg_list
+      libc.src.stdio.printf_core.vfprintf_internal
+)
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND printf_deps
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
+      libc.src.__support.File.platform_stdout
+  )
+endif()
+
+add_entrypoint_object(
+  printf
+  SRCS
+    printf.cpp
+  HDRS
+    ../printf.h
+  DEPENDS
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  vprintf
+  SRCS
+    vprintf.cpp
+  HDRS
+    ../vprintf.h
+  DEPENDS
+    ${printf_deps}
 )
 
 add_entrypoint_object(

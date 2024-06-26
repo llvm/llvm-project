@@ -117,79 +117,22 @@
 // ANDROID32-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.a32.o %t.a32.so -o %t4.a32
-// RUN: llvm-readobj -S --dynamic-table %t4.a32 | FileCheck --check-prefix=RELR32-HEADERS %s
-// RUN: llvm-readobj -r --raw-relr %t4.a32 | FileCheck --check-prefix=RAW-RELR32 %s
-// RUN: llvm-readobj -r %t4.a32 | FileCheck --check-prefix=RELR32 %s
+// RUN: llvm-readelf -Sdr %t4.a32 | FileCheck --check-prefix=RELR32 %s
 
-// RELR32-HEADERS:       Index: 1
-// RELR32-HEADERS-NEXT:  Name: .dynsym
+// RELR32:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+// RELR32:      .dynstr           STRTAB          {{.*}}                         00   A  0   0  1
+// RELR32-NEXT: .rel.dyn          REL             {{.*}}                         08   A  1   0  4
+// RELR32-NEXT: .relr.dyn         RELR            {{0*}}[[#%x,RELR:]] {{.*}}     04   A  0   0  4
 
-// RELR32-HEADERS:       Name: .relr.dyn
-// RELR32-HEADERS-NEXT:  Type: SHT_RELR
-// RELR32-HEADERS-NEXT:  Flags [ (0x2)
-// RELR32-HEADERS-NEXT:    SHF_ALLOC (0x2)
-// RELR32-HEADERS-NEXT:  ]
-// RELR32-HEADERS-NEXT:  Address: [[ADDR:.*]]
-// RELR32-HEADERS-NEXT:  Offset: [[ADDR]]
-// RELR32-HEADERS-NEXT:  Size: 8
-// RELR32-HEADERS-NEXT:  Link: 0
-// RELR32-HEADERS-NEXT:  Info: 0
-// RELR32-HEADERS-NEXT:  AddressAlignment: 4
-// RELR32-HEADERS-NEXT:  EntrySize: 4
+// RELR32:      (RELCOUNT)   1
+// RELR32:      (RELR)       0x[[#RELR]]
+// RELR32-NEXT: (RELRSZ)     8 (bytes)
+// RELR32-NEXT: (RELRENT)    4 (bytes)
 
-// RELR32-HEADERS:       0x00000024 RELR                 [[ADDR]]
-// RELR32-HEADERS:       0x00000023 RELRSZ               8 (bytes)
-// RELR32-HEADERS:       0x00000025 RELRENT              4 (bytes)
-
-/// SHT_RELR section contains address/bitmap entries
-/// encoding the offsets for relative relocation.
-// RAW-RELR32:           Section ({{.+}}) .relr.dyn {
-// RAW-RELR32-NEXT:      0x30284
-// RAW-RELR32-NEXT:      0x7FCFEFF
-// RAW-RELR32-NEXT:      }
-
-/// Decoded SHT_RELR section is same as UNPACKED,
-/// but contains only the relative relocations.
-/// Any relative relocations with odd offset stay in SHT_REL.
-// RELR32:               Section ({{.+}}) .rel.dyn {
-// RELR32-NEXT:          0x302F1 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302A4 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x302C8 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x302F5 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x302F9 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x302FD R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x30301 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x30305 R_ARM_ABS32 bar2
-// RELR32-NEXT:          0x302C4 R_ARM_ABS32 zed2
-// RELR32-NEXT:          }
-// RELR32-NEXT:          Section ({{.+}}) .relr.dyn {
-// RELR32-NEXT:          0x30284 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x30288 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x3028C R_ARM_RELATIVE -
-// RELR32-NEXT:          0x30290 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x30294 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x30298 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x3029C R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302A0 R_ARM_RELATIVE -
-
-// RELR32-NEXT:          0x302A8 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302AC R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302B0 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302B4 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302B8 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302BC R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302C0 R_ARM_RELATIVE -
-
-// RELR32-NEXT:          0x302CC R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302D0 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302D4 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302D8 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302DC R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302E0 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302E4 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302E8 R_ARM_RELATIVE -
-// RELR32-NEXT:          0x302EC R_ARM_RELATIVE -
-// RELR32-NEXT:          }
+// RELR32:      Relocation section '.relr.dyn' at offset {{.*}} contains 24 entries:
+// RELR32-NEXT: Index: Entry    Address   Symbolic Address
+// RELR32-NEXT: 0000:  00030284 {{.*}}
+// RELR32-NEXT: 0001:  07fcfeff {{.*}}
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %p/Inputs/shared2.s -o %t.a64.so.o
 // RUN: ld.lld -shared %t.a64.so.o -soname=so -o %t.a64.so
@@ -198,24 +141,24 @@
 // RUN: llvm-readobj -r %t2.a64 | FileCheck --check-prefix=UNPACKED64 %s
 
 // UNPACKED64:          Section ({{.+}}) .rela.dyn {
-// UNPACKED64-NEXT:     0x30690 R_AARCH64_RELATIVE - 0x1
-// UNPACKED64-NEXT:     0x30698 R_AARCH64_RELATIVE - 0x2
-// UNPACKED64-NEXT:     0x306A0 R_AARCH64_RELATIVE - 0x3
-// UNPACKED64-NEXT:     0x306A8 R_AARCH64_RELATIVE - 0x4
-// UNPACKED64-NEXT:     0x306B0 R_AARCH64_RELATIVE - 0x5
+// UNPACKED64-NEXT:     0x30690 R_AARCH64_RELATIVE - 0x30690
+// UNPACKED64-NEXT:     0x30698 R_AARCH64_RELATIVE - 0x30691
+// UNPACKED64-NEXT:     0x306A0 R_AARCH64_RELATIVE - 0x2
+// UNPACKED64-NEXT:     0x306A8 R_AARCH64_RELATIVE - 0xFFFFFFFFFFFFFFFF
+// UNPACKED64-NEXT:     0x306B0 R_AARCH64_RELATIVE - 0x80000000
 // UNPACKED64-NEXT:     0x306B8 R_AARCH64_RELATIVE - 0x6
 // UNPACKED64-NEXT:     0x306C0 R_AARCH64_RELATIVE - 0x7
-// UNPACKED64-NEXT:     0x306C8 R_AARCH64_RELATIVE - 0x8
+// UNPACKED64-NEXT:     0x306C8 R_AARCH64_RELATIVE - 0x30698
 
-// UNPACKED64-NEXT:     0x306D8 R_AARCH64_RELATIVE - 0x1
+// UNPACKED64-NEXT:     0x306D8 R_AARCH64_RELATIVE - 0x30691
 // UNPACKED64-NEXT:     0x306E0 R_AARCH64_RELATIVE - 0x2
 // UNPACKED64-NEXT:     0x306E8 R_AARCH64_RELATIVE - 0x3
 // UNPACKED64-NEXT:     0x306F0 R_AARCH64_RELATIVE - 0x4
 // UNPACKED64-NEXT:     0x306F8 R_AARCH64_RELATIVE - 0x5
 // UNPACKED64-NEXT:     0x30700 R_AARCH64_RELATIVE - 0x6
-// UNPACKED64-NEXT:     0x30708 R_AARCH64_RELATIVE - 0x7
+// UNPACKED64-NEXT:     0x30708 R_AARCH64_RELATIVE - 0x30697
 
-// UNPACKED64-NEXT:     0x30720 R_AARCH64_RELATIVE - 0x1
+// UNPACKED64-NEXT:     0x30720 R_AARCH64_RELATIVE - 0x30691
 // UNPACKED64-NEXT:     0x30728 R_AARCH64_RELATIVE - 0x2
 // UNPACKED64-NEXT:     0x30730 R_AARCH64_RELATIVE - 0x3
 // UNPACKED64-NEXT:     0x30738 R_AARCH64_RELATIVE - 0x4
@@ -223,9 +166,9 @@
 // UNPACKED64-NEXT:     0x30748 R_AARCH64_RELATIVE - 0x6
 // UNPACKED64-NEXT:     0x30750 R_AARCH64_RELATIVE - 0x7
 // UNPACKED64-NEXT:     0x30758 R_AARCH64_RELATIVE - 0x8
-// UNPACKED64-NEXT:     0x30760 R_AARCH64_RELATIVE - 0x9
+// UNPACKED64-NEXT:     0x30760 R_AARCH64_RELATIVE - 0x30699
 
-// UNPACKED64-NEXT:     0x30769 R_AARCH64_RELATIVE - 0xA
+// UNPACKED64-NEXT:     0x30769 R_AARCH64_RELATIVE - 0x3069A
 
 // UNPACKED64-NEXT:     0x306D0 R_AARCH64_ABS64 bar2 0x1
 // UNPACKED64-NEXT:     0x30718 R_AARCH64_ABS64 bar2 0x0
@@ -238,163 +181,142 @@
 // UNPACKED64-NEXT:     }
 
 // RUN: ld.lld -pie --pack-dyn-relocs=android %t.a64.o %t.a64.so -o %t3.a64
-// RUN: llvm-readobj -S --dynamic-table %t3.a64 | FileCheck --check-prefix=ANDROID64-HEADERS %s
-// RUN: llvm-readobj -r %t3.a64 | FileCheck --check-prefix=ANDROID64 %s
+// RUN: llvm-readelf -S -d -r %t3.a64 | FileCheck --check-prefix=ANDROID64 %s
 
-// ANDROID64-HEADERS:       Index: 1
-// ANDROID64-HEADERS-NEXT:  Name: .dynsym
+// ANDROID64:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+// ANDROID64:      .dynstr           STRTAB          {{.*}}                         00   A  0   0  1
+// ANDROID64-NEXT: .rela.dyn         ANDROID_RELA    {{0*}}[[#%x,ANDROID:]] {{.*}}  01   A  1   0  8
+// ANDROID64-NEXT: .text             PROGBITS        {{.*}}                         00  AX  0   0  4
 
-// ANDROID64-HEADERS:       Name: .rela.dyn
-// ANDROID64-HEADERS-NEXT:  Type: SHT_ANDROID_RELA
-// ANDROID64-HEADERS-NEXT:  Flags [ (0x2)
-// ANDROID64-HEADERS-NEXT:    SHF_ALLOC (0x2)
-// ANDROID64-HEADERS-NEXT:  ]
-// ANDROID64-HEADERS-NEXT:  Address: [[ADDR:.*]]
-// ANDROID64-HEADERS-NEXT:  Offset: [[ADDR]]
-// ANDROID64-HEADERS-NEXT:  Size: [[SIZE:.*]]
-// ANDROID64-HEADERS-NEXT:  Link: 1
-// ANDROID64-HEADERS-NEXT:  Info: 0
-// ANDROID64-HEADERS-NEXT:  AddressAlignment: 8
-// ANDROID64-HEADERS-NEXT:  EntrySize: 1
+// ANDROID64:      (DEBUG)           0x0
+// ANDROID64-NEXT: (ANDROID_RELA)    0x[[#ANDROID]]
+// ANDROID64-NEXT: (ANDROID_RELASZ)  136 (bytes)
+// ANDROID64-NEXT: (RELAENT)         24 (bytes)
 
 // ANDROID64-HEADERS: 0x0000000060000011 ANDROID_RELA          [[ADDR]]
 // ANDROID64-HEADERS: 0x0000000060000012 ANDROID_RELASZ        [[SIZE]]
 
-// ANDROID64:          Section ({{.+}}) .rela.dyn {
-// ANDROID64-NEXT:     0x303E0 R_AARCH64_RELATIVE - 0x1
-// ANDROID64-NEXT:     0x303E8 R_AARCH64_RELATIVE - 0x2
-// ANDROID64-NEXT:     0x303F0 R_AARCH64_RELATIVE - 0x3
-// ANDROID64-NEXT:     0x303F8 R_AARCH64_RELATIVE - 0x4
-// ANDROID64-NEXT:     0x30400 R_AARCH64_RELATIVE - 0x5
-// ANDROID64-NEXT:     0x30408 R_AARCH64_RELATIVE - 0x6
-// ANDROID64-NEXT:     0x30410 R_AARCH64_RELATIVE - 0x7
-// ANDROID64-NEXT:     0x30418 R_AARCH64_RELATIVE - 0x8
-// ANDROID64-NEXT:     0x30470 R_AARCH64_RELATIVE - 0x1
-// ANDROID64-NEXT:     0x30478 R_AARCH64_RELATIVE - 0x2
-// ANDROID64-NEXT:     0x30480 R_AARCH64_RELATIVE - 0x3
-// ANDROID64-NEXT:     0x30488 R_AARCH64_RELATIVE - 0x4
-// ANDROID64-NEXT:     0x30490 R_AARCH64_RELATIVE - 0x5
-// ANDROID64-NEXT:     0x30498 R_AARCH64_RELATIVE - 0x6
-// ANDROID64-NEXT:     0x304A0 R_AARCH64_RELATIVE - 0x7
-// ANDROID64-NEXT:     0x304A8 R_AARCH64_RELATIVE - 0x8
-// ANDROID64-NEXT:     0x304B0 R_AARCH64_RELATIVE - 0x9
-
-// ANDROID64-NEXT:     0x30428 R_AARCH64_RELATIVE - 0x1
-// ANDROID64-NEXT:     0x30430 R_AARCH64_RELATIVE - 0x2
-// ANDROID64-NEXT:     0x30438 R_AARCH64_RELATIVE - 0x3
-// ANDROID64-NEXT:     0x30440 R_AARCH64_RELATIVE - 0x4
-// ANDROID64-NEXT:     0x30448 R_AARCH64_RELATIVE - 0x5
-// ANDROID64-NEXT:     0x30450 R_AARCH64_RELATIVE - 0x6
-// ANDROID64-NEXT:     0x30458 R_AARCH64_RELATIVE - 0x7
-
-// ANDROID64-NEXT:     0x304B9 R_AARCH64_RELATIVE - 0xA
-
-// ANDROID64-NEXT:     0x30468 R_AARCH64_ABS64 bar2 0x0
-// ANDROID64-NEXT:     0x304C1 R_AARCH64_ABS64 bar2 0x0
-// ANDROID64-NEXT:     0x304C9 R_AARCH64_ABS64 bar2 0x0
-// ANDROID64-NEXT:     0x304E1 R_AARCH64_ABS64 bar2 0x0
-// ANDROID64-NEXT:     0x30420 R_AARCH64_ABS64 bar2 0x1
-// ANDROID64-NEXT:     0x30460 R_AARCH64_ABS64 zed2 0x0
-// ANDROID64-NEXT:     0x304D1 R_AARCH64_ABS64 bar2 0x1
-// ANDROID64-NEXT:     0x304D9 R_AARCH64_ABS64 bar2 0x1
-// ANDROID64-NEXT:     }
+// ANDROID64:       Relocation section '.rela.dyn' at offset {{.*}} contains 33 entries:
+// ANDROID64-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+// ANDROID64-NEXT:  00000000000303f0  0000000000000403 R_AARCH64_RELATIVE                303f0
+// ANDROID64-NEXT:  00000000000303f8  0000000000000403 R_AARCH64_RELATIVE                303f1
+// ANDROID64-NEXT:  0000000000030400  0000000000000403 R_AARCH64_RELATIVE                2
+// ANDROID64-NEXT:  0000000000030408  0000000000000403 R_AARCH64_RELATIVE                ffffffffffffffff
+// ANDROID64-NEXT:  0000000000030410  0000000000000403 R_AARCH64_RELATIVE                80000000
+// ANDROID64-NEXT:  0000000000030418  0000000000000403 R_AARCH64_RELATIVE                6
+// ANDROID64-NEXT:  0000000000030420  0000000000000403 R_AARCH64_RELATIVE                7
+// ANDROID64-NEXT:  0000000000030428  0000000000000403 R_AARCH64_RELATIVE                303f8
+// ANDROID64-NEXT:  0000000000030480  0000000000000403 R_AARCH64_RELATIVE                303f1
+// ANDROID64-NEXT:  0000000000030488  0000000000000403 R_AARCH64_RELATIVE                2
+// ANDROID64-NEXT:  0000000000030490  0000000000000403 R_AARCH64_RELATIVE                3
+// ANDROID64-NEXT:  0000000000030498  0000000000000403 R_AARCH64_RELATIVE                4
+// ANDROID64-NEXT:  00000000000304a0  0000000000000403 R_AARCH64_RELATIVE                5
+// ANDROID64-NEXT:  00000000000304a8  0000000000000403 R_AARCH64_RELATIVE                6
+// ANDROID64-NEXT:  00000000000304b0  0000000000000403 R_AARCH64_RELATIVE                7
+// ANDROID64-NEXT:  00000000000304b8  0000000000000403 R_AARCH64_RELATIVE                8
+// ANDROID64-NEXT:  00000000000304c0  0000000000000403 R_AARCH64_RELATIVE                303f9
+// ANDROID64-NEXT:  0000000000030438  0000000000000403 R_AARCH64_RELATIVE                303f1
+// ANDROID64-NEXT:  0000000000030440  0000000000000403 R_AARCH64_RELATIVE                2
+// ANDROID64-NEXT:  0000000000030448  0000000000000403 R_AARCH64_RELATIVE                3
+// ANDROID64-NEXT:  0000000000030450  0000000000000403 R_AARCH64_RELATIVE                4
+// ANDROID64-NEXT:  0000000000030458  0000000000000403 R_AARCH64_RELATIVE                5
+// ANDROID64-NEXT:  0000000000030460  0000000000000403 R_AARCH64_RELATIVE                6
+// ANDROID64-NEXT:  0000000000030468  0000000000000403 R_AARCH64_RELATIVE                303f7
+// ANDROID64-NEXT:  00000000000304c9  0000000000000403 R_AARCH64_RELATIVE                303fa
+// ANDROID64-NEXT:  0000000000030478  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// ANDROID64-NEXT:  00000000000304d1  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// ANDROID64-NEXT:  00000000000304d9  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// ANDROID64-NEXT:  00000000000304f1  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// ANDROID64-NEXT:  0000000000030430  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// ANDROID64-NEXT:  0000000000030470  0000000200000101 R_AARCH64_ABS64        0000000000000000 zed2 + 0
+// ANDROID64-NEXT:  00000000000304e1  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// ANDROID64-NEXT:  00000000000304e9  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// ANDROID64-EMPTY:
 
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.a64.o %t.a64.so -o %t4.a64
-// RUN: llvm-readobj -S --dynamic-table %t4.a64 | FileCheck --check-prefix=RELR64-HEADERS %s
-// RUN: llvm-readobj -r --raw-relr %t4.a64 | FileCheck --check-prefix=RAW-RELR64 %s
-// RUN: llvm-readobj -r %t4.a64 | FileCheck --check-prefix=RELR64 %s
+// RUN: llvm-readelf -Sdr -x .data %t4.a64 | FileCheck --check-prefix=RELR64 %s
 
-// RELR64-HEADERS:       Index: 1
-// RELR64-HEADERS-NEXT:  Name: .dynsym
+// RELR64:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+// RELR64:      .dynstr           STRTAB          {{.*}}                         00   A  0   0  1
+// RELR64-NEXT: .rela.dyn         RELA            {{.*}}                         18   A  1   0  8
+// RELR64-NEXT: .relr.dyn         RELR            {{0*}}[[#%x,RELR:]] {{.*}}     08   A  0   0  8
+// RELR64-NEXT: .text             PROGBITS        0000000000010380 000380 000000 00  AX  0   0  4
 
-// RELR64-HEADERS:       Name: .relr.dyn
-// RELR64-HEADERS-NEXT:  Type: SHT_RELR
-// RELR64-HEADERS-NEXT:  Flags [ (0x2)
-// RELR64-HEADERS-NEXT:    SHF_ALLOC (0x2)
-// RELR64-HEADERS-NEXT:  ]
-// RELR64-HEADERS-NEXT:  Address: [[ADDR:.*]]
-// RELR64-HEADERS-NEXT:  Offset: [[ADDR]]
-// RELR64-HEADERS-NEXT:  Size: 16
-// RELR64-HEADERS-NEXT:  Link: 0
-// RELR64-HEADERS-NEXT:  Info: 0
-// RELR64-HEADERS-NEXT:  AddressAlignment: 8
-// RELR64-HEADERS-NEXT:  EntrySize: 8
-
-// RELR64-HEADERS:       0x0000000000000024 RELR                 [[ADDR]]
-// RELR64-HEADERS:       0x0000000000000023 RELRSZ               16 (bytes)
-// RELR64-HEADERS:       0x0000000000000025 RELRENT              8 (bytes)
-
-/// SHT_RELR section contains address/bitmap entries
-/// encoding the offsets for relative relocation.
-// RAW-RELR64:           Section ({{.+}}) .relr.dyn {
-// RAW-RELR64-NEXT:      0x30490
-// RAW-RELR64-NEXT:      0x7FCFEFF
-// RAW-RELR64-NEXT:      }
+// RELR64:      (RELACOUNT)   1
+// RELR64:      (RELR)        0x[[#RELR]]
+// RELR64-NEXT: (RELRSZ)      16 (bytes)
+// RELR64-NEXT: (RELRENT)     8 (bytes)
 
 /// Decoded SHT_RELR section is same as UNPACKED,
 /// but contains only the relative relocations.
 /// Any relative relocations with odd offset stay in SHT_RELA.
-// RELR64:      Section ({{.+}}) .rela.dyn {
-// RELR64-NEXT:   0x30569 R_AARCH64_RELATIVE - 0xA
-// RELR64-NEXT:   0x304D0 R_AARCH64_ABS64 bar2 0x1
-// RELR64-NEXT:   0x30518 R_AARCH64_ABS64 bar2 0x0
-// RELR64-NEXT:   0x30571 R_AARCH64_ABS64 bar2 0x0
-// RELR64-NEXT:   0x30579 R_AARCH64_ABS64 bar2 0x0
-// RELR64-NEXT:   0x30581 R_AARCH64_ABS64 bar2 0x1
-// RELR64-NEXT:   0x30589 R_AARCH64_ABS64 bar2 0x1
-// RELR64-NEXT:   0x30591 R_AARCH64_ABS64 bar2 0x0
-// RELR64-NEXT:   0x30510 R_AARCH64_ABS64 zed2 0x0
-// RELR64-NEXT: }
-// RELR64-NEXT: Section ({{.+}}) .relr.dyn {
-// RELR64-NEXT:   0x30490 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30498 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304A0 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304A8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304B0 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304B8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304C0 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304C8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304D8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304E0 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304E8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304F0 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x304F8 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30500 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30508 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30520 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30528 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30530 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30538 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30540 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30548 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30550 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30558 R_AARCH64_RELATIVE -
-// RELR64-NEXT:   0x30560 R_AARCH64_RELATIVE -
-// RELR64-NEXT: }
+// RELR64:       Relocation section '.rela.dyn' at offset {{.*}} contains 9 entries:
+// RELR64-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+// RELR64-NEXT:  0000000000030569  0000000000000403 R_AARCH64_RELATIVE                3049a
+// RELR64-NEXT:  00000000000304d0  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// RELR64-NEXT:  0000000000030518  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// RELR64-NEXT:  0000000000030571  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// RELR64-NEXT:  0000000000030579  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// RELR64-NEXT:  0000000000030581  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// RELR64-NEXT:  0000000000030589  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 1
+// RELR64-NEXT:  0000000000030591  0000000100000101 R_AARCH64_ABS64        0000000000000000 bar2 + 0
+// RELR64-NEXT:  0000000000030510  0000000200000101 R_AARCH64_ABS64        0000000000000000 zed2 + 0
+// RELR64-EMPTY: 
+// RELR64-NEXT:  Relocation section '.relr.dyn' at offset {{.*}} contains 24 entries:
+// RELR64-NEXT:  Symbolic Address
+// RELR64-NEXT:  $d.0{{$}}
+// RELR64-NEXT:  $d.0 + 0x8
+// RELR64-NEXT:  $d.0 + 0x10
+// RELR64-NEXT:  $d.0 + 0x18
+// RELR64-NEXT:  $d.0 + 0x20
+// RELR64-NEXT:  $d.0 + 0x28
+// RELR64-NEXT:  $d.0 + 0x30
+// RELR64-NEXT:  $d.0 + 0x38
+// RELR64-NEXT:  $d.0 + 0x48
+// RELR64-NEXT:  $d.0 + 0x50
+// RELR64-NEXT:  $d.0 + 0x58
+// RELR64-NEXT:  $d.0 + 0x60
+// RELR64-NEXT:  $d.0 + 0x68
+// RELR64-NEXT:  $d.0 + 0x70
+// RELR64-NEXT:  $d.0 + 0x78
+// RELR64-NEXT:  $d.0 + 0x90
+// RELR64-NEXT:  $d.0 + 0x98
+// RELR64-NEXT:  $d.0 + 0xa0
+// RELR64-NEXT:  $d.0 + 0xa8
+// RELR64-NEXT:  $d.0 + 0xb0
+// RELR64-NEXT:  $d.0 + 0xb8
+// RELR64-NEXT:  $d.0 + 0xc0
+// RELR64-NEXT:  $d.0 + 0xc8
+// RELR64-NEXT:  $d.0 + 0xd0
+// RELR64-EMPTY:
+// RELR64-NEXT: Hex dump of section '.data':
+// RELR64-NEXT: 0x00030490 90040300 00000000 91040300 00000000 .
+// RELR64-NEXT: 0x000304a0 02000000 00000000 ffffffff ffffffff .
+// RELR64-NEXT: 0x000304b0 00000080 00000000 06000000 00000000 .
 
 .data
-.align 2
-.dc.a __ehdr_start + 1
+.balign 2
+.dc.a .data
+.dc.a .data + 1
 .dc.a __ehdr_start + 2
-.dc.a __ehdr_start + 3
-.dc.a __ehdr_start + 4
-.dc.a __ehdr_start + 5
+.dc.a __ehdr_start - 1
+.dc.a __ehdr_start + 0x80000000
 .dc.a __ehdr_start + 6
 .dc.a __ehdr_start + 7
-.dc.a __ehdr_start + 8
+.dc.a .data + 8
 .dc.a bar2 + 1
 
-.dc.a __ehdr_start + 1
+.dc.a .data + 1
 .dc.a __ehdr_start + 2
 .dc.a __ehdr_start + 3
 .dc.a __ehdr_start + 4
 .dc.a __ehdr_start + 5
 .dc.a __ehdr_start + 6
-.dc.a __ehdr_start + 7
+.dc.a .data + 7
 .dc.a zed2
 .dc.a bar2
 
-.dc.a __ehdr_start + 1
+.dc.a .data + 1
 .dc.a __ehdr_start + 2
 .dc.a __ehdr_start + 3
 .dc.a __ehdr_start + 4
@@ -402,9 +324,9 @@
 .dc.a __ehdr_start + 6
 .dc.a __ehdr_start + 7
 .dc.a __ehdr_start + 8
-.dc.a __ehdr_start + 9
+.dc.a .data + 9
 .byte 00
-.dc.a __ehdr_start + 10
+.dc.a .data + 10
 .dc.a bar2
 .dc.a bar2
 .dc.a bar2 + 1

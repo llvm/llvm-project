@@ -163,11 +163,10 @@ define void @func_memory() memory(readwrite, argmem: none) {
 ; CHECK-LABEL: @passthrough_combined
 ; CHECK-SAME: attributes {passthrough = [
 ; CHECK-DAG: ["alignstack", "16"]
-; CHECK-DAG: "noinline"
 ; CHECK-DAG: "probe-stack"
 ; CHECK-DAG: ["alloc-family", "malloc"]
 ; CHECK:   llvm.return
-define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc-family"="malloc" {
+define void @passthrough_combined() alignstack(16) "probe-stack" "alloc-family"="malloc" {
   ret void
 }
 
@@ -222,20 +221,32 @@ define void @streaming_compatible_func() "aarch64_pstate_sm_compatible" {
 
 ; CHECK-LABEL: @arm_new_za_func
 ; CHECK-SAME: attributes {arm_new_za}
-define void @arm_new_za_func() "aarch64_pstate_za_new" {
+define void @arm_new_za_func() "aarch64_new_za" {
   ret void
 }
 
+
+; CHECK-LABEL: @arm_in_za_func
+; CHECK-SAME: attributes {arm_in_za}
+define void @arm_in_za_func() "aarch64_in_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_out_za_func
+; CHECK-SAME: attributes {arm_out_za}
+define void @arm_out_za_func() "aarch64_out_za" {
+  ret void
+}
+
+; CHECK-LABEL: @arm_inout_za_func
+; CHECK-SAME: attributes {arm_inout_za}
+define void @arm_inout_za_func() "aarch64_inout_za" {
+  ret void
+}
 
 ; CHECK-LABEL: @arm_preserves_za_func
 ; CHECK-SAME: attributes {arm_preserves_za}
-define void @arm_preserves_za_func() "aarch64_pstate_za_preserved" {
-  ret void
-}
-
-; CHECK-LABEL: @arm_shared_za_func
-; CHECK-SAME: attributes {arm_shared_za}
-define void @arm_shared_za_func() "aarch64_pstate_za_shared" {
+define void @arm_preserves_za_func() "aarch64_preserves_za" {
   ret void
 }
 
@@ -332,3 +343,21 @@ declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
 declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"
+
+// -----
+
+; CHECK-LABEL: @noinline_attribute
+; CHECK-SAME: attributes {no_inline}
+declare void @noinline_attribute() noinline
+
+// -----
+
+; CHECK-LABEL: @alwaysinline_attribute
+; CHECK-SAME: attributes {always_inline}
+declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @optnone_attribute
+; CHECK-SAME: attributes {no_inline, optimize_none}
+declare void @optnone_attribute() noinline optnone

@@ -11,7 +11,7 @@
 void func(...) { // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}}
   // Show that va_start doesn't require the second argument in C23 mode.
   va_list list;
-  va_start(list); // FIXME: it would be nice to issue a portability warning to C17 and earlier here.
+  va_start(list); // expected-warning {{passing no argument for the '...' parameter of a variadic macro is incompatible with C standards before C23}} expected-note@* {{macro 'va_start' defined here}}
   va_end(list);
 
   // Show that va_start doesn't expand or evaluate the second argument.
@@ -26,7 +26,7 @@ void func(...) { // expected-warning {{'...' as the only parameter of a function
   __builtin_va_start(list); // expected-error {{too few arguments to function call, expected 2, have 1}}
 
   // Verify that the return type of a call to va_start is 'void'.
-  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), "");
+  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), ""); // expected-warning {{passing no argument for the '...' parameter of a variadic macro is incompatible with C standards before C23}} expected-note@* {{macro 'va_start' defined here}}
   _Static_assert(__builtin_types_compatible_p(__typeof__(__builtin_va_start(list, 0)), void), "");
 }
 

@@ -45,13 +45,6 @@
 // CHECK-UNROLL-LOOPS: "-funroll-loops"
 // CHECK-NO-UNROLL-LOOPS: "-fno-unroll-loops"
 
-// RUN: %clang -### -S -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// RUN: %clang -### -S -fno-reroll-loops -freroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-REROLL-LOOPS %s
-// RUN: %clang -### -S -freroll-loops -fno-reroll-loops %s 2>&1 | FileCheck -check-prefix=CHECK-NO-REROLL-LOOPS %s
-// CHECK-REROLL-LOOPS: "-freroll-loops"
-// CHECK-NO-REROLL-LOOPS-NOT: "-freroll-loops"
-
 // RUN: %clang -### -S -fprofile-sample-accurate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-SAMPLE-ACCURATE %s
 // CHECK-PROFILE-SAMPLE-ACCURATE: "-fprofile-sample-accurate"
 
@@ -630,3 +623,9 @@
 // RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // CHECK-MS-VOLATILE: -fms-volatile
 // CHECK-NO-MS-VOLATILE-NOT: -fms-volatile
+
+// RUN: %clang -### --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fstrict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
+// CHECK-NO-STRICT-ALIASING: -relaxed-aliasing

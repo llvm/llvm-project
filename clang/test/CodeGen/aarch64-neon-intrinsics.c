@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -S -disable-O0-optnone \
+// RUN:     -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | FileCheck %s
@@ -14132,8 +14132,8 @@ int32_t test_vqshrund_n_s64(int64_t a) {
 // CHECK:   [[VQRSHRUNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[TMP0]], i32 8)
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRUNH_N_S16]], i64 0
 // CHECK:   ret i8 [[TMP1]]
-int8_t test_vqrshrunh_n_s16(int16_t a) {
-  return (int8_t)vqrshrunh_n_s16(a, 8);
+uint8_t test_vqrshrunh_n_s16(int16_t a) {
+  return (uint8_t)vqrshrunh_n_s16(a, 8);
 }
 
 // CHECK-LABEL: @test_vqrshruns_n_s32(
@@ -14141,15 +14141,15 @@ int8_t test_vqrshrunh_n_s16(int16_t a) {
 // CHECK:   [[VQRSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRUNS_N_S32]], i64 0
 // CHECK:   ret i16 [[TMP1]]
-int16_t test_vqrshruns_n_s32(int32_t a) {
-  return (int16_t)vqrshruns_n_s32(a, 16);
+uint16_t test_vqrshruns_n_s32(int32_t a) {
+  return (uint16_t)vqrshruns_n_s32(a, 16);
 }
 
 // CHECK-LABEL: @test_vqrshrund_n_s64(
 // CHECK:   [[VQRSHRUND_N_S64:%.*]] = call i32 @llvm.aarch64.neon.sqrshrun.i32(i64 %a, i32 32)
 // CHECK:   ret i32 [[VQRSHRUND_N_S64]]
-int32_t test_vqrshrund_n_s64(int64_t a) {
-  return (int32_t)vqrshrund_n_s64(a, 32);
+uint32_t test_vqrshrund_n_s64(int64_t a) {
+  return (uint32_t)vqrshrund_n_s64(a, 32);
 }
 
 // CHECK-LABEL: @test_vcvts_n_f32_s32(

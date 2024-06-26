@@ -1,26 +1,26 @@
 // REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 -target-feature +ptx62 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP64 %s
 
 #define __device__ __attribute__((device))
@@ -42,6 +42,14 @@ __device__ int read_tid() {
 
   return x + y + z + w;
 
+}
+
+__device__ bool reflect() {
+
+// CHECK: call i32 @llvm.nvvm.reflect(ptr {{.*}})
+
+  unsigned x = __nvvm_reflect("__CUDA_ARCH");
+  return x >= 700;
 }
 
 __device__ int read_ntid() {

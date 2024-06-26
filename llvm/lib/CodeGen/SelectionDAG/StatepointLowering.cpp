@@ -340,6 +340,9 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   // to grab the return value from the return register(s), or it can be a LOAD
   // to load a value returned by reference via a stack slot.
 
+  if (CallEnd->getOpcode() == ISD::EH_LABEL)
+    CallEnd = CallEnd->getOperand(0).getNode();
+
   bool HasDef = !SI.CLI.RetTy->isVoidTy();
   if (HasDef) {
     if (CallEnd->getOpcode() == ISD::LOAD)
@@ -1287,7 +1290,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
     // Lowering relocate(undef) as arbitrary constant. Current constant value
     // is chosen such that it's unlikely to be a valid pointer.
-    setValue(&Relocate, DAG.getTargetConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    setValue(&Relocate, DAG.getConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
     return;
   }
 

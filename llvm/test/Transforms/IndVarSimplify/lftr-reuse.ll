@@ -148,7 +148,7 @@ define void @guardedloop(ptr %matrix, ptr %vector,
 ; CHECK-NEXT:    [[VECTORP:%.*]] = getelementptr inbounds [0 x double], ptr [[VECTOR:%.*]], i32 0, i64 [[INDVARS_IV2]]
 ; CHECK-NEXT:    [[V2:%.*]] = load double, ptr [[VECTORP]], align 8
 ; CHECK-NEXT:    call void @use(double [[V2]])
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], [[TMP0]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[RETURN_LOOPEXIT:%.*]]

@@ -13,7 +13,7 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main"
   
-  define void @header_not_target_unrolled_loop(i32* nocapture %v, i32 %n) {
+  define void @header_not_target_unrolled_loop(ptr nocapture %v, i32 %n) {
   entry:
     %cmp56 = icmp sgt i32 %n, 1
     br i1 %cmp56, label %for.cond1.preheader.preheader, label %for.end20
@@ -36,13 +36,13 @@
   for.cond4.preheader.preheader:                    ; preds = %for.cond1.preheader
     %tmp2 = mul i32 %gap.057, -4
     %tmp6 = mul i32 %gap.057, -2
-    %scevgep1 = getelementptr i32, i32* %v, i32 %gap.057
+    %scevgep1 = getelementptr i32, ptr %v, i32 %gap.057
     %0 = shl i32 %gap.057, 2
     br label %for.cond4.preheader
   
   for.cond4.preheader:                              ; preds = %for.inc16, %for.cond4.preheader.preheader
-    %lsr.iv2 = phi i32* [ %scevgep3, %for.inc16 ], [ %scevgep1, %for.cond4.preheader.preheader ]
-    %lsr.iv = phi i32* [ %v, %for.cond4.preheader.preheader ], [ %scevgep, %for.inc16 ]
+    %lsr.iv2 = phi ptr [ %scevgep3, %for.inc16 ], [ %scevgep1, %for.cond4.preheader.preheader ]
+    %lsr.iv = phi ptr [ %v, %for.cond4.preheader.preheader ], [ %scevgep, %for.inc16 ]
     %i.053 = phi i32 [ %inc, %for.inc16 ], [ %gap.057, %for.cond4.preheader.preheader ]
     %tmp8 = phi i32 [ %start, %for.cond4.preheader.preheader ], [ %tmp16, %for.inc16 ]
     %j.048 = sub nsw i32 %i.053, %gap.057
@@ -55,26 +55,26 @@
   land.rhs:                                         ; preds = %land.rhs.preheader, %for.body8
     %lsr.iv4 = phi i32 [ %lsr.iv.next, %for.body8 ], [ 0, %land.rhs.preheader ]
     %j.051 = phi i32 [ %j.0, %for.body8 ], [ %j.048, %land.rhs.preheader ]
-    %1 = bitcast i32* %lsr.iv2 to i8*
-    %2 = bitcast i32* %lsr.iv to i8*
-    %uglygep3 = getelementptr i8, i8* %2, i32 %lsr.iv4
-    %uglygep34 = bitcast i8* %uglygep3 to i32*
-    %tmp9 = load i32, i32* %uglygep34, align 4
-    %uglygep1 = getelementptr i8, i8* %1, i32 %lsr.iv4
-    %uglygep12 = bitcast i8* %uglygep1 to i32*
-    %tmp12 = load i32, i32* %uglygep12, align 4
+    %1 = bitcast ptr %lsr.iv2 to ptr
+    %2 = bitcast ptr %lsr.iv to ptr
+    %uglygep3 = getelementptr i8, ptr %2, i32 %lsr.iv4
+    %uglygep34 = bitcast ptr %uglygep3 to ptr
+    %tmp9 = load i32, ptr %uglygep34, align 4
+    %uglygep1 = getelementptr i8, ptr %1, i32 %lsr.iv4
+    %uglygep12 = bitcast ptr %uglygep1 to ptr
+    %tmp12 = load i32, ptr %uglygep12, align 4
     %cmp7 = icmp sgt i32 %tmp9, %tmp12
     br i1 %cmp7, label %for.body8, label %for.inc16
   
   for.body8:                                        ; preds = %land.rhs
-    %3 = bitcast i32* %lsr.iv2 to i8*
-    %4 = bitcast i32* %lsr.iv to i8*
-    %sunkaddr = getelementptr i8, i8* %4, i32 %lsr.iv4
-    %5 = bitcast i8* %sunkaddr to i32*
-    store i32 %tmp12, i32* %5, align 4
-    %uglygep = getelementptr i8, i8* %3, i32 %lsr.iv4
-    %uglygep6 = bitcast i8* %uglygep to i32*
-    store i32 %tmp9, i32* %uglygep6, align 4
+    %3 = bitcast ptr %lsr.iv2 to ptr
+    %4 = bitcast ptr %lsr.iv to ptr
+    %sunkaddr = getelementptr i8, ptr %4, i32 %lsr.iv4
+    %5 = bitcast ptr %sunkaddr to ptr
+    store i32 %tmp12, ptr %5, align 4
+    %uglygep = getelementptr i8, ptr %3, i32 %lsr.iv4
+    %uglygep6 = bitcast ptr %uglygep to ptr
+    store i32 %tmp9, ptr %uglygep6, align 4
     %j.0 = sub nsw i32 %j.051, %gap.057
     %lsr.iv.next = add i32 %lsr.iv4, %0
     %cmp5 = icmp sgt i32 %j.0, -1
@@ -82,10 +82,10 @@
   
   for.inc16:                                        ; preds = %for.body8, %land.rhs, %for.cond4.preheader
     %inc = add nsw i32 %i.053, 1
-    %scevgep = getelementptr i32, i32* %lsr.iv, i32 1
+    %scevgep = getelementptr i32, ptr %lsr.iv, i32 1
     %tmp16 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp8, i32 1)
     %tmp17 = icmp ne i32 %tmp16, 0
-    %scevgep3 = getelementptr i32, i32* %lsr.iv2, i32 1
+    %scevgep3 = getelementptr i32, ptr %lsr.iv2, i32 1
     br i1 %tmp17, label %for.cond4.preheader, label %for.cond.loopexit
   
   for.end20:                                        ; preds = %for.cond.loopexit, %entry
@@ -99,7 +99,7 @@
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
   
   attributes #0 = { noduplicate nounwind }
   attributes #1 = { nounwind }

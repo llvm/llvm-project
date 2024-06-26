@@ -124,7 +124,7 @@ class FrameAccessAnalysis {
     if (IsIndexed || (!FIE.Size && (FIE.IsLoad || FIE.IsStore))) {
       LLVM_DEBUG(dbgs() << "Giving up on indexed memory access/unknown size\n");
       LLVM_DEBUG(dbgs() << "Blame insn: ");
-      LLVM_DEBUG(BC.printInstruction(outs(), Inst, 0, &BF, true, false, false));
+      LLVM_DEBUG(BC.printInstruction(dbgs(), Inst, 0, &BF, true, false, false));
       LLVM_DEBUG(Inst.dump());
       return false;
     }
@@ -561,22 +561,18 @@ FrameAnalysis::FrameAnalysis(BinaryContext &BC, BinaryFunctionCallGraph &CG)
     NamedRegionTimer T1("clearspt", "clear spt", "FA", "FA breakdown",
                         opts::TimeFA);
     clearSPTMap();
-
-    // Clean up memory allocated for annotation values
-    if (!opts::NoThreads)
-      for (MCPlusBuilder::AllocatorIdTy Id : SPTAllocatorsId)
-        BC.MIB->freeValuesAllocator(Id);
   }
 }
 
 void FrameAnalysis::printStats() {
-  outs() << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsNotOptimized
-         << " function(s) were not optimized.\n"
-         << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsFailedRestoreFI
-         << " function(s) "
-         << format("(%.1lf%% dyn cov)",
+  BC.outs() << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsNotOptimized
+            << " function(s) were not optimized.\n"
+            << "BOLT-INFO: FRAME ANALYSIS: " << NumFunctionsFailedRestoreFI
+            << " function(s) "
+            << format(
+                   "(%.1lf%% dyn cov)",
                    (100.0 * CountFunctionsFailedRestoreFI / CountDenominator))
-         << " could not have its frame indices restored.\n";
+            << " could not have its frame indices restored.\n";
 }
 
 void FrameAnalysis::clearSPTMap() {

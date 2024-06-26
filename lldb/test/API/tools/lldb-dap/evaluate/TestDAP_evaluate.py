@@ -13,7 +13,7 @@ from lldbsuite.test.lldbtest import *
 
 class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
     def assertEvaluate(self, expression, regex):
-        self.assertRegexpMatches(
+        self.assertRegex(
             self.dap_server.request_evaluate(expression, context=self.context)["body"][
                 "result"
             ],
@@ -27,7 +27,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         )
 
     def isResultExpandedDescription(self):
-        return self.context == "repl" or self.context == "hover"
+        return self.context == "repl"
 
     def isExpressionParsedExpected(self):
         return self.context != "hover"
@@ -78,9 +78,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
             self.assertEvaluate(
                 "struct2", "0x.* {foo:16}" if enableAutoVariableSummaries else "0x.*"
@@ -127,9 +129,11 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         else:
             self.assertEvaluate(
                 "struct1",
-                re.escape("{foo:15}")
-                if enableAutoVariableSummaries
-                else "my_struct @ 0x",
+                (
+                    re.escape("{foo:15}")
+                    if enableAutoVariableSummaries
+                    else "my_struct @ 0x"
+                ),
             )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
@@ -188,31 +192,26 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("my_bool_vec", "size=2")
 
     @skipIfWindows
-    @skipIfRemote
     def test_generic_evaluate_expressions(self):
         # Tests context-less expression evaluations
         self.run_test_evaluate_expressions(enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_repl_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from the Debug Console
         self.run_test_evaluate_expressions("repl", enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_watch_evaluate_expressions(self):
         # Tests expression evaluations that are triggered from a watch expression
         self.run_test_evaluate_expressions("watch", enableAutoVariableSummaries=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_hover_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when hovering on the editor
         self.run_test_evaluate_expressions("hover", enableAutoVariableSummaries=False)
 
     @skipIfWindows
-    @skipIfRemote
     def test_variable_evaluate_expressions(self):
         # Tests expression evaluations that are triggered in the variable explorer
         self.run_test_evaluate_expressions("variable", enableAutoVariableSummaries=True)

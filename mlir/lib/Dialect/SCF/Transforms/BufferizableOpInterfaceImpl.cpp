@@ -463,7 +463,7 @@ DenseSet<int64_t> getEquivalentBuffers(Block::BlockArgListType bbArgs,
 /// Helper function for loop bufferization. Return the bufferized values of the
 /// given OpOperands. If an operand is not a tensor, return the original value.
 static FailureOr<SmallVector<Value>>
-getBuffers(RewriterBase &rewriter, MutableOperandRange operands,
+getBuffers(RewriterBase &rewriter, const MutableOperandRange &operands,
            const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
@@ -1266,6 +1266,9 @@ struct ForallOpInterface
         forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
+
+    // Keep discardable attributes from the original op.
+    newForallOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     rewriter.eraseOp(newForallOp.getBody()->getTerminator());
 

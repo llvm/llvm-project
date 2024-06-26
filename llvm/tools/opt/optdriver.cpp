@@ -47,6 +47,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -317,7 +318,7 @@ struct TimeTracerRAII {
 // TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
 // it exists.
 static bool shouldPinPassToLegacyPM(StringRef Pass) {
-  std::vector<StringRef> PassNameExactToIgnore = {
+  static constexpr StringLiteral PassNameExactToIgnore[] = {
       "nvvm-reflect",
       "nvvm-intr-range",
       "amdgpu-simplifylib",
@@ -334,13 +335,13 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   if (llvm::is_contained(PassNameExactToIgnore, Pass))
     return false;
 
-  std::vector<StringRef> PassNamePrefix = {
+  static constexpr StringLiteral PassNamePrefix[] = {
       "x86-",    "xcore-", "wasm-",  "systemz-", "ppc-",    "nvvm-",
       "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
       "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-",
       "amdgcn-", "polly-", "riscv-", "dxil-"};
-  std::vector<StringRef> PassNameContain = {"-eh-prepare"};
-  std::vector<StringRef> PassNameExact = {
+  static constexpr StringLiteral PassNameContain[] = {"-eh-prepare"};
+  static constexpr StringLiteral PassNameExact[] = {
       "safe-stack",
       "cost-model",
       "codegenprepare",
@@ -429,7 +430,7 @@ extern "C" int optMain(
   initializeSelectOptimizePass(Registry);
   initializeCallBrPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
-  initializeAtomicExpandPass(Registry);
+  initializeAtomicExpandLegacyPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
@@ -439,6 +440,7 @@ extern "C" int optMain(
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
+  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeExpandVectorPredicationPass(Registry);
@@ -462,15 +464,11 @@ extern "C" int optMain(
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
   // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format, if it's built in.
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  // new debug-info format.
   if (TryUseNewDbgInfoFormat) {
-    // If LLVM was built with support for this, turn the new debug-info format
-    // on.
+    // Turn the new debug-info format on.
     UseNewDbgInfoFormat = true;
   }
-#endif
-  (void)TryUseNewDbgInfoFormat;
 
   LLVMContext Context;
 

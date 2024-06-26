@@ -259,7 +259,7 @@ class SourceManagerTestCase(TestBase):
         m = re.search("^\[(\d+)\].*// Set break point at this line.", output)
         if not m:
             self.fail("Fail to display source level breakpoints")
-        self.assertTrue(int(m.group(1)) > 0)
+        self.assertGreater(int(m.group(1)), 0)
 
         # Modify content
         self.modify_content()
@@ -323,13 +323,12 @@ class SourceManagerTestCase(TestBase):
         )
 
         self.expect(
-            "run",
-            RUN_SUCCEEDED,
+            "process status",
             substrs=[
                 "stop reason = breakpoint",
-                "%s:%d" % (src_file, 0),
-                "Note: this address is compiler-generated code in " "function",
-                "that has no source code associated " "with it.",
+                f"{src_file}:0",
+                "Note: this address is compiler-generated code in function",
+                "that has no source code associated with it.",
             ],
         )
 

@@ -31,35 +31,35 @@
     br i1 %cmp, label %if.end, label %if.then
   
   if.then:                                          ; preds = %entry
-    %0 = bitcast [128 x i32]* %q to i8*
-    call void @llvm.lifetime.start.p0i8(i64 512, i8* nonnull %0)
-    %arrayidx2 = bitcast [128 x i32]* %q to i32*
-    %call = call i32 @inita(i32* nonnull %arrayidx2)
-    call void @llvm.lifetime.end.p0i8(i64 512, i8* nonnull %0)
+    %0 = bitcast ptr %q to ptr
+    call void @llvm.lifetime.start.p0(i64 512, ptr nonnull %0)
+    %arrayidx2 = bitcast ptr %q to ptr
+    %call = call i32 @inita(ptr nonnull %arrayidx2)
+    call void @llvm.lifetime.end.p0(i64 512, ptr nonnull %0)
     br label %return
 
   unreachable:
     br label %return
   
   if.end:                                           ; preds = %entry
-    %1 = bitcast [128 x i32]* %r to i8*
-    call void @llvm.lifetime.start.p0i8(i64 512, i8* nonnull %1)
-    %arrayidx1 = getelementptr inbounds [128 x i32], [128 x i32]* %r, i64 0, i64 3
-    %call2 = call i32 @inita(i32* nonnull %arrayidx1)
-    call void @llvm.lifetime.end.p0i8(i64 512, i8* nonnull %1)
+    %1 = bitcast ptr %r to ptr
+    call void @llvm.lifetime.start.p0(i64 512, ptr nonnull %1)
+    %arrayidx1 = getelementptr inbounds [128 x i32], ptr %r, i64 0, i64 3
+    %call2 = call i32 @inita(ptr nonnull %arrayidx1)
+    call void @llvm.lifetime.end.p0(i64 512, ptr nonnull %1)
     br label %return
   
   return:                                           ; preds = %if.end, %if.then
     ret void
   }
   
-  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+  declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
   
-  declare i32 @inita(i32*)
+  declare i32 @inita(ptr)
   
-  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+  declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
   
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
   
 ...
 ---

@@ -1245,7 +1245,6 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
       continue;
 
     assert(SpanningTreeNodes[Cur].NumInEdges == 1, "must have 1 parent");
-    const uint32_t Parent = SpanningTreeNodes[Cur].InEdges[0].Node;
     const uint32_t ParentEdge = SpanningTreeNodes[Cur].InEdges[0].ID;
 
     // Calculate parent edge freq.
@@ -1464,9 +1463,8 @@ void visitCallFlowEntry(CallFlowHashTable::MapEntry &Entry, int FD,
 int openProfile() {
   // Build the profile name string by appending our PID
   char Buf[BufSize];
-  char *Ptr = Buf;
   uint64_t PID = __getpid();
-  Ptr = strCopy(Buf, __bolt_instr_filename, BufSize);
+  char *Ptr = strCopy(Buf, __bolt_instr_filename, BufSize);
   if (__bolt_instr_use_pid) {
     Ptr = strCopy(Ptr, ".", BufSize - (Ptr - Buf + 1));
     Ptr = intToStr(Ptr, PID, 10);

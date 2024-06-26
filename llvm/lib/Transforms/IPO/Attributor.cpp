@@ -132,13 +132,13 @@ static cl::opt<bool>
 #ifndef NDEBUG
 static cl::list<std::string>
     SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma seperated list of attribute names that are "
+                  cl::desc("Comma separated list of attribute names that are "
                            "allowed to be seeded."),
                   cl::CommaSeparated);
 
 static cl::list<std::string> FunctionSeedAllowList(
     "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma seperated list of function names that are "
+    cl::desc("Comma separated list of function names that are "
              "allowed to be seeded."),
     cl::CommaSeparated);
 #endif
@@ -275,7 +275,7 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty, DL);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -1749,6 +1749,10 @@ bool Attributor::checkForAllCallees(
   return Pred(Callees.getArrayRef());
 }
 
+bool canMarkAsVisited(const User *Usr) {
+  return isa<PHINode>(Usr) || !isa<Instruction>(Usr);
+}
+
 bool Attributor::checkForAllUses(
     function_ref<bool(const Use &, bool &)> Pred,
     const AbstractAttribute &QueryingAA, const Value &V,
@@ -1796,7 +1800,7 @@ bool Attributor::checkForAllUses(
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    if (isa<PHINode>(U->getUser()) && !Visited.insert(U).second)
+    if (canMarkAsVisited(U->getUser()) && !Visited.insert(U).second)
       continue;
     DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U->getUser()))
@@ -3123,12 +3127,12 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       // Create a new call or invoke instruction to replace the old one.
       CallBase *NewCB;
       if (InvokeInst *II = dyn_cast<InvokeInst>(OldCB)) {
-        NewCB =
-            InvokeInst::Create(NewFn, II->getNormalDest(), II->getUnwindDest(),
-                               NewArgOperands, OperandBundleDefs, "", OldCB);
+        NewCB = InvokeInst::Create(NewFn, II->getNormalDest(),
+                                   II->getUnwindDest(), NewArgOperands,
+                                   OperandBundleDefs, "", OldCB->getIterator());
       } else {
         auto *NewCI = CallInst::Create(NewFn, NewArgOperands, OperandBundleDefs,
-                                       "", OldCB);
+                                       "", OldCB->getIterator());
         NewCI->setTailCallKind(cast<CallInst>(OldCB)->getTailCallKind());
         NewCB = NewCI;
       }
@@ -3954,7 +3958,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
     // to do it eagerly.
-    if (F->hasLocalLinkage()) {
+    if (AC.UseLiveness && F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&

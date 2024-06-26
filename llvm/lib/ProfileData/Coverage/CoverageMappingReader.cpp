@@ -244,7 +244,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
-    uint64_t BIDX = 0, NC = 0, ID = 0, TID = 0, FID = 0;
+    uint64_t BIDX, NC;
+    // They are stored as internal values plus 1 (min is -1)
+    uint64_t ID1, TID1, FID1;
+    mcdc::Parameters Params;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -302,19 +305,29 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readCounter(C2))
             return Err;
-          if (auto Err = readIntMax(ID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(ID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(TID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(TID1, std::numeric_limits<int16_t>::max()))
             return Err;
-          if (auto Err = readIntMax(FID, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(FID1, std::numeric_limits<int16_t>::max()))
             return Err;
+          if (ID1 == 0)
+            return make_error<CoverageMapError>(
+                coveragemap_error::malformed,
+                "MCDCConditionID shouldn't be zero");
+          Params = mcdc::BranchParameters{
+              static_cast<int16_t>(static_cast<int16_t>(ID1) - 1),
+              {static_cast<int16_t>(static_cast<int16_t>(FID1) - 1),
+               static_cast<int16_t>(static_cast<int16_t>(TID1) - 1)}};
           break;
         case CounterMappingRegion::MCDCDecisionRegion:
           Kind = CounterMappingRegion::MCDCDecisionRegion;
           if (auto Err = readIntMax(BIDX, std::numeric_limits<unsigned>::max()))
             return Err;
-          if (auto Err = readIntMax(NC, std::numeric_limits<unsigned>::max()))
+          if (auto Err = readIntMax(NC, std::numeric_limits<int16_t>::max()))
             return Err;
+          Params = mcdc::DecisionParameters{static_cast<unsigned>(BIDX),
+                                            static_cast<uint16_t>(NC)};
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -370,13 +383,8 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     });
 
     auto CMR = CounterMappingRegion(
-        C, C2,
-        CounterMappingRegion::MCDCParameters{
-            static_cast<unsigned>(BIDX), static_cast<unsigned>(NC),
-            static_cast<unsigned>(ID), static_cast<unsigned>(TID),
-            static_cast<unsigned>(FID)},
-        InferredFileID, ExpandedFileID, LineStart, ColumnStart,
-        LineStart + NumLines, ColumnEnd, Kind);
+        C, C2, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
+        LineStart + NumLines, ColumnEnd, Kind, Params);
     if (CMR.startLoc() > CMR.endLoc())
       return make_error<CoverageMapError>(
           coveragemap_error::malformed,
@@ -886,31 +894,34 @@ static Error readCoverageMappingData(
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
-    InstrProfSymtab &&ProfileNames, uint8_t BytesInAddress,
+    std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
     llvm::endianness Endian, StringRef CompilationDir) {
-  std::unique_ptr<BinaryCoverageReader> Reader(
-      new BinaryCoverageReader(std::move(FuncRecords)));
-  Reader->ProfileNames = std::move(ProfileNames);
+  if (ProfileNamesPtr == nullptr)
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "Caller must provide ProfileNames");
+  std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader(
+      std::move(ProfileNamesPtr), std::move(FuncRecords)));
+  InstrProfSymtab &ProfileNames = *Reader->ProfileNames;
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
   if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::little>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 4 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::little) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::little>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == llvm::endianness::big) {
     if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
   } else
     return make_error<CoverageMapError>(
@@ -955,8 +966,8 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Data.size() < ProfileNamesSize)
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of ProfileNames is too big");
-  InstrProfSymtab ProfileNames;
-  if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
+  auto ProfileNames = std::make_unique<InstrProfSymtab>();
+  if (Error E = ProfileNames->create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
   Data = Data.substr(ProfileNamesSize);
 
@@ -1091,7 +1102,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       OF->isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
 
   // Look for the sections that we are interested in.
-  InstrProfSymtab ProfileNames;
+  auto ProfileNames = std::make_unique<InstrProfSymtab>();
   std::vector<SectionRef> NamesSectionRefs;
   // If IPSK_name is not found, fallback to search for IPK_covname, which is
   // used when binary correlation is enabled.
@@ -1108,7 +1119,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
     return make_error<CoverageMapError>(
         coveragemap_error::malformed,
         "the size of coverage mapping section is not one");
-  if (Error E = ProfileNames.create(NamesSectionRefs.back()))
+  if (Error E = ProfileNames->create(NamesSectionRefs.back()))
     return std::move(E);
 
   auto CoverageSection = lookupSections(*OF, IPSK_covmap);

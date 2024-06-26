@@ -897,19 +897,7 @@ public:
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused),
         m_options() {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeRegularExpression;
-    index_arg.arg_repetition = eArgRepeatOptional;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeRegularExpression, eArgRepeatOptional);
   }
 
   ~CommandObjectObjC_ClassTable_Dump() override = default;
@@ -1015,19 +1003,7 @@ public:
             "language objc tagged-pointer info",
             eCommandRequiresProcess | eCommandProcessMustBeLaunched |
                 eCommandProcessMustBePaused) {
-    CommandArgumentEntry arg;
-    CommandArgumentData index_arg;
-
-    // Define the first (and only) variant of this arg.
-    index_arg.arg_type = eArgTypeAddress;
-    index_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(index_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeAddress, eArgRepeatPlus);
   }
 
   ~CommandObjectMultiwordObjC_TaggedPointer_Info() override = default;
@@ -1893,15 +1869,15 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper(
       if (loader->IsFullyInitialized()) {
         switch (exe_ctx.GetTargetRef().GetDynamicClassInfoHelper()) {
         case eDynamicClassInfoHelperAuto:
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperGetRealizedClassList:
           if (m_runtime.m_has_objc_getRealizedClassList_trylock)
             return DynamicClassInfoExtractor::objc_getRealizedClassList_trylock;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperCopyRealizedClassList:
           if (m_runtime.m_has_objc_copyRealizedClassList)
             return DynamicClassInfoExtractor::objc_copyRealizedClassList;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case eDynamicClassInfoHelperRealizedClassesStruct:
           return DynamicClassInfoExtractor::gdb_objc_realized_classes;
         }
@@ -3178,7 +3154,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
                             << m_objc_debug_taggedpointer_ext_payload_lshift) >>
                            m_objc_debug_taggedpointer_ext_payload_rshift);
   int64_t data_payload_signed =
-      ((int64_t)((int64_t)unobfuscated
+      ((int64_t)((uint64_t)unobfuscated
                  << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 

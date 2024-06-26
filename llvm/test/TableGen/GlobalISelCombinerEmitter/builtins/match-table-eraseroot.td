@@ -19,7 +19,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(15), // Rule ID 0 //
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(13), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
 // CHECK-NEXT:       // MIs[0] a
@@ -27,9 +27,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       // MIs[0] b
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // Combiner Rule #0: Test0
-// CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 0: @15
+// CHECK-NEXT:       GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:     // Label 0: @13
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     };
 // CHECK-NEXT:   return MatchTable0;

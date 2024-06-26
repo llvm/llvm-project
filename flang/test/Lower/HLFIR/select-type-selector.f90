@@ -14,7 +14,7 @@
 ! (16.9.109) applied to the corresponding dimension of selector. The upper bound of each dimension is one less
 ! than the sum of the lower bound and the extent.
 
-! RUN: bbc -emit-hlfir -polymorphic-type -I nowhere -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -I nowhere -o - %s | FileCheck %s
 
 subroutine test()
   type t

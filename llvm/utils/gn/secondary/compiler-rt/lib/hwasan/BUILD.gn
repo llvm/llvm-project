@@ -59,7 +59,6 @@ source_set("sources") {
     "hwasan_report.h",
     "hwasan_setjmp_aarch64.S",
     "hwasan_setjmp_riscv64.S",
-    "hwasan_setjmp_x86_64.S",
     "hwasan_tag_mismatch_aarch64.S",
     "hwasan_tag_mismatch_riscv64.S",
     "hwasan_thread.cpp",

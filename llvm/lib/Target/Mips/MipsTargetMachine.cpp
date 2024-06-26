@@ -67,7 +67,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsPreLegalizerCombinerPass(*PR);
   initializeMipsPostLegalizerCombinerPass(*PR);
   initializeMipsMulMulBugFixPass(*PR);
-  initializeMipsDAGToDAGISelPass(*PR);
+  initializeMipsDAGToDAGISelLegacyPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,
@@ -263,7 +263,7 @@ std::unique_ptr<CSEConfigBase> MipsPassConfig::getCSEConfig() const {
 
 void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   if (getMipsSubtarget().os16())
     addPass(createMipsOs16Pass());
   if (getMipsSubtarget().inMips16HardFloat())

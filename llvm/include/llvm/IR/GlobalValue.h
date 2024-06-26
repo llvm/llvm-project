@@ -24,7 +24,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MD5.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -360,6 +359,7 @@ public:
   // storage is shared between `G1` and `G2`.
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
+  void setNoSanitizeMetadata();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
@@ -587,7 +587,7 @@ public:
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+  static GUID getGUID(StringRef GlobalName);
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).

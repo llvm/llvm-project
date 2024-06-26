@@ -43,7 +43,7 @@ subroutine char_test2(c)
   call test(stmt_func(c))
 end subroutine
 ! CHECK-LABEL:  func.func @_QPchar_test2(
-! CHECK:    %[[C:.*]]:2 = hlfir.declare %1 typeparams %c10 {uniq_name = "_QFchar_test2Ec"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+! CHECK:    %[[C:.*]]:2 = hlfir.declare %{{.*}} typeparams %c10 dummy_scope %{{[0-9]+}} {uniq_name = "_QFchar_test2Ec"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 ! CHECK:    %[[CAST:.*]] = fir.convert %[[C]]#0 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,5>>
 ! CHECK:    %[[C_STMT_FUNC:.*]]:2 = hlfir.declare %[[CAST]] typeparams %c5{{.*}} {uniq_name = "_QFchar_test2Fstmt_funcEc_stmt_func"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:    hlfir.concat %[[C_STMT_FUNC]]#0, %{{.*}} len %{{.*}} : (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,7>>, index) -> !hlfir.expr<!fir.char<1,12>>

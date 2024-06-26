@@ -22,8 +22,6 @@
 //
 // Future loop memory idioms to recognize:
 //   memcmp, strlen, etc.
-// Future floating point idioms to recognize in -ffast-math mode:
-//   fpowi
 //
 // This could recognize common matrix multiplies and dot product idioms and
 // replace them with calls to BLAS (if linked in??).
@@ -1107,7 +1105,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     GV->setAlignment(Align(16));
     Value *PatternPtr = GV;
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
-    
+
     // Set the TBAA info if present.
     if (AATags.TBAA)
       NewCall->setMetadata(LLVMContext::MD_tbaa, AATags.TBAA);
@@ -1117,7 +1115,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
 
     if (AATags.NoAlias)
       NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
-  } 
+  }
 
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
@@ -2409,15 +2407,15 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   if (!isGuaranteedNotToBeUndefOrPoison(BitPos)) {
     // BitMask may be computed from BitPos, Freeze BitPos so we can increase
     // it's use count.
-    Instruction *InsertPt = nullptr;
+    std::optional<BasicBlock::iterator> InsertPt = std::nullopt;
     if (auto *BitPosI = dyn_cast<Instruction>(BitPos))
-      InsertPt = &**BitPosI->getInsertionPointAfterDef();
+      InsertPt = BitPosI->getInsertionPointAfterDef();
     else
-      InsertPt = &*DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
+      InsertPt = DT->getRoot()->getFirstNonPHIOrDbgOrAlloca();
     if (!InsertPt)
       return false;
     FreezeInst *BitPosFrozen =
-        new FreezeInst(BitPos, BitPos->getName() + ".fr", InsertPt);
+        new FreezeInst(BitPos, BitPos->getName() + ".fr", *InsertPt);
     BitPos->replaceUsesWithIf(BitPosFrozen, [BitPosFrozen](Use &U) {
       return U.getUser() != BitPosFrozen;
     });

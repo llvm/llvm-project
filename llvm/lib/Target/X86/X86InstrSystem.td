@@ -68,6 +68,14 @@ def SYSENTER : I<0x34, RawFrm, (outs), (ins), "sysenter", []>, TB;
 def SYSEXIT   : I<0x35, RawFrm, (outs), (ins), "sysexit{l}", []>, TB;
 def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
                   Requires<[In64BitMode]>;
+
+// FRED Instructions
+let hasSideEffects = 1, Defs = [RSP, EFLAGS] in {
+  def ERETS: I<0x01, MRM_CA, (outs), (ins), "erets",
+              []>, TB, XD, Requires<[In64BitMode]>;
+  def ERETU: I<0x01, MRM_CA, (outs), (ins), "eretu",
+              []>, TB, XS, Requires<[In64BitMode]>;
+} // hasSideEffects = 1, Defs = [RSP, EFLAGS]
 } // SchedRW
 
 def : Pat<(debugtrap),
@@ -212,7 +220,16 @@ def MOV16sm : I<0x8E, MRMSrcMem, (outs SEGMENT_REG:$dst), (ins i16mem:$src),
 
 let SchedRW = [WriteSystem] in {
 def SWAPGS : I<0x01, MRM_F8, (outs), (ins), "swapgs", []>, TB;
+// LKGS instructions
+let hasSideEffects = 1 in {
+  let mayLoad = 1 in
+  def LKGS16m : I<0x00, MRM6m, (outs), (ins i16mem:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+  def LKGS16r : I<0x00, MRM6r, (outs), (ins GR16:$src), "lkgs\t$src",
+                  []>, TB, XD, Requires<[In64BitMode]>;
+} // hasSideEffects
 
+let Defs = [EFLAGS] in {
 let mayLoad = 1 in
 def LAR16rm : I<0x02, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                 "lar{w}\t{$src, $dst|$dst, $src}", []>, TB,
@@ -253,6 +270,7 @@ def LSL64rm : RI<0x03, MRMSrcMem, (outs GR64:$dst), (ins i16mem:$src),
                  "lsl{q}\t{$src, $dst|$dst, $src}", []>, TB;
 def LSL64rr : RI<0x03, MRMSrcReg, (outs GR64:$dst), (ins GR16orGR32orGR64:$src),
                  "lsl{q}\t{$src, $dst|$dst, $src}", []>, TB;
+}
 
 def INVLPG : I<0x01, MRM7m, (outs), (ins i8mem:$addr), "invlpg\t$addr", []>, TB;
 
@@ -364,12 +382,14 @@ def LGS32rm : I<0xb5, MRMSrcMem, (outs GR32:$dst), (ins opaquemem:$src),
 def LGS64rm : RI<0xb5, MRMSrcMem, (outs GR64:$dst), (ins opaquemem:$src),
                  "lgs{q}\t{$src, $dst|$dst, $src}", []>, TB;
 
+let Defs = [EFLAGS] in {
 def VERRr : I<0x00, MRM4r, (outs), (ins GR16:$seg), "verr\t$seg", []>, TB;
 def VERWr : I<0x00, MRM5r, (outs), (ins GR16:$seg), "verw\t$seg", []>, TB;
 let mayLoad = 1 in {
 def VERRm : I<0x00, MRM4m, (outs), (ins i16mem:$seg), "verr\t$seg", []>, TB;
 def VERWm : I<0x00, MRM5m, (outs), (ins i16mem:$seg), "verw\t$seg", []>, TB;
 }
+} // Defs EFLAGS
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -712,7 +732,7 @@ def INVPCID64 : I<0x82, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
 
 def INVPCID64_EVEX : I<0xF2, MRMSrcMem, (outs), (ins GR64:$src1, i128mem:$src2),
                        "invpcid\t{$src2, $src1|$src1, $src2}", []>,
-                     EVEX, NoCD8, T_MAP4, XS, Requires<[In64BitMode]>;
+                     EVEX, NoCD8, T_MAP4, XS, WIG, Requires<[In64BitMode]>;
 } // SchedRW
 
 let Predicates = [HasINVPCID, NoEGPR] in {

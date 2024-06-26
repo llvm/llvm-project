@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_60 \
-// RUN:            -fcuda-is-device -S -emit-llvm -o - -x cuda %s \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 //
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_50 \

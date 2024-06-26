@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s \
 ; RUN:     -pass-remarks-missed="polly-detect" 2>&1 | FileCheck %s
 
 ; void f(long A[], long N) {

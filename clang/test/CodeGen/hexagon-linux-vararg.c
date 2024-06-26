@@ -9,7 +9,7 @@ struct AAA {
   int d;
 };
 
-// CHECK:   call void @llvm.va_start(ptr %arraydecay)
+// CHECK:   call void @llvm.va_start.p0(ptr %arraydecay)
 // CHECK:   %arraydecay1 = getelementptr inbounds [1 x %struct.__va_list_tag],
 // ptr %ap, i32 0, i32 0
 // CHECK:   br label %vaarg.maybe_reg

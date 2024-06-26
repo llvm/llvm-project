@@ -47,17 +47,17 @@
 
   define dso_local i64 @funone() !dbg !15 {
   entry:
-    %0 = load i64, i64* @c, align 8, !dbg !21
+    %0 = load i64, ptr @c, align 8, !dbg !21
     %tobool = icmp ne i64 %0, 0, !dbg !21
     br i1 %tobool, label %if.then, label %if.end, !dbg !27
 
   if.then:                                          ; preds = %entry
-    %1 = load i64, i64* @b, align 8, !dbg !21
+    %1 = load i64, ptr @b, align 8, !dbg !21
     br label %cleanup, !dbg !21
 
   if.end:                                           ; preds = %entry
     call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !DIExpression()), !dbg !27
-    %2 = load i64, i64* @a, align 8, !dbg !27
+    %2 = load i64, ptr @a, align 8, !dbg !27
     br label %cleanup, !dbg !27
 
   cleanup:                                          ; preds = %if.end, %if.then
@@ -67,12 +67,12 @@
 
   define dso_local signext i16 @funtwo() !dbg !34 {
   entry:
-    %localtwo.sroa.0.0.copyload = load i16, i16* null, align 1, !dbg !48
+    %localtwo.sroa.0.0.copyload = load i16, ptr null, align 1, !dbg !48
     call void @llvm.dbg.value(metadata i16 %localtwo.sroa.0.0.copyload, metadata !39, metadata !DIExpression()), !dbg !51
     ret i16 %localtwo.sroa.0.0.copyload, !dbg !51
   }
 
-  declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+  declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
   declare void @llvm.dbg.value(metadata, metadata, metadata)
 
   !llvm.dbg.cu = !{!2}
@@ -145,7 +145,7 @@ body:             |
 name:            funtwo
 body:             |
   bb.0.entry:
-    $eax = MOVZX32rm16 $noreg, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s16) from `i16* null`, align 1)
+    $eax = MOVZX32rm16 $noreg, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s16) from `ptr null`, align 1)
     DBG_VALUE $ax, $noreg, !39, !DIExpression(), debug-location !51
     RET64 $ax, debug-location !51
 

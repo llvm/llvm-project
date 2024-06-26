@@ -41,13 +41,19 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop 4 times since TC being a multiple of VF means
+; We should unroll this loop 4 times since TC being a multiple of VF means
 ; that the epilogue loop may not need to run, making it profitable for
 ; the vector loop to run even once
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_16(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
@@ -77,13 +83,19 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop twice since TC not being a multiple of VF may require
-; the epilogue loop to run, making it profitable when the vector loop runs
-; at least twice.
+; We should unroll this loop four times since unrolling it twice
+; will produce the same epilogue TC of 1, making larger unroll count
+; more profitable
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_17(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
@@ -113,14 +125,15 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop 4 times since TC being a multiple of VF means
-; that the epilogue loop may not need to run, making it profitable for
-; the vector loop to run even once. The IC is restricted to 4 since 
-; that is the maximum supported for the target.
+; We should unroll this loop twice since unrolling four times will 
+; create an epilogue loop of TC 8, while unrolling it twice will 
+; eliminate the epologue loop altogether
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_24(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
@@ -150,13 +163,15 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop twice since TC not being a multiple of VF may require
+; We should unroll this loop twice since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice.
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_25(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
@@ -186,13 +201,19 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop 4 times since TC not being a multiple of VF may require
+; We should unroll this loop 4 times since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice.
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_33(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret
@@ -222,14 +243,20 @@ for.end:                                       ; preds = %for.body
   ret void
 }
 
-; TODO: We should unroll this loop 4 times since TC not being a multiple of VF may require
+; We should unroll this loop 4 times since TC not being a multiple of VF may require
 ; the epilogue loop to run, making it profitable when the vector loop runs
 ; at least twice. The IC is restricted to 4 since that is the maximum supported 
 ; for the target.
 ;
 ; CHECK-VECTOR-LABEL: @foo_trip_count_101(
 ; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
+; CHECK-VECTOR: load <4 x i32>
 ; CHECK-VECTOR-NOT: load <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
+; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR: store <4 x i32>
 ; CHECK-VECTOR-NOT: store <4 x i32>
 ; CHECK-VECTOR: ret

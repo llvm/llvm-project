@@ -1,5 +1,5 @@
 # RUN: not llvm-mc -triple riscv64 -mattr=+a < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zaamo < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv64 -mattr=+zaamo < %s 2>&1 | FileCheck %s
 
 # Final operand must have parentheses
 amoswap.d a1, a2, a3 # CHECK: :[[@LINE]]:19: error: expected '(' or optional integer offset

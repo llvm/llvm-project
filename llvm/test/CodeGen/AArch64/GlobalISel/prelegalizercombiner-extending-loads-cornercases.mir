@@ -9,7 +9,7 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
 
-  define void @multiple_copies(i8* %addr) {
+  define void @multiple_copies(ptr %addr) {
   entry:
     br i1 0, label %if, label %else
   if:
@@ -20,7 +20,7 @@
     ret void
   }
 
-  define void @sink_to_phi_trivially_dominating(i8* %addr) {
+  define void @sink_to_phi_trivially_dominating(ptr %addr) {
   entry:
     br i1 0, label %if, label %exit
   if:
@@ -29,7 +29,7 @@
     ret void
   }
 
-  define void @sink_to_phi_nondominating(i8* %addr) {
+  define void @sink_to_phi_nondominating(ptr %addr) {
   entry:
     br i1 0, label %if, label %else
   if:
@@ -40,7 +40,7 @@
     ret void
   }
 
-  define void @sink_to_phi_emptyblock(i8* %addr) {
+  define void @sink_to_phi_emptyblock(ptr %addr) {
   entry:
     br i1 0, label %if, label %else
   if:
@@ -53,12 +53,12 @@
     ret void
   }
 
-  define void @use_doesnt_def_anything(i8* %addr) {
+  define void @use_doesnt_def_anything(ptr %addr) {
   entry:
     ret void
   }
 
-  define void @op0_isnt_a_reg(i8* %addr) {
+  define void @op0_isnt_a_reg(ptr %addr) {
   entry:
     ret void
   }

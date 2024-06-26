@@ -35,7 +35,7 @@ void function3() CONSUMABLE(consumed); // expected-warning {{'consumable' attrib
 
 class CONSUMABLE(unknown) AttrTester1 {
   void callableWhen0()  CALLABLE_WHEN("unconsumed");
-  void callableWhen1()  CALLABLE_WHEN(42); // expected-error {{'callable_when' attribute requires a string}}
+  void callableWhen1()  CALLABLE_WHEN(42); // expected-error {{expected string literal as argument of 'callable_when' attribute}}
   void callableWhen2()  CALLABLE_WHEN("foo"); // expected-warning {{'callable_when' attribute argument not supported: foo}}
   void callableWhen3()  CALLABLE_WHEN(unconsumed);
   void consumes()       SET_TYPESTATE(consumed);

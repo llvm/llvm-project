@@ -39,9 +39,9 @@ bool ABIInfo::isOHOSFamily() const {
   return getTarget().getTriple().isOHOSFamily();
 }
 
-Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                             QualType Ty) const {
-  return Address::invalid();
+RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                            QualType Ty, AggValueSlot Slot) const {
+  return RValue::getIgnored();
 }
 
 bool ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
@@ -61,7 +61,7 @@ bool ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate() const {
 bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
                                      uint64_t &Members) const {
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t NElements = AT->getSize().getZExtValue();
+    uint64_t NElements = AT->getZExtSize();
     if (NElements == 0)
       return false;
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
@@ -98,7 +98,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
       QualType FT = FD->getType();
       while (const ConstantArrayType *AT =
              getContext().getAsConstantArrayType(FT)) {
-        if (AT->getSize().getZExtValue() == 0)
+        if (AT->isZeroSize())
           return false;
         FT = AT->getElementType();
       }
@@ -182,6 +182,58 @@ ABIArgInfo ABIInfo::getNaturalAlignIndirectInReg(QualType Ty,
                                                  bool Realign) const {
   return ABIArgInfo::getIndirectInReg(getContext().getTypeAlignInChars(Ty),
                                       /*ByVal*/ false, Realign);
+}
+
+void ABIInfo::appendAttributeMangling(TargetAttr *Attr,
+                                      raw_ostream &Out) const {
+  if (Attr->isDefaultVersion())
+    return;
+  appendAttributeMangling(Attr->getFeaturesStr(), Out);
+}
+
+void ABIInfo::appendAttributeMangling(TargetVersionAttr *Attr,
+                                      raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getNamesStr(), Out);
+}
+
+void ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                      raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+  Out << '.' << Attr->getMangledIndex(Index);
+}
+
+void ABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                      raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  llvm::sort(Info.Features, [&TI](StringRef LHS, StringRef RHS) {
+    // Multiversioning doesn't allow "no-${feature}", so we can
+    // only have "+" prefixes here.
+    assert(LHS.starts_with("+") && RHS.starts_with("+") &&
+           "Features should always have a prefix.");
+    return TI.multiVersionSortPriority(LHS.substr(1)) >
+           TI.multiVersionSortPriority(RHS.substr(1));
+  });
+
+  bool IsFirst = true;
+  if (!Info.CPU.empty()) {
+    IsFirst = false;
+    Out << "arch_" << Info.CPU;
+  }
+
+  for (StringRef Feat : Info.Features) {
+    if (!IsFirst)
+      Out << '_';
+    IsFirst = false;
+    Out << Feat.substr(1);
+  }
 }
 
 // Pin the vtable to this file.

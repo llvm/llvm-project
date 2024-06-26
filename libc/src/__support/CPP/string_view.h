@@ -179,7 +179,8 @@ public:
   LIBC_INLINE char back() const { return Data[Len - 1]; }
 
   // Finds the first occurence of c in this view, starting at position From.
-  LIBC_INLINE size_t find_first_of(const char c, size_t From = 0) const {
+  LIBC_INLINE constexpr size_t find_first_of(const char c,
+                                             size_t From = 0) const {
     for (size_t Pos = From; Pos < size(); ++Pos)
       if ((*this)[Pos] == c)
         return Pos;
@@ -187,12 +188,28 @@ public:
   }
 
   // Finds the last occurence of c in this view, ending at position End.
-  LIBC_INLINE size_t find_last_of(const char c, size_t End = npos) const {
+  LIBC_INLINE constexpr size_t find_last_of(const char c,
+                                            size_t End = npos) const {
     End = End >= size() ? size() : End + 1;
     for (; End > 0; --End)
       if ((*this)[End - 1] == c)
         return End - 1;
     return npos;
+  }
+
+  // Finds the first character not equal to c in this view, starting at position
+  // From.
+  LIBC_INLINE constexpr size_t find_first_not_of(const char c,
+                                                 size_t From = 0) const {
+    for (size_t Pos = From; Pos < size(); ++Pos)
+      if ((*this)[Pos] != c)
+        return Pos;
+    return npos;
+  }
+
+  // Check if this view contains the given character.
+  LIBC_INLINE constexpr bool contains(char c) const {
+    return find_first_of(c) != npos;
   }
 };
 

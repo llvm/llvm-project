@@ -6,6 +6,9 @@ from lldbsuite.test.lldbtest import *
 
 
 class DAPTestCaseBase(TestBase):
+    # set timeout based on whether ASAN was enabled or not. Increase
+    # timeout by a factor of 10 if ASAN is enabled.
+    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adaptor(self, lldbDAPEnv=None):
@@ -122,6 +125,8 @@ class DAPTestCaseBase(TestBase):
         for cmd in commands:
             found = False
             for line in lines:
+                if len(cmd) > 0 and (cmd[0] == "!" or cmd[0] == "?"):
+                    cmd = cmd[1:]
                 if line.startswith(prefix) and cmd in line:
                     found = True
                     break
@@ -190,8 +195,10 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
-    def collect_console(self, duration):
-        return self.dap_server.collect_output("console", duration=duration)
+    def collect_console(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "console", timeout_secs=timeout_secs, pattern=pattern
+        )
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
@@ -213,8 +220,8 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, waitForStop=True):
-        self.dap_server.request_stepIn(threadId=threadId)
+    def stepIn(self, threadId=None, targetId=None, waitForStop=True):
+        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId)
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -249,13 +256,13 @@ class DAPTestCaseBase(TestBase):
     def continue_to_exit(self, exitCode=0):
         self.dap_server.request_continue()
         stopped_events = self.dap_server.wait_for_stopped()
-        self.assertEquals(
+        self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
-        self.assertEquals(
+        self.assertEqual(
             stopped_events[0]["event"], "exited", "make sure program ran to completion"
         )
-        self.assertEquals(
+        self.assertEqual(
             stopped_events[0]["body"]["exitCode"],
             exitCode,
             "exitCode == %i" % (exitCode),

@@ -17,19 +17,19 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [8 x i8] c"a = %l\0A\00", align 1
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
-declare void @hoo(i64*)
+declare void @hoo(ptr)
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
-define void @goo(i32 %N, i64* %b) {
+define void @goo(i32 %N, ptr %b) {
 entry:
   %a.i = alloca i64, align 8
-  %tmp = bitcast i64* %a.i to i8*
-  %c = getelementptr inbounds i64, i64* %b, i64 0
+  %tmp = bitcast ptr %a.i to ptr
+  %c = getelementptr inbounds i64, ptr %b, i64 0
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -38,12 +38,12 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %tmp)
-  call void @hoo(i64* %a.i)
-  call void @hoo(i64* %c)
-  %tmp1 = load volatile i64, i64* %a.i, align 8
-  %call.i = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i64 0, i64 0), i64 %tmp1)
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %tmp)
+  call void @llvm.lifetime.start.p0(i64 8, ptr %tmp)
+  call void @hoo(ptr %a.i)
+  call void @hoo(ptr %c)
+  %tmp1 = load volatile i64, ptr %a.i, align 8
+  %call.i = call i32 (ptr, ...) @printf(ptr @.str, i64 %tmp1)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %tmp)
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 

@@ -10,11 +10,15 @@
 #define MLIR_DIALECT_MESH_INTERFACES_SHARDINGINTERFACE_H_
 
 #include "mlir/Dialect/Mesh/IR/MeshOps.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
 
 class Operation;
+class IRMapping;
+class SymbolTableCollection;
 
 namespace mesh {
 
@@ -33,6 +37,11 @@ struct ShardingOption {
   ShardingOption() = default;
   ShardingOption(ShardingArray shardingArray, FlatSymbolRefAttr mesh)
       : shardingArray(std::move(shardingArray)), mesh(mesh) {}
+  static ShardingOption makeEmpty() {
+    auto res = ShardingOption();
+    res.empty = true;
+    return res;
+  }
 };
 
 // This method retrieves the 'MeshShardingAttr' attribute from a given operation
@@ -52,14 +61,24 @@ defaultGetShardingOption(Operation *op,
                          ArrayRef<MeshShardingAttr> operandShardings,
                          ArrayRef<MeshShardingAttr> resultShardings);
 
+FailureOr<SmallVector<MeshShardingAttr>>
+defaultGetShardingAnnotations(Operation *op,
+                              const ShardingOption &shardingOption);
+
 LogicalResult
 defaultAddShardingAnnotations(Operation *op, OpBuilder &b,
                               const ShardingOption &shardingOption);
 
 } // namespace detail
 
-} // namespace mesh
+// Assumes full replication on all ranked tensor arguments and results.
+void spmdizeFullyReplicatedOperation(
+    Operation &op, ArrayRef<Value> spmdizedOperands,
+    ArrayRef<MeshShardingAttr> operandShardings,
+    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
+    SymbolTableCollection &symbolTable, OpBuilder &builder);
 
+} // namespace mesh
 } // namespace mlir
 
 /// Include the ODS generated interface header files.

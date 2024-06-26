@@ -43,17 +43,13 @@ private:
 
 void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t MagicNumber = 0x07230203;
-
-  // TODO: set the version on a min-necessary basis (just like the translator
-  // does) requires some refactoring of MCAssembler::VersionInfoType.
-  constexpr uint32_t Major = 1;
-  constexpr uint32_t Minor = 0;
-  constexpr uint32_t VersionNumber = 0 | (Major << 16) | (Minor << 8);
-  // TODO: check if we could use anything other than 0 (spec allows).
-  constexpr uint32_t GeneratorMagicNumber = 0;
-  // TODO: do not hardcode this as well.
-  constexpr uint32_t Bound = 900;
+  constexpr uint32_t GeneratorID = 43;
+  constexpr uint32_t GeneratorMagicNumber =
+      (GeneratorID << 16) | (LLVM_VERSION_MAJOR);
   constexpr uint32_t Schema = 0;
+  const MCAssembler::VersionInfoType &VIT = Asm.getVersionInfo();
+  uint32_t VersionNumber = 0 | (VIT.Major << 16) | (VIT.Minor << 8);
+  uint32_t Bound = VIT.Update;
 
   W.write<uint32_t>(MagicNumber);
   W.write<uint32_t>(VersionNumber);

@@ -138,8 +138,10 @@ public:
 TEST(CallDescription, SimpleNameMatching) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"bar"}}, false}, // false: there's no call to 'bar' in this code.
-          {{{"foo"}}, true},  // true: there's a call to 'foo' in this code.
+          {{CDM::SimpleFunc, {"bar"}},
+           false}, // false: there's no call to 'bar' in this code.
+          {{CDM::SimpleFunc, {"foo"}},
+           true}, // true: there's a call to 'foo' in this code.
       })),
       "void foo(); void bar() { foo(); }"));
 }
@@ -147,8 +149,8 @@ TEST(CallDescription, SimpleNameMatching) {
 TEST(CallDescription, RequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"foo"}, 1}, true},
-          {{{"foo"}, 2}, false},
+          {{CDM::SimpleFunc, {"foo"}, 1}, true},
+          {{CDM::SimpleFunc, {"foo"}, 2}, false},
       })),
       "void foo(int); void foo(int, int); void bar() { foo(1); }"));
 }
@@ -156,8 +158,8 @@ TEST(CallDescription, RequiredArguments) {
 TEST(CallDescription, LackOfRequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"foo"}, std::nullopt}, true},
-          {{{"foo"}, 2}, false},
+          {{CDM::SimpleFunc, {"foo"}, std::nullopt}, true},
+          {{CDM::SimpleFunc, {"foo"}, 2}, false},
       })),
       "void foo(int); void foo(int, int); void bar() { foo(1); }"));
 }
@@ -187,7 +189,7 @@ TEST(CallDescription, QualifiedNames) {
   const std::string Code = (Twine{MockStdStringHeader} + AdditionalCode).str();
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"std", "basic_string", "c_str"}}, true},
+          {{CDM::CXXMethod, {"std", "basic_string", "c_str"}}, true},
       })),
       Code));
 }
@@ -202,7 +204,8 @@ TEST(CallDescription, MatchConstructor) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(
           new CallDescriptionAction<CXXConstructExpr>({
-              {{{"std", "basic_string", "basic_string"}, 2, 2}, true},
+              {{CDM::CXXMethod, {"std", "basic_string", "basic_string"}, 2, 2},
+               true},
           })),
       Code));
 }
@@ -228,7 +231,7 @@ TEST(CallDescription, MatchConversionOperator) {
     })code";
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"aaa", "bbb", "Bar", "operator int"}}, true},
+          {{CDM::CXXMethod, {"aaa", "bbb", "Bar", "operator int"}}, true},
       })),
       Code));
 }
@@ -252,7 +255,7 @@ TEST(CallDescription, RejectOverQualifiedNames) {
   // FIXME: We should **not** match.
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"std", "container", "data"}}, true},
+          {{CDM::CXXMethod, {"std", "container", "data"}}, true},
       })),
       Code));
 }
@@ -272,7 +275,7 @@ TEST(CallDescription, DontSkipNonInlineNamespaces) {
     SCOPED_TRACE("my v1 bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"my", "v1", "bar"}}, true},
+            {{CDM::SimpleFunc, {"my", "v1", "bar"}}, true},
         })),
         Code));
   }
@@ -281,7 +284,7 @@ TEST(CallDescription, DontSkipNonInlineNamespaces) {
     SCOPED_TRACE("my bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"my", "bar"}}, true},
+            {{CDM::SimpleFunc, {"my", "bar"}}, true},
         })),
         Code));
   }
@@ -303,7 +306,7 @@ TEST(CallDescription, SkipTopInlineNamespaces) {
     SCOPED_TRACE("my v1 bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"my", "v1", "bar"}}, true},
+            {{CDM::SimpleFunc, {"my", "v1", "bar"}}, true},
         })),
         Code));
   }
@@ -311,7 +314,7 @@ TEST(CallDescription, SkipTopInlineNamespaces) {
     SCOPED_TRACE("v1 bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"v1", "bar"}}, true},
+            {{CDM::SimpleFunc, {"v1", "bar"}}, true},
         })),
         Code));
   }
@@ -338,7 +341,7 @@ TEST(CallDescription, SkipAnonimousNamespaces) {
 
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"std", "container", "data"}}, true},
+          {{CDM::CXXMethod, {"std", "container", "data"}}, true},
       })),
       Code));
 }
@@ -376,7 +379,7 @@ TEST(CallDescription, AliasNames) {
       SCOPED_TRACE("std container data");
       EXPECT_TRUE(tooling::runToolOnCode(
           std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-              {{{"std", "container", "data"}}, true},
+              {{CDM::CXXMethod, {"std", "container", "data"}}, true},
           })),
           UseAliasInSpellingCode));
     }
@@ -385,7 +388,7 @@ TEST(CallDescription, AliasNames) {
       SCOPED_TRACE("std cont data");
       EXPECT_TRUE(tooling::runToolOnCode(
           std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-              {{{"std", "cont", "data"}}, false},
+              {{CDM::CXXMethod, {"std", "cont", "data"}}, false},
           })),
           UseAliasInSpellingCode));
     }
@@ -399,7 +402,7 @@ TEST(CallDescription, AliasNames) {
       SCOPED_TRACE("std container data");
       EXPECT_TRUE(tooling::runToolOnCode(
           std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-              {{{"std", "container", "data"}}, true},
+              {{CDM::CXXMethod, {"std", "container", "data"}}, true},
           })),
           UseAliasInSpellingCode));
     }
@@ -408,7 +411,7 @@ TEST(CallDescription, AliasNames) {
       SCOPED_TRACE("std cont data");
       EXPECT_TRUE(tooling::runToolOnCode(
           std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-              {{{"std", "cont", "data"}}, false},
+              {{CDM::CXXMethod, {"std", "cont", "data"}}, false},
           })),
           UseAliasInSpellingCode));
     }
@@ -431,7 +434,7 @@ TEST(CallDescription, AliasSingleNamespace) {
     SCOPED_TRACE("aaa bbb ccc bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"aaa", "bbb", "ccc", "bar"}}, true},
+            {{CDM::SimpleFunc, {"aaa", "bbb", "ccc", "bar"}}, true},
         })),
         Code));
   }
@@ -440,7 +443,7 @@ TEST(CallDescription, AliasSingleNamespace) {
     SCOPED_TRACE("aaa bbb_alias ccc bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"aaa", "bbb_alias", "ccc", "bar"}}, false},
+            {{CDM::SimpleFunc, {"aaa", "bbb_alias", "ccc", "bar"}}, false},
         })),
         Code));
   }
@@ -462,7 +465,7 @@ TEST(CallDescription, AliasMultipleNamespaces) {
     SCOPED_TRACE("aaa bbb ccc bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"aaa", "bbb", "ccc", "bar"}}, true},
+            {{CDM::SimpleFunc, {"aaa", "bbb", "ccc", "bar"}}, true},
         })),
         Code));
   }
@@ -471,7 +474,7 @@ TEST(CallDescription, AliasMultipleNamespaces) {
     SCOPED_TRACE("aaa_bbb_ccc bar");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-            {{{"aaa_bbb_ccc", "bar"}}, false},
+            {{CDM::SimpleFunc, {"aaa_bbb_ccc", "bar"}}, false},
         })),
         Code));
   }
@@ -480,31 +483,35 @@ TEST(CallDescription, AliasMultipleNamespaces) {
 TEST(CallDescription, NegativeMatchQualifiedNames) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{{"foo", "bar"}}, false},
-          {{{"bar", "foo"}}, false},
-          {{{"foo"}}, true},
+          {{CDM::Unspecified, {"foo", "bar"}}, false},
+          {{CDM::Unspecified, {"bar", "foo"}}, false},
+          {{CDM::Unspecified, {"foo"}}, true},
       })),
       "void foo(); struct bar { void foo(); }; void test() { foo(); }"));
 }
 
 TEST(CallDescription, MatchBuiltins) {
-  // Test CDF_MaybeBuiltin - a flag that allows matching weird builtins.
-  EXPECT_TRUE(tooling::runToolOnCode(
-      std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-          {{{{"memset"}, 3}, false},
-           {{CDF_MaybeBuiltin, {"memset"}, 3}, true}})),
-      "void foo() {"
-      "  int x;"
-      "  __builtin___memset_chk(&x, 0, sizeof(x),"
-      "                         __builtin_object_size(&x, 0));"
-      "}"));
-
+  // Test the matching modes CDM::CLibrary and CDM::CLibraryMaybeHardened,
+  // which can recognize builtin variants of C library functions.
+  {
+    SCOPED_TRACE("hardened variants of functions");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::Unspecified, {"memset"}, 3}, false},
+             {{CDM::CLibrary, {"memset"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"memset"}, 3}, true}})),
+        "void foo() {"
+        "  int x;"
+        "  __builtin___memset_chk(&x, 0, sizeof(x),"
+        "                         __builtin_object_size(&x, 0));"
+        "}"));
+  }
   {
     SCOPED_TRACE("multiple similar builtins");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"memcpy"}, 3}, false},
-             {{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true}})),
+            {{{CDM::CLibrary, {"memcpy"}, 3}, false},
+             {{CDM::CLibrary, {"wmemcpy"}, 3}, true}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -513,17 +520,46 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins reversed order");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true},
-             {{CDF_MaybeBuiltin, {"memcpy"}, 3}, false}})),
+            {{{CDM::CLibrary, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibrary, {"memcpy"}, 3}, false}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
   }
   {
-    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    SCOPED_TRACE("multiple similar builtins with hardened variant");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, false}})),
+            {{{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
+          })"));
+  }
+  {
+    SCOPED_TRACE(
+        "multiple similar builtins with hardened variant reversed order");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, false}})),
         R"(
           void funcXXX();
           void XXXfunc();
@@ -537,8 +573,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead matches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, true}})),
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, true}})),
         R"(
           void func();
           void func_XXX();
@@ -565,7 +601,7 @@ TEST(CallDescription, MatchBuiltins) {
 
 class CallDescChecker
     : public Checker<check::PreCall, check::PreStmt<CallExpr>> {
-  CallDescriptionSet Set = {{{"bar"}, 0}};
+  CallDescriptionSet Set = {{CDM::SimpleFunc, {"bar"}, 0}};
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {

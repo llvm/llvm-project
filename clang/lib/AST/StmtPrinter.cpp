@@ -84,7 +84,7 @@ namespace {
 
     void PrintStmt(Stmt *S, int SubIndent) {
       IndentLevel += SubIndent;
-      if (S && isa<Expr>(S)) {
+      if (isa_and_nonnull<Expr>(S)) {
         // If this is an expr used in a stmt context, indent and newline it.
         Indent();
         Visit(S);
@@ -292,8 +292,11 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  for (const auto *Attr : Node->getAttrs()) {
+  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
+    if (Attr != Attrs.back())
+      OS << ' ';
   }
 
   PrintStmt(Node->getSubStmt(), 0);
@@ -1138,11 +1141,44 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 }
 
 //===----------------------------------------------------------------------===//
+//  OpenACC construct printing methods
+//===----------------------------------------------------------------------===//
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getStructuredBlock());
+}
+
+void StmtPrinter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
+  Indent() << "#pragma acc loop";
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS, Policy);
+    Printer.VisitClauseList(S->clauses());
+  }
+  OS << '\n';
+
+  PrintStmt(S->getLoop());
+}
+
+//===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
 
 void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
   OS << Node->getBuiltinStr() << "()";
+}
+
+void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
+  llvm::report_fatal_error("Not implemented");
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
@@ -1429,7 +1465,7 @@ void StmtPrinter::VisitOffsetOfExpr(OffsetOfExpr *Node) {
       continue;
 
     // Field or identifier node.
-    IdentifierInfo *Id = ON.getFieldName();
+    const IdentifierInfo *Id = ON.getFieldName();
     if (!Id)
       continue;
 
@@ -1503,7 +1539,7 @@ void StmtPrinter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *Node) {
   OS << "]";
 }
 
-void StmtPrinter::VisitOMPArraySectionExpr(OMPArraySectionExpr *Node) {
+void StmtPrinter::VisitArraySectionExpr(ArraySectionExpr *Node) {
   PrintExpr(Node->getBase());
   OS << "[";
   if (Node->getLowerBound())
@@ -1513,7 +1549,7 @@ void StmtPrinter::VisitOMPArraySectionExpr(OMPArraySectionExpr *Node) {
     if (Node->getLength())
       PrintExpr(Node->getLength());
   }
-  if (Node->getColonLocSecond().isValid()) {
+  if (Node->isOMPArraySection() && Node->getColonLocSecond().isValid()) {
     OS << ":";
     if (Node->getStride())
       PrintExpr(Node->getStride());
@@ -1907,7 +1943,7 @@ void StmtPrinter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *Node) {
 void StmtPrinter::VisitCXXMemberCallExpr(CXXMemberCallExpr *Node) {
   // If we have a conversion operator call only print the argument.
   CXXMethodDecl *MD = Node->getMethodDecl();
-  if (MD && isa<CXXConversionDecl>(MD)) {
+  if (isa_and_nonnull<CXXConversionDecl>(MD)) {
     PrintExpr(Node->getImplicitObjectArgument());
     return;
   }
@@ -2330,7 +2366,7 @@ void StmtPrinter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     E->getQualifier()->print(OS, Policy);
   OS << "~";
 
-  if (IdentifierInfo *II = E->getDestroyedTypeIdentifier())
+  if (const IdentifierInfo *II = E->getDestroyedTypeIdentifier())
     OS << II->getName();
   else
     E->getDestroyedType().print(OS, Policy);

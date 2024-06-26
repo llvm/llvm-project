@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Replaces LLVM IR instructions with vector operands (i.e., the frem
-// instruction or calls to LLVM intrinsics) with matching calls to functions
-// from a vector library (e.g libmvec, SVML) using TargetLibraryInfo interface.
+// Replaces calls to LLVM Intrinsics with matching calls to functions from a
+// vector library (e.g libmvec, SVML) using TargetLibraryInfo interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,6 +24,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -70,83 +70,67 @@ Function *getTLIFunction(Module *M, FunctionType *VectorFTy,
   return TLIFunc;
 }
 
-/// Replace the instruction \p I with a call to the corresponding function from
-/// the vector library (\p TLIVecFunc).
-static void replaceWithTLIFunction(Instruction &I, VFInfo &Info,
+/// Replace the intrinsic call \p II to \p TLIVecFunc, which is the
+/// corresponding function from the vector library.
+static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
                                    Function *TLIVecFunc) {
-  IRBuilder<> IRBuilder(&I);
-  auto *CI = dyn_cast<CallInst>(&I);
-  SmallVector<Value *> Args(CI ? CI->args() : I.operands());
+  IRBuilder<> IRBuilder(II);
+  SmallVector<Value *> Args(II->args());
   if (auto OptMaskpos = Info.getParamIndexForOptionalMask()) {
     auto *MaskTy =
-        VectorType::get(Type::getInt1Ty(I.getContext()), Info.Shape.VF);
+        VectorType::get(Type::getInt1Ty(II->getContext()), Info.Shape.VF);
     Args.insert(Args.begin() + OptMaskpos.value(),
                 Constant::getAllOnesValue(MaskTy));
   }
 
-  // If it is a call instruction, preserve the operand bundles.
+  // Preserve the operand bundles.
   SmallVector<OperandBundleDef, 1> OpBundles;
-  if (CI)
-    CI->getOperandBundlesAsDefs(OpBundles);
+  II->getOperandBundlesAsDefs(OpBundles);
 
   auto *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
-  I.replaceAllUsesWith(Replacement);
+  II->replaceAllUsesWith(Replacement);
   // Preserve fast math flags for FP math.
   if (isa<FPMathOperator>(Replacement))
-    Replacement->copyFastMathFlags(&I);
+    Replacement->copyFastMathFlags(II);
 }
 
-/// Returns true when successfully replaced \p I with a suitable function taking
-/// vector arguments, based on available mappings in the \p TLI. Currently only
-/// works when \p I is a call to vectorized intrinsic or the frem instruction.
+/// Returns true when successfully replaced \p II, which is a call to a
+/// vectorized intrinsic, with a suitable function taking vector arguments,
+/// based on available mappings in the \p TLI.
 static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
-                                    Instruction &I) {
+                                    IntrinsicInst *II) {
+  assert(II != nullptr && "Intrinsic cannot be null");
   // At the moment VFABI assumes the return type is always widened unless it is
   // a void type.
-  auto *VTy = dyn_cast<VectorType>(I.getType());
+  auto *VTy = dyn_cast<VectorType>(II->getType());
   ElementCount EC(VTy ? VTy->getElementCount() : ElementCount::getFixed(0));
-
-  // Compute the argument types of the corresponding scalar call and the scalar
-  // function name. For calls, it additionally finds the function to replace
-  // and checks that all vector operands match the previously found EC.
+  // Compute the argument types of the corresponding scalar call and check that
+  // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
-  std::string ScalarName;
-  Function *FuncToReplace = nullptr;
-  auto *CI = dyn_cast<CallInst>(&I);
-  if (CI) {
-    FuncToReplace = CI->getCalledFunction();
-    Intrinsic::ID IID = FuncToReplace->getIntrinsicID();
-    assert(IID != Intrinsic::not_intrinsic && "Not an intrinsic");
-    for (auto Arg : enumerate(CI->args())) {
-      auto *ArgTy = Arg.value()->getType();
-      if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
-        ScalarArgTypes.push_back(ArgTy);
-      } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
-        ScalarArgTypes.push_back(VectorArgTy->getElementType());
-        // When return type is void, set EC to the first vector argument, and
-        // disallow vector arguments with different ECs.
-        if (EC.isZero())
-          EC = VectorArgTy->getElementCount();
-        else if (EC != VectorArgTy->getElementCount())
-          return false;
-      } else
-        // Exit when it is supposed to be a vector argument but it isn't.
+  Intrinsic::ID IID = II->getIntrinsicID();
+  for (auto Arg : enumerate(II->args())) {
+    auto *ArgTy = Arg.value()->getType();
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+      ScalarArgTypes.push_back(ArgTy);
+    } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
+      ScalarArgTypes.push_back(VectorArgTy->getElementType());
+      // When return type is void, set EC to the first vector argument, and
+      // disallow vector arguments with different ECs.
+      if (EC.isZero())
+        EC = VectorArgTy->getElementCount();
+      else if (EC != VectorArgTy->getElementCount())
         return false;
-    }
-    // Try to reconstruct the name for the scalar version of the instruction,
-    // using scalar argument types.
-    ScalarName = Intrinsic::isOverloaded(IID)
-                     ? Intrinsic::getName(IID, ScalarArgTypes, I.getModule())
-                     : Intrinsic::getName(IID).str();
-  } else {
-    assert(VTy && "Return type must be a vector");
-    auto *ScalarTy = VTy->getScalarType();
-    LibFunc Func;
-    if (!TLI.getLibFunc(I.getOpcode(), ScalarTy, Func))
+    } else
+      // Exit when it is supposed to be a vector argument but it isn't.
       return false;
-    ScalarName = TLI.getName(Func);
-    ScalarArgTypes = {ScalarTy, ScalarTy};
   }
+
+  // Try to reconstruct the name for the scalar version of the instruction,
+  // using scalar argument types.
+  std::string ScalarName =
+      Intrinsic::isOverloaded(IID)
+          ? Intrinsic::getName(IID, ScalarArgTypes, II->getModule())
+          : Intrinsic::getName(IID).str();
 
   // Try to find the mapping for the scalar version of this intrinsic and the
   // exact vector width of the call operands in the TargetLibraryInfo. First,
@@ -162,7 +146,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // Replace the call to the intrinsic with a call to the vector library
   // function.
-  Type *ScalarRetTy = I.getType()->getScalarType();
+  Type *ScalarRetTy = II->getType()->getScalarType();
   FunctionType *ScalarFTy =
       FunctionType::get(ScalarRetTy, ScalarArgTypes, /*isVarArg*/ false);
   const std::string MangledName = VD->getVectorFunctionABIVariantString();
@@ -174,22 +158,19 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // specification when being created, this is why we need to add extra check to
   // make sure that the operands of the vector function obtained via VFABI match
   // the operands of the original vector instruction.
-  if (CI) {
-    for (auto VFParam : OptInfo->Shape.Parameters) {
-      if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
-        continue;
+  for (auto &VFParam : OptInfo->Shape.Parameters) {
+    if (VFParam.ParamKind == VFParamKind::GlobalPredicate)
+      continue;
 
-      // tryDemangleForVFABI must return valid ParamPos, otherwise it could be
-      // a bug in the VFABI parser.
-      assert(VFParam.ParamPos < CI->arg_size() &&
-             "ParamPos has invalid range.");
-      Type *OrigTy = CI->getArgOperand(VFParam.ParamPos)->getType();
-      if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
-        LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Will not replace: " << ScalarName
-                          << ". Wrong type at index " << VFParam.ParamPos
-                          << ": " << *OrigTy << "\n");
-        return false;
-      }
+    // tryDemangleForVFABI must return valid ParamPos, otherwise it could be
+    // a bug in the VFABI parser.
+    assert(VFParam.ParamPos < II->arg_size() && "ParamPos has invalid range");
+    Type *OrigTy = II->getArgOperand(VFParam.ParamPos)->getType();
+    if (OrigTy->isVectorTy() != (VFParam.ParamKind == VFParamKind::Vector)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Will not replace: " << ScalarName
+                        << ". Wrong type at index " << VFParam.ParamPos << ": "
+                        << *OrigTy << "\n");
+      return false;
     }
   }
 
@@ -197,45 +178,32 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   if (!VectorFTy)
     return false;
 
-  Function *TLIFunc = getTLIFunction(I.getModule(), VectorFTy,
-                                     VD->getVectorFnName(), FuncToReplace);
-
-  replaceWithTLIFunction(I, *OptInfo, TLIFunc);
+  Function *TLIFunc =
+      getTLIFunction(II->getModule(), VectorFTy, VD->getVectorFnName(),
+                     II->getCalledFunction());
+  replaceWithTLIFunction(II, *OptInfo, TLIFunc);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Replaced call to `" << ScalarName
                     << "` with call to `" << TLIFunc->getName() << "`.\n");
   ++NumCallsReplaced;
   return true;
 }
 
-/// Supported instruction \p I must be a vectorized frem or a call to an
-/// intrinsic that returns either void or a vector.
-static bool isSupportedInstruction(Instruction *I) {
-  Type *Ty = I->getType();
-  if (auto *CI = dyn_cast<CallInst>(I))
-    return (Ty->isVectorTy() || Ty->isVoidTy()) && CI->getCalledFunction() &&
-           CI->getCalledFunction()->getIntrinsicID() !=
-               Intrinsic::not_intrinsic;
-  if (I->getOpcode() == Instruction::FRem && Ty->isVectorTy())
-    return true;
-  return false;
-}
-
 static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
-  bool Changed = false;
   SmallVector<Instruction *> ReplacedCalls;
   for (auto &I : instructions(F)) {
-    if (!isSupportedInstruction(&I))
-      continue;
-    if (replaceWithCallToVeclib(TLI, I)) {
-      ReplacedCalls.push_back(&I);
-      Changed = true;
+    // Process only intrinsic calls that return void or a vector.
+    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      if (!II->getType()->isVectorTy() && !II->getType()->isVoidTy())
+        continue;
+
+      if (replaceWithCallToVeclib(TLI, II))
+        ReplacedCalls.push_back(&I);
     }
   }
-  // Erase the calls to the intrinsics that have been replaced
-  // with calls to the vector library.
-  for (auto *CI : ReplacedCalls)
-    CI->eraseFromParent();
-  return Changed;
+  // Erase any intrinsic calls that were replaced with vector library calls.
+  for (auto *I : ReplacedCalls)
+    I->eraseFromParent();
+  return !ReplacedCalls.empty();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +214,7 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto Changed = runImpl(TLI, F);
   if (Changed) {
-    LLVM_DEBUG(dbgs() << "Instructions replaced with vector libraries: "
+    LLVM_DEBUG(dbgs() << "Intrinsic calls replaced with vector libraries: "
                       << NumCallsReplaced << "\n");
 
     PreservedAnalyses PA;

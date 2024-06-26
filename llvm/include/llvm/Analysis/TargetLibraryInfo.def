@@ -471,6 +471,11 @@ TLI_DEFINE_ENUM_INTERNAL(cxa_atexit)
 TLI_DEFINE_STRING_INTERNAL("__cxa_atexit")
 TLI_DEFINE_SIG_INTERNAL(Int, Ptr, Ptr, Ptr)
 
+/// int atexit(void (*f)(void));
+TLI_DEFINE_ENUM_INTERNAL(atexit)
+TLI_DEFINE_STRING_INTERNAL("atexit")
+TLI_DEFINE_SIG_INTERNAL(Int, Ptr)
+
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
 TLI_DEFINE_ENUM_INTERNAL(cxa_guard_abort)
@@ -1068,6 +1073,21 @@ TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 TLI_DEFINE_ENUM_INTERNAL(ctermid)
 TLI_DEFINE_STRING_INTERNAL("ctermid")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr)
+
+/// double erf(double x);
+TLI_DEFINE_ENUM_INTERNAL(erf)
+TLI_DEFINE_STRING_INTERNAL("erf")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl)
+
+/// float erff(float x);
+TLI_DEFINE_ENUM_INTERNAL(erff)
+TLI_DEFINE_STRING_INTERNAL("erff")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
+
+/// long double erfl(long double x);
+TLI_DEFINE_ENUM_INTERNAL(erfl)
+TLI_DEFINE_STRING_INTERNAL("erfl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
 /// int execl(const char *path, const char *arg, ...);
 TLI_DEFINE_ENUM_INTERNAL(execl)

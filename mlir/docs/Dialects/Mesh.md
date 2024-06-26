@@ -46,7 +46,6 @@ These are the axes specified by `mesh_axes` attribute.
 For Example on a 3D mesh an operation with `mesh_axes = [0, 2]` would specify
 an in-group device with `(i, j)`. Then for each group with index `g` on the
 second axis, the in-group device would be `(i, g, j)`.
-
 ### Purity
 Collectives that involve the whole device group to perform a single operation
 are pure. The exceptions are `send` and `recv`.
@@ -72,4 +71,4 @@ passes like dead code and common sub-expression elimination.
 
 ## Attributes
 
-[include "Dialects/MeshAttributes.md"]
+[include "Dialects/MeshAttrs.md"]

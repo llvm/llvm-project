@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H
 
 // Below are generic definitions of symbolic bit-masks, modes etc. They serve
 // most architectures including x86_64, aarch64 but have to be adjusted for few
@@ -164,4 +164,4 @@
 #define TCIOFF 2 // Suspend output
 #define TCION 3  // Restart output
 
-#endif // __LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_TERMIOS_MACROS_H

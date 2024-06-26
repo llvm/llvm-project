@@ -132,7 +132,8 @@ define i1 @constant_fold_inttoptr_null(i16 %i) {
 
 define i1 @constant_fold_ptrtoint_null() {
 ; CHECK-LABEL: @constant_fold_ptrtoint_null(
-; CHECK-NEXT:    ret i1 icmp eq (ptr addrspace(3) @g, ptr addrspace(3) null)
+; CHECK-NEXT:    [[X:%.*]] = icmp eq i16 ptrtoint (ptr addrspace(3) @g to i16), 0
+; CHECK-NEXT:    ret i1 [[X]]
 ;
   %x = icmp eq i16 ptrtoint (ptr addrspace(3) @g to i16), ptrtoint (ptr addrspace(3) null to i16)
   ret i1 %x
@@ -140,7 +141,8 @@ define i1 @constant_fold_ptrtoint_null() {
 
 define i1 @constant_fold_ptrtoint_null_2() {
 ; CHECK-LABEL: @constant_fold_ptrtoint_null_2(
-; CHECK-NEXT:    ret i1 icmp eq (ptr addrspace(3) @g, ptr addrspace(3) null)
+; CHECK-NEXT:    [[X:%.*]] = icmp eq i16 0, ptrtoint (ptr addrspace(3) @g to i16)
+; CHECK-NEXT:    ret i1 [[X]]
 ;
   %x = icmp eq i16 ptrtoint (ptr addrspace(3) null to i16), ptrtoint (ptr addrspace(3) @g to i16)
   ret i1 %x
@@ -223,7 +225,7 @@ define i32 @test_cast_gep_large_indices_as() {
 
 define i32 @test_constant_cast_gep_struct_indices_as() {
 ; CHECK-LABEL: @test_constant_cast_gep_struct_indices_as(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds ([[STRUCT_FOO:%.*]], ptr addrspace(3) @constant_fold_global_ptr, i16 0, i32 2, i16 2), align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @constant_fold_global_ptr, i16 16), align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %x = getelementptr %struct.foo, ptr addrspace(3) @constant_fold_global_ptr, i18 0, i32 2, i12 2

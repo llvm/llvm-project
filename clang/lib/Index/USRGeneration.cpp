@@ -267,10 +267,13 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
     Out << '>';
   }
 
+  QualType CanonicalType = D->getType().getCanonicalType();
   // Mangle in type information for the arguments.
-  for (auto *PD : D->parameters()) {
-    Out << '#';
-    VisitType(PD->getType());
+  if (const auto *FPT = CanonicalType->getAs<FunctionProtoType>()) {
+    for (QualType PT : FPT->param_types()) {
+      Out << '#';
+      VisitType(PT);
+    }
   }
   if (D->isVariadic())
     Out << '.';
@@ -769,6 +772,11 @@ void USRGenerator::VisitType(QualType T) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:

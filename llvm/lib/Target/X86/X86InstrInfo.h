@@ -26,6 +26,12 @@
 namespace llvm {
 class X86Subtarget;
 
+// X86 MachineCombiner patterns
+enum X86MachineCombinerPattern : unsigned {
+  // X86 VNNI
+  DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
+};
+
 namespace X86 {
 
 enum AsmComments {
@@ -42,7 +48,8 @@ enum AsmComments {
 std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
+unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
+                       bool HasNDD = false);
 
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
@@ -61,6 +68,21 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
+// Turn CFCMOV instruction into condition code.
+CondCode getCondFromCFCMov(const MachineInstr &MI);
+
+// Turn CCMP instruction into condition code.
+CondCode getCondFromCCMP(const MachineInstr &MI);
+
+// Turn condition code into condition flags for CCMP/CTEST.
+int getCCMPCondFlagsFromCondCode(CondCode CC);
+
+// Get the opcode of corresponding NF variant.
+unsigned getNFVariant(unsigned Opc);
+
+// Get the opcode of corresponding NonND variant.
+unsigned getNonNDVariant(unsigned Opc);
+
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC);
@@ -76,6 +98,9 @@ unsigned getSwappedVPCOMImm(unsigned Imm);
 
 /// Get the VCMP immediate if the opcodes are swapped.
 unsigned getSwappedVCMPImm(unsigned Imm);
+
+/// Get the width of the vector register operand.
+unsigned getVectorRegisterWidth(const MCOperandInfo &Info);
 
 /// Check if the instruction is X87 instruction.
 bool isX87Instruction(MachineInstr &MI);
@@ -247,26 +272,26 @@ public:
   /// FIXME: This should become part of our instruction tables.
   static bool isDataInvariantLoad(MachineInstr &MI);
 
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+  Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
                                unsigned &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
 
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr &MI,
+  Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
                               unsigned &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
-  unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
@@ -372,7 +397,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, unsigned &Width,
+      bool &OffsetIsScalable, LocationSize &Width,
       const TargetRegisterInfo *TRI) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,
@@ -600,16 +625,15 @@ protected:
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the
   /// original code sequence.
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
@@ -642,6 +666,12 @@ private:
                                         ArrayRef<MachineOperand> MOs,
                                         MachineBasicBlock::iterator InsertPt,
                                         unsigned Size, Align Alignment) const;
+
+  MachineInstr *foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
+                                    unsigned OpNum,
+                                    ArrayRef<MachineOperand> MOs,
+                                    MachineBasicBlock::iterator InsertPt,
+                                    unsigned BitsSize, bool AllowCommute) const;
 
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.
@@ -686,8 +716,13 @@ private:
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
 
+  /// Commute operands of \p MI for memory fold.
+  ///
+  /// \param Idx1 the index of operand to be commuted.
+  ///
+  /// \returns the index of operand that is commuted with \p Idx1. If the method
+  /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
-  void UndoCommuteForFold(MachineInstr &MI, unsigned Idx1, unsigned Idx2) const;
 };
 } // namespace llvm
 

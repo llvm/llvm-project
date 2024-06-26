@@ -47,7 +47,7 @@ static void handler(int) {
 
 TEST(LlvmLibcSignalTest, SigaltstackRunOnAltStack) {
   struct sigaction action;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, nullptr, &action),
               Succeeds(0));
   action.sa_handler = handler;

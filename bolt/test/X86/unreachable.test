@@ -1,4 +1,4 @@
-# Check unreachable code elimination
+## Check unreachable code elimination
 
 RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -pie -shared -o %t.so
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \

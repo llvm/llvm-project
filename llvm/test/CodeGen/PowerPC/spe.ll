@@ -252,15 +252,13 @@ define i1 @test_fcmpuno(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpuno:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    efscmpeq 0, 3, 3
-; CHECK-NEXT:    efscmpeq 1, 4, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crand 20, 5, 1
-; CHECK-NEXT:    bc 12, 20, .LBB12_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB12_2: # %entry
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bc 4, 1, .LBB12_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    bclr 12, 1, 0
+; CHECK-NEXT:  .LBB12_2: # %entry
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp uno float %a, %b
@@ -270,16 +268,15 @@ define i1 @test_fcmpuno(float %a, float %b) #0 {
 define i1 @test_fcmpord(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpord:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpeq 0, 4, 4
-; CHECK-NEXT:    efscmpeq 1, 3, 3
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnand 20, 5, 1
-; CHECK-NEXT:    bc 12, 20, .LBB13_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB13_2: # %entry
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bclr 4, 1, 0
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    efscmpeq 0, 5, 5
+; CHECK-NEXT:    bclr 4, 1, 0
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ord float %a, %b
@@ -289,16 +286,15 @@ define i1 @test_fcmpord(float %a, float %b) #0 {
 define i1 @test_fcmpueq(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpueq:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpgt 0, 3, 4
-; CHECK-NEXT:    efscmplt 1, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    cror 20, 5, 1
-; CHECK-NEXT:    bc 12, 20, .LBB14_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB14_2: # %entry
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bclr 12, 1, 0
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    efscmplt 0, 5, 4
+; CHECK-NEXT:    bclr 12, 1, 0
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ueq float %a, %b
@@ -308,16 +304,15 @@ define i1 @test_fcmpueq(float %a, float %b) #0 {
 define i1 @test_fcmpne(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpne:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmplt 0, 3, 4
-; CHECK-NEXT:    efscmpgt 1, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnor 20, 5, 1
-; CHECK-NEXT:    bc 12, 20, .LBB15_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB15_2: # %entry
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bc 12, 1, .LBB15_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    efscmpgt 0, 5, 4
+; CHECK-NEXT:    bclr 4, 1, 0
+; CHECK-NEXT:  .LBB15_2: # %entry
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp one float %a, %b
@@ -389,18 +384,18 @@ ret:
 define i1 @test_fcmpult(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpult:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mr 5, 3
 ; CHECK-NEXT:    efscmpeq 0, 3, 3
-; CHECK-NEXT:    efscmpeq 1, 4, 4
-; CHECK-NEXT:    crnand 20, 5, 1
-; CHECK-NEXT:    efscmplt 0, 3, 4
-; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnor 20, 1, 20
-; CHECK-NEXT:    bc 12, 20, .LBB18_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ori 3, 5, 0
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB18_2: # %entry
 ; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    bc 4, 1, .LBB18_3
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    efscmpeq 0, 4, 4
+; CHECK-NEXT:    bc 4, 1, .LBB18_3
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    efscmplt 0, 5, 4
+; CHECK-NEXT:    bclr 4, 1, 0
+; CHECK-NEXT:  .LBB18_3: # %entry
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   entry:
   %r = fcmp ult float %a, %b
@@ -747,16 +742,14 @@ define i1 @test_dcmpuno(double %a, double %b) #0 {
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evmergelo 5, 5, 6
 ; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    li 7, 1
 ; SPE-NEXT:    efdcmpeq 0, 3, 3
-; SPE-NEXT:    efdcmpeq 1, 5, 5
-; SPE-NEXT:    crand 20, 5, 1
-; SPE-NEXT:    bc 12, 20, .LBB35_2
-; SPE-NEXT:  # %bb.1: # %entry
-; SPE-NEXT:    ori 3, 7, 0
-; SPE-NEXT:    blr
-; SPE-NEXT:  .LBB35_2: # %entry
 ; SPE-NEXT:    li 3, 0
+; SPE-NEXT:    bc 4, 1, .LBB35_2
+; SPE-NEXT:  # %bb.1: # %entry
+; SPE-NEXT:    efdcmpeq 0, 5, 5
+; SPE-NEXT:    bclr 12, 1, 0
+; SPE-NEXT:  .LBB35_2: # %entry
+; SPE-NEXT:    li 3, 1
 ; SPE-NEXT:    blr
 ;
 ; EFPU2-LABEL: test_dcmpuno:
@@ -780,18 +773,16 @@ define i1 @test_dcmpuno(double %a, double %b) #0 {
 define i1 @test_dcmpord(double %a, double %b) #0 {
 ; SPE-LABEL: test_dcmpord:
 ; SPE:       # %bb.0: # %entry
-; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    evmergelo 4, 5, 6
-; SPE-NEXT:    li 7, 1
-; SPE-NEXT:    efdcmpeq 0, 4, 4
-; SPE-NEXT:    efdcmpeq 1, 3, 3
-; SPE-NEXT:    crnand 20, 5, 1
-; SPE-NEXT:    bc 12, 20, .LBB36_2
-; SPE-NEXT:  # %bb.1: # %entry
-; SPE-NEXT:    ori 3, 7, 0
-; SPE-NEXT:    blr
-; SPE-NEXT:  .LBB36_2: # %entry
+; SPE-NEXT:    evmergelo 4, 3, 4
+; SPE-NEXT:    evmergelo 3, 5, 6
+; SPE-NEXT:    efdcmpeq 0, 3, 3
 ; SPE-NEXT:    li 3, 0
+; SPE-NEXT:    bclr 4, 1, 0
+; SPE-NEXT:  # %bb.1: # %entry
+; SPE-NEXT:    efdcmpeq 0, 4, 4
+; SPE-NEXT:    bclr 4, 1, 0
+; SPE-NEXT:  # %bb.2: # %entry
+; SPE-NEXT:    li 3, 1
 ; SPE-NEXT:    blr
 ;
 ; EFPU2-LABEL: test_dcmpord:
@@ -1173,17 +1164,15 @@ define i1 @test_dcmpne(double %a, double %b) #0 {
 ; SPE-LABEL: test_dcmpne:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evmergelo 5, 5, 6
-; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    li 7, 1
-; SPE-NEXT:    efdcmplt 0, 3, 5
-; SPE-NEXT:    efdcmpgt 1, 3, 5
-; SPE-NEXT:    crnor 20, 5, 1
-; SPE-NEXT:    bc 12, 20, .LBB43_2
-; SPE-NEXT:  # %bb.1: # %entry
-; SPE-NEXT:    ori 3, 7, 0
-; SPE-NEXT:    blr
-; SPE-NEXT:  .LBB43_2: # %entry
+; SPE-NEXT:    evmergelo 4, 3, 4
 ; SPE-NEXT:    li 3, 0
+; SPE-NEXT:    efdcmplt 0, 4, 5
+; SPE-NEXT:    bc 12, 1, .LBB43_2
+; SPE-NEXT:  # %bb.1: # %entry
+; SPE-NEXT:    efdcmpgt 0, 4, 5
+; SPE-NEXT:    bclr 4, 1, 0
+; SPE-NEXT:  .LBB43_2: # %entry
+; SPE-NEXT:    li 3, 1
 ; SPE-NEXT:    blr
 ;
 ; EFPU2-LABEL: test_dcmpne:
@@ -1208,20 +1197,19 @@ define i1 @test_dcmpne(double %a, double %b) #0 {
 ; EFPU2-NEXT:    mr 5, 29
 ; EFPU2-NEXT:    mr 6, 30
 ; EFPU2-NEXT:    bl __eqdf2
-; EFPU2-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
-; EFPU2-NEXT:    cmpwi 3, 0
-; EFPU2-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
-; EFPU2-NEXT:    li 4, 1
-; EFPU2-NEXT:    lwz 28, 32(1) # 4-byte Folded Reload
-; EFPU2-NEXT:    crorc 20, 2, 10
-; EFPU2-NEXT:    lwz 12, 24(1)
-; EFPU2-NEXT:    bc 12, 20, .LBB43_2
-; EFPU2-NEXT:  # %bb.1: # %entry
-; EFPU2-NEXT:    ori 3, 4, 0
-; EFPU2-NEXT:    b .LBB43_3
-; EFPU2-NEXT:  .LBB43_2: # %entry
+; EFPU2-NEXT:    mr 4, 3
 ; EFPU2-NEXT:    li 3, 0
+; EFPU2-NEXT:    bc 4, 10, .LBB43_3
+; EFPU2-NEXT:  # %bb.1: # %entry
+; EFPU2-NEXT:    cmpwi 4, 0
+; EFPU2-NEXT:    bc 12, 2, .LBB43_3
+; EFPU2-NEXT:  # %bb.2: # %entry
+; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:  .LBB43_3: # %entry
+; EFPU2-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
+; EFPU2-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
+; EFPU2-NEXT:    lwz 28, 32(1) # 4-byte Folded Reload
+; EFPU2-NEXT:    lwz 12, 24(1)
 ; EFPU2-NEXT:    lwz 27, 28(1) # 4-byte Folded Reload
 ; EFPU2-NEXT:    mtcrf 32, 12 # cr2
 ; EFPU2-NEXT:    lwz 0, 52(1)
@@ -1404,20 +1392,19 @@ ret:
 define i1 @test_dcmpge(double %a, double %b) #0 {
 ; SPE-LABEL: test_dcmpge:
 ; SPE:       # %bb.0: # %entry
-; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    evmergelo 4, 5, 6
-; SPE-NEXT:    li 7, 1
-; SPE-NEXT:    efdcmpeq 0, 4, 4
-; SPE-NEXT:    efdcmpeq 1, 3, 3
-; SPE-NEXT:    efdcmplt 5, 3, 4
-; SPE-NEXT:    crand 20, 5, 1
-; SPE-NEXT:    crorc 20, 21, 20
-; SPE-NEXT:    bc 12, 20, .LBB47_2
-; SPE-NEXT:  # %bb.1: # %entry
-; SPE-NEXT:    ori 3, 7, 0
-; SPE-NEXT:    blr
-; SPE-NEXT:  .LBB47_2: # %entry
+; SPE-NEXT:    evmergelo 4, 3, 4
+; SPE-NEXT:    evmergelo 5, 5, 6
 ; SPE-NEXT:    li 3, 0
+; SPE-NEXT:    efdcmpeq 0, 5, 5
+; SPE-NEXT:    bclr 4, 1, 0
+; SPE-NEXT:  # %bb.1: # %entry
+; SPE-NEXT:    efdcmpeq 0, 4, 4
+; SPE-NEXT:    bclr 4, 1, 0
+; SPE-NEXT:  # %bb.2: # %entry
+; SPE-NEXT:    efdcmplt 0, 4, 5
+; SPE-NEXT:    bclr 12, 1, 0
+; SPE-NEXT:  # %bb.3: # %entry
+; SPE-NEXT:    li 3, 1
 ; SPE-NEXT:    blr
 ;
 ; EFPU2-LABEL: test_dcmpge:
@@ -1507,10 +1494,13 @@ define double @test_dselect(double %a, double %b, i1 %c) #0 {
 ; EFPU2-LABEL: test_dselect:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    andi. 7, 7, 1
-; EFPU2-NEXT:    bclr 12, 1, 0
+; EFPU2-NEXT:    bc 12, 1, .LBB49_2
 ; EFPU2-NEXT:  # %bb.1: # %entry
-; EFPU2-NEXT:    ori 3, 5, 0
-; EFPU2-NEXT:    ori 4, 6, 0
+; EFPU2-NEXT:    mr 3, 5
+; EFPU2-NEXT:  .LBB49_2: # %entry
+; EFPU2-NEXT:    bclr 12, 1, 0
+; EFPU2-NEXT:  # %bb.3: # %entry
+; EFPU2-NEXT:    mr 4, 6
 ; EFPU2-NEXT:    blr
 entry:
   %r = select i1 %c, double %a, double %b

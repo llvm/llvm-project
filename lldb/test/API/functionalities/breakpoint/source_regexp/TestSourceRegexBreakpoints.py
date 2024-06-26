@@ -52,7 +52,7 @@ class TestSourceRegexBreakpoints(TestBase):
         a_func_line = line_number("a.c", "Set A breakpoint here")
         line_entry = address.GetLineEntry()
         self.assertTrue(line_entry.IsValid(), "Got a valid line entry.")
-        self.assertEquals(
+        self.assertEqual(
             line_entry.line,
             a_func_line,
             "Our line number matches the one lldbtest found.",
