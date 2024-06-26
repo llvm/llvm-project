@@ -123,11 +123,7 @@ vfs::makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                     std::unique_ptr<OutputFileImpl> F2)
         : PreferredBufferSize(std::max(F1->getOS().GetBufferSize(),
                                        F1->getOS().GetBufferSize())),
-          F1(std::move(F1)), F2(std::move(F2)) {
-      // Don't double buffer.
-      this->F1->getOS().SetUnbuffered();
-      this->F2->getOS().SetUnbuffered();
-    }
+          F1(std::move(F1)), F2(std::move(F2)) {}
     size_t PreferredBufferSize;
     std::unique_ptr<OutputFileImpl> F1;
     std::unique_ptr<OutputFileImpl> F2;
