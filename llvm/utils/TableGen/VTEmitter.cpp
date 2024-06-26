@@ -39,7 +39,7 @@ static void VTtoGetLLVMTyString(raw_ostream &OS, const Record *VT) {
   int64_t OutputVTSize = OutputVT->getValueAsInt("Size");
 
   if (OutputVT->getValueAsBit("isFP")) {
-    StringRef FloatTy = "";
+    StringRef FloatTy;
     auto OutputVTName = OutputVT->getValueAsString("LLVMName");
     switch (OutputVTSize) {
     default:
