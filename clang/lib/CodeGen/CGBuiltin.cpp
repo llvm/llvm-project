@@ -730,9 +730,8 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
       // Emit "int" TBAA metadata on FP math libcalls.
       clang::QualType IntTy = Context.IntTy;
       TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
-      MDNode *Tag = CGF.CGM.getTBAAAccessTagInfo(TBAAInfo);
       Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
-      Inst->setMetadata(LLVMContext::MD_tbaa, Tag);
+      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
     }
   }
   return Call;
