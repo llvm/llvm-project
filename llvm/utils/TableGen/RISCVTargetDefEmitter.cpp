@@ -211,27 +211,6 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef TUNE_PROC\n";
 }
 
-static inline uint64_t getValueFromBitsInit(const BitsInit *B,
-                                            const Record &R) {
-  assert(B->getNumBits() <= 64 && "BitInits' too long!");
-
-  uint64_t Value = 0;
-  for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
-    const auto *Bit = cast<BitInit>(B->getBit(i));
-    Value |= uint64_t(Bit->getValue()) << i;
-  }
-  return Value;
-}
-
-static unsigned getBitPosFromValue(uint64_t Val) {
-  int Pos = 0;
-  while (Val > 1) {
-    Pos += 1;
-    Val >>= 1;
-  }
-  return Pos;
-}
-
 static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
   std::vector<Record *> Extensions =
@@ -247,13 +226,11 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
   OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
   for (const Record *Rec : Extensions) {
-    BitsInit *GroupIDBits = Rec->getValueAsBitsInit("GroupID");
-    BitsInit *BitmaskBits = Rec->getValueAsBitsInit("Bitmask");
+    unsigned GroupIDVal = Rec->getValueAsInt("GroupID");
+    unsigned BitmaskVal = Rec->getValueAsInt("Bitmask");
 
     StringRef ExtName = Rec->getValueAsString("Name");
     ExtName.consume_front("experimental-");
-    uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
-    uint64_t BitmaskVal = getValueFromBitsInit(BitmaskBits, *Rec);
 
 #ifndef NDEBUG
     assert(Seen.insert(std::make_pair(GroupIDVal, BitmaskVal)).second &&
@@ -262,7 +239,7 @@ static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
 
     OS << "    {"
        << "\"" << ExtName << "\""
-       << ", " << GroupIDVal << ", " << getBitPosFromValue(BitmaskVal) << "ULL"
+       << ", " << GroupIDVal << ", " << BitmaskVal << "ULL"
        << "},\n";
   }
   OS << "};\n";

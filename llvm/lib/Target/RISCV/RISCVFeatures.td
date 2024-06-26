@@ -42,8 +42,8 @@ class RISCVExtension<string name, int major, int minor, string desc,
 // gourpID      - groupID of extension
 // bitmaskShift - bitmask shift of extension
 class RISCVExtensionBitmask<bits<3> groupID, int bitmaskShift> {
-    bits<3> GroupID = groupID;
-    bits<64> Bitmask = !shl(1, bitmaskShift);
+    int GroupID = groupID;
+    int Bitmask = bitmaskShift;
 }
 
 // Version of RISCVExtension to be used for Experimental extensions. This
