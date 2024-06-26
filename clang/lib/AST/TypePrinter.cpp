@@ -1020,6 +1020,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   }
   T->printExceptionSpecification(OS, Policy);
 
+  const FunctionEffectsRef FX = T->getFunctionEffects();
+  for (const auto &CFE : FX) {
+    OS << " __attribute__((" << CFE.Effect.name();
+    if (const Expr *E = CFE.Cond.getCondition()) {
+      OS << '(';
+      E->printPretty(OS, nullptr, Policy);
+      OS << ')';
+    }
+    OS << "))";
+  }
+
   if (T->hasTrailingReturn()) {
     OS << " -> ";
     print(T->getReturnType(), OS, StringRef());
@@ -1966,6 +1977,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
+  case attr::NonBlocking:
+  case attr::NonAllocating:
+  case attr::Blocking:
+  case attr::Allocating:
   case attr::SwiftAttr:
     llvm_unreachable("This attribute should have been handled already");
 
