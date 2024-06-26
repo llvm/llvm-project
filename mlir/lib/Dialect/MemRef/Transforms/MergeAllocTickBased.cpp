@@ -138,6 +138,14 @@ void TickCollecter::onReturnOp(TickCollecterStates *s, Operation *op) const {
   }
 }
 
+void TickCollecter::onExtractPointerOp(TickCollecterStates *s,
+                                       Operation *op) const {
+  // the pointer escapes from the memref, making it untraceable
+  for (auto val : op->getOperands()) {
+    accessValue(s, val, true);
+  }
+}
+
 void TickCollecter::onAllocOp(TickCollecterStates *s, Operation *op) const {
   s->allocTicks[op].allocTick = s->curTick;
 }
@@ -295,6 +303,10 @@ TickCollecter::operator()(Operation *root,
       collecter.onReturnOp(&s, op);
     } else if (isa<AllocOp>(op)) {
       collecter.onAllocOp(&s, op);
+    } else if (isa<ExtractAlignedPointerAsIndexOp, ExtractStridedMetadataOp>(
+                   op)) {
+      // TODO: should detect an op-trait which extracts pointer from memref
+      collecter.onExtractPointerOp(&s, op);
     } else if (!isMemoryEffectFree(op)) {
       // if the op has no memory effects, it don't contribute to liveness
       collecter.onGeneralOp(&s, op);

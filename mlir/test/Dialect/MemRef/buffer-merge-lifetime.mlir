@@ -79,7 +79,18 @@ func.func @basic2() {
 // check that the operations without memory effects do not contribute to the lifetime of the buffer
 // CHECK-DAG: func.func @no_mem_effect() attributes {__mergealloc_scope = [[TOPSCOPE3:[0-9]+]]
 func.func @no_mem_effect() {
-  // CHECK: %[[B:.*]] = memref.alloc() {__mergealloc_lifetime = array<i64: [[TOPSCOPE3]], 4, 4>}
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[B:.*]] = memref.alloc() {__mergealloc_lifetime = array<i64: [[TOPSCOPE3]], 5, 5>}
+  %b = memref.alloc() : memref<8x64xi8>
+  %x = memref.dim %b, %c0 : memref<8x64xi8>
+  "test.source"(%b)  : (memref<8x64xi8>) -> ()
+  return
+}
+
+// check that if pointer is extracted, the alloc is untraceable
+// CHECK-DAG: func.func @extract_pointer() attributes {__mergealloc_scope = [[TOPSCOPEExt:[0-9]+]]
+func.func @extract_pointer() {
+  // CHECK: %[[BExt:.*]] = memref.alloc() {__mergealloc_lifetime = array<i64: [[TOPSCOPEExt]], -2, -2>}
   %b = memref.alloc() : memref<8x64xi8>
   %0 = memref.extract_aligned_pointer_as_index %b : memref<8x64xi8> -> index
   "test.source"(%b)  : (memref<8x64xi8>) -> ()

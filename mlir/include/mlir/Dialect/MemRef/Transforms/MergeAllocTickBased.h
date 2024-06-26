@@ -115,6 +115,9 @@ struct TickCollecter {
 
   virtual void onAllocOp(TickCollecterStates *s, Operation *op) const;
 
+  // called on Ops that extracts pointers from a memref
+  virtual void onExtractPointerOp(TickCollecterStates *s, Operation *op) const;
+
   virtual void onGeneralOp(TickCollecterStates *s, Operation *op) const;
 
   virtual void pushComplexScope(TickCollecterStates *s, Operation *op) const;
