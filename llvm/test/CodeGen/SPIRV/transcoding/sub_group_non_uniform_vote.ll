@@ -86,15 +86,18 @@
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformElect %[[#bool]] %[[#ScopeSubgroup]]
+; CHECK-SPIRV: %[[#]] = OpGroupNonUniformElect %[[#bool]] %[[#ScopeSubgroup]]
 ; CHECK-SPIRV: OpFunctionEnd
 
 define dso_local spir_kernel void @testSubGroupElect(i32 addrspace(1)* nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z15sub_group_electv()
+  %r2 = tail call spir_func i32 @__spirv_GroupNonUniformElect(i32 3)
   store i32 %2, i32 addrspace(1)* %0, align 4
   ret void
 }
 
 declare dso_local spir_func i32 @_Z15sub_group_electv() local_unnamed_addr
+declare dso_local spir_func i32 @__spirv_GroupNonUniformElect(i32)
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformAll %[[#bool]] %[[#ScopeSubgroup]] %[[#false]]
