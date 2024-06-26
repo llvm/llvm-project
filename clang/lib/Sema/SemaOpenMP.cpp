@@ -8019,8 +8019,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
 
 static CapturedStmt *
 setBranchProtectedScope(Sema &SemaRef, OpenMPDirectiveKind DKind, Stmt *AStmt) {
-  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
-  auto *CS = cast<CapturedStmt>(AStmt);
+  auto *CS = dyn_cast<CapturedStmt>(AStmt);
+  assert(CS && "Captured statement expected");
   // 1.2.2 OpenMP Language Terminology
   // Structured block - An executable statement with a single entry at the
   // top and a single exit at the bottom.
