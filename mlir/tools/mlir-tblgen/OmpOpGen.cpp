@@ -17,6 +17,13 @@
 
 using namespace llvm;
 
+/// Obtain the name of the OpenMP clause a given record inheriting
+/// `OpenMP_Clause` refers to.
+///
+/// It supports direct and indirect `OpenMP_Clause` superclasses. Once the
+/// `OpenMP_Clause` class the record is based on is found, the optional
+/// "OpenMP_" prefix and "Skip" and "Clause" suffixes are removed to return only
+/// the clause name, i.e. "OpenMP_CollapseClauseSkip" is returned as "Collapse".
 static StringRef extractOmpClauseName(Record *clause) {
   Record *ompClause = clause->getRecords().getClass("OpenMP_Clause");
   assert(ompClause && "base OpenMP records expected to be defined");
@@ -61,6 +68,8 @@ static StringRef extractOmpClauseName(Record *clause) {
   return clauseClassName;
 }
 
+/// Check that the given argument, identified by its name and initialization
+/// value, is present in the \c arguments `dag`.
 static bool verifyArgument(DagInit *arguments, StringRef argName,
                            Init *argInit) {
   auto range = zip_equal(arguments->getArgNames(), arguments->getArgs());
@@ -72,17 +81,26 @@ static bool verifyArgument(DagInit *arguments, StringRef argName,
              }) != range.end();
 }
 
+/// Check that the given string record value, identified by its name \c value,
+/// is either undefined or empty in both the given operation and clause record
+/// or its contents for the clause record are contained in the operation record.
 static bool verifyStringValue(StringRef value, Record *op, Record *clause) {
   auto opValue = op->getValueAsOptionalString(value);
   auto clauseValue = clause->getValueAsOptionalString(value);
-  if (!opValue)
-    return !clauseValue || clauseValue->empty();
 
-  return !clauseValue || opValue->contains(clauseValue->trim());
+  bool opHasValue = opValue && !opValue->trim().empty();
+  bool clauseHasValue = clauseValue && !clauseValue->trim().empty();
+
+  if (!opHasValue)
+    return !clauseHasValue;
+
+  return !clauseHasValue || opValue->contains(clauseValue->trim());
 }
 
-// Verify that all fields of the given clause not explicitly ignored are present
-// in the corresponding operation field.
+/// Verify that all fields of the given clause not explicitly ignored are
+/// present in the corresponding operation field.
+///
+/// Print warnings or errors where this is not the case.
 static void verifyClause(Record *op, Record *clause) {
   StringRef clauseClassName = extractOmpClauseName(clause);
 
@@ -130,6 +148,8 @@ static void verifyClause(Record *op, Record *clause) {
             "or explicitly skipping this field.");
 }
 
+/// Verify that all properties of `OpenMP_Clause`s of records deriving from
+/// `OpenMP_Op`s have been inherited by the latter.
 static bool verifyDecls(const RecordKeeper &recordKeeper, raw_ostream &) {
   for (Record *op : recordKeeper.getAllDerivedDefinitions("OpenMP_Op")) {
     for (Record *clause : op->getValueAsListOfDefs("clauseList"))
