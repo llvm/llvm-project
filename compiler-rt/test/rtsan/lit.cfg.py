@@ -38,9 +38,7 @@ config.substitutions.append(
     ("%clangxx ", build_invocation(config.cxx_mode_flags + [config.target_cflags]))
 )
 config.substitutions.append(("%clang_rtsan ", build_invocation(clang_rtsan_cflags)))
-config.substitutions.append(
-    ("%clangxx_rtsan", build_invocation(clang_rtsan_cxxflags))
-)
+config.substitutions.append(("%clangxx_rtsan", build_invocation(clang_rtsan_cxxflags)))
 config.substitutions.append(("%llvm_rtsan", llvm_rtsan))
 config.substitutions.append(
     (
