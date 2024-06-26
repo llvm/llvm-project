@@ -615,8 +615,7 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         PHIBBs.insert(UI.getParent());
 
     const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
-    for (unsigned i = 0, e = Uses.size(); i != e; ++i) {
-      MachineOperand *UseMO = Uses[i];
+    for (MachineOperand *UseMO : Uses) {
       MachineInstr *UseMI = UseMO->getParent();
       MachineBasicBlock *UseMBB = UseMI->getParent();
       if (PHIBBs.count(UseMBB))

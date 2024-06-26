@@ -891,9 +891,9 @@ public:
     DenseMap<BasicBlock *, unsigned int> BBToOrder;
     { // Init OrderToBB and BBToOrder.
       unsigned int RPONumber = 0;
-      for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-        OrderToBB[RPONumber] = *RI;
-        BBToOrder[*RI] = RPONumber;
+      for (BasicBlock *BB : RPOT) {
+        OrderToBB[RPONumber] = BB;
+        BBToOrder[BB] = RPONumber;
         Worklist.push(RPONumber);
         ++RPONumber;
       }
@@ -2312,9 +2312,9 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   DenseMap<BasicBlock *, unsigned int> BBToOrder;
   { // Init OrderToBB and BBToOrder.
     unsigned int RPONumber = 0;
-    for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-      OrderToBB[RPONumber] = *RI;
-      BBToOrder[*RI] = RPONumber;
+    for (BasicBlock *BB : RPOT) {
+      OrderToBB[RPONumber] = BB;
+      BBToOrder[BB] = RPONumber;
       Worklist.push(RPONumber);
       ++RPONumber;
     }
