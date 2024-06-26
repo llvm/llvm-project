@@ -866,7 +866,7 @@ void SimplifyIndvar::pushIVUsers(
       continue;
 
     // Avoid adding Defs that SCEV expand to themselves, e.g. the LoopPhis
-    // of the outter loops.
+    // of the outer loops.
     if (!DT->dominates(L->getHeader(), UI->getParent()))
       continue;
 
@@ -879,9 +879,8 @@ void SimplifyIndvar::pushIVUsers(
             ? 0 // reset depth if we go back inside the loop.
             : OutOfLoopChainCounter + (UI->getParent() != Def->getParent());
 
-    if (!MaxDepthOutOfLoop || Counter < MaxDepthOutOfLoop) {
+    if (!MaxDepthOutOfLoop || Counter < MaxDepthOutOfLoop)
       SimpleIVUsers.push_back(std::make_tuple(UI, Def, Counter));
-    }
   }
 }
 
