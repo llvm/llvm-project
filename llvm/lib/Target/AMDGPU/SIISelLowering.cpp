@@ -1610,6 +1610,16 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
         return false;
     }
 
+    if ((AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+        AM.BaseOffs < 0) {
+      // Scalar (non-buffer) loads can only use a negative offset if
+      // soffset+offset is non-negative. Since the compiler can only prove that
+      // in a few special cases, it is safer to claim that negative offsets are
+      // not supported.
+      return false;
+    }
+
     if (AM.Scale == 0) // r + i or just i, depending on HasBaseReg.
       return true;
 
@@ -16175,9 +16185,10 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
         return AtomicExpansionKind::None;
 
-      // TODO: Handle <2 x bfloat> case. While gfx90a/gfx940 supports it for
-      // global/flat, it does not for buffer. gfx12 does have the buffer
-      // version.
+      // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
+      // buffer. gfx12 does have the buffer version.
+      if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isBFloat2(Ty))
+        return AtomicExpansionKind::None;
     }
 
     if (unsafeFPAtomicsDisabled(RMW->getFunction()))

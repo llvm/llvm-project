@@ -5164,15 +5164,7 @@ static Function *createOutlinedFunction(
           ? make_range(Func->arg_begin() + 1, Func->arg_end())
           : Func->args();
 
-  // Rewrite uses of input valus to parameters.
-  for (auto InArg : zip(Inputs, ArgRange)) {
-    Value *Input = std::get<0>(InArg);
-    Argument &Arg = std::get<1>(InArg);
-    Value *InputCopy = nullptr;
-
-    Builder.restoreIP(
-        ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
-
+  auto ReplaceValue = [](Value *Input, Value *InputCopy, Function *Func) {
     // Things like GEP's can come in the form of Constants. Constants and
     // ConstantExpr's do not have access to the knowledge of what they're
     // contained in, so we must dig a little to find an instruction so we
@@ -5198,7 +5190,48 @@ static Function *createOutlinedFunction(
       if (auto *Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
           Instr->replaceUsesOfWith(Input, InputCopy);
+  };
+
+  SmallVector<std::pair<Value *, Value *>> DeferredReplacement;
+
+  // Rewrite uses of input valus to parameters.
+  for (auto InArg : zip(Inputs, ArgRange)) {
+    Value *Input = std::get<0>(InArg);
+    Argument &Arg = std::get<1>(InArg);
+    Value *InputCopy = nullptr;
+
+    Builder.restoreIP(
+        ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
+
+    // In certain cases a Global may be set up for replacement, however, this
+    // Global may be used in multiple arguments to the kernel, just segmented
+    // apart, for example, if we have a global array, that is sectioned into
+    // multiple mappings (technically not legal in OpenMP, but there is a case
+    // in Fortran for Common Blocks where this is neccesary), we will end up
+    // with GEP's into this array inside the kernel, that refer to the Global
+    // but are technically seperate arguments to the kernel for all intents and
+    // purposes. If we have mapped a segment that requires a GEP into the 0-th
+    // index, it will fold into an referal to the Global, if we then encounter
+    // this folded GEP during replacement all of the references to the
+    // Global in the kernel will be replaced with the argument we have generated
+    // that corresponds to it, including any other GEP's that refer to the
+    // Global that may be other arguments. This will invalidate all of the other
+    // preceding mapped arguments that refer to the same global that may be
+    // seperate segments. To prevent this, we defer global processing until all
+    // other processing has been performed.
+    if (llvm::isa<llvm::GlobalValue>(std::get<0>(InArg)) ||
+        llvm::isa<llvm::GlobalObject>(std::get<0>(InArg)) ||
+        llvm::isa<llvm::GlobalVariable>(std::get<0>(InArg))) {
+      DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
+      continue;
+    }
+
+    ReplaceValue(Input, InputCopy, Func);
   }
+
+  // Replace all of our deferred Input values, currently just Globals.
+  for (auto Deferred : DeferredReplacement)
+    ReplaceValue(std::get<0>(Deferred), std::get<1>(Deferred), Func);
 
   // Restore insert point.
   Builder.restoreIP(OldInsertPoint);
