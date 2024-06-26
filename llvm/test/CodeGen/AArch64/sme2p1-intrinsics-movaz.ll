@@ -8,7 +8,7 @@
 ; X2 - Horiz
 ;;
 
-define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_hor_z8_i8_x2(i32 %tile, i32 %slice) {
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_hor_z8_i8_x2(i32 %tile, i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z8_i8_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w1
@@ -20,7 +20,7 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_hor_z8_i8_x2(i32 %ti
   %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.x2.nxv16i8(i32 0, i32 %slice.max)
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %res2
 }
-define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_hor_z16_i16_x2(i32 %slice) {
+define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_hor_z16_i16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_i16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -33,7 +33,7 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_hor_z16_i16_x2(i32 %
   ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %res2
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_hor_z32_i32_x2(i32 %slice) {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_hor_z32_i32_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z32_i32_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -46,7 +46,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_hor_z32_i32_x2(i32 %
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %res2
 }
 
-define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_hor_z64_i64_x2(i32 %slice) {
+define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_hor_z64_i64_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z64_i64_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -58,7 +58,7 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_hor_z64_i64_x2(i32 %
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_hor_z16_bf16_x2(i32 %slice) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_hor_z16_bf16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_bf16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -71,7 +71,7 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_hor_z16_bf16_x
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_hor_z16_f16_x2(i32 %slice) {
+define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_hor_z16_f16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_f16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -84,7 +84,7 @@ define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_hor_z16_f16_x2(i32
   ret {<vscale x 8 x half>, <vscale x 8 x half>} %res2
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_hor_z32_f32_x2(i32 %slice) {
+define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_hor_z32_f32_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z32_f32_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -97,7 +97,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_hor_z32_f32_x2(i
   ret {<vscale x 4 x float>, <vscale x 4 x float>} %res2
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_hor_z64_f64_x2(i32 %slice) {
+define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_hor_z64_f64_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z64_f64_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -113,7 +113,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_hor_z64_f64_x2
 ; X2- Vert
 ;;
 
-define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_ver_z8_i8_x2(i32 %tile, i32 %slice) {
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_ver_z8_i8_x2(i32 %tile, i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z8_i8_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w1
@@ -125,7 +125,7 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_ver_z8_i8_x2(i32 %ti
   %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.vert.x2.nxv16i8(i32 0, i32 %slice.max)
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %res2
 }
-define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_ver_z16_i16_x2(i32 %slice) {
+define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_ver_z16_i16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_i16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -138,7 +138,7 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_ver_z16_i16_x2(i32 %
   ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %res2
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_ver_z32_i32_x2(i32 %slice) {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_ver_z32_i32_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z32_i32_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -151,7 +151,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_ver_z32_i32_x2(i32 %
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %res2
 }
 
-define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_ver_z64_i64_x2(i32 %slice) {
+define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_ver_z64_i64_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z64_i64_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -163,7 +163,7 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_ver_z64_i64_x2(i32 %
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_ver_z16_bf16_x2(i32 %slice) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_ver_z16_bf16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_bf16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -176,7 +176,7 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_ver_z16_bf16_x
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_ver_z16_f16_x2(i32 %slice) {
+define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_ver_z16_f16_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_f16_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -189,7 +189,7 @@ define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_ver_z16_f16_x2(i32
   ret {<vscale x 8 x half>, <vscale x 8 x half>} %res2
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_ver_z32_f32_x2(i32 %slice) {
+define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_ver_z32_f32_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z32_f32_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -202,7 +202,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_ver_z32_f32_x2(i
   ret {<vscale x 4 x float>, <vscale x 4 x float>} %res2
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_ver_z64_f64_x2(i32 %slice) {
+define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_ver_z64_f64_x2(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z64_f64_x2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -218,7 +218,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_ver_z64_f64_x2
 ; X4 - Horiz
 ;;
 
-define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_hor_z8_i8_x4(i32 %tile, i32 %slice) {
+define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_hor_z8_i8_x4(i32 %tile, i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z8_i8_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w1
@@ -230,7 +230,7 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 
   %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.x4.nxv16i8(i32 0, i32 %slice.max)
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} %res2
 }
-define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_hor_z16_i16_x4(i32 %slice) {
+define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_hor_z16_i16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_i16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -243,7 +243,7 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x
   ret {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} %res2
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_hor_z32_i32_x4(i32 %slice) {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_hor_z32_i32_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z32_i32_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -255,7 +255,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} %res2
 }
 
-define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_hor_z64_i64_x4(i32 %slice) {
+define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_hor_z64_i64_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z64_i64_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -267,7 +267,7 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_hor_z16_bf16_x4(i32 %slice) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_hor_z16_bf16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_bf16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -280,7 +280,7 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vs
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @test_readz_hor_z16_f16_x4(i32 %slice) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @test_readz_hor_z16_f16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z16_f16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -293,7 +293,7 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x
   ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res2
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_hor_z32_f32_x4(i32 %slice) {
+define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_hor_z32_f32_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z32_f32_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -305,7 +305,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale
   ret {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} %res2
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_hor_z64_f64_x4(i32 %slice) {
+define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_hor_z64_f64_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_hor_z64_f64_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -321,7 +321,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vsc
 ; X4 - Vert
 ;;
 
-define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_ver_z8_i8_x4(i32 %tile, i32 %slice) {
+define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_ver_z8_i8_x4(i32 %tile, i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z8_i8_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w1
@@ -333,7 +333,7 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 
   %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.vert.x4.nxv16i8(i32 0, i32 %slice.max)
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>,<vscale x 16 x i8>, <vscale x 16 x i8>} %res2
 }
-define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_ver_z16_i16_x4(i32 %slice) {
+define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_ver_z16_i16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_i16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -346,7 +346,7 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x
   ret {<vscale x 8 x i16>, <vscale x 8 x i16>,<vscale x 8 x i16>, <vscale x 8 x i16>} %res2
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_ver_z32_i32_x4(i32 %slice) {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_ver_z32_i32_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z32_i32_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -358,7 +358,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x
   ret {<vscale x 4 x i32>, <vscale x 4 x i32>,<vscale x 4 x i32>, <vscale x 4 x i32>} %res2
 }
 
-define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_ver_z64_i64_x4(i32 %slice) {
+define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_ver_z64_i64_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z64_i64_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -370,7 +370,7 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>,<vscale x 2 x i64>, <vscale x 2 x i64>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_ver_z16_bf16_x4(i32 %slice) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_ver_z16_bf16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_bf16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -383,7 +383,7 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vs
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @test_readz_ver_z16_f16_x4(i32 %slice) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @test_readz_ver_z16_f16_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z16_f16_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -396,7 +396,7 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x
   ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res2
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_ver_z32_f32_x4(i32 %slice) {
+define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_ver_z32_f32_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z32_f32_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -408,7 +408,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale
   ret {<vscale x 4 x float>, <vscale x 4 x float>,<vscale x 4 x float>, <vscale x 4 x float>} %res2
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_ver_z64_f64_x4(i32 %slice) {
+define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_ver_z64_f64_x4(i32 %slice) #0 {
 ; CHECK-LABEL: test_readz_ver_z64_f64_x4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w12, w0
@@ -419,6 +419,8 @@ define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vsc
   %res2 = call {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.vert.x4.nxv2f64(i32 7, i32 %slice)
   ret {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vscale x 2 x double>} %res
 }
+
+attributes #0 = { "target-features"="+sve" }
 
 declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.za8.x2.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.horiz.x2.nxv8i16(i32, i32)
