@@ -13770,7 +13770,7 @@ Value *BoUpSLP::vectorizeTree(
     }
 
     if (auto *VU = dyn_cast<InsertElementInst>(User);
-        VU && VU && VU->getOperand(1) == Scalar) {
+        VU && VU->getOperand(1) == Scalar) {
       // Skip if the scalar is another vector op or Vec is not an instruction.
       if (!Scalar->getType()->isVectorTy() && isa<Instruction>(Vec)) {
         if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
