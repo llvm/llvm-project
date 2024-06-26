@@ -505,7 +505,8 @@ void __init_riscv_features_bit() {
       {RISCV_HWPROBE_KEY_IMA_EXT_0, 0},
       {RISCV_HWPROBE_KEY_MVENDORID, 0},
   };
-  initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0]));
+  if (initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0])))
+    return ;
 
   initRISCVFeature(Hwprobes);
   updateImpliedFeatures();
