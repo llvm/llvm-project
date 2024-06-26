@@ -125,7 +125,7 @@ AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
 static cl::opt<unsigned> MaxDepthOutOfLoop(
-    "indvars-max-depth-out-of-loop", cl::Hidden, cl::init(1),
+    "indvars-max-depth-out-of-loop", cl::Hidden, cl::init(0),
     cl::desc(
         "Strict upper bound for the number of successive out-of-loop blocks "
         "when traversing use-def chains. 0 enables full traversal"));
