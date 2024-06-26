@@ -12058,8 +12058,7 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
-static void maybeNoteImplicitDeductionGuide(Sema &S,
-                                            CXXDeductionGuideDecl *DG) {
+static void NoteImplicitDeductionGuide(Sema &S, CXXDeductionGuideDecl *DG) {
   // We want to always print synthesized deduction guides for type aliases.
   // They would retain the explicit bit of the corresponding constructor.
   TemplateDecl *OriginTemplate =
@@ -12166,7 +12165,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
     if (!DG)
       return;
-    maybeNoteImplicitDeductionGuide(S, DG);
+    NoteImplicitDeductionGuide(S, DG);
   });
 
   switch (Cand->FailureKind) {
