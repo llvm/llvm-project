@@ -178,6 +178,20 @@ bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
   return Changed;
 }
 
+static bool shouldOptimize(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+    return true;
+  case Type::IntegerTyID: {
+    if (Ty->getIntegerBitWidth() == 32 || Ty->getIntegerBitWidth() == 64)
+      return true;
+  }
+  default:
+    return false;
+  }
+}
+
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
@@ -227,12 +241,10 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
-  // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is either
-  // 32 or 64 bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || (DL->getTypeSizeInBits(I.getType()) != 32 &&
-      DL->getTypeSizeInBits(I.getType()) != 64))) {
+  // value to the atomic calculation. We only optimize divergent values if
+  // we have DPP available on our subtarget, and the atomic operation is of
+  // 32/64 bit integer, float or double type.
+  if (ValDivergent && (!ST->hasDPP() || !shouldOptimize(I.getType()))) {
     return;
   }
 
@@ -311,12 +323,10 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   const bool ValDivergent = UA->isDivergentUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
-  // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32 or
-  // 64 bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || (DL->getTypeSizeInBits(I.getType()) != 32 &&
-       DL->getTypeSizeInBits(I.getType()) != 64))) {
+  // value to the atomic calculation. We only optimize divergent values if
+  // we have DPP available on our subtarget, and the atomic operation is of
+  // 32/64 bit integer, float or double type.
+  if (ValDivergent && (!ST->hasDPP() || !shouldOptimize(I.getType()))) {
     return;
   }
 
