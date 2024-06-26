@@ -1234,7 +1234,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     const Record *R = getRecord(E->getType());
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
-      return this->visitInitializer(Inits[0]);
+      return this->delegate(Inits[0]);
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
@@ -1329,22 +1329,8 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
-    // Prepare composite return value.
-    if (!Initializing) {
-      if (GlobalDecl) {
-        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
-        if (!GlobalIndex)
-          return false;
-        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-          return false;
-      } else {
-        std::optional<unsigned> LocalIndex = allocateLocal(E);
-        if (!LocalIndex)
-          return false;
-        if (!this->emitGetPtrLocal(*LocalIndex, E))
-          return false;
-      }
-    }
+    if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
+      return this->delegate(Inits[0]);
 
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
@@ -2150,7 +2136,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(SubExpr);
+    return this->delegate(SubExpr);
   }
   // If we don't end up using the materialized temporary anyway, don't
   // bother creating it.
@@ -2944,6 +2930,39 @@ bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   return this->delegate(E->getSubExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXStdInitializerListExpr(
+    const CXXStdInitializerListExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  const ConstantArrayType *ArrayType =
+      Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
+  const Record *R = getRecord(E->getType());
+  assert(Initializing);
+  assert(SubExpr->isGLValue());
+
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+
+  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  if (isIntegralType(SecondFieldT)) {
+    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
+                         SecondFieldT, E))
+      return false;
+    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+  }
+  assert(SecondFieldT == PT_Ptr);
+
+  if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+    return false;
+  if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+    return false;
+  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
@@ -3404,10 +3423,15 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD,
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
+VarCreationState ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   // We don't know what to do with these, so just return false.
   if (VD->getType().isNull())
     return false;
+
+  // This case is EvalEmitter-only. If we won't create any instructions for the
+  // initializer anyway, don't bother creating the variable in the first place.
+  if (!this->isActive())
+    return VarCreationState::NotCreated();
 
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
@@ -3561,6 +3585,24 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
     return false;
+
+  // For these, we're expected to ultimately return an APValue pointing
+  // to the CallExpr. This is needed to get the correct codegen.
+  unsigned Builtin = E->getBuiltinCallee();
+  if (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
+      Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+      Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
+      Builtin == Builtin::BI__builtin_function_start) {
+    if (std::optional<unsigned> GlobalOffset = P.createGlobal(E)) {
+      if (!this->emitGetPtrGlobal(*GlobalOffset, E))
+        return false;
+
+      if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT))
+        return this->emitDecayPtr(PT_Ptr, PT, E);
+      return true;
+    }
+    return false;
+  }
 
   QualType ReturnType = E->getType();
   std::optional<PrimType> ReturnT = classify(E);
@@ -4226,7 +4268,10 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
              VD->isStaticDataMember()) &&
             typeShouldBeVisited(VD->getType())) {
-          if (!this->visitVarDecl(VD))
+          auto VarState = this->visitVarDecl(VD);
+          if (VarState.notCreated())
+            return true;
+          if (!VarState)
             return false;
           // Retry.
           return this->visitDeclRef(VD, E);
@@ -4236,7 +4281,10 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       if (const auto *VD = dyn_cast<VarDecl>(D);
           VD && VD->getAnyInitializer() &&
           VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-        if (!this->visitVarDecl(VD))
+        auto VarState = this->visitVarDecl(VD);
+        if (VarState.notCreated())
+          return true;
+        if (!VarState)
           return false;
         // Retry.
         return this->visitDeclRef(VD, E);

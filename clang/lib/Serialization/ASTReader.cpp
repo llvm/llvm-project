@@ -935,9 +935,8 @@ LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF, DeclID Value) {
   return ID;
 }
 
-static LocalDeclID getLocalDeclID(ASTReader &Reader, ModuleFile &MF,
-                                  unsigned ModuleFileIndex,
-                                  unsigned LocalDeclID) {
+LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF,
+                             unsigned ModuleFileIndex, unsigned LocalDeclID) {
   DeclID Value = (DeclID)ModuleFileIndex << 32 | (DeclID)LocalDeclID;
   return LocalDeclID::get(Reader, MF, Value);
 }
@@ -2629,7 +2628,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
            "We should only check the content of the inputs with "
            "ValidateASTInputFilesContent enabled.");
 
-    if (StoredContentHash == static_cast<uint64_t>(llvm::hash_code(-1)))
+    if (StoredContentHash == 0)
       return OriginalChange;
 
     auto MemBuffOrError = FileMgr.getBufferForFile(*File);
@@ -7884,7 +7883,7 @@ LocalDeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
   if (!OrignalModuleFileIndex)
     return LocalDeclID();
 
-  return getLocalDeclID(*this, M, OrignalModuleFileIndex, ID);
+  return LocalDeclID::get(*this, M, OrignalModuleFileIndex, ID);
 }
 
 GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,

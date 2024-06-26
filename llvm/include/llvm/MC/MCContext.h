@@ -136,6 +136,9 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
+  /// For MCFragment instances.
+  BumpPtrAllocator FragmentAllocator;
+
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
@@ -348,6 +351,9 @@ private:
   MCSymbol *getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                               unsigned Instance);
 
+  template <typename Symbol>
+  Symbol *getOrCreateSectionSymbol(StringRef Section);
+
   MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
                                      unsigned Flags, unsigned EntrySize,
                                      const MCSymbolELF *Group, bool IsComdat,
@@ -432,7 +438,8 @@ public:
   MCInst *createMCInst();
 
   template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new F(std::forward<Args>(args)...);
+    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
+        F(std::forward<Args>(args)...);
   }
 
   /// \name Symbol Management
@@ -596,15 +603,13 @@ public:
                                                    unsigned EntrySize);
 
   MCSectionGOFF *getGOFFSection(StringRef Section, SectionKind Kind,
-                                MCSection *Parent, const MCExpr *SubsectionId);
+                                MCSection *Parent, uint32_t Subsection = 0);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                 StringRef COMDATSymName, int Selection,
-                                unsigned UniqueID = GenericSectionID,
-                                const char *BeginSymName = nullptr);
+                                unsigned UniqueID = GenericSectionID);
 
-  MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
-                                const char *BeginSymName = nullptr);
+  MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics);
 
   /// Gets or creates a section equivalent to Sec that is associated with the
   /// section containing KeySym. For example, to create a debug info section
