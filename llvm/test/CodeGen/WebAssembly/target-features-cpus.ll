@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 ; mvp: should not contain the target features section
 ; MVP-NOT: .custom_section.target_features,"",@
 
-; generic: +mutable-globals, +sign-ext
+; generic: +multivalue, +mutable-globals, +reference-types, +sign-ext
 ; GENERIC-LABEL: .custom_section.target_features,"",@
 ; GENERIC-NEXT: .int8  4
 ; GENERIC-NEXT: .int8  43
@@ -27,8 +27,10 @@ target triple = "wasm32-unknown-unknown"
 ; GENERIC-NEXT: .int8  8
 ; GENERIC-NEXT: .ascii  "sign-ext"
 
-; bleeding-edge: +atomics, +bulk-memory, +mutable-globals, +nontrapping-fptoint,
-;                +sign-ext, +simd128, +tail-call
+; bleeding-edge: +atomics, +bulk-memory, +exception-handling, +extended-const,
+;                +half-precision, +multimemory, +multivalue, +mutable-globals,
+;                +nontrapping-fptoint, +relaxed-simd, +reference-types,
+;                +simd128, +sign-ext, +tail-call
 ; BLEEDING-EDGE-LABEL: .section  .custom_section.target_features,"",@
 ; BLEEDING-EDGE-NEXT: .int8  14
 ; BLEEDING-EDGE-NEXT: .int8  43
