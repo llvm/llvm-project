@@ -53,10 +53,10 @@ bool base_move() {
   int move_counter = 0;
   int copy_counter = 0;
 
-  auto start = SizedInputIterator();
+  auto start         = SizedInputIterator();
   start.move_counter = &move_counter;
   start.copy_counter = &copy_counter;
-  auto stop  = SizedInputIterator();
+  auto stop          = SizedInputIterator();
 
   auto view = BasicTestView<SizedInputIterator>{start, stop};
   auto sv   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
@@ -82,7 +82,7 @@ bool base_copy() {
 
   start.move_counter = &move_counter;
   start.copy_counter = &copy_counter;
-  auto stop        = SizedInputIterator();
+  auto stop          = SizedInputIterator();
 
   auto view                 = BasicTestView<SizedInputIterator>{start, stop};
   auto sv                   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
