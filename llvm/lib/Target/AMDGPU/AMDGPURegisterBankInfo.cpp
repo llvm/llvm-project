@@ -4905,8 +4905,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_load_tr_b128:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
-    case Intrinsic::amdgcn_ds_ordered_swap:
-    case Intrinsic::amdgcn_ds_fadd_v2bf16: {
+    case Intrinsic::amdgcn_ds_ordered_swap: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       unsigned M0Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
@@ -5219,11 +5218,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
   case AMDGPU::G_ATOMICRMW_FADD:
+  case AMDGPU::G_ATOMICRMW_FMIN:
+  case AMDGPU::G_ATOMICRMW_FMAX:
   case AMDGPU::G_ATOMICRMW_UINC_WRAP:
   case AMDGPU::G_ATOMICRMW_UDEC_WRAP:
-  case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMIN:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMAX: {
+  case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
     OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);

@@ -2293,8 +2293,11 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   if (const Instruction *I = dyn_cast<Instruction>(GEP))
     F = I->getFunction();
 
-  if (!GEP->isInBounds() ||
-      NullPointerIsDefined(F, GEP->getPointerAddressSpace()))
+  // If the gep is nuw or inbounds with invalid null pointer, then the GEP
+  // may be null iff the base pointer is null and the offset is zero.
+  if (!GEP->hasNoUnsignedWrap() &&
+      !(GEP->isInBounds() &&
+        !NullPointerIsDefined(F, GEP->getPointerAddressSpace())))
     return false;
 
   // FIXME: Support vector-GEPs.
@@ -9390,6 +9393,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
+                                      APInt(Width, 2));
   default:
     break;
   }

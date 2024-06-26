@@ -33,22 +33,22 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i64 [[TMP11]]
+; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 [[DOTIDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x i64>, ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_IND]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD2]], [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP16]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[TMP15]], i64 [[TMP17]]
-; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP13]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP14]], ptr [[TMP18]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 2 x i64>, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_LOAD2]], [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[DOTIDX3:%.*]] = shl i64 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 [[DOTIDX3]]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP12]], ptr [[TMP14]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP13]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[STEP_ADD]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -58,8 +58,8 @@ define void @add_ind64_unrolled(ptr noalias nocapture %a, ptr noalias nocapture 
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[I_08]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP20]], [[I_08]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP18]], [[I_08]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I_08]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
