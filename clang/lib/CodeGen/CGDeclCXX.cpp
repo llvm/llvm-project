@@ -1059,8 +1059,13 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
     if (Guard.isValid()) {
       // If we have a guard variable, check whether we've already performed
       // these initializations. This happens for TLS initialization functions.
-      llvm::Value *GuardVal = EmitLoadOfScalar(
-          MakeAddrLValue(Guard, getContext().IntTy), SourceLocation());
+      Address GuardAddr = Guard;
+      if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
+        // Get the thread-local address via intrinsic.
+        if (GV->isThreadLocal())
+          GuardAddr = GuardAddr.withPointer(
+              Builder.CreateThreadLocalAddress(GV), NotKnownNonNull);
+      llvm::Value *GuardVal = Builder.CreateLoad(GuardAddr);
       llvm::Value *Uninit =
           Builder.CreateIsNull(GuardVal, "guard.uninitialized");
       llvm::BasicBlock *InitBlock = createBasicBlock("init");
@@ -1071,18 +1076,23 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       // Mark as initialized before initializing anything else. If the
       // initializers use previously-initialized thread_local vars, that's
       // probably supposed to be OK, but the standard doesn't say.
-      EmitStoreOfScalar(llvm::ConstantInt::get(GuardVal->getType(), 1),
-                        MakeAddrLValue(Guard, getContext().IntTy));
+      if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
+        // Get the thread-local address via intrinsic.
+        if (GV->isThreadLocal())
+          GuardAddr = GuardAddr.withPointer(
+              Builder.CreateThreadLocalAddress(GV), NotKnownNonNull);
+      Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(), 1),
+                          GuardAddr);
 
       // Emit invariant start for TLS guard address.
       if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
         uint64_t Width =
             CGM.getDataLayout().getTypeAllocSize(GuardVal->getType());
         llvm::Value *TLSAddr = Guard.getPointer();
-        // Get the thread-local address via intrinsic.
         if (auto *GV = dyn_cast<llvm::GlobalValue>(Guard.getPointer()))
+          // Get the thread-local address via intrinsic.
           if (GV->isThreadLocal())
-            TLSAddr = Builder.CreateThreadLocalAddress(Guard.getPointer());
+            TLSAddr = Builder.CreateThreadLocalAddress(GV);
         Builder.CreateInvariantStart(
             TLSAddr, llvm::ConstantInt::getSigned(Int64Ty, Width));
       }
