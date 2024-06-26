@@ -404,7 +404,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  setOperationAction(ISD::FRINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+  setOperationAction({ISD::FRINT, ISD::LRINT, ISD::LLRINT},
+                     {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
@@ -1388,7 +1389,11 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCEIL: return LowerFCEIL(Op, DAG);
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
-  case ISD::FNEARBYINT: return LowerFNEARBYINT(Op, DAG);
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    return LowerLRINT(Op, DAG);
+  case ISD::FNEARBYINT:
+    return LowerFNEARBYINT(Op, DAG);
   case ISD::FROUNDEVEN:
     return LowerFROUNDEVEN(Op, DAG);
   case ISD::FROUND: return LowerFROUND(Op, DAG);
@@ -2494,6 +2499,14 @@ SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
   auto VT = Op.getValueType();
   auto Arg = Op.getOperand(0u);
   return DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), VT, Arg);
+}
+
+SDValue AMDGPUTargetLowering::LowerLRINT(SDValue Op, SelectionDAG &DAG) const {
+  auto ResVT = Op.getValueType();
+  auto Arg = Op.getOperand(0u);
+  auto ArgVT = Arg.getValueType();
+  SDValue RoundNode = DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), ArgVT, Arg);
+  return DAG.getNode(ISD::FP_TO_SINT, SDLoc(Op), ResVT, RoundNode);
 }
 
 // XXX - May require not supporting f32 denormals?
