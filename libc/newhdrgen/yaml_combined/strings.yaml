@@ -1,0 +1,72 @@
+header: strings.h
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: bcopy
+    standards: 
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: const void *
+      - type: void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: bzero
+    standards: 
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: bcmp
+    standards: 
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: const void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strcasecmp
+    standards: 
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strncasecmp
+    standards: 
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: index
+    standards: 
+      - BSDExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+    guard: null
+    attributes: []
+  - name: rindex
+    standards: 
+      - BSDExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+    guard: null
+    attributes: []

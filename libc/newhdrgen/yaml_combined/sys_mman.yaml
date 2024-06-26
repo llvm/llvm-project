@@ -1,0 +1,145 @@
+#known as sys/mman in POSIX 
+header: sys-mman.h
+standards: POSIX
+macros: []
+macros: []
+types:
+  - type_name: mode_t
+  - type_name: size_t
+  - type_name: off_t
+enums: []
+objects: []
+functions:
+  - name: madvise
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: int
+    guard: null
+    attributes: []
+  - name: mmap
+    standards: 
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: int
+      - type: int
+      - type: int
+      - type: off_t
+    guard: null
+    attributes: []
+  - name: mprotect
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: int
+    guard: null
+    attributes: []
+  - name: munmap
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: POSIX_madvise
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: int
+    guard: null
+    attributes: []
+  # this is a linux function
+  - name: mincore
+    standards: 
+      - Linux
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: unsigned char *
+    guard: null
+    attributes: []
+  - name: mlock
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: mlock2
+    standards: 
+      - Linux
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: unsigned int
+    guard: null
+    attributes: []
+  - name: munlock
+    standards: POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: mlockall
+    standards: 
+      -POSIX
+    return_type: int
+    arguments:
+      - type: int
+    guard: null
+    attributes: []
+  - name: munlockall
+    standards: 
+      - POSIX
+    return_type: int
+    arguments: []
+    guard: null
+    attributes: []
+  - name: msync
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: int
+    guard: null
+    attributes: []
+  - name: shm_open
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: int
+      - type: mode_t
+    guard: null
+    attributes: []
+  - name: shm_unlink
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const char *
+    guard: null
+    attributes: []

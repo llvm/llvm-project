@@ -1,0 +1,386 @@
+header: string.h
+macros: []
+types:
+  - type_name: size_t
+enums: []
+objects: []
+functions:
+  - name: memcpy
+    standards: 
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *__restrict
+      - type: const void *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memmove
+    standards: 
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: const void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memcmp
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: const void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memchr
+    standards: 
+      - stdc
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: int
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memset
+    standards: 
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: int
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memset_explicit
+    standards: 
+      - stdc
+    return_type: void *
+    arguments:
+      - type: void *
+      - type: int
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strcpy
+    standards: 
+      - stdc
+    return_type: char
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+    guard: null
+    attributes: []
+  - name: strncpy
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strcat
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+    guard: null
+    attributes: []
+  - name: strncat
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *
+      - type: const char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strcmp
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strcoll
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strncmp
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strxfrm
+    standards: 
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strchr
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+    guard: null
+    attributes: []
+  - name: strcspn
+    standards: 
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strdup
+    return_type: char *
+    arguments:
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strndup
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strpbrk
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strrchr
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+    guard: null
+    attributes: []
+  - name: strspn
+    standards: 
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strstr
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strtok
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+    guard: null
+    attributes: []
+  - name: strerror
+    standards: 
+      - stdc
+    return_type: char *
+    arguments:
+      - type: int
+    guard: null
+    attributes: []
+  - name: strlen
+    standards: 
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: memccpy
+    standards: 
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *__restrict
+      - type: const void *__restrict
+      - type: int
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: mempcpy
+    standards: 
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: void *__restrict
+      - type: const void *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: stpcpy
+    standards: 
+      - POSIX
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+    guard: null
+    attributes: []
+  - name: stpncpy
+    standards: 
+      - POSIX
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strnlen
+    standards: 
+      - POSIX
+    return_type: size_t
+    arguments:
+      - type: const char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strtok_r
+    standards: 
+      - POSIX
+    return_type: char *
+    arguments:
+      - type: char *__restrict
+      - type: const char *__restrict
+      - type: char ** __restrict
+    guard: null
+    attributes: []
+  - name: strsignal
+    standards: 
+      - POSIX
+    return_type: char *
+    arguments:
+      - type: int
+    guard: null
+    attributes: []
+  - name: memmem
+    standards: 
+      - GNUExtensions
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: size_t
+      - type: const void *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: memrchr
+    standards: 
+      - GNUExtensions
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: int
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strerror_r
+    standards: 
+      - GNUExtensions
+    return_type: char *
+    arguments:
+      - type: int
+      - type: char *
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strcasestr
+    standards: 
+      - GNUExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: const char *
+    guard: null
+    attributes: []
+  - name: strchrnul
+    standards: 
+      - GNUExtensions
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: int
+    guard: null
+    attributes: []
+  - name: strlcat
+    standards: 
+      - BSDExtensions
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: char *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strlcpy
+    standards: 
+      - BSDExtensions
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: char *__restrict
+      - type: size_t
+    guard: null
+    attributes: []
+  - name: strsep
+    standards: 
+      - BSDExtensions
+    return_type: char *
+    arguments:
+      - type: char **__restrict
+      - type: char *__restrict
+    guard: null
+    attributes: []
+
+
+
+
