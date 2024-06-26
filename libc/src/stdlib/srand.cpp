@@ -12,6 +12,14 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) { rand_next = seed; }
+// Silence warnings on targets with slow atomics.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Watomic-alignment"
+
+LLVM_LIBC_FUNCTION(void, srand, (unsigned int seed)) {
+  rand_next.store(seed, cpp::MemoryOrder::RELAXED);
+}
+
+#pragma GCC diagnostic pop
 
 } // namespace LIBC_NAMESPACE

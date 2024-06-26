@@ -20,14 +20,12 @@ entry:
 define i16 @sub16rr(i16 noundef %a, i16 noundef %b) {
 ; CHECK-LABEL: sub16rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x29,0xf7]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    subw %si, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16rr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} subl %esi, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x29,0xf7]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} subw %si, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x29,0xf7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = sub i16 %a, %b
@@ -131,14 +129,12 @@ entry:
 define i16 @sub16ri8(i16 noundef %a) {
 ; CHECK-LABEL: sub16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subl $-128, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x80]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    subw $-128, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xef,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16ri8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} subl $-128, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xef,0x80]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} subw $-128, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0xef,0x80]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = sub i16 %a, -128
@@ -193,16 +189,14 @@ entry:
 define i16 @sub16ri(i16 noundef %a) {
 ; CHECK-LABEL: sub16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl $-1234, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xc7,0x2e,0xfb,0xff,0xff]
+; CHECK-NEXT:    addw $-1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xc7,0x2e,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2E
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} addl $-1234, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xc7,0x2e,0xfb,0xff,0xff]
+; NF-NEXT:    {nf} addw $-1234, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0xc7,0x2e,0xfb]
 ; NF-NEXT:    # imm = 0xFB2E
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = sub i16 %a, 1234
@@ -262,16 +256,12 @@ entry:
 define i16 @sub16mr(ptr %a, i16 noundef %b) {
 ; CHECK-LABEL: sub16mr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    subl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x29,0xf0]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    subw %si, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    subl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x29,0xf0]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} subw %si, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x29,0x37]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -314,16 +304,12 @@ entry:
 define i16 @sub16mi8(ptr %a) {
 ; CHECK-LABEL: sub16mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    subl $-128, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe8,0x80]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    subw $-128, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x2f,0x80]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16mi8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    subl $-128, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xe8,0x80]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} subw $-128, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0x2f,0x80]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -382,18 +368,14 @@ entry:
 define i16 @sub16mi(ptr %a) {
 ; CHECK-LABEL: sub16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    addl $-1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0x2e,0xfb,0xff,0xff]
+; CHECK-NEXT:    addw $-1234, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0x07,0x2e,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2E
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: sub16mi:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    addl $-1234, %eax # EVEX TO LEGACY Compression encoding: [0x05,0x2e,0xfb,0xff,0xff]
+; NF-NEXT:    {nf} addw $-1234, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0x07,0x2e,0xfb]
 ; NF-NEXT:    # imm = 0xFB2E
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a

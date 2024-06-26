@@ -5438,16 +5438,32 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
 
-  auto createLaneOp = [&IID, &B](Register Src0, Register Src1, Register Src2,
-                                 LLT VT) -> Register {
+  bool IsPermLane16 = IID == Intrinsic::amdgcn_permlane16 ||
+                      IID == Intrinsic::amdgcn_permlanex16;
+
+  auto createLaneOp = [&IID, &B, &MI](Register Src0, Register Src1,
+                                      Register Src2, LLT VT) -> Register {
     auto LaneOp = B.buildIntrinsic(IID, {VT}).addUse(Src0);
     switch (IID) {
     case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_permlane64:
       return LaneOp.getReg(0);
     case Intrinsic::amdgcn_readlane:
       return LaneOp.addUse(Src1).getReg(0);
     case Intrinsic::amdgcn_writelane:
       return LaneOp.addUse(Src1).addUse(Src2).getReg(0);
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16: {
+      Register Src3 = MI.getOperand(5).getReg();
+      Register Src4 = MI.getOperand(6).getImm();
+      Register Src5 = MI.getOperand(7).getImm();
+      return LaneOp.addUse(Src1)
+          .addUse(Src2)
+          .addUse(Src3)
+          .addImm(Src4)
+          .addImm(Src5)
+          .getReg(0);
+    }
     default:
       llvm_unreachable("unhandled lane op");
     }
@@ -5456,9 +5472,10 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register DstReg = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(2).getReg();
   Register Src1, Src2;
-  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
+      IsPermLane16) {
     Src1 = MI.getOperand(3).getReg();
-    if (IID == Intrinsic::amdgcn_writelane) {
+    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16) {
       Src2 = MI.getOperand(4).getReg();
     }
   }
@@ -5473,12 +5490,15 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
 
   if (Size < 32) {
     Src0 = B.buildAnyExt(S32, Src0).getReg(0);
-    if (Src2.isValid())
+
+    if (IsPermLane16)
+      Src1 = B.buildAnyExt(LLT::scalar(32), Src1).getReg(0);
+
+    if (IID == Intrinsic::amdgcn_writelane)
       Src2 = B.buildAnyExt(LLT::scalar(32), Src2).getReg(0);
 
     Register LaneOpDst = createLaneOp(Src0, Src1, Src2, S32);
     B.buildTrunc(DstReg, LaneOpDst);
-
     MI.eraseFromParent();
     return true;
   }
@@ -5505,15 +5525,23 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   SmallVector<Register, 2> PartialRes;
   unsigned NumParts = Size / 32;
   MachineInstrBuilder Src0Parts = B.buildUnmerge(PartialResTy, Src0);
-  MachineInstrBuilder Src2Parts;
+  MachineInstrBuilder Src1Parts, Src2Parts;
 
-  if (Src2.isValid())
+  if (IsPermLane16)
+    Src1Parts = B.buildUnmerge(PartialResTy, Src1);
+
+  if (IID == Intrinsic::amdgcn_writelane)
     Src2Parts = B.buildUnmerge(PartialResTy, Src2);
 
   for (unsigned i = 0; i < NumParts; ++i) {
     Src0 = Src0Parts.getReg(i);
-    if (Src2.isValid())
+
+    if (IsPermLane16)
+      Src1 = Src1Parts.getReg(i);
+
+    if (IID == Intrinsic::amdgcn_writelane)
       Src2 = Src2Parts.getReg(i);
+
     PartialRes.push_back(createLaneOp(Src0, Src1, Src2, PartialResTy));
   }
 
@@ -7465,6 +7493,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_writelane:
   case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_permlane16:
+  case Intrinsic::amdgcn_permlanex16:
+  case Intrinsic::amdgcn_permlane64:
     return legalizeLaneOp(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
