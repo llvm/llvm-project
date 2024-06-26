@@ -135,7 +135,6 @@ func.func @vectorize_scalable_nd_tensor_extract_transfer_read_basic(%arg0: tenso
 // CHECK-SAME: %[[BASE:.*]]: tensor<?x?x?xf32>, %[[DEST:.*]]: tensor<?x?x?xf32>
 // CHECK:           %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x[4]xf32>
 // CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<1x1x[4]xi1>
-// CHECK:           %[[INDEX_VEC:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
@@ -143,7 +142,8 @@ func.func @vectorize_scalable_nd_tensor_extract_transfer_read_basic(%arg0: tenso
 // CHECK:           %[[DEST_DIM1:.*]] = tensor.dim %[[DEST]], %[[C1]] : tensor<?x?x?xf32>
 // CHECK:           %[[DEST_DIM2:.*]] = tensor.dim %[[DEST]], %[[C2]] : tensor<?x?x?xf32>
 // CHECK:           %[[DEST_MASK:.*]] = vector.create_mask %[[DEST_DIM0]], %[[DEST_DIM1]], %[[DEST_DIM2]] : vector<1x1x[4]xi1>
-// CHECK:           %[[INDEX_VEC_BCAST:.*]] = vector.broadcast %[[INDEX_VEC]] : vector<4xindex> to vector<1x1x[4]xindex>
+// CHECK:           %[[INDEX_VEC:.*]] = vector.step : vector<[4]xindex>
+// CHECK:           %[[INDEX_VEC_BCAST:.*]] = vector.broadcast %[[INDEX_VEC]] : vector<[4]xindex> to vector<1x1x[4]xindex>
 // CHECK:           %[[GATHER:.*]] = vector.mask %[[DEST_MASK]] { vector.gather %[[BASE]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {{\[}}%[[INDEX_VEC_BCAST]]], %[[MASK]], %[[PASSTHRU]] : tensor<?x?x?xf32>, vector<1x1x[4]xindex>, vector<1x1x[4]xi1>, vector<1x1x[4]xf32> into vector<1x1x[4]xf32> } : vector<1x1x[4]xi1> -> vector<1x1x[4]xf32>
 // CHECK:           %[[OUT:.*]] = vector.mask %[[DEST_MASK]] { vector.transfer_write %[[GATHER]], %[[DEST]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x1x[4]xf32>, tensor<?x?x?xf32> } : vector<1x1x[4]xi1> -> tensor<?x?x?xf32>
 // CHECK:           return %[[OUT]] : tensor<?x?x?xf32>
