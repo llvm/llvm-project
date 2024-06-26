@@ -1865,11 +1865,6 @@ public:
   /// Only used by clients of CloneFunction, and only right after the cloning.
   void replaceLinkageName(MDString *LN) { replaceOperandWith(3, LN); }
 
-  DICompileUnit *getUnit() const {
-    return cast_or_null<DICompileUnit>(getRawUnit());
-  }
-  void replaceUnit(DICompileUnit *CU) { replaceOperandWith(4, CU); }
-
   DISubroutineType *getType() const {
     return cast_or_null<DISubroutineType>(getRawType());
   }
@@ -1878,9 +1873,13 @@ public:
   }
   void replaceType(DISubroutineType *Ty) {
     assert(isDistinct() && "Only distinct nodes can mutate");
-    replaceOperandWith(5, Ty);
+    replaceOperandWith(4, Ty);
   }
 
+  DICompileUnit *getUnit() const {
+    return cast_or_null<DICompileUnit>(getRawUnit());
+  }
+  void replaceUnit(DICompileUnit *CU) { replaceOperandWith(5, CU); }
   DITemplateParameterArray getTemplateParams() const {
     return cast_or_null<MDTuple>(getRawTemplateParams());
   }
@@ -1904,8 +1903,8 @@ public:
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }
   MDString *getRawLinkageName() const { return getOperandAs<MDString>(3); }
-  Metadata *getRawUnit() const { return getOperand(4); }
-  Metadata *getRawType() const { return getOperand(5); }
+  Metadata *getRawType() const { return getOperand(4); }
+  Metadata *getRawUnit() const { return getOperand(5); }
   Metadata *getRawDeclaration() const { return getOperand(6); }
   Metadata *getRawRetainedNodes() const { return getOperand(7); }
   Metadata *getRawContainingType() const {

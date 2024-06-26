@@ -1138,9 +1138,10 @@ DISubprogram *DISubprogram::getImpl(
                          RetainedNodes, ThrownTypes, Annotations,
                          TargetFuncName));
   SmallVector<Metadata *, 13> Ops = {
-      File,        Scope,       Name,          LinkageName,    Unit,
-      Type,        Declaration, RetainedNodes, ContainingType, TemplateParams,
-      ThrownTypes, Annotations, TargetFuncName};
+      File,           Scope,          Name,        LinkageName,
+      Type,           Unit,           Declaration, RetainedNodes,
+      ContainingType, TemplateParams, ThrownTypes, Annotations,
+      TargetFuncName};
   if (!TargetFuncName) {
     Ops.pop_back();
     if (!Annotations) {
