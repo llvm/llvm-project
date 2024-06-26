@@ -23,11 +23,14 @@ static std::unordered_set<std::string> USRVisited;
 
 static llvm::sys::Mutex USRVisitedGuard;
 
+
+
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
 
-template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
+template <typename T> bool MapASTVisitor::mapDecl(const T *D,
+                            bool IsDefinition) {
   // If we're looking a decl not in user files, skip this decl.
   if (D->getASTContext().getSourceManager().isInSystemHeader(D->getLocation()))
     return true;
@@ -45,10 +48,11 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   {
     std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
     std::string Visited = USR.str().str();
-    if (USRVisited.count(Visited)) {
+    if (USRVisited.count(Visited))
       return true;
-    }
-    USRVisited.insert(Visited);
+    // We considered a USR to be visited only when its defined
+    if (IsDefinition)
+      USRVisited.insert(Visited);
   }
 
   bool IsFileInRootDir;
@@ -71,30 +75,34 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
 }
 
 bool MapASTVisitor::VisitNamespaceDecl(const NamespaceDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, true);
 }
 
-bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) { return mapDecl(D); }
+bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) {
+  return mapDecl(D, D->isThisDeclarationADefinition());
+}
 
-bool MapASTVisitor::VisitEnumDecl(const EnumDecl *D) { return mapDecl(D); }
+bool MapASTVisitor::VisitEnumDecl(const EnumDecl *D) {
+  return mapDecl(D, D->isThisDeclarationADefinition());
+}
 
 bool MapASTVisitor::VisitCXXMethodDecl(const CXXMethodDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
 bool MapASTVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   // Don't visit CXXMethodDecls twice
   if (isa<CXXMethodDecl>(D))
     return true;
-  return mapDecl(D);
+  return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
 bool MapASTVisitor::VisitTypedefDecl(const TypedefDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, true);
 }
 
 bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
-  return mapDecl(D);
+  return mapDecl(D, true);
 }
 
 comments::FullComment *
