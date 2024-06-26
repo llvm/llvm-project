@@ -626,3 +626,4 @@ constexpr int *get2() {
   extern int same_entity_2[];
   return same_entity_2;
 }
+static_assert(get2() == same_entity_2, "failed to find previous decl");
