@@ -15,7 +15,19 @@
 #ifndef LLVM_ADT_SETOPERATIONS_H
 #define LLVM_ADT_SETOPERATIONS_H
 
+#include "llvm/ADT/STLExtras.h"
+
 namespace llvm {
+
+namespace detail {
+template <typename Set, typename Fn>
+using check_has_member_remove_if_t =
+    decltype(std::declval<Set>().remove_if(std::declval<Fn>()));
+
+template <typename Set, typename Fn>
+static constexpr bool HasMemberRemoveIf =
+    is_detected<check_has_member_remove_if_t, Set, Fn>::value;
+} // namespace detail
 
 /// set_union(A, B) - Compute A := A u B, return whether A changed.
 ///
@@ -36,11 +48,16 @@ template <class S1Ty, class S2Ty> bool set_union(S1Ty &S1, const S2Ty &S2) {
 /// elements that are not contained in S2.
 ///
 template <class S1Ty, class S2Ty> void set_intersect(S1Ty &S1, const S2Ty &S2) {
-  for (typename S1Ty::iterator I = S1.begin(); I != S1.end();) {
-    const auto &E = *I;
-    ++I;
-    if (!S2.count(E))
-      S1.erase(E); // Erase element if not in S2
+  auto Pred = [&S2](const auto &E) { return !S2.count(E); };
+  if constexpr (detail::HasMemberRemoveIf<S1Ty, decltype(Pred)>) {
+    S1.remove_if(Pred);
+  } else {
+    for (typename S1Ty::iterator I = S1.begin(); I != S1.end();) {
+      const auto &E = *I;
+      ++I;
+      if (!S2.count(E))
+        S1.erase(E); // Erase element if not in S2
+    }
   }
 }
 
