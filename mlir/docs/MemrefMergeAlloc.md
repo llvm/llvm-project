@@ -130,10 +130,11 @@ merging transformation of this proposal:
 3. calling runtime memory allocator for each buffer introduces more run time
    overhead than a single merged allocation after allocation merging.
 
-However, utilizing runtime memory allocator can be viewed as a supplementary
-approach of the allocation merging at compile-time, for example, to handle
-memref with dynamic shapes. These two memory optimization approaches should
-coexist and cowork in the pass pipeline.
+However, utilizing runtime memory allocator can handle the cases when the
+lifetime is hard to accurately analyze at compile-time, and when the shape is
+unknown at compile-time, for example, to handle memref with dynamic shapes.
+These two memory optimization approaches should coexist and cowork in the pass
+pipeline.
 
 ## General framework for implementation of merge-alloc
 
@@ -248,14 +249,14 @@ A tick-based implementation of merge-alloc in provided by default. The basic
 idea of the tick-based allocation merging is that
 
 1. Each of the operations in a function is assigned a "tick". An operation with
-   a smaller tick is expected to be executed before one with a larger tick
+   a smaller tick is expected to be executed before one with a larger tick.
 2. Collect the first referenced tick and the last referenced tick for each
    mergeable allocation. If a buffer is referenced in loops and branches,
    special handling is needed.
 3. For each allocation scope, linearize the first referenced tick and the last
    referenced tick of mergeable allocations inside of it into a single linear
-   timeline
-4. Use a "static-memory-planner" to handle the linear timeline
+   timeline.
+4. Use a "static-memory-planner" to handle the linear timeline.
 
 Limitations of Tick-based merge-alloc:
  * only contiguous, static shaped and identical layout memrefs are considered.
