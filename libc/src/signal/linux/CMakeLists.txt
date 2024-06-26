@@ -60,6 +60,7 @@ add_entrypoint_object(
   DEPENDS
     .__restore
     libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -124,7 +125,7 @@ add_entrypoint_object(
     ../signal.h
   DEPENDS
     .sigaction
-    libc.include.signal
+    libc.hdr.signal_macros
 )
 
 add_entrypoint_object(
