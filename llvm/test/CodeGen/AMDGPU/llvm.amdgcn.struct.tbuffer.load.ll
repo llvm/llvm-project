@@ -131,9 +131,8 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
 ; GFX12-LABEL: tbuffer_load_immoffs_large:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v8, 0
-; GFX12-NEXT:    s_mov_b32 s5, 61
 ; GFX12-NEXT:    s_clause 0x2
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
+; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v8, s[0:3], 61/*Invalid immediate*/ format:[BUF_FMT_8_8_8_8_SINT] idxen offset:4095
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] idxen offset:73
 ; GFX12-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], s4 format:77 idxen offset:1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

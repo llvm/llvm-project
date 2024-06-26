@@ -29,8 +29,8 @@ using namespace llvm::codeview;
 CodeViewContext::~CodeViewContext() {
   // If someone inserted strings into the string table but never actually
   // emitted them somewhere, clean up the fragment.
-  if (!InsertedStrTabFragment)
-    delete StrTabFragment;
+  if (!InsertedStrTabFragment && StrTabFragment)
+    StrTabFragment->destroy();
 }
 
 /// This is a valid number for use with .cv_loc if we've already seen a .cv_file

@@ -387,6 +387,7 @@ def FeatureGFX90AInsts : SubtargetFeature<"gfx90a-insts",
   "GFX90AInsts",
   "true",
   "Additional instructions for GFX90A+"
+  // [HasAtomicFMinFMaxF64GlobalInsts, HasAtomicFMinFMaxF64FlatInsts] // TODO
 >;
 
 def FeatureGFX940Insts : SubtargetFeature<"gfx940-insts",
@@ -868,6 +869,30 @@ def FeatureAtomicFaddRtnInsts : SubtargetFeature<"atomic-fadd-rtn-insts",
   [FeatureFlatGlobalInsts]
 >;
 
+def FeatureAtomicFMinFMaxF32GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-global-f32",
+  "HasAtomicFMinFMaxF32GlobalInsts",
+  "true",
+  "Has global/buffer instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF64GlobalInsts : SubtargetFeature<"atomic-fmin-fmax-global-f64",
+  "HasAtomicFMinFMaxF64GlobalInsts",
+  "true",
+  "Has global/buffer instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF32FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f32",
+  "HasAtomicFMinFMaxF32FlatInsts",
+  "true",
+  "Has flat memory instructions for atomicrmw fmin/fmax for float"
+>;
+
+def FeatureAtomicFMinFMaxF64FlatInsts : SubtargetFeature<"atomic-fmin-fmax-flat-f64",
+  "HasAtomicFMinFMaxF64FlatInsts",
+  "true",
+  "Has flat memory instructions for atomicrmw fmin/fmax for double"
+>;
+
 def FeatureAtomicFaddNoRtnInsts : SubtargetFeature<"atomic-fadd-no-rtn-insts",
   "HasAtomicFaddNoRtnInsts",
   "true",
@@ -1305,7 +1330,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
-  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+  FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts
   ]
 >;
 
@@ -1316,7 +1342,9 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
-  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero
+  FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
+  FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
+  FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
   ]
 >;
 
@@ -1371,7 +1399,9 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength63
+   FeatureMaxHardClauseLength63,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts
   ]
 >;
 
@@ -1392,7 +1422,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS,
    FeatureGWS, FeatureDefaultComponentZero,
-   FeatureMaxHardClauseLength32
+   FeatureMaxHardClauseLength32,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts
   ]
 >;
 
@@ -1413,6 +1444,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureMaxHardClauseLength32,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
@@ -1434,6 +1467,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureExclusiveScanInsts
   ]
@@ -1598,7 +1632,10 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeaturePackedTID,
      FullRate64Ops,
      FeatureBackOffBarrier,
-     FeatureKernargPreload])>;
+     FeatureKernargPreload,
+     FeatureAtomicFMinFMaxF64GlobalInsts,
+     FeatureAtomicFMinFMaxF64FlatInsts
+     ])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1638,7 +1675,10 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FullRate64Ops,
    FeatureBackOffBarrier,
-   FeatureKernargPreload]>;
+   FeatureKernargPreload,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts
+   ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -1917,6 +1957,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
 ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -1970,7 +2012,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
    FeatureMaxHardClauseLength63,
-   FeatureMinimum3Maximum3PKF16
+   FeatureMinimum3Maximum3PKF16,
+   FeatureAtomicFMinFMaxF64GlobalInsts,
+   FeatureAtomicFMinFMaxF64FlatInsts,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2329,10 +2373,27 @@ def HasMinimum3Maximum3PKF16 :
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
-def HasBufferFlatGlobalAtomicsF64 :
+
+def HasBufferFlatGlobalAtomicsF64 : // FIXME: Rename to show it's only for fadd
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
   // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
   AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX1210Insts)>;
+
+def HasAtomicFMinFMaxF32GlobalInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF32GlobalInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF32GlobalInsts)>;
+
+def HasAtomicFMinFMaxF64GlobalInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF64GlobalInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64GlobalInsts)>;
+
+def HasAtomicFMinFMaxF32FlatInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF32FlatInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF32FlatInsts)>;
+
+def HasAtomicFMinFMaxF64FlatInsts :
+  Predicate<"Subtarget->hasAtomicFMinFMaxF64FlatInsts()">,
+  AssemblerPredicate<(any_of FeatureAtomicFMinFMaxF64FlatInsts)>;
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,

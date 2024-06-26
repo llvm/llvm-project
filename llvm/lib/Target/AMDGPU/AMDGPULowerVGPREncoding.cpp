@@ -183,9 +183,16 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
     }
 
     // Keep unused bits from the old mask to minimize switches.
-    // Skip tied uses, these will be handled along with defs and only vdst bit
-    // affects these operands.
-    if (!Reg || (!Op->isDef() && Op->isTied()))
+    if (!Reg)
+      continue;
+
+    // Skip tied uses of src2 of VOP2, these will be handled along with defs and
+    // only vdst bit affects these operands. We cannot skip tied uses of VOP3,
+    // these uses are real even if must match the vdst.
+    if (Ops[I] == AMDGPU::OpName::src2 && !Op->isDef() && Op->isTied() &&
+        (SIInstrInfo::isVOP2(MI) ||
+         (SIInstrInfo::isVOP3(MI) &&
+          TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
     NewMode &= ~(3 << (I * 2));

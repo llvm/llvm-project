@@ -354,7 +354,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A pure subprogram may not have a variable with the VOLATILE attribute"_err_en_US);
     }
-    if (IsProcedure(symbol) && !IsPureProcedure(symbol) && IsDummy(symbol)) {
+    if (innermostSymbol_ && innermostSymbol_->name() == "__builtin_c_funloc") {
+      // The intrinsic procedure C_FUNLOC() gets a pass on this check.
+    } else if (IsProcedure(symbol) && !IsPureProcedure(symbol) &&
+        IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure of a pure subprogram must be pure"_err_en_US);
     }
@@ -463,16 +466,11 @@ void CheckHelper::Check(const Symbol &symbol) {
           symbol.name());
     }
   }
-  if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
-    if (IsAllocatable(symbol)) {
-      messages_.Say(
-          "Procedure '%s' may not be ALLOCATABLE without an explicit interface"_err_en_US,
-          symbol.name());
-    } else if (symbol.Rank() > 0) {
-      messages_.Say(
-          "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
-          symbol.name());
-    }
+  if (IsProcedure(symbol) && !symbol.HasExplicitInterface() &&
+      symbol.Rank() > 0) {
+    messages_.Say(
+        "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
+        symbol.name());
   }
 }
 
@@ -1325,6 +1323,13 @@ private:
   bool CheckSameAttrs(const Symbol &, const Symbol &, ATTRS, ATTRS);
   bool ShapesAreCompatible(const DummyDataObject &, const DummyDataObject &);
   evaluate::Shape FoldShape(const evaluate::Shape &);
+  std::optional<evaluate::Shape> FoldShape(
+      const std::optional<evaluate::Shape> &shape) {
+    if (shape) {
+      return FoldShape(*shape);
+    }
+    return std::nullopt;
+  }
   std::string AsFortran(DummyDataObject::Attr attr) {
     return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
   }
