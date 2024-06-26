@@ -402,13 +402,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                 typeIs(1, s32)(Query));
       });
 
-  getActionDefinitionsBuilder(G_FCMP)
-      .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
-      .clampScalar(0, sXLen, sXLen);
+  auto &FCmpActions = getActionDefinitionsBuilder(G_FCMP).legalIf(
+      all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)));
+  // TODO: Fold this into typeIsScalarFPArith.
+  if (ST.hasStdExtZfh())
+    FCmpActions.legalFor({sXLen, s16});
+  FCmpActions.clampScalar(0, sXLen, sXLen);
 
   // TODO: Support vector version of G_IS_FPCLASS.
-  getActionDefinitionsBuilder(G_IS_FPCLASS)
-      .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
+  auto &FClassActions =
+      getActionDefinitionsBuilder(G_IS_FPCLASS)
+          .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
+  // TODO: Fold this into typeIsScalarFPArith.
+  if (ST.hasStdExtZfh())
+    FClassActions.customFor({s1, s16});
 
   auto &FConstantActions = getActionDefinitionsBuilder(G_FCONSTANT)
                                .legalIf(typeIsScalarFPArith(0, ST));
