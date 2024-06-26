@@ -422,8 +422,9 @@ TEST(SmallPtrSetTest, RemoveIf) {
   Set.erase(&Vals[0]); // Leave a tombstone.
 
   // Remove odd elements.
-  Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  bool Removed = Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
   // We should only have element 2 left now.
+  EXPECT_TRUE(Removed);
   EXPECT_EQ(Set.size(), 1u);
   EXPECT_TRUE(Set.contains(&Vals[2]));
 
@@ -436,9 +437,13 @@ TEST(SmallPtrSetTest, RemoveIf) {
   Set.erase(&Vals[0]); // Leave a tombstone.
 
   // Remove odd elements.
-  Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
+  Removed = Set.remove_if([](int *Ptr) { return *Ptr % 2 != 0; });
   // We should only have elements 2 and 4 left now.
+  EXPECT_TRUE(Removed);
   EXPECT_EQ(Set.size(), 2u);
   EXPECT_TRUE(Set.contains(&Vals[2]));
   EXPECT_TRUE(Set.contains(&Vals[4]));
+
+  Removed = Set.remove_if([](int *Ptr) { return false; });
+  EXPECT_FALSE(Removed);
 }

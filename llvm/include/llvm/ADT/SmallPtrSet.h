@@ -357,9 +357,11 @@ public:
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
 
-  /// Remove elements that match the given predicate.
+  /// Remove elements that match the given predicate. Returns whether anything
+  /// was removed.
   template <typename UnaryPredicate>
-  void remove_if(UnaryPredicate P) {
+  bool remove_if(UnaryPredicate P) {
+    bool Removed = false;
     for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
       const void *Value = *APtr;
       if (Value == getTombstoneMarker() || Value == getEmptyMarker())
@@ -368,8 +370,10 @@ public:
       if (P(Ptr)) {
         *APtr = getTombstoneMarker();
         ++NumTombstones;
+        Removed = true;
       }
     }
+    return Removed;
   }
 
   /// count - Return 1 if the specified pointer is in the set, 0 otherwise.
