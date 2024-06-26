@@ -577,12 +577,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI.getType(DstReg).getSizeInBits();
-    if (Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
+    if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
       Register GPRReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
         return false;
 
-      unsigned Opcode = Size == 64 ? RISCV::FMV_D_X : RISCV::FMV_W_X;
+      unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
+                        : Size == 32 ? RISCV::FMV_W_X
+                                     : RISCV::FMV_H_X;
       auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;

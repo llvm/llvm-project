@@ -404,7 +404,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   assert(ST->hasPermLaneX16());
   V = B.CreateBitCast(V, IntNTy);
   Value *Permlanex16Call = B.CreateIntrinsic(
-      Intrinsic::amdgcn_permlanex16, {},
+      V->getType(), Intrinsic::amdgcn_permlanex16,
       {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
   V = buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                           B.CreateBitCast(Permlanex16Call, AtomicTy));
@@ -416,7 +416,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
     // Reduce across the upper and lower 32 lanes.
     V = B.CreateBitCast(V, IntNTy);
     Value *Permlane64Call =
-        B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V);
+        B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_permlane64, V);
     return buildNonAtomicBinOp(B, Op, B.CreateBitCast(V, AtomicTy),
                                B.CreateBitCast(Permlane64Call, AtomicTy));
   }
@@ -472,7 +472,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     assert(ST->hasPermLaneX16());
     V = B.CreateBitCast(V, IntNTy);
     Value *PermX = B.CreateIntrinsic(
-        Intrinsic::amdgcn_permlanex16, {},
+        V->getType(), Intrinsic::amdgcn_permlanex16,
         {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
 
     Value *UpdateDPPCall =

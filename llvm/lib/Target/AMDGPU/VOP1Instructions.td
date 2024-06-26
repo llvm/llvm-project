@@ -756,9 +756,7 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      getVOP1Pat<int_amdgcn_permlane64,
-                                                 VOP_MOVRELS>.ret,
-                                      /*VOP1Only=*/ 1> {
+                                      [], /*VOP1Only=*/ 1> {
     let IsInvalidSingleUseConsumer = 1;
     let IsInvalidSingleUseProducer = 1;
   }
@@ -781,6 +779,12 @@ defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP
 let SubtargetPredicate = HasPermlane32Swap in {
 defm V_PERMLANE32_SWAP_B32 : VOP1Inst<"v_permlane32_swap_b32", VOP_PERMLANE_SWAP>;
 }
+}
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
+        (vt (V_PERMLANE64_B32 (vt VRegSrc_32:$src0)))
+  >;
 }
 
 //===----------------------------------------------------------------------===//

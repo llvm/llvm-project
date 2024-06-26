@@ -18479,6 +18479,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
     return Builder.CreateCall(F, Args);
   }
+  case AMDGPU::BI__builtin_amdgcn_permlane16:
+  case AMDGPU::BI__builtin_amdgcn_permlanex16:
+    return emitBuiltinWithOneOverloadedType<6>(
+        *this, E,
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
+            ? Intrinsic::amdgcn_permlane16
+            : Intrinsic::amdgcn_permlanex16);
+  case AMDGPU::BI__builtin_amdgcn_permlane64:
+    return emitBuiltinWithOneOverloadedType<1>(*this, E,
+                                               Intrinsic::amdgcn_permlane64);
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_readlane);
