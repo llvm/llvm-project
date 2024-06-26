@@ -788,9 +788,9 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
-def FeatureMemoryAtomicFaddF32DenormalSupport
+def FeatureMemoryAtomicFAddF32DenormalSupport
   : SubtargetFeature<"memory-atomic-fadd-f32-denormal-support",
-  "HasAtomicMemoryAtomicFaddF32DenormalSupport",
+  "HasMemoryAtomicFaddF32DenormalSupport",
   "true",
   "global/flat/buffer atomic fadd for float supports denormal handling"
 >;
@@ -1435,7 +1435,7 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureMemoryAtomicFaddF32DenormalSupport
+   FeatureMemoryAtomicFAddF32DenormalSupport
    ]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
@@ -1548,7 +1548,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureMemoryAtomicFaddF32DenormalSupport]>;
+   FeatureMemoryAtomicFAddF32DenormalSupport]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -1641,7 +1641,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
-   FeatureMemoryAtomicFaddF32DenormalSupport
+   FeatureMemoryAtomicFAddF32DenormalSupport
    ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
