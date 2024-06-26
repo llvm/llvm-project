@@ -57550,16 +57550,20 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
+    case ISD::MUL:
+      return false;
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:
     case ISD::SUB:
     case ISD::ADD:
-    case ISD::MUL:
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      return false;
+      // NDD instruction never has "partial register write" issue b/c it has
+      // destination register's upper bits [63:OSIZE]) zeroed even when
+      // OSIZE=8/16.
+      return Subtarget.hasNDD();
     }
   }
 

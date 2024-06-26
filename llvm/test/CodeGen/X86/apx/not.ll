@@ -14,8 +14,7 @@ entry:
 define i16 @not16r(i16 noundef %a) {
 ; CHECK-LABEL: not16r:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    notl %edi, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    notw %di, %ax
 ; CHECK-NEXT:    retq
 entry:
   %not = xor i16 %a, -1
@@ -56,9 +55,7 @@ entry:
 define i16 @not16m(ptr %ptr) {
 ; CHECK-LABEL: not16m:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    notl %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    notw (%rdi), %ax
 ; CHECK-NEXT:    retq
 entry:
   %a = load i16, ptr %ptr
