@@ -1393,11 +1393,27 @@ private:
     OutStreamer.emitSizeT(0);
   }
 
+  void serialiseConstantFP(ConstantFP *CFP) {
+    // For simplicity, for now we store all constant float values as doubles.
+    if ((CFP->getType()->isFloatTy()) || (CFP->getType()->isDoubleTy())) {
+      OutStreamer.emitInt8(ConstKindVal);
+      OutStreamer.emitSizeT(typeIndex(CFP->getType()));
+      OutStreamer.emitSizeT(sizeof(double));
+      double Value = CFP->getValueAPF().convertToDouble();
+      OutStreamer.emitBinaryData(
+          {reinterpret_cast<const char *>(&Value), sizeof(double)});
+    } else {
+      serialiseUnimplementedConstant(CFP);
+    }
+  }
+
   void serialiseConstant(Constant *C) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
       serialiseConstantInt(CI);
     } else if (ConstantPointerNull *NP = dyn_cast<ConstantPointerNull>(C)) {
       serialiseConstantNullPtr(NP);
+    } else if (ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
+      serialiseConstantFP(CFP);
     } else {
       serialiseUnimplementedConstant(C);
     }
