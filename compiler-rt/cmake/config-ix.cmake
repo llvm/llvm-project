@@ -1,11 +1,10 @@
 include(CMakePushCheckState)
 include(AddLLVM)
-include(LLVMCheckCompilerLinkerFlag)
+include(CheckCompilerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
-include(CheckCompilerFlag)
 include(CheckSymbolExists)
 include(TestBigEndian)
 
