@@ -23,10 +23,12 @@
 // Concepts
 
 template <typename Iter>
-concept IterDifferable = std::invocable<std::minus<>,Iter, Iter>;
+concept IterDifferable = std::invocable<std::minus<>, Iter, Iter>;
 
 // Iterators
 
+// The base for an input iterator that keeps a count of the times that it is
+// moved and copied.
 template <class Derived, std::input_iterator Iter = int*, bool IsSized = false>
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
 struct InputIterBase {
@@ -35,25 +37,33 @@ struct InputIterBase {
   using value_type        = typename std::iterator_traits<Iter>::value_type;
   using difference_type   = typename std::iterator_traits<Iter>::difference_type;
 
-  int copy_counter = 0;
-  int move_counter = 0;
+  int* move_counter = nullptr;
+  int* copy_counter = nullptr;
 
   Iter value_{};
 
-  constexpr InputIterBase()                     = default;
+  constexpr InputIterBase() = default;
   constexpr explicit InputIterBase(Iter value) : value_(value) {}
 
   constexpr InputIterBase(const InputIterBase& other) noexcept {
-    copy_counter++;
+    copy_counter = other.copy_counter;
+    move_counter = other.move_counter;
+    if (copy_counter != nullptr) {
+      (*copy_counter)++;
+    }
     value_ = other.value_;
   }
 
   constexpr InputIterBase(InputIterBase&& other) noexcept {
-    move_counter++;
+    copy_counter = other.copy_counter;
+    move_counter = other.move_counter;
+    if (move_counter != nullptr) {
+      (*move_counter)++;
+    }
     value_ = std::move(other.value_);
   }
   constexpr InputIterBase& operator=(const InputIterBase& other) = default;
-  constexpr InputIterBase& operator=(InputIterBase&& other) = default;
+  constexpr InputIterBase& operator=(InputIterBase&& other)      = default;
 
   constexpr value_type operator*() const { return *value_; }
   constexpr Derived& operator++() {
@@ -73,34 +83,14 @@ struct InputIterBase {
   }
 };
 
-struct UnsizedInputIterator : InputIterBase<UnsizedInputIterator /*, Iter = int *, IsSized = false */> {};
-static_assert(std::input_iterator<UnsizedInputIterator>);
-static_assert(!std::sized_sentinel_for<UnsizedInputIterator, UnsizedInputIterator>);
-
+// In input iterator that is sized.
 struct SizedInputIterator : InputIterBase<SizedInputIterator, int*, true> {
   using InputIterBase::InputIterBase;
 };
 static_assert(std::input_iterator<SizedInputIterator>);
 static_assert(std::sized_sentinel_for<SizedInputIterator, SizedInputIterator>);
 
-// Don't move/hold the iterator itself, copy/hold the base
-// of that iterator and reconstruct the iterator on demand.
-// May result in aliasing (if, e.g., Iterator is an iterator
-// over int *).
-template <class Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
-struct ViewOverNonCopyableIterator : std::ranges::view_base {
-  constexpr explicit ViewOverNonCopyableIterator(Iter it, Sent sent) : it_(base(it)), sent_(base(sent)) {}
-
-  ViewOverNonCopyableIterator(ViewOverNonCopyableIterator&&)            = default;
-  ViewOverNonCopyableIterator& operator=(ViewOverNonCopyableIterator&&) = default;
-
-  constexpr Iter begin() const { return Iter(it_); }
-  constexpr Sent end() const { return Sent(sent_); }
-
-private:
-  decltype(base(std::declval<Iter>())) it_;
-  decltype(base(std::declval<Sent>())) sent_;
-};
+// Views
 
 // Put IterMoveIterSwapTestRangeIterator in a namespace to test ADL of CPOs iter_swap and iter_move
 // (see iter_swap.pass.cpp and iter_move.pass.cpp).
@@ -263,6 +253,25 @@ using UnsimpleConstView         = MaybeConstCommonSimpleView<false, true, true>;
 using UnsimpleUnCommonConstView = MaybeConstCommonSimpleView<false, true, false>;
 using SimpleUnCommonConstView   = MaybeConstCommonSimpleView<true, true, false>;
 using SimpleCommonConstView     = MaybeConstCommonSimpleView<true, true, true>;
+
+// Don't move/hold the iterator itself, copy/hold the base
+// of that iterator and reconstruct the iterator on demand.
+// May result in aliasing (if, e.g., Iterator is an iterator
+// over int *).
+template <class Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>>
+struct ViewOverNonCopyableIterator : std::ranges::view_base {
+  constexpr explicit ViewOverNonCopyableIterator(Iter it, Sent sent) : it_(base(it)), sent_(base(sent)) {}
+
+  ViewOverNonCopyableIterator(ViewOverNonCopyableIterator&&)            = default;
+  ViewOverNonCopyableIterator& operator=(ViewOverNonCopyableIterator&&) = default;
+
+  constexpr Iter begin() const { return Iter(it_); }
+  constexpr Sent end() const { return Sent(sent_); }
+
+private:
+  decltype(base(std::declval<Iter>())) it_;
+  decltype(base(std::declval<Sent>())) sent_;
+};
 
 // Ranges
 

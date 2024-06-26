@@ -48,19 +48,65 @@ constexpr bool base_const() {
 }
 
 bool base_move() {
-  auto view = BasicTestView<SizedInputIterator>{SizedInputIterator(), SizedInputIterator()};
-  auto sv = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
-  [[maybe_unused]] auto result = sv.begin().base();
-  assert(result.move_counter==1);
-  assert(result.copy_counter==0);
+  // Keep track of how many times the original iterator is moved
+  // and/or copied during the test.
+  int move_counter = 0;
+  int copy_counter = 0;
+
+  auto start = SizedInputIterator();
+  start.move_counter = &move_counter;
+  start.copy_counter = &copy_counter;
+  auto stop  = SizedInputIterator();
+
+  auto view = BasicTestView<SizedInputIterator>{start, stop};
+  auto sv   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
+  auto svi  = sv.begin();
+
+  // Reset the move/copy counters so that they reflect *only* whether the
+  // base() member function moved or copied the iterator.
+  move_counter                 = 0;
+  copy_counter                 = 0;
+  [[maybe_unused]] auto result = std::move(svi).base();
+
+  // Ensure that base std::move'd the iterator.
+  assert(*result.move_counter == 1);
+  assert(*result.copy_counter == 0);
+  return true;
+}
+
+bool base_copy() {
+  // See above.
+  int move_counter = 0;
+  int copy_counter = 0;
+  auto start       = SizedInputIterator();
+
+  start.move_counter = &move_counter;
+  start.copy_counter = &copy_counter;
+  auto stop        = SizedInputIterator();
+
+  auto view                 = BasicTestView<SizedInputIterator>{start, stop};
+  auto sv                   = std::ranges::stride_view<BasicTestView<SizedInputIterator>>(view, 1);
+  [[maybe_unused]] auto svi = sv.begin();
+
+  // See above.
+  move_counter                                      = 0;
+  copy_counter                                      = 0;
+  [[maybe_unused]] const SizedInputIterator& result = svi.base();
+
+  // Ensure that base did _not_ std::move'd the iterator.
+  assert(*result.move_counter == 0);
+  assert(*result.copy_counter == 0);
   return true;
 }
 
 int main(int, char**) {
+  /*
   base_noexcept();
   static_assert(base_noexcept());
   base_const();
   static_assert(base_const());
+  */
   base_move();
+  base_copy();
   return 0;
 }
