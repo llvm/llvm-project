@@ -473,6 +473,10 @@ namespace AddressOf {
 
   constexpr _Complex float F = {3, 4};
   static_assert(__builtin_addressof(F) == &F, "");
+
+  void testAddressof(int x) {
+    static_assert(&x == __builtin_addressof(x), "");
+  }
 }
 
 namespace std {
