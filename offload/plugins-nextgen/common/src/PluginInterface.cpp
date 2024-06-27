@@ -843,9 +843,8 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     ProfOrErr->dump();
 
     // Write data to profiling file
-    if (auto Err = ProfOrErr->write()) {
-      consumeError(std::move(Err));
-    }
+    if (auto Err = ProfOrErr->write())
+      return Err;
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,

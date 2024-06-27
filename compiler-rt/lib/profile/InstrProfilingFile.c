@@ -1321,7 +1321,6 @@ int __llvm_write_custom_profile(const char *Target,
   /* Prepend "TARGET." to current filename */
   memcpy(TargetFilename, Target, TargetLength);
   TargetFilename[TargetLength] = '.';
-  memcpy(TargetFilename, Target, TargetLength);
   memcpy(TargetFilename + 1 + TargetLength, Filename, FilenameLength);
   TargetFilename[FilenameLength + 1 + TargetLength] = 0;
 
