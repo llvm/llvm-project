@@ -299,6 +299,10 @@ them.
  Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
  section references. Any invalid sh_link fields will be set to zero.
 
+.. option:: --change-section-lma \*{+-}<val>
+
+ Shift LMA of non-zero-sized sections in the program header table by ``<val>``
+
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple
@@ -527,10 +531,6 @@ them.
 .. option:: --weaken
 
  Mark all defined global symbols as weak in the output.
-
-.. option:: --change-section-lma \*{+-}<val>
-
- Shift LMA of non-zero-sized sections in the program header by ``<val>``
 
 MACH-O-SPECIFIC OPTIONS
 -----------------------

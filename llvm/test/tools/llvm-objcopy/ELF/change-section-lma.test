@@ -1,28 +1,32 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --change-section-lma *+0x20 %t %t2
 # RUN: llvm-readelf -l %t2 | FileCheck %s --check-prefix=CHECK-PLUS
-# RUN: llvm-objcopy --change-section-lma *-0x10 %t2 %t3
+# RUN: llvm-objcopy --change-section-lma *-0x30 %t %t3
 # RUN: llvm-readelf -l %t3 | FileCheck %s --check-prefix=CHECK-MINUS
 # RUN: not llvm-objcopy --change-section-lma .text3=0x5000 %t  2>&1 | FileCheck %s --check-prefix=ERR-SET-ADDRESS
 # RUN: not llvm-objcopy --change-section-lma .text3+0x30 %t  2>&1 | FileCheck %s --check-prefix=ERR-SPECIFIC-SEC
 # RUN: not llvm-objcopy --change-section-lma *+0c50 %t  2>&1 | FileCheck %s --check-prefix=ERR-INVALID-VAL
 # RUN: not llvm-objcopy --change-section-lma 0 %t  2>&1 | FileCheck %s --check-prefix=ERR-MISSING-OFFSET
+# RUN: not llvm-objcopy --change-section-lma *-0x2000 %t  2>&1 | FileCheck %s --check-prefix=ERR-UNDERFLOW
+# RUN: not llvm-objcopy --change-section-lma *+0x100000000 %t  2>&1 | FileCheck %s --check-prefix=ERR-OVERFLOW
 
 # CHECK-PLUS:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
-# CHECK-PLUS:  PHDR           0x000002 0x0000000000001002 0x0000000000001022 0x000038 0x000000
-# CHECK-PLUS:  LOAD           0x000000 0x0000000000001000 0x0000000000001020 0x001120 0x001120
-# CHECK-PLUS:  LOAD           0x001120 0x0000000000005000 0x0000000000006020 0x001000 0x001000
+# CHECK-PLUS:  PHDR           0x000002 0x0000000000001102 0x0000000000001122 0x000038 0x000000
+# CHECK-PLUS:  LOAD           0x000000 0x0000000000001100 0x0000000000001120 0x000220 0x000220
+# CHECK-PLUS:  LOAD           0x000220 0xffffffff00005100 0xffffffff00006120 0x000100 0x000100
 # CHECK-PLUS:  NOTE           0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000
 
-# CHECK-MINUS:  PHDR           0x000002 0x0000000000001002 0x0000000000001012 0x000038 0x000000
-# CHECK-MINUS:  LOAD           0x000000 0x0000000000001000 0x0000000000001010 0x001120 0x001120
-# CHECK-MINUS:  LOAD           0x001120 0x0000000000005000 0x0000000000006010 0x001000 0x001000
+# CHECK-MINUS:  PHDR           0x000002 0x0000000000001102 0x00000000000010d2 0x000038 0x000000
+# CHECK-MINUS:  LOAD           0x000000 0x0000000000001100 0x00000000000010d0 0x000220 0x000220
+# CHECK-MINUS:  LOAD           0x000220 0xffffffff00005100 0xffffffff000060d0 0x000100 0x000100
 # CHECK-MINUS:  NOTE           0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000
 
 # ERR-SET-ADDRESS: error: bad format for --change-section-lma: changing LMA to a specific value is not supported. Use *+val or *-val instead
 # ERR-SPECIFIC-SEC: error: bad format for --change-section-lma: changing a specific section LMA is not supported. Use *+val or *-val instead
 # ERR-INVALID-VAL: error: bad format for --change-section-lma: value after *+ is 0c50 when it should be integer
 # ERR-MISSING-OFFSET: error: bad format for --change-section-lma: missing LMA offset
+# ERR-UNDERFLOW: : address 0x1102 would underflow
+# ERR-OVERFLOW: address 0xffffffff00006100 would overflow
 
 !ELF
 FileHeader:
@@ -32,23 +36,23 @@ FileHeader:
 Sections:
   - Name:          .text1
     Type:          SHT_PROGBITS
-    Size:          0x1000
+    Size:          0x100
   - Name:          .text2
     Type:          SHT_PROGBITS
-    Size:          0x1000
+    Size:          0x100
 ProgramHeaders:
   - Type:          PT_PHDR
     FileSize:      0x38
     Offset:        0x2
-    VAddr:         0x1002
+    VAddr:         0x1102
   - Type:          PT_LOAD
     Offset:        0x0
-    VAddr:         0x1000
+    VAddr:         0x1100
     FirstSec:      .text1
     LastSec:       .text1
   - Type:          PT_LOAD
-    VAddr:         0x5000
-    PAddr:         0x6000
+    VAddr:         0xFFFFFFFF00005100
+    PAddr:         0xFFFFFFFF00006100
     FirstSec:      .text2
     LastSec:       .text2
   - Type:          PT_NOTE

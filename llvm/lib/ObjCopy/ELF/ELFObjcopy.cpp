@@ -672,8 +672,22 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (Config.ChangeSectionLMAValAll != 0) {
     for (Segment &Seg : Obj.segments()) {
-      if (Seg.FileSize > 0)
-        Seg.PAddr += Config.ChangeSectionLMAValAll;
+      if (Seg.FileSize > 0) {
+        if (Config.ChangeSectionLMAValAll > 0 &&
+            Seg.PAddr > std::numeric_limits<uint64_t>::max() -
+                            Config.ChangeSectionLMAValAll) {
+          return createStringError(errc::invalid_argument,
+                                   "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                                       " would overflow");
+        } else if (Config.ChangeSectionLMAValAll < 0 &&
+                   Seg.PAddr < std::numeric_limits<uint64_t>::min() -
+                                   Config.ChangeSectionLMAValAll)
+          return createStringError(errc::invalid_argument,
+                                   "address 0x" + Twine::utohexstr(Seg.PAddr) +
+                                       " would underflow");
+        else
+          Seg.PAddr += Config.ChangeSectionLMAValAll;
+      }
     }
   }
 
