@@ -5,6 +5,7 @@ add_flang_library(FIRSupport
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
+  Utils.cpp
 
   DEPENDS
   FIROpsIncGen
