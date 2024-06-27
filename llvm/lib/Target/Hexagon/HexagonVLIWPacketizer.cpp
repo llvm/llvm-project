@@ -96,7 +96,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+      AU.addRequired<MachineBranchProbabilityInfo>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfo>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -125,7 +125,7 @@ char HexagonPacketizer::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonPacketizer, "hexagon-packetizer",
                       "Hexagon Packetizer", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(HexagonPacketizer, "hexagon-packetizer",
@@ -213,8 +213,7 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfo>();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *MBPI =
-      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  auto *MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
 
   if (EnableGenAllInsnClass)
     HII->genAllInsnTimingClasses(MF);
