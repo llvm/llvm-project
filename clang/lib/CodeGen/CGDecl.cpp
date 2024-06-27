@@ -1972,7 +1972,21 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   }
 
   if (!constant) {
-    initializeWhatIsTechnicallyUninitialized(Loc);
+    if (trivialAutoVarInit !=
+        LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      // At this point, we know D has an Init expression, but isn't a constant.
+      // - If D is not a scalar, auto-var-init conservatively (members may be
+      // left uninitialized by constructor Init expressions for example).
+      // - If D is a scalar, we only need to auto-var-init if there is a
+      // self-reference. Otherwise, the Init expression should be sufficient.
+      // It may be that the Init expression uses other uninitialized memory,
+      // but auto-var-init here would not help, as auto-init would get
+      // overwritten by Init.
+      if (!D.getType()->isScalarType() || capturedByInit ||
+          isAccessedBy(D, Init)) {
+        initializeWhatIsTechnicallyUninitialized(Loc);
+      }
+    }
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
