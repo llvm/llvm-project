@@ -289,9 +289,18 @@ genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
 static std::vector<std::unique_ptr<TagNode>>
 genJsScriptsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
+
+  // index_json.js is part of every generated HTML file
+  SmallString<128> IndexJSONPath = computeRelativePath("", InfoPath);
+  auto IndexJSONNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
+  llvm::sys::path::append(IndexJSONPath, "index_json.js");
+  llvm::sys::path::native(IndexJSONPath, llvm::sys::path::Style::posix);
+  IndexJSONNode->Attributes.emplace_back("src", std::string(IndexJSONPath));
+  Out.emplace_back(std::move(IndexJSONNode));
+
   for (const auto &FilePath : CDCtx.JsScripts) {
-    auto ScriptNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
     SmallString<128> ScriptPath = computeRelativePath("", InfoPath);
+    auto ScriptNode = std::make_unique<TagNode>(HTMLTag::TAG_SCRIPT);
     llvm::sys::path::append(ScriptPath, llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(ScriptPath, llvm::sys::path::Style::posix);
@@ -1069,7 +1078,7 @@ llvm::Error HTMLGenerator::createResources(ClangDocContext &CDCtx) {
     if (Err)
       return Err;
   }
-  for (const auto &FilePath : CDCtx.FilesToCopy) {
+  for (const auto &FilePath : CDCtx.JsScripts) {
     Err = CopyFile(FilePath, CDCtx.OutDirectory);
     if (Err)
       return Err;
