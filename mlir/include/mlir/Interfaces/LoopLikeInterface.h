@@ -61,8 +61,8 @@ namespace mlir {
 /// A function that rewrites `target`'s terminator as a teminator obtained by
 /// fusing `source` into `target`.
 using FuseTerminatorFn =
-    std::function<void(RewriterBase &rewriter, LoopLikeOpInterface source,
-                       LoopLikeOpInterface &target, IRMapping mapping)>;
+    function_ref<void(RewriterBase &rewriter, LoopLikeOpInterface source,
+                      LoopLikeOpInterface &target, IRMapping mapping)>;
 
 /// Returns a fused `LoopLikeOpInterface` created by fusing `source` to
 /// `target`.  The `NewYieldValuesFn` callback is used to pass to the
