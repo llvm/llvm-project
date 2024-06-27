@@ -1694,16 +1694,29 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
   //
   // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
   // to symbol.
-  assert(TM.getTargetTriple().isOSBinFormatELF() &&
-         "LOADauthptrstatic is implemented only for ELF");
-  const auto &TLOF =
-      static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
+  MCSymbol *AuthPtrStubSym;
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    const auto &TLOF =
+        static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
 
-  assert(GAOp.getOffset() == 0 &&
-         "non-zero offset for $auth_ptr$ stub slots is not supported");
-  const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-  MCSymbol *AuthPtrStubSym =
-      TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  } else {
+    assert(TM.getTargetTriple().isOSBinFormatMachO() &&
+           "LOADauthptrstatic is implemented only for MachO/ELF");
+
+    const auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
+        getObjFileLowering());
+
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  }
 
   MachineOperand StubMOHi =
       MachineOperand::CreateMCSymbol(AuthPtrStubSym, AArch64II::MO_PAGE);
