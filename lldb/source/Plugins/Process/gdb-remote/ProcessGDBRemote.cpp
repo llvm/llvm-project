@@ -4881,7 +4881,7 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
                                             registers) &&
       // Target XML is not required to include register information.
-      (!registers.empty()))
+      !registers.empty())
     AddRemoteRegisters(registers, arch_to_use);
 
   return m_register_info_sp->GetNumRegisters() > 0;
