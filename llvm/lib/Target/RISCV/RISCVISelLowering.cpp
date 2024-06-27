@@ -16894,7 +16894,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                        DAG.getNode(ISD::FNEG, DL, VT, NewFPExtRound));
   }
   case ISD::MGATHER: {
-    const auto *MGN = dyn_cast<MaskedGatherSDNode>(N);
+    const auto *MGN = cast<MaskedGatherSDNode>(N);
     const EVT VT = N->getValueType(0);
     SDValue Index = MGN->getIndex();
     SDValue ScaleOp = MGN->getScale();
@@ -16994,7 +16994,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::MSCATTER:{
-    const auto *MSN = dyn_cast<MaskedScatterSDNode>(N);
+    const auto *MSN = cast<MaskedScatterSDNode>(N);
     SDValue Index = MSN->getIndex();
     SDValue ScaleOp = MSN->getScale();
     ISD::MemIndexType IndexType = MSN->getIndexType();
@@ -17030,7 +17030,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::VP_GATHER: {
-    const auto *VPGN = dyn_cast<VPGatherSDNode>(N);
+    const auto *VPGN = cast<VPGatherSDNode>(N);
     SDValue Index = VPGN->getIndex();
     SDValue ScaleOp = VPGN->getScale();
     ISD::MemIndexType IndexType = VPGN->getIndexType();
@@ -17055,7 +17055,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   }
   case ISD::VP_SCATTER: {
-    const auto *VPSN = dyn_cast<VPScatterSDNode>(N);
+    const auto *VPSN = cast<VPScatterSDNode>(N);
     SDValue Index = VPSN->getIndex();
     SDValue ScaleOp = VPSN->getScale();
     ISD::MemIndexType IndexType = VPSN->getIndexType();
