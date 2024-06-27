@@ -302,7 +302,7 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   return Res;
 }
 
-using RepeatedValue = std::pair<Value*, APInt>;
+using RepeatedValue = std::pair<Value *, uint64_t>;
 
 /// Given an associative binary expression, return the leaf
 /// nodes in Ops along with their weights (how many times the leaf occurs).  The
@@ -384,7 +384,6 @@ static bool LinearizeExprTree(Instruction *I,
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
-  unsigned Bitwidth = I->getType()->getScalarType()->getPrimitiveSizeInBits();
   unsigned Opcode = I->getOpcode();
   assert(I->isAssociative() && I->isCommutative() &&
          "Expected an associative and commutative operation!");
@@ -399,8 +398,8 @@ static bool LinearizeExprTree(Instruction *I,
   // with their weights, representing a certain number of paths to the operator.
   // If an operator occurs in the worklist multiple times then we found multiple
   // ways to get to it.
-  SmallVector<std::pair<Instruction*, APInt>, 8> Worklist; // (Op, Weight)
-  Worklist.push_back(std::make_pair(I, APInt(Bitwidth, 1)));
+  SmallVector<std::pair<Instruction *, uint64_t>, 8> Worklist; // (Op, Weight)
+  Worklist.push_back(std::make_pair(I, 1));
   bool Changed = false;
 
   // Leaves of the expression are values that either aren't the right kind of
@@ -418,17 +417,17 @@ static bool LinearizeExprTree(Instruction *I,
 
   // Leaves - Keeps track of the set of putative leaves as well as the number of
   // paths to each leaf seen so far.
-  using LeafMap = DenseMap<Value *, APInt>;
+  using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout DL = I->getModule()->getDataLayout();
+  const DataLayout DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
 #endif
   while (!Worklist.empty()) {
-    std::pair<Instruction*, APInt> P = Worklist.pop_back_val();
-    I = P.first; // We examine the operands of this binary operator.
+    // We examine the operands of this binary operator.
+    auto [I, Weight] = Worklist.pop_back_val();
 
     if (isa<OverflowingBinaryOperator>(I)) {
       Flags.HasNUW &= I->hasNoUnsignedWrap();
@@ -437,7 +436,6 @@ static bool LinearizeExprTree(Instruction *I,
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
-      APInt Weight = P.second; // Number of paths to this operand.
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
       assert(!Op->use_empty() && "No uses, so how did we get to it?!");
 
@@ -472,6 +470,7 @@ static bool LinearizeExprTree(Instruction *I,
 
         // Update the number of paths to the leaf.
         It->second += Weight;
+        assert(It->second >= Weight && "Weight overflows");
 
         // If we still have uses that are not accounted for by the expression
         // then it is not safe to modify the value.
@@ -534,10 +533,7 @@ static bool LinearizeExprTree(Instruction *I,
       // Node initially thought to be a leaf wasn't.
       continue;
     assert(!isReassociableOp(V, Opcode) && "Shouldn't be a leaf!");
-    APInt Weight = It->second;
-    if (Weight.isMinValue())
-      // Leaf already output or weight reduction eliminated it.
-      continue;
+    uint64_t Weight = It->second;
     // Ensure the leaf is only output once.
     It->second = 0;
     Ops.push_back(std::make_pair(V, Weight));
@@ -551,7 +547,7 @@ static bool LinearizeExprTree(Instruction *I,
   if (Ops.empty()) {
     Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, I->getType());
     assert(Identity && "Associative operation without identity!");
-    Ops.emplace_back(Identity, APInt(Bitwidth, 1));
+    Ops.emplace_back(Identity, 1);
   }
 
   return Changed;
@@ -691,9 +687,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     // stupid, create a new node if there are none left.
     BinaryOperator *NewOp;
     if (NodesToRewrite.empty()) {
-      Constant *Undef = UndefValue::get(I->getType());
-      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Undef,
-                                     Undef, "", I->getIterator());
+      Constant *Poison = PoisonValue::get(I->getType());
+      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Poison,
+                                     Poison, "", I->getIterator());
       if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {
@@ -771,7 +767,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 static Value *NegateValue(Value *V, Instruction *BI,
                           ReassociatePass::OrderedSet &ToRedo) {
   if (auto *C = dyn_cast<Constant>(V)) {
-    const DataLayout &DL = BI->getModule()->getDataLayout();
+    const DataLayout &DL = BI->getDataLayout();
     Constant *Res = C->getType()->isFPOrFPVectorTy()
                         ? ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)
                         : ConstantExpr::getNeg(C);
@@ -848,7 +844,13 @@ static Value *NegateValue(Value *V, Instruction *BI,
                      ->getIterator();
     }
 
+    // Check that if TheNeg is moved out of its parent block, we drop its
+    // debug location to avoid extra coverage.
+    // See test dropping_debugloc_the_neg.ll for a detailed example.
+    if (TheNeg->getParent() != InsertPt->getParent())
+      TheNeg->dropLocation();
     TheNeg->moveBefore(*InsertPt->getParent(), InsertPt);
+
     if (TheNeg->getOpcode() == Instruction::Sub) {
       TheNeg->setHasNoUnsignedWrap(false);
       TheNeg->setHasNoSignedWrap(false);
@@ -1020,7 +1022,8 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
 static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   Constant *MulCst = ConstantInt::get(Shl->getType(), 1);
   auto *SA = cast<ConstantInt>(Shl->getOperand(1));
-  MulCst = ConstantExpr::getShl(MulCst, SA);
+  MulCst = ConstantFoldBinaryInstruction(Instruction::Shl, MulCst, SA);
+  assert(MulCst && "Constant folding of immediate constants failed");
 
   BinaryOperator *Mul = BinaryOperator::CreateMul(Shl->getOperand(0), MulCst,
                                                   "", Shl->getIterator());
@@ -1097,8 +1100,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
   Factors.reserve(Tree.size());
   for (unsigned i = 0, e = Tree.size(); i != e; ++i) {
     RepeatedValue E = Tree[i];
-    Factors.append(E.second.getZExtValue(),
-                   ValueEntry(getRank(E.first), E.first));
+    Factors.append(E.second, ValueEntry(getRank(E.first), E.first));
   }
 
   bool FoundFactor = false;
@@ -1820,10 +1822,10 @@ ReassociatePass::buildMinimalMultiplyDAG(IRBuilderBase &Builder,
   }
   // Unique factors with equal powers -- we've folded them into the first one's
   // base.
-  Factors.erase(std::unique(Factors.begin(), Factors.end(),
-                            [](const Factor &LHS, const Factor &RHS) {
-                              return LHS.Power == RHS.Power;
-                            }),
+  Factors.erase(llvm::unique(Factors,
+                             [](const Factor &LHS, const Factor &RHS) {
+                               return LHS.Power == RHS.Power;
+                             }),
                 Factors.end());
 
   // Iteratively collect the base of each factor with an add power into the
@@ -1880,7 +1882,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
                                            SmallVectorImpl<ValueEntry> &Ops) {
   // Now that we have the linearized expression tree, try to optimize it.
   // Start by folding any constants that we found.
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   Constant *Cst = nullptr;
   unsigned Opcode = I->getOpcode();
   while (!Ops.empty()) {
@@ -2176,7 +2178,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
       shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
       (cast<PossiblyDisjointInst>(I)->isDisjoint() ||
        haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                           SimplifyQuery(I->getModule()->getDataLayout(),
+                           SimplifyQuery(I->getDataLayout(),
                                          /*DT=*/nullptr, /*AC=*/nullptr, I)))) {
     Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
     RedoInsts.insert(I);
@@ -2277,7 +2279,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
   for (const RepeatedValue &E : Tree)
-    Ops.append(E.second.getZExtValue(), ValueEntry(getRank(E.first), E.first));
+    Ops.append(E.second, ValueEntry(getRank(E.first), E.first));
 
   LLVM_DEBUG(dbgs() << "RAIn:\t"; PrintOps(I, Ops); dbgs() << '\n');
 

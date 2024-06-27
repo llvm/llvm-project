@@ -1221,7 +1221,6 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       SmallPtrSet<const Value *, 4> ObjSet;
       SmallVector<Metadata *, 4> Scopes, NoAliases;
 
-      SmallSetVector<const Argument *, 4> NAPtrArgs;
       for (const Value *V : PtrArgs) {
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
@@ -1364,8 +1363,6 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
       ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
     if (CB.paramHasAttr(I, Attribute::ReadOnly))
       ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
-    if (CB.paramHasAttr(I, Attribute::WriteOnly))
-      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
     HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
   }
 

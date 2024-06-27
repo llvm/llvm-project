@@ -828,12 +828,18 @@ multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
             (!cast<NI>(NAME) $lhs, $rhs)>;
 }
 
-multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
+multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name,
+                     bits<32> simdop, list<Predicate> reqs = []> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$v), (outs), (ins),
                       [(set (vec.vt V128:$dst),
                         (vec.vt (node (vec.vt V128:$v))))],
                       vec.prefix#"."#name#"\t$dst, $v",
-                      vec.prefix#"."#name, simdop>;
+                      vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionUnary<Vec vec, SDPatternOperator node, string name,
+                              bits<32> simdop> {
+  defm "" : SIMDUnary<vec, node, name, simdop, [HasHalfPrecision]>;
 }
 
 // Bitwise logic: v128.not
@@ -1190,6 +1196,10 @@ defm EXTMUL_HIGH_U :
 multiclass SIMDUnaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDUnary<F32x4, node, name, baseInst>;
   defm "" : SIMDUnary<F64x2, node, name, !add(baseInst, 12)>;
+  // Unlike F32x4 and F64x2 there's not a gap in the opcodes between "neg" and
+  // "sqrt" so subtract one from the offset.
+  defm "" : HalfPrecisionUnary<F16x8, node, name,
+                               !add(baseInst,!if(!eq(name, "sqrt"), 80, 81))>;
 }
 
 // Absolute value: abs
@@ -1210,14 +1220,20 @@ defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
 defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
+defm CEIL : HalfPrecisionUnary<F16x8, fceil, "ceil", 0x13c>;
+defm FLOOR : HalfPrecisionUnary<F16x8, ffloor, "floor", 0x13d>;
+defm TRUNC : HalfPrecisionUnary<F16x8, ftrunc, "trunc", 0x13e>;
+defm NEAREST : HalfPrecisionUnary<F16x8, fnearbyint, "nearest", 0x13f>;
 
 // WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
 def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (frint (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 // WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
 def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (froundeven (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
@@ -1304,16 +1320,23 @@ def : Pat<(v8f16 (int_wasm_pmax (v8f16 V128:$lhs), (v8f16 V128:$rhs))),
 //===----------------------------------------------------------------------===//
 
 multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
-                       bits<32> simdop> {
+                       bits<32> simdop, list<Predicate> reqs = []> {
   defm op#_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
            [(set (vec.vt V128:$dst), (vec.vt (op (arg.vt V128:$vec))))],
-           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop>;
+           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
+                                string name, bits<32> simdop> {
+  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasHalfPrecision]>;
 }
 
 // Floating point to integer with saturation: trunc_sat
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_sint, "trunc_sat_f16x8_s", 0x148>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_uint, "trunc_sat_f16x8_u", 0x149>;
 
 // Support the saturating variety as well.
 def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
@@ -1339,6 +1362,8 @@ defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
 defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, sint_to_fp, "convert_i16x8_s", 0x14a>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, uint_to_fp, "convert_i16x8_u", 0x14b>;
 
 // Extending operations
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.
@@ -1464,23 +1489,24 @@ defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero,
 // Relaxed (Negative) Multiply-Add  (madd/nmadd)
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS> {
+multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate> reqs> {
   defm MADD_#vec :
-    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
-              [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
-                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-              vec.prefix#".relaxed_madd\t$dst, $a, $b, $c",
-              vec.prefix#".relaxed_madd", simdopA>;
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
+             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".relaxed_madd\t$dst, $a, $b, $c",
+           vec.prefix#".relaxed_madd", simdopA, reqs>;
   defm NMADD_#vec :
-    RELAXED_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
-              [(set (vec.vt V128:$dst), (int_wasm_relaxed_nmadd
-                (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-              vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
-              vec.prefix#".relaxed_nmadd", simdopS>;
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (int_wasm_relaxed_nmadd
+             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
+           vec.prefix#".relaxed_nmadd", simdopS, reqs>;
 }
 
-defm "" : SIMDMADD<F32x4, 0x105, 0x106>;
-defm "" : SIMDMADD<F64x2, 0x107, 0x108>;
+defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
+defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
+defm "" : SIMDMADD<F16x8, 0x146, 0x147, [HasHalfPrecision]>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect

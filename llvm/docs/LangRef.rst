@@ -462,7 +462,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g. floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard c calling
-    convention. Currently it is for x86_64 only.
+    convention. Currently it is for x86_64 and AArch64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style TLS. The access
     function generally has an entry block, an exit block and an initialization
@@ -811,6 +811,10 @@ contains the same type while ``{<vscale x 2 x i32>, <vscale x 2 x i64>}``
 doesn't). These kinds of structs (we may call them homogeneous scalable vector
 structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
+
+Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
+alignments are not larger than that of a TOC entry. Optimizations should not
+increase their alignments to mitigate TOC overflow.
 
 Syntax::
 
@@ -1598,8 +1602,10 @@ Currently, only the following parameter attributes are defined:
     through this pointer argument (even though it may read from the memory that
     the pointer points to).
 
-    If a function reads from a writeonly pointer argument, the behavior is
-    undefined.
+    This attribute is understood in the same way as the ``memory(write)``
+    attribute. That is, the pointer may still be read as long as the read is
+    not observable outside the function. See the ``memory`` documentation for
+    precise semantics.
 
 ``writable``
     This attribute is only meaningful in conjunction with ``dereferenceable(N)``
@@ -1624,6 +1630,27 @@ Currently, only the following parameter attributes are defined:
     The ``writable`` attribute cannot be combined with ``readnone``,
     ``readonly`` or a ``memory`` attribute that does not contain
     ``argmem: write``.
+
+``initializes((Lo1, Hi1), ...)``
+    This attribute indicates that the function initializes the ranges of the
+    pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
+    means the first memory access is a non-volatile, non-atomic write. The
+    write must happen before the function returns. If the function unwinds,
+    the write may not happen.
+
+    This attribute only holds for the memory accessed via this pointer
+    parameter. Other arbitrary accesses to the same memory via other pointers
+    are allowed.
+
+    The ``writable`` or ``dereferenceable`` attribute do not imply the
+    ``initializes`` attribute. The ``initializes`` attribute does not imply
+    ``writeonly`` since ``initializes`` allows reading from the pointer
+    after writing.
+
+    This attribute is a list of constant ranges in ascending order with no
+    overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit integers,
+    and negative values are allowed in case the argument points partway into
+    an allocation. An empty list is not allowed.
 
 ``dead_on_unwind``
     At a high level, this attribute indicates that the pointer argument is dead
@@ -1924,7 +1951,11 @@ example:
     even if this attribute says the frame pointer can be eliminated.
     The allowed string values are:
 
-     * ``"none"`` (default) - the frame pointer can be eliminated.
+     * ``"none"`` (default) - the frame pointer can be eliminated, and it's
+       register can be used for other purposes.
+     * ``"reserved"`` - the frame pointer register must either be updated to
+       point to a valid frame record for the current function, or not be
+       modified.
      * ``"non-leaf"`` - the frame pointer should be kept if the function calls
        other functions.
      * ``"all"`` - the frame pointer should be kept.
@@ -1968,6 +1999,21 @@ example:
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
       argument memory.
+
+    The supported access kinds are:
+
+    - ``readwrite``: Any kind of access to the location is allowed.
+    - ``read``: The location is only read. Writing to the location is immediate
+      undefined behavior. This includes the case where the location is read from
+      and then the same value is written back.
+    - ``write``: Only writes to the location are observable outside the function
+      call. However, the function may still internally read the location after
+      writing it, as this is not observable. Reading the location prior to
+      writing it results in a poison value.
+    - ``none``: No reads or writes to the location are observed outside the
+      function. It is always valid to read and write allocas, and to read global
+      constants, even if ``memory(none)`` is used, as these effects are not
+      externally observable.
 
     The supported memory location kinds are:
 
@@ -4821,10 +4867,6 @@ The following is the syntax for constant expressions:
     required to make sense for the type of "pointer to TY". These indexes
     may be implicitly sign-extended or truncated to match the index size
     of CSTPTR's address space.
-``icmp COND (VAL1, VAL2)``
-    Perform the :ref:`icmp operation <i_icmp>` on constants.
-``fcmp COND (VAL1, VAL2)``
-    Perform the :ref:`fcmp operation <i_fcmp>` on constants.
 ``extractelement (VAL, IDX)``
     Perform the :ref:`extractelement operation <i_extractelement>` on
     constants.
@@ -5658,7 +5700,7 @@ it. For example:
 
     call void asm sideeffect "something bad", ""(), !srcloc !42
     ...
-    !42 = !{ i32 1234567 }
+    !42 = !{ i64 1234567 }
 
 It is up to the front-end to make sense of the magic numbers it places
 in the IR. If the MDNode contains multiple constants, the code generator
@@ -6288,11 +6330,11 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
-(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
+expression language. They are used in :ref:`debug records <debugrecords>`
+(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
 referenced LLVM variable relates to the source language variable. Debug
-intrinsics are interpreted left-to-right: start by pushing the value/address
-operand of the intrinsic onto a stack, then repeatedly push and evaluate
+expressions are interpreted left-to-right: start by pushing the value/address
+operand of the record onto a stack, then repeatedly push and evaluate
 opcodes from the DIExpression until the final variable description is produced.
 
 The current supported opcode vocabulary is limited:
@@ -6312,6 +6354,15 @@ The current supported opcode vocabulary is limited:
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
   that references a base type constructed from the supplied values.
+- ``DW_OP_LLVM_extract_bits_sext, 16, 8,`` specifies the offset and size
+  (``16`` and ``8`` here, respectively) of bits that are to be extracted and
+  sign-extended from the value at the top of the expression stack. If the top of
+  the expression stack is a memory location then these bits are extracted from
+  the value pointed to by that memory location. Maps into a ``DW_OP_shl``
+  followed by ``DW_OP_shra``.
+- ``DW_OP_LLVM_extract_bits_zext`` behaves similarly to
+  ``DW_OP_LLVM_extract_bits_sext``, but zero-extends instead of sign-extending.
+  Maps into a ``DW_OP_shl`` followed by ``DW_OP_shr``.
 - ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the
   given tag offset in an implementation-defined manner.
@@ -6380,23 +6431,24 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+      #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+    !20 = !DILocation(line: 10, scope: !12)
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+      #dbg_value(i32 4, !17,
+        !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
+        !21)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
-                        DW_OP_LLVM_implicit_pointer))
+    !21 = !DILocation(line: 10, scope: !12)
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -6407,45 +6459,48 @@ sense that a debugger might modify its value), whereas *implicit locations*
 describe merely the actual *value* of a source variable which might not exist
 in registers or in memory (see ``DW_OP_stack_value``).
 
-A ``llvm.dbg.declare`` intrinsic describes an indirect value (the address) of a
-source variable. The first operand of the intrinsic must be an address of some
-kind. A DIExpression attached to the intrinsic refines this address to produce a
+A ``#dbg_declare`` record describes an indirect value (the address) of a
+source variable. The first operand of the record must be an address of some
+kind. A DIExpression operand to the record refines this address to produce a
 concrete location for the source variable.
 
-A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
-The first operand of the intrinsic may be a direct or indirect value. A
-DIExpression attached to the intrinsic refines the first operand to produce a
+A ``#dbg_value`` record describes the direct value of a source variable.
+The first operand of the record may be a direct or indirect value. A
+DIExpression operand to the record refines the first operand to produce a
 direct value. For example, if the first operand is an indirect value, it may be
 necessary to insert ``DW_OP_deref`` into the DIExpression in order to produce a
-valid debug intrinsic.
+valid debug record.
 
 .. note::
 
    A DIExpression is interpreted in the same way regardless of which kind of
-   debug intrinsic it's attached to.
+   debug record it's attached to.
+
+   DIExpressions are always printed and parsed inline; they can never be
+   referenced by an ID (e.g. ``!1``).
 
 .. code-block:: text
 
-    !0 = !DIExpression(DW_OP_deref)
-    !1 = !DIExpression(DW_OP_plus_uconst, 3)
-    !1 = !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-    !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
-    !3 = !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
-    !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
-    !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
+    !DIExpression(DW_OP_deref)
+    !DIExpression(DW_OP_plus_uconst, 3)
+    !DIExpression(DW_OP_constu, 3, DW_OP_plus)
+    !DIExpression(DW_OP_bit_piece, 3, 7)
+    !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
+    !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
+    !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
 """"""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
-link together `@llvm.dbg.assign` intrinsics (:ref:`debug
-intrinsics<dbg_intrinsics>`) and instructions that store in IR. See `Debug Info
-Assignment Tracking <AssignmentTracking.html>`_ for more info.
+link together (:ref:`#dbg_assign records <debugrecords>`) and instructions
+that store in IR. See `Debug Info Assignment Tracking
+<AssignmentTracking.html>`_ for more info.
 
 .. code-block:: llvm
 
     store i32 %a, ptr %a.addr, align 4, !DIAssignID !2
-    llvm.dbg.assign(metadata %a, metadata !1, metadata !DIExpression(), !2, metadata %a.addr, metadata !DIExpression()), !dbg !3
+    #dbg_assign(%a, !1, !DIExpression(), !2, %a.addr, !DIExpression(), !3)
 
     !2 = distinct !DIAssignID()
 
@@ -6459,17 +6514,18 @@ DIArgList
    also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
-``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
+used in :ref:`debug records <debugrecords>` in combination with a
+``DIExpression`` that uses the
 ``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
 within a function, it must only be used as a function argument, must always be
 inlined, and cannot appear in named metadata.
 
 .. code-block:: text
 
-    llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %b),
-                   metadata !16,
-                   metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
+    #dbg_value(!DIArgList(i32 %a, i32 %b),
+               !16,
+               !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus),
+               !26)
 
 DIFlags
 """""""
@@ -11376,10 +11432,10 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. Note that the
-   object does not have to be live anymore; being in-bounds of a deallocated
-   object is sufficient.
+ * The base pointer has an *in bounds* address of the allocated object that it
+   is :ref:`based <pointeraliasing>` on. This means that it points into that
+   allocated object, or to its end. Note that the object does not have to be
+   live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
@@ -12948,12 +13004,12 @@ an extra level of indentation. As an example:
     #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
-These debug records are an optional replacement for
-:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
-``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
-records and intrinsics to appear in the same module. More information about
-debug records can be found in the `LLVM Source Level Debugging
-<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
+Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
+passed to LLVM; it is an error for both records and intrinsics to appear in the
+same module. More information about debug records can be found in the `LLVM
+Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
+document.
 
 .. _intrinsics:
 
@@ -14397,7 +14453,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
-                                                   i32 <bitmap-bytes>)
+                                                   i32 <bitmap-bits>)
 
 Overview:
 """""""""
@@ -14415,7 +14471,7 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
+The third argument is the number of bitmap bits required by the function to
 record the number of test vectors executed for each boolean expression.
 
 Semantics:
@@ -14427,52 +14483,6 @@ to generate the appropriate data structures and the code to instrument MC/DC
 test vectors in a format that can be written out by a compiler runtime and
 consumed via the ``llvm-profdata`` tool.
 
-'``llvm.instrprof.mcdc.condbitmap.update``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare void @llvm.instrprof.mcdc.condbitmap.update(ptr <name>, i64 <hash>,
-                                                          i32 <condition-id>,
-                                                          ptr <mcdc-temp-addr>,
-                                                          i1 <bool-value>)
-
-Overview:
-"""""""""
-
-The '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic is used to track
-MC/DC condition evaluation for each condition in a boolean expression.
-
-Arguments:
-""""""""""
-
-The first argument is a pointer to a global variable containing the
-name of the entity being instrumented. This should generally be the
-(mangled) function name for a set of counters.
-
-The second argument is a hash value that can be used by the consumer
-of the profile data to detect changes to the instrumented source.
-
-The third argument is an ID of a condition to track. This value is used as a
-bit index into the condition bitmap.
-
-The fourth argument is the address of the condition bitmap.
-
-The fifth argument is the boolean value representing the evaluation of the
-condition (true or false)
-
-Semantics:
-""""""""""
-
-This intrinsic represents the update of a condition bitmap that is local to a
-function and will cause the ``-instrprof`` pass to generate the code to
-instrument the control flow around each condition in a boolean expression. The
-ID of each condition corresponds to a bit index in the condition bitmap which
-is set based on the evaluation of the condition.
-
 '``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14482,7 +14492,6 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
-                                                        i32 <bitmap-bytes>)
                                                         i32 <bitmap-index>,
                                                         ptr <mcdc-temp-addr>)
 
@@ -14492,10 +14501,9 @@ Overview:
 The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
 test vector execution after each boolean expression has been fully executed.
 The overall value of the condition bitmap, after it has been successively
-updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
-the true or false evaluation of each condition, uniquely identifies an executed
-MC/DC test vector and is used as a bit index into the global test vector
-bitmap.
+updated with the true or false evaluation of each condition, uniquely identifies
+an executed MC/DC test vector and is used as a bit index into the global test
+vector bitmap.
 
 Arguments:
 """"""""""
@@ -14507,13 +14515,10 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
-record the number of test vectors executed for each boolean expression.
-
-The fourth argument is the byte index into the global test vector bitmap
+The third argument is the bit index into the global test vector bitmap
 corresponding to the function.
 
-The fifth argument is the address of the condition bitmap, which contains a
+The fourth argument is the address of the condition bitmap, which contains a
 value representing an executed MC/DC test vector. It is loaded and used as the
 bit index of the test vector bitmap.
 
@@ -15412,6 +15417,228 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``tan``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.asin.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.asin`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.asin.f32(float  %Val)
+      declare double    @llvm.asin.f64(double %Val)
+      declare x86_fp80  @llvm.asin.f80(x86_fp80  %Val)
+      declare fp128     @llvm.asin.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.asin.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.asin.*``' intrinsics return the arcsine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``asin``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.acos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.acos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.acos.f32(float  %Val)
+      declare double    @llvm.acos.f64(double %Val)
+      declare x86_fp80  @llvm.acos.f80(x86_fp80  %Val)
+      declare fp128     @llvm.acos.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.acos.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.acos.*``' intrinsics return the arccosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``acos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.atan.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.atan`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.atan.f32(float  %Val)
+      declare double    @llvm.atan.f64(double %Val)
+      declare x86_fp80  @llvm.atan.f80(x86_fp80  %Val)
+      declare fp128     @llvm.atan.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.atan.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.atan.*``' intrinsics return the arctangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``atan``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.sinh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sinh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.sinh.f32(float  %Val)
+      declare double    @llvm.sinh.f64(double %Val)
+      declare x86_fp80  @llvm.sinh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.sinh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.sinh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sinh.*``' intrinsics return the hyperbolic sine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``sinh``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.cosh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.cosh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.cosh.f32(float  %Val)
+      declare double    @llvm.cosh.f64(double %Val)
+      declare x86_fp80  @llvm.cosh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.cosh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.cosh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.cosh.*``' intrinsics return the hyperbolic cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``cosh``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.tanh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.tanh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.tanh.f32(float  %Val)
+      declare double    @llvm.tanh.f64(double %Val)
+      declare x86_fp80  @llvm.tanh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.tanh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.tanh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.tanh.*``' intrinsics return the hyperbolic tangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -26235,6 +26462,42 @@ same values as the libm ``cos`` functions would, and handles error
 conditions in the same way.
 
 
+'``llvm.experimental.constrained.tan``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.tan(<type> <op1>,
+                                         metadata <rounding mode>,
+                                         metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the tangent of the specified operand, returning the
+same values as the libm ``tan`` functions would, and handles error
+conditions in the same way.
+
+
 '``llvm.experimental.constrained.exp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -27935,7 +28198,7 @@ Syntax:
 
 ::
 
-      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) nounwind memory(argmem: read)
 
 Overview:
 """""""""
@@ -29096,7 +29359,7 @@ Lowering:
 Lowers to a call to `objc_storeWeak <https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-storeweak>`_.
 
 Preserving Debug Information Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
 These intrinsics are used to carry certain debuginfo together with
 IR-level operations. For example, it may be desirable to

@@ -181,10 +181,14 @@ public:
                           const Twine &N, Module &M);
 
   /// Creates a function with some attributes recorded in llvm.module.flags
-  /// applied.
+  /// and the LLVMContext applied.
   ///
   /// Use this when synthesizing new functions that need attributes that would
   /// have been set by command line options.
+  ///
+  /// This function should not be called from backends or the LTO pipeline. If
+  /// it is called from one of those places, some default attributes will not be
+  /// applied to the function.
   static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
                                          unsigned AddrSpace,
                                          const Twine &N = "",
@@ -654,7 +658,10 @@ public:
     return getUWTableKind() != UWTableKind::None;
   }
   void setUWTableKind(UWTableKind K) {
-    addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
+    if (K == UWTableKind::None)
+      removeFnAttr(Attribute::UWTable);
+    else
+      addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
   }
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {

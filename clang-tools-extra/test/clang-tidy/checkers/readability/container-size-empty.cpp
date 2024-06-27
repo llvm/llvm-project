@@ -889,3 +889,9 @@ namespace PR88203 {
     // CHECK-FIXES: {{^    }}if (s.empty()) {}{{$}}
   }
 }
+
+namespace PR94454 {
+  template <char...>
+  int operator""_ci() { return 0; }
+  auto eq = 0_ci == 0;
+}

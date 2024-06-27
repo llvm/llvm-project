@@ -712,19 +712,18 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
     if (const auto *TD = TNA.getAsTemplateDecl(); TD && TD->isTypeAlias())
       return TemplateDeductionResult::Success;
 
-    // Perform template argument deduction for the template name.
-    if (auto Result =
-            DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
-                                    SA->template_arguments(), Deduced);
-        Result != TemplateDeductionResult::Success)
-      return Result;
-
     // FIXME: To preserve sugar, the TST needs to carry sugared resolved
     // arguments.
     ArrayRef<TemplateArgument> AResolved =
         SA->getCanonicalTypeInternal()
             ->castAs<TemplateSpecializationType>()
             ->template_arguments();
+
+    // Perform template argument deduction for the template name.
+    if (auto Result = DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
+                                              AResolved, Deduced);
+        Result != TemplateDeductionResult::Success)
+      return Result;
 
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be
@@ -4501,7 +4500,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
 
   // Deduce an argument of type ParamType from an expression with index ArgIdx.
   auto DeduceCallArgument = [&](QualType ParamType, unsigned ArgIdx,
-                                bool ExplicitObjetArgument) {
+                                bool ExplicitObjectArgument) {
     // C++ [demp.deduct.call]p1: (DR1391)
     //   Template argument deduction is done by comparing each function template
     //   parameter that contains template-parameters that participate in
@@ -4509,7 +4508,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     if (!hasDeducibleTemplateParameters(*this, FunctionTemplate, ParamType))
       return TemplateDeductionResult::Success;
 
-    if (ExplicitObjetArgument) {
+    if (ExplicitObjectArgument) {
       //   ... with the type of the corresponding argument
       return DeduceTemplateArgumentsFromCallArgument(
           *this, TemplateParams, FirstInnerIndex, ParamType, ObjectType,
@@ -4544,14 +4543,14 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
 
       if (ParamIdx == 0 && HasExplicitObject) {
         if (auto Result = DeduceCallArgument(ParamType, 0,
-                                             /*ExplicitObjetArgument=*/true);
+                                             /*ExplicitObjectArgument=*/true);
             Result != TemplateDeductionResult::Success)
           return Result;
         continue;
       }
 
       if (auto Result = DeduceCallArgument(ParamType, ArgIdx++,
-                                           /*ExplicitObjetArgument=*/false);
+                                           /*ExplicitObjectArgument=*/false);
           Result != TemplateDeductionResult::Success)
         return Result;
 
@@ -4586,7 +4585,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
            PackScope.nextPackElement(), ++ArgIdx) {
         ParamTypesForArgChecking.push_back(ParamPattern);
         if (auto Result = DeduceCallArgument(ParamPattern, ArgIdx,
-                                             /*ExplicitObjetArgument=*/false);
+                                             /*ExplicitObjectArgument=*/false);
             Result != TemplateDeductionResult::Success)
           return Result;
       }
@@ -4626,8 +4625,9 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
         unsigned PackArgEnd = ArgIdx + *ArgPosAfterSubstitution;
         for (; ArgIdx < PackArgEnd && ArgIdx < Args.size(); ArgIdx++) {
           ParamTypesForArgChecking.push_back(ParamPattern);
-          if (auto Result = DeduceCallArgument(ParamPattern, ArgIdx,
-                                               /*ExplicitObjetArgument=*/false);
+          if (auto Result =
+                  DeduceCallArgument(ParamPattern, ArgIdx,
+                                     /*ExplicitObjectArgument=*/false);
               Result != TemplateDeductionResult::Success)
             return Result;
 
@@ -5133,6 +5133,20 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     return true;
   MultiLevelTemplateArgumentList MLTAL(Concept, CanonicalConverted,
                                        /*Final=*/false);
+  // Build up an EvaluationContext with an ImplicitConceptSpecializationDecl so
+  // that the template arguments of the constraint can be preserved. For
+  // example:
+  //
+  //  template <class T>
+  //  concept C = []<D U = void>() { return true; }();
+  //
+  // We need the argument for T while evaluating type constraint D in
+  // building the CallExpr to the lambda.
+  EnterExpressionEvaluationContext EECtx(
+      S, Sema::ExpressionEvaluationContext::Unevaluated,
+      ImplicitConceptSpecializationDecl::Create(
+          S.getASTContext(), Concept->getDeclContext(), Concept->getLocation(),
+          CanonicalConverted));
   if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
                                     MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
@@ -5404,7 +5418,8 @@ TypeSourceInfo *Sema::ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
       .TransformType(TypeWithAuto);
 }
 
-void Sema::DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init) {
+void Sema::DiagnoseAutoDeductionFailure(const VarDecl *VDecl,
+                                        const Expr *Init) {
   if (isa<InitListExpr>(Init))
     Diag(VDecl->getLocation(),
          VDecl->isInitCapture()

@@ -31,6 +31,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -840,14 +841,15 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     }
 
     if (const auto *ABIAttr = dyn_cast<ParameterABIAttr>(TmplAttr)) {
-      AddParameterABIAttr(New, *ABIAttr, ABIAttr->getABI());
+      Swift().AddParameterABIAttr(New, *ABIAttr, ABIAttr->getABI());
       continue;
     }
 
     if (isa<NSConsumedAttr>(TmplAttr) || isa<OSConsumedAttr>(TmplAttr) ||
         isa<CFConsumedAttr>(TmplAttr)) {
-      AddXConsumedAttr(New, *TmplAttr, attrToRetainOwnershipKind(TmplAttr),
-                       /*template instantiation=*/true);
+      ObjC().AddXConsumedAttr(New, *TmplAttr,
+                              attrToRetainOwnershipKind(TmplAttr),
+                              /*template instantiation=*/true);
       continue;
     }
 

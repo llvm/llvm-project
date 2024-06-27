@@ -86,7 +86,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -1109,6 +1111,31 @@ void ASTContext::setCurrentNamedModule(Module *M) {
   CurrentCXXNamedModule = M;
 }
 
+bool ASTContext::isInSameModule(const Module *M1, const Module *M2) {
+  if (!M1 != !M2)
+    return false;
+
+  /// Get the representative module for M. The representative module is the
+  /// first module unit for a specific primary module name. So that the module
+  /// units have the same representative module belongs to the same module.
+  ///
+  /// The process is helpful to reduce the expensive string operations.
+  auto GetRepresentativeModule = [this](const Module *M) {
+    auto Iter = SameModuleLookupSet.find(M);
+    if (Iter != SameModuleLookupSet.end())
+      return Iter->second;
+
+    const Module *RepresentativeModule =
+        PrimaryModuleNameMap.try_emplace(M->getPrimaryModuleInterfaceName(), M)
+            .first->second;
+    SameModuleLookupSet[M] = RepresentativeModule;
+    return RepresentativeModule;
+  };
+
+  assert(M1 && "Shouldn't call `isInSameModule` if both M1 and M2 are none.");
+  return GetRepresentativeModule(M1) == GetRepresentativeModule(M2);
+}
+
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
   if (!ExternCContext)
     ExternCContext = ExternCContextDecl::Create(*this, getTranslationUnitDecl());
@@ -1382,6 +1409,13 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #define WASM_TYPE(Name, Id, SingletonId)                                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+  }
+
+  if (Target.getTriple().isAMDGPU() ||
+      (AuxTarget && AuxTarget->getTriple().isAMDGPU())) {
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AMDGPUTypes.def"
   }
 
   // Builtin type for __objc_yes and __objc_no
@@ -2200,6 +2234,13 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 8;                                                                 \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_OPAQUE_PTR_TYPE(NAME, MANGLEDNAME, AS, WIDTH, ALIGN, ID,        \
+                               SINGLETONID)                                    \
+  case BuiltinType::ID:                                                        \
+    Width = WIDTH;                                                             \
+    Align = ALIGN;                                                             \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -3086,6 +3127,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return getExtQualType(TypeNode, Quals);
   else
     return QualType(TypeNode, Quals.getFastQualifiers());
+}
+
+uint16_t
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+  assert(RD->isPolymorphic() &&
+         "Attempted to get vtable pointer discriminator on a monomorphic type");
+  std::unique_ptr<MangleContext> MC(createMangleContext());
+  SmallString<256> Str;
+  llvm::raw_svector_ostream Out(Str);
+  MC->mangleCXXVTable(RD, Out);
+  return llvm::getPointerAuthStableSipHash(Str);
 }
 
 QualType ASTContext::getObjCGCQualType(QualType T,
@@ -4561,11 +4613,13 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
+      FunctionEffect, EffectConditionExpr, Qualifiers>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.ExtParameterInfos ? NumArgs : 0, EPI.FunctionEffects.size(),
+      EPI.FunctionEffects.conditions().size(),
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
@@ -5925,11 +5979,9 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
   return T;
 }
 
-/// Return the uniqued reference to the deduced template specialization type
-/// which has been deduced to the given type, or to the canonical undeduced
-/// such type, or the canonical deduced-but-dependent such type.
-QualType ASTContext::getDeducedTemplateSpecializationType(
-    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
+    TemplateName Template, QualType DeducedType, bool IsDependent,
+    QualType Canon) const {
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -5940,13 +5992,28 @@ QualType ASTContext::getDeducedTemplateSpecializationType(
     return QualType(DTST, 0);
 
   auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
-      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent);
+      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent,
+                                        Canon);
   llvm::FoldingSetNodeID TempID;
   DTST->Profile(TempID);
   assert(ID == TempID && "ID does not match");
   Types.push_back(DTST);
   DeducedTemplateSpecializationTypes.InsertNode(DTST, InsertPos);
   return QualType(DTST, 0);
+}
+
+/// Return the uniqued reference to the deduced template specialization type
+/// which has been deduced to the given type, or to the canonical undeduced
+/// such type, or the canonical deduced-but-dependent such type.
+QualType ASTContext::getDeducedTemplateSpecializationType(
+    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+  QualType Canon = DeducedType.isNull()
+                       ? getDeducedTemplateSpecializationTypeInternal(
+                             getCanonicalTemplateName(Template), QualType(),
+                             IsDependent, QualType())
+                       : DeducedType.getCanonicalType();
+  return getDeducedTemplateSpecializationTypeInternal(Template, DeducedType,
+                                                      IsDependent, Canon);
 }
 
 /// getAtomicType - Return the uniqued reference to the atomic type for
@@ -8155,6 +8222,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
@@ -10495,6 +10564,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
 
+  std::optional<FunctionEffectSet> MergedFX;
+
   if (lproto && rproto) { // two C99 style function prototypes
     assert((AllowCXX ||
             (!lproto->hasExceptionSpec() && !rproto->hasExceptionSpec())) &&
@@ -10509,6 +10580,25 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
+
+    // Function effects are handled similarly to noreturn, see above.
+    FunctionEffectsRef LHSFX = lproto->getFunctionEffects();
+    FunctionEffectsRef RHSFX = rproto->getFunctionEffects();
+    if (LHSFX != RHSFX) {
+      if (IsConditionalOperator)
+        MergedFX = FunctionEffectSet::getIntersection(LHSFX, RHSFX);
+      else {
+        FunctionEffectSet::Conflicts Errs;
+        MergedFX = FunctionEffectSet::getUnion(LHSFX, RHSFX, Errs);
+        // Here we're discarding a possible error due to conflicts in the effect
+        // sets. But we're not in a context where we can report it. The
+        // operation does however guarantee maintenance of invariants.
+      }
+      if (*MergedFX != LHSFX)
+        allLTypes = false;
+      if (*MergedFX != RHSFX)
+        allRTypes = false;
+    }
 
     SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
     bool canUseLeft, canUseRight;
@@ -10553,6 +10643,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     EPI.ExtInfo = einfo;
     EPI.ExtParameterInfos =
         newParamInfos.empty() ? nullptr : newParamInfos.data();
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, types, EPI);
   }
 
@@ -10590,6 +10682,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, proto->getParamTypes(), EPI);
   }
 
@@ -11516,6 +11610,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.SveCountTy;
       break;
     }
+    case 'b': {
+      Type = Context.AMDGPUBufferRsrcTy;
+      break;
+    }
     default:
       llvm_unreachable("Unexpected target builtin type");
     }
@@ -12018,7 +12116,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  if (VD->shouldEmitInExternalSource())
     return false;
 
   // Variables that can be needed in other TUs are required.
@@ -13663,17 +13761,16 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
   }
 }
 
-std::vector<std::string> ASTContext::filterFunctionTargetVersionAttrs(
-    const TargetVersionAttr *TV) const {
-  assert(TV != nullptr);
-  llvm::SmallVector<StringRef, 8> Feats;
-  std::vector<std::string> ResFeats;
-  TV->getFeatures(Feats);
-  for (auto &Feature : Feats)
-    if (Target->validateCpuSupports(Feature.str()))
-      // Use '?' to mark features that came from TargetVersion.
-      ResFeats.push_back("?" + Feature.str());
-  return ResFeats;
+// Given a list of FMV features, return a concatenated list of the
+// corresponding backend features (which may contain duplicates).
+static std::vector<std::string> getFMVBackendFeaturesFor(
+    const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
+  std::vector<std::string> BackendFeats;
+  for (StringRef F : FMVFeatStrings)
+    if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
+      for (StringRef F : FMVExt->getImpliedFeatures())
+        BackendFeats.push_back(F.str());
+  return BackendFeats;
 }
 
 ParsedTargetAttr
@@ -13708,10 +13805,12 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    ParsedAttr.Features.insert(
-        ParsedAttr.Features.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.end());
+    // AArch64 handles command line option features in parseTargetAttr().
+    if (!Target->getTriple().isAArch64())
+      ParsedAttr.Features.insert(
+          ParsedAttr.Features.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.end());
 
     if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
       TargetCPU = ParsedAttr.CPU;
@@ -13732,32 +13831,31 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                     Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
-    std::vector<std::string> Features;
     if (Target->getTriple().isAArch64()) {
-      // TargetClones for AArch64
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-      for (StringRef Feat : Feats)
-        if (Target->validateCpuSupports(Feat.str()))
-          // Use '?' to mark features that came from AArch64 TargetClones.
-          Features.push_back("?" + Feat.str());
+      std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
+      std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    std::vector<std::string> Feats = filterFunctionTargetVersionAttrs(TV);
-    Feats.insert(Feats.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.end());
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Feats);
+    llvm::SmallVector<StringRef, 8> Feats;
+    TV->getFeatures(Feats);
+    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    Features.insert(Features.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.end());
+    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }
@@ -13807,4 +13905,75 @@ StringRef ASTContext::getCUIDHash() const {
     return StringRef();
   CUIDHash = llvm::utohexstr(llvm::MD5Hash(LangOpts.CUID), /*LowerCase=*/true);
   return CUIDHash;
+}
+
+const CXXRecordDecl *
+ASTContext::baseForVTableAuthentication(const CXXRecordDecl *ThisClass) {
+  assert(ThisClass);
+  assert(ThisClass->isPolymorphic());
+  const CXXRecordDecl *PrimaryBase = ThisClass;
+  while (1) {
+    assert(PrimaryBase);
+    assert(PrimaryBase->isPolymorphic());
+    auto &Layout = getASTRecordLayout(PrimaryBase);
+    auto Base = Layout.getPrimaryBase();
+    if (!Base || Base == PrimaryBase || !Base->isPolymorphic())
+      break;
+    PrimaryBase = Base;
+  }
+  return PrimaryBase;
+}
+
+bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
+                                         StringRef MangledName) {
+  auto *Method = cast<CXXMethodDecl>(VirtualMethodDecl.getDecl());
+  assert(Method->isVirtual());
+  bool DefaultIncludesPointerAuth =
+      LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
+
+  if (!DefaultIncludesPointerAuth)
+    return true;
+
+  auto Existing = ThunksToBeAbbreviated.find(VirtualMethodDecl);
+  if (Existing != ThunksToBeAbbreviated.end())
+    return Existing->second.contains(MangledName.str());
+
+  std::unique_ptr<MangleContext> Mangler(createMangleContext());
+  llvm::StringMap<llvm::SmallVector<std::string, 2>> Thunks;
+  auto VtableContext = getVTableContext();
+  if (const auto *ThunkInfos = VtableContext->getThunkInfo(VirtualMethodDecl)) {
+    auto *Destructor = dyn_cast<CXXDestructorDecl>(Method);
+    for (const auto &Thunk : *ThunkInfos) {
+      SmallString<256> ElidedName;
+      llvm::raw_svector_ostream ElidedNameStream(ElidedName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ true,
+                                    ElidedNameStream);
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ true,
+                             ElidedNameStream);
+      SmallString<256> MangledName;
+      llvm::raw_svector_ostream mangledNameStream(MangledName);
+      if (Destructor)
+        Mangler->mangleCXXDtorThunk(Destructor, VirtualMethodDecl.getDtorType(),
+                                    Thunk, /* elideOverrideInfo */ false,
+                                    mangledNameStream);
+      else
+        Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
+                             mangledNameStream);
+
+      if (Thunks.find(ElidedName) == Thunks.end())
+        Thunks[ElidedName] = {};
+      Thunks[ElidedName].push_back(std::string(MangledName));
+    }
+  }
+  llvm::StringSet<> SimplifiedThunkNames;
+  for (auto &ThunkList : Thunks) {
+    llvm::sort(ThunkList.second);
+    SimplifiedThunkNames.insert(ThunkList.second[0]);
+  }
+  bool Result = SimplifiedThunkNames.contains(MangledName);
+  ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
+  return Result;
 }

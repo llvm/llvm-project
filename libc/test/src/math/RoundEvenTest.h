@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDEVENTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDEVENTEST_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -60,22 +61,25 @@ public:
     EXPECT_FP_EQ(T(-2.0), func(T(-1.75)));
     EXPECT_FP_EQ(T(11.0), func(T(10.65)));
     EXPECT_FP_EQ(T(-11.0), func(T(-10.65)));
-    EXPECT_FP_EQ(T(1233.0), func(T(1233.25)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1233.50)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1233.75)));
-    EXPECT_FP_EQ(T(-1233.0), func(T(-1233.25)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1233.50)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1233.75)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.50)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.50)));
+    EXPECT_FP_EQ(T(123.0), func(T(123.25)));
+    EXPECT_FP_EQ(T(124.0), func(T(123.50)));
+    EXPECT_FP_EQ(T(124.0), func(T(123.75)));
+    EXPECT_FP_EQ(T(-123.0), func(T(-123.25)));
+    EXPECT_FP_EQ(T(-124.0), func(T(-123.50)));
+    EXPECT_FP_EQ(T(-124.0), func(T(-123.75)));
+    EXPECT_FP_EQ(T(124.0), func(T(124.50)));
+    EXPECT_FP_EQ(T(-124.0), func(T(-124.50)));
   }
 
   void testRange(RoundEvenFunc func) {
-    constexpr StorageType COUNT = 100'000;
-    constexpr StorageType STEP = STORAGE_MAX / COUNT;
-    for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-      T x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
+    constexpr int COUNT = 100'000;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0;
+    for (int i = 0; i <= COUNT; ++i, v += STEP) {
+      FPBits xbits(v);
+      T x = xbits.get_val();
+      if (xbits.is_inf_or_nan())
         continue;
 
       ASSERT_MPFR_MATCH(mpfr::Operation::RoundEven, x, func(x), 0.0);

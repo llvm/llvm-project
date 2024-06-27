@@ -29,6 +29,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -676,7 +677,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
             .second;
     if (keepGroup) {
-      if (config->relocatable)
+      if (!config->resolveGroups)
         this->sections[i] = createInputSection(
             i, sec, check(obj.getSectionName(sec, shstrtab)));
       continue;
@@ -844,6 +845,16 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
+    case SHT_LLVM_LTO:
+      // Discard .llvm.lto in a relocatable link that does not use the bitcode.
+      // The concatenated output does not properly reflect the linking
+      // semantics. In addition, since we do not use the bitcode wrapper format,
+      // the concatenated raw bitcode would be invalid.
+      if (config->relocatable && !config->fatLTOObjects) {
+        sections[i] = &InputSection::discarded;
+        break;
+      }
+      [[fallthrough]];
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
@@ -876,7 +887,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // We handle that situation gracefully by discarding dangling relocation
       // sections.
       const uint32_t info = sec.sh_info;
-      InputSectionBase *s = getRelocTarget(i, sec, info);
+      InputSectionBase *s = getRelocTarget(i, info);
       if (!s)
         continue;
 
@@ -1013,9 +1024,7 @@ void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
-                                                const Elf_Shdr &sec,
-                                                uint32_t info) {
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
 

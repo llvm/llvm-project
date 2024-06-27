@@ -8,8 +8,8 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that DW_AT_low_pc/DW_AT_high_pc is converted to DW_AT_low_pc/DW_AT_ranges.
-# Checks that DW_AT_rnglists_base is inserted, and that correct address is used.
+## This tests checks that DW_AT_low_pc/DW_AT_high_pc is converted to DW_AT_low_pc/DW_AT_ranges.
+## Checks that DW_AT_rnglists_base is inserted, and that correct address is used.
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_AT_low_pc

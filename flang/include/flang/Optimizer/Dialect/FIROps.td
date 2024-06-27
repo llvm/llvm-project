@@ -1171,6 +1171,23 @@ def fir_BoxIsArrayOp : fir_SimpleOp<"box_isarray", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
+  let summary = "detect if a boxed value is an assumed-size array";
+
+  let description = [{
+    Fir box SSA values may describe assumed-size arrays. This operation
+    allows detecting this, even for assumed-rank box.
+
+    ```
+      %a = fir.is_assumed_size %b : (!fir.box<!fir.array<*:f64>>) -> i1
+    ```
+  }];
+
+  let arguments = (ins BoxOrClassType:$val);
+
+  let results = (outs BoolLike);
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -1694,6 +1711,7 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
@@ -2107,8 +2125,8 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def fir_DoLoopOp : region_Op<"do_loop",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getYieldedValuesMutable"]>]> {
   let summary = "generalized loop operation";
   let description = [{
@@ -2138,9 +2156,12 @@ def fir_DoLoopOp : region_Op<"do_loop",
     Index:$lowerBound,
     Index:$upperBound,
     Index:$step,
+    Variadic<AnyType>:$reduceOperands,
     Variadic<AnyType>:$initArgs,
     OptionalAttr<UnitAttr>:$unordered,
-    OptionalAttr<UnitAttr>:$finalValue
+    OptionalAttr<UnitAttr>:$finalValue,
+    OptionalAttr<ArrayAttr>:$reduceAttrs,
+    OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -2151,6 +2172,8 @@ def fir_DoLoopOp : region_Op<"do_loop",
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
       CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
+      CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
+      CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -2163,11 +2186,12 @@ def fir_DoLoopOp : region_Op<"do_loop",
       return getBody()->getArguments().drop_front();
     }
     mlir::Operation::operand_range getIterOperands() {
-      return getOperands().drop_front(getNumControlOperands());
+      return getOperands()
+          .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
     llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
-      return
-          getOperation()->getOpOperands().drop_front(getNumControlOperands());
+      return getOperation()->getOpOperands()
+          .drop_front(getNumControlOperands() + getNumReduceOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2182,11 +2206,25 @@ def fir_DoLoopOp : region_Op<"do_loop",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return (*this)->getNumOperands() > getNumControlOperands();
+      return getNumIterOperands() > 0;
+    }
+    /// Does the operation hold operands for reduction variables
+    bool hasReduceOperands() {
+      return getNumReduceOperands() > 0;
+    }
+    /// Get Number of variadic operands
+    unsigned getNumOperands(unsigned idx) {
+      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
+        getOperandSegmentSizeAttr());
+      return static_cast<unsigned>(segments[idx]);
+    }
+    // Get Number of reduction operands
+    unsigned getNumReduceOperands() {
+      return getNumOperands(3);
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return (*this)->getNumOperands() - getNumControlOperands();
+      return getNumOperands(4);
     }
 
     /// Get the body of the loop
@@ -2376,7 +2414,8 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath
+                      "::mlir::arith::FastMathFlags::none">:$fastmath,
+    UnitAttr:$is_bind_c
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2782,7 +2821,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
     OptionalAttr<StrAttr>:$linkName,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AtMostRegion<1>:$region);

@@ -45,6 +45,7 @@
 #include <functional>
 #include <limits>
 #include <numeric>
+#include <stack>
 #include <string>
 
 #define DEBUG_TYPE "bolt"
@@ -3641,8 +3642,8 @@ bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
 
 BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
   BasicBlockListType DFS;
-  unsigned Index = 0;
   std::stack<BinaryBasicBlock *> Stack;
+  std::set<BinaryBasicBlock *> Visited;
 
   // Push entry points to the stack in reverse order.
   //
@@ -3659,17 +3660,13 @@ BinaryFunction::BasicBlockListType BinaryFunction::dfs() const {
   for (BinaryBasicBlock *const BB : reverse(EntryPoints))
     Stack.push(BB);
 
-  for (BinaryBasicBlock &BB : blocks())
-    BB.setLayoutIndex(BinaryBasicBlock::InvalidIndex);
-
   while (!Stack.empty()) {
     BinaryBasicBlock *BB = Stack.top();
     Stack.pop();
 
-    if (BB->getLayoutIndex() != BinaryBasicBlock::InvalidIndex)
+    if (Visited.find(BB) != Visited.end())
       continue;
-
-    BB->setLayoutIndex(Index++);
+    Visited.insert(BB);
     DFS.push_back(BB);
 
     for (BinaryBasicBlock *SuccBB : BB->landing_pads()) {

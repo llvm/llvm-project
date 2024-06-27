@@ -546,9 +546,9 @@ function(add_compiler_rt_install_targets name)
                               -DCMAKE_INSTALL_DO_STRIP=1
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     set_target_properties(install-${ARG_PARENT_TARGET} PROPERTIES
-                          FOLDER "Compiler-RT Misc")
+                          FOLDER "Compiler-RT/Installation")
     set_target_properties(install-${ARG_PARENT_TARGET}-stripped PROPERTIES
-                          FOLDER "Compiler-RT Misc")
+                          FOLDER "Compiler-RT/Installation")
     add_dependencies(install-compiler-rt install-${ARG_PARENT_TARGET})
     add_dependencies(install-compiler-rt-stripped install-${ARG_PARENT_TARGET}-stripped)
   endif()

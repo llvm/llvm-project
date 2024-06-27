@@ -13,6 +13,8 @@
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 
 namespace clang {
@@ -235,6 +237,64 @@ bool SemaMIPS::CheckMipsBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
 
   return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u) ||
          SemaRef.BuiltinConstantArgMultiple(TheCall, i, m);
+}
+
+void SemaMIPS::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
+  // Only one optional argument permitted.
+  if (AL.getNumArgs() > 1) {
+    Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 1;
+    return;
+  }
+
+  StringRef Str;
+  SourceLocation ArgLoc;
+
+  if (AL.getNumArgs() == 0)
+    Str = "";
+  else if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
+    return;
+
+  // Semantic checks for a function with the 'interrupt' attribute for MIPS:
+  // a) Must be a function.
+  // b) Must have no parameters.
+  // c) Must have the 'void' return type.
+  // d) Cannot have the 'mips16' attribute, as that instruction set
+  //    lacks the 'eret' instruction.
+  // e) The attribute itself must either have no argument or one of the
+  //    valid interrupt types, see [MipsInterruptDocs].
+
+  if (!isFuncOrMethodForAttrSubject(D)) {
+    Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedFunctionOrMethod;
+    return;
+  }
+
+  if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
+    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
+        << /*MIPS*/ 0 << 0;
+    return;
+  }
+
+  if (!getFunctionOrMethodResultType(D)->isVoidType()) {
+    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
+        << /*MIPS*/ 0 << 1;
+    return;
+  }
+
+  // We still have to do this manually because the Interrupt attributes are
+  // a bit special due to sharing their spellings across targets.
+  if (checkAttrMutualExclusion<Mips16Attr>(*this, D, AL))
+    return;
+
+  MipsInterruptAttr::InterruptType Kind;
+  if (!MipsInterruptAttr::ConvertStrToInterruptType(Str, Kind)) {
+    Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << "'" + std::string(Str) + "'";
+    return;
+  }
+
+  D->addAttr(::new (getASTContext())
+                 MipsInterruptAttr(getASTContext(), AL, Kind));
 }
 
 } // namespace clang

@@ -643,82 +643,6 @@ Error RewriteInstance::discoverStorage() {
   return Error::success();
 }
 
-void RewriteInstance::parseBuildID() {
-  if (!BuildIDSection)
-    return;
-
-  StringRef Buf = BuildIDSection->getContents();
-
-  // Reading notes section (see Portable Formats Specification, Version 1.1,
-  // pg 2-5, section "Note Section").
-  DataExtractor DE =
-      DataExtractor(Buf,
-                    /*IsLittleEndian=*/true, InputFile->getBytesInAddress());
-  uint64_t Offset = 0;
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t NameSz = DE.getU32(&Offset);
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t DescSz = DE.getU32(&Offset);
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t Type = DE.getU32(&Offset);
-
-  LLVM_DEBUG(dbgs() << "NameSz = " << NameSz << "; DescSz = " << DescSz
-                    << "; Type = " << Type << "\n");
-
-  // Type 3 is a GNU build-id note section
-  if (Type != 3)
-    return;
-
-  StringRef Name = Buf.slice(Offset, Offset + NameSz);
-  Offset = alignTo(Offset + NameSz, 4);
-  if (Name.substr(0, 3) != "GNU")
-    return;
-
-  BuildID = Buf.slice(Offset, Offset + DescSz);
-}
-
-std::optional<std::string> RewriteInstance::getPrintableBuildID() const {
-  if (BuildID.empty())
-    return std::nullopt;
-
-  std::string Str;
-  raw_string_ostream OS(Str);
-  const unsigned char *CharIter = BuildID.bytes_begin();
-  while (CharIter != BuildID.bytes_end()) {
-    if (*CharIter < 0x10)
-      OS << "0";
-    OS << Twine::utohexstr(*CharIter);
-    ++CharIter;
-  }
-  return OS.str();
-}
-
-void RewriteInstance::patchBuildID() {
-  raw_fd_ostream &OS = Out->os();
-
-  if (BuildID.empty())
-    return;
-
-  size_t IDOffset = BuildIDSection->getContents().rfind(BuildID);
-  assert(IDOffset != StringRef::npos && "failed to patch build-id");
-
-  uint64_t FileOffset = getFileOffsetForAddress(BuildIDSection->getAddress());
-  if (!FileOffset) {
-    BC->errs()
-        << "BOLT-WARNING: Non-allocatable build-id will not be updated.\n";
-    return;
-  }
-
-  char LastIDByte = BuildID[BuildID.size() - 1];
-  LastIDByte ^= 1;
-  OS.pwrite(&LastIDByte, 1, FileOffset + IDOffset + BuildID.size() - 1);
-
-  BC->outs() << "BOLT-INFO: patched build-id (flipped last bit)\n";
-}
-
 Error RewriteInstance::run() {
   assert(BC && "failed to create a binary context");
 
@@ -1977,7 +1901,6 @@ Error RewriteInstance::readSpecialSections() {
       ".rela" + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
-  BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
 
   if (ErrorOr<BinarySection &> BATSec =
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
@@ -2035,10 +1958,7 @@ Error RewriteInstance::readSpecialSections() {
     report_error("expected valid eh_frame section", EHFrameOrError.takeError());
   CFIRdWrt.reset(new CFIReaderWriter(*BC, *EHFrameOrError.get()));
 
-  // Parse build-id
-  parseBuildID();
-  if (std::optional<std::string> FileBuildID = getPrintableBuildID())
-    BC->setFileBuildID(*FileBuildID);
+  processSectionMetadata();
 
   // Read .dynamic/PT_DYNAMIC.
   return readELFDynamic();
@@ -3218,14 +3138,20 @@ void RewriteInstance::initializeMetadataManager() {
   if (BC->IsLinuxKernel)
     MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
 
+  MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
+
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
 }
 
-void RewriteInstance::processMetadataPreCFG() {
+void RewriteInstance::processSectionMetadata() {
   initializeMetadataManager();
 
+  MetadataManager.runSectionInitializers();
+}
+
+void RewriteInstance::processMetadataPreCFG() {
   MetadataManager.runInitializersPreCFG();
 
   processProfileDataPreCFG();
@@ -5771,8 +5697,6 @@ void RewriteInstance::rewriteFile() {
 
   // Update symbol tables.
   patchELFSymTabs();
-
-  patchBuildID();
 
   if (opts::EnableBAT)
     encodeBATSection();

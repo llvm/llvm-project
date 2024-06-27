@@ -1335,6 +1335,26 @@ fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewShape(int rank) const {
   return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
 }
 
+fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
+    fir::BaseBoxType::Attribute attr) const {
+  mlir::Type baseType = fir::unwrapRefType(getEleTy());
+  switch (attr) {
+  case fir::BaseBoxType::Attribute::None:
+    break;
+  case fir::BaseBoxType::Attribute::Allocatable:
+    baseType = fir::HeapType::get(baseType);
+    break;
+  case fir::BaseBoxType::Attribute::Pointer:
+    baseType = fir::PointerType::get(baseType);
+    break;
+  }
+  return llvm::TypeSwitch<fir::BaseBoxType, fir::BaseBoxType>(*this)
+      .Case<fir::BoxType>(
+          [baseType](auto) { return fir::BoxType::get(baseType); })
+      .Case<fir::ClassType>(
+          [baseType](auto) { return fir::ClassType::get(baseType); });
+}
+
 bool fir::BaseBoxType::isAssumedRank() const {
   if (auto seqTy =
           mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(getEleTy())))

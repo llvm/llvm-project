@@ -36,7 +36,7 @@ void Test() {
 
   constexpr U0 u0a{};
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0a 'const U0' constexpr listinit
-  // CHECK-NEXT:  |   |-value: Union None
+  // CHECK-NEXT:  |   |-value: Union .U0::(anonymous union at {{.*}}) Union .f Float 3.141500e+00
 
   constexpr U0 u0b{3.1415f};
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} u0b 'const U0' constexpr listinit

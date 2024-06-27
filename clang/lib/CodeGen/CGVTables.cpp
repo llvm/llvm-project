@@ -95,7 +95,7 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
       CGF,
       Address(ReturnValue, CGF.ConvertTypeForMem(ResultType->getPointeeType()),
               ClassAlign),
-      Thunk.Return);
+      ClassDecl, Thunk.Return);
 
   if (NullCheckValue) {
     CGF.Builder.CreateBr(AdjustEnd);
@@ -219,8 +219,10 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
          "Store of this should be in entry block?");
   // Adjust "this", if necessary.
   Builder.SetInsertPoint(&*ThisStore);
-  llvm::Value *AdjustedThisPtr =
-      CGM.getCXXABI().performThisAdjustment(*this, ThisPtr, Thunk.This);
+
+  const CXXRecordDecl *ThisValueClass = Thunk.ThisType->getPointeeCXXRecordDecl();
+  llvm::Value *AdjustedThisPtr = CGM.getCXXABI().performThisAdjustment(
+      *this, ThisPtr, ThisValueClass, Thunk);
   AdjustedThisPtr = Builder.CreateBitCast(AdjustedThisPtr,
                                           ThisStore->getOperand(0)->getType());
   ThisStore->setOperand(0, AdjustedThisPtr);
@@ -307,10 +309,15 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CurGD.getDecl());
 
   // Adjust the 'this' pointer if necessary
+  const CXXRecordDecl *ThisValueClass =
+      MD->getThisType()->getPointeeCXXRecordDecl();
+  if (Thunk)
+    ThisValueClass = Thunk->ThisType->getPointeeCXXRecordDecl();
+
   llvm::Value *AdjustedThisPtr =
-    Thunk ? CGM.getCXXABI().performThisAdjustment(
-                          *this, LoadCXXThisAddress(), Thunk->This)
-          : LoadCXXThis();
+      Thunk ? CGM.getCXXABI().performThisAdjustment(*this, LoadCXXThisAddress(),
+                                                    ThisValueClass, *Thunk)
+            : LoadCXXThis();
 
   // If perfect forwarding is required a variadic method, a method using
   // inalloca, or an unprototyped thunk, use musttail. Emit an error if this
@@ -504,10 +511,22 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
   SmallString<256> Name;
   MangleContext &MCtx = CGM.getCXXABI().getMangleContext();
   llvm::raw_svector_ostream Out(Name);
-  if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD))
-    MCtx.mangleCXXDtorThunk(DD, GD.getDtorType(), TI.This, Out);
-  else
-    MCtx.mangleThunk(MD, TI, Out);
+
+  if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
+    MCtx.mangleCXXDtorThunk(DD, GD.getDtorType(), TI,
+                            /* elideOverrideInfo */ false, Out);
+  } else
+    MCtx.mangleThunk(MD, TI, /* elideOverrideInfo */ false, Out);
+
+  if (CGM.getContext().useAbbreviatedThunkName(GD, Name.str())) {
+    Name = "";
+    if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD))
+      MCtx.mangleCXXDtorThunk(DD, GD.getDtorType(), TI,
+                              /* elideOverrideInfo */ true, Out);
+    else
+      MCtx.mangleThunk(MD, TI, /* elideOverrideInfo */ true, Out);
+  }
+
   llvm::Type *ThunkVTableTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
   llvm::Constant *Thunk = CGM.GetAddrOfThunk(Name, ThunkVTableTy, GD);
 
@@ -819,11 +838,17 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
       nextVTableThunkIndex++;
       fnPtr = maybeEmitThunk(GD, thunkInfo, /*ForVTable=*/true);
+      if (CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+        assert(thunkInfo.Method &&  "Method not set");
+        GD = GD.getWithDecl(thunkInfo.Method);
+      }
 
     // Otherwise we can use the method definition directly.
     } else {
       llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
       fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
+      if (CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
+        GD = getItaniumVTableContext().findOriginalMethod(GD);
     }
 
     if (useRelativeLayout()) {
@@ -841,6 +866,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (FnAS != GVAS)
         fnPtr =
             llvm::ConstantExpr::getAddrSpaceCast(fnPtr, CGM.GlobalsInt8PtrTy);
+      if (const auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
+        return builder.addSignedPointer(fnPtr, Schema, GD, QualType());
       return builder.add(fnPtr);
     }
   }
@@ -1051,6 +1079,11 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
 
+  // V-tables for non-template classes with an owning module are always
+  // uniquely emitted in that module.
+  if (RD->isInNamedModule())
+    return llvm::GlobalVariable::ExternalLinkage;
+
   // We're at the end of the translation unit, so the current key
   // function is fully correct.
   const CXXMethodDecl *keyFunction = Context.getCurrentKeyFunction(RD);
@@ -1185,6 +1218,21 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
       TSK == TSK_ExplicitInstantiationDefinition)
     return false;
 
+  // Itanium C++ ABI [5.2.3]:
+  // Virtual tables for dynamic classes are emitted as follows:
+  //
+  // - If the class is templated, the tables are emitted in every object that
+  // references any of them.
+  // - Otherwise, if the class is attached to a module, the tables are uniquely
+  // emitted in the object for the module unit in which it is defined.
+  // - Otherwise, if the class has a key function (see below), the tables are
+  // emitted in the object for the translation unit containing the definition of
+  // the key function. This is unique if the key function is not inline.
+  // - Otherwise, the tables are emitted in every object that references any of
+  // them.
+  if (RD->isInNamedModule())
+    return RD->shouldEmitInExternalSource();
+
   // Otherwise, if the class doesn't have a key function (possibly
   // anymore), the vtable must be defined here.
   const CXXMethodDecl *keyFunction = CGM.getContext().getCurrentKeyFunction(RD);
@@ -1194,13 +1242,7 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   const FunctionDecl *Def;
   // Otherwise, if we don't have a definition of the key function, the
   // vtable must be defined somewhere else.
-  if (!keyFunction->hasBody(Def))
-    return true;
-
-  assert(Def && "The body of the key function is not assigned to Def?");
-  // If the non-inline key function comes from another module unit, the vtable
-  // must be defined there.
-  return Def->isInAnotherModuleUnit() && !Def->isInlineSpecified();
+  return !keyFunction->hasBody(Def);
 }
 
 /// Given that we're currently at the end of the translation unit, and

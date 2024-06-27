@@ -213,7 +213,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   if (IsImm) {
     assert(AmtVT->isIntegerTy(32) && "Unexpected shift-by-immediate type");
     KnownBits KnownAmtBits =
-        llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+        llvm::computeKnownBits(Amt, II.getDataLayout());
     if (KnownAmtBits.getMaxValue().ult(BitWidth)) {
       Amt = Builder.CreateZExtOrTrunc(Amt, SVT);
       Amt = Builder.CreateVectorSplat(VWidth, Amt);
@@ -237,9 +237,9 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
     APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
     KnownBits KnownLowerBits = llvm::computeKnownBits(
-        Amt, DemandedLower, II.getModule()->getDataLayout());
+        Amt, DemandedLower, II.getDataLayout());
     KnownBits KnownUpperBits = llvm::computeKnownBits(
-        Amt, DemandedUpper, II.getModule()->getDataLayout());
+        Amt, DemandedUpper, II.getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
@@ -357,7 +357,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
   KnownBits KnownAmt =
-      llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+      llvm::computeKnownBits(Amt, II.getDataLayout());
   if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))
@@ -2701,14 +2701,14 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (match(Mask, PatternMatch::m_SExt(PatternMatch::m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
-      assert(Mask->getType()->getPrimitiveSizeInBits() ==
-                 II.getType()->getPrimitiveSizeInBits() &&
+      auto *MaskTy = cast<FixedVectorType>(Mask->getType());
+      auto *OpTy = cast<FixedVectorType>(II.getType());
+      assert(MaskTy->getPrimitiveSizeInBits() ==
+                 OpTy->getPrimitiveSizeInBits() &&
              "Not expecting mask and operands with different sizes");
+      unsigned NumMaskElts = MaskTy->getNumElements();
+      unsigned NumOperandElts = OpTy->getNumElements();
 
-      unsigned NumMaskElts =
-          cast<FixedVectorType>(Mask->getType())->getNumElements();
-      unsigned NumOperandElts =
-          cast<FixedVectorType>(II.getType())->getNumElements();
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
       }
@@ -2716,8 +2716,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // If the mask has less elements than the operands, each mask bit maps to
       // multiple elements of the operands. Bitcast back and forth.
       if (NumMaskElts < NumOperandElts) {
-        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, Mask->getType());
-        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, Mask->getType());
+        Value *CastOp0 = IC.Builder.CreateBitCast(Op0, MaskTy);
+        Value *CastOp1 = IC.Builder.CreateBitCast(Op1, MaskTy);
         Value *Sel = IC.Builder.CreateSelect(BoolVec, CastOp1, CastOp0);
         return new BitCastInst(Sel, II.getType());
       }

@@ -287,7 +287,7 @@ class DefaultIntArgument<string name, int default> : IntArgument<name, 1> {
 // possible values, and a list of enumerators to map them to.
 class EnumArgument<string name, string type, bit is_string, list<string> values,
                    list<string> enums, bit opt = 0, bit fake = 0,
-                   bit isExternalType = 0>
+                   bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, opt, fake> {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -296,13 +296,16 @@ class EnumArgument<string name, string type, bit is_string, list<string> values,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // FIXME: There should be a VariadicArgument type that takes any other type
 //        of argument and generates the appropriate type.
 class VariadicEnumArgument<string name, string type, bit is_string,
                            list<string> values, list<string> enums,
-                           bit isExternalType = 0>
+                           bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, 1>  {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -311,6 +314,9 @@ class VariadicEnumArgument<string name, string type, bit is_string,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // Represents an attribute wrapped by another attribute.
@@ -680,6 +686,10 @@ class Attr {
   bit PragmaAttributeSupport;
   // Set to true if this attribute accepts parameter pack expansion expressions.
   bit AcceptsExprPack = 0;
+  // To support multiple enum parameters to an attribute without breaking
+  // our existing general parsing we need to have a separate flag that
+  // opts an attribute into strict parsing of attribute parameters
+  bit StrictEnumParameters = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -1059,11 +1069,6 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("visionos_app_extension", "xros_app_extension")
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
-}
-static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
-  if (EnvironmentType >= llvm::Triple::Pixel && EnvironmentType <= llvm::Triple::Amplification)
-    return llvm::Triple::getEnvironmentTypeName(EnvironmentType);
-  return "";
 }
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
@@ -1458,6 +1463,28 @@ def CXX11NoReturn : InheritableAttr {
                    C23<"", "noreturn", 202202>, C23<"", "_Noreturn", 202202>];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [CXX11NoReturnDocs];
+}
+
+def NonBlocking : TypeAttr {
+  let Spellings = [Clang<"nonblocking">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonBlockingDocs];
+}
+
+def NonAllocating : TypeAttr {
+  let Spellings = [Clang<"nonallocating">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonAllocatingDocs];
+}
+
+def Blocking : TypeAttr {
+  let Spellings = [Clang<"blocking">];
+  let Documentation = [BlockingDocs];
+}
+
+def Allocating : TypeAttr {
+  let Spellings = [Clang<"allocating">];
+  let Documentation = [AllocatingDocs];
 }
 
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
@@ -2918,7 +2945,7 @@ def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
   let Spellings = [GCC<"model">];
   let Args = [EnumArgument<"Model", "llvm::CodeModel::Model", /*is_string=*/1,
               ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
-              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>];
   let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
   let Documentation = [CodeModelDocs];
 }
@@ -3068,7 +3095,8 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
-def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+def PreserveNone : DeclOrTypeAttr,
+                   TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetAnyX86.Arches)>> {
   let Spellings = [Clang<"preserve_none">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [PreserveNoneDocs];
@@ -4469,36 +4497,20 @@ def HLSLShader : InheritableAttr {
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Args = [
-    EnumArgument<"Type", "ShaderType", /*is_string=*/true,
+    EnumArgument<"Type", "llvm::Triple::EnvironmentType", /*is_string=*/true,
                  ["pixel", "vertex", "geometry", "hull", "domain", "compute",
                   "raygeneration", "intersection", "anyhit", "closesthit",
                   "miss", "callable", "mesh", "amplification"],
                  ["Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
                   "RayGeneration", "Intersection", "AnyHit", "ClosestHit",
-                  "Miss", "Callable", "Mesh", "Amplification"]>
+                  "Miss", "Callable", "Mesh", "Amplification"],
+                  /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
   let AdditionalMembers =
 [{
-  static const unsigned ShaderTypeMaxValue = (unsigned)HLSLShaderAttr::Amplification;
-
-  static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
-    switch (ShaderType) {
-      case HLSLShaderAttr::Pixel:         return llvm::Triple::Pixel;
-      case HLSLShaderAttr::Vertex:        return llvm::Triple::Vertex;
-      case HLSLShaderAttr::Geometry:      return llvm::Triple::Geometry;
-      case HLSLShaderAttr::Hull:          return llvm::Triple::Hull;
-      case HLSLShaderAttr::Domain:        return llvm::Triple::Domain;
-      case HLSLShaderAttr::Compute:       return llvm::Triple::Compute;
-      case HLSLShaderAttr::RayGeneration: return llvm::Triple::RayGeneration;
-      case HLSLShaderAttr::Intersection:  return llvm::Triple::Intersection;
-      case HLSLShaderAttr::AnyHit:        return llvm::Triple::AnyHit;
-      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::ClosestHit;
-      case HLSLShaderAttr::Miss:          return llvm::Triple::Miss;
-      case HLSLShaderAttr::Callable:      return llvm::Triple::Callable;
-      case HLSLShaderAttr::Mesh:          return llvm::Triple::Mesh;
-      case HLSLShaderAttr::Amplification: return llvm::Triple::Amplification;
-    }
+  static bool isValidShaderType(llvm::Triple::EnvironmentType ShaderType) {
+    return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
 }
@@ -4507,30 +4519,31 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                           /*is_string=*/0,
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              EnumArgument<"ResourceKind", "llvm::hlsl::ResourceKind",
-                           /*is_string=*/0,
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              DefaultBoolArgument<"isROV", /*default=*/0>
-              ];
+  let Args = [
+    EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+                 /*is_string=*/0, ["SRV", "UAV", "CBuffer", "Sampler"],
+                 ["SRV", "UAV", "CBuffer", "Sampler"],
+                 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+    EnumArgument<
+        "ResourceKind", "llvm::hlsl::ResourceKind",
+        /*is_string=*/0,
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
+    DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
   let Documentation = [InternalOnly];
 }
 
@@ -4566,6 +4579,31 @@ def NoRandomizeLayout : InheritableAttr {
   let LangOpts = [COnly];
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
+
+def VTablePointerAuthentication : InheritableAttr {
+  let Spellings = [Clang<"ptrauth_vtable_pointer">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+  let StrictEnumParameters = 1;
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+                ["default_key", "no_authentication", "process_dependent",
+                 "process_independent"],
+                ["DefaultKey", "NoKey", "ProcessDependent",
+                 "ProcessIndependent"]>,
+              EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
+                /*is_string=*/ true,
+                ["default_address_discrimination", "no_address_discrimination",
+                 "address_discrimination"],
+                ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
+                 "AddressDiscrimination"]>,
+              EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
+                /*is_string=*/ true,
+                ["default_extra_discrimination", "no_extra_discrimination",
+                 "type_discrimination", "custom_discrimination"],
+                ["DefaultExtraDiscrimination", "NoExtraDiscrimination",
+                 "TypeDiscrimination", "CustomDiscrimination"]>,
+              IntArgument<"CustomDiscriminationValue", 1>];
+}
 
 def FunctionReturnThunks : InheritableAttr,
     TargetSpecificAttr<TargetAnyX86> {

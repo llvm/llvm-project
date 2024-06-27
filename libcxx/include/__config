@@ -566,15 +566,11 @@ typedef __char32_t char32_t;
 #  ifndef _LIBCPP_NO_ABI_TAG
 #    define _LIBCPP_HIDE_FROM_ABI                                                                                      \
       _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION                                                       \
-          __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))))
+      __attribute__((__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))))
 #  else
 #    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
 #  define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
-
-// This macro provides a HIDE_FROM_ABI equivalent that can be applied to extern
-// "C" function, as those lack mangling.
-#  define _LIBCPP_HIDE_FROM_ABI_C _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
 #  ifdef _LIBCPP_BUILDING_LIBRARY
 #    if _LIBCPP_ABI_VERSION > 1
@@ -587,11 +583,11 @@ typedef __char32_t char32_t;
 #  endif
 
 // TODO: Remove this workaround once we drop support for Clang 16
-#if __has_warning("-Wc++23-extensions")
-#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
-#else
-#  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++2b-extensions")
-#endif
+#  if __has_warning("-Wc++23-extensions")
+#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+#  else
+#    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++2b-extensions")
+#  endif
 
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers in the modulemap, we can simply disable this
@@ -621,10 +617,16 @@ typedef __char32_t char32_t;
                                inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
+#ifdef _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+#  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD namespace filesystem {
+#  define _LIBCPP_END_NAMESPACE_FILESYSTEM } _LIBCPP_END_NAMESPACE_STD
+#else
 #  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
                                              inline namespace __fs { namespace filesystem {
 
 #  define _LIBCPP_END_NAMESPACE_FILESYSTEM }} _LIBCPP_END_NAMESPACE_STD
+#endif
+
 // clang-format on
 
 #  if __has_attribute(__enable_if__)

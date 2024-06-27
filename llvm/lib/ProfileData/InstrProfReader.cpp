@@ -91,11 +91,13 @@ static Error initializeReader(InstrProfReader &Reader) {
 /// associated endian format to read the binary ids correctly.
 static Error
 readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
-                      const uint64_t BinaryIdsSize,
-                      const uint8_t *BinaryIdsStart,
+                      ArrayRef<uint8_t> BinaryIdsBuffer,
                       std::vector<llvm::object::BuildID> &BinaryIds,
                       const llvm::endianness Endian) {
   using namespace support;
+
+  const uint64_t BinaryIdsSize = BinaryIdsBuffer.size();
+  const uint8_t *BinaryIdsStart = BinaryIdsBuffer.data();
 
   if (BinaryIdsSize == 0)
     return Error::success();
@@ -113,12 +115,7 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
           instrprof_error::malformed,
           "not enough data to read binary id length");
 
-    uint64_t BILen = 0;
-    if (Endian == llvm::endianness::little)
-      BILen = endian::readNext<uint64_t, llvm::endianness::little>(BI);
-    else
-      BILen = endian::readNext<uint64_t, llvm::endianness::big>(BI);
-
+    uint64_t BILen = endian::readNext<uint64_t>(BI, Endian);
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "binary id length is 0");
@@ -143,13 +140,12 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
   return Error::success();
 }
 
-static void
-printBinaryIdsInternal(raw_ostream &OS,
-                       std::vector<llvm::object::BuildID> &BinaryIds) {
+static void printBinaryIdsInternal(raw_ostream &OS,
+                                   ArrayRef<llvm::object::BuildID> BinaryIds) {
   OS << "Binary IDs: \n";
-  for (auto BI : BinaryIds) {
-    for (uint64_t I = 0; I < BI.size(); I++)
-      OS << format("%02x", BI[I]);
+  for (const auto &BI : BinaryIds) {
+    for (auto I : BI)
+      OS << format("%02x", I);
     OS << "\n";
   }
 }
@@ -590,10 +586,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
   if (BinaryIdSize % sizeof(uint64_t) || BinaryIdEnd > BufferEnd)
     return error(instrprof_error::bad_header);
-  if (BinaryIdSize != 0) {
-    if (Error Err =
-            readBinaryIdsInternal(*DataBuffer, BinaryIdSize, BinaryIdStart,
-                                  BinaryIds, getDataEndianness()))
+  ArrayRef<uint8_t> BinaryIdsBuffer(BinaryIdStart, BinaryIdSize);
+  if (!BinaryIdsBuffer.empty()) {
+    if (Error Err = readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer,
+                                          BinaryIds, getDataEndianness()))
       return Err;
   }
 
@@ -1204,8 +1200,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
 
 Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
                                             const unsigned char *Ptr,
-                                            uint64_t FirstWord,
-                                            memprof::IndexedVersion Version) {
+                                            uint64_t FirstWord) {
   // The value returned from RecordTableGenerator.Emit.
   const uint64_t RecordTableOffset =
       Version == memprof::Version0
@@ -1259,8 +1254,7 @@ Error IndexedMemProfReader::deserializeV012(const unsigned char *Start,
 }
 
 Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
-                                          const unsigned char *Ptr,
-                                          memprof::IndexedVersion Version) {
+                                          const unsigned char *Ptr) {
   // The offset in the stream right before invoking
   // CallStackTableGenerator.Emit.
   const uint64_t CallStackPayloadOffset =
@@ -1285,7 +1279,7 @@ Error IndexedMemProfReader::deserializeV3(const unsigned char *Start,
   MemProfRecordTable.reset(MemProfRecordHashTable::Create(
       /*Buckets=*/Start + RecordTableOffset,
       /*Payload=*/Start + RecordPayloadOffset,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+      /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version3, Schema)));
 
   return Error::success();
 }
@@ -1323,11 +1317,11 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   case memprof::Version0:
   case memprof::Version1:
   case memprof::Version2:
-    if (Error E = deserializeV012(Start, Ptr, FirstWord, Version))
+    if (Error E = deserializeV012(Start, Ptr, FirstWord))
       return E;
     break;
   case memprof::Version3:
-    if (Error E = deserializeV3(Start, Ptr, Version))
+    if (Error E = deserializeV3(Start, Ptr))
       return E;
     break;
   }
@@ -1391,13 +1385,13 @@ Error IndexedInstrProfReader::readHeader() {
   if (Header->getIndexedProfileVersion() >= 9) {
     const unsigned char *Ptr = Start + Header->BinaryIdOffset;
     // Read binary ids size.
-    BinaryIdsSize =
+    uint64_t BinaryIdsSize =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
       return error(instrprof_error::bad_header);
     // Set the binary ids start.
-    BinaryIdsStart = Ptr;
-    if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
+    BinaryIdsBuffer = ArrayRef<uint8_t>(Ptr, BinaryIdsSize);
+    if (Ptr > (const unsigned char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
   }
@@ -1405,14 +1399,16 @@ Error IndexedInstrProfReader::readHeader() {
   if (Header->getIndexedProfileVersion() >= 12) {
     const unsigned char *Ptr = Start + Header->VTableNamesOffset;
 
-    CompressedVTableNamesLen =
+    uint64_t CompressedVTableNamesLen =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     // Writer first writes the length of compressed string, and then the actual
     // content.
-    VTableNamePtr = (const char *)Ptr;
+    const char *VTableNamePtr = (const char *)Ptr;
     if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::truncated);
+
+    VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
   }
 
   if (Header->getIndexedProfileVersion() >= 10 &&
@@ -1468,8 +1464,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
 
   auto NewSymtab = std::make_unique<InstrProfSymtab>();
 
-  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
-          StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
+  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(VTableName)) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));
   }
@@ -1509,7 +1504,7 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   // A flag to indicate if the records are from the same type
   // of profile (i.e cs vs nocs).
   bool CSBitMatch = false;
-  auto getFuncSum = [](const std::vector<uint64_t> &Counts) {
+  auto getFuncSum = [](ArrayRef<uint64_t> Counts) {
     uint64_t ValueSum = 0;
     for (uint64_t CountValue : Counts) {
       if (CountValue == (uint64_t)-1)
@@ -1613,7 +1608,7 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
         instrprof_error::unknown_function,
         "memprof record not found for function hash " + Twine(FuncNameHash));
 
-  const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
+  const memprof::IndexedMemProfRecord &IndexedRecord = *Iter;
   switch (Version) {
   case memprof::Version0:
   case memprof::Version1:
@@ -1698,8 +1693,8 @@ Error IndexedInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 
 Error IndexedInstrProfReader::readBinaryIds(
     std::vector<llvm::object::BuildID> &BinaryIds) {
-  return readBinaryIdsInternal(*DataBuffer, BinaryIdsSize, BinaryIdsStart,
-                               BinaryIds, llvm::endianness::little);
+  return readBinaryIdsInternal(*DataBuffer, BinaryIdsBuffer, BinaryIds,
+                               llvm::endianness::little);
 }
 
 Error IndexedInstrProfReader::printBinaryIds(raw_ostream &OS) {

@@ -1936,7 +1936,7 @@ DeclResult Sema::CheckClassTemplate(
   // We may have found the injected-class-name of a class template,
   // class template partial specialization, or class template specialization.
   // In these cases, grab the template that is being defined or specialized.
-  if (!PrevClassTemplate && PrevDecl && isa<CXXRecordDecl>(PrevDecl) &&
+  if (!PrevClassTemplate && isa_and_nonnull<CXXRecordDecl>(PrevDecl) &&
       cast<CXXRecordDecl>(PrevDecl)->isInjectedClassName()) {
     PrevDecl = cast<CXXRecordDecl>(PrevDecl->getDeclContext());
     PrevClassTemplate
@@ -3170,10 +3170,6 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     Expr *RequiresClause = buildAssociatedConstraints(
         SemaRef, F, AliasTemplate, DeduceResults, IsDeducible);
 
-    // FIXME: implement the is_deducible constraint per C++
-    // [over.match.class.deduct]p3.3:
-    //    ... and a constraint that is satisfied if and only if the arguments
-    //    of A are deducible (see below) from the return type.
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
         AliasTemplate->getTemplateParameters()->getLAngleLoc(),
@@ -5660,7 +5656,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::ConstantEvaluated, CSD};
+      *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(

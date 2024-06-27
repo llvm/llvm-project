@@ -327,7 +327,8 @@ public:
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
-  CodeGenRewrite(fir::CodeGenRewriteOptions opts) : Base(opts) {}
+  using CodeGenRewriteBase<CodeGenRewrite>::CodeGenRewriteBase;
+
   void runOnOperation() override final {
     mlir::ModuleOp mod = getOperation();
 
@@ -360,11 +361,6 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass>
-fir::createFirCodeGenRewritePass(fir::CodeGenRewriteOptions Options) {
-  return std::make_unique<CodeGenRewrite>(Options);
-}
 
 void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
                                        bool preserveDeclare) {

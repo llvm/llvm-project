@@ -14,16 +14,22 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
-#include "llvm/IR/Instructions.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -35,14 +41,10 @@ public:
     return isPreISelGenericOpcode(MI->getOpcode());
   }
 
-  bool hasPoisonGeneratingFlags() const {
-    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
-                         FmNoNans | FmNoInfs);
-  }
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
 
   void dropPoisonGeneratingFlags() {
-    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
-               FmNoInfs);
+    clearFlags(PoisonFlags);
     assert(!hasPoisonGeneratingFlags());
   }
 };
@@ -853,6 +855,43 @@ class GTrunc : public GCastOp {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
+/// Represents a vscale.
+class GVScale : public GenericMachineInstr {
+public:
+  APInt getSrc() const { return getOperand(1).getCImm()->getValue(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents an integer subtraction.
+class GSub : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SUB;
+  };
+};
+
+/// Represents an integer multiplication.
+class GMul : public GIntBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_MUL;
+  };
+};
+
+/// Represents a shift left.
+class GShl : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+  Register getShiftReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHL;
   };
 };
 

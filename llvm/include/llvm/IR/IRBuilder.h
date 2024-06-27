@@ -63,10 +63,9 @@ public:
   virtual ~IRBuilderDefaultInserter();
 
   virtual void InsertHelper(Instruction *I, const Twine &Name,
-                            BasicBlock *BB,
                             BasicBlock::iterator InsertPt) const {
-    if (BB)
-      I->insertInto(BB, InsertPt);
+    if (InsertPt.isValid())
+      I->insertInto(InsertPt.getNodeParent(), InsertPt);
     I->setName(Name);
   }
 };
@@ -83,9 +82,8 @@ public:
       : Callback(std::move(Callback)) {}
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock *BB,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     Callback(I);
   }
 };
@@ -143,7 +141,7 @@ public:
   /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
-    Inserter.InsertHelper(I, Name, BB, InsertPt);
+    Inserter.InsertHelper(I, Name, InsertPt);
     AddMetadataToInst(I);
     return I;
   }
@@ -1051,7 +1049,7 @@ public:
 
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
                            {}, nullptr, Name);
   }
@@ -1772,14 +1770,14 @@ public:
 
   AllocaInst *CreateAlloca(Type *Ty, unsigned AddrSpace,
                            Value *ArraySize = nullptr, const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
   }
 
   AllocaInst *CreateAlloca(Type *Ty, Value *ArraySize = nullptr,
                            const Twine &Name = "") {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     Align AllocaAlign = DL.getPrefTypeAlign(Ty);
     unsigned AddrSpace = DL.getAllocaAddrSpace();
     return Insert(new AllocaInst(Ty, AddrSpace, ArraySize, AllocaAlign), Name);
@@ -1817,7 +1815,7 @@ public:
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
                               bool isVolatile, const Twine &Name = "") {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = DL.getABITypeAlign(Ty);
     }
     return Insert(new LoadInst(Ty, Ptr, Twine(), isVolatile, *Align), Name);
@@ -1826,7 +1824,7 @@ public:
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                 bool isVolatile = false) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = DL.getABITypeAlign(Val->getType());
     }
     return Insert(new StoreInst(Val, Ptr, isVolatile, *Align));
@@ -1843,7 +1841,7 @@ public:
                       AtomicOrdering FailureOrdering,
                       SyncScope::ID SSID = SyncScope::System) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(New->getType()));
     }
 
@@ -1856,7 +1854,7 @@ public:
                                  AtomicOrdering Ordering,
                                  SyncScope::ID SSID = SyncScope::System) {
     if (!Align) {
-      const DataLayout &DL = BB->getModule()->getDataLayout();
+      const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
@@ -1864,25 +1862,23 @@ public:
   }
 
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                   const Twine &Name = "", bool IsInBounds = false) {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, IsInBounds))
+                   const Twine &Name = "",
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, NW))
       return V;
-    return Insert(IsInBounds
-                      ? GetElementPtrInst::CreateInBounds(Ty, Ptr, IdxList)
-                      : GetElementPtrInst::Create(Ty, Ptr, IdxList),
-                  Name);
+    return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
   }
 
   Value *CreateInBoundsGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                            const Twine &Name = "") {
-    return CreateGEP(Ty, Ptr, IdxList, Name, /* IsInBounds */ true);
+    return CreateGEP(Ty, Ptr, IdxList, Name, GEPNoWrapFlags::inBounds());
   }
 
   Value *CreateConstGEP1_32(Type *Ty, Value *Ptr, unsigned Idx0,
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, /*IsInBounds=*/false))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
       return V;
 
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
@@ -1892,7 +1888,7 @@ public:
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt32Ty(Context), Idx0);
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, /*IsInBounds=*/true))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
       return V;
 
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
@@ -1905,7 +1901,7 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, /*IsInBounds=*/false))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
       return V;
 
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
@@ -1918,7 +1914,7 @@ public:
       ConstantInt::get(Type::getInt32Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, /*IsInBounds=*/true))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
       return V;
 
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
@@ -1928,7 +1924,7 @@ public:
                             const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, /*IsInBounds=*/false))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::none()))
       return V;
 
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idx), Name);
@@ -1938,7 +1934,7 @@ public:
                                     const Twine &Name = "") {
     Value *Idx = ConstantInt::get(Type::getInt64Ty(Context), Idx0);
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, /*IsInBounds=*/true))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idx, GEPNoWrapFlags::inBounds()))
       return V;
 
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idx), Name);
@@ -1951,7 +1947,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, /*IsInBounds=*/false))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::none()))
       return V;
 
     return Insert(GetElementPtrInst::Create(Ty, Ptr, Idxs), Name);
@@ -1964,7 +1960,7 @@ public:
       ConstantInt::get(Type::getInt64Ty(Context), Idx1)
     };
 
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, /*IsInBounds=*/true))
+    if (auto *V = Folder.FoldGEP(Ty, Ptr, Idxs, GEPNoWrapFlags::inBounds()))
       return V;
 
     return Insert(GetElementPtrInst::CreateInBounds(Ty, Ptr, Idxs), Name);
@@ -1976,13 +1972,14 @@ public:
   }
 
   Value *CreatePtrAdd(Value *Ptr, Value *Offset, const Twine &Name = "",
-                      bool IsInBounds = false) {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, IsInBounds);
+                      GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
+    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, NW);
   }
 
   Value *CreateInBoundsPtrAdd(Value *Ptr, Value *Offset,
                               const Twine &Name = "") {
-    return CreateGEP(getInt8Ty(), Ptr, Offset, Name, /*IsInBounds*/ true);
+    return CreateGEP(getInt8Ty(), Ptr, Offset, Name,
+                     GEPNoWrapFlags::inBounds());
   }
 
   /// Same as CreateGlobalString, but return a pointer with "i8*" type

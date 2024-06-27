@@ -89,6 +89,8 @@
 // requires code not to make these assumptions.
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
+// Dont' add an inline namespace for `std::filesystem`
+#  define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -125,8 +127,7 @@
 //
 // Supported containers:
 // - `span`;
-// - `string_view`;
-// - `array`.
+// - `string_view`.
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
