@@ -45,7 +45,6 @@ class StepScriptedTestCase(TestBase):
         stop_desc = thread.GetStopDescription(1000)
         self.assertIn("Stepping out from", stop_desc, "Got right description")
 
-    @expectedFailureAll()
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
         self.build()
