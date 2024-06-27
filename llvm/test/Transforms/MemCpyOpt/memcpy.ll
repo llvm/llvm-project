@@ -699,7 +699,7 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
 ; Merge/drop noalias metadata when replacing parameter.
 define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @immut_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
@@ -712,7 +712,7 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @byval_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
