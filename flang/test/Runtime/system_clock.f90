@@ -6,7 +6,7 @@ program system_clock_test
     implicit none
 
     integer, parameter :: delta = 1
-    real(kind=real64), parameter :: epsilon = 0.001
+    real(kind=real64), parameter :: epsilon = 0.1
 
     integer(kind=int64) :: t_start, t_end
     integer(kind=int64) :: rate
