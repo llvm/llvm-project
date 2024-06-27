@@ -501,9 +501,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                        MemIntrinsicInfo &Info) const {
   switch (Inst->getIntrinsicID()) {
   case Intrinsic::amdgcn_ds_ordered_add:
-  case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
+  case Intrinsic::amdgcn_ds_ordered_swap: {
     auto *Ordering = dyn_cast<ConstantInt>(Inst->getArgOperand(2));
     auto *Volatile = dyn_cast<ConstantInt>(Inst->getArgOperand(4));
     if (!Ordering || !Volatile)
@@ -1018,8 +1016,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
 bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                             Intrinsic::ID IID) const {
   switch (IID) {
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
   case Intrinsic::amdgcn_flat_atomic_fadd:
@@ -1039,20 +1035,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                     Value *NewV) const {
   auto IntrID = II->getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
-    const ConstantInt *IsVolatile = cast<ConstantInt>(II->getArgOperand(4));
-    if (!IsVolatile->isZero())
-      return nullptr;
-    Module *M = II->getParent()->getParent()->getParent();
-    Type *DestTy = II->getType();
-    Type *SrcTy = NewV->getType();
-    Function *NewDecl =
-        Intrinsic::getDeclaration(M, II->getIntrinsicID(), {DestTy, SrcTy});
-    II->setArgOperand(0, NewV);
-    II->setCalledFunction(NewDecl);
-    return II;
-  }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
     unsigned TrueAS = IntrID == Intrinsic::amdgcn_is_shared ?
