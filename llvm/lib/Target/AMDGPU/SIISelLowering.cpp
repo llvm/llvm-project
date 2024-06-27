@@ -16175,9 +16175,10 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
         return AtomicExpansionKind::None;
 
-      // TODO: Handle <2 x bfloat> case. While gfx90a/gfx940 supports it for
-      // global/flat, it does not for buffer. gfx12 does have the buffer
-      // version.
+      // While gfx90a/gfx940 supports v2bf16 for global/flat, it does not for
+      // buffer. gfx12 does have the buffer version.
+      if (Subtarget->hasAtomicBufferPkAddBF16Inst() && isBFloat2(Ty))
+        return AtomicExpansionKind::None;
     }
 
     if (unsafeFPAtomicsDisabled(RMW->getFunction()))
