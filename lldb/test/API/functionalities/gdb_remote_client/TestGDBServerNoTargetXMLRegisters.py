@@ -1,6 +1,6 @@
 """
 Check that lldb falls back to default register layouts when the remote provides
-no target XML.
+no target XML or does not include registers in the target XML.
 
 GPRS are passed to the responder to create register data to send back to lldb.
 Registers in SUPPL are virtual registers based on those general ones. The tests
@@ -14,6 +14,8 @@ from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 import binascii
+from textwrap import dedent
+
 
 class MyResponder(MockGDBServerResponder):
     @staticmethod
@@ -22,8 +24,10 @@ class MyResponder(MockGDBServerResponder):
             val = l.split("0x")[1]
             yield binascii.b2a_hex(bytes(reversed(binascii.a2b_hex(val)))).decode()
 
-    def __init__(self, reg_data, halt_reason):
+    def __init__(self, architecture, has_target_xml, reg_data, halt_reason):
         super().__init__()
+        self.architecture = architecture
+        self.has_target_xml = has_target_xml
         self.reg_data = "".join(self.filecheck_to_blob(reg_data))
         self.halt_reason = halt_reason
 
@@ -36,13 +40,24 @@ class MyResponder(MockGDBServerResponder):
     def haltReason(self):
         return self.halt_reason
 
+    def qXferRead(self, obj, annex, offset, length):
+        if self.has_target_xml and annex == "target.xml":
+            return (
+                dedent(
+                    f"""\
+                    <?xml version="1.0"?>
+                    <target version="1.0">
+                      <architecture>{self.architecture}</architecture>
+                    </target>"""
+                ),
+                False,
+            )
+
+        return None, False
+
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-    @skipIfRemote
-    @skipIfLLVMTargetMissing("X86")
-    def test_x86_64_regs(self):
-        """Test grabbing various x86_64 registers from gdbserver."""
-
+    def check_x86_64_regs(self, has_target_xml):
         GPRS = """
 CHECK-AMD64-DAG: rax = 0x0807060504030201
 CHECK-AMD64-DAG: rbx = 0x1817161514131211
@@ -125,6 +140,8 @@ CHECK-AMD64-DAG: r15l = 0xf1
 """
 
         self.server.responder = MyResponder(
+            "x86-64",
+            has_target_xml,
             GPRS,
             "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
         )
@@ -155,10 +172,21 @@ CHECK-AMD64-DAG: r15l = 0xf1
         self.match("register read flags", ["eflags = 0x1c1b1a19"])
 
     @skipIfRemote
-    @skipIfLLVMTargetMissing("AArch64")
-    def test_aarch64_regs(self):
-        """Test grabbing various aarch64 registers from gdbserver."""
+    @skipIfLLVMTargetMissing("X86")
+    def test_x86_64_regs_no_target_xml(self):
+        """Test grabbing various x86_64 registers from gdbserver when there
+        is no target XML."""
+        self.check_x86_64_regs(False)
 
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
+    def test_x86_64_regs_no_register_info(self):
+        """Test grabbing various x86_64 registers from gdbserver when there
+        is target XML but it does not include register info."""
+        self.check_x86_64_regs(True)
+
+    def check_aarch64_regs(self, has_target_xml):
         GPRS = """
 CHECK-AARCH64-DAG: x0 = 0x0001020304050607
 CHECK-AARCH64-DAG: x1 = 0x0102030405060708
@@ -232,6 +260,8 @@ CHECK-AARCH64-DAG: w31 = 0x23242526
 """
 
         self.server.responder = MyResponder(
+            "aarch64",
+            has_target_xml,
             GPRS,
             "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
         )
@@ -258,10 +288,21 @@ CHECK-AARCH64-DAG: w31 = 0x23242526
         self.match("register read flags", ["cpsr = 0x21222324"])
 
     @skipIfRemote
-    @skipIfLLVMTargetMissing("X86")
-    def test_i386_regs(self):
-        """Test grabbing various i386 registers from gdbserver."""
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_regs_no_target_xml(self):
+        """Test grabbing various aarch64 registers from gdbserver when there
+        is no target XML."""
+        self.check_aarch64_regs(False)
 
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_regs_no_register_info(self):
+        """Test grabbing various aarch64 registers from gdbserver when there
+        is target XML but it does not include register info."""
+        self.check_aarch64_regs(True)
+
+    def check_i386_regs(self, has_target_xml):
         GPRS = """
 CHECK-I386-DAG: eax = 0x04030201
 CHECK-I386-DAG: ecx = 0x14131211
@@ -307,6 +348,8 @@ CHECK-I386-DAG: dil = 0x71
 """
 
         self.server.responder = MyResponder(
+            "i386",
+            has_target_xml,
             GPRS,
             "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;07:0102030405060708;10:1112131415161718;",
         )
@@ -329,3 +372,18 @@ CHECK-I386-DAG: dil = 0x71
         self.match("register read sp", ["esp = 0x44434241"])
         self.match("register read pc", ["eip = 0x84838281"])
         self.match("register read flags", ["eflags = 0x94939291"])
+
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
+    def test_i386_regs_no_target_xml(self):
+        """Test grabbing various i386 registers from gdbserver when there is
+        no target XML."""
+        self.check_i386_regs(False)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
+    def test_i386_regs_no_register_info(self):
+        """Test grabbing various i386 registers from gdbserver when there is
+        target XML but it does not include register info."""
+        self.check_i386_regs(True)
