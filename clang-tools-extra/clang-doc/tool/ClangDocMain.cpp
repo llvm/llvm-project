@@ -313,6 +313,12 @@ Example usage for a project using a compile commands database:
 
   // First reducing phase (reduce all decls into one info per decl).
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
+  int i = 0;
+  for(auto &Group : USRToBitcode) {
+    i += USRToBitcode.size();
+  }
+  llvm::outs() << "USR: " << i << "\n";
+
   std::atomic<bool> Error;
   Error = false;
   llvm::sys::Mutex IndexMutex;

@@ -12,18 +12,14 @@
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Mutex.h"
-#include <unordered_set>
 
 namespace clang {
 namespace doc {
 
-
-static std::unordered_set<std::string> USRVisited;
-
+static llvm::StringSet USRVisited;
 static llvm::sys::Mutex USRVisitedGuard;
-
-
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
@@ -47,12 +43,11 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D,
   // Prevent Visiting USR twice
   {
     std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
-    std::string Visited = USR.str().str();
-    if (USRVisited.count(Visited))
+    if (USRVisited.count(USR.str()))
       return true;
     // We considered a USR to be visited only when its defined
     if (IsDefinition)
-      USRVisited.insert(Visited);
+      USRVisited.insert(USR.str());
   }
 
   bool IsFileInRootDir;
@@ -61,7 +56,6 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D,
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
                                getLine(D, D->getASTContext()), File,
                                IsFileInRootDir, CDCtx.PublicOnly);
-
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
