@@ -121,14 +121,6 @@ let Predicates = [HasCMOV, HasCF] in {
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV64rm addr:$src1, timm:$cond)>;
 
-  // FIXME: Shouldn't patterns for 0 work for undef?
-  def : Pat<(X86cload addr:$src1, undef, timm:$cond, EFLAGS),
-            (CFCMOV16rm addr:$src1, timm:$cond)>;
-  def : Pat<(X86cload addr:$src1, undef, timm:$cond, EFLAGS),
-            (CFCMOV32rm addr:$src1, timm:$cond)>;
-  def : Pat<(X86cload addr:$src1, undef, timm:$cond, EFLAGS),
-            (CFCMOV64rm addr:$src1, timm:$cond)>;
-
   def : Pat<(X86cload addr:$src2, GR16:$src1, timm:$cond, EFLAGS),
             (CFCMOV16rm_ND GR16:$src1, addr:$src2, timm:$cond)>;
   def : Pat<(X86cload addr:$src2, GR32:$src1, timm:$cond, EFLAGS),

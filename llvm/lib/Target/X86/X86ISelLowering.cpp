@@ -32330,7 +32330,8 @@ SDValue X86TargetLowering::visitMaskedLoad(
   EVT VTy = PassThru.getValueType();
   EVT Ty = VTy.getVectorElementType();
   SDVTList Tys = DAG.getVTList(Ty, MVT::Other);
-  auto ScalarPassThru = DAG.getBitcast(Ty, PassThru);
+  auto ScalarPassThru = PassThru.isUndef() ? DAG.getConstant(0, DL, Ty)
+                                           : DAG.getBitcast(Ty, PassThru);
   auto Flags = getFlagsOfCmpZeroFori1(DAG, DL, Mask);
   auto COND_NE = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
   SDValue Ops[] = {Chain, Ptr, ScalarPassThru, COND_NE, Flags};
