@@ -213,7 +213,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   if (IsImm) {
     assert(AmtVT->isIntegerTy(32) && "Unexpected shift-by-immediate type");
     KnownBits KnownAmtBits =
-        llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+        llvm::computeKnownBits(Amt, II.getDataLayout());
     if (KnownAmtBits.getMaxValue().ult(BitWidth)) {
       Amt = Builder.CreateZExtOrTrunc(Amt, SVT);
       Amt = Builder.CreateVectorSplat(VWidth, Amt);
@@ -237,9 +237,9 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
     APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
     KnownBits KnownLowerBits = llvm::computeKnownBits(
-        Amt, DemandedLower, II.getModule()->getDataLayout());
+        Amt, DemandedLower, II.getDataLayout());
     KnownBits KnownUpperBits = llvm::computeKnownBits(
-        Amt, DemandedUpper, II.getModule()->getDataLayout());
+        Amt, DemandedUpper, II.getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
@@ -357,7 +357,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   // If the shift amount is guaranteed to be in-range we can replace it with a
   // generic shift.
   KnownBits KnownAmt =
-      llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
+      llvm::computeKnownBits(Amt, II.getDataLayout());
   if (KnownAmt.getMaxValue().ult(BitWidth)) {
     return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                       : Builder.CreateLShr(Vec, Amt))

@@ -134,7 +134,7 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterato
     return nullptr;
   }
 
-  const DataLayout &DL = P->getModule()->getDataLayout();
+  const DataLayout &DL = P->getDataLayout();
 
   // Create a stack slot to hold the value.
   AllocaInst *Slot;

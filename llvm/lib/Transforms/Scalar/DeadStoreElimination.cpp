@@ -484,7 +484,7 @@ memoryIsNotModifiedBetween(Instruction *FirstI, Instruction *SecondI,
 static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
                               uint64_t OldOffsetInBits, uint64_t OldSizeInBits,
                               uint64_t NewSizeInBits, bool IsOverwriteEnd) {
-  const DataLayout &DL = Inst->getModule()->getDataLayout();
+  const DataLayout &DL = Inst->getDataLayout();
   uint64_t DeadSliceSizeInBits = OldSizeInBits - NewSizeInBits;
   uint64_t DeadSliceOffsetInBits =
       OldOffsetInBits + (IsOverwriteEnd ? NewSizeInBits : 0);

@@ -2192,7 +2192,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           // Skip this assignment if the affected bits are outside of the
           // variable fragment.
           if (!at::calculateFragmentIntersect(
-                  I.getModule()->getDataLayout(), Info->Base,
+                  I.getDataLayout(), Info->Base,
                   Info->OffsetInBits, Info->SizeInBits, Assign, FragInfo) ||
               (FragInfo && FragInfo->SizeInBits == 0))
             return;

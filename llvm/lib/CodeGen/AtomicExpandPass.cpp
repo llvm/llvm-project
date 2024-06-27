@@ -173,22 +173,22 @@ INITIALIZE_PASS_END(AtomicExpandLegacy, DEBUG_TYPE,
 
 // Helper functions to retrieve the size of atomic instructions.
 static unsigned getAtomicOpSize(LoadInst *LI) {
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   return DL.getTypeStoreSize(LI->getType());
 }
 
 static unsigned getAtomicOpSize(StoreInst *SI) {
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
   return DL.getTypeStoreSize(SI->getValueOperand()->getType());
 }
 
 static unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
-  const DataLayout &DL = RMWI->getModule()->getDataLayout();
+  const DataLayout &DL = RMWI->getDataLayout();
   return DL.getTypeStoreSize(RMWI->getValOperand()->getType());
 }
 
 static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
-  const DataLayout &DL = CASI->getModule()->getDataLayout();
+  const DataLayout &DL = CASI->getDataLayout();
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
 }
 
@@ -1645,7 +1645,7 @@ bool AtomicExpandImpl::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 // Note: This function is exposed externally by AtomicExpandUtils.h
 bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                     CreateCmpXchgInstFun CreateCmpXchg) {
-  ReplacementIRBuilder Builder(AI, AI->getModule()->getDataLayout());
+  ReplacementIRBuilder Builder(AI, AI->getDataLayout());
   Builder.setIsFPConstrained(
       AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
 

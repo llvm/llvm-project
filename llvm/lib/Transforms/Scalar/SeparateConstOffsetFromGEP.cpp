@@ -245,7 +245,7 @@ public:
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
-      : IP(InsertionPt), DL(InsertionPt->getModule()->getDataLayout()) {}
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -1369,7 +1369,7 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   Second->setOperand(1, Offset1);
 
   // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
-  const DataLayout &DAL = First->getModule()->getDataLayout();
+  const DataLayout &DAL = First->getDataLayout();
   APInt Offset(DAL.getIndexSizeInBits(
                    cast<PointerType>(First->getType())->getAddressSpace()),
                0);

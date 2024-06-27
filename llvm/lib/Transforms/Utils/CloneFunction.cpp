@@ -535,7 +535,7 @@ void PruningFunctionCloner::CloneBlock(
       // this stage, thus instruction simplification is performed after
       // processing phi-nodes.
       if (Value *V = ConstantFoldInstruction(
-              NewInst, BB->getModule()->getDataLayout())) {
+              NewInst, BB->getDataLayout())) {
         if (isInstructionTriviallyDead(NewInst)) {
           VMap[&*II] = V;
           NewInst->eraseFromParent();

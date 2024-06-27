@@ -1641,7 +1641,7 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *IntPtrTy = Builder.getIntPtrTy(Load->getModule()->getDataLayout());
+    Type *IntPtrTy = Builder.getIntPtrTy(Load->getDataLayout());
     Value *StoreBegin = Builder.CreatePtrToInt(
         const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
     Value *StoreEnd = Builder.CreateAdd(

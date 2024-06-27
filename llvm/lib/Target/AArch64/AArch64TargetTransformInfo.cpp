@@ -1787,7 +1787,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
@@ -1817,7 +1817,7 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);

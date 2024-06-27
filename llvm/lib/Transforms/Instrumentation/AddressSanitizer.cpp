@@ -747,7 +747,7 @@ struct AddressSanitizer {
   }
 
   TypeSize getAllocaSizeInBytes(const AllocaInst &AI) const {
-    return *AI.getAllocationSize(AI.getModule()->getDataLayout());
+    return *AI.getAllocationSize(AI.getDataLayout());
   }
 
   /// Check if we want (and can) handle this alloca.
