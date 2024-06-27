@@ -25,6 +25,7 @@
 #include "polly/ZoneAlgo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/Module.h"
 
 #include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
