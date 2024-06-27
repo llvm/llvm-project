@@ -154,10 +154,8 @@ count_t GetSystemClockCountRate(int kind, fallback_implementation) {
 
 template <typename Unused = void>
 count_t GetSystemClockCountMax(int kind, fallback_implementation) {
-  constexpr auto max_clock_t{std::numeric_limits<std::clock_t>::max()};
   unsigned_count_t maxCount{GetHUGE(kind)};
-  return max_clock_t <= maxCount ? static_cast<count_t>(max_clock_t)
-                                 : static_cast<count_t>(maxCount);
+  return maxCount;
 }
 
 #ifdef CLOCKID_ELAPSED_TIME
