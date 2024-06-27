@@ -6,7 +6,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @mulsiExtendedOnI1() {
+func.func @mulsi_extended_on_i1() {
     // mulsi_extended on i1, tests for overflow bit
     // mulsi_extended 1, 1 : i1 = (1, 0)
     // CHECK-NEXT: 1
@@ -18,7 +18,7 @@ func.func @mulsiExtendedOnI1() {
     return
 }
 
-func.func @mulsimuluiExtendedOverflows() {
+func.func @mulsi_mului_extended_overflows() {
     // mulsi and mului extended versions, with overflow
     // mulsi_extended -100, -100 : i8 = (16, 39); mului_extended -100, -100 : i8 = (16, 95)
     // CHECK-NEXT:  16
@@ -36,8 +36,7 @@ func.func @mulsimuluiExtendedOverflows() {
 }
 
 func.func @entry() {
-    func.call @mulsiExtendedOnI1() : () -> ()
-    func.call @mulsimuluiExtendedOverflows() : () -> ()
-
+    func.call @mulsi_extended_on_i1() : () -> ()
+    func.call @mulsi_mului_extended_overflows() : () -> ()
     return
 }

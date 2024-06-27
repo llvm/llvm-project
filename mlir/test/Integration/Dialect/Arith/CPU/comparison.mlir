@@ -6,7 +6,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @signedComparisonOnI1s() {
+func.func @signed_comparison_on_i1s() {
     // signed comparisons on i1s
     // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true
     // CHECK-NEXT: 0
@@ -26,7 +26,7 @@ func.func @signedComparisonOnI1s() {
     return
 }
 
-func.func @sge0And1IsTrue() {
+func.func @sge_0_1_is_true() {
     // sge 0 -1, sge 0 1, should be true
     // sge 0 -1 == sge 0 1 == true (1)
     // CHECK-NEXT: 1
@@ -41,7 +41,7 @@ func.func @sge0And1IsTrue() {
     return
 }
 
-func.func @zeroUltMinIndex() {
+func.func @zero_ult_min_index() {
     // 0 `ult` -2^63 = true
     // CHECK-NEXT: 1
     %c0 = arith.constant 0 : index
@@ -52,8 +52,8 @@ func.func @zeroUltMinIndex() {
 }
 
 func.func @entry() {
-    func.call @signedComparisonOnI1s() : () -> ()
-    func.call @sge0And1IsTrue() : () -> ()
-    func.call @zeroUltMinIndex() : () -> ()
+    func.call @signed_comparison_on_i1s() : () -> ()
+    func.call @sge_0_1_is_true() : () -> ()
+    func.call @zero_ult_min_index() : () -> ()
     return
 }

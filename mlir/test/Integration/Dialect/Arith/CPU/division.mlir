@@ -5,7 +5,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @divsiRoundTowardsZero() {
+func.func @divsi_round_towards_zero() {
     // divsi should round towards zero (rather than -infinity)
     // divsi -97 68 = -1
     // CHECK: -1
@@ -16,7 +16,7 @@ func.func @divsiRoundTowardsZero() {
     return
 }
 
-func.func @remsiPrintZero() {
+func.func @remsi_print_zero() {
     // remsi minInt -1 = 0
     // remsi -2^(w-1) -1 = 0
     // CHECK-NEXT:  -1
@@ -31,7 +31,7 @@ func.func @remsiPrintZero() {
     return
 }
 
-func.func @ceildivsiKeepSigns() {
+func.func @ceildivsi_keep_signs() {
     // ceildivsi should keep signs
     // forall w, y. (w > 0, y > 0) => -2^w `ceildiv` y : i_w < 0
     // CHECK-NEXT:  -18
@@ -42,7 +42,7 @@ func.func @ceildivsiKeepSigns() {
     return
 }
 
-func.func @divsiI1SignedRepr() {
+func.func @divsi_i1_signed_repr() {
     // divsi should output unsigned representation, e.g. in the case of i1
     // repr (divsi (x : i1) (x : i1)) = 1 (not represented as -1)
     // CHECK-NEXT: %2=1
@@ -59,9 +59,9 @@ func.func @divsiI1SignedRepr() {
 }
 
 func.func @entry() {
-    func.call @divsiRoundTowardsZero() : () -> ()
-    func.call @remsiPrintZero() : () -> ()
-    func.call @ceildivsiKeepSigns() : () -> ()
-    func.call @divsiI1SignedRepr() : () -> ()
+    func.call @divsi_round_towards_zero() : () -> ()
+    func.call @remsi_print_zero() : () -> ()
+    func.call @ceildivsi_keep_signs() : () -> ()
+    func.call @divsi_i1_signed_repr() : () -> ()
     return
 }

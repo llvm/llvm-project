@@ -6,7 +6,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @zeroPlusOneOnI1() {
+func.func @zero_plus_one_on_i1() {
     // addi on i1
     // addi(0, 1) : i1 = 1 : i1; addi(0, -1) : i1 = 1
     // CHECK:      1
@@ -23,7 +23,7 @@ func.func @zeroPlusOneOnI1() {
     return
 }
 
-func.func @adduiExtendedI1() {
+func.func @addui_extended_i1() {
     // addui_extended on i1
     // addui_extended 1 1 : i1 = 0, 1
     // CHECK-NEXT: 0
@@ -35,7 +35,7 @@ func.func @adduiExtendedI1() {
     return
 }
 
-func.func @adduiExtendedOverflowBitIsN1() {
+func.func @addui_extended_overflow_bit_is_n1() {
     // addui_extended overflow bit is treated as -1
     // addui_extended -1633386 -1643386 = ... 1 (overflow because negative numbers are large positive numbers)
     // CHECK-NEXT: 0
@@ -48,8 +48,8 @@ func.func @adduiExtendedOverflowBitIsN1() {
 }
 
 func.func @entry() {
-    func.call @zeroPlusOneOnI1() : () -> ()
-    func.call @adduiExtendedI1() : () -> ()
-    func.call @adduiExtendedOverflowBitIsN1() : () -> ()
+    func.call @zero_plus_one_on_i1() : () -> ()
+    func.call @addui_extended_i1() : () -> ()
+    func.call @addui_extended_overflow_bit_is_n1() : () -> ()
     return
 }

@@ -5,7 +5,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @i32Neg1IndexCast() {
+func.func @i32_neg_1_index_cast() {
     // index casting of -1 : i32 -> 2^64 - 1
     // index_cast(-1 : i32) = 2^64 - 1;
     // CHECK-NEXT: -1
@@ -17,7 +17,7 @@ func.func @i32Neg1IndexCast() {
     return
 }
 
-func.func @indexCastuiAndSi() {
+func.func @index_castui_and_index_cast() {
     // casting to index, ui and si
     // -1 : i32; index_cast(-1 : i32) = 2^64 - 1; index_castui(-1 : i32) = 2^32 - 1
     // CHECK-NEXT: -1
@@ -32,7 +32,7 @@ func.func @indexCastuiAndSi() {
     return
 }
 
-func.func @indexCastAfterConversion() {
+func.func @index_cast_after_conversion() {
     // index should be represented as unsigned ints, and reflected through comparison:
     // index_cast(x) `slt` index_cast(y) == x `slt` y
     // CHECK-NEXT: 1
@@ -45,7 +45,7 @@ func.func @indexCastAfterConversion() {
     return
 }
 
-func.func @indexCastuiDowncast() {
+func.func @index_castui_downcast() {
     // index_castui casting down truncates bits
     // index_castui 11277513 = 1 : i3
     // CHECK-NEXT: 1
@@ -55,7 +55,7 @@ func.func @indexCastuiDowncast() {
     return
 }
 
-func.func @indexCastDowncast() {
+func.func @index_cast_downcast() {
     // index_cast casting down truncates bits
     // index_cast -3762 = 334 : i12
     // CHECK-NEXT: 334
@@ -65,18 +65,11 @@ func.func @indexCastDowncast() {
     return
 }
 
-func.func @c0() -> i64 {
-    // heper function for below test
-    %c100_i64 = arith.constant 100 : i64
-    return %c100_i64 : i64
-}
-
 func.func @entry() {
-    func.call @i32Neg1IndexCast() : () -> ()
-    func.call @indexCastuiAndSi() : () -> ()
-    func.call @indexCastAfterConversion() : () -> ()
-    func.call @indexCastuiDowncast() : () -> ()
-    func.call @indexCastDowncast() : () -> ()
-
+    func.call @i32_neg_1_index_cast() : () -> ()
+    func.call @index_castui_and_index_cast() : () -> ()
+    func.call @index_cast_after_conversion() : () -> ()
+    func.call @index_castui_downcast() : () -> ()
+    func.call @index_cast_downcast() : () -> ()
     return
 }

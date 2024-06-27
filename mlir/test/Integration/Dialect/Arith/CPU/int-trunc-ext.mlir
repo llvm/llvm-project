@@ -6,7 +6,7 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
-func.func @extsiOnI1() {
+func.func @extsi_on_i1() {
     // extsi on 1 : i1
     // extsi(1: i1) = -1 : i16
     // CHECK:      1
@@ -18,7 +18,7 @@ func.func @extsiOnI1() {
     return
 }
 
-func.func @extuiOn1I1() {
+func.func @extui_on_1_i1() {
     // extui should extend i1 with 0 bits not 1s
     // extui(1 : i1) = 1 : i64
     // CHECK-NEXT: 1
@@ -30,7 +30,7 @@ func.func @extuiOn1I1() {
     return
 }
 
-func.func @trunciI16ToI8() {
+func.func @trunci_i16_to_i8() {
     // trunci on 20194 : i16
     // trunci(20194 : i16) = -30 : i8
     // CHECK-NEXT: 20194
@@ -43,8 +43,8 @@ func.func @trunciI16ToI8() {
 }
 
 func.func @entry() {
-    func.call @extsiOnI1() : () -> ()
-    func.call @extuiOn1I1() : () -> ()
-    func.call @trunciI16ToI8() : () -> ()
+    func.call @extsi_on_i1() : () -> ()
+    func.call @extui_on_1_i1() : () -> ()
+    func.call @trunci_i16_to_i8() : () -> ()
     return
 }
