@@ -3797,12 +3797,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
         KernelInfo::getMayUseNestedParallelismFromKernelEnvironment(KernelEnvC);
     ConstantInt *AssumedMayUseNestedParallelismC = ConstantInt::get(
         MayUseNestedParallelismC->getIntegerType(), NestedParallelism);
-    // D142569 started calling setMayUseNestedParallelismOfKernelEnvironment,
-    // breaking nested parallelism tests. ifdef out for now.
-#if 0
     setMayUseNestedParallelismOfKernelEnvironment(
         AssumedMayUseNestedParallelismC);
-#endif
 
     if (!DisableOpenMPOptStateMachineRewrite) {
       ConstantInt *UseGenericStateMachineC =
@@ -4697,13 +4693,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
                 AA.KernelEnvC);
         ConstantInt *NewMayUseNestedParallelismC = ConstantInt::get(
             MayUseNestedParallelismC->getIntegerType(), AA.NestedParallelism);
-        // D142569 started calling
-        // setMayUseNestedParallelismOfKernelEnvironment, breaking nested
-        // parallelism tests. ifdef out for now.
-#if 0	
         AA.setMayUseNestedParallelismOfKernelEnvironment(
             NewMayUseNestedParallelismC);
-#endif
       }
     } RAII(*this);
 
