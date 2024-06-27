@@ -877,7 +877,36 @@ extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
   } else {
     if (const auto *ET = QT->getAs<EnumType>())
       QT = ET->getDecl()->getIntegerType();
-    switch (QT->castAs<BuiltinType>()->getKind()) {
+
+    BuiltinType::Kind K = QT->castAs<BuiltinType>()->getKind();
+  #ifdef __arm__
+    switch (K) {
+    default:
+      llvm_unreachable("unknown type kind!");
+    case BuiltinType::Bool:
+    case BuiltinType::SChar:
+    case BuiltinType::Char_S:
+    case BuiltinType::Char_U:
+    case BuiltinType::UChar:
+    case BuiltinType::Short:
+    case BuiltinType::UShort:
+    case BuiltinType::Int:
+    case BuiltinType::UInt:
+    case BuiltinType::Long:
+    case BuiltinType::ULong:
+    case BuiltinType::LongLong:
+    case BuiltinType::ULongLong:
+    case BuiltinType::Float:
+    case BuiltinType::Double:
+      // Consume unused leading 32-bit of storage
+      va_arg(args, int);
+
+    case BuiltinType::LongDouble:
+      break;
+    }
+  #endif
+
+    switch (K) {
     default:
       llvm_unreachable("unknown type kind!");
       break;

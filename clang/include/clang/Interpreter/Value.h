@@ -98,6 +98,8 @@ class REPL_EXTERNAL_VISIBILITY Value {
     void *m_Ptr;
   };
 
+  static_assert(sizeof(Storage) <= 2 * sizeof(void *), "va_args");
+
 public:
   enum Kind {
 #define X(type, name) K_##name,

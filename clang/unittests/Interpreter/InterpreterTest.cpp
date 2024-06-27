@@ -284,7 +284,6 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 
 // This test exposes an ARM specific problem in the interpreter, see
 // https://github.com/llvm/llvm-project/issues/94994.
-#ifndef __arm__
 TEST_F(InterpreterTest, Value) {
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
@@ -383,6 +382,5 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
 }
-#endif /* ifndef __arm__ */
 
 } // end anonymous namespace
