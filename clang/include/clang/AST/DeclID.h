@@ -197,6 +197,8 @@ public:
 
   static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
                          DeclID ID);
+  static LocalDeclID get(ASTReader &Reader, serialization::ModuleFile &MF,
+                         unsigned ModuleFileIndex, unsigned LocalDeclID);
 
   LocalDeclID &operator++() {
     ++ID;

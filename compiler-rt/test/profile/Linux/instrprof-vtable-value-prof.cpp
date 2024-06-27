@@ -14,19 +14,19 @@
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables test.profraw | FileCheck %s --check-prefixes=COMMON,RAW
 
 // Generate indexed profile from raw profile and show the data.
-// RUN: llvm-profdata merge test.profraw -o test.profdata
+// RUN: llvm-profdata merge --keep-vtable-symbols test.profraw -o test.profdata
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables test.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // Generate text profile from raw and indexed profiles respectively and show the data.
-// RUN: llvm-profdata merge --text test.profraw -o raw.proftext
+// RUN: llvm-profdata merge --keep-vtable-symbols --text test.profraw -o raw.proftext
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text raw.proftext | FileCheck %s --check-prefix=ICTEXT
-// RUN: llvm-profdata merge --text test.profdata -o indexed.proftext
+// RUN: llvm-profdata merge --keep-vtable-symbols --text test.profdata -o indexed.proftext
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text indexed.proftext | FileCheck %s --check-prefix=ICTEXT
 
 // Generate indexed profile from text profiles and show the data
-// RUN: llvm-profdata merge --binary raw.proftext -o text.profraw
+// RUN: llvm-profdata merge --keep-vtable-symbols --binary raw.proftext -o text.profraw
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables text.profraw | FileCheck %s --check-prefixes=COMMON,INDEXED
-// RUN: llvm-profdata merge --binary indexed.proftext -o text.profdata
+// RUN: llvm-profdata merge --keep-vtable-symbols --binary indexed.proftext -o text.profdata
 // RUN: llvm-profdata show --function=main --ic-targets --show-vtables text.profdata | FileCheck %s --check-prefixes=COMMON,INDEXED
 
 // COMMON: Counters:
@@ -128,12 +128,12 @@
 // RUN:    | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
 // For the indirect call site `ptr->func`
-// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, compare 1 vtables and sink 1 instructions
-// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, compare 1 vtables and sink 1 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, sink 1 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 //
 // For the indirect call site `delete ptr`
-// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, compare 1 vtables and sink 2 instructions
-// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, compare 1 vtables and sink 2 instructions
+// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, sink 2 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 
 // The IR matchers for indirect callsite `ptr->func`.
 // IR-LABEL: @main

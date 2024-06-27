@@ -102,6 +102,18 @@ func.func @insert_slice_of_transfer_write(%t1 : tensor<?x12xf32>, %v : vector<5x
   return %1 : tensor<?x12xf32>
 }
 
+// CHECK-LABEL: func @unit_insert_slice_of_unit_transfer_write(
+//  CHECK-SAME:     %[[t1:.*]]: tensor<1x1x12xf32>, %[[v:.*]]: vector<1x6xf32>, %[[s:.*]]: index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[r:.*]] = vector.transfer_write %[[v]], %[[t1]][%[[c0]], %[[c0]], %[[s]]] {in_bounds = [true, true]} : vector<1x6xf32>, tensor<1x1x12xf32>
+//       CHECK:   return %[[r]]
+func.func @unit_insert_slice_of_unit_transfer_write(%t1 : tensor<1x1x12xf32>, %v : vector<1x6xf32>, %s : index, %t2 : tensor<1x6xf32>) -> tensor<1x1x12xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.transfer_write %v, %t2[%c0, %c0] {in_bounds = [true, true]} : vector<1x6xf32>, tensor<1x6xf32>
+  %1 = tensor.insert_slice %0 into %t1[0, 0, %s] [1, 1, 6] [1, 1, 1] : tensor<1x6xf32> into tensor<1x1x12xf32>
+  return %1 : tensor<1x1x12xf32>
+}
+
 // CHECK-LABEL: func @insert_slice_of_transfer_write_non_leading_rank_reduction(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?x12xf32>, %[[v:.*]]: vector<5x6xf32>, %[[s:.*]]: index
 //   CHECK-DAG:   %[[c3:.*]] = arith.constant 3 : index

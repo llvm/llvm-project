@@ -9173,10 +9173,8 @@ static CompilerContextKind GetCompilerKind(clang::Decl::Kind clang_kind,
     if (decl_ctx) {
       if (decl_ctx->isFunctionOrMethod())
         return CompilerContextKind::Function;
-      else if (decl_ctx->isRecord())
-        return (CompilerContextKind)((uint16_t)CompilerContextKind::Class |
-                                     (uint16_t)CompilerContextKind::Struct |
-                                     (uint16_t)CompilerContextKind::Union);
+      if (decl_ctx->isRecord())
+        return CompilerContextKind::ClassOrStruct | CompilerContextKind::Union;
     }
     break;
   }
