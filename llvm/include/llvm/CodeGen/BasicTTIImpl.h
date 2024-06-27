@@ -544,6 +544,10 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
+  InstructionCost getHistogramCost(Type *Ty) {
+    return InstructionCost::getInvalid();
+  }
+
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) {
     return true;
   }

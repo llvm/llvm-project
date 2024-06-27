@@ -662,6 +662,10 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
+InstructionCost TargetTransformInfo::getHistogramCost(Type *Ty) const {
+  return TTIImpl->getHistogramCost(Ty);
+}
+
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
     const Instruction *I) const {
   return TTIImpl->isExpensiveToSpeculativelyExecute(I);

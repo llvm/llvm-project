@@ -387,6 +387,23 @@ public:
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
 
+  bool isHistogramLoadOrUpdate(Instruction *I) const {
+    for (const HistogramInfo &HGram : LAI->getHistograms())
+      if (HGram.Load == I || HGram.Update == I)
+        return true;
+
+    return false;
+  }
+
+  std::optional<const HistogramInfo *>
+  getHistogramForStore(StoreInst *SI) const {
+    for (const HistogramInfo &HGram : LAI->getHistograms())
+      if (HGram.Store == SI)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }

@@ -420,6 +420,10 @@ public:
 
   bool haveFastSqrt(Type *Ty) const { return false; }
 
+  InstructionCost getHistogramCost(Type *Ty) const {
+    return InstructionCost::getInvalid();
+  }
+
   bool isExpensiveToSpeculativelyExecute(const Instruction *I) { return true; }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
