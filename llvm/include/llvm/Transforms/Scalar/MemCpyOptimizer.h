@@ -78,8 +78,7 @@ private:
                                   BatchAAResults &BAA);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
   bool processImmutArgument(CallBase &CB, unsigned ArgNo);
-  Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
-                                    Value *ByteVal);
+  bool tryMergingIntoMemset(BasicBlock *BB);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
                              AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
