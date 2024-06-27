@@ -274,6 +274,17 @@ for.body:
 }
 
 define void @test9() {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP0]], <4 x i16> zeroinitializer, i64 4)
+; CHECK-NEXT:    br label [[FOR_BODY13:%.*]]
+; CHECK:       for.body13:
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i16> [[TMP1]] to <8 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr null, align 4
+; CHECK-NEXT:    br label [[FOR_BODY13]]
+;
 entry:
   br label %for.body13
 
