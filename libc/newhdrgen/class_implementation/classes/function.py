@@ -20,7 +20,7 @@ class Function:
             arg if isinstance(arg, str) else arg["type"] for arg in arguments
         ]
         self.guard = guard
-        self.attributes = attributes
+        self.attributes = attributes or []
 
     def __str__(self):
         attributes_str = " ".join(self.attributes)
