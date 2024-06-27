@@ -48,8 +48,6 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; LINUX-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX-NEXT:    callq __stack_chk_fail@PLT
 
-
-
    tail call tailcc void @h(ptr null, i64 0, ptr null)
    ret void
 }
@@ -76,7 +74,7 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    callq __security_check_cookie
 ; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
-;
+
 ; LINUX-LABEL: tailcall_unrelated_frame:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq %rax
@@ -94,7 +92,6 @@ define void @tailcall_unrelated_frame() sspreq {
 ; LINUX-NEXT:  .LBB1_2: # %CallStackCheckFailBlk
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    callq __stack_chk_fail@PLT
-
 
   call void @bar()
   tail call void @bar()
