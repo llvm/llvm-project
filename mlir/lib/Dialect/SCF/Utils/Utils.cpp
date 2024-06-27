@@ -1164,13 +1164,11 @@ bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
       target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
       target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
       target.getLoopSteps() == source.getLoopSteps();
-  auto forAllTarget = dyn_cast<scf::ForallOp>(*target);
-  auto forAllSource = dyn_cast<scf::ForallOp>(*source);
   // TODO: Decouple checks on concrete loop types and move this function
   // somewhere for general utility for `LoopLikeOpInterface`
-  if (forAllTarget && forAllSource)
-    iterSpaceEq =
-        iterSpaceEq && forAllTarget.getMapping() == forAllSource.getMapping();
+  if (auto forAllTarget = dyn_cast<scf::ForallOp>(*target))
+    iterSpaceEq = iterSpaceEq && forAllTarget.getMapping() ==
+                                     cast<scf::ForallOp>(*source).getMapping();
   if (!iterSpaceEq) {
     diag << "target and source iteration spaces must be equal";
     return false;

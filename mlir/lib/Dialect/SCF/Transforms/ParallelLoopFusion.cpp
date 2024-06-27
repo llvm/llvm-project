@@ -161,7 +161,6 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
   IRRewriter rewriter(builder);
   secondPloop = mlir::fuseIndependentSiblingParallelLoops(
       firstPloop, secondPloop, rewriter);
-  ;
 }
 
 void mlir::scf::naivelyFuseParallelOps(
