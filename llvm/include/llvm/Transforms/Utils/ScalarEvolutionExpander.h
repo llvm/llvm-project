@@ -376,7 +376,9 @@ public:
     Builder.SetInsertPoint(IP);
   }
 
-  void setInsertPoint(BasicBlock::iterator IP) { Builder.SetInsertPoint(IP); }
+  void setInsertPoint(BasicBlock::iterator IP) {
+    Builder.SetInsertPoint(IP->getParent(), IP);
+  }
 
   /// Clear the current insertion point. This is useful if the instruction
   /// that had been serving as the insertion point may have been deleted.

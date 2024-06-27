@@ -2489,7 +2489,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
   LLVMContext &C = CI->getContext();
   IRBuilder<> Builder(C);
-  Builder.SetInsertPoint(CI->getIterator());
+  Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
     bool FallthroughToDefaultUpgrade = false;
@@ -5023,7 +5023,7 @@ void llvm::UpgradeARCRuntime(Module &M) {
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 
-      IRBuilder<> Builder(CI->getIterator());
+      IRBuilder<> Builder(CI->getParent(), CI->getIterator());
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 

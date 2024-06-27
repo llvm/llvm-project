@@ -3135,10 +3135,8 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
 static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,
                                     Instruction *Instr, bool BeforeDbgRecords) {
   BasicBlock::iterator I = Instr ? Instr->getIterator() : Block->end();
-  assert(I.getNodeParent() == Block &&
-         "Non-null Instr must be contained in Block!");
   I.setHeadBit(BeforeDbgRecords);
-  Builder->SetInsertPoint(I);
+  Builder->SetInsertPoint(Block, I);
 }
 
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,

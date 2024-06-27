@@ -4180,7 +4180,7 @@ static bool mergeConditionalStoreToAddress(
                                                 QStore->getParent(), PPHI);
 
   BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
-  IRBuilder<> QB(PostBBFirst);
+  IRBuilder<> QB(PostBB, PostBBFirst);
   QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
 
   Value *PPred = PStore->getParent() == PTB ? PCond : QB.CreateNot(PCond);
