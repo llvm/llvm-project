@@ -97,6 +97,7 @@ struct SanitizerTrapInfoTy {
     ExceedsLength,
     ExceedsSlots,
     OutOfBounds,
+    UseAfterScope,
     UseAfterFree,
     MemoryLeak,
   } ErrorCode;
@@ -216,6 +217,18 @@ struct SanitizerTrapInfoTy {
                    uint64_t LineNo) {
     accessError(OutOfBounds, A, AP, Size, AccessId, PC, FunctionName, FileName,
                 LineNo);
+    __builtin_trap();
+  }
+
+  template <enum AllocationKind AK>
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
+    gnu::always_inline]] void
+  useAfterScope(const AllocationTy<AK> &A, const AllocationPtrTy<AK> &AP,
+                uint64_t Size, int64_t AccessId, uint64_t PC,
+                const char *FunctionName, const char *FileName,
+                uint64_t LineNo) {
+    accessError(UseAfterScope, A, AP, Size, AccessId, PC, FunctionName,
+                FileName, LineNo);
     __builtin_trap();
   }
 

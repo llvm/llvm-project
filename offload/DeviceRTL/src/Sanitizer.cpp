@@ -138,7 +138,10 @@ template <AllocationKind AK> struct AllocationTracker {
     int64_t Length = A.Length;
     if (Offset > Length - Size ||
         (SanitizerConfig<AK>::useTags() && A.Tag != AP.AllocationTag)) {
-      if (Offset > Length - Size)
+      if (AK == AllocationKind::LOCAL && Length == 0)
+        __sanitizer_trap_info_ptr->useAfterScope<AK>(
+            A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
+      else if (Offset > Length - Size)
         __sanitizer_trap_info_ptr->outOfBoundAccess<AK>(
             A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
       else

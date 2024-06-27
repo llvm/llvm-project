@@ -31,6 +31,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -67,7 +68,8 @@ static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
   // Sanitizers may use markers.
   if (CGOpts.SanitizeAddressUseAfterScope ||
       LangOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      LangOpts.Sanitize.has(SanitizerKind::Memory))
+      LangOpts.Sanitize.has(SanitizerKind::Memory) ||
+      LangOpts.Sanitize.has(SanitizerKind::Offload))
     return true;
 
   // For now, only in optimized builds.
@@ -791,6 +793,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       SanOpts.set(SanitizerKind::KernelHWAddress, false);
     if (no_sanitize_mask & SanitizerKind::KernelHWAddress)
       SanOpts.set(SanitizerKind::HWAddress, false);
+    if (no_sanitize_mask & SanitizerKind::Offload)
+      SanOpts.set(SanitizerKind::Offload, false);
 
     if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
       Fn->addFnAttr(llvm::Attribute::NoSanitizeBounds);
@@ -809,7 +813,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     CurFn->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
   } else {
     // Apply sanitizer attributes to the function.
-    if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress))
+    if (SanOpts.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
+                         SanitizerKind::Offload))
       Fn->addFnAttr(llvm::Attribute::SanitizeAddress);
     if (SanOpts.hasOneOf(SanitizerKind::HWAddress |
                          SanitizerKind::KernelHWAddress))

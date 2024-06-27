@@ -380,6 +380,8 @@ bool GPUSanImpl::instrumentCallInst(LoopInfo &LI, CallInst &CI) {
   if (isa<LifetimeIntrinsic>(CI))
     return Changed;
   if (auto *Fn = CI.getCalledFunction()) {
+    if (Fn->getName().starts_with("__kmpc_target_init"))
+      return Changed;
     if ((Fn->isDeclaration() || Fn->getName().starts_with("__kmpc") ||
          Fn->getName().starts_with("rpc_")) &&
         !Fn->getName().starts_with("ompx")) {
@@ -455,7 +457,7 @@ void GPUSanImpl::instrumentReturns(
   for (auto *RI : Returns) {
     IRBuilder<> IRB(RI);
     IRB.CreateCall(getFreeNLocalFn(),
-                   {ConstantInt::get(Int32Ty, Allocas.size())}, ".free");
+                   {ConstantInt::get(Int32Ty, Allocas.size())});
   }
 }
 

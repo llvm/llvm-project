@@ -70,6 +70,7 @@
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
+#include "llvm/Transforms/Instrumentation/GPUSan.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
@@ -738,6 +739,10 @@ static void addSanitizers(const Triple &TargetTriple,
 
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
+    }
+    if (LangOpts.Sanitize.has(SanitizerKind::Offload) &&
+        (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())) {
+      MPM.addPass(GPUSanPass());
     }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
