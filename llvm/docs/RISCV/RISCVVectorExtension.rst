@@ -13,7 +13,8 @@ Mapping to LLVM IR types
 
 RVV adds 32 ``VLEN`` sized registers, where ``VLEN`` is an unknown constant to the compiler. To be able to represent ``VLEN`` sized values, the RISC-V backend takes the same approach as AArch64's SVE and uses `scalable vector types <https://llvm.org/docs/LangRef.html#t-vector>`_.
 
-Scalable vector types are of the form ``<vscale x n x ty>``, which indicate a vector with a multiple of ``n`` elements of type ``ty``. ``n`` and ``ty`` then end up controlling LMUL and SEW respectively.
+Scalable vector types are of the form ``<vscale x n x ty>``, which indicates a vector with a multiple of ``n`` elements of type ``ty``.
+On RISC-V ``n`` and ``ty`` control LMUL and SEW respectively.
 
 LLVM supports only ``ELEN=32`` or ``ELEN=64``, so ``vscale`` is defined as ``VLEN/64`` (see ``RISCV::RVVBitsPerBlock``).
 Note this means that ``VLEN>=64``, so ``VLEN=32`` isn't currently supported.
