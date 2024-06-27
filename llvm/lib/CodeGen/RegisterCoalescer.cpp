@@ -3680,7 +3680,6 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
                       CP.getDstIdx());
     LHSVals.pruneMainSegments(LHS, ShrinkMainRange);
     LHSVals.pruneSubRegValues(LHS, ShrinkMask);
-    RHSVals.pruneSubRegValues(LHS, ShrinkMask);
   }
 
   // The merging algorithm in LiveInterval::join() can't handle conflicting
