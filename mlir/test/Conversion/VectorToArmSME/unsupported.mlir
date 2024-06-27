@@ -192,3 +192,54 @@ func.func @vector_outerproduct_unknown_mask(%lhs : vector<[4]xf32>, %rhs : vecto
   %0 = vector.mask %mask { vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>} : vector<[4]xf32>, vector<[4]xf32> } : vector<[4]x[4]xi1> -> vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
 }
+
+// -----
+
+/// Not SVE predicate-sized.
+
+// CHECK-LABEL: @negative_vector_extract_to_psel_0
+func.func @negative_vector_extract_to_psel_0(%a: index, %b: index, %index: index) -> vector<[32]xi1>
+{
+  // CHECK-NOT: arm_sve.psel
+  %mask = vector.create_mask %a, %b : vector<[4]x[32]xi1>
+  %slice = vector.extract %mask[%index] : vector<[32]xi1> from vector<[4]x[32]xi1>
+  return %slice : vector<[32]xi1>
+}
+
+// -----
+
+/// Source not 2-D scalable mask.
+
+// CHECK-LABEL: @negative_vector_extract_to_psel_1
+func.func @negative_vector_extract_to_psel_1(%a: index, %b: index, %index: index) -> vector<[8]xi1>
+{
+  // CHECK-NOT: arm_sve.psel
+  %mask = vector.create_mask %a, %b : vector<4x[8]xi1>
+  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<4x[8]xi1>
+  return %slice : vector<[8]xi1>
+}
+
+// -----
+
+/// Source not vector.create_mask.
+
+// CHECK-LABEL: @negative_vector_extract_to_psel_2
+func.func @negative_vector_extract_to_psel_2(%mask: vector<[4]x[8]xi1>, %index: index) -> vector<[8]xi1>
+{
+  // CHECK-NOT: arm_sve.psel
+  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<[4]x[8]xi1>
+  return %slice : vector<[8]xi1>
+}
+
+// -----
+
+/// Not psel-like extract.
+
+// CHECK-LABEL: @negative_vector_extract_to_psel_3
+func.func @negative_vector_extract_to_psel_3(%a: index, %b: index, %index: index) -> i1
+{
+  // CHECK-NOT: arm_sve.psel
+  %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+  %el = vector.extract %mask[2, %index] : i1 from vector<[4]x[8]xi1>
+  return %el : i1
+}

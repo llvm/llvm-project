@@ -434,6 +434,45 @@ static void printScheduleClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for Order Clause
+//===----------------------------------------------------------------------===//
+
+// order ::= `order` `(` [order-modiﬁer ':'] concurrent `)`
+// order-modiﬁer ::= reproducible | unconstrained
+static ParseResult parseOrderClause(OpAsmParser &parser,
+                                    ClauseOrderKindAttr &kindAttr,
+                                    OrderModifierAttr &modifierAttr) {
+  StringRef enumStr;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&enumStr))
+    return failure();
+  if (std::optional<OrderModifier> enumValue =
+          symbolizeOrderModifier(enumStr)) {
+    modifierAttr = OrderModifierAttr::get(parser.getContext(), *enumValue);
+    if (parser.parseOptionalColon())
+      return failure();
+    loc = parser.getCurrentLocation();
+    if (parser.parseKeyword(&enumStr))
+      return failure();
+  }
+  if (std::optional<ClauseOrderKind> enumValue =
+          symbolizeClauseOrderKind(enumStr)) {
+    kindAttr = ClauseOrderKindAttr::get(parser.getContext(), *enumValue);
+    return success();
+  }
+  return parser.emitError(loc, "invalid clause value: '") << enumStr << "'";
+}
+
+static void printOrderClause(OpAsmPrinter &p, Operation *op,
+                             ClauseOrderKindAttr kindAttr,
+                             OrderModifierAttr modifierAttr) {
+  if (modifierAttr)
+    p << stringifyOrderModifier(modifierAttr.getValue()) << ":";
+  if (kindAttr)
+    p << stringifyClauseOrderKind(kindAttr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
 // Parser, printer and verifier for ReductionVarList
 //===----------------------------------------------------------------------===//
 
@@ -1682,7 +1721,8 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
         /*simd_modifier=*/false, /*nowait=*/false,
-        /*ordered_val=*/nullptr, /*order_val=*/nullptr);
+        /*ordered_val=*/nullptr, /*order_val=*/nullptr,
+        /*order_modifier=*/nullptr);
   state.addAttributes(attributes);
 }
 
@@ -1697,7 +1737,8 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
                   makeArrayAttr(ctx, clauses.reductionDeclSymbols),
                   clauses.scheduleValAttr, clauses.scheduleChunkVar,
                   clauses.scheduleModAttr, clauses.scheduleSimdAttr,
-                  clauses.nowaitAttr, clauses.orderedAttr, clauses.orderAttr);
+                  clauses.nowaitAttr, clauses.orderedAttr, clauses.orderAttr,
+                  clauses.orderModAttr);
 }
 
 LogicalResult WsloopOp::verify() {
@@ -1726,8 +1767,8 @@ void SimdOp::build(OpBuilder &builder, OperationState &state,
   // privatizers, reductionDeclSymbols.
   SimdOp::build(builder, state, clauses.alignedVars,
                 makeArrayAttr(ctx, clauses.alignmentAttrs), clauses.ifVar,
-                clauses.nontemporalVars, clauses.orderAttr, clauses.simdlenAttr,
-                clauses.safelenAttr);
+                clauses.nontemporalVars, clauses.orderAttr,
+                clauses.orderModAttr, clauses.simdlenAttr, clauses.safelenAttr);
 }
 
 LogicalResult SimdOp::verify() {
@@ -1762,7 +1803,8 @@ void DistributeOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privatizers.
   DistributeOp::build(builder, state, clauses.distScheduleStaticAttr,
                       clauses.distScheduleChunkSizeVar, clauses.allocateVars,
-                      clauses.allocatorVars, clauses.orderAttr);
+                      clauses.allocatorVars, clauses.orderAttr,
+                      clauses.orderModAttr);
 }
 
 LogicalResult DistributeOp::verify() {

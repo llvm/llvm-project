@@ -39,6 +39,13 @@ enum class ParameterKind : uint8_t {
   DXILHandle,
 };
 
+enum class ResourceClass : uint8_t {
+  SRV = 0,
+  UAV,
+  CBuffer,
+  Sampler,
+};
+
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
 /// "Shape" in the DXIL docs.
 enum class ResourceKind : uint32_t {

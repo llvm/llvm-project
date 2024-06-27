@@ -283,7 +283,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     break;
   }
 
-  return TypeIdx(ID);
+  return TypeIdx(0, ID);
 }
 
 unsigned serialization::ComputeHash(Selector Sel) {
