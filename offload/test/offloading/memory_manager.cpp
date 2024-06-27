@@ -1,6 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-// REQURIES: nvidia-gpu
+// REQURIES: nvidiagpu
 
 #include <omp.h>
 
