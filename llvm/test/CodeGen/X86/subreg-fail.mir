@@ -3,6 +3,10 @@
 # RUN:   -verify-coalescing -enable-subreg-liveness=true \
 # RUN:   --run-pass=register-coalescer -o - | FileCheck %s
 
+# Check that the register coalescer correctly handles merging live ranges over
+# SUBREG_TO_REG on X86. The -verify-coalescing option will give an error if
+# this is incorrect.
+
 ---
 name:            test1
 alignment:       16
