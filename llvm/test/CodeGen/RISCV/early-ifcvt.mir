@@ -3,550 +3,545 @@
 # RUN: -run-pass=early-ifcvt -simplify-mir  -o - %s | FileCheck %s
 
 ---
-name: blt
+name:            ifcvt_lt
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: blt
+body:             |
+  ; CHECK-LABEL: name: ifcvt_lt
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x_i, %k
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add1, [[SLT]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add2, [[SLT]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x, %const_5
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_t, [[SLT]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_f, [[SLT]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BLT %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BLT %x, %const_5, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
+    %const_t:gpr = ADDI $x0, 1
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
+    %const_f:gpr = ADDI $x0, 2
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
 ...
 
 ---
-name: bltu
+name:            ifcvt_ltu
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: bltu
+body:             |
+  ; CHECK-LABEL: name: ifcvt_ltu
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[SLTU:%[0-9]+]]:gpr = SLTU %x_i, %k
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add1, [[SLTU]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add2, [[SLTU]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[SLTU:%[0-9]+]]:gpr = SLTU %x, %const_5
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_t, [[SLTU]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_f, [[SLTU]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BLTU %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BLTU %x, %const_5, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
+    %const_t:gpr = ADDI $x0, 1
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
+    %const_f:gpr = ADDI $x0, 2
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
 ...
 
 ---
-name: beq
+name:            ifcvt_ge
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: beq
+body:             |
+  ; CHECK-LABEL: name: ifcvt_ge
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x, %const_5
+  ; CHECK-NEXT:   [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_f, [[XORI]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_t, [[XORI]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gpr = XOR %x_i, %k
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11
+
+    %base_addr:gpr = COPY $x10
+    %n:gpr = COPY $x11
+    %i_0:gpr = COPY $x0
+    PseudoBR %bb.1
+
+  bb.1:
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BGE %x, %const_5, %bb.2
+    PseudoBR %bb.3
+
+  bb.2:
+    %const_t:gpr = ADDI $x0, 1
+    PseudoBR %bb.4
+
+  bb.3:
+    %const_f:gpr = ADDI $x0, 2
+    PseudoBR %bb.4
+
+  bb.4:
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
+
+  bb.5:
+    PseudoRET
+...
+
+---
+name:            ifcvt_geu
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: ifcvt_geu
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $x10, $x11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
+  ; CHECK-NEXT:   %n:gpr = COPY $x11
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[SLTU:%[0-9]+]]:gpr = SLTU %x, %const_5
+  ; CHECK-NEXT:   [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_f, [[XORI]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_t, [[XORI]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   PseudoRET
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11
+
+    %base_addr:gpr = COPY $x10
+    %n:gpr = COPY $x11
+    %i_0:gpr = COPY $x0
+    PseudoBR %bb.1
+
+  bb.1:
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BGEU %x, %const_5, %bb.2
+    PseudoBR %bb.3
+
+  bb.2:
+    %const_t:gpr = ADDI $x0, 1
+    PseudoBR %bb.4
+
+  bb.3:
+    %const_f:gpr = ADDI $x0, 2
+    PseudoBR %bb.4
+
+  bb.4:
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
+
+  bb.5:
+    PseudoRET
+...
+
+---
+name:            ifcvt_eq
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: ifcvt_eq
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   liveins: $x10, $x11
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
+  ; CHECK-NEXT:   %n:gpr = COPY $x11
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gpr = XOR %x, %const_5
   ; CHECK-NEXT:   [[SLTIU:%[0-9]+]]:gpr = SLTIU [[XOR]], 1
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add1, [[SLTIU]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add2, [[SLTIU]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_t, [[SLTIU]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_f, [[SLTIU]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BEQ %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BEQ %x, %const_5, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
+    %const_t:gpr = ADDI $x0, 1
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
+    %const_f:gpr = ADDI $x0, 2
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
 ...
 
 ---
-name: bne
+name:            ifcvt_ne
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: bne
+body:             |
+  ; CHECK-LABEL: name: ifcvt_ne
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gpr = XOR %x_i, %k
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_5:gpr = ADDI $x0, 5
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gpr = XOR %x, %const_5
   ; CHECK-NEXT:   [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[XOR]]
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add1, [[SLTU]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add2, [[SLTU]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_t, [[SLTU]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_f, [[SLTU]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BNE %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    %const_5:gpr = ADDI $x0, 5
+    BNE %x, %const_5, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
+    %const_t:gpr = ADDI $x0, 1
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
+    %const_f:gpr = ADDI $x0, 2
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
 ...
 
 ---
-name: bge
+name:            ifcvt_eqz
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: bge
+body:             |
+  ; CHECK-LABEL: name: ifcvt_eqz
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x_i, %k
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add2, [[SLT]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add1, [[SLT]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_t:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_f:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   [[SLTIU:%[0-9]+]]:gpr = SLTIU %x, 1
+  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %const_t, [[SLTIU]]
+  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %const_f, [[SLTIU]]
+  ; CHECK-NEXT:   %val:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BGE %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    BEQ %x, $x0, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
+    %const_t:gpr = ADDI $x0, 1
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
+    %const_f:gpr = ADDI $x0, 2
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val:gpr = PHI %const_t, %bb.2, %const_f, %bb.3
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
 ...
 
 ---
-name: bgeu
+name:            ifcvt_lt_needs_rc_copies
 tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: bgeu
+body:             |
+  ; CHECK-LABEL: name: ifcvt_lt_needs_rc_copies
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
+  ; CHECK-NEXT:   liveins: $x10, $x11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %base_addr:gpr = COPY $x10
   ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
+  ; CHECK-NEXT:   %i_0:gpr = COPY $x0
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   [[SLTU:%[0-9]+]]:gpr = SLTU %x_i, %k
-  ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC %add2, [[SLTU]]
-  ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN %add1, [[SLTU]]
-  ; CHECK-NEXT:   %res:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   SD %res, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   PseudoRET
-  bb.0:
-    successors: %bb.1
-    liveins: $x10, $x11, $x12
-
-    %x:gpr = COPY $x10
-    %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
-    PseudoBR %bb.1
-
-  bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BGEU %x_i, %k, %bb.2
-    PseudoBR %bb.3
-
-  bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
-    PseudoBR %bb.4
-
-  bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
-    PseudoBR %bb.4
-
-  bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:gpr = PHI %add1, %bb.2, %add2, %bb.3
-    SD %res, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
-
-  bb.5:
-    PseudoRET
-...
-
----
-name: needs_rc_copy_fpr64
-tracksRegLiveness: true
-body: |
-  ; CHECK-LABEL: name: needs_rc_copy_fpr64
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   liveins: $x10, $x11, $x12
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %x:gpr = COPY $x10
-  ; CHECK-NEXT:   %n:gpr = COPY $x11
-  ; CHECK-NEXT:   %k:gpr = COPY $x12
-  ; CHECK-NEXT:   %zero:gpr = COPY $x0
-  ; CHECK-NEXT:   PseudoBR %bb.1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1, %bb.5
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.1
-  ; CHECK-NEXT:   %x_i_addr:gpr = ADD %x, %i
-  ; CHECK-NEXT:   %x_i:gpr = LD %x_i_addr, 0
-  ; CHECK-NEXT:   %add1:gpr = ADDI %x_i, 1
-  ; CHECK-NEXT:   %itofp1:fpr64 = nofpexcept FCVT_D_W %add1, 0
-  ; CHECK-NEXT:   %add2:gpr = ADDI %x_i, 2
-  ; CHECK-NEXT:   %itofp2:fpr64 = nofpexcept FCVT_D_W %add2, 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY %itofp1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY %itofp2
-  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x_i, %k
+  ; CHECK-NEXT:   %offset:gpr = PHI %i_inc, %bb.1, %i_0, %bb.0
+  ; CHECK-NEXT:   %addr:gpr = ADD %base_addr, %offset
+  ; CHECK-NEXT:   %x:gpr = LW %addr, 0
+  ; CHECK-NEXT:   %const_1:gpr = ADDI $x0, 1
+  ; CHECK-NEXT:   %const_t:fpr64 = nofpexcept FCVT_D_W %const_1, 0
+  ; CHECK-NEXT:   %const_2:gpr = ADDI $x0, 2
+  ; CHECK-NEXT:   %const_f:fpr64 = nofpexcept FCVT_D_W %const_2, 0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY %const_t
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY %const_f
+  ; CHECK-NEXT:   [[SLT:%[0-9]+]]:gpr = SLT %x, $x0
   ; CHECK-NEXT:   [[VT_MASKC:%[0-9]+]]:gpr = VT_MASKC [[COPY]], [[SLT]]
   ; CHECK-NEXT:   [[VT_MASKCN:%[0-9]+]]:gpr = VT_MASKCN [[COPY1]], [[SLT]]
   ; CHECK-NEXT:   [[OR:%[0-9]+]]:gpr = OR [[VT_MASKC]], [[VT_MASKCN]]
-  ; CHECK-NEXT:   %res:fpr64 = COPY [[OR]]
-  ; CHECK-NEXT:   %fptoi:gpr = nofpexcept FCVT_W_D %res, 1
-  ; CHECK-NEXT:   SD %fptoi, %x_i, 0
-  ; CHECK-NEXT:   %i_inc:gpr = ADDI %i, 1
-  ; CHECK-NEXT:   BEQ %i_inc, %n, %bb.5
-  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT:   %val_fp:fpr64 = COPY [[OR]]
+  ; CHECK-NEXT:   %val:gpr = nofpexcept FCVT_W_D %val_fp, 1
+  ; CHECK-NEXT:   SW %val, %addr, 0
+  ; CHECK-NEXT:   %i_inc:gpr = ADDI %offset, 4
+  ; CHECK-NEXT:   BLT %i_inc, %n, %bb.1
+  ; CHECK-NEXT:   PseudoBR %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
     successors: %bb.1
-    liveins: $x10, $x11, $x12
+    liveins: $x10, $x11
 
-    %x:gpr = COPY $x10
+    %base_addr:gpr = COPY $x10
     %n:gpr = COPY $x11
-    %k:gpr = COPY $x12
-    %zero:gpr = COPY $x0
+    %i_0:gpr = COPY $x0
     PseudoBR %bb.1
 
   bb.1:
-    successors: %bb.2, %bb.3
-
-    %i:gpr = PHI %zero, %bb.0, %i_inc, %bb.4
-    %x_i_addr:gpr = ADD %x, %i
-    %x_i:gpr = LD %x_i_addr, 0
-    BLT %x_i, %k, %bb.2
+    %offset:gpr = PHI %i_inc, %bb.4, %i_0, %bb.0
+    %addr:gpr = ADD %base_addr, %offset
+    %x:gpr = LW %addr, 0
+    BLT %x, $x0, %bb.2
     PseudoBR %bb.3
 
   bb.2:
-    successors: %bb.4
-
-    %add1:gpr = ADDI %x_i, 1
-    %itofp1:fpr64 = nofpexcept FCVT_D_W %add1, 0
+    %const_1:gpr = ADDI $x0, 1
+    %const_t:fpr64 = nofpexcept FCVT_D_W %const_1, 0
     PseudoBR %bb.4
 
   bb.3:
-    successors: %bb.4
-
-    %add2:gpr = ADDI %x_i, 2
-    %itofp2:fpr64 = nofpexcept FCVT_D_W %add2, 0
+    %const_2:gpr = ADDI $x0, 2
+    %const_f:fpr64 = nofpexcept FCVT_D_W %const_2, 0
     PseudoBR %bb.4
 
   bb.4:
-    successors: %bb.1, %bb.5
-
-    %res:fpr64 = PHI %itofp1, %bb.2, %itofp2, %bb.3
-    %fptoi:gpr = nofpexcept FCVT_W_D %res, 1
-    SD %fptoi, %x_i, 0
-    %i_inc:gpr = ADDI %i, 1
-    BEQ %i_inc, %n, %bb.5
-    PseudoBR %bb.1
+    %val_fp:fpr64 = PHI %const_t, %bb.2, %const_f, %bb.3
+    %val:gpr = nofpexcept FCVT_W_D %val_fp, 1
+    SW %val, %addr, 0
+    %i_inc:gpr = ADDI %offset, 4
+    BLT %i_inc, %n, %bb.1
+    PseudoBR %bb.5
 
   bb.5:
     PseudoRET
