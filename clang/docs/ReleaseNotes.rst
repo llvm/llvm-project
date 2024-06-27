@@ -739,6 +739,10 @@ Bug Fixes in This Version
   negatives where the analysis failed to detect unchecked access to guarded
   data.
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
