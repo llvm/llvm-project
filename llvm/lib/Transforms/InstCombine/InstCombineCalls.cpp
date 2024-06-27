@@ -2650,7 +2650,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
-    if (auto *CI = dyn_cast<CallBase>(Ptr)) {
+    if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -2662,10 +2662,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
-    } else if (auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
+    } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
       // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
       // our purposes, so check for that too.
-      auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
+      const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
       if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
         break;
 

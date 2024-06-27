@@ -13,6 +13,7 @@ define i64 @test_ptrauth_nop(ptr %p) {
 }
 
 declare void @foo()
+declare void @bar()
 
 define i64 @test_ptrauth_nop_constant() {
 ; CHECK-LABEL: @test_ptrauth_nop_constant(
@@ -139,11 +140,11 @@ define i64 @test_ptrauth_nop_constant_addrdisc_mismatch() {
 
 define i64 @test_ptrauth_nop_constant_addrdisc_mismatch2() {
 ; CHECK-LABEL: @test_ptrauth_nop_constant_addrdisc_mismatch2(
-; CHECK-NEXT:    [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @test_ptrauth_nop to i64), i64 1234)
+; CHECK-NEXT:    [[BLENDED:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr @bar to i64), i64 1234)
 ; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 [[BLENDED]])
 ; CHECK-NEXT:    ret i64 [[AUTHED]]
 ;
-  %addr = ptrtoint ptr @test_ptrauth_nop to i64
+  %addr = ptrtoint ptr @bar to i64
   %blended = call i64 @llvm.ptrauth.blend(i64 %addr, i64 1234)
   %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 %blended)
   ret i64 %authed
