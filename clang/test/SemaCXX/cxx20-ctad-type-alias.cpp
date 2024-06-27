@@ -108,7 +108,6 @@ struct Foo {
   Foo(T const (&)[N]);
 };
 
-// FIXME: Prefer non-canonical template arguments in the deduction guide?
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
                                // expected-note {{implicit deduction guide declared as 'template <typename X> requires __is_deducible(test9::Bar, Foo<type-parameter-0-0, sizeof(type-parameter-0-0)>) Bar(Foo<type-parameter-0-0, sizeof(type-parameter-0-0)>) -> Foo<type-parameter-0-0, sizeof(type-parameter-0-0)>'}} \
