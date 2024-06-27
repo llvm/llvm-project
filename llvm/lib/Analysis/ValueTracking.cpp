@@ -3994,6 +3994,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_cosf:
   case LibFunc_cosl:
     return Intrinsic::cos;
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return Intrinsic::tan;
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
