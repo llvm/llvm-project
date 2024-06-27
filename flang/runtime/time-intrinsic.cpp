@@ -107,6 +107,15 @@ double GetCpuTime(preferred_implementation,
 using count_t = std::int64_t;
 using unsigned_count_t = std::uint64_t;
 
+// POSIX implementation using clock_gettime where available.  The clock_gettime
+// result is in nanoseconds, which is converted as necessary to
+//  - deciseconds for kind 1
+//  - milliseconds for kinds 2, 4
+//  - nanoseconds for kinds 8, 16
+constexpr unsigned_count_t DS_PER_SEC{10u};
+constexpr unsigned_count_t MS_PER_SEC{1'000u};
+constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
+
 // Computes HUGE(INT(0,kind)) as an unsigned integer value.
 static constexpr inline unsigned_count_t GetHUGE(int kind) {
   if (kind > 8) {
@@ -118,21 +127,29 @@ static constexpr inline unsigned_count_t GetHUGE(int kind) {
 // This is the fallback implementation, which should work everywhere.
 template <typename Unused = void>
 count_t GetSystemClockCount(int kind, fallback_implementation) {
-  unsigned_count_t timestamp;
-  timestamp =
-      std::chrono::high_resolution_clock::now().time_since_epoch().count();
-  if (timestamp == static_cast<unsigned_count_t>(-1)) {
+  std::timespec tspec;
+
+  if (std::timespec_get(&tspec, TIME_UTC) < 0) {
     // Return -HUGE(COUNT) to represent failure.
     return -static_cast<count_t>(GetHUGE(kind));
   }
-  // Return the modulus of the unsigned integral count with HUGE(COUNT)+1.
-  // The result is a signed integer but never negative.
-  return static_cast<count_t>(timestamp % (GetHUGE(kind) + 1));
+
+  // compute the timestamp as seconds plus nanoseconds
+  const unsigned_count_t huge{GetHUGE(kind)};
+  unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
+  unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
+  if (kind >= 8) {
+    return (sec * NS_PER_SEC + nsec) % (huge + 1);
+  } else if (kind >= 2) {
+    return (sec * MS_PER_SEC + (nsec / (NS_PER_SEC / MS_PER_SEC))) % (huge + 1);
+  } else { // kind == 1
+    return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
+  }
 }
 
 template <typename Unused = void>
 count_t GetSystemClockCountRate(int kind, fallback_implementation) {
-  return std::chrono::high_resolution_clock::period::den;
+  return kind >= 8 ? NS_PER_SEC : kind >= 2 ? MS_PER_SEC : DS_PER_SEC;
 }
 
 template <typename Unused = void>
@@ -142,15 +159,6 @@ count_t GetSystemClockCountMax(int kind, fallback_implementation) {
   return max_clock_t <= maxCount ? static_cast<count_t>(max_clock_t)
                                  : static_cast<count_t>(maxCount);
 }
-
-// POSIX implementation using clock_gettime where available.  The clock_gettime
-// result is in nanoseconds, which is converted as necessary to
-//  - deciseconds for kind 1
-//  - milliseconds for kinds 2, 4
-//  - nanoseconds for kinds 8, 16
-constexpr unsigned_count_t DS_PER_SEC{10u};
-constexpr unsigned_count_t MS_PER_SEC{1'000u};
-constexpr unsigned_count_t NS_PER_SEC{1'000'000'000u};
 
 #ifdef CLOCKID_ELAPSED_TIME
 template <typename T = int, typename U = struct timespec>
