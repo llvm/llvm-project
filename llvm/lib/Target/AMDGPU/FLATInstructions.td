@@ -1626,6 +1626,7 @@ defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_ADD_F32", "int_amd
 }
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in {
+defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_global", v2f16>;
 defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "global_addrspace", v2f16>;
 defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
 }
