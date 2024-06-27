@@ -550,7 +550,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
-      if (!StringRef(DemangledName).starts_with("llvm.")) {
+      if (DemangledName.length() > 0 &&
+          !StringRef(DemangledName).starts_with("llvm.")) {
         auto [Grp, Opcode, ExtNo] =
             SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
         if (Opcode == SPIRV::OpGroupAsyncCopy) {
