@@ -17,14 +17,17 @@ module real_tests
   !WARN: warning: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
- !WARN: warning: argument is out of range [-1., 1.]
+  !WARN: warning: argument is out of range [-1., 1.]
   real(4), parameter :: nan_r4_acos1 = acos(1.1)
   TEST_ISNAN(nan_r4_acos1)
-  real(4), parameter :: ok_r4_gamma = gamma(-1.1)
-  real(4), parameter :: ok_r4_log_gamma = log_gamma(-2.001)
- !WARN: warning: invalid argument on evaluation of intrinsic function or operation
+  !WARN: warning: argument is out of range [-1., 1.]
+  real(4), parameter :: nan_r4_acos2 = acos(r4_pmax)
+  TEST_ISNAN(nan_r4_acos2)
+  !WARN: warning: argument is out of range [-1., 1.]
   real(4), parameter :: nan_r4_acos3 = acos(r4_nmax)
   TEST_ISNAN(nan_r4_acos3)
+  real(4), parameter :: ok_r4_gamma = gamma(-1.1)
+  real(4), parameter :: ok_r4_log_gamma = log_gamma(-2.001)
 
   !WARN: warning: overflow on evaluation of intrinsic function or operation
   logical, parameter :: test_exp_overflow = exp(256._4).EQ.r4_pinf
