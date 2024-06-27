@@ -238,12 +238,19 @@ static bool isValidElementType(Type *Ty) {
          !Ty->isPPC_FP128Ty();
 }
 
+/// \returns the number of elements for Ty.
+static unsigned getNumElements(Type *Ty) {
+  assert(!isa<ScalableVectorType>(Ty) &&
+         "ScalableVectorType is not supported.");
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty))
+    return VecTy->getNumElements();
+  return 1;
+}
+
 /// \returns the vector type of ScalarTy based on vectorization factor.
 static FixedVectorType *getWidenedType(Type *ScalarTy, unsigned VF) {
-  if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy))
-    return FixedVectorType::get(VecTy->getElementType(),
-                                VF * VecTy->getNumElements());
-  return FixedVectorType::get(ScalarTy, VF);
+  return FixedVectorType::get(ScalarTy->getScalarType(),
+                              VF * getNumElements(ScalarTy));
 }
 
 /// \returns True if the value is a constant (but not globals/constant
