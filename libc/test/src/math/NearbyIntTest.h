@@ -10,13 +10,13 @@
 #define LLVM_LIBC_TEST_SRC_MATH_NEARBYINTTEST_H
 
 #include "src/__support/CPP/algorithm.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/CPP/array.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/fenv_macros.h"
+using namespace LIBC_NAMESPACE::fputil::testing;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -25,8 +25,13 @@ class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD,
-                                            FE_TOWARDZERO, FE_TONEAREST};
+  static constexpr LIBC_NAMESPACE::cpp::array<RoundingMode, 4> ROUNDING_MODES =
+      {
+          RoundingMode::Upward,
+          RoundingMode::Downward,
+          RoundingMode::TowardZero,
+          RoundingMode::Nearest,
+      };
 
   static constexpr StorageType MIN_SUBNORMAL =
       FPBits::min_subnormal().uintval();
@@ -35,47 +40,32 @@ class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
   static constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
 
-  static mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
-    switch (mode) {
-    case FE_UPWARD:
-      return mpfr::RoundingMode::Upward;
-    case FE_DOWNWARD:
-      return mpfr::RoundingMode::Downward;
-    case FE_TOWARDZERO:
-      return mpfr::RoundingMode::TowardZero;
-    case FE_TONEAREST:
-      return mpfr::RoundingMode::Nearest;
-    default:
-      __builtin_unreachable();
-    }
-  }
-
 public:
   using NearbyIntFunc = T (*)(T);
 
   void test_round_numbers(NearbyIntFunc func) {
-    for (int mode : ROUNDING_MODES) {
-      LIBC_NAMESPACE::fputil::set_round(mode);
-      mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-      EXPECT_FP_EQ(func(T(1.0)), mpfr::round(T(1.0), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-1.0)), mpfr::round(T(-1.0), mpfr_mode));
-      EXPECT_FP_EQ(func(T(10.0)), mpfr::round(T(10.0), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-10.0)), mpfr::round(T(-10.0), mpfr_mode));
-      EXPECT_FP_EQ(func(T(1234.0)), mpfr::round(T(1234.0), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-1234.0)), mpfr::round(T(-1234.0), mpfr_mode));
+    for (RoundingMode mode : ROUNDING_MODES) {
+      if (ForceRoundingMode r(mode); r.success) {
+        EXPECT_FP_EQ(func(T(1.0)), mpfr::round(T(1.0), mode));
+        EXPECT_FP_EQ(func(T(-1.0)), mpfr::round(T(-1.0), mode));
+        EXPECT_FP_EQ(func(T(10.0)), mpfr::round(T(10.0), mode));
+        EXPECT_FP_EQ(func(T(-10.0)), mpfr::round(T(-10.0), mode));
+        EXPECT_FP_EQ(func(T(1234.0)), mpfr::round(T(1234.0), mode));
+        EXPECT_FP_EQ(func(T(-1234.0)), mpfr::round(T(-1234.0), mode));
+      }
     }
   }
 
   void test_fractions(NearbyIntFunc func) {
-    for (int mode : ROUNDING_MODES) {
-      LIBC_NAMESPACE::fputil::set_round(mode);
-      mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-      EXPECT_FP_EQ(func(T(0.5)), mpfr::round(T(0.5), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-0.5)), mpfr::round(T(-0.5), mpfr_mode));
-      EXPECT_FP_EQ(func(T(0.115)), mpfr::round(T(0.115), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-0.115)), mpfr::round(T(-0.115), mpfr_mode));
-      EXPECT_FP_EQ(func(T(0.715)), mpfr::round(T(0.715), mpfr_mode));
-      EXPECT_FP_EQ(func(T(-0.715)), mpfr::round(T(-0.715), mpfr_mode));
+    for (RoundingMode mode : ROUNDING_MODES) {
+      if (ForceRoundingMode r(mode); r.success) {
+        EXPECT_FP_EQ(func(T(0.5)), mpfr::round(T(0.5), mode));
+        EXPECT_FP_EQ(func(T(-0.5)), mpfr::round(T(-0.5), mode));
+        EXPECT_FP_EQ(func(T(0.115)), mpfr::round(T(0.115), mode));
+        EXPECT_FP_EQ(func(T(-0.115)), mpfr::round(T(-0.115), mode));
+        EXPECT_FP_EQ(func(T(0.715)), mpfr::round(T(0.715), mode));
+        EXPECT_FP_EQ(func(T(-0.715)), mpfr::round(T(-0.715), mode));
+      }
     }
   }
 
@@ -86,10 +76,10 @@ public:
         StorageType(1));
     for (StorageType i = MIN_SUBNORMAL; i <= MAX_SUBNORMAL; i += STEP) {
       T x = FPBits(i).get_val();
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-        EXPECT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
+      for (RoundingMode mode : ROUNDING_MODES) {
+        if (ForceRoundingMode r(mode); r.success) {
+          EXPECT_FP_EQ(func(x), mpfr::round(x, mode));
+        }
       }
     }
   }
@@ -107,10 +97,10 @@ public:
       if (xbits.is_nan())
         continue;
 
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        mpfr::RoundingMode mpfr_mode = to_mpfr_rounding_mode(mode);
-        EXPECT_FP_EQ(func(x), mpfr::round(x, mpfr_mode));
+      for (RoundingMode mode : ROUNDING_MODES) {
+        if (ForceRoundingMode r(mode); r.success) {
+          EXPECT_FP_EQ(func(x), mpfr::round(x, mode));
+        }
       }
     }
   }

@@ -584,10 +584,9 @@ add_fp_unittest(
   HDRS
     NearbyIntTest.h
   DEPENDS
-    libc.hdr.fenv_macros
     libc.src.math.nearbyint
     libc.src.__support.CPP.algorithm
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.CPP.array
 )
 
 add_fp_unittest(
@@ -600,10 +599,9 @@ add_fp_unittest(
   HDRS
     NearbyIntTest.h
   DEPENDS
-    libc.hdr.fenv_macros
     libc.src.math.nearbyintf
     libc.src.__support.CPP.algorithm
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.CPP.array
 )
 
 add_fp_unittest(
@@ -616,10 +614,9 @@ add_fp_unittest(
   HDRS
     NearbyIntTest.h
   DEPENDS
-    libc.hdr.fenv_macros
     libc.src.math.nearbyintl
     libc.src.__support.CPP.algorithm
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.CPP.array
 )
 
 add_fp_unittest(
@@ -632,10 +629,9 @@ add_fp_unittest(
   HDRS
     NearbyIntTest.h
   DEPENDS
-    libc.hdr.fenv_macros
     libc.src.math.nearbyintf16
     libc.src.__support.CPP.algorithm
-    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.CPP.array
 )
 
 add_fp_unittest(
