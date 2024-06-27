@@ -1543,7 +1543,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       loopInfo, alignedVars,
       simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                          : nullptr,
-      llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);
+      simdOp.getOrderVal() ? llvm::omp::OrderKind::OMP_ORDER_concurrent
+                           : llvm::omp::OrderKind::OMP_ORDER_unknown,
+      simdlen, safelen);
 
   builder.restoreIP(afterIP);
   return success();

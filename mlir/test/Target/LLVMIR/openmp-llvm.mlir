@@ -826,6 +826,30 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
 
 // -----
 
+// CHECK-LABEL: @simd_order
+llvm.func @simd_order() {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 {bindc_name = "i", pinned} : (i64) -> !llvm.ptr
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
+  %4 = llvm.mlir.constant(1 : i32) : i32
+  %5 = llvm.mlir.constant(10 : i32) : i32
+  %6 = llvm.mlir.constant(1 : i32) : i32
+  omp.simd order(concurrent) safelen(2) {
+    omp.loop_nest (%arg0) : i32 = (%4) to (%5) inclusive step (%6) {
+      llvm.store %arg0, %1 : i32, !llvm.ptr
+      omp.yield
+    }
+  }
+  llvm.return
+}
+// If clause order(concurrent) is specified then the memory instructions
+// are marked parallel even if 'safelen' is finite.
+// CHECK: llvm.loop.parallel_accesses
+// CHECK-NEXT: llvm.loop.vectorize.enable
+// CHECK-NEXT: llvm.loop.vectorize.width{{.*}}i64 2
+// -----
+
 llvm.func @body(i64)
 
 llvm.func @test_omp_wsloop_ordered(%lb : i64, %ub : i64, %step : i64) -> () {
