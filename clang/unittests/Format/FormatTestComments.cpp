@@ -512,8 +512,8 @@ TEST_F(FormatTestComments, CommentReflowingCanApplyOnlyToIndents) {
   Style.ReflowComments = FormatStyle::RCS_IndentOnly;
   verifyNoChange("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa"
-                 "\naaaaaaaaa*/",
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "aaaaaaaaa*/",
                  Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
                  "    aaaaaaaaa*/",
