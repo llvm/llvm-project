@@ -2079,21 +2079,6 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectPOPSExitingWaveID(
-    MachineInstr &MI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  const DebugLoc &DL = MI.getDebugLoc();
-  MachineBasicBlock *MBB = MI.getParent();
-
-  // TODO: Select this with a tablegen pattern. This is tricky because the
-  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
-  // mayLoad/mayStore and tablegen complains about the mismatch.
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
-                 .addReg(AMDGPU::SRC_POPS_EXITING_WAVE_ID);
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
@@ -2144,8 +2129,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_leave:
     return selectSBarrierLeave(I);
-  case Intrinsic::amdgcn_pops_exiting_wave_id:
-    return selectPOPSExitingWaveID(I);
   }
   return selectImpl(I, *CoverageInfo);
 }
