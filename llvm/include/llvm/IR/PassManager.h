@@ -224,10 +224,20 @@ protected:
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };
 
+template <typename IRUnitT>
+void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
+
+template <>
+void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+
 extern template class PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
+
+template <>
+void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                            const Function &IR);
 
 extern template class PassManager<Function>;
 
