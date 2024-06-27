@@ -4970,7 +4970,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const auto &TLI = DAG.getTargetLoweringInfo();
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
-  // The Load/Res may point to different values.
+  // The Load/Res may point to different values and both of them are output
+  // variables.
   SDValue Load;
   SDValue Res;
   if (!IsExpanding && TTI.hasConditionalLoadStoreForType(

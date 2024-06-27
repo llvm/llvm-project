@@ -55691,14 +55691,13 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
   if (N->getConstantOperandVal(3) != X86::COND_NE)
     return SDValue();
 
-  SDNode *Sub = N->getOperand(4).getNode();
-  if (Sub->getOpcode() != X86ISD::SUB)
+  SDValue Sub = N->getOperand(4);
+  if (Sub.getOpcode() != X86ISD::SUB)
     return SDValue();
 
-  SDValue SetCC = Sub->getOperand(1);
+  SDValue SetCC = Sub.getOperand(1);
 
-  if (!X86::isZeroNode(Sub->getOperand(0)) ||
-      SetCC.getOpcode() != X86ISD::SETCC)
+  if (!X86::isZeroNode(Sub.getOperand(0)) || SetCC.getOpcode() != X86ISD::SETCC)
     return SDValue();
 
   SmallVector<SDValue, 5> Ops(N->op_values());
