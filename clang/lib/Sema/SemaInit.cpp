@@ -551,7 +551,7 @@ public:
       : InitListChecker(S, Entity, IL, T, /*VerifyOnly=*/true,
                         /*TreatUnavailableAsInvalid=*/false,
                         /*InOverloadResolution=*/false,
-                        &AggrDeductionCandidateParamTypes){};
+                        &AggrDeductionCandidateParamTypes) {}
 
   bool HadError() { return hadError; }
 
@@ -1481,7 +1481,21 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-      if (!isa_and_nonnull<ConstantArrayType>(
+
+      // In the presence of a braced-init-list within the initializer, we should
+      // not perform brace-elision, even if brace elision would otherwise be
+      // applicable. For example, given:
+      //
+      // template <class T> struct Foo {
+      //   T t[2];
+      // };
+      //
+      // Foo t = {{1, 2}};
+      //
+      // we don't want the (T, T) but rather (T [2]) in terms of the initializer
+      // {{1, 2}}.
+      if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
+          !isa_and_present<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
         ++Index;
         AggrDeductionCandidateParamTypes->push_back(ElemType);
@@ -9465,6 +9479,57 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Wrap it in a construction of a std::initializer_list<T>.
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
 
+      if (!Step->Type->isDependentType()) {
+        QualType ElementType;
+        [[maybe_unused]] bool IsStdInitializerList =
+            S.isStdInitializerList(Step->Type, &ElementType);
+        assert(IsStdInitializerList &&
+               "StdInitializerList step to non-std::initializer_list");
+        const CXXRecordDecl *Record =
+            Step->Type->getAsCXXRecordDecl()->getDefinition();
+        assert(Record && Record->isCompleteDefinition() &&
+               "std::initializer_list should have already be "
+               "complete/instantiated by this point");
+
+        auto InvalidType = [&] {
+          S.Diag(Record->getLocation(),
+                 diag::err_std_initializer_list_malformed)
+              << Step->Type.getUnqualifiedType();
+          return ExprError();
+        };
+
+        if (Record->isUnion() || Record->getNumBases() != 0 ||
+            Record->isPolymorphic())
+          return InvalidType();
+
+        RecordDecl::field_iterator Field = Record->field_begin();
+        if (Field == Record->field_end())
+          return InvalidType();
+
+        // Start pointer
+        if (!Field->getType()->isPointerType() ||
+            !S.Context.hasSameType(Field->getType()->getPointeeType(),
+                                   ElementType.withConst()))
+          return InvalidType();
+
+        if (++Field == Record->field_end())
+          return InvalidType();
+
+        // Size or end pointer
+        if (const auto *PT = Field->getType()->getAs<PointerType>()) {
+          if (!S.Context.hasSameType(PT->getPointeeType(),
+                                     ElementType.withConst()))
+            return InvalidType();
+        } else {
+          if (Field->isBitField() ||
+              !S.Context.hasSameType(Field->getType(), S.Context.getSizeType()))
+            return InvalidType();
+        }
+
+        if (++Field != Record->field_end())
+          return InvalidType();
+      }
+
       // Bind the result, in case the library has given initializer_list a
       // non-trivial destructor.
       if (shouldBindAsTemporary(Entity))
@@ -10979,8 +11044,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // FIXME: The "second phase of [over.match.list] case can also
     // theoretically happen here, but it's not clear whether we can
     // ever have a parameter of the right type.
-    bool SuppressUserConversions = Kind.isCopyInit();
-
     if (TD) {
       SmallVector<Expr *, 8> TmpInits;
       for (Expr *E : Inits)
@@ -10990,12 +11053,12 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TmpInits.push_back(E);
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
-          SuppressUserConversions,
+          /*SuppressUserConversions=*/false,
           /*PartialOverloading=*/false, AllowExplicit, ADLCallKind::NotADL,
           /*PO=*/{}, AllowAggregateDeductionCandidate);
     } else {
       AddOverloadCandidate(GD, FoundDecl, Inits, Candidates,
-                           SuppressUserConversions,
+                           /*SuppressUserConversions=*/false,
                            /*PartialOverloading=*/false, AllowExplicit);
     }
   };
@@ -11027,14 +11090,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         //   if e_i is of array type and x_i is a braced-init-list, T_i is an
         //   rvalue reference to the declared type of e_i and
         // C++ [over.match.class.deduct]p1.9:
-        //   if e_i is of array type and x_i is a bstring-literal, T_i is an
+        //   if e_i is of array type and x_i is a string-literal, T_i is an
         //   lvalue reference to the const-qualified declared type of e_i and
         // C++ [over.match.class.deduct]p1.10:
         //   otherwise, T_i is the declared type of e_i
         for (int I = 0, E = ListInit->getNumInits();
              I < E && !isa<PackExpansionType>(ElementTypes[I]); ++I)
           if (ElementTypes[I]->isArrayType()) {
-            if (isa<InitListExpr>(ListInit->getInit(I)))
+            if (isa<InitListExpr, DesignatedInitExpr>(ListInit->getInit(I)))
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
             else if (isa<StringLiteral>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))

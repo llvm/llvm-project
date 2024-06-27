@@ -449,11 +449,9 @@ ExprResult Parser::createEmbedExpr() {
                                    false, ArrayTy, StartLoc);
     };
 
-    StringLiteral *FileNameArg =
-        CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
     StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
         Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnEmbedExpr(StartLoc, FileNameArg, BinaryDataArg);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
   }
   return Res;
 }

@@ -143,20 +143,15 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
 
   const Instruction *I = dyn_cast<Instruction>(CurUser);
   if (I) {
-    uint32_t ActualNumValueData = 0;
     uint64_t TotalCount = 0;
     // MaxNumVTableAnnotations is the maximum number of vtables annotated on
     // the instruction.
-    auto ValueDataArray =
-        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
-                                 ActualNumValueData, TotalCount);
+    auto ValueDataArray = getValueProfDataFromInst(
+        *I, IPVK_VTableTarget, MaxNumVTableAnnotations, TotalCount);
 
-    if (ValueDataArray.get()) {
-      for (uint32_t j = 0; j < ActualNumValueData; j++) {
-        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
-                                                   ValueDataArray[j].Value));
-      }
-    }
+    for (const auto &V : ValueDataArray)
+      RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                 V.Value));
   }
   return HasBlockAddress;
 }
@@ -483,11 +478,11 @@ static void computeFunctionSummary(
           }
         }
 
-        uint32_t NumVals, NumCandidates;
+        uint32_t NumCandidates;
         uint64_t TotalCount;
         auto CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(
-                &I, NumVals, TotalCount, NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
+                                                               NumCandidates);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
@@ -1075,7 +1070,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   if (!ModuleSummaryDotFile.empty()) {
     std::error_code EC;
-    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_None);
+    raw_fd_ostream OSDot(ModuleSummaryDotFile, EC, sys::fs::OpenFlags::OF_Text);
     if (EC)
       report_fatal_error(Twine("Failed to open dot file ") +
                          ModuleSummaryDotFile + ": " + EC.message() + "\n");

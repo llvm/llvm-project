@@ -1178,7 +1178,7 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
-  assert(false && "not yet implemented");
+  llvm::report_fatal_error("Not implemented");
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {

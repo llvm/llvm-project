@@ -1327,7 +1327,6 @@ void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   E->EmbedKeywordLoc = readSourceLocation();
   EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
-  Data->Filename = cast<StringLiteral>(Record.readSubStmt());
   Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());
   E->Data = Data;
   E->Begin = Record.readInt();

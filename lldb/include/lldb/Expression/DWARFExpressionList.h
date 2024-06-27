@@ -92,7 +92,7 @@ public:
                      lldb::addr_t func_load_addr, lldb::addr_t file_addr,
                      ABI *abi) const;
 
-  /// Dump all locaitons with each seperated by new line.
+  /// Dump all locaitons with each separated by new line.
   void GetDescription(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
 
   /// Search for a load address in the dwarf location list

@@ -1503,7 +1503,7 @@ public:
   ///  associated element type, index, and super region.
   const ElementRegion *getElementRegion(QualType elementType, NonLoc Idx,
                                         const SubRegion *superRegion,
-                                        ASTContext &Ctx);
+                                        const ASTContext &Ctx);
 
   const ElementRegion *getElementRegionWithSuper(const ElementRegion *ER,
                                                  const SubRegion *superRegion) {

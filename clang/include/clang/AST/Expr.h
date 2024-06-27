@@ -787,6 +787,11 @@ public:
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
 
+  /// If the current Expr can be evaluated to a pointer to a null-terminated
+  /// constant string, return the constant string (without the terminating
+  /// null).
+  std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const;
+
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
   enum NullPointerConstantKind {
@@ -4801,7 +4806,6 @@ private:
 
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
-  StringLiteral *Filename;
   StringLiteral *BinaryData;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
@@ -4848,7 +4852,6 @@ public:
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
-  StringLiteral *getFilenameStringLiteral() const { return Data->Filename; }
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
   EmbedDataStorage *getData() const { return Data; }
 

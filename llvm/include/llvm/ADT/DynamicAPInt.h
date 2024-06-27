@@ -203,18 +203,14 @@ public:
 
   friend hash_code hash_value(const DynamicAPInt &x); // NOLINT
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   raw_ostream &print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 inline raw_ostream &operator<<(raw_ostream &OS, const DynamicAPInt &X) {
   X.print(OS);
   return OS;
 }
-#endif
 
 /// Redeclarations of friend declaration above to
 /// make it discoverable by lookups.

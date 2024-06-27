@@ -1,19 +1,19 @@
 ; Test finding types by CompilerContext.
 ; RUN: llc %s -filetype=obj -o %t.o
 ; RUN: lldb-test symbols %t.o -find=type --language=C99 \
-; RUN:   -compiler-context="Module:CModule,Module:SubModule,Struct:FromSubmoduleX" \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,ClassOrStruct:FromSubmoduleX" \
 ; RUN:   | FileCheck %s --check-prefix=NORESULTS
 ; RUN: lldb-test symbols %t.o -find=type --language=C++ \
-; RUN:   -compiler-context="Module:CModule,Module:SubModule,Struct:FromSubmodule" \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,ClassOrStruct:FromSubmodule" \
 ; RUN:   | FileCheck %s --check-prefix=NORESULTS
 ; RUN: lldb-test symbols %t.o -find=type --language=C99 \
-; RUN:   -compiler-context="Module:CModule,Module:SubModule,Struct:FromSubmodule" \
+; RUN:   -compiler-context="Module:CModule,Module:SubModule,ClassOrStruct:FromSubmodule" \
 ; RUN:   | FileCheck %s
 ; RUN: lldb-test symbols %t.o -find=type --language=C99 \
-; RUN:   -compiler-context="Module:CModule,AnyModule:*,Struct:FromSubmodule" \
+; RUN:   -compiler-context="Module:CModule,AnyModule:*,ClassOrStruct:FromSubmodule" \
 ; RUN:   | FileCheck %s
 ; RUN: lldb-test symbols %t.o -find=type --language=C99 \
-; RUN:   -compiler-context="AnyModule:*,Struct:FromSubmodule" \
+; RUN:   -compiler-context="AnyModule:*,ClassOrStruct:FromSubmodule" \
 ; RUN:   | FileCheck %s
 ; RUN: lldb-test symbols %t.o -find=type --language=C99 \
 ; RUN:   -compiler-context="Module:CModule,Module:SubModule,AnyType:FromSubmodule" \

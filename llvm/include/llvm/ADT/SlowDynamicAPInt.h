@@ -71,18 +71,14 @@ public:
 
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 inline raw_ostream &operator<<(raw_ostream &OS, const SlowDynamicAPInt &X) {
   X.print(OS);
   return OS;
 }
-#endif
 
 /// Returns the remainder of dividing LHS by RHS.
 ///

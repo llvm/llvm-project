@@ -251,6 +251,15 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   ];
 }
 
+// This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
+def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "mlir::ModuleOp"> {
+  let summary = "Convert constant function arguments to global constants.";
+  let description = [{
+    Convert scalar literals of function arguments to global constants.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+}
+
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let summary = "Move local array allocations from heap memory into stack memory";
   let description = [{
@@ -258,6 +267,15 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
+}
+
+def StackReclaim : Pass<"stack-reclaim"> {
+  let summary = "Insert stacksave/stackrestore in region with allocas";
+  let description = [{
+    Insert stacksave/stackrestore in loop region to reclaim alloca done in its
+    scope.
+  }];
+  let dependentDialects = [ "mlir::LLVM::LLVMDialect" ];
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {

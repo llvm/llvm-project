@@ -1,5 +1,9 @@
-// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,cxx -Wno-c23-extensions
-// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,c
+// RUN: rm -rf %t && mkdir -p %t/media
+// RUN: cp %S/Inputs/single_byte.txt %S/Inputs/jk.txt %S/Inputs/numbers.txt %t/
+// RUN: cp %S/Inputs/media/empty %t/media/
+// RUN: printf "\0" > %t/null_byte.bin
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;
 
@@ -96,3 +100,19 @@ constexpr unsigned char ch =
 #embed FILE_NAME limit(LIMIT) clang::offset(OFFSET) EMPTY_SUFFIX
 ;
 static_assert(ch == 0);
+
+void foobar(float x, char y, char z); // cxx-note {{candidate function not viable: requires 3 arguments, but 1 was provided}}
+                                      // c-note@-1 {{declared here}}
+void g1() { foobar((float) // cxx-error {{no matching function for call to 'foobar'}}
+#embed "numbers.txt" limit(3) // expected-warning {{left operand of comma operator has no effect}}
+); // c-error {{too few arguments to function call, expected 3, have 1}}
+}
+
+#if __cplusplus
+struct S { S(char x); ~S(); };
+void f1() {
+  S s[] = {
+#embed "null_byte.bin"
+  };
+}
+#endif

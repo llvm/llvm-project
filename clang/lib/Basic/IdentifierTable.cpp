@@ -441,7 +441,7 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 4, 'e', 's', else);
   CASE( 4, 'l', 'n', line);
   CASE( 4, 's', 'c', sccs);
-  CASE(5, 'e', 'b', embed);
+  CASE( 5, 'e', 'b', embed);
   CASE( 5, 'e', 'd', endif);
   CASE( 5, 'e', 'r', error);
   CASE( 5, 'i', 'e', ident);

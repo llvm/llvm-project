@@ -68,6 +68,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -210,6 +211,17 @@ cl::opt<int> SwpForceIssueWidth(
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
 
+/// A command line argument to set the window scheduling option.
+cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
+    "window-sched", cl::Hidden, cl::init(WindowSchedulingFlag::WS_On),
+    cl::desc("Set how to use window scheduling algorithm."),
+    cl::values(clEnumValN(WindowSchedulingFlag::WS_Off, "off",
+                          "Turn off window algorithm."),
+               clEnumValN(WindowSchedulingFlag::WS_On, "on",
+                          "Use window algorithm after SMS algorithm fails."),
+               clEnumValN(WindowSchedulingFlag::WS_Force, "force",
+                          "Use window algorithm instead of SMS algorithm.")));
+
 } // end namespace llvm
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
@@ -296,8 +308,11 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   ++NumTrytoPipeline;
+  if (useSwingModuloScheduler())
+    Changed = swingModuloScheduler(L);
 
-  Changed = swingModuloScheduler(L);
+  if (useWindowScheduler(Changed))
+    Changed = runWindowScheduler(L);
 
   LI.LoopPipelinerInfo.reset();
   return Changed;
@@ -488,7 +503,33 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<LiveIntervals>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
+  MachineSchedContext Context;
+  Context.MF = MF;
+  Context.MLI = MLI;
+  Context.MDT = MDT;
+  Context.PassConfig = &getAnalysis<TargetPassConfig>();
+  Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  Context.LIS = &getAnalysis<LiveIntervals>();
+  Context.RegClassInfo->runOnMachineFunction(*MF);
+  WindowScheduler WS(&Context, L);
+  return WS.run();
+}
+
+bool MachinePipeliner::useSwingModuloScheduler() {
+  // SwingModuloScheduler does not work when WindowScheduler is forced.
+  return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
+}
+
+bool MachinePipeliner::useWindowScheduler(bool Changed) {
+  // WindowScheduler does not work when it is off or when SwingModuloScheduler
+  // is successfully scheduled.
+  return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
+         (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
 }
 
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
