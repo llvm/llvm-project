@@ -3788,7 +3788,7 @@ struct FormatStyle {
   };
 
   /// \brief Comment reformatting style.
-  /// \version 20
+  /// \version 3.8
   ReflowCommentsStyle ReflowComments;
 
   /// Remove optional braces of control statements (``if``, ``else``, ``for``,

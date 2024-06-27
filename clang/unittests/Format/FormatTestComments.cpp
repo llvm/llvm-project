@@ -496,9 +496,14 @@ TEST_F(FormatTestComments, CommentReflowingCanBeTurnedOff) {
   Style.ReflowComments = FormatStyle::RCS_Never;
   verifyNoChange("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\naaaaaaaaa*/", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n    aaaaaaaaa*/", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n *    aaaaaaaaa*/",
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "aaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "    aaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 " *    aaaaaaaaa*/",
                  Style);
 }
 
@@ -507,10 +512,16 @@ TEST_F(FormatTestComments, CommentReflowingCanApplyOnlyToIndents) {
   Style.ReflowComments = FormatStyle::RCS_IndentOnly;
   verifyNoChange("// aaaaaaaaa aaaaaaaaaa aaaaaaaaaa", Style);
   verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa */", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\naaaaaaaaa*/", Style);
-  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n    aaaaaaaaa*/", Style);
-  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n * aaaaaaaaa*/",
-               "/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n      * aaaaaaaaa*/",
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa"
+                 "\naaaaaaaaa*/",
+                 Style);
+  verifyNoChange("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+                 "    aaaaaaaaa*/",
+                 Style);
+  verifyFormat("/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               " * aaaaaaaaa*/",
+               "/* aaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n"
+               "      * aaaaaaaaa*/",
                Style);
 }
 
