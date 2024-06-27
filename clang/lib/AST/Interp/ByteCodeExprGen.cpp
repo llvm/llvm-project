@@ -2695,7 +2695,18 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
     return true;
   assert(!Initializing);
 
-  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(E->getGuidDecl());
+  const MSGuidDecl *GuidDecl = E->getGuidDecl();
+  const RecordDecl *RD = GuidDecl->getType()->getAsRecordDecl();
+  assert(RD);
+  // If the definiton of the result type is incomplete, just return a dummy.
+  // If (and when) that is read from, we will fail, but not now.
+  if (!RD->isCompleteDefinition()) {
+    if (std::optional<unsigned> I = P.getOrCreateDummy(GuidDecl))
+      return this->emitGetPtrGlobal(*I, E);
+    return false;
+  }
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(GuidDecl);
   if (!GlobalIndex)
     return false;
   if (!this->emitGetPtrGlobal(*GlobalIndex, E))
@@ -2703,7 +2714,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(this->getRecord(E->getType()));
 
-  const APValue &V = E->getGuidDecl()->getAsAPValue();
+  const APValue &V = GuidDecl->getAsAPValue();
   if (V.getKind() == APValue::None)
     return true;
 
