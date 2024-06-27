@@ -1,4 +1,4 @@
-; The IR below was crafted so as:
+	; The IR below was crafted so as:
 ; 1) To have a loop, so we create a loop pass manager
 ; 2) To be "immutable" in the sense that no pass in the standard
 ;    pipeline will modify it.
@@ -156,6 +156,7 @@
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
+; CHECK-O-NEXT: Running pass: IPSCCPPass
 ; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalOptPass
