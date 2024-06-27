@@ -184,12 +184,9 @@ functions:
   - name: pthread_exit
     standards: 
       - POSIX
-    return_type: void
+    return_type: __Noreturn void
     arguments:
       - type: void *
-    guard: null
-    attributes:
-      - noreturn
   - name: pthread_getname_np
     standards:
       - GNUExtensions
