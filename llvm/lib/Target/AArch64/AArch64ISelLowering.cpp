@@ -9555,8 +9555,7 @@ SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
     SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
     SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
   const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
-  const GlobalValue *GV = TGN->getGlobal();
-  assert(GV->hasExternalWeakLinkage());
+  assert(TGN->getGlobal()->hasExternalWeakLinkage());
 
   // Offsets and extern_weak don't mix well: ptrauth aside, you'd get the
   // offset alone as a pointer if the symbol wasn't available, which would
