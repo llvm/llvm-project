@@ -2388,12 +2388,14 @@ namespace SPIRV {
 std::tuple<int, unsigned, unsigned>
 mapBuiltinToOpcode(const StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set) {
-  const SPIRV::DemangledBuiltin *Builtin =
-      SPIRV::lookupBuiltin(DemangledCall, Set);
-  if (!Builtin)
+  Register Reg;
+  SmallVector<Register> Args;
+  std::unique_ptr<const IncomingCall> Call =
+      lookupBuiltin(DemangledCall, Set, Reg, nullptr, Args);
+  if (!Call)
     return std::make_tuple(-1, 0, 0);
 
-  switch (Builtin->Group) {
+  switch (Call->Builtin->Group) {
   case SPIRV::Relational:
   case SPIRV::Atomic:
   case SPIRV::Barrier:
@@ -2404,43 +2406,43 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   case SPIRV::AsyncCopy:
   case SPIRV::LoadStore:
   case SPIRV::CoopMatr:
-    if (const auto *R = SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set))
-      return std::make_tuple(Builtin->Group, R->Opcode, 0);
+    if (const auto *R = SPIRV::lookupNativeBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::Extended:
     if (const auto *R =
-            SPIRV::lookupExtendedBuiltin(Builtin->Name, Builtin->Set))
-      return std::make_tuple(Builtin->Group, 0, R->Number);
+            SPIRV::lookupExtendedBuiltin(Call->Builtin->Name, Call->Builtin->Set))
+      return std::make_tuple(Call->Builtin->Group, 0, R->Number);
     break;
   case SPIRV::VectorLoadStore:
     if (const auto *R =
-            SPIRV::lookupVectorLoadStoreBuiltin(Builtin->Name, Builtin->Set))
+            SPIRV::lookupVectorLoadStoreBuiltin(Call->Builtin->Name, Call->Builtin->Set))
       return std::make_tuple(SPIRV::Extended, 0, R->Number);
     break;
   case SPIRV::Group:
-    if (const auto *R = SPIRV::lookupGroupBuiltin(Builtin->Name))
-      return std::make_tuple(Builtin->Group, R->Opcode, 0);
+    if (const auto *R = SPIRV::lookupGroupBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::AtomicFloating:
-    if (const auto *R = SPIRV::lookupAtomicFloatingBuiltin(Builtin->Name))
-      return std::make_tuple(Builtin->Group, R->Opcode, 0);
+    if (const auto *R = SPIRV::lookupAtomicFloatingBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::IntelSubgroups:
-    if (const auto *R = SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name))
-      return std::make_tuple(Builtin->Group, R->Opcode, 0);
+    if (const auto *R = SPIRV::lookupIntelSubgroupsBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::GroupUniform:
-    if (const auto *R = SPIRV::lookupGroupUniformBuiltin(Builtin->Name))
-      return std::make_tuple(Builtin->Group, R->Opcode, 0);
+    if (const auto *R = SPIRV::lookupGroupUniformBuiltin(Call->Builtin->Name))
+      return std::make_tuple(Call->Builtin->Group, R->Opcode, 0);
     break;
   case SPIRV::WriteImage:
-    return std::make_tuple(Builtin->Group, SPIRV::OpImageWrite, 0);
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpImageWrite, 0);
   case SPIRV::Select:
-    return std::make_tuple(Builtin->Group, TargetOpcode::G_SELECT, 0);
+    return std::make_tuple(Call->Builtin->Group, TargetOpcode::G_SELECT, 0);
   case SPIRV::Construct:
-    return std::make_tuple(Builtin->Group, SPIRV::OpCompositeConstruct, 0);
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpCompositeConstruct, 0);
   case SPIRV::KernelClock:
-    return std::make_tuple(Builtin->Group, SPIRV::OpReadClockKHR, 0);
+    return std::make_tuple(Call->Builtin->Group, SPIRV::OpReadClockKHR, 0);
   default:
     return std::make_tuple(-1, 0, 0);
   }

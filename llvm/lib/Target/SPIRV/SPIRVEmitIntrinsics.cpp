@@ -550,18 +550,20 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
-      auto [Grp, Opcode, ExtNo] =
-          SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
-      if (Opcode == SPIRV::OpGroupAsyncCopy) {
-        for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2;
-             ++i) {
-          Value *Op = CI->getArgOperand(i);
-          if (!isPointerTy(Op->getType()))
-            continue;
-          ++PtrCnt;
-          if (Type *ElemTy = GR->findDeducedElementType(Op))
-            KnownElemTy = ElemTy; // src will rewrite dest if both are defined
-          Ops.push_back(std::make_pair(Op, i));
+      if (!StringRef(DemangledName).starts_with("llvm.")) {
+        auto [Grp, Opcode, ExtNo] =
+            SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+        if (Opcode == SPIRV::OpGroupAsyncCopy) {
+          for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2;
+               ++i) {
+            Value *Op = CI->getArgOperand(i);
+            if (!isPointerTy(Op->getType()))
+              continue;
+            ++PtrCnt;
+            if (Type *ElemTy = GR->findDeducedElementType(Op))
+              KnownElemTy = ElemTy; // src will rewrite dest if both are defined
+            Ops.push_back(std::make_pair(Op, i));
+          }
         }
       }
     }
