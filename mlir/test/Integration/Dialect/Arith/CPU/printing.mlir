@@ -1,4 +1,4 @@
-// tests arith operations on i1 type.
+// Tests arith operations on i1 type.
 
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
