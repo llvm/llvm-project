@@ -96,6 +96,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -325,15 +326,25 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
-// A pass for testing -print-on-crash.
+// Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
     return PreservedAnalyses::all();
   }
-  static StringRef name() { return "TriggerCrashPass"; }
+  static StringRef name() { return "TriggerCrashModulePass"; }
+};
+
+class TriggerCrashFunctionPass
+    : public PassInfoMixin<TriggerCrashFunctionPass> {
+public:
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 // A pass for testing message reporting of -verify-each failures.
@@ -1907,6 +1918,18 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     if (!Params)                                                               \
       return Params.takeError();                                               \
     MFPM.addPass(CREATE_PASS(Params.get()));                                   \
+    return Error::success();                                                   \
+  }
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  if (Name == "require<" NAME ">") {                                           \
+    MFPM.addPass(                                                              \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            MachineFunction>());                               \
+    return Error::success();                                                   \
+  }                                                                            \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    MFPM.addPass(InvalidateAnalysisPass<                                       \
+                 std::remove_reference_t<decltype(CREATE_PASS)>>());           \
     return Error::success();                                                   \
   }
 #include "llvm/Passes/MachinePassRegistry.def"

@@ -20,10 +20,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
-    # setjmp.h entrypoints
-    libc.src.setjmp.longjmp
-    libc.src.setjmp.setjmp
-
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
@@ -165,6 +161,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
 
+    # stdlib.h external entrypoints
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.free
+    libc.src.stdlib.malloc
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -179,6 +180,14 @@ set(TARGET_LIBC_ENTRYPOINTS
     # libc.src.sys.epoll.epoll_pwait2
 
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+  )
+endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # fenv.h entrypoints
@@ -213,6 +222,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl
+    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
     libc.src.math.erff
@@ -349,6 +359,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnf
     libc.src.math.scalbnl
     libc.src.math.sincosf
+    libc.src.math.sin
     libc.src.math.sinf
     libc.src.math.sinhf
     libc.src.math.sqrt

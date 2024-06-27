@@ -160,10 +160,14 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
   SmallVector<Function *, 4> DeadFunctions;
 
-  CGSCCUpdateResult UR = {
-      RCWorklist,           CWorklist,     InvalidRefSCCSet,
-      InvalidSCCSet,        nullptr,       PreservedAnalyses::all(),
-      InlinedInternalEdges, DeadFunctions, {}};
+  CGSCCUpdateResult UR = {CWorklist,
+                          InvalidRefSCCSet,
+                          InvalidSCCSet,
+                          nullptr,
+                          PreservedAnalyses::all(),
+                          InlinedInternalEdges,
+                          DeadFunctions,
+                          {}};
 
   // Request PassInstrumentation from analysis manager, will use it to run
   // instrumenting callbacks for the passes later.

@@ -891,9 +891,9 @@ public:
     DenseMap<BasicBlock *, unsigned int> BBToOrder;
     { // Init OrderToBB and BBToOrder.
       unsigned int RPONumber = 0;
-      for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-        OrderToBB[RPONumber] = *RI;
-        BBToOrder[*RI] = RPONumber;
+      for (BasicBlock *BB : RPOT) {
+        OrderToBB[RPONumber] = BB;
+        BBToOrder[BB] = RPONumber;
         Worklist.push(RPONumber);
         ++RPONumber;
       }
@@ -2231,10 +2231,11 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // order of fragment size - there should be no duplicates.
   for (auto &Pair : FragmentMap) {
     SmallVector<DebugVariable, 8> &Frags = Pair.second;
-    llvm::sort(Frags, [](const DebugVariable &Next, const DebugVariable &Elmt) {
-      return Elmt.getFragmentOrDefault().SizeInBits >
-             Next.getFragmentOrDefault().SizeInBits;
-    });
+    std::sort(Frags.begin(), Frags.end(),
+              [](const DebugVariable &Next, const DebugVariable &Elmt) {
+                return Elmt.getFragmentOrDefault().SizeInBits >
+                       Next.getFragmentOrDefault().SizeInBits;
+              });
     // Check for duplicates.
     assert(std::adjacent_find(Frags.begin(), Frags.end()) == Frags.end());
   }
@@ -2311,9 +2312,9 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   DenseMap<BasicBlock *, unsigned int> BBToOrder;
   { // Init OrderToBB and BBToOrder.
     unsigned int RPONumber = 0;
-    for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-      OrderToBB[RPONumber] = *RI;
-      BBToOrder[*RI] = RPONumber;
+    for (BasicBlock *BB : RPOT) {
+      OrderToBB[RPONumber] = BB;
+      BBToOrder[BB] = RPONumber;
       Worklist.push(RPONumber);
       ++RPONumber;
     }
