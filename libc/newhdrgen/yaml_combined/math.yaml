@@ -14,8 +14,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: copysignf
     standards: 
       - stdc
@@ -23,8 +21,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: copysignl
     standards: 
       - stdc
@@ -32,8 +28,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: copysignf16
     standards: 
       - stdc
@@ -42,7 +36,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: copysignf128
     standards: 
       - stdc
@@ -51,31 +44,24 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: ceil
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: ceilf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: ceill
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: ceilf16
     standards: 
       - stdc
@@ -83,7 +69,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: ceilf128
     standards: 
       - stdc
@@ -91,7 +76,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fabs
     standards: 
       - stdc
@@ -100,23 +84,18 @@ functions:
       - type: double
     attributes:
       - __LIBC_CONST_ATTR
-    guard: null
   - name: fabsf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: fabsl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: fabsf16
     standards: 
       - stdc
@@ -124,7 +103,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fabsf128
     standards: 
       - stdc
@@ -132,7 +110,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fdim
     standards: 
       - stdc
@@ -140,8 +117,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fdimf
     standards: 
       - stdc
@@ -149,8 +124,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fdiml
     standards: 
       - stdc
@@ -158,8 +131,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fdimf16
     standards: 
       - stdc
@@ -168,7 +139,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fdimf128
     standards: 
       - stdc
@@ -177,31 +147,24 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: floor
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: floorf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: floorl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: floorf16
     standards: 
       - stdc
@@ -209,7 +172,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: floorf128
     standards: 
       - stdc
@@ -217,7 +179,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fmin
     standards: 
       - stdc
@@ -225,8 +186,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fminf
     standards: 
       - stdc
@@ -234,8 +193,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fminl
     standards: 
       - stdc
@@ -243,8 +200,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fminf16
     standards: 
       - stdc
@@ -253,7 +208,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fminf128
     standards: 
       - stdc
@@ -261,8 +215,6 @@ functions:
     arguments:
       - type: float128
       - type: float128
-    guard: null
-    attributes: []
   - name: fmax
     standards: 
       - stdc
@@ -270,8 +222,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaxf
     standards: 
       - stdc
@@ -279,8 +229,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmaxl
     standards: 
       - stdc
@@ -288,8 +236,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmaxf16
     standards: 
       - stdc
@@ -298,7 +244,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmaxf128
     standards: 
       - stdc
@@ -306,8 +251,6 @@ functions:
     arguments:
       - type: float128
       - type: float128
-    guard: null
-    attributes: []
   - name: fmaximum
     standards: 
       - stdc
@@ -315,8 +258,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaximumf
     standards: 
       - stdc
@@ -324,8 +265,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmaximuml
     standards: 
       - stdc
@@ -333,8 +272,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmaximumf16
     standards: 
       - stdc
@@ -343,7 +280,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmaximumf128
     standards: 
       - stdc
@@ -352,7 +288,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fmaximum_num
     standards: 
       - stdc
@@ -360,8 +295,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaximum_numf
     standards: 
       - stdc
@@ -369,8 +302,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmaximum_numl
     standards: 
       - stdc
@@ -378,8 +309,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmaximum_numf16
     standards: 
       - stdc
@@ -388,7 +317,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmaximum_numf128
     standards: 
       - stdc
@@ -397,7 +325,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fmaximum_mag
     standards: 
       - stdc
@@ -405,8 +332,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaximum_magf
     standards: 
       - stdc
@@ -414,8 +339,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmaximum_magl
     standards: 
       - stdc
@@ -423,8 +346,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmaximum_magf16
     standards: 
       - stdc
@@ -433,7 +354,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmaximum_magf128
     standards: 
       - stdc
@@ -442,7 +362,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fmaximum_mag_num
     standards: 
       - stdc
@@ -450,8 +369,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaximum_mag_numf
     standards: 
       - stdc
@@ -459,8 +376,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmaximum_mag_numl
     standards: 
       - stdc
@@ -468,8 +383,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmaximum_mag_numf16
     standards: 
       - stdc
@@ -478,7 +391,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmaximum_mag_numf128
     standards: 
       - stdc
@@ -487,7 +399,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fminimum
     standards: 
       - stdc
@@ -495,8 +406,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fminimumf
     standards: 
       - stdc
@@ -504,8 +413,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fminimuml
     standards: 
       - stdc
@@ -513,8 +420,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fminimumf16
     standards: 
       - stdc
@@ -523,7 +428,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fminimumf128
     standards: 
       - stdc
@@ -532,7 +436,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fminimum_num
     standards: 
       - stdc
@@ -540,8 +443,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fminimum_numf
     standards: 
       - stdc
@@ -549,8 +450,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fminimum_numl
     standards: 
       - stdc
@@ -558,8 +457,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fminimum_numf16
     standards: 
       - stdc
@@ -568,7 +465,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fminimum_numf128
     standards: 
       - stdc
@@ -577,7 +473,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fminimum_mag
     standards: 
       - stdc
@@ -585,8 +480,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fminimum_magf
     standards: 
       - stdc
@@ -594,8 +487,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fminimum_magl
     standards: 
       - stdc
@@ -603,8 +494,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fminimum_magf16
     standards: 
       - stdc
@@ -613,7 +502,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fminimum_magf128
     standards: 
       - stdc
@@ -622,7 +510,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fminimum_mag_num
     standards: 
       - stdc
@@ -630,8 +517,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fminimum_mag_numf
     standards: 
       - stdc
@@ -639,8 +524,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fminimum_mag_numl
     standards: 
       - stdc
@@ -648,8 +531,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fminimum_mag_numf16
     standards: 
       - stdc
@@ -658,7 +539,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fminimum_mag_numf128
     standards: 
       - stdc
@@ -667,7 +547,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fma
     standards: 
       - stdc
@@ -676,8 +555,6 @@ functions:
       - type: double
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmaf
     standards: 
       - stdc
@@ -686,8 +563,6 @@ functions:
       - type: float
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: f16fmaf
     standards: 
       - stdc
@@ -697,7 +572,6 @@ functions:
       - type: float
       - type: float
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fmod
     standards: 
       - stdc
@@ -705,8 +579,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: fmodf
     standards: 
       - stdc
@@ -714,8 +586,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: fmodl
     standards: 
       - stdc
@@ -723,8 +593,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: fmodf16
     standards: 
       - stdc
@@ -733,7 +601,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fmodf128
     standards: 
       - stdc
@@ -742,7 +609,6 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: frexp
     standards: 
       - stdc
@@ -750,8 +616,6 @@ functions:
     arguments:
       - type: double
       - type: int *
-    guard: null
-    attributes: []
   - name: frexpf
     standards: 
       - stdc
@@ -759,8 +623,6 @@ functions:
     arguments:
       - type: float
       - type: int *
-    guard: null
-    attributes: []
   - name: frexpl
     standards: 
       - stdc
@@ -768,8 +630,6 @@ functions:
     arguments:
       - type: long double
       - type: int *
-    guard: null
-    attributes: []
   - name: frexpf16
     standards: 
       - stdc
@@ -778,7 +638,6 @@ functions:
       - type: _Float16
       - type: int *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: frexpf128
     standards: 
       - stdc
@@ -787,7 +646,6 @@ functions:
       - type: float128
       - type: int *
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fromfp
     standards: 
       - stdc
@@ -796,8 +654,6 @@ functions:
       - type: double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpf
     standards: 
       - stdc
@@ -806,8 +662,6 @@ functions:
       - type: float
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpl
     standards: 
       - stdc
@@ -816,8 +670,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpf16
     standards: 
       - stdc
@@ -827,7 +679,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fromfpf128
     standards: 
       - stdc
@@ -837,7 +688,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: fromfpx
     standards: 
       - stdc
@@ -846,8 +696,6 @@ functions:
       - type: double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpxf
     standards: 
       - stdc
@@ -856,8 +704,6 @@ functions:
       - type: float
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpxl
     standards: 
       - stdc
@@ -866,8 +712,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: fromfpxf16
     standards: 
       - stdc
@@ -877,7 +721,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: fromfpxf128
     standards: 
       - stdc
@@ -887,7 +730,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: ufromfp
     standards: 
       - stdc
@@ -896,8 +738,6 @@ functions:
       - type: double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpf
     standards: 
       - stdc
@@ -906,8 +746,6 @@ functions:
       - type: float
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpl
     standards: 
       - stdc
@@ -916,8 +754,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpf16
     standards: 
       - stdc
@@ -927,7 +763,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: ufromfpf128
     standards: 
       - stdc
@@ -937,7 +772,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: ufromfpx
     standards: 
       - stdc
@@ -946,8 +780,6 @@ functions:
       - type: double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpxf
     standards: 
       - stdc
@@ -956,8 +788,6 @@ functions:
       - type: float
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpxl
     standards: 
       - stdc
@@ -966,8 +796,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: ufromfpxf16
     standards: 
       - stdc
@@ -977,7 +805,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: ufromfpxf128
     standards: 
       - stdc
@@ -987,7 +814,6 @@ functions:
       - type: int
       - type: unsigned int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: hypot
     standards: 
       - stdc
@@ -995,8 +821,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: hypotf
     standards: 
       - stdc
@@ -1004,32 +828,24 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: ilogb
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: ilogbf
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: ilogbl
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: ilogbf16
     standards: 
       - stdc
@@ -1037,7 +853,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: ilogbf128
     standards: 
       - stdc
@@ -1045,31 +860,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: llogb
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: llogbf
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: llogbl
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: llogbf16
     standards: 
       - stdc
@@ -1077,7 +885,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: llogbf128
     standards: 
       - stdc
@@ -1085,7 +892,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: ldexp
     standards: 
       - stdc
@@ -1093,8 +899,6 @@ functions:
     arguments:
       - type: double
       - type: int
-    guard: null
-    attributes: []
   - name: ldexpf
     standards: 
       - stdc
@@ -1102,8 +906,6 @@ functions:
     arguments:
       - type: float
       - type: int
-    guard: null
-    attributes: []
   - name: ldexpl
     standards: 
       - stdc
@@ -1111,8 +913,6 @@ functions:
     arguments:
       - type: long double
       - type: int
-    guard: null
-    attributes: []
   - name: ldexpf128
     standards: 
       - stdc
@@ -1121,127 +921,96 @@ functions:
       - type: float128
       - type: int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: log10
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: log10f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: log1p
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: log1pf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: log2
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: log2f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: log
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: logf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: log1p
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: log1pf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: log2
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: log2f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: logb
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: logbf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: logbl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: logbf16
     standards: 
       - stdc
@@ -1249,7 +1018,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: logbf128
     standards: 
       - stdc
@@ -1257,7 +1025,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: modf
     standards: 
       - stdc
@@ -1265,8 +1032,6 @@ functions:
     arguments:
       - type: double
       - type: double *
-    guard: null
-    attributes: []
   - name: modff
     standards: 
       - stdc
@@ -1274,8 +1039,6 @@ functions:
     arguments:
       - type: float
       - type: float *
-    guard: null
-    attributes: []
   - name: modfl
     standards: 
       - stdc
@@ -1283,8 +1046,6 @@ functions:
     arguments:
       - type: long double
       - type: long double *
-    guard: null
-    attributes: []
   - name: modff16
     standards: 
       - stdc
@@ -1293,7 +1054,6 @@ functions:
       - type: _Float16
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: modff128
     standards: 
       - stdc
@@ -1302,31 +1062,24 @@ functions:
       - type: float128
       - type: float128 *
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: cos
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: cosf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: sin
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: sincosf
     standards: 
       - gnu
@@ -1335,112 +1088,84 @@ functions:
       - type: float
       - type: float *
       - type: float *
-    guard: null
-    attributes: []
   - name: sinf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: tan
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: tanf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: erff
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: exp
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: expf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: exp2
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: exp2f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: exp2m1f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: expm1
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: expm1f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: exp10
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: exp10f
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: remainder
     standards: 
       - stdc
@@ -1448,8 +1173,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: remainderf
     standards: 
       - stdc
@@ -1457,8 +1180,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: remainderl
     standards: 
       - stdc
@@ -1466,8 +1187,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: remainderf16
     standards: 
       - stdc
@@ -1476,7 +1195,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: remquo
     standards: 
       - stdc
@@ -1485,8 +1203,6 @@ functions:
       - type: double
       - type: double
       - type: int *
-    guard: null
-    attributes: []
   - name: remquof
     standards: 
       - stdc
@@ -1495,8 +1211,6 @@ functions:
       - type: float
       - type: float
       - type: int *
-    guard: null
-    attributes: []
   - name: remquol
     standards: 
       - stdc
@@ -1505,8 +1219,6 @@ functions:
       - type: long double
       - type: long double
       - type: int *
-    guard: null
-    attributes: []
   - name: remquof16
     standards: 
       - stdc
@@ -1516,7 +1228,6 @@ functions:
       - type: _Float16
       - type: int *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: remquof128
     standards: 
       - stdc
@@ -1526,31 +1237,24 @@ functions:
       - type: float128
       - type: int *
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: round
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: roundf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: roundl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: roundf16
     standards: 
       - stdc
@@ -1558,7 +1262,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: roundf128
     standards: 
       - stdc
@@ -1566,31 +1269,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: roundeven
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: roundevenf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: roundevenl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: roundevenf16
     standards: 
       - stdc
@@ -1611,24 +1307,18 @@ functions:
     return_type: long
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: lroundf
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: lroundl
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: lroundf16
     standards: 
       - stdc
@@ -1636,7 +1326,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: lroundf128
     standards: 
       - stdc
@@ -1644,31 +1333,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: llround
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: llroundf
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: llroundl
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: llroundf16
     standards: 
       - stdc
@@ -1676,7 +1358,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: llroundf128
     standards: 
       - stdc
@@ -1684,31 +1365,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: rint
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: rintf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: rintl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: rintf16
     standards: 
       - stdc
@@ -1716,7 +1390,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: rintf128
     standards: 
       - stdc
@@ -1724,31 +1397,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: lrint
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: lrintf
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: lrintl
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: lrintf16
     standards: 
       - stdc
@@ -1756,7 +1422,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: lrintf128
     standards: 
       - stdc
@@ -1764,31 +1429,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: llrint
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: llrintf
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: llrintl
     standards: 
       - stdc
     return_type: Longlong
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: llrintf16
     standards: 
       - stdc
@@ -1796,7 +1454,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: llrintf128
     standards: 
       - stdc
@@ -1804,31 +1461,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: sqrt
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: sqrtf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: sqrtl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: sqrtf128
     standards: 
       - stdc
@@ -1836,31 +1486,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: trunc
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: truncf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: truncl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: truncf16
     standards: 
       - stdc
@@ -1868,7 +1511,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: truncf128
     standards: 
       - stdc
@@ -1876,31 +1518,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: nearbyint
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: nearbyintf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: nearbyintl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: nearbyintf16
     standards: 
       - stdc
@@ -1908,7 +1543,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: nearbyintf128
     standards: 
       - stdc
@@ -1916,7 +1550,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: nextafterf
     standards: 
       - stdc
@@ -1924,8 +1557,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: nextafter
     standards: 
       - stdc
@@ -1933,8 +1564,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: nextafterl
     standards: 
       - stdc
@@ -1942,8 +1571,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: nextafterf16
     standards: 
       - stdc
@@ -1952,7 +1579,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: nextafterf128
     standards: 
       - stdc
@@ -1968,8 +1594,6 @@ functions:
     arguments:
       - type: float
       - type: long double
-    guard: null
-    attributes: []
   - name: nexttoward
     standards: 
       - stdc
@@ -1977,8 +1601,6 @@ functions:
     arguments:
       - type: double
       - type: long double
-    guard: null
-    attributes: []
   - name: nexttowardl
     standards: 
       - stdc
@@ -1986,8 +1608,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: nexttowardf16
     standards: 
       - stdc
@@ -2002,24 +1622,18 @@ functions:
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: nextdownf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: nextdownl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: nextdownf16
     standards: 
       - stdc
@@ -2027,7 +1641,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: nextdownf128
     standards: 
       - stdc
@@ -2035,31 +1648,24 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: nextup
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: nextupf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: nextupl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: long double
-    guard: null
-    attributes: []
   - name: nextupf16
     standards: 
       - stdc
@@ -2067,7 +1673,6 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: nextupf128
     standards: 
       - stdc
@@ -2075,7 +1680,6 @@ functions:
     arguments:
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: powf
     standards: 
       - stdc
@@ -2083,8 +1687,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: pow
     standards: 
       - stdc
@@ -2092,64 +1694,48 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: coshf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: sinhf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: tanhf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: acosf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: asinf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: asin
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: double
-    guard: null
-    attributes: []
   - name: atanf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: atan2f
     standards: 
       - stdc
@@ -2157,32 +1743,24 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: acoshf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: asinhf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: atanhf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: float
-    guard: null
-    attributes: []
   - name: scalbn
     standards: 
       - stdc
@@ -2190,8 +1768,6 @@ functions:
     arguments:
       - type: double
       - type: int
-    guard: null
-    attributes: []
   - name: scalbnf
     standards: 
       - stdc
@@ -2199,8 +1775,6 @@ functions:
     arguments:
       - type: float
       - type: int
-    guard: null
-    attributes: []
   - name: scalbnl
     standards: 
       - stdc
@@ -2208,8 +1782,6 @@ functions:
     arguments:
       - type: long double
       - type: int
-    guard: null
-    attributes: []
   - name: scalbnf128
     standards: 
       - stdc
@@ -2218,31 +1790,24 @@ functions:
       - type: float128
       - type: int
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: nanf
     standards: 
       - stdc
     return_type: float
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: nan
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: nanl
     standards: 
       - stdc
     return_type: long double
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: nanf16
     standards: 
       - stdc
@@ -2250,7 +1815,6 @@ functions:
     arguments:
       - type: const char *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: nanf128
     standards: 
       - stdc
@@ -2258,7 +1822,6 @@ functions:
     arguments:
       - type: const char *
     guard: LIBC_TYPES_HAS_FLOAT128
-    attributes: []
   - name: canonicalize
     standards: 
       - stdc
@@ -2266,8 +1829,6 @@ functions:
     arguments:
       - type: double
       - type: double
-    guard: null
-    attributes: []
   - name: canonicalizef
     standards: 
       - stdc
@@ -2275,8 +1836,6 @@ functions:
     arguments:
       - type: float
       - type: float
-    guard: null
-    attributes: []
   - name: canonicalizel
     standards: 
       - stdc
@@ -2284,8 +1843,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-    guard: null
-    attributes: []
   - name: canonicalizef16
     standards: 
       - stdc
@@ -2294,7 +1851,6 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: canonicalizef128
     standards: 
       - stdc
@@ -2311,7 +1867,6 @@ functions:
       - type: _Float16 *
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: totalordermagf16
     standards: 
       - stdc
@@ -2320,7 +1875,6 @@ functions:
       - type: _Float16 *
       - type: _Float16 *
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
   - name: f16sqrtf
     standards: 
       - stdc
@@ -2328,5 +1882,3 @@ functions:
     arguments:
       - type: float
     guard: LIBC_TYPES_HAS_FLOAT16
-    attributes: []
-    

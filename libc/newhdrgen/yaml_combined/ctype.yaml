@@ -10,112 +10,84 @@ functions:
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isalpha
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isblank
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: iscntrl
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isdigit
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isgraph
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: islower
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isprint
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: ispunct
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isspace
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isupper
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: isxdigit
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: tolower
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: toupper
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
     functions:
   - name: isascii
     standards: 
@@ -123,13 +95,9 @@ functions:
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: toascii
     standards: 
       - GNUExtensions
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []

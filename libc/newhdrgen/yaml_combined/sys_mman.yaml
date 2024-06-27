@@ -18,8 +18,6 @@ functions:
       - type: void *
       - type: size_t
       - type: int
-    guard: null
-    attributes: []
   - name: mmap
     standards: 
       - POSIX
@@ -31,8 +29,6 @@ functions:
       - type: int
       - type: int
       - type: off_t
-    guard: null
-    attributes: []
   - name: mprotect
     standards: 
       - POSIX
@@ -41,8 +37,6 @@ functions:
       - type: void *
       - type: size_t
       - type: int
-    guard: null
-    attributes: []
   - name: munmap
     standards: 
       - POSIX
@@ -50,8 +44,6 @@ functions:
     arguments:
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: POSIX_madvise
     standards: 
       - POSIX
@@ -60,8 +52,6 @@ functions:
       - type: void *
       - type: size_t
       - type: int
-    guard: null
-    attributes: []
   # this is a linux function
   - name: mincore
     standards: 
@@ -71,8 +61,6 @@ functions:
       - type: void *
       - type: size_t
       - type: unsigned char *
-    guard: null
-    attributes: []
   - name: mlock
     standards: 
       - POSIX
@@ -80,8 +68,6 @@ functions:
     arguments:
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: mlock2
     standards: 
       - Linux
@@ -90,31 +76,23 @@ functions:
       - type: void *
       - type: size_t
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: munlock
     standards: POSIX
     return_type: int
     arguments:
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: mlockall
     standards: 
       -POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: munlockall
     standards: 
       - POSIX
     return_type: int
     arguments: []
-    guard: null
-    attributes: []
   - name: msync
     standards: 
       - POSIX
@@ -123,8 +101,6 @@ functions:
       - type: void *
       - type: size_t
       - type: int
-    guard: null
-    attributes: []
   - name: shm_open
     standards: 
       - POSIX
@@ -133,13 +109,10 @@ functions:
       - type: const char *
       - type: int
       - type: mode_t
-    guard: null
-    attributes: []
   - name: shm_unlink
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
+      

@@ -19,8 +19,6 @@ functions:
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: kill
     standards: 
       - POSIX 
@@ -28,8 +26,6 @@ functions:
     arguments:
       - type: pid_t
       - type: int
-    guard: null
-    attributes: []
   - name: sigaction
     standards: 
       - POSIX
@@ -38,8 +34,6 @@ functions:
       - type: int
       - type: const struct sigaction * __restrict
       - type: struct sigaction * __restrict
-    guard: null
-    attributes: []
   - name: sigaltstack
     standards: 
       - POSIX 
@@ -47,8 +41,6 @@ functions:
     arguments:
       - type: const stack_t * __restrict
       - type: stack_t * __restrict
-    guard: null
-    attributes: []
   - name: sigdelset
     standards: 
       - POSIX 
@@ -56,8 +48,6 @@ functions:
     arguments:
       - type: sigset_t *
       - type: int
-    guard: null
-    attributes: []
   - name: sigaddset
     standards: 
       - POSIX
@@ -65,16 +55,12 @@ functions:
     arguments:
       - type: sigset_t *
       - type: int
-    guard: null
-    attributes: []
   - name: sigemptyset
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: sigset_t *
-    guard: null
-    attributes: []
   - name: sigprocmask
     standards: 
       - POSIX 
@@ -83,16 +69,12 @@ functions:
       - type: int
       - type: const sigset_t * __restrict
       - type: sigset_t * __restrict
-    guard: null
-    attributes: []
   - name: sigfillset
     standards: 
       - POSIX 
     return_type: int
     arguments:
       - type: sigset_t *
-    guard: null
-    attributes: []
   - name: signal
     standards: 
       - stdc
@@ -100,6 +82,3 @@ functions:
     arguments:
       - type: int
       - type: __sighandler_t
-    guard: null
-    attributes: []
-    

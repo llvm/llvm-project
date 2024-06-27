@@ -16,8 +16,6 @@ functions:
     return_type: char *
     arguments:
       - type: struct tm *
-    guard: null
-    attributes: []
   - name: asctime_r
     standard: 
       - stdc
@@ -25,8 +23,6 @@ functions:
     arguments:
       - type: struct tm *
       - type: char *
-    guard: null
-    attributes: []
   - name: clock_gettime
     standard: 
       - POSIX
@@ -34,15 +30,11 @@ functions:
     arguments:
       - type: clockid_t
       - type: struct timespec *
-    guard: null
-    attributes: []
   - name: clock
     standard: 
       - stdc
     return_type: clock_t
     arguments: []
-    guard: null
-    attributes: []
   - name: difftime
     standard: 
       - stdc
@@ -50,8 +42,6 @@ functions:
     arguments:
       - type: time_t
       - type: time_t
-    guard: null
-    attributes: []
   - name: gettimeofday
     standard: 
       - POSIX
@@ -59,16 +49,12 @@ functions:
     arguments:
       - type: struct timeval *
       - type: void *
-    guard: null
-    attributes: []
   - name: gmtime
     standard: 
       - stdc
     return_type: struct tm *
     arguments:
       - type: time_t *
-    guard: null
-    attributes: []
   - name: gmtime_r
     standard: 
       - stdc
@@ -76,16 +62,12 @@ functions:
     arguments:
       - type: time_t *
       - type: struct tm *
-    guard: null
-    attributes: []
   - name: mktime
     standard: 
       - stdc
     return_type: time_t
     arguments:
       - type: struct tm *
-    guard: null
-    attributes: []
   - name: nanosleep
     standard: 
       - POSIX
@@ -93,13 +75,9 @@ functions:
     arguments:
       - type: const struct timespec *
       - type: struct timespec *
-    guard: null
-    attributes: []
   - name: time
     standard: 
       - stdc
     return_type: time_t
     arguments:
       - type: time_t *
-    guard: null
-    attributes: []

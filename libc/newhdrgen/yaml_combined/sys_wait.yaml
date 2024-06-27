@@ -13,8 +13,6 @@ functions:
     return_type: pid_t
     arguments:
       - type: int *
-    guard: null
-    attributes: []
   - name: wait4
     standards: 
       - BSDExtensions
@@ -25,8 +23,6 @@ functions:
       - type: int *
       - type: int
       - type: struct rusage *
-    guard: null
-    attributes: []
   - name: waitpid
     standards: 
       - POSIX
@@ -35,5 +31,3 @@ functions:
       - type: pid_t
       - type: int *
       - type: int
-    guard: null
-    attributes: []

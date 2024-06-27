@@ -12,8 +12,6 @@ functions:
       - type: const void *
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: bzero
     standards: 
       - llvm_libc_ext
@@ -21,8 +19,6 @@ functions:
     arguments:
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: bcmp
     standards: 
       - llvm_libc_ext
@@ -31,8 +27,6 @@ functions:
       - type: const void *
       - type: const void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: strcasecmp
     standards: 
       - BSDExtensions
@@ -40,8 +34,6 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
-    guard: null
-    attributes: []
   - name: strncasecmp
     standards: 
       - BSDExtensions
@@ -50,8 +42,6 @@ functions:
       - type: const char *
       - type: const char *
       - type: size_t
-    guard: null
-    attributes: []
   - name: index
     standards: 
       - BSDExtensions
@@ -59,8 +49,6 @@ functions:
     arguments:
       - type: const char *
       - type: int
-    guard: null
-    attributes: []
   - name: rindex
     standards: 
       - BSDExtensions
@@ -68,6 +56,3 @@ functions:
     arguments:
       - type: const char *
       - type: int
-    guard: null
-    attributes: []
-    

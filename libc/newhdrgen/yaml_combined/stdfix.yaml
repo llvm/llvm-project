@@ -11,7 +11,6 @@ functions:
     arguments:
       - type: short accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: abshr
     standards: 
       - stdc_ext
@@ -19,7 +18,6 @@ functions:
     arguments:
       - type: short fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: absk
     standards: 
       - stdc_ext
@@ -27,7 +25,6 @@ functions:
     arguments:
       - type: accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: absr
     standards: 
       - stdc_ext
@@ -35,7 +32,6 @@ functions:
     arguments:
       - type: fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: abslk
     standards: 
       - stdc_ext
@@ -43,7 +39,6 @@ functions:
     arguments:
       - type: long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: abslr
     standards: 
       - stdc_ext
@@ -51,7 +46,6 @@ functions:
     arguments:
       - type: long fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: exphk
     standards: 
       - stdc_ext
@@ -60,7 +54,6 @@ functions:
     arguments:
       - type: short accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: expk
     standards: 
       - stdc_ext
@@ -69,7 +62,6 @@ functions:
     arguments:
       - type: accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundhk
     standards: 
       - stdc_ext
@@ -78,7 +70,6 @@ functions:
       - type: short accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundhr
     standards: 
       - stdc_ext
@@ -87,7 +78,6 @@ functions:
       - type: short fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundk
     standards: 
       - stdc_ext
@@ -96,7 +86,6 @@ functions:
       - type: accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundr
     standards: 
       - stdc_ext
@@ -105,7 +94,6 @@ functions:
       - type: fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundlk
     standards: 
       - stdc_ext
@@ -114,7 +102,6 @@ functions:
       - type: long accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundlr
     standards: 
       - stdc_ext
@@ -123,7 +110,6 @@ functions:
       - type: long fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: rounduhk
     standards: 
       - stdc_ext
@@ -132,7 +118,6 @@ functions:
       - type: unsigned short accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: rounduhr
     standards: 
       - stdc_ext
@@ -141,7 +126,6 @@ functions:
       - type: unsigned short fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: rounduk
     standards: 
       - stdc_ext
@@ -150,7 +134,6 @@ functions:
       - type: unsigned accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundur
     standards: 
       - stdc_ext
@@ -159,7 +142,6 @@ functions:
       - type: unsigned fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundulk
     standards: 
       - stdc_ext
@@ -168,7 +150,6 @@ functions:
       - type: unsigned long accum
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: roundulr
     standards: 
       - stdc_ext
@@ -177,7 +158,6 @@ functions:
       - type: unsigned long fract
       - type: int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtuhk
     standards: 
       - stdc_ext
@@ -186,7 +166,6 @@ functions:
     arguments:
       - type: unsigned short accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtuhr
     standards: 
       - stdc_ext
@@ -195,7 +174,6 @@ functions:
     arguments:
       - type: unsigned short fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtuk
     standards: 
       - stdc_ext 
@@ -204,7 +182,6 @@ functions:
     arguments:
       - type: unsigned accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtur
     standards: 
       - stdc_ext
@@ -213,7 +190,6 @@ functions:
     arguments:
       - type: unsigned fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtulr
     standards: 
       - stdc_ext  
@@ -222,14 +198,12 @@ functions:
     arguments:
       - type: unsigned long fract
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: sqrtulk
     standards: llvm_libc_stdfix_ext
     return_type: unsigned long accum
     arguments:
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: uhksqrtus 
     standards: 
       - stdc_ext
@@ -238,7 +212,6 @@ functions:
     arguments:
       - type: unsigned short
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []
   - name: uksqrtui
     standards: 
       - stdc_ext 
@@ -247,4 +220,3 @@ functions:
     arguments:
       - type: unsigned int
     guard: LIBC_COMPILER_HAS_FIXED_POINT
-    attributes: []

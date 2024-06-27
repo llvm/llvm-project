@@ -12,16 +12,12 @@ functions:
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fetestexcept
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fetestexceptflag
     standards: 
       - stdc
@@ -29,47 +25,35 @@ functions:
     arguments:
       - type: const fexcept_t *
       - type: int
-    guard: null
-    attributes: []
   - name: feraiseexcept
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fesetround
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fegetround
     standards: 
       - stdc
     return_type: int
     arguments: []
-    guard: null
-    attributes: []
   - name: fegetenv
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: fenv_t *
-    guard: null
-    attributes: []
   - name: fesetenv
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: const fenv_t *
-    guard: null
-    attributes: []
   - name: fegetexceptflag
     standards: 
       - stdc
@@ -77,16 +61,12 @@ functions:
     arguments:
       - type: fexcept_t *
       - type: int
-    guard: null
-    attributes: []
   - name: fesetexcept
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fesetexceptflag
     standards: 
       - stdc
@@ -94,24 +74,18 @@ functions:
     arguments:
       - type: const fexcept_t *
       - type: int
-    guard: null
-    attributes: []
   - name: feholdexcept
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: fenv_t *
-    guard: null
-    attributes: []
   - name: feupdateenv
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: const fenv_t *
-    guard: null
-    attributes: []
   - name: fedisableexcept
     standards: 
       - GNUExtensions
@@ -131,5 +105,3 @@ functions:
       - GNUExtensions
     return_type: int
     arguments: []
-    guard: null
-    attributes: []

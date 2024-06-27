@@ -20,40 +20,30 @@ functions:
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: atoi
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: atof
     standards: 
       - stdc
     return_type: double
     arguments:
       - type: const char * __restrict
-    guard: null
-    attributes: []
   - name: atol
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: atoll
     standards: 
       - stdc
     return_type: long long
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: bsearch
     standards: 
       - stdc
@@ -64,8 +54,6 @@ functions:
       - type: size_t
       - type: size_t
       - type: __bsearchcompare_t
-    guard: null
-    attributes: []
   - name: div
     standards: 
       - stdc
@@ -73,16 +61,12 @@ functions:
     arguments:
       - type: int
       - type: int
-    guard: null
-    attributes: []
   - name: labs
     standards: 
       - stdc
     return_type: long
     arguments:
       - type: long
-    guard: null
-    attributes: []
   - name: ldiv
     standards: 
       - stdc
@@ -90,16 +74,12 @@ functions:
     arguments:
       - type: long
       - type: long
-    guard: null
-    attributes: []
   - name: llabs
     standards: 
       - stdc
     return_type: long long
     arguments:
       - type: long long
-    guard: null
-    attributes: []
   - name: lldiv
     standards: 
       - stdc
@@ -107,8 +87,6 @@ functions:
     arguments:
       - type: long long
       - type: long long
-    guard: null
-    attributes: []
   - name: qsort
     standards: 
       - stdc
@@ -118,8 +96,6 @@ functions:
       - type: size_t
       - type: size_t
       - type: __qsortcompare_t
-    guard: null
-    attributes: []
   - name: qsort_r
     standards: 
       - GNUExtensions 
@@ -130,23 +106,17 @@ functions:
       - type: size_t
       - type: __qsortrcompare_t
       - type: void *
-    guard: null
-    attributes: []
   - name: rand
     standards: 
       - stdc
     return_type: int
     arguments: []
-    guard: null
-    attributes: []
   - name: srand
     standards: 
       - stdc
     return_type: void
     arguments:
       - type: unsigned int
-    guard: null
-    attributes: []
   - name: strfromd
     standards: 
       - stdc
@@ -156,8 +126,6 @@ functions:
       - type: size_t
       - type: const char * __restrict
       - type: double
-    guard: null
-    attributes: []
   - name: strfromf
     standards: 
       - stdc
@@ -167,8 +135,6 @@ functions:
       - type: size_t
       - type: const char * __restrict
       - type: float
-    guard: null
-    attributes: []
   - name: strfroml
     standards: 
       - stdc
@@ -178,8 +144,6 @@ functions:
       - type: size_t
       - type: const char * __restrict
       - type: long double
-    guard: null
-    attributes: []
   - name: strtod
     standards: 
       - stdc
@@ -187,8 +151,6 @@ functions:
     arguments:
       - type: const char * __restrict
       - type: char * * __restrict
-    guard: null
-    attributes: []
   - name: strtof
     standards: 
       - stdc
@@ -196,8 +158,6 @@ functions:
     arguments:
       - type: const char * __restrict
       - type: char * * __restrict
-    guard: null
-    attributes: []
   - name: strtol
     standards: 
       - stdc
@@ -206,8 +166,6 @@ functions:
       - type: const char * __restrict
       - type: char * * __restrict
       - type: int
-    guard: null
-    attributes: []
   - name: strtold
     standards: 
       - stdc
@@ -215,8 +173,6 @@ functions:
     arguments:
       - type: const char * __restrict
       - type: char * * __restrict
-    guard: null
-    attributes: []
   - name: strtoll
     standards: 
       - stdc
@@ -225,8 +181,6 @@ functions:
       - type: const char * __restrict
       - type: char * * __restrict
       - type: int
-    guard: null
-    attributes: []
   - name: strtoul
     standards: 
       - stdc
@@ -235,8 +189,6 @@ functions:
       - type: const char * __restrict
       - type: char * * __restrict
       - type: int
-    guard: null
-    attributes: []
   - name: strtoull
     standards: 
       - stdc
@@ -245,16 +197,12 @@ functions:
       - type: const char * __restrict
       - type: char * * __restrict
       - type: int
-    guard: null
-    attributes: []
   - name: malloc
     standards: 
       - stdc
     return_type: void *
     arguments:
       - type: size_t
-    guard: null
-    attributes: []
   - name: calloc
     standards: 
       - stdc
@@ -262,8 +210,6 @@ functions:
     arguments:
       - type: size_t
       - type: size_t
-    guard: null
-    attributes: []
   - name: realloc
     standards: 
       - stdc
@@ -271,8 +217,6 @@ functions:
     arguments:
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: aligned_alloc
     standards: 
       - stdc
@@ -280,68 +224,50 @@ functions:
     arguments:
       - type: size_t
       - type: size_t
-    guard: null
-    attributes: []
   - name: free
     standards: 
       - stdc
     return_type: void
     arguments:
       - type: void *
-    guard: null
-    attributes: []
   - name: _Exit
     standards: 
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: abort
     standards: 
       - stdc
     return_type: _Noreturn void
     arguments: []
-    guard: null
-    attributes: []
   - name: at_quick_exit
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: __atexithandler_t
-    guard: null
-    attributes: []
   - name: atexit
     standards: 
       - stdc
     return_type: int
     arguments:
       - type: __atexithandler_t
-    guard: null
-    attributes: []
   - name: exit
     standards: 
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: getenv
     standards: 
       - stdc
     return_type: char *
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: quick_exit
     standards: 
       - stdc
     return_type: _Noreturn void
     arguments:
       - type: int
-    guard: null
-    attributes: []
