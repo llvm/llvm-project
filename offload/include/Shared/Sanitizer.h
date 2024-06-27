@@ -150,7 +150,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation]] void
+  [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
   allocationError(ErrorCodeTy EC, void *Start, uint64_t Length, int64_t Id,
                   int64_t Tag, uint64_t Slot, uint64_t PC) {
     AllocationStart = Start;
@@ -165,7 +165,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation]] void
+  [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
   accessError(ErrorCodeTy EC, const AllocationTy<AK> &A,
               const AllocationPtrTy<AK> &AP, uint64_t Size, int64_t Id,
               uint64_t PC, const char *FunctionName, const char *FileName,
@@ -189,8 +189,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   exceedsAllocationLength(void *Start, uint64_t Length, int64_t AllocationId,
                           uint64_t Slot, uint64_t PC) {
     allocationError<AK>(ExceedsLength, Start, Length, AllocationId, /*Tag=*/0,
@@ -199,8 +198,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
   exceedsAllocationSlots(void *Start, uint64_t Length, int64_t AllocationId,
                          uint64_t Slot, uint64_t PC) {
     allocationError<AK>(ExceedsSlots, Start, Length, AllocationId, /*Tag=*/0,
@@ -209,9 +207,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
-  outOfBoundAccess(const AllocationTy<AK> &A, const AllocationPtrTy<AK> &AP,
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  outOfBoundAccess(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                    uint64_t Size, int64_t AccessId, uint64_t PC,
                    const char *FunctionName, const char *FileName,
                    uint64_t LineNo) {
@@ -221,9 +218,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
-  useAfterScope(const AllocationTy<AK> &A, const AllocationPtrTy<AK> &AP,
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  useAfterScope(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                 uint64_t Size, int64_t AccessId, uint64_t PC,
                 const char *FunctionName, const char *FileName,
                 uint64_t LineNo) {
@@ -233,9 +229,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
-  useAfterFree(const AllocationTy<AK> &A, const AllocationPtrTy<AK> &AP,
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  useAfterFree(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                uint64_t Size, int64_t AccessId, uint64_t PC,
                const char *FunctionName, const char *FileName,
                uint64_t LineNo) {
@@ -245,9 +240,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::flatten,
-    gnu::always_inline]] void
-  memoryLeak(const AllocationTy<AK> &A, uint64_t Slot) {
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  memoryLeak(const AllocationTy<AK> A, uint64_t Slot) {
     allocationError<AK>(MemoryLeak, A.Start, A.Length, A.Id, A.Tag, Slot,
                         /*PC=*/0);
     __builtin_trap();

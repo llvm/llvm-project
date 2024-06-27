@@ -173,6 +173,7 @@ private:
   FunctionCallee FreeNLocal;
 
   StringMap<Value *> GlobalStringMap;
+  DenseMap<Value *, Value *> PtrMap;
 };
 
 } // end anonymous namespace
@@ -430,7 +431,7 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
       Changed = true;
       break;
     case Instruction::GetElementPtr:
-      instrumentGEPInst(LI, cast<GetElementPtrInst>(I));
+      // instrumentGEPInst(LI, cast<GetElementPtrInst>(I));
       Changed = true;
       break;
     case Instruction::Call:

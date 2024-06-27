@@ -61,7 +61,7 @@ endforeach()
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
 
-add_llvm_library(offload.kernels
+add_llvm_library(clang_rt.offload_kernels
   STATIC
 
   Kernels/Sanitizer.cpp
@@ -75,8 +75,8 @@ add_llvm_library(offload.kernels
 )
 
 list(JOIN LIBOMPTARGET_DEVICE_ARCHITECTURES "," KERNEL_OFFLOAD_ARCHS)
-target_compile_options(offload.kernels PRIVATE -x cuda --offload-arch=${KERNEL_OFFLOAD_ARCHS} -nocudalib -nogpulib -fopenmp-target-jit -foffload-via-llvm )
-target_link_options(offload.kernels PRIVATE -x cuda --offload-arch=${KERNEL_OFFLOAD_ARCHS} -nocudalib -nogpulib -fopenmp-target-jit -foffload-via-llvm )
+target_compile_options(clang_rt.offload_kernels PRIVATE -x cuda --offload-arch=${KERNEL_OFFLOAD_ARCHS} -nocudalib -nogpulib -fopenmp-target-jit -foffload-via-llvm )
+target_link_options(clang_rt.offload_kernels PRIVATE -x cuda --offload-arch=${KERNEL_OFFLOAD_ARCHS} -nocudalib -nogpulib -fopenmp-target-jit -foffload-via-llvm )
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
@@ -85,4 +85,4 @@ set_target_properties(omptarget PROPERTIES
                       INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-install(TARGETS offload.kernels LIBRARY COMPONENT offload.kernels DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+install(TARGETS clang_rt.offload_kernels LIBRARY COMPONENT clang_rt.offload_kernels DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")

@@ -1,5 +1,5 @@
 // clang-format off
-// RUN: %libomptarget-compileopt-generic -loffload.kernels -mllvm -enable-gpu-san
+// RUN: %libomptarget-compileopt-generic -fsanitize=offload
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
 // clang-format on
 

@@ -38,7 +38,7 @@ template <AllocationKind AK> struct AllocationTracker {
   create(void *Start, uint64_t Length, int64_t AllocationId, uint64_t Slot,
          uint64_t PC) {
     if constexpr (SanitizerConfig<AK>::OFFSET_BITS < 64)
-      if (Length >= (1UL << (SanitizerConfig<AK>::OFFSET_BITS)))
+      if (OMP_UNLIKELY(Length >= (1UL << (SanitizerConfig<AK>::OFFSET_BITS))))
         __sanitizer_trap_info_ptr->exceedsAllocationLength<AK>(
             Start, Length, AllocationId, Slot, PC);
 
@@ -57,7 +57,7 @@ template <AllocationKind AK> struct AllocationTracker {
       Slot = ++Cnt;
 
     uint64_t NumSlots = SanitizerConfig<AK>::SLOTS;
-    if (Slot >= NumSlots)
+    if (OMP_UNLIKELY(Slot >= NumSlots))
       __sanitizer_trap_info_ptr->exceedsAllocationSlots<AK>(
           Start, Length, AllocationId, Slot, PC);
 
@@ -136,8 +136,9 @@ template <AllocationKind AK> struct AllocationTracker {
     auto &A = AllocArr.Arr[AP.AllocationId];
     int64_t Offset = AP.Offset;
     int64_t Length = A.Length;
-    if (Offset > Length - Size ||
-        (SanitizerConfig<AK>::useTags() && A.Tag != AP.AllocationTag)) {
+    if (OMP_UNLIKELY(
+            Offset > Length - Size ||
+            (SanitizerConfig<AK>::useTags() && A.Tag != AP.AllocationTag))) {
       if (AK == AllocationKind::LOCAL && Length == 0)
         __sanitizer_trap_info_ptr->useAfterScope<AK>(
             A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
@@ -205,7 +206,7 @@ template <AllocationKind AK> struct AllocationTracker {
     auto &AllocArr = Allocations[0];
     for (uint64_t Slot = 0; Slot < SanitizerConfig<AK>::SLOTS; ++Slot) {
       auto &A = AllocArr.Arr[Slot];
-      if (A.Length)
+      if (OMP_UNLIKELY(A.Length))
         __sanitizer_trap_info_ptr->memoryLeak<AK>(A, Slot);
     }
   }

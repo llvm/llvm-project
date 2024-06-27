@@ -740,10 +740,6 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
     }
-    if (LangOpts.Sanitize.has(SanitizerKind::Offload) &&
-        (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())) {
-      MPM.addPass(GPUSanPass());
-    }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(

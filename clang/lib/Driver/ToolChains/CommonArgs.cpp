@@ -1204,6 +1204,12 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                              const ToolChain &TC, const ArgList &Args,
                              bool ForceStaticHostRuntime, bool IsOffloadingHost,
                              bool GompNeedsRT) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
+  if (SanArgs.needsOffloadKernels()) {
+    CmdArgs.push_back("-loffload.kernels");
+    CmdArgs.append({"-mllvm", "-enable-offload-sanitizer"});
+  }
+
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                     options::OPT_fno_openmp, false)) {
     // We need libomptarget (liboffload) if it's the choosen offloading runtime.

@@ -620,11 +620,13 @@ struct OMPInformationCache : public InformationCache {
     // functions, except if `optnone` is present.
     if (isOpenMPDevice(M)) {
       for (Function &F : M) {
-        for (StringRef Prefix : {"__kmpc", "_ZN4ompx", "omp_"})
-          if (F.hasFnAttribute(Attribute::NoInline) &&
-              F.getName().starts_with(Prefix) &&
-              !F.hasFnAttribute(Attribute::OptimizeNone))
-            F.removeFnAttr(Attribute::NoInline);
+        for (StringRef Prefix : {"__kmpc", "_ZN4ompx", "omp_"}) {
+          if (!F.getName().starts_with(Prefix) ||
+              F.hasFnAttribute(Attribute::OptimizeNone))
+            continue;
+          F.removeFnAttr(Attribute::NoInline);
+          F.addFnAttr(Attribute::AlwaysInline);
+        }
       }
     }
 
