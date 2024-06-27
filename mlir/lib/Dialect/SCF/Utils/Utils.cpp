@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -1074,8 +1075,86 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
 // Fusion related helpers
 //===----------------------------------------------------------------------===//
 
+/// Check if `target` and `source` are siblings, in the context that `target`
+/// is being fused into `source`.
+///
+/// This is a simple check that just checks if both operations are in the same
+/// block and some checks to ensure that the fused IR does not violate
+/// dominance.
+static bool isOpSibling(Operation *target, Operation *source,
+                        Diagnostic &diag) {
+  // Check if both operations are same.
+  if (target == source) {
+    diag << "target and source need to be different loops";
+    return false;
+  }
+
+  // Check if both operations are in the same block.
+  if (target->getBlock() != source->getBlock()) {
+    diag << "target and source are not in the same block";
+    return false;
+  }
+
+  // Check if fusion will violate dominance.
+  DominanceInfo domInfo(source);
+  if (target->isBeforeInBlock(source)) {
+    // Since `target` is before `source`, all users of results of `target`
+    // need to be dominated by `source`.
+    for (Operation *user : target->getUsers()) {
+      if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
+        diag << "user of results of target should "
+                "be properly dominated by source";
+        return false;
+      }
+    }
+  } else {
+    // Since `target` is after `source`, all values used by `target` need
+    // to dominate `source`.
+
+    // Check if operands of `target` are dominated by `source`.
+    for (Value operand : target->getOperands()) {
+      Operation *operandOp = operand.getDefiningOp();
+      // Operands without defining operations are block arguments. When `target`
+      // and `source` occur in the same block, these operands dominate `source`.
+      if (!operandOp)
+        continue;
+
+      // Operand's defining operation should properly dominate `source`.
+      if (!domInfo.properlyDominates(operandOp, source,
+                                     /*enclosingOpOk=*/false)) {
+        diag << "operands of target should be properly dominated by source";
+        return false;
+      }
+    }
+
+    // Check if values used by `target` are dominated by `source`.
+    bool failed = false;
+    OpOperand *failedValue = nullptr;
+    visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
+      Operation *operandOp = operand->get().getDefiningOp();
+      if (operandOp && !domInfo.properlyDominates(operandOp, source,
+                                                  /*enclosingOpOk=*/false)) {
+        // `operand` is not an argument of an enclosing block and the defining
+        // op of `operand` is outside `target` but does not dominate `source`.
+        failed = true;
+        failedValue = operand;
+      }
+    });
+
+    if (failed) {
+      diag << "values used inside regions of target should be properly "
+              "dominated by source";
+      diag.attachNote(failedValue->getOwner()->getLoc()) << "see operation";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
-                                         LoopLikeOpInterface source) {
+                                         LoopLikeOpInterface source,
+                                         Diagnostic &diag) {
   bool iterSpaceEq =
       target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
       target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
@@ -1085,9 +1164,13 @@ bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
   // TODO: Decouple checks on concrete loop types and move this function
   // somewhere for general utility for `LoopLikeOpInterface`
   if (forAllTarget && forAllSource)
-    return iterSpaceEq &&
-           forAllTarget.getMapping() == forAllSource.getMapping();
-  return iterSpaceEq;
+    iterSpaceEq =
+        iterSpaceEq && forAllTarget.getMapping() == forAllSource.getMapping();
+  if (!iterSpaceEq) {
+    diag << "target and source iteration spaces must be equal";
+    return false;
+  }
+  return isOpSibling(target, source, diag);
 }
 
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,

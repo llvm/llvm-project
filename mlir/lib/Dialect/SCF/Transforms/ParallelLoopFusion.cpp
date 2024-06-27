@@ -136,9 +136,10 @@ verifyDependencies(ParallelOp firstPloop, ParallelOp secondPloop,
 static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
                           const IRMapping &firstToSecondPloopIndices,
                           llvm::function_ref<bool(Value, Value)> mayAlias) {
+  Diagnostic diag(firstPloop.getLoc(), DiagnosticSeverity::Remark);
   return !hasNestedParallelOp(firstPloop) &&
          !hasNestedParallelOp(secondPloop) &&
-         checkFusionStructuralLegality(firstPloop, secondPloop) &&
+         checkFusionStructuralLegality(firstPloop, secondPloop, diag) &&
          succeeded(verifyDependencies(firstPloop, secondPloop,
                                       firstToSecondPloopIndices, mayAlias));
 }

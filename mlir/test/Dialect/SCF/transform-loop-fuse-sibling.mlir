@@ -335,8 +335,9 @@ func.func @target_for_region_uses_result_of_source_for_err(%A: tensor<128xf32>, 
     %6 = vector.transfer_write %5, %arg4[%arg3] {in_bounds = [true]} : vector<16xf32>, tensor<128xf32>
     scf.yield %6 : tensor<128xf32>
   }
-  %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %B) -> (tensor<128xf32>) {
   // expected-error @below {{values used inside regions of target should be properly dominated by source}}
+  %dup1 = scf.for %arg3 = %c0 to %c128 step %c16 iter_args(%arg4 = %B) -> (tensor<128xf32>) {
+    // expected-note @below {{see operation}}
     %dup2 = vector.transfer_read %1[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
     %dup3 = vector.transfer_read %arg4[%arg3], %cst {in_bounds = [true]} : tensor<128xf32>, vector<16xf32>
     %dup5 = arith.addf %dup3, %dup2 : vector<16xf32>

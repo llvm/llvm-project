@@ -425,78 +425,6 @@ void transform::TakeAssumedBranchOp::getEffects(
 // LoopFuseSiblingOp
 //===----------------------------------------------------------------------===//
 
-/// Check if `target` and `source` are siblings, in the context that `target`
-/// is being fused into `source`.
-///
-/// This is a simple check that just checks if both operations are in the same
-/// block and some checks to ensure that the fused IR does not violate
-/// dominance.
-static DiagnosedSilenceableFailure isOpSibling(Operation *target,
-                                               Operation *source) {
-  // Check if both operations are same.
-  if (target == source)
-    return emitSilenceableFailure(source)
-           << "target and source need to be different loops";
-
-  // Check if both operations are in the same block.
-  if (target->getBlock() != source->getBlock())
-    return emitSilenceableFailure(source)
-           << "target and source are not in the same block";
-
-  // Check if fusion will violate dominance.
-  DominanceInfo domInfo(source);
-  if (target->isBeforeInBlock(source)) {
-    // Since `target` is before `source`, all users of results of `target`
-    // need to be dominated by `source`.
-    for (Operation *user : target->getUsers()) {
-      if (!domInfo.properlyDominates(source, user, /*enclosingOpOk=*/false)) {
-        return emitSilenceableFailure(target)
-               << "user of results of target should be properly dominated by "
-                  "source";
-      }
-    }
-  } else {
-    // Since `target` is after `source`, all values used by `target` need
-    // to dominate `source`.
-
-    // Check if operands of `target` are dominated by `source`.
-    for (Value operand : target->getOperands()) {
-      Operation *operandOp = operand.getDefiningOp();
-      // Operands without defining operations are block arguments. When `target`
-      // and `source` occur in the same block, these operands dominate `source`.
-      if (!operandOp)
-        continue;
-
-      // Operand's defining operation should properly dominate `source`.
-      if (!domInfo.properlyDominates(operandOp, source,
-                                     /*enclosingOpOk=*/false))
-        return emitSilenceableFailure(target)
-               << "operands of target should be properly dominated by source";
-    }
-
-    // Check if values used by `target` are dominated by `source`.
-    bool failed = false;
-    OpOperand *failedValue = nullptr;
-    visitUsedValuesDefinedAbove(target->getRegions(), [&](OpOperand *operand) {
-      Operation *operandOp = operand->get().getDefiningOp();
-      if (operandOp && !domInfo.properlyDominates(operandOp, source,
-                                                  /*enclosingOpOk=*/false)) {
-        // `operand` is not an argument of an enclosing block and the defining
-        // op of `operand` is outside `target` but does not dominate `source`.
-        failed = true;
-        failedValue = operand;
-      }
-    });
-
-    if (failed)
-      return emitSilenceableFailure(failedValue->getOwner())
-             << "values used inside regions of target should be properly "
-                "dominated by source";
-  }
-
-  return DiagnosedSilenceableFailure::success();
-}
-
 DiagnosedSilenceableFailure
 transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
@@ -520,14 +448,10 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
     return emitSilenceableFailure(target->getLoc())
            << "target or source is not a loop op";
 
-  // Check if the target and source are siblings.
-  DiagnosedSilenceableFailure diag = isOpSibling(target, source);
-  if (!diag.succeeded())
-    return diag;
-
-  if (!mlir::checkFusionStructuralLegality(target, source))
-    return emitSilenceableFailure(target->getLoc())
-           << "operations cannot be fused";
+  // Check if loops can be fused
+  Diagnostic diag(target.getLoc(), DiagnosticSeverity::Error);
+  if (!mlir::checkFusionStructuralLegality(target, source, diag))
+    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
 
   Operation *fusedLoop;
   // TODO: Support fusion for loop-like ops besides scf.for, scf.forall
