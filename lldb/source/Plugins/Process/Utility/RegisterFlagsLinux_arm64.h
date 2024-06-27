@@ -38,8 +38,8 @@ public:
   /// For the registers listed in this class, detect which fields are
   /// present. Must be called before UpdateRegisterInfos.
   /// If called more than once, fields will be redetected each time from
-  /// scratch. If you do not have access to hwcap, just pass 0 for each one, you
-  /// will only get unconditional fields.
+  /// scratch. If the target would not have this register at all, the list of
+  /// fields will be left empty.
   void DetectFields(uint64_t hwcap, uint64_t hwcap2);
 
   /// Add the field information of any registers named in this class,
@@ -63,7 +63,7 @@ private:
 
   struct RegisterEntry {
     RegisterEntry(llvm::StringRef name, unsigned size, DetectorFn detector)
-        : m_name(name), m_flags(std::string(name) + "_flags", size, {{"", 0}}),
+        : m_name(name), m_flags(std::string(name) + "_flags", size, {}),
           m_detector(detector) {}
 
     llvm::StringRef m_name;

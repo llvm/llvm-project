@@ -108,10 +108,6 @@ uint64_t RegisterFlags::Field::GetMask() const {
 }
 
 void RegisterFlags::SetFields(const std::vector<Field> &fields) {
-  // We expect that the XML processor will discard anything describing flags but
-  // with no fields.
-  assert(fields.size() && "Some fields must be provided.");
-
   // We expect that these are unsorted but do not overlap.
   // They could fill the register but may have gaps.
   std::vector<Field> provided_fields = fields;
