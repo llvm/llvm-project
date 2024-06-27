@@ -126,7 +126,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                            PreHeader);
       } else {
         // Succ is LatchExit.
-        NewPN->addIncoming(UndefValue::get(PN.getType()), PreHeader);
+        NewPN->addIncoming(PoisonValue::get(PN.getType()), PreHeader);
       }
 
       Value *V = PN.getIncomingValueForBlock(Latch);
