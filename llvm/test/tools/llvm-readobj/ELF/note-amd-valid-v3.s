@@ -11,7 +11,8 @@
 #LLVM-NEXT:      Name: .note
 #LLVM-NEXT:      Offset: 0x40
 #LLVM-NEXT:      Size: 0x110
-#LLVM-NEXT:      Note {
+#LLVM-NEXT:      Notes [
+#LLVM-NEXT:      {
 #LLVM-NEXT:        Owner: AMDGPU
 #LLVM-NEXT:        Data size: 0xFC
 #LLVM-NEXT:        Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
@@ -33,6 +34,7 @@
 #LLVM-NEXT:  ...
 #LLVM-EMPTY:
 #LLVM-NEXT:      }
+#LLVM-NEXT:     ]
 #LLVM-NEXT:    }
 #LLVM-NEXT:  ]
 

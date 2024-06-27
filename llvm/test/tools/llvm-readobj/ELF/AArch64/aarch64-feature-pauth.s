@@ -169,7 +169,8 @@ end:
 # OBJ-ERR-NEXT:     Name: .note.gnu.property
 # OBJ-ERR-NEXT:     Offset: 0x40
 # OBJ-ERR-NEXT:     Size: 0x[[SIZE]]
-# OBJ-ERR-NEXT:     Note {
+# OBJ-ERR-NEXT:     Notes [
+# OBJ-ERR-NEXT:     {
 # OBJ-ERR-NEXT:       Owner: GNU
 # OBJ-ERR-NEXT:       Data size: 0x[[DATASIZE]]
 # OBJ-ERR-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
@@ -177,6 +178,7 @@ end:
 # OBJ-ERR-NEXT:         AArch64 PAuth ABI core info: [[ERR]]
 # OBJ-ERR-NEXT:       ]
 # OBJ-ERR-NEXT:     }
+# OBJ-ERR-NEXT:    ]
 # OBJ-ERR-NEXT:   }
 # OBJ-ERR-NEXT: ]
 
