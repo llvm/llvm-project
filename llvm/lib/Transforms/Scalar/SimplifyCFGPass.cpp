@@ -73,6 +73,11 @@ static cl::opt<bool> UserHoistCommonInsts(
     "hoist-common-insts", cl::Hidden, cl::init(false),
     cl::desc("hoist common instructions (default = false)"));
 
+static cl::opt<bool> UserHoistLoadsStoresWithCondFaulting(
+    "hoist-loads-stores-with-cond-faulting", cl::Hidden, cl::init(false),
+    cl::desc("Hoist loads/stores if the target supports conditional faulting "
+             "(default = false)"));
+
 static cl::opt<bool> UserSinkCommonInsts(
     "sink-common-insts", cl::Hidden, cl::init(false),
     cl::desc("Sink common instructions (default = false)"));
@@ -272,6 +277,21 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
                                     const SimplifyCFGOptions &Options) {
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
 
+  // In codegen, we use unreachableblockelim to remove dead blocks b/c it
+  // doesn't really have any well defined semantics for unreachable code.
+  //
+  // The first character is not capitalized to reduce the code diff FTTB.
+  auto removeUnreachableBlocks = [&](Function &F, DomTreeUpdater *DTU = nullptr,
+                                     MemorySSAUpdater *MSSAU = nullptr) {
+    return !Options.RunInCodeGen &&
+           llvm::removeUnreachableBlocks(F, DTU, MSSAU);
+  };
+
+  // Only run simplifycfg in codegen if we'd like to hoist loads/stores.
+  if (Options.RunInCodeGen && (!Options.HoistLoadsStoresWithCondFaulting ||
+                               !TTI.hasConditionalLoadStoreForType()))
+    return false;
+
   bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   EverChanged |=
       tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
@@ -326,6 +346,9 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.NeedCanonicalLoop = UserKeepLoops;
   if (UserHoistCommonInsts.getNumOccurrences())
     Options.HoistCommonInsts = UserHoistCommonInsts;
+  if (UserHoistLoadsStoresWithCondFaulting.getNumOccurrences())
+    Options.HoistLoadsStoresWithCondFaulting =
+        UserHoistLoadsStoresWithCondFaulting;
   if (UserSinkCommonInsts.getNumOccurrences())
     Options.SinkCommonInsts = UserSinkCommonInsts;
   if (UserSpeculateUnpredictables.getNumOccurrences())
@@ -354,6 +377,8 @@ void SimplifyCFGPass::printPipeline(
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.HoistLoadsStoresWithCondFaulting ? "" : "no-")
+     << "hoist-loads-stores-with-cond-faulting;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
   OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
   OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch;";
