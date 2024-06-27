@@ -1155,9 +1155,8 @@ void JITDylib::dump(raw_ostream &OS) {
     std::vector<std::pair<SymbolStringPtr, SymbolTableEntry *>> SymbolsSorted;
     for (auto &KV : Symbols)
       SymbolsSorted.emplace_back(KV.first, &KV.second);
-    llvm::sort(SymbolsSorted, [](const auto &L, const auto &R) {
-      return *L.first < *R.first;
-    });
+    std::sort(SymbolsSorted.begin(), SymbolsSorted.end(),
+              [](const auto &L, const auto &R) { return *L.first < *R.first; });
 
     for (auto &KV : SymbolsSorted) {
       OS << "    \"" << *KV.first << "\": ";
