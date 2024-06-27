@@ -3467,7 +3467,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
           IsTLSLocalExecModel) {
         Type *GVType = GV->getValueType();
         if (GVType->isSized() && !GVType->isEmptyTy() &&
-            GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+            GV->getDataLayout().getTypeAllocSize(GVType) <=
                 AIXSmallTlsPolicySizeLimit)
           return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA, TLSReg);
       }
@@ -3530,7 +3530,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     if (HasAIXSmallLocalDynamicTLS) {
       Type *GVType = GV->getValueType();
       if (GVType->isSized() && !GVType->isEmptyTy() &&
-          GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+          GV->getDataLayout().getTypeAllocSize(GVType) <=
               AIXSmallTlsPolicySizeLimit)
         return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA,
                            ModuleHandle);
@@ -5873,7 +5873,7 @@ bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
 
   GetReturnInfo(CalleeCC, CalleeFunc->getReturnType(),
                 CalleeFunc->getAttributes(), Outs, *this,
-                CalleeFunc->getParent()->getDataLayout());
+                CalleeFunc->getDataLayout());
 
   return isEligibleForTCO(CalleeGV, CalleeCC, CallerCC, CB,
                           CalleeFunc->isVarArg(), Outs, Ins, CallerFunc,
@@ -17543,7 +17543,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
 
     const TargetOptions &Options = getTargetMachine().Options;
     const Function *F = I->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
 
     return !(

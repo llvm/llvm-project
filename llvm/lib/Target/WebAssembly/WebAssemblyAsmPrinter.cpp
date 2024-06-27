@@ -195,7 +195,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       // can actually calculate the legal VTs.
       const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
       computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getParent()->getDataLayout(), GlobalVT, VTs);
+                           GV->getDataLayout(), GlobalVT, VTs);
     }
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
