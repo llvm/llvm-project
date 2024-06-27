@@ -4572,6 +4572,10 @@ public:
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
 
+  /// Check that VTable Pointer authentication is only being set on the first
+  /// first instantiation of the vtable
+  void checkIncorrectVTablePointerAuthenticationAttribute(CXXRecordDecl &RD);
+
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
                                          SourceLocation RBrac,
