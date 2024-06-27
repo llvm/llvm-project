@@ -840,7 +840,9 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
       return ProfOrErr.takeError();
 
     // Dump out profdata
-    ProfOrErr->dump();
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
 
     // Write data to profiling file
     if (auto Err = ProfOrErr->write())
