@@ -33,18 +33,6 @@ v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], s[16:23]
 v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], 3.0
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], s[16:23]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], 3.0
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], s[16:19]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], 3.0
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
 v_wmma_bf16_16x16x32_bf16 v[16:19], v[0:7], v[8:15], s[16:19]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
@@ -177,18 +165,6 @@ v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] clamp
 v_wmma_i32_16x16x128_iu4 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
-v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], s32
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], 1.0, v32
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 index_key:2
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
-
-v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
-
 v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], s32
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
@@ -199,18 +175,6 @@ v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 index_key:2
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
 
 v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 neg_lo:[0,0,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
-
-v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], s28
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], 1.0, v28
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 index_key:2
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: out of range index_key
-
-v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 neg_lo:[0,0,1]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
 
 v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], s28

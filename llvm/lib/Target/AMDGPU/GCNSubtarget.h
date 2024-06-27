@@ -179,7 +179,7 @@ protected:
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
-  bool HasGFX1211DGEMMInsts = false;
+  bool HasGFX1211GEMMInsts = false;
   bool HasDefaultComponentZero = false;
   bool HasDefaultComponentBroadcast = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -920,7 +920,7 @@ public:
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
 
-  bool hasGFX1211DGEMMInsts() const { return HasGFX1211DGEMMInsts; }
+  bool hasGFX1211GEMMInsts() const { return HasGFX1211GEMMInsts; }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 

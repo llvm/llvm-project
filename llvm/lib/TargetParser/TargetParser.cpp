@@ -374,7 +374,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx13-insts"] = true;
       [[fallthrough]];
     case GK_GFX1211:
-      Features["gfx1211-dgemm-insts"] = true;
+      Features["gfx1211-gemm-insts"] = true;
       [[fallthrough]];
     case GK_GFX1210:
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
