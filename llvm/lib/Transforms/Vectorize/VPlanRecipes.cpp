@@ -1502,7 +1502,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
     // Use i32 for the gep index type when the value is constant,
     // or query DataLayout for a more suitable index type otherwise.
     const DataLayout &DL =
-        Builder.GetInsertBlock()->getModule()->getDataLayout();
+        Builder.GetInsertBlock()->getDataLayout();
     Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
@@ -1941,7 +1941,7 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
-  const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();
+  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),

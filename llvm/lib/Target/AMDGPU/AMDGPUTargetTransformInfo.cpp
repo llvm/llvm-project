@@ -144,7 +144,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
   for (const BasicBlock *BB : L->getBlocks()) {
-    const DataLayout &DL = BB->getModule()->getDataLayout();
+    const DataLayout &DL = BB->getDataLayout();
     unsigned LocalGEPsSeen = 0;
 
     if (llvm::any_of(L->getSubLoops(), [BB](const Loop* SubLoop) {
@@ -847,7 +847,7 @@ bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
   if (Indices.size() > 1)
     return true;
 
-  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const DataLayout &DL = CI->getDataLayout();
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
       TLI->ParseConstraints(DL, ST->getRegisterInfo(), *CI);

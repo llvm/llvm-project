@@ -1559,7 +1559,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                              const CallInst &I,
                                              MachineFunction &MF,
                                              unsigned Intrinsic) const {
-  auto &DL = I.getModule()->getDataLayout();
+  auto &DL = I.getDataLayout();
 
   auto SetRVVLoadStoreInfo = [&](unsigned PtrOp, bool IsStore,
                                  bool IsUnitStrided, bool UsePtrVal = false) {
@@ -20906,7 +20906,7 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
   // sign-extend.
   if (AI->getOperation() == AtomicRMWInst::Min ||
       AI->getOperation() == AtomicRMWInst::Max) {
-    const DataLayout &DL = AI->getModule()->getDataLayout();
+    const DataLayout &DL = AI->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
     Value *SextShamt =
@@ -21531,7 +21531,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
   if (!isLegalInterleavedAccessType(VTy, Factor, LI->getAlign(),
                                     LI->getPointerAddressSpace(),
-                                    LI->getModule()->getDataLayout()))
+                                    LI->getDataLayout()))
     return false;
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
@@ -21585,7 +21585,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
                                    ShuffleVTy->getNumElements() / Factor);
   if (!isLegalInterleavedAccessType(VTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(),
-                                    SI->getModule()->getDataLayout()))
+                                    SI->getDataLayout()))
     return false;
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
@@ -21630,7 +21630,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
 
   if (!isLegalInterleavedAccessType(ResVTy, Factor, LI->getAlign(),
                                     LI->getPointerAddressSpace(),
-                                    LI->getModule()->getDataLayout()))
+                                    LI->getDataLayout()))
     return false;
 
   Function *VlsegNFunc;
@@ -21680,7 +21680,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(),
-                                    SI->getModule()->getDataLayout()))
+                                    SI->getDataLayout()))
     return false;
 
   Function *VssegNFunc;
