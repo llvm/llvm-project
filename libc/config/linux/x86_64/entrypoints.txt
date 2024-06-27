@@ -593,7 +593,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
   if(LIBC_TYPES_HAS_FLOAT128)
     list(APPEND TARGET_LIBM_ENTRYPOINTS
       # math.h C23 mixed _Float16 and _Float128 entrypoints
-      libc.src.math.f16fma128
+      libc.src.math.f16fmaf128
     )
   endif()
 endif()
