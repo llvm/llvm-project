@@ -14,6 +14,7 @@
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
+#include "X86ELFStreamer.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
@@ -741,6 +742,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
     // Register the null streamer.
     TargetRegistry::RegisterNullTargetStreamer(*T, createX86NullTargetStreamer);
 
+    TargetRegistry::RegisterELFStreamer(*T, createX86ELFStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
 
     // Register the MCInstPrinter.
