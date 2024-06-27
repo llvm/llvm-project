@@ -307,26 +307,19 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     if (Version.empty())
       return;
 
-    // First add the per-target multilib include dir.
-    if (!SelectedMultilibs.empty() && !SelectedMultilibs.back().isDefault()) {
-      const Multilib &M = SelectedMultilibs.back();
+    {
+      // First the per-target include dir: include/<target>/c++/v1.
       SmallString<128> TargetDir(Path);
-      llvm::sys::path::append(TargetDir, Target, M.gccSuffix(), "c++", Version);
-      if (getVFS().exists(TargetDir)) {
-        addSystemInclude(DriverArgs, CC1Args, TargetDir);
-      }
+      llvm::sys::path::append(TargetDir, Target, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
     }
 
-    // Second add the per-target include dir.
-    SmallString<128> TargetDir(Path);
-    llvm::sys::path::append(TargetDir, Target, "c++", Version);
-    if (getVFS().exists(TargetDir))
-      addSystemInclude(DriverArgs, CC1Args, TargetDir);
-
-    // Third the generic one.
-    SmallString<128> Dir(Path);
-    llvm::sys::path::append(Dir, "c++", Version);
-    addSystemInclude(DriverArgs, CC1Args, Dir);
+    {
+      // Then the generic dir: include/c++/v1.
+      SmallString<128> Dir(Path);
+      llvm::sys::path::append(Dir, "c++", Version);
+      addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
   };
 
   switch (GetCXXStdlibType(DriverArgs)) {
