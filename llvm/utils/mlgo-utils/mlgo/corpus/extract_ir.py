@@ -46,7 +46,7 @@ def parse_args_and_run():
         "--input_type",
         type=str,
         help="Input file type - JSON, LLD params, directory, or bazel aquery.",
-        choices=["json", "params", "directory", "aquery"],
+        choices=["json", "params", "directory", "bazel_aquery"],
         default="json",
         nargs="?",
     )
@@ -149,7 +149,7 @@ def main(args):
             "structured compilation database, use that instead"
         )
         objs = extract_ir_lib.load_from_directory(args.input, args.output_dir)
-    elif args.input_type == "aquery":
+    elif args.input_type == "bazel_aquery":
         with open(args.input, encoding="utf-8") as aquery_json_handle:
             objs = extract_ir_lib.load_bazel_aquery(
                 json.load(aquery_json_handle), args.obj_base_dir, args.output_dir

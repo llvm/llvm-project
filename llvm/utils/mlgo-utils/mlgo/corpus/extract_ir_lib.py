@@ -321,7 +321,9 @@ def load_bazel_aquery(aquery_json, obj_base_dir: str, output_dir: str):
 
     Args:
       aquery_json: The JSON-formatted output of the bazel aquery command for
-        the target of interest.
+        the target of interest. The bazel aquery JSON should be a JSON
+        serialized version of the analysis.ActionGraphContainer proto.
+        https://github.com/bazelbuild/bazel/blob/master/src/main/protobuf/analysis_v2.proto
       obj_base_dir: The base build directory that all object files will be
         written out as arelative to.
       output_dir: The output directory where extracted .bc and .cmd files should
