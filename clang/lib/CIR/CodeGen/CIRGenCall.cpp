@@ -456,11 +456,11 @@ buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
 
     mlir::cir::TryCallOp tryCallOp;
     if (indirectFuncTy) {
-      tryCallOp = builder.create<mlir::cir::TryCallOp>(
+      tryCallOp = builder.createIndirectTryCallOp(
           callLoc, addr, indirectFuncVal, indirectFuncTy, CIRCallArgs);
     } else {
-      tryCallOp = builder.create<mlir::cir::TryCallOp>(callLoc, directFuncOp,
-                                                       addr, CIRCallArgs);
+      tryCallOp =
+          builder.createTryCallOp(callLoc, directFuncOp, addr, CIRCallArgs);
     }
     tryCallOp->setAttr("extra_attrs", extraFnAttrs);
     return tryCallOp;

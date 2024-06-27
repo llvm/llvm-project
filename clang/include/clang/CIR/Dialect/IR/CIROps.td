@@ -2881,14 +2881,6 @@ def TryCallOp : CIR_CallOp<"try_call"> {
   let results = (outs Variadic<CIR_AnyType>);
 
   let builders = [
-    OpBuilder<(ins "FuncOp":$callee, "mlir::Value":$exception,
-                   CArg<"ValueRange", "{}">:$operands), [{
-      $_state.addOperands(ValueRange{exception});
-      $_state.addOperands(operands);
-      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      if (!callee.getFunctionType().isVoid())
-        $_state.addTypes(callee.getFunctionType().getReturnType());
-    }]>,
     OpBuilder<(ins "Value":$ind_target, "mlir::Value":$exception,
                "FuncType":$fn_type,
                CArg<"ValueRange", "{}">:$operands), [{
@@ -2903,8 +2895,10 @@ def TryCallOp : CIR_CallOp<"try_call"> {
     [{
       $_state.addOperands(ValueRange{exception});
       $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
-      $_state.addTypes(resType);
+      if (callee)
+        $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
     }]>];
 
     let hasVerifier = 1;

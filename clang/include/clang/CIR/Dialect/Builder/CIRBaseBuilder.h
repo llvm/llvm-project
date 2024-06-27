@@ -504,6 +504,45 @@ public:
     return createCallOp(loc, callee, mlir::cir::VoidType(), operands,
                         extraFnAttr);
   }
+
+  mlir::cir::TryCallOp
+  createTryCallOp(mlir::Location loc, mlir::Value exception,
+                  mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
+                  mlir::Type returnType = mlir::cir::VoidType(),
+                  mlir::ValueRange operands = mlir::ValueRange(),
+                  mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+    mlir::cir::TryCallOp tryCallOp = create<mlir::cir::TryCallOp>(
+        loc, callee, exception, returnType, operands);
+    if (extraFnAttr) {
+      tryCallOp->setAttr("extra_attrs", extraFnAttr);
+    } else {
+      mlir::NamedAttrList empty;
+      tryCallOp->setAttr("extra_attrs",
+                         mlir::cir::ExtraFuncAttributesAttr::get(
+                             getContext(), empty.getDictionary(getContext())));
+    }
+    return tryCallOp;
+  }
+
+  mlir::cir::TryCallOp
+  createTryCallOp(mlir::Location loc, mlir::cir::FuncOp callee,
+                  mlir::Value exception, mlir::ValueRange operands,
+                  mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+    return createTryCallOp(loc, exception, mlir::SymbolRefAttr::get(callee),
+                           callee.getFunctionType().getReturnType(), operands,
+                           extraFnAttr);
+  }
+
+  mlir::cir::TryCallOp createIndirectTryCallOp(mlir::Location loc,
+                                               mlir::Value ind_target,
+                                               mlir::Value exception,
+                                               mlir::cir::FuncType fn_type,
+                                               mlir::ValueRange operands) {
+    llvm::SmallVector<mlir::Value, 4> resOperands({ind_target});
+    resOperands.append(operands.begin(), operands.end());
+    return createTryCallOp(loc, exception, mlir::SymbolRefAttr(),
+                           fn_type.getReturnType(), resOperands);
+  }
 };
 
 } // namespace cir
