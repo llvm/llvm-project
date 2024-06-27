@@ -1118,6 +1118,20 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level);
 
+  // Interprocedural constant propagation now that basic cleanup has occurred
+  // and prior to optimizing globals.
+  // FIXME: This position in the pipeline hasn't been carefully considered in
+  // years, it should be re-analyzed.
+  MPM.addPass(IPSCCPPass(
+              IPSCCPOptions(/*AllowFuncSpec=*/
+                            Level != OptimizationLevel::Os &&
+                            Level != OptimizationLevel::Oz &&
+                            !isLTOPreLink(Phase))));
+
+  // Attach metadata to indirect call sites indicating the set of functions
+  // they may target at run-time. This should follow IPSCCP.
+  MPM.addPass(CalledValuePropagationPass());
+
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());
 
@@ -1190,19 +1204,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   else
     MPM.addPass(buildInlinerPipeline(Level, Phase));
 
-  // Interprocedural constant propagation after the inliner pipeline yields
-  // better optimization results.
-  // FIXME: This position in the pipeline hasn't been carefully considered in
-  // years, it should be re-analyzed.
   MPM.addPass(IPSCCPPass(
               IPSCCPOptions(/*AllowFuncSpec=*/
                             Level != OptimizationLevel::Os &&
                             Level != OptimizationLevel::Oz &&
                             !isLTOPreLink(Phase))));
-
-  // Attach metadata to indirect call sites indicating the set of functions
-  // they may target at run-time. This should follow IPSCCP.
-  MPM.addPass(CalledValuePropagationPass());
 
   // Remove any dead arguments exposed by cleanups, constant folding globals,
   // and argument promotion.
