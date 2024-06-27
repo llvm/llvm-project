@@ -53,16 +53,16 @@ static bool consumeFront(std::string_view &S, std::string_view C) {
   return true;
 }
 
-static bool consumeFront(std::string_view &S, std::string_view CA,
-                         std::string_view CB, bool A) {
-  const std::string_view &C = A ? CA : CB;
-  return consumeFront(S, C);
+static bool consumeFront(std::string_view &S, std::string_view PrefixA,
+                         std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return consumeFront(S, Prefix);
 }
 
-static bool startsWith(std::string_view S, std::string_view CA,
-                       std::string_view CB, bool A) {
-  const std::string_view &C = A ? CA : CB;
-  return llvm::itanium_demangle::starts_with(S, C);
+static bool startsWith(std::string_view S, std::string_view PrefixA,
+                       std::string_view PrefixB, bool A) {
+  const std::string_view &Prefix = A ? PrefixA : PrefixB;
+  return llvm::itanium_demangle::starts_with(S, Prefix);
 }
 
 static bool isMemberPointer(std::string_view MangledName, bool &Error) {
