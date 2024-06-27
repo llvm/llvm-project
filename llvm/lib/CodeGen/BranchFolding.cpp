@@ -99,7 +99,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+      AU.addRequired<MachineBranchProbabilityInfo>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -131,10 +131,9 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
                          PassConfig->getEnableTailMerge();
   MBFIWrapper MBBFreqInfo(
       getAnalysis<MachineBlockFrequencyInfo>());
-  BranchFolder Folder(
-      EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
-      getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI(),
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
+  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
+                      getAnalysis<MachineBranchProbabilityInfo>(),
+                      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
   return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
                                  MF.getSubtarget().getRegisterInfo());
 }
