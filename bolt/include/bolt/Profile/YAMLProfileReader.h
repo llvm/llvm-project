@@ -73,10 +73,6 @@ private:
   bool parseFunctionProfile(BinaryFunction &Function,
                             const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
-  /// Match profiles to functions using calls as anchors.
-  void matchWithCallsAsAnchors(BinaryContext &BC,
-                               uint64_t &MatchedWithCallsAsAnchors);
-
   /// Infer function profile from stale data (collected on older binaries).
   bool inferStaleProfile(BinaryFunction &Function,
                          const yaml::bolt::BinaryFunctionProfile &YamlBF);

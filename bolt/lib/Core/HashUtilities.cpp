@@ -155,5 +155,30 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   return HashString;
 }
 
+/// An even looser  hash of a basic block to use with the stale profile
+/// matching. Hashing block function calls allows for broader relational
+/// matching, predicated on the assumption that called functions remain similar
+/// across revisions.
+std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
+  // The hash is computed by creating a string of all lexicographically ordered
+  // called function names.
+  std::multiset<std::string> FunctionNames;
+  for (const MCInst &Instr : BB) {
+    // Skip non-call instructions.
+    if (!BC.MIB->isCall(Instr))
+      continue;
+    const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+    if (!CallSymbol)
+      continue;
+    FunctionNames.insert(std::string(CallSymbol->getName()));
+  }
+
+  std::string HashString;
+  for (const std::string &FunctionName : FunctionNames)
+    HashString.append(FunctionName);
+
+  return HashString;
+}
+
 } // namespace bolt
 } // namespace llvm

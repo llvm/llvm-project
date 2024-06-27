@@ -35,6 +35,8 @@ std::string hashBlock(BinaryContext &BC, const BinaryBasicBlock &BB,
 
 std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB);
 
+std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB);
+
 } // namespace bolt
 } // namespace llvm
 

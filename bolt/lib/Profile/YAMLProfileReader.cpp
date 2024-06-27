@@ -14,7 +14,6 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 
@@ -28,11 +27,6 @@ static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
-
-llvm::cl::opt<bool>
-    MatchWithCallsAsAnchors("match-with-calls-as-anchors",
-                            cl::desc("Matches with calls as anchors"),
-                            cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
@@ -348,80 +342,6 @@ bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
   return false;
 }
 
-void YAMLProfileReader::matchWithCallsAsAnchors(
-    BinaryContext &BC, uint64_t &MatchedWithCallsAsAnchors) {
-  auto ComputeCallHash = [&](std::string HashString) {
-    if (YamlBP.Header.HashFunction == HashFunction::StdHash)
-      return std::hash<std::string>{}(HashString);
-    if (YamlBP.Header.HashFunction == HashFunction::XXH3)
-      return llvm::xxh3_64bits(HashString);
-    llvm_unreachable("Unhandled HashFunction");
-  };
-
-  std::unordered_map<uint64_t, BinaryFunction *> CallHashToBF;
-  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
-    if (ProfiledFunctions.count(BF))
-      continue;
-
-    std::string HashString{""};
-    for (const auto &BB : BF->blocks()) {
-      std::multiset<std::string> FunctionNames;
-      for (const MCInst &Instr : BB) {
-        // Skip non-call instructions.
-        if (!BC.MIB->isCall(Instr))
-          continue;
-        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
-        if (!CallSymbol)
-          continue;
-        FunctionNames.insert(std::string(CallSymbol->getName()));
-      }
-      // Adds called functions to the hash string in lexigraphic order.
-      for (const std::string &FunctionName : FunctionNames)
-        HashString.append(FunctionName);
-    }
-    // its possible we have some collisions.. our options to solve include
-    // cmp block ct, or potentially fname edit distance. although, thats p exp
-    if (HashString == "")
-      continue;
-    CallHashToBF[ComputeCallHash(HashString)] = BF;
-  }
-
-  std::unordered_map<uint32_t, std::string> ProfiledFunctionIdToName;
-  for (const yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    // How do we handle functions with multiple names? LTO specifically,
-    // right now the scope of this is to identical names wo lto i think
-    StringRef Name = YamlBF.Name;
-    const size_t Pos = Name.find("(*");
-    if (Pos != StringRef::npos)
-      Name = Name.substr(0, Pos);
-    ProfiledFunctionIdToName[YamlBF.Id] = Name;
-  }
-  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
-    if (YamlBF.Used)
-      continue;
-    std::string HashString{""};
-    for (const yaml::bolt::BinaryBasicBlockProfile &Block : YamlBF.Blocks) {
-      std::multiset<std::string> FunctionNames;
-      for (const yaml::bolt::CallSiteInfo &CallSite : Block.CallSites) {
-        std::string &FunctionName = ProfiledFunctionIdToName[CallSite.DestId];
-        FunctionNames.insert(FunctionName);
-      }
-      for (const std::string &FunctionName : FunctionNames)
-        HashString.append(FunctionName);
-    }
-    if (HashString == "")
-      continue;
-    size_t Hash = ComputeCallHash(HashString);
-    auto It = CallHashToBF.find(Hash);
-    if (It == CallHashToBF.end())
-      continue;
-    if (ProfiledFunctions.count(It->second))
-      continue;
-    matchProfileToFunction(YamlBF, *It->second);
-    ++MatchedWithCallsAsAnchors;
-  }
-}
-
 Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   if (opts::Verbosity >= 1) {
     outs() << "BOLT-INFO: YAML profile with hash: ";
@@ -495,19 +415,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
       matchProfileToFunction(YamlBF, *BF);
 
-  uint64_t MatchedWithCallsAsAnchors = 0;
-  if (opts::MatchWithCallsAsAnchors)
-    matchWithCallsAsAnchors(BC, MatchedWithCallsAsAnchors);
-
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
-
-  if (opts::Verbosity >= 2) {
-    outs() << "BOLT-INFO: matched " << MatchedWithCallsAsAnchors
-           << " functions with calls as anchors\n";
-  }
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
