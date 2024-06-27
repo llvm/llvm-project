@@ -416,7 +416,6 @@ def PACKW  : ALUW_rr<0b0000100, 0b100, "packw">,
              Sched<[WritePACK32, ReadPACK32, ReadPACK32]>;
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
-let IsSignExtendingOpW = 1 in
 def ZEXT_H_RV32 : RVBUnary<0b000010000000, 0b100, OPC_OP, "zext.h">,
                   Sched<[WriteIALU, ReadIALU]>;
 def REV8_RV32 : RVBUnary<0b011010011000, 0b101, OPC_OP_IMM, "rev8">,
