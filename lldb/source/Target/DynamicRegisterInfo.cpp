@@ -437,6 +437,7 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
 }
 
 void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
+  printf("DynamicRegisterInfo::Finalize\n");
   if (m_finalized)
     return;
 
