@@ -482,7 +482,8 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind,
 }
 
 static Expected<std::unique_ptr<SymbolicFile>>
-getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context) {
+getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
+                object::Archive::Kind Kind) {
   const file_magic Type = identify_magic(Buf.getBuffer());
   // Don't attempt to read non-symbolic file types.
   if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
@@ -490,8 +491,38 @@ getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context) {
   if (Type == file_magic::bitcode) {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
         Buf, file_magic::bitcode, &Context);
-    if (!ObjOrErr)
-      return ObjOrErr.takeError();
+    // An error reading a bitcode file most likely indicates that the file
+    // was created by a compiler from the future. Normally we don't try to
+    // implement forwards compatibility for bitcode files, but when creating an
+    // archive we can implement best-effort forwards compatibility by treating
+    // the file as a blob and not creating symbol index entries for it. lld and
+    // mold ignore the archive symbol index, so provided that you use one of
+    // these linkers, LTO will work as long as lld or the gold plugin is newer
+    // than the compiler. We only ignore errors if the archive format is one
+    // that is supported by a linker that is known to ignore the index,
+    // otherwise there's no chance of this working so we may as well error out.
+    // We print a warning on read failure so that users of linkers that rely on
+    // the symbol index can diagnose the issue.
+    //
+    // This is the same behavior as GNU ar when the linker plugin returns an
+    // error when reading the input file. If the bitcode file is actually
+    // malformed, it will be diagnosed at link time.
+    if (!ObjOrErr) {
+      switch (Kind) {
+      case object::Archive::K_BSD:
+      case object::Archive::K_GNU:
+      case object::Archive::K_GNU64:
+        llvm::logAllUnhandledErrors(ObjOrErr.takeError(), llvm::errs(),
+                                    "warning: " + Buf.getBufferIdentifier() +
+                                        ": ");
+        return nullptr;
+      case object::Archive::K_AIXBIG:
+      case object::Archive::K_COFF:
+      case object::Archive::K_DARWIN:
+      case object::Archive::K_DARWIN64:
+        return ObjOrErr.takeError();
+      }
+    }
     return std::move(*ObjOrErr);
   } else {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
@@ -820,7 +851,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
     for (const NewArchiveMember &M : NewMembers) {
       Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr =
-          getSymbolicFile(M.Buf->getMemBufferRef(), Context);
+          getSymbolicFile(M.Buf->getMemBufferRef(), Context, Kind);
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       SymFiles.push_back(std::move(*SymFileOrErr));
