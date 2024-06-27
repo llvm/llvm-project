@@ -248,4 +248,56 @@ define <2 x i16> @upgrade_amdgcn_ds_fadd_v2bf16__missing_args_as_i16(ptr addrspa
   ret <2 x i16> %result0
 }
 
+declare float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) nocapture, float, i32 immarg, i32 immarg, i1 immarg)
+declare double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) nocapture, double, i32 immarg, i32 immarg, i1 immarg)
+
+define float @upgrade_amdgcn_ds_fmin_f32(ptr addrspace(3) %ptr, float %val) {
+  ; CHECK: atomicrmw fmin ptr addrspace(3) %ptr, float %val syncscope("agent") seq_cst, align 4
+  %result0 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
+
+  ; CHECK: = atomicrmw volatile fmin ptr addrspace(3) %ptr, float %val syncscope("agent") seq_cst, align 4
+  %result1 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 true)
+
+  ; CHECK: = atomicrmw fmin ptr addrspace(3) %ptr, float %val syncscope("agent") seq_cst, align 4
+  %result2 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr, float %val, i32 43, i32 3, i1 false)
+
+  ; CHECK: = atomicrmw fmin ptr addrspace(3) %ptr, float %val syncscope("agent") acquire, align 4
+  %result3 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr, float %val, i32 4, i32 2, i1 false)
+
+  ret float %result3
+}
+
+define double @upgrade_amdgcn_ds_fmin_f64(ptr addrspace(3) %ptr, double %val) {
+  ; CHECK: atomicrmw fmin ptr addrspace(3) %ptr, double %val syncscope("agent") seq_cst, align 8
+  %result0 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr, double %val, i32 0, i32 0, i1 false)
+
+  ; CHECK: = atomicrmw volatile fmin ptr addrspace(3) %ptr, double %val syncscope("agent") seq_cst, align 8
+  %result1 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr, double %val, i32 0, i32 0, i1 true)
+
+  ; CHECK: = atomicrmw fmin ptr addrspace(3) %ptr, double %val syncscope("agent") seq_cst, align 8
+  %result2 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr, double %val, i32 43, i32 3, i1 false)
+
+  ; CHECK: = atomicrmw fmin ptr addrspace(3) %ptr, double %val syncscope("agent") acquire, align 8
+  %result3 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr, double %val, i32 4, i32 2, i1 false)
+
+  ret double %result3
+}
+
+declare float @llvm.amdgcn.ds.fmin(ptr addrspace(3) nocapture, float, i32 immarg, i32 immarg, i1 immarg)
+
+define float @upgrade_amdgcn_ds_fmin_f32_no_suffix(ptr addrspace(3) %ptr, float %val) {
+  ; CHECK: = atomicrmw fmin ptr addrspace(3) %ptr, float %val syncscope("agent") seq_cst, align 4
+
+  %result0 = call float @llvm.amdgcn.ds.fmin(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
+  ret float %result0
+}
+
+declare float @llvm.amdgcn.ds.fmax(ptr addrspace(3) nocapture, float, i32 immarg, i32 immarg, i1 immarg)
+
+define float @upgrade_amdgcn_ds_fmax_f32_no_suffix(ptr addrspace(3) %ptr, float %val) {
+  ; CHECK: = atomicrmw fmax ptr addrspace(3) %ptr, float %val syncscope("agent") seq_cst, align 4
+  %result0 = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
+  ret float %result0
+}
+
 attributes #0 = { argmemonly nounwind willreturn }
