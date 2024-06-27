@@ -176,7 +176,7 @@ Changes to the RISC-V Backend
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 1.0.0 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
