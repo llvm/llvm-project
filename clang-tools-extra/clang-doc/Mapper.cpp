@@ -43,11 +43,12 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D,
   // Prevent Visiting USR twice
   {
     std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
-    if (USRVisited.count(USR.str()))
+    StringRef Visited = USR.str();
+    if (USRVisited.count(Visited))
       return true;
     // We considered a USR to be visited only when its defined
     if (IsDefinition)
-      USRVisited.insert(USR.str());
+      USRVisited.insert(Visited);
   }
 
   bool IsFileInRootDir;
