@@ -1,5 +1,8 @@
 ; RUN: opt -S -passes=separate-const-offset-from-gep < %s | FileCheck %s
 
+; Check that SeparateConstOffsetFromGEP's reuniteExts() propagates the debug location
+; to the new sext instruction, which replaces the old add/sub instruction (`%add.sext`/`%sub.sext`).
+
 define i64 @add_sext__dominating_add_nsw(i32 %arg0, i32 %arg1) !dbg !5 {
 ; CHECK-LABEL: define i64 @add_sext__dominating_add_nsw(
 ; CHECK:  entry:
