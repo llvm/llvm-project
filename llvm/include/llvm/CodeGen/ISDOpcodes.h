@@ -83,12 +83,6 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
-  /// A ptrauth constant.
-  /// ptr, key, addr-disc, disc
-  /// Note that the addr-disc can be a non-constant value, to allow representing
-  /// a constant global address signed using address-diversification, in code.
-  PtrAuthGlobalAddress,
-
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
