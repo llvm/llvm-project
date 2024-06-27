@@ -30557,7 +30557,7 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
     bool Not = false;
     // Check if we have a NOT
     Value *PeekI;
-    if (match(I, m_c_Xor(m_Value(PeekI), m_AllOnes())) ||
+    if (match(I, m_Not(m_Value(PeekI))) ||
         match(I, m_Sub(m_AllOnes(), m_Value(PeekI)))) {
       Not = true;
       I = dyn_cast<Instruction>(PeekI);
