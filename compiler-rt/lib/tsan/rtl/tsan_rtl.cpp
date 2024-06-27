@@ -35,8 +35,10 @@ extern "C" void __tsan_resume() {
   __tsan_resumed = 1;
 }
 
+#if SANITIZER_APPLE
 SANITIZER_WEAK_DEFAULT_IMPL
 void __tsan_test_only_on_fork() {}
+#endif
 
 namespace __tsan {
 
@@ -828,7 +830,9 @@ void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   // Disables memory write in OnUserAlloc/Free.
   thr->ignore_reads_and_writes++;
 
+#  if SANITIZER_APPLE
   __tsan_test_only_on_fork();
+#  endif
 }
 
 static void ForkAfter(ThreadState* thr) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
