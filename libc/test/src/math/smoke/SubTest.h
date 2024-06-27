@@ -155,4 +155,4 @@ public:
   TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
   TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ADDTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H
