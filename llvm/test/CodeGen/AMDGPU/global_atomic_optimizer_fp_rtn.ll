@@ -1082,9 +1082,87 @@ define amdgpu_ps double @global_atomic_fadd_double_uni_address_uni_value_agent_s
 }
 
 define amdgpu_ps double @global_atomic_fadd_double_uni_address_div_value_scope_agent_scope_unsafe(ptr addrspace(1) inreg %ptr, double %val) #0 {
-; IR-LABEL: @global_atomic_fadd_double_uni_address_div_value_scope_agent_scope_unsafe(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 4
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_double_uni_address_div_value_scope_agent_scope_unsafe(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live()
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0)
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]])
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] syncscope("agent") monotonic, align 4
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]])
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = fadd double [[TMP14]], [[TMP21:%.*]]
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ -0.000000e+00, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]])
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]])
+; IR-ITERATIVE-NEXT:    [[TMP22]] = fadd double [[ACCUMULATOR]], [[TMP20]]
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic_fadd_double_uni_address_div_value_scope_agent_scope_unsafe(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live()
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0)
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]])
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double -0.000000e+00)
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP9]], i32 273, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP11:%.*]] = fadd double [[TMP9]], [[TMP10]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP11]], i32 274, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP13:%.*]] = fadd double [[TMP11]], [[TMP12]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP13]], i32 276, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP15:%.*]] = fadd double [[TMP13]], [[TMP14]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP15]], i32 280, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP17:%.*]] = fadd double [[TMP15]], [[TMP16]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP17]], i32 322, i32 10, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP19:%.*]] = fadd double [[TMP17]], [[TMP18]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP19]], i32 323, i32 12, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP21:%.*]] = fadd double [[TMP19]], [[TMP20]]
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP21]], i32 312, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63)
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]])
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] syncscope("agent") monotonic, align 4
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]])
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]])
+; IR-DPP-NEXT:    [[TMP32:%.*]] = fadd double [[TMP30]], [[TMP31]]
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double %val syncscope("agent") monotonic, align 4
   ret double %result
@@ -1100,9 +1178,87 @@ define amdgpu_ps double @global_atomic_fadd_double_uni_address_uni_value_one_as_
 }
 
 define amdgpu_ps double @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double %val) #1 {
-; IR-LABEL: @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("one-as") monotonic, align 8
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] syncscope("one-as") monotonic, align 8
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[TMP21:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ -0.000000e+00, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP22]] = call double @llvm.experimental.constrained.fadd.f64(double [[ACCUMULATOR]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic_fadd_double_uni_address_div_value_one_as_scope_unsafe_strictfp(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double -0.000000e+00) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP9]], double [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP11]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP13]], double [[TMP14]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP15]], double [[TMP16]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP17]], double [[TMP18]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP21:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP19]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP21]], i32 312, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] syncscope("one-as") monotonic, align 8
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP30]], double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double %val syncscope("one-as") monotonic
   ret double %result
@@ -1118,9 +1274,87 @@ define amdgpu_ps double @global_atomic_fsub_double_uni_address_uni_value_agent_s
 }
 
 define amdgpu_ps double @global_atomic_fsub_double_uni_address_div_value_agent_scope_strictfp(ptr addrspace(1) inreg %ptr, double %val) #2 {
-; IR-LABEL: @global_atomic_fsub_double_uni_address_div_value_agent_scope_strictfp(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fsub ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic_fsub_double_uni_address_div_value_agent_scope_strictfp(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fsub ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] syncscope("agent") monotonic, align 8
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP14]], double [[TMP21:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ -0.000000e+00, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP22]] = call double @llvm.experimental.constrained.fadd.f64(double [[ACCUMULATOR]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic_fsub_double_uni_address_div_value_agent_scope_strictfp(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double -0.000000e+00) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP9]], double [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP11]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP13]], double [[TMP14]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP15]], double [[TMP16]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP17]], double [[TMP18]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP21:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP19]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP21]], i32 312, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fsub ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] syncscope("agent") monotonic, align 8
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[TMP30]], double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fsub ptr addrspace(1) %ptr, double %val syncscope("agent") monotonic
   ret double %result
@@ -1158,9 +1392,87 @@ define amdgpu_ps double @global_atomic_fmin_double_uni_address_uni_value_agent_s
 }
 
 define amdgpu_ps double @global_atomic_fmin_double_uni_address_div_value_agent_scope_unsafe(ptr addrspace(1) inreg %ptr, double %val) #0 {
-; IR-LABEL: @global_atomic_fmin_double_uni_address_div_value_agent_scope_unsafe(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic_fmin_double_uni_address_div_value_agent_scope_unsafe(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live()
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0)
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]])
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] syncscope("agent") monotonic, align 8
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]])
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = call double @llvm.minnum.f64(double [[TMP14]], double [[TMP21:%.*]])
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ 0x7FF0000000000000, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]])
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]])
+; IR-ITERATIVE-NEXT:    [[TMP22]] = call double @llvm.minnum.f64(double [[ACCUMULATOR]], double [[TMP20]])
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic_fmin_double_uni_address_div_value_agent_scope_unsafe(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live()
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0)
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]])
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double 0x7FF0000000000000)
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP9]], i32 273, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP11:%.*]] = call double @llvm.minnum.f64(double [[TMP9]], double [[TMP10]])
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP11]], i32 274, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP13:%.*]] = call double @llvm.minnum.f64(double [[TMP11]], double [[TMP12]])
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP13]], i32 276, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP15:%.*]] = call double @llvm.minnum.f64(double [[TMP13]], double [[TMP14]])
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP15]], i32 280, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP17:%.*]] = call double @llvm.minnum.f64(double [[TMP15]], double [[TMP16]])
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP17]], i32 322, i32 10, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP19:%.*]] = call double @llvm.minnum.f64(double [[TMP17]], double [[TMP18]])
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP19]], i32 323, i32 12, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP21:%.*]] = call double @llvm.minnum.f64(double [[TMP19]], double [[TMP20]])
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double [[TMP21]], i32 312, i32 15, i32 15, i1 false)
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63)
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]])
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] syncscope("agent") monotonic, align 8
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]])
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]])
+; IR-DPP-NEXT:    [[TMP32:%.*]] = call double @llvm.minnum.f64(double [[TMP30]], double [[TMP31]])
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fmin ptr addrspace(1) %ptr, double %val syncscope("agent") monotonic
   ret double %result
@@ -1224,9 +1536,87 @@ define amdgpu_ps double @global_atomic__fmax_double_uni_address_uni_value_agent_
 }
 
 define amdgpu_ps double @global_atomic__fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(ptr addrspace(1) inreg %ptr, double %val) #1{
-; IR-LABEL: @global_atomic__fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] syncscope("agent") monotonic, align 8
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic__fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] syncscope("agent") monotonic, align 8
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP14]], double [[TMP21:%.*]], metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ 0xFFF0000000000000, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP22]] = call double @llvm.experimental.constrained.maxnum.f64(double [[ACCUMULATOR]], double [[TMP20]], metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic__fmax_double_uni_address_div_value_agent_scope_unsafe_strictfp(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double 0xFFF0000000000000) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP9]], double [[TMP10]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP11]], double [[TMP12]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP13]], double [[TMP14]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP15]], double [[TMP16]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP17]], double [[TMP18]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP21:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP19]], double [[TMP20]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double [[TMP21]], i32 312, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] syncscope("agent") monotonic, align 8
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.maxnum.f64(double [[TMP30]], double [[TMP31]], metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fmax ptr addrspace(1) %ptr, double %val syncscope("agent") monotonic
   ret double %result
@@ -1242,9 +1632,87 @@ define amdgpu_ps double @global_atomic_fadd_double_uni_address_uni_value_system_
 }
 
 define amdgpu_ps double @global_atomic_fadd_double_uni_address_div_value_system_scope_strictfp(ptr addrspace(1) inreg %ptr, double %val) #2 {
-; IR-LABEL: @global_atomic_fadd_double_uni_address_div_value_system_scope_strictfp(
-; IR-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[VAL:%.*]] monotonic, align 4
-; IR-NEXT:    ret double [[RESULT]]
+; IR-ITERATIVE-LABEL: @global_atomic_fadd_double_uni_address_div_value_system_scope_strictfp(
+; IR-ITERATIVE-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP16:%.*]]
+; IR-ITERATIVE:       2:
+; IR-ITERATIVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-ITERATIVE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[COMPUTELOOP:%.*]]
+; IR-ITERATIVE:       10:
+; IR-ITERATIVE-NEXT:    [[TMP11:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP22:%.*]] monotonic, align 4
+; IR-ITERATIVE-NEXT:    br label [[TMP12:%.*]]
+; IR-ITERATIVE:       12:
+; IR-ITERATIVE-NEXT:    [[TMP13:%.*]] = phi double [ poison, [[COMPUTEEND:%.*]] ], [ [[TMP11]], [[TMP10:%.*]] ]
+; IR-ITERATIVE-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP13]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP14]], double [[TMP21:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    br label [[TMP16]]
+; IR-ITERATIVE:       16:
+; IR-ITERATIVE-NEXT:    [[TMP17:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP15]], [[TMP12]] ]
+; IR-ITERATIVE-NEXT:    ret double [[TMP17]]
+; IR-ITERATIVE:       ComputeLoop:
+; IR-ITERATIVE-NEXT:    [[ACCUMULATOR:%.*]] = phi double [ -0.000000e+00, [[TMP2]] ], [ [[TMP22]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[OLDVALUEPHI:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP21]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP9]], [[TMP2]] ], [ [[TMP25:%.*]], [[COMPUTELOOP]] ]
+; IR-ITERATIVE-NEXT:    [[TMP18:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
+; IR-ITERATIVE-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[VAL:%.*]], i32 [[TMP19]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP21]] = call double @llvm.amdgcn.writelane.f64(double [[ACCUMULATOR]], i32 [[TMP19]], double [[OLDVALUEPHI]]) #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP22]] = call double @llvm.experimental.constrained.fadd.f64(double [[ACCUMULATOR]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR7]]
+; IR-ITERATIVE-NEXT:    [[TMP23:%.*]] = shl i64 1, [[TMP18]]
+; IR-ITERATIVE-NEXT:    [[TMP24:%.*]] = xor i64 [[TMP23]], -1
+; IR-ITERATIVE-NEXT:    [[TMP25]] = and i64 [[ACTIVEBITS]], [[TMP24]]
+; IR-ITERATIVE-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[TMP25]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP26]], label [[COMPUTEEND]], label [[COMPUTELOOP]]
+; IR-ITERATIVE:       ComputeEnd:
+; IR-ITERATIVE-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-ITERATIVE-NEXT:    br i1 [[TMP27]], label [[TMP10]], label [[TMP12]]
+;
+; IR-DPP-LABEL: @global_atomic_fadd_double_uni_address_div_value_system_scope_strictfp(
+; IR-DPP-NEXT:    [[TMP1:%.*]] = call i1 @llvm.amdgcn.ps.live() #[[ATTR8]]
+; IR-DPP-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP33:%.*]]
+; IR-DPP:       2:
+; IR-DPP-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; IR-DPP-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 32
+; IR-DPP-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; IR-DPP-NEXT:    [[TMP7:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP4]], i32 0) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP8:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP6]], i32 [[TMP7]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP9:%.*]] = call double @llvm.amdgcn.set.inactive.f64(double [[VAL:%.*]], double -0.000000e+00) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP10:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP9]], i32 273, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP11:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP9]], double [[TMP10]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP12:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP11]], i32 274, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP13:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP11]], double [[TMP12]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP14:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP13]], i32 276, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP15:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP13]], double [[TMP14]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP16:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP15]], i32 280, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP17:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP15]], double [[TMP16]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP18:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP17]], i32 322, i32 10, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP19:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP17]], double [[TMP18]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP20:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP19]], i32 323, i32 12, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP21:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP19]], double [[TMP20]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP22:%.*]] = call double @llvm.amdgcn.update.dpp.f64(double -0.000000e+00, double [[TMP21]], i32 312, i32 15, i32 15, i1 false) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP23:%.*]] = call double @llvm.amdgcn.readlane.f64(double [[TMP21]], i32 63) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP24:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP23]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[TMP8]], 0
+; IR-DPP-NEXT:    br i1 [[TMP25]], label [[TMP26:%.*]], label [[TMP28:%.*]]
+; IR-DPP:       26:
+; IR-DPP-NEXT:    [[TMP27:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], double [[TMP24]] monotonic, align 4
+; IR-DPP-NEXT:    br label [[TMP28]]
+; IR-DPP:       28:
+; IR-DPP-NEXT:    [[TMP29:%.*]] = phi double [ poison, [[TMP2]] ], [ [[TMP27]], [[TMP26]] ]
+; IR-DPP-NEXT:    [[TMP30:%.*]] = call double @llvm.amdgcn.readfirstlane.f64(double [[TMP29]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP31:%.*]] = call double @llvm.amdgcn.strict.wwm.f64(double [[TMP22]]) #[[ATTR8]]
+; IR-DPP-NEXT:    [[TMP32:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[TMP30]], double [[TMP31]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; IR-DPP-NEXT:    br label [[TMP33]]
+; IR-DPP:       33:
+; IR-DPP-NEXT:    [[TMP34:%.*]] = phi double [ poison, [[TMP0:%.*]] ], [ [[TMP32]], [[TMP28]] ]
+; IR-DPP-NEXT:    ret double [[TMP34]]
 ;
   %result = atomicrmw fadd ptr addrspace(1) %ptr, double %val monotonic, align 4
   ret double %result

@@ -178,6 +178,20 @@ bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
   return Changed;
 }
 
+static bool shouldOptimizeForType(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+    return true;
+  case Type::IntegerTyID: {
+    if (Ty->getIntegerBitWidth() == 32 || Ty->getIntegerBitWidth() == 64)
+      return true;
+  default:
+    return false;
+  }
+  }
+}
+
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
@@ -237,8 +251,7 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // value to the atomic calculation. We can only optimize divergent values if
   // we have DPP available on our subtarget, and the atomic operation is 32
   // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
+  if (ValDivergent && (!ST->hasDPP() || !shouldOptimizeForType(I.getType()))) {
     return;
   }
 
@@ -320,8 +333,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   // value to the atomic calculation. We can only optimize divergent values if
   // we have DPP available on our subtarget, and the atomic operation is 32
   // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
+  if (ValDivergent && (!ST->hasDPP() || !shouldOptimizeForType(I.getType()))) {
     return;
   }
 
@@ -755,7 +767,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         // of each active lane in the wavefront. This will be our new value
         // which we will provide to the atomic operation.
         Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-        assert(TyBitWidth == 32);
+        assert(TyBitWidth == 32 || TyBitWidth == 64);
         NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
                                  {NewV, LastLaneIdx});
       }
