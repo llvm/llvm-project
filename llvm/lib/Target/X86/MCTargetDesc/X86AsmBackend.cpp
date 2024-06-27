@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86ELFStreamer.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -20,6 +19,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -1561,12 +1561,17 @@ public:
 };
 } // end anonymous namespace
 
+void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
+                             const MCSubtargetInfo &STI) {
+  auto &Backend = static_cast<X86AsmBackend &>(S.getAssembler().getBackend());
+  Backend.emitInstructionBegin(S, Inst, STI);
+  S.MCObjectStreamer::emitInstruction(Inst, STI);
+  Backend.emitInstructionEnd(S, Inst);
+}
+
 void X86ELFStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
-  auto &Backend = static_cast<X86AsmBackend &>(getAssembler().getBackend());
-  Backend.emitInstructionBegin(*this, Inst, STI);
-  MCObjectStreamer::emitInstruction(Inst, STI);
-  Backend.emitInstructionEnd(*this, Inst);
+  X86_MC::emitInstruction(*this, Inst, STI);
 }
 
 MCStreamer *llvm::createX86ELFStreamer(const Triple &T, MCContext &Context,
