@@ -156,6 +156,7 @@ struct MissingFeatures {
   static bool constantFoldsToSimpleInteger() { return false; }
   static bool checkFunctionCallABI() { return false; }
   static bool zeroInitializer() { return false; }
+  static bool targetLoweringInfoAddressSpaceMap() { return false; }
   static bool targetCodeGenInfoIsProtoCallVariadic() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool operandBundles() { return false; }

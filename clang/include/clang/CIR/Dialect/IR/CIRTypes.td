@@ -208,23 +208,33 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
     `CIR.ptr` is a type returned by any op generating a pointer in C++.
   }];
 
-  let parameters = (ins "mlir::Type":$pointee,
-                        DefaultValuedParameter<"unsigned", "0">:$addrSpace);
+  let parameters = (ins
+    "mlir::Type":$pointee,
+    // FIXME(cir): Currently unable to directly use AddressSpaceAttr because of
+    // cyclic dep. Workaround with the top type and verifier.
+    OptionalParameter<"mlir::Attribute">:$addrSpace
+  );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$pointee, CArg<"unsigned", "0">:$addrSpace), [{
-      return Base::get(pointee.getContext(), pointee, addrSpace);
+      "mlir::Type":$pointee,
+      CArg<"mlir::Attribute", "{}">:$addrSpace), [{
+      return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
-      "mlir::Type":$pointee, CArg<"unsigned", "0">:$addrSpace), [{
-      return Base::get($_ctxt, pointee, addrSpace);
-    }]>,
+      "mlir::Type":$pointee,
+      CArg<"mlir::Attribute", "{}">:$addrSpace), [{
+      return $_get($_ctxt, pointee, addrSpace);
+    }]>
   ];
 
   let assemblyFormat = [{
-    `<` $pointee ( `,` `addrspace` `(` $addrSpace^ `)` )? `>`
+    `<` $pointee ( `,` `addrspace` `(`
+      custom<PointerAddrSpace>($addrSpace)^
+    `)` )? `>`
   }];
+
+  let genVerifyDecl = 1;
 
   let skipDefaultBuilders = 1;
 

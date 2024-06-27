@@ -4,8 +4,13 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  // CHECK: @test_addrspace_assembly_format(%arg0: !cir.ptr<!s32i>)
-  cir.func @test_addrspace_assembly_format(%arg0: !cir.ptr<!s32i, addrspace(0)>) {
+  // CHECK: @test_format1(%arg0: !cir.ptr<!s32i, addrspace(target<0>)>)
+  cir.func @test_format1(%arg0: !cir.ptr<!s32i, addrspace(target<0>)>) {
+    cir.return
+  }
+
+  // CHECK: @test_format2(%arg0: !cir.ptr<!s32i>)
+  cir.func @test_format2(%arg0: !cir.ptr<!s32i>) {
     cir.return
   }
 }

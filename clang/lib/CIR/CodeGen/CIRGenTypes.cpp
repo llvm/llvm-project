@@ -605,9 +605,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     const ReferenceType *RTy = cast<ReferenceType>(Ty);
     QualType ETy = RTy->getPointeeType();
     auto PointeeType = convertTypeForMem(ETy);
-    ResultType = ::mlir::cir::PointerType::get(
-        Builder.getContext(), PointeeType,
-        Context.getTargetAddressSpace(ETy.getAddressSpace()));
+    ResultType = Builder.getPointerTo(PointeeType, ETy.getAddressSpace());
     assert(ResultType && "Cannot get pointer type?");
     break;
   }
@@ -622,9 +620,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     // if (PointeeType->isVoidTy())
     //  PointeeType = Builder.getI8Type();
 
-    ResultType = ::mlir::cir::PointerType::get(
-        Builder.getContext(), PointeeType,
-        Context.getTargetAddressSpace(ETy.getAddressSpace()));
+    ResultType = Builder.getPointerTo(PointeeType, ETy.getAddressSpace());
     assert(ResultType && "Cannot get pointer type?");
     break;
   }
