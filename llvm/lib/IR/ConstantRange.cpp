@@ -440,6 +440,11 @@ bool ConstantRange::isAllNonNegative() const {
   return !isSignWrappedSet() && Lower.isNonNegative();
 }
 
+bool ConstantRange::isAllPositive() const {
+  // Empty and full set are automatically treated correctly.
+  return !isSignWrappedSet() && Lower.isStrictlyPositive();
+}
+
 APInt ConstantRange::getUnsignedMax() const {
   if (isFullSet() || isUpperWrapped())
     return APInt::getMaxValue(getBitWidth());
