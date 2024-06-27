@@ -5,10 +5,9 @@
 define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %N) {
 ; CHECK-LABEL: 'simple_histogram'
 ; CHECK-NEXT:    for.body:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Histogram:
 ; CHECK-NEXT:            %1 = load i32, ptr %arrayidx2, align 4 ->
 ; CHECK-NEXT:            store i32 %inc, ptr %arrayidx2, align 4
 ; CHECK-EMPTY:

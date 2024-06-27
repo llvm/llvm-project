@@ -144,7 +144,9 @@ public:
       // on MinDepDistBytes.
       BackwardVectorizable,
       // Same, but may prevent store-to-load forwarding.
-      BackwardVectorizableButPreventsForwarding
+      BackwardVectorizableButPreventsForwarding,
+      // Access is to a loop loaded value, but is part of a histogram operation.
+      Histogram
     };
 
     /// String version of the types.
@@ -201,7 +203,8 @@ public:
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
-                       &UnderlyingObjects);
+                       &UnderlyingObjects,
+                   const SmallPtrSetImpl<const Value *> &HistogramPtrs);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -352,7 +355,8 @@ private:
   isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
               unsigned BIdx,
               const DenseMap<Value *, SmallVector<const Value *, 16>>
-                  &UnderlyingObjects);
+                  &UnderlyingObjects,
+              const SmallPtrSetImpl<const Value *> &HistogramPtrs);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -393,7 +397,8 @@ private:
       const MemAccessInfo &A, Instruction *AInst, const MemAccessInfo &B,
       Instruction *BInst,
       const DenseMap<Value *, SmallVector<const Value *, 16>>
-          &UnderlyingObjects);
+          &UnderlyingObjects,
+      const SmallPtrSetImpl<const Value *> &HistogramPtrs);
 };
 
 class RuntimePointerChecking;
@@ -443,6 +448,15 @@ struct PointerDiffInfo {
                   unsigned AccessSize, bool NeedsFreeze)
       : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize),
         NeedsFreeze(NeedsFreeze) {}
+};
+
+struct HistogramInfo {
+  LoadInst *Load;
+  Instruction *Update;
+  StoreInst *Store;
+
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
+      : Load(Load), Update(Update), Store(Store) {}
 };
 
 /// Holds information about the memory runtime legality checks to verify
@@ -664,6 +678,10 @@ public:
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
 
+  const SmallVectorImpl<HistogramInfo> &getHistograms() const {
+    return Histograms;
+  }
+
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
   const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
@@ -777,6 +795,13 @@ private:
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
+
+  /// Holds the load, update, and store instructions for all histogram-style
+  /// operations found in the loop.
+  SmallVector<HistogramInfo, 2> Histograms;
+
+  /// Storing Histogram Pointers
+  SmallPtrSet<const Value *, 2> HistogramPtrs;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride
