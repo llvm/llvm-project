@@ -154,6 +154,8 @@
 #define long_maxbnd LONG_MIN
 #define ulong_maxbnd 0
 
+#define HALFBND 65535
+
 #define MMN(F,N,TO,TI,S,R) \
 ATTR TO##N \
 convert_##TO##N##S##R(TI##N x) \
@@ -1714,7 +1716,7 @@ convert_double_rtz(ulong l)
 ATTR half
 convert_half_rtn(short s)
 {
-    return __ocml_cvtrtz_f16_f32((float)s);
+    return __ocml_cvtrtn_f16_f32((float)s);
 }
 
 ATTR half
@@ -1746,21 +1748,21 @@ convert_half_rtp(ushort u)
 ATTR half
 convert_half_rtn(int i)
 {
-    i = clamp(i, SHRT_MIN, SHRT_MAX);
+    i = clamp(i, -HALFBND, HALFBND);
     return __ocml_cvtrtn_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtp(int i)
 {
-    i = clamp(i, SHRT_MIN, SHRT_MAX);
+    i = clamp(i, -HALFBND, HALFBND);
     return __ocml_cvtrtp_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtz(int i)
 {
-    i = clamp(i, SHRT_MIN, SHRT_MAX);
+    i = clamp(i, -HALFBND, HALFBND);
     return __ocml_cvtrtz_f16_f32((float)i);
 }
 
@@ -1783,21 +1785,21 @@ convert_half_rtp(uint u)
 ATTR half
 convert_half_rtn(long l)
 {
-    int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
+    int i = (int)clamp(l, -(long)HALFBND, (long)HALFBND);
     return __ocml_cvtrtn_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtp(long l)
 {
-    int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
+    int i = (int)clamp(l, -(long)HALFBND, (long)HALFBND);
     return __ocml_cvtrtp_f16_f32((float)i);
 }
 
 ATTR half
 convert_half_rtz(long l)
 {
-    int i = (int)clamp(l, (long)SHRT_MIN, (long)SHRT_MAX);
+    int i = (int)clamp(l, -(long)HALFBND, (long)HALFBND);
     return __ocml_cvtrtz_f16_f32((float)i);
 }
 
