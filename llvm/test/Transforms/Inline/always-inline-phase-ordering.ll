@@ -1,5 +1,6 @@
 ; RUN: opt --Os -pass-remarks=inline -S < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+target triple = "arm64e-apple-macosx13"
 
 ; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'bar.8' with (cost=always): always inline attribute
 ; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'pluto' with (cost=always): always inline attribute
@@ -22,14 +23,14 @@ bb:
   unreachable
 }
 
-define linkonce_odr void @pluto() !prof !38 {
+define linkonce_odr void @pluto() #1 !prof !38 {
 bb:
   call void @wibble()
   ret void
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr void @wibble() #1 {
+define linkonce_odr void @wibble() #2 {
 bb:
   call void @widget()
   ret void
@@ -60,7 +61,7 @@ bb:
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr i32 @snork() #1 {
+define linkonce_odr i32 @snork() #2 {
 bb:
   %tmpv1 = call i32 @spam()
   %tmpv2 = call i32 @wobble()
@@ -81,7 +82,7 @@ bb:
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr i32 @wobble() #1 {
+define linkonce_odr i32 @wobble() #2 {
 bb:
   %tmpv = call i64 @wobble.5(i8 0)
   %tmpv1 = call i64 @eggs.7()
@@ -117,7 +118,8 @@ bb:
 }
 
 attributes #0 = { "frame-pointer"="non-leaf" }
-attributes #1 = { alwaysinline }
+attributes #1 = { "target-cpu"="apple-m1" }
+attributes #2 = { alwaysinline }
 
 !llvm.module.flags = !{!0, !1, !30, !31, !32, !36, !37}
 

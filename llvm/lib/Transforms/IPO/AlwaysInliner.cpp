@@ -104,7 +104,6 @@ bool AlwaysInlineImpl(
         Changed = true;
       }
     }
-    
   }
 
   // Final cleanup stage. Firstly, remove any live functions.
@@ -202,7 +201,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
 
   bool Changed = AlwaysInlineImpl(M, InsertLifetime, PSI, GetAssumptionCache,
-                                    GetAAR, GetBFI);
+                                  GetAAR, GetBFI);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
