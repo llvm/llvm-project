@@ -41,11 +41,16 @@ class MyResponder(MockGDBServerResponder):
 
     def qXferRead(self, obj, annex, offset, length):
         if self.has_target_xml and annex == "target.xml":
-            return dedent(f"""\
-          <?xml version="1.0"?>
-          <target version="1.0">
-            <architecture>{self.architecture}</architecture>
-          </target>"""), False
+            return (
+                dedent(
+                    f"""\
+                    <?xml version="1.0"?>
+                    <target version="1.0">
+                      <architecture>{self.architecture}</architecture>
+                    </target>"""
+                ),
+                False,
+            )
         
         return None, False
 
@@ -371,7 +376,7 @@ CHECK-I386-DAG: dil = 0x71
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs_no_target_xml(self):
         """Test grabbing various i386 registers from gdbserver when there is
-           no target XML."""
+        no target XML."""
         self.check_i386_regs(False)
 
     @skipIfXmlSupportMissing
@@ -379,5 +384,5 @@ CHECK-I386-DAG: dil = 0x71
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs_no_register_info(self):
         """Test grabbing various i386 registers from gdbserver when there is
-           target XML but it does not include register info."""
+        target XML but it does not include register info."""
         self.check_i386_regs(True)
