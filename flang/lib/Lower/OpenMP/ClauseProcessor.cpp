@@ -394,6 +394,28 @@ bool ClauseProcessor::processNumThreads(
   return false;
 }
 
+bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
+  using Order = omp::clause::Order;
+  if (auto *clause = findUniqueClause<Order>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
+        firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
+    const auto &modifier =
+        std::get<std::optional<Order::OrderModifier>>(clause->t);
+    if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
+    } else {
+      // "If order-modifier is not unconstrained, the behavior is as if the
+      // reproducible modifier is present."
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::reproducible);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processOrdered(
     mlir::omp::OrderedClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Ordered>()) {

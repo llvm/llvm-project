@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -coverage-notes-file=test.gcno -coverage-data-file=test.gcda -triple aarch64-linux-android30 -target-cpu generic -target-feature +tagged-globals -fsanitize=hwaddress %s -o %t
+// RUN: %clang_cc1 -emit-llvm -coverage-notes-file=/dev/null -coverage-data-file=/dev/null -triple aarch64-linux-android30 -target-cpu generic -target-feature +tagged-globals -fsanitize=hwaddress %s -o %t
 // RUN: FileCheck %s < %t
 
 // CHECK: define internal void @__llvm_gcov_writeout() unnamed_addr [[ATTR:#[0-9]+]]
