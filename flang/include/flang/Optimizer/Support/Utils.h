@@ -137,29 +137,6 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
            " in " + intrinsicName);
 }
 
-/// Find the fir.type_info that was created for this \p recordType in \p module,
-/// if any. \p  symbolTable can be provided to speed-up the lookup. This tool
-/// will match record type even if they have been "altered" in type conversion
-/// passes.
-fir::TypeInfoOp
-lookupTypeInfoOp(fir::RecordType recordType, mlir::ModuleOp module,
-                 const mlir::SymbolTable *symbolTable = nullptr);
-
-/// Find the fir.type_info named \p name in \p module, if any. \p  symbolTable
-/// can be provided to speed-up the lookup. Prefer using the equivalent with a
-/// RecordType argument  unless it is certain \p name has not been altered by a
-/// pass rewriting fir.type (see NameUniquer::dropTypeConversionMarkers).
-fir::TypeInfoOp
-lookupTypeInfoOp(llvm::StringRef name, mlir::ModuleOp module,
-                 const mlir::SymbolTable *symbolTable = nullptr);
-
-/// Returns all lower bounds of \p component if it is an array component of \p
-/// recordType with non default lower bounds. Returns nullopt if this is not an
-/// array componnet of \p recordType or if its lower bounds are all ones.
-std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
-    fir::RecordType recordType, llvm::StringRef component,
-    mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
