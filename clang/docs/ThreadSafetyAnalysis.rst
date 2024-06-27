@@ -464,6 +464,7 @@ on success and ``LockNotAcquired`` on failure, the analysis may fail to detect
 access to guarded data without holding the mutex because they are both non-zero.
 
 .. code-block:: c++
+
   // *** Beware: this code demonstrates incorrect usage. ***
 
   enum TrylockResult { LockAcquired = 1, LockNotAcquired = 2 };
