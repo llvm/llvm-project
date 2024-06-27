@@ -1038,7 +1038,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
     LLVM_DEBUG(dbgs() << "  In block '" << BB->getName()
                       << "' folding undef terminator: " << *BBTerm << '\n');
-    BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    Instruction *NewBI = BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    NewBI->setDebugLoc(BBTerm->getDebugLoc());
     ++NumFolds;
     BBTerm->eraseFromParent();
     DTU->applyUpdatesPermissive(Updates);
@@ -1657,7 +1658,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
       // Finally update the terminator.
       Instruction *Term = BB->getTerminator();
-      BranchInst::Create(OnlyDest, Term->getIterator());
+      Instruction *NewBI = BranchInst::Create(OnlyDest, Term->getIterator());
+      NewBI->setDebugLoc(Term->getDebugLoc());
       ++NumFolds;
       Term->eraseFromParent();
       DTU->applyUpdatesPermissive(Updates);
