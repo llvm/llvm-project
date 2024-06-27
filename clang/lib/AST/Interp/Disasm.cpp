@@ -205,7 +205,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
       ND->printQualifiedName(OS);
     else if (asExpr())
-      OS << "expr (TODO)";
+      OS << "Expr " << (const void *)asExpr();
   }
 
   // Print a few interesting bits about the descriptor.
