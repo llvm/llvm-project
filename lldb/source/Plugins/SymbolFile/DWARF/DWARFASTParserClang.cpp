@@ -490,14 +490,16 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   // Set a bit that lets us know that we are currently parsing this
-  if (!TypeSystemClang::UseRedeclCompletion())
-    if (auto [it, inserted] =
+  if (TypeSystemClang::UseRedeclCompletion()) {
+    if (Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE()))
+      return type_ptr->shared_from_this();
+  } else if (auto [it, inserted] =
             dwarf->GetDIEToType().try_emplace(die.GetDIE(), DIE_IS_BEING_PARSED);
         !inserted) {
       if (it->getSecond() == nullptr || it->getSecond() == DIE_IS_BEING_PARSED)
         return nullptr;
       return it->getSecond()->shared_from_this();
-    }
+  }
 
   ParsedDWARFTypeAttributes attrs(die);
 
