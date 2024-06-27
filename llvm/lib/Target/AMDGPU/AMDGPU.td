@@ -946,8 +946,8 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
-def FeatureGFX1210DGEMMInsts : SubtargetFeature<"gfx1210-dgemm-insts",
-  "HasGFX1210DGEMMInsts",
+def FeatureGFX1211DGEMMInsts : SubtargetFeature<"gfx1211-dgemm-insts",
+  "HasGFX1211DGEMMInsts",
   "true",
   "Has v_wmma_f64_16x16x4_f64, v_wmma_f64_16x16x8_f64 instructions"
 >;
@@ -1915,7 +1915,6 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
-   FeatureDPALU_DPP,
    FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
@@ -1953,13 +1952,17 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
-   FeatureGFX1210DGEMMInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
 ]>;
+
+def FeatureISAVersion12_11 : FeatureSet<
+  !listconcat(FeatureISAVersion12_10.Features,
+  [FeatureDPALU_DPP,
+   FeatureGFX1211DGEMMInsts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2703,9 +2706,9 @@ def HasFlatAtomicFaddF32Inst
   : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
   AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
-def HasGFX1210DGEMMInsts
-  : Predicate<"Subtarget->hasGFX1210DGEMMInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX1210DGEMMInsts)>;
+def HasGFX1211DGEMMInsts
+  : Predicate<"Subtarget->hasGFX1211DGEMMInsts()">,
+  AssemblerPredicate<(all_of FeatureGFX1211DGEMMInsts)>;
 
 def HasDefaultComponentZero
   : Predicate<"Subtarget->hasDefaultComponentZero()">,

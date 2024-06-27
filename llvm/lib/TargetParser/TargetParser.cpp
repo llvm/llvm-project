@@ -129,6 +129,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1211"},   {"gfx1211"}, GK_GFX1211, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1301"},   {"gfx1301"}, GK_GFX1301, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1302"},   {"gfx1302"}, GK_GFX1302, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
@@ -286,6 +287,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1210: return {12, 1, 0};
+  case GK_GFX1211: return {12, 1, 1};
   case GK_GFX1300: return {13, 0, 0};
   case GK_GFX1301: return {13, 0, 1};
   case GK_GFX1302: return {13, 0, 2};
@@ -371,6 +373,9 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     case GK_GFX1300:
       Features["gfx13-insts"] = true;
       [[fallthrough]];
+    case GK_GFX1211:
+      Features["gfx1211-dgemm-insts"] = true;
+      [[fallthrough]];
     case GK_GFX1210:
       Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
       Features["ci-insts"] = true;
@@ -396,7 +401,6 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
-      Features["gfx1210-dgemm-insts"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:
@@ -647,6 +651,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1302:
     case GK_GFX1301:
     case GK_GFX1300:
+    case GK_GFX1211:
     case GK_GFX1210:
     case GK_GFX1201:
     case GK_GFX1200:

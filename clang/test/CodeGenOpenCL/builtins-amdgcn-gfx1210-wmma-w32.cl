@@ -2,9 +2,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1210 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1210
 
-typedef double v8d   __attribute__((ext_vector_type(8)));
-typedef double v4d   __attribute__((ext_vector_type(4)));
-typedef double v2d   __attribute__((ext_vector_type(2)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));
 typedef float  v2f   __attribute__((ext_vector_type(2)));
 typedef half   v32h   __attribute__((ext_vector_type(32)));
@@ -16,32 +13,10 @@ typedef __bf16 v8bf16 __attribute__((ext_vector_type(8)));
 typedef int    v16i   __attribute__((ext_vector_type(16)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
 
-// CHECK-GFX1210-LABEL: @test_amdgcn_wmma_f64_16x16x4_f64(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1 false, <2 x double> [[A:%.*]], i1 false, <2 x double> [[B:%.*]], i16 0, <8 x double> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x double> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4:![0-9]+]]
-// CHECK-GFX1210-NEXT:    ret void
-//
-void test_amdgcn_wmma_f64_16x16x4_f64(global v8d* out, v2d a, v2d b, v8d c)
-{
-  *out = __builtin_amdgcn_wmma_f64_16x16x4_f64(0, a, 0, b, 0, c);
-}
-
-// CHECK-GFX1210-LABEL: @test_amdgcn_wmma_f64_16x16x8_f64(
-// CHECK-GFX1210-NEXT:  entry:
-// CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 false, <4 x double> [[A:%.*]], i1 false, <4 x double> [[B:%.*]], i16 0, <8 x double> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x double> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4]]
-// CHECK-GFX1210-NEXT:    ret void
-//
-void test_amdgcn_wmma_f64_16x16x8_f64(global v8d* out, v4d a, v4d b, v8d c)
-{
-  *out = __builtin_amdgcn_wmma_f64_16x16x8_f64(0, a, 0, b, 0, c);
-}
-
 // CHECK-GFX1210-LABEL: @test_amdgcn_wmma_f32_16x16x4_f32(
 // CHECK-GFX1210-NEXT:  entry:
 // CHECK-GFX1210-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.wmma.f32.16x16x4.f32.v8f32.v2f32(i1 false, <2 x float> [[A:%.*]], i1 false, <2 x float> [[B:%.*]], i16 0, <8 x float> [[C:%.*]])
-// CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4]]
+// CHECK-GFX1210-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 32, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1210-NEXT:    ret void
 //
 void test_amdgcn_wmma_f32_16x16x4_f32(global v8f* out, v2f a, v2f b, v8f c)

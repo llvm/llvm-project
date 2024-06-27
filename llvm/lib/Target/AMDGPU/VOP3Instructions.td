@@ -72,7 +72,7 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtDPP = 0;
 }
 
-let HasExtVOP3DPP = 1 in
+let HasExt64BitDPP = 1 in
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
   // The dual form of the opcode swaps src0 and src1.
   let Src0VOPD3 = getVCSrcForVT<Src1VT>.ret;
@@ -82,7 +82,10 @@ def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64> {
 }
 
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
-def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32>;
+def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
+  let HasExtVOP3DPP = 0;
+  let HasExt64BitDPP = 1;
+}
 def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
 def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
   let HasClamp = 1;

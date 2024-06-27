@@ -1148,8 +1148,9 @@ class VOP3_DPP8_Base<string OpName, VOPProfile P> :
   VOP_DPP8_Base<OpName, P, P.InsVOP3DPP8, P.AsmVOP3DPP8> {
   let OutOperandList = P.OutsVOP3DPP8;
   let AsmMatchConverter = "cvtVOP3DPP8";
-  let AsmVariantName = !if(P.HasExtVOP3DPP, AMDGPUAsmVariants.VOP3_DPP,
-                                            AMDGPUAsmVariants.Disable);
+  let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
+                           AMDGPUAsmVariants.VOP3_DPP,
+                           AMDGPUAsmVariants.Disable);
   let VOP3 = 1;
   let Size = 12;
 }

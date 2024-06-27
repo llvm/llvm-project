@@ -26,7 +26,7 @@ s_load_b32 s4, s[2:3], 10 nv nv
 // GFX1210-ERR:                              ^
 
 v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_share
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX1210-ERR: v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
 // GFX1210-ERR:                          ^
 

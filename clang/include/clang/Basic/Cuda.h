@@ -130,6 +130,7 @@ enum class CudaArch {
   GFX1200,
   GFX1201,
   GFX1210,
+  GFX1211,
   GFX1300,
   GFX1301,
   GFX1302,

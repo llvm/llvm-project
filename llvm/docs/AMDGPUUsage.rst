@@ -545,6 +545,13 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1211``                 ``amdgcn``   APU   - wavefrontsize64 - Architected                   *TBA*
+                                                                        flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      ``gfx1300``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -2084,6 +2091,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      *reserved*                                 0x058      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1211``          0x05a      ``gfx1211``
      ========================================== ========== =============================
 
 Sections
@@ -5167,7 +5175,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.FP16_OVFL``.
      27      1 bit    RESERVED                       GFX6-GFX120*
                                                        Reserved, must be 0.
-                      FLAT_SCRATCH_IS_NV             GFX1210
+                      FLAT_SCRATCH_IS_NV             GFX121*
                                                        0 - Use the NV ISA as indication
                                                        that scratch is NV. 1 - Force
                                                        scratch to NV = 1, even if
@@ -5288,7 +5296,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC2.DYNAMIC_VGPR``.
-     6:1     6 bits  USER_SGPR_COUNT                 GFX1210-GFX13
+     6:1     6 bits  USER_SGPR_COUNT                 GFX121*-GFX13
                                                        The total number of SGPR
                                                        user data
                                                        registers requested. This
@@ -5394,7 +5402,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        roundup(lds-size / (128 * 4))
                                                      GFX950
                                                        roundup(lds-size / (320 * 4))
-                                                     GFX1210-GFX13
+                                                     GFX121*-GFX13
                                                        roundup(lds-size / (256 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
@@ -5536,12 +5544,12 @@ The fields used by CP for code objects before V3 also match those specified in
      13      1 bit   GLG_EN                          If 1, group launch guarantee will be enabled for this dispatch
      16:14   3 bits  RESERVED                        GFX120*
                                                        Reserved, must be 0.
-                     NAMED_BAR_CNT                   GFX1210-GFX13
+                     NAMED_BAR_CNT                   GFX121*-GFX13
                                                        Number of named barriers to alloc for each workgroup, in granularity of
                                                        4. Range is from 0-4 allocating 0, 4, 8, 12, 16.
      17      1 bit   RESERVED                        GFX120*, GFX13
                                                        Reserved, must be 0.
-                     ENABLE_DYNAMIC_VGPR             GFX1210
+                     ENABLE_DYNAMIC_VGPR             GFX121*
                                                        Enables dynamic VGPR mode, where each wave allocates one VGPR chunk
                                                        at launch and can request for additional space to use during
                                                        execution in SQ.
@@ -5549,13 +5557,13 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        Used by CP to set up ``COMPUTE_PGM_RSRC3.DYNAMIC_VGPR``.
      20:18   3 bits  RESERVED                        GFX120*, GFX13 (TODO-GFX13: Verify)
                                                        Reserved, must be 0.
-                     TCP_SPLIT                       GFX1210
+                     TCP_SPLIT                       GFX121*
                                                        Desired LDS/VC split of TCP. 0: no preference 1: LDS=0, VC=448kB
                                                        2: LDS=64kB, VC=384kB 3: LDS=128kB, VC=320kB 4: LDS=192kB, VC=256kB
                                                        5: LDS=256kB, VC=192kB 6: LDS=320kB, VC=128kB 7: LDS=384kB, VC=64kB
      21      1 bit   RESERVED                        GFX120*
                                                        Reserved, must be 0.
-                     ENABLE_DIDT_THROTTLE            GFX1210-GFX13
+                     ENABLE_DIDT_THROTTLE            GFX121*-GFX13
                                                        Enable DIDT throttling for all ACE pipes
      30:22   9 bits  RESERVED                        Reserved, must be 0.
      31      1 bit   IMAGE_OP                        If 1, the kernel execution contains image instructions. If executed as
