@@ -5389,7 +5389,7 @@ def err_not_class_template_specialization : Error<
   "cannot specialize a %select{dependent template|template template "
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
-  "explicit specialization cannot have a storage class">;
+  "explicit specialization cannot have a storage class">, InGroup<ExplicitSpecializationStorageClass>;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
