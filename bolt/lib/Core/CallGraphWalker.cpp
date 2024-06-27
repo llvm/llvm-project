@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/CallGraphWalker.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/CallGraphWalker.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Timer.h"
 #include <queue>

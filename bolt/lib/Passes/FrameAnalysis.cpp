@@ -12,7 +12,7 @@
 
 #include "bolt/Passes/FrameAnalysis.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/CallGraphWalker.h"
+#include "bolt/Core/CallGraphWalker.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Timer.h"
 #include <fstream>

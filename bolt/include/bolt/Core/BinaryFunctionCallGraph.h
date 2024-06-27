@@ -9,7 +9,7 @@
 #ifndef BOLT_PASSES_BINARY_FUNCTION_CALLGRAPH_H
 #define BOLT_PASSES_BINARY_FUNCTION_CALLGRAPH_H
 
-#include "bolt/Passes/CallGraph.h"
+#include "bolt/Core/CallGraph.h"
 #include <deque>
 #include <functional>
 #include <unordered_map>

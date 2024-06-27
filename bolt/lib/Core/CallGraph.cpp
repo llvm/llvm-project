@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/CallGraph.h"
+#include "bolt/Core/CallGraph.h"
 
 #define DEBUG_TYPE "callgraph"
 

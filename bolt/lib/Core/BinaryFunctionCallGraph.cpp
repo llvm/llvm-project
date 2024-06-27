@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/Support/CommandLine.h"
