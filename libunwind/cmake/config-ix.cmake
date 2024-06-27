@@ -6,6 +6,17 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckSymbolExists)
 include(CheckCSourceCompiles)
 
+# Disable linker for CMake flag compatibility checks
+#
+# Due to https://gitlab.kitware.com/cmake/cmake/-/issues/23454, we need to
+# disable CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG),
+# for static targets; cache the target type here, and reset it after the various
+# checks have been performed.
+set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_REQUIRED_LINK_OPTIONS)
+
 # The compiler driver may be implicitly trying to link against libunwind, which
 # might not work if libunwind doesn't exist yet. Try to check if
 # --unwindlib=none is supported, and use that if possible.
@@ -104,6 +115,10 @@ endif()
 
 # Check compiler flags
 check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+
+# reset CMAKE_TRY_COMPILE_TARGET_TYPE & CMAKE_REQUIRED_LINK_OPTIONS after flag checks
+set(CMAKE_TRY_COMPILE_TARGET_TYPE ${_previous_CMAKE_TRY_COMPILE_TARGET_TYPE})
+set(CMAKE_REQUIRED_LINK_OPTIONS ${_previous_CMAKE_REQUIRED_LINK_OPTIONS})
 
 # Check symbols
 check_symbol_exists(__arm__ "" LIBUNWIND_TARGET_ARM)
