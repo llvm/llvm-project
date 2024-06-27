@@ -4589,7 +4589,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_atomic_exch_gen_i_sys:
   case Intrinsic::nvvm_atomic_xor_gen_i_cta:
   case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
@@ -4602,7 +4602,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     if (Intrinsic == Intrinsic::nvvm_ldu_global_i)
       Info.memVT = getValueType(DL, I.getType());
@@ -4620,7 +4620,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldg_global_i:
   case Intrinsic::nvvm_ldg_global_f:
   case Intrinsic::nvvm_ldg_global_p: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
 
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     if (Intrinsic == Intrinsic::nvvm_ldg_global_i)
