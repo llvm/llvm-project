@@ -283,9 +283,11 @@ Note that the vector pseudo remains as it's needed to encode the register class 
    vadd.vv v8, v8, v10
 
 
+
 See also
 ========
 
+- `[llvm-dev] [RFC] Code generation for RISC-V V-extension <https://lists.llvm.org/pipermail/llvm-dev/2020-October/145850.html>`_
 - `2023 LLVM Dev Mtg - Vector codegen in the RISC-V backend <https://youtu.be/-ox8iJmbp0c?feature=shared>`_
 - `2023 LLVM Dev Mtg - How to add an C intrinsic and code-gen it, using the RISC-V vector C intrinsics <https://youtu.be/t17O_bU1jks?feature=shared>`_
 - `2021 LLVM Dev Mtg “Optimizing code for scalable vector architectures” <https://youtu.be/daWLCyhwrZ8?feature=shared>`_
