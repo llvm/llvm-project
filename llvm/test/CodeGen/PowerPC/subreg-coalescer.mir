@@ -2,6 +2,10 @@
 # RUN: llc -mtriple powerpc64le-unknown-linux-gnu -mcpu=pwr8 -x mir < %s \
 # RUN:   -verify-coalescing --run-pass=register-coalescer -o - | FileCheck %s
 
+# Check that the register coalescer correctly handles merging live ranges over
+# SUBREG_TO_REG on PowerPC. The -verify-coalescing option will give an error if
+# this is incorrect.
+
 ---
 name: check_subregs
 alignment:       16
