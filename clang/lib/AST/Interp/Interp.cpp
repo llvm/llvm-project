@@ -322,7 +322,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   };
 
   if (const auto *D = Desc->asVarDecl();
-      D && D->hasGlobalStorage() && !IsConstType(D)) {
+      D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
     return S.inConstantContext();
   }
