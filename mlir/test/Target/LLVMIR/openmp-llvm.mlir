@@ -828,16 +828,12 @@ llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fi
 
 // CHECK-LABEL: @simd_order
 llvm.func @simd_order() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", pinned} : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(1 : i64) : i64
-  %3 = llvm.alloca %2 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
-  %4 = llvm.mlir.constant(1 : i32) : i32
-  %5 = llvm.mlir.constant(10 : i32) : i32
-  %6 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.mlir.constant(10 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.alloca %1 x i64 : (i64) -> !llvm.ptr
   omp.simd order(concurrent) safelen(2) {
-    omp.loop_nest (%arg0) : i32 = (%4) to (%5) inclusive step (%6) {
-      llvm.store %arg0, %1 : i32, !llvm.ptr
+    omp.loop_nest (%arg0) : i64 = (%1) to (%0) inclusive step (%1) {
+      llvm.store %arg0, %2 : i64, !llvm.ptr
       omp.yield
     }
   }
