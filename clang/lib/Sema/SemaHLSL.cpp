@@ -852,3 +852,231 @@ void SemaHLSL::DiagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
 
   DiagnoseHLSLAvailability(SemaRef).RunOnTranslationUnit(TU);
 }
+
+// Helper function for CheckHLSLBuiltinFunctionCall
+bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
+  ExprResult A = TheCall->getArg(0);
+
+  QualType ArgTyA = A.get()->getType();
+
+  auto *VecTyA = ArgTyA->getAs<VectorType>();
+  SourceLocation BuiltinLoc = TheCall->getBeginLoc();
+
+  for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
+    ExprResult B = TheCall->getArg(i);
+    QualType ArgTyB = B.get()->getType();
+    auto *VecTyB = ArgTyB->getAs<VectorType>();
+    if (VecTyA == nullptr && VecTyB == nullptr)
+      return false;
+
+    if (VecTyA && VecTyB) {
+      bool retValue = false;
+      if (VecTyA->getElementType() != VecTyB->getElementType()) {
+        // Note: type promotion is intended to be handeled via the intrinsics
+        //  and not the builtin itself.
+        S->Diag(TheCall->getBeginLoc(),
+                diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+            << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+        retValue = true;
+      }
+      if (VecTyA->getNumElements() != VecTyB->getNumElements()) {
+        // You should only be hitting this case if you are calling the builtin
+        // directly. HLSL intrinsics should avoid this case via a
+        // HLSLVectorTruncation.
+        S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
+            << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc());
+        retValue = true;
+      }
+      return retValue;
+    }
+  }
+
+  // Note: if we get here one of the args is a scalar which
+  // requires a VectorSplat on Arg0 or Arg1
+  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+      << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                     TheCall->getArg(1)->getEndLoc());
+  return true;
+}
+
+bool CheckArgsTypesAreCorrect(
+    Sema *S, CallExpr *TheCall, QualType ExpectedType,
+    llvm::function_ref<bool(clang::QualType PassedType)> Check) {
+  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+    QualType PassedType = TheCall->getArg(i)->getType();
+    if (Check(PassedType)) {
+      if (auto *VecTyA = PassedType->getAs<VectorType>())
+        ExpectedType = S->Context.getVectorType(
+            ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+      S->Diag(TheCall->getArg(0)->getBeginLoc(),
+              diag::err_typecheck_convert_incompatible)
+          << PassedType << ExpectedType << 1 << 0 << 0;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllFloatTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasFloatingRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkAllFloatTypes);
+}
+
+bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
+  auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
+    clang::QualType BaseType =
+        PassedType->isVectorType()
+            ? PassedType->getAs<clang::VectorType>()->getElementType()
+            : PassedType;
+    return !BaseType->isHalfType() && !BaseType->isFloat32Type();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkFloatorHalf);
+}
+
+bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
+  auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
+    if (const auto *VecTy = PassedType->getAs<VectorType>())
+      return VecTy->getElementType()->isDoubleType();
+    return false;
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                  checkDoubleVector);
+}
+
+bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
+    return !PassedType->hasUnsignedIntegerRepresentation();
+  };
+  return CheckArgsTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                  checkAllUnsignedTypes);
+}
+
+void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
+                                QualType ReturnType) {
+  auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
+  if (VecTyA)
+    ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),
+                                          VectorKind::Generic);
+  TheCall->setType(ReturnType);
+}
+
+// Note: returning true in this case results in CheckBuiltinFunctionCall
+// returning an ExprError
+bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all:
+  case Builtin::BI__builtin_hlsl_elementwise_any: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_clamp: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.BuiltinElementwiseTernaryMath(
+            TheCall, /*CheckForFloatArgs*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_dot: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.BuiltinVectorToScalarMath(TheCall))
+      return true;
+    if (CheckNoDoubleVectors(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_rcp: {
+    if (CheckAllArgsHaveFloatRepresentation(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
+  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_isinf: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_lerp: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
+      return true;
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_mad: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (SemaRef.BuiltinElementwiseTernaryMath(
+            TheCall, /*CheckForFloatArgs*/
+            TheCall->getArg(0)->getType()->hasFloatingRepresentation()))
+      return true;
+    break;
+  }
+  // Note these are llvm builtins that we want to catch invalid intrinsic
+  // generation. Normal handling of these builitns will occur elsewhere.
+  case Builtin::BI__builtin_elementwise_bitreverse: {
+    if (CheckUnsignedIntRepresentation(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_elementwise_acos:
+  case Builtin::BI__builtin_elementwise_asin:
+  case Builtin::BI__builtin_elementwise_atan:
+  case Builtin::BI__builtin_elementwise_ceil:
+  case Builtin::BI__builtin_elementwise_cos:
+  case Builtin::BI__builtin_elementwise_cosh:
+  case Builtin::BI__builtin_elementwise_exp:
+  case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_floor:
+  case Builtin::BI__builtin_elementwise_log:
+  case Builtin::BI__builtin_elementwise_log2:
+  case Builtin::BI__builtin_elementwise_log10:
+  case Builtin::BI__builtin_elementwise_pow:
+  case Builtin::BI__builtin_elementwise_roundeven:
+  case Builtin::BI__builtin_elementwise_sin:
+  case Builtin::BI__builtin_elementwise_sinh:
+  case Builtin::BI__builtin_elementwise_sqrt:
+  case Builtin::BI__builtin_elementwise_tan:
+  case Builtin::BI__builtin_elementwise_tanh:
+  case Builtin::BI__builtin_elementwise_trunc: {
+    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
+      return true;
+    break;
+  }
+  }
+  return false;
+}
