@@ -32,6 +32,9 @@ module real_tests
   !WARN: warning: argument is out of range [-1., 1.]
   real(4), parameter :: nan_r4_acos5 = acos(r4_pinf)
   TEST_ISNAN(nan_r4_acos5)
+  !WARN: warning: argument is out of range [-1., 1.]
+  real(8), parameter :: nan_r8_dasin1 = dasin(-1.1_8)
+  TEST_ISNAN(nan_r8_dasin1)
 
   real(4), parameter :: ok_r4_gamma = gamma(-1.1)
   real(4), parameter :: ok_r4_log_gamma = log_gamma(-2.001)
