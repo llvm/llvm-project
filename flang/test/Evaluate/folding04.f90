@@ -35,6 +35,9 @@ module real_tests
   !WARN: warning: argument is out of range [-1., 1.]
   real(8), parameter :: nan_r8_dasin1 = dasin(-1.1_8)
   TEST_ISNAN(nan_r8_dasin1)
+  !WARN: warning: argument 'x' must be strictly positive
+  real(8), parameter :: nan_r8_dlog1 = dlog(-0.1_8)
+  TEST_ISNAN(nan_r8_dlog1)
 
   real(4), parameter :: ok_r4_gamma = gamma(-1.1)
   real(4), parameter :: ok_r4_log_gamma = log_gamma(-2.001)
