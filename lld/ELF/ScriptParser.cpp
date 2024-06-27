@@ -588,7 +588,6 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
 }
 
 SectionClassDesc *ScriptParser::readSectionClassDescription() {
-  std::string loc = getCurrentLocation();
   StringRef name = readSectionClassName();
   SectionClassDesc *desc = make<SectionClassDesc>(name);
   if (!script->sectionClasses.insert({name, desc}).second)
@@ -596,9 +595,9 @@ SectionClassDesc *ScriptParser::readSectionClassDescription() {
   expect("{");
   while (!errorCount() && !consume("}")) {
     StringRef tok = next();
-    if (tok == "(" || tok == ")")
+    if (tok == "(" || tok == ")") {
       setError("expected filename pattern");
-    else if (peek() == "(") {
+    } else if (peek() == "(") {
       InputSectionDescription *isd = readInputSectionDescription(tok);
       if (!isd->classRef.empty())
         setError("section class '" + name + "' references class '" +

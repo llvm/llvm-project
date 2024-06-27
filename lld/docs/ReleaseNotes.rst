@@ -43,8 +43,8 @@ ELF Improvements
   regions by automatically spilling to later class references if a region would
   overflow. This reduces the toil of manually packing regions (typical for
   embedded). It also makes full LTO feasible in such cases, since IR merging
-  currently prevents the linker script from referring to input files. (TODO: PR
-  Reference)
+  currently prevents the linker script from referring to input files.
+  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
 * ``--enable-non-contiguous-regions`` option allows automatically packing input
   sections into memory regions by automatically spilling to later matches if a
   region would overflow. This reduces the toil of manually packing regions
