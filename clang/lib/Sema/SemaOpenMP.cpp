@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaOpenMP.h"
+
 #include "TreeTransform.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
@@ -12004,7 +12005,7 @@ protected:
 
     return true;
   }
-  };
+};
 
 bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
                                                      ErrorInfoTy &ErrorInfo) {
@@ -13213,7 +13214,7 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
         Diag(ErrorInfo.ErrorLoc, diag::err_omp_atomic_compare)
             << ErrorInfo.ErrorRange;
         Diag(ErrorInfo.NoteLoc, diag::note_omp_atomic_compare)
-          << ErrorInfo.Error << ErrorInfo.NoteRange;
+            << ErrorInfo.Error << ErrorInfo.NoteRange;
         return StmtError();
       }
       X = Checker.getX();
@@ -16508,9 +16509,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
         ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_fail:
-    Res = ActOnOpenMPFailClause(
-        static_cast<OpenMPClauseKind>(Argument),
-        ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    Res = ActOnOpenMPFailClause(static_cast<OpenMPClauseKind>(Argument),
+                                ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_update:
     Res = ActOnOpenMPUpdateClause(static_cast<OpenMPDependClauseKind>(Argument),
@@ -23165,8 +23165,7 @@ void SemaOpenMP::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
 
 /// This class visits every VarDecl that the initializer references and adds
 /// OMPDeclareTargetDeclAttr to each of them.
-class GlobalDeclRefChecker final
-    : public StmtVisitor<GlobalDeclRefChecker> {
+class GlobalDeclRefChecker final : public StmtVisitor<GlobalDeclRefChecker> {
   SmallVector<VarDecl *> DeclVector;
   Attr *A;
 
