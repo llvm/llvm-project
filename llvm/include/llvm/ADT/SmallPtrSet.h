@@ -353,14 +353,27 @@ public:
     return insert(Ptr).first;
   }
 
-  /// erase - If the set contains the specified pointer, remove it and return
-  /// true, otherwise return false. Invalidates iterators if it returns true.
+  /// Remove pointer from the set.
+  ///
+  /// Returns whether the pointer was in the set. Invalidates iterators if
+  /// true is returned. To remove elements while iterating over the set, use
+  /// remove_if() instead.
   bool erase(PtrType Ptr) {
     return erase_imp(PtrTraits::getAsVoidPointer(Ptr));
   }
 
-  /// Remove elements that match the given predicate. Returns whether anything
-  /// was removed.
+  /// Remove elements that match the given predicate.
+  ///
+  /// This method is a safe replacement for the following pattern, which is not
+  /// valid, because the erase() calls would invalidate the iterator:
+  ///
+  ///     for (PtrType *Ptr : Set)
+  ///       if (Pred(P))
+  ///         Set.erase(P);
+  ///
+  /// Returns whether anything was removed. It is safe to read the set inside
+  /// the predicate function. However, the predicate must not modify the set
+  /// itself, only indicate a removal by returning true.
   template <typename UnaryPredicate>
   bool remove_if(UnaryPredicate P) {
     bool Removed = false;
