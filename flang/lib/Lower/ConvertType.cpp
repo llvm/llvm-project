@@ -212,7 +212,7 @@ struct TypeBuilderImpl {
   }
 
   mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
               return mlir::NoneType::get(context);
@@ -280,10 +280,11 @@ struct TypeBuilderImpl {
     if (ultimate.IsObjectArray()) {
       auto shapeExpr =
           Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      if (!shapeExpr)
-        TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;
-      translateShape(shape, std::move(*shapeExpr));
+      // If there is no shapExpr, this is an assumed-rank, and the empty shape
+      // will build the desired fir.array<*:T> type.
+      if (shapeExpr)
+        translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
     }
     if (Fortran::semantics::IsPointer(symbol))

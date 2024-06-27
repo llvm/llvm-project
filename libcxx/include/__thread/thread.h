@@ -65,18 +65,17 @@ class __thread_specific_ptr {
 
   // Only __thread_local_data() may construct a __thread_specific_ptr
   // and only with _Tp == __thread_struct.
-  static_assert((is_same<_Tp, __thread_struct>::value), "");
+  static_assert(is_same<_Tp, __thread_struct>::value, "");
   __thread_specific_ptr();
   friend _LIBCPP_EXPORTED_FROM_ABI __thread_specific_ptr<__thread_struct>& __thread_local_data();
-
-  __thread_specific_ptr(const __thread_specific_ptr&);
-  __thread_specific_ptr& operator=(const __thread_specific_ptr&);
 
   _LIBCPP_HIDDEN static void _LIBCPP_TLS_DESTRUCTOR_CC __at_thread_exit(void*);
 
 public:
   typedef _Tp* pointer;
 
+  __thread_specific_ptr(const __thread_specific_ptr&)            = delete;
+  __thread_specific_ptr& operator=(const __thread_specific_ptr&) = delete;
   ~__thread_specific_ptr();
 
   _LIBCPP_HIDE_FROM_ABI pointer get() const { return static_cast<_Tp*>(__libcpp_tls_get(__key_)); }

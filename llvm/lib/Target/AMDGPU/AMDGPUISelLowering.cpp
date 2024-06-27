@@ -42,8 +42,10 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   if (StoreSize <= 32)
     return EVT::getIntegerVT(Ctx, StoreSize);
 
-  assert(StoreSize % 32 == 0 && "Store size not a multiple of 32");
-  return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
+  if (StoreSize % 32 == 0)
+    return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
+
+  return VT;
 }
 
 unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
@@ -5522,8 +5524,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)
   NODE_NAME_CASE(DS_ORDERED_COUNT)
   NODE_NAME_CASE(ATOMIC_CMP_SWAP)
-  NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
-  NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
   NODE_NAME_CASE(BUFFER_LOAD)
   NODE_NAME_CASE(BUFFER_LOAD_UBYTE)
   NODE_NAME_CASE(BUFFER_LOAD_USHORT)
@@ -5562,7 +5562,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
   NODE_NAME_CASE(BUFFER_ATOMIC_CSUB)
   NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
-  NODE_NAME_CASE(BUFFER_ATOMIC_FADD_BF16)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
   NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
