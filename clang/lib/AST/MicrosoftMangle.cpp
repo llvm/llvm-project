@@ -447,8 +447,8 @@ private:
   void mangleDecayedArrayType(const ArrayType *T);
   void mangleArrayType(const ArrayType *T);
   void mangleFunctionClass(const FunctionDecl *FD);
-  void mangleCallingConvention(CallingConv CC);
-  void mangleCallingConvention(const FunctionType *T);
+  void mangleCallingConvention(CallingConv CC, SourceRange Range);
+  void mangleCallingConvention(const FunctionType *T, SourceRange Range);
   void mangleIntegerLiteral(const llvm::APSInt &Number,
                             const NonTypeTemplateParmDecl *PD = nullptr,
                             QualType TemplateArgType = QualType());
@@ -888,7 +888,8 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
   Out << "$B";
   mangleNumber(OffsetInVFTable);
   Out << 'A';
-  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>());
+  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>(),
+                          MD->getSourceRange());
 }
 
 void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
@@ -2768,7 +2769,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
     mangleQualifiers(Quals, /*IsMember=*/false);
   }
 
-  mangleCallingConvention(CC);
+  mangleCallingConvention(CC, Range);
 
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
@@ -2949,7 +2950,8 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
     Out << 'Y';
   }
 }
-void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
+void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
+                                                      SourceRange Range) {
   // <calling-convention> ::= A # __cdecl
   //                      ::= B # __export __cdecl
   //                      ::= C # __pascal
@@ -2962,7 +2964,10 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
   //                      ::= J # __export __fastcall
   //                      ::= Q # __vectorcall
   //                      ::= S # __attribute__((__swiftcall__)) // Clang-only
-  //                      ::= T # __attribute__((__swiftasynccall__))
+  //                      ::= W # __attribute__((__swiftasynccall__))
+  //                      ::= U # __attribute__((__preserve_most__))
+  //                      ::= V # __attribute__((__preserve_none__)) //
+  //                      Clang-only
   //                            // Clang-only
   //                      ::= w # __regcall
   //                      ::= x # __regcall4
@@ -2974,28 +2979,55 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
 
   switch (CC) {
     default:
-      llvm_unreachable("Unsupported CC for mangling");
+      break;
     case CC_Win64:
     case CC_X86_64SysV:
-    case CC_C: Out << 'A'; break;
-    case CC_X86Pascal: Out << 'C'; break;
-    case CC_X86ThisCall: Out << 'E'; break;
-    case CC_X86StdCall: Out << 'G'; break;
-    case CC_X86FastCall: Out << 'I'; break;
-    case CC_X86VectorCall: Out << 'Q'; break;
-    case CC_Swift: Out << 'S'; break;
-    case CC_SwiftAsync: Out << 'W'; break;
-    case CC_PreserveMost: Out << 'U'; break;
+    case CC_C:
+      Out << 'A';
+      return;
+    case CC_X86Pascal:
+      Out << 'C';
+      return;
+    case CC_X86ThisCall:
+      Out << 'E';
+      return;
+    case CC_X86StdCall:
+      Out << 'G';
+      return;
+    case CC_X86FastCall:
+      Out << 'I';
+      return;
+    case CC_X86VectorCall:
+      Out << 'Q';
+      return;
+    case CC_Swift:
+      Out << 'S';
+      return;
+    case CC_SwiftAsync:
+      Out << 'W';
+      return;
+    case CC_PreserveMost:
+      Out << 'U';
+      return;
+    case CC_PreserveNone:
+      Out << 'V';
+      return;
     case CC_X86RegCall:
       if (getASTContext().getLangOpts().RegCall4)
         Out << "x";
       else
         Out << "w";
-      break;
+      return;
   }
+
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "cannot mangle this calling convention yet");
+  Diags.Report(Range.getBegin(), DiagID) << Range;
 }
-void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T) {
-  mangleCallingConvention(T->getCallConv());
+void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T,
+                                                      SourceRange Range) {
+  mangleCallingConvention(T->getCallConv(), Range);
 }
 
 void MicrosoftCXXNameMangler::mangleThrowSpecification(
