@@ -1197,7 +1197,6 @@ public:
 
   // validateOutputConstraint, validateInputConstraint - Checks that
   // a constraint is valid and provides information about it.
-  // FIXME: These should return a real error instead of just true/false.
   bool validateOutputConstraint(ConstraintInfo &Info,
                                 llvm::StringMap<bool> *FeatureMap,
                                 diag::kind &Diag) const;

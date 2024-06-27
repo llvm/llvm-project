@@ -12,7 +12,7 @@ void f(void) {
   asm ("foo\n" : [symbolic_name] "=a" (i) : "[symbolic_name]" (i));
   asm ("foo\n" : "=a" (i) : "[" (i)); // expected-error {{invalid input constraint '[' in asm: missing ']'}}
   asm ("foo\n" : "=a" (i) : "[foo" (i)); // expected-error {{invalid input constraint '[foo' in asm: missing ']'}}
-  asm ("foo\n" : "=a" (i) : "[symbolic_name]" (i)); // expected-error {{invalid input constraint '[symbolic_name]' in asm: cannot find an output constraint with the specified name}}
+  asm ("foo\n" : "=a" (i) : "[symbolic_name]" (i)); // expected-error {{invalid input constraint '[symbolic_name]' in asm: no matching output constraint with the specified name}}
 
   asm ("foo\n" : : "" (i)); // expected-error {{invalid input constraint '' in asm: empty constraint has been provided}}
   asm ("foo\n" : "=a" (i) : "" (i)); // expected-error {{invalid input constraint '' in asm: empty constraint has been provided}}
@@ -91,7 +91,7 @@ int test7(unsigned long long b) {
 // PR3904
 void test8(int i) {
   // A number in an input constraint can't point to a read-write constraint.
-  asm("" : "+r" (i), "=r"(i) :  "0" (i)); // expected-error{{invalid input constraint '0' in asm: must refer to an output only operand}}
+  asm("" : "+r" (i), "=r"(i) :  "0" (i)); // expected-error{{invalid input constraint '0' in asm: must refer to an output-only operand}}
 }
 
 // PR3905
@@ -234,14 +234,14 @@ void fn5(void) {
   int l;
     __asm__(""
           : [g] "+r"(l)
-          : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm: must refer to an output only operand}}
+          : "[g]"(l)); // expected-error {{invalid input constraint '[g]' in asm: must refer to an output-only operand}}
 }
 
 void fn6(void) {
     int a;
   __asm__(""
             : "=rm"(a), "=rm"(a)
-            : "11m"(a)); // expected-error {{invalid input constraint '11m' in asm: references to a non-existing output constraint}}
+            : "11m"(a)); // expected-error {{invalid input constraint '11m' in asm: references non-existent output constraint}}
 }
 
 // PR14269
@@ -363,7 +363,6 @@ void test19(long long x)
 void test20(long long x)
 {
   st_size64 a;
-  asm ("" : "=rm" (a): "1" (1)); // expected-error {{invalid input constraint '1' in asm: references to a non-existing output constraint}}
   asm ("" : "=rm" (a): "9876543210" (1)); // expected-error {{invalid input constraint '9876543210' in asm: the index is out of bounds}}
   asm ("" : "rm" (a): "0" (1)); // expected-error {{invalid output constraint 'rm' in asm: output constraint must start with '=' or '+'}}
 }

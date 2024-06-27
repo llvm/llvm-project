@@ -325,7 +325,7 @@ def err_asm_invalid_constraint_mem_or_reg : Error<
 def err_asm_invalid_constraint_missing_bracket : Error<
   "%sub{asm_invalid_constraint_generic}0,1: missing ']'">;
 def err_asm_invalid_constraint_wrong_symbol : Error<
-  "%sub{asm_invalid_constraint_generic}0,1: cannot find an output constraint"
+  "%sub{asm_invalid_constraint_generic}0,1: no matching output constraint"
   " with the specified name">;
 def err_asm_invalid_constraint_empty : Error<
   "%sub{asm_invalid_constraint_generic}0,1: empty constraint has been"
@@ -333,13 +333,13 @@ def err_asm_invalid_constraint_empty : Error<
 def err_asm_invalid_constraint_oob : Error<
   "%sub{asm_invalid_constraint_generic}0,1: the index is out of bounds">;
 def err_asm_invalid_constraint_missing : Error<
-  "%sub{asm_invalid_constraint_generic}0,1: references to a non-existing output"
+  "%sub{asm_invalid_constraint_generic}0,1: references non-existent output"
   " constraint">;
 def err_asm_invalid_constraint_wrongly_tied : Error<
   "%sub{asm_invalid_constraint_generic}0,1: tied constraint must be tied to"
   " the same operand referenced to by the number">;
 def err_asm_invalid_constraint_output_only : Error<
-  "%sub{asm_invalid_constraint_generic}0,1: must refer to an output only"
+  "%sub{asm_invalid_constraint_generic}0,1: must refer to an output-only"
   " operand">;
 
 def warn_stack_clash_protection_inline_asm : Warning<
