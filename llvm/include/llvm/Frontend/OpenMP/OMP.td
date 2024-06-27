@@ -665,6 +665,7 @@ def OMP_Distribute : Directive<"distribute"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;
@@ -2058,6 +2059,7 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
@@ -2331,6 +2333,7 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute];
   let category = CA_Executable;
