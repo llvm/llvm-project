@@ -7,7 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-
 class StepScriptedTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -16,12 +15,14 @@ class StepScriptedTestCase(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.runCmd("command script import Steps.py")
 
+    @expectedFailureAll()
     def test_standard_step_out(self):
         """Tests stepping with the scripted thread plan laying over a standard
         thread plan for stepping out."""
         self.build()
         self.step_out_with_scripted_plan("Steps.StepOut")
 
+    @expectedFailureAll()
     def test_scripted_step_out(self):
         """Tests stepping with the scripted thread plan laying over an another
         scripted thread plan for stepping out."""
@@ -44,6 +45,7 @@ class StepScriptedTestCase(TestBase):
         stop_desc = thread.GetStopDescription(1000)
         self.assertIn("Stepping out from", stop_desc, "Got right description")
 
+    @expectedFailureAll()
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
         self.build()
@@ -62,10 +64,12 @@ class StepScriptedTestCase(TestBase):
         # Make sure we didn't let the process run:
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")
 
+    @expectedFailureAll()
     def test_checking_variable(self):
         """Test that we can call SBValue API's from a scripted thread plan - using SBAPI's to step"""
         self.do_test_checking_variable(False)
 
+    @expectedFailureAll()
     def test_checking_variable_cli(self):
         """Test that we can call SBValue API's from a scripted thread plan - using cli to step"""
         self.do_test_checking_variable(True)

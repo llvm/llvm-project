@@ -132,6 +132,11 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
+* Removed ``llvm.amdgcn.ds.fadd``, ``llvm.amdgcn.ds.fmin`` and
+  ``llvm.amdgcn.ds.fmax`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
+  `fmax` with addrspace(3) instead.
+
 Changes to the ARM Backend
 --------------------------
 
