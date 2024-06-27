@@ -983,6 +983,17 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
   }
 }
 
+/// \returns a bitset for selecting opcodes. false for Opcode0 and true for
+/// Opcode1.
+SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
+                               unsigned Opcode1) {
+  SmallBitVector OpcodeMask(VL.size(), false);
+  for (unsigned Lane : seq<unsigned>(VL.size()))
+    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
+      OpcodeMask.set(Lane);
+  return OpcodeMask;
+}
+
 namespace llvm {
 
 static void inversePermutation(ArrayRef<unsigned> Indices,
@@ -5093,11 +5104,7 @@ void BoUpSLP::reorderTopToBottom() {
           FixedVectorType::get(TE->Scalars[0]->getType(), TE->Scalars.size());
       unsigned Opcode0 = TE->getOpcode();
       unsigned Opcode1 = TE->getAltOpcode();
-      // The opcode mask selects between the two opcodes.
-      SmallBitVector OpcodeMask(TE->Scalars.size(), false);
-      for (unsigned Lane : seq<unsigned>(0, TE->Scalars.size()))
-        if (cast<Instruction>(TE->Scalars[Lane])->getOpcode() == Opcode1)
-          OpcodeMask.set(Lane);
+      SmallBitVector OpcodeMask(getAltInstrMask(TE->Scalars, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
         VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
@@ -6009,11 +6016,7 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                                        ArrayRef<Value *> VL) const {
   unsigned Opcode0 = S.getOpcode();
   unsigned Opcode1 = S.getAltOpcode();
-  // The opcode mask selects between the two opcodes.
-  SmallBitVector OpcodeMask(VL.size(), false);
-  for (unsigned Lane : seq<unsigned>(0, VL.size()))
-    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
-      OpcodeMask.set(Lane);
+  SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
   // If this pattern is supported by the target then consider it profitable.
   if (TTI->isLegalAltInstr(FixedVectorType::get(S.MainOp->getType(), VL.size()),
                            Opcode0, Opcode1, OpcodeMask))
@@ -9744,11 +9747,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // order.
       unsigned Opcode0 = E->getOpcode();
       unsigned Opcode1 = E->getAltOpcode();
-      // The opcode mask selects between the two opcodes.
-      SmallBitVector OpcodeMask(E->Scalars.size(), false);
-      for (unsigned Lane : seq<unsigned>(0, E->Scalars.size()))
-        if (cast<Instruction>(E->Scalars[Lane])->getOpcode() == Opcode1)
-          OpcodeMask.set(Lane);
+      SmallBitVector OpcodeMask(getAltInstrMask(E->Scalars, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the
       // order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
