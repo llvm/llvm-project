@@ -237,7 +237,5 @@ DIExpression *llvm::parseDIExpressionAtBeginning(StringRef Asm, unsigned &Read,
   if (LLParser(Asm, SM, Err, const_cast<Module *>(&M), nullptr, M.getContext())
           .parseDIExpressionAtBeginning(MD, Read, Slots))
     return nullptr;
-  if (auto *Expr = dyn_cast<DIExpression>(MD))
-    return Expr;
-  return nullptr;
+  return dyn_cast<DIExpression>(MD);
 }
