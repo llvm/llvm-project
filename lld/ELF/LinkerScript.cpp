@@ -499,14 +499,9 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   SmallVector<InputSectionBase *, 0> ret;
   DenseSet<InputSectionBase *> spills;
 
-  // Returns whether an input section was already assigned to an earlier input
-  // section description in this output section or section class.
-  const auto alreadyAssignedToOutCmd =
-      [&outCmd](InputSectionBase *sec) { return sec->parent == &outCmd; };
-
   // Returns whether an input section's flags match the input section
   // description's specifiers.
-  const auto flagsMatch = [cmd](InputSectionBase *sec) {
+  auto flagsMatch = [cmd](InputSectionBase *sec) {
     return (sec->flags & cmd->withFlags) == cmd->withFlags &&
            (sec->flags & cmd->withoutFlags) == 0;
   };
@@ -549,7 +544,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
-            alreadyAssignedToOutCmd(sec) || !flagsMatch(sec))
+            sec->parent == &outCmd || !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
@@ -599,22 +594,24 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   } else {
     SectionClassDesc *scd = script->sectionClasses.lookup(cmd->classRef);
     if (!scd) {
-      error("undefined section class '" + cmd->classRef + "'");
+      errorOrWarn("undefined section class '" + cmd->classRef + "'");
       return ret;
     }
     if (!scd->sc.assigned) {
-      error("section class '" + cmd->classRef + "' referenced by '" +
-            outCmd.name + "' before class definition");
+      errorOrWarn("section class '" + cmd->classRef + "' referenced by '" +
+                  outCmd.name + "' before class definition");
       return ret;
     }
 
     for (InputSectionDescription *isd : scd->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
-        if (alreadyAssignedToOutCmd(sec) || !flagsMatch(sec))
+        if (sec->parent == &outCmd || !flagsMatch(sec))
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
-        if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/"))
-          error("section '" + sec->name + "' cannot spill from/to /DISCARD/");
+        if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
+          errorOrWarn("section '" + sec->name + "' cannot spill from/to /DISCARD/");
+          continue;
+        }
         if (isSpill)
           spills.insert(sec);
         ret.push_back(sec);
@@ -622,10 +619,10 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     }
   }
 
-  // The flag --enable-non-contiguous-regions may cause sections to match an
-  // InputSectionDescription in more than one OutputSection. Matches after the
-  // first were collected in the spills set, so replace these with potential
-  // spill sections.
+  // The flag --enable-non-contiguous-regions or the section CLASS syntax may
+  // cause sections to match an InputSectionDescription in more than one
+  // OutputSection. Matches after the first were collected in the spills set, so
+  // replace these with potential spill sections.
   if (!spills.empty()) {
     for (InputSectionBase *&sec : ret) {
       if (!spills.contains(sec))
@@ -792,8 +789,9 @@ void LinkerScript::processSectionCommands() {
         for (InputSectionBase *isec : isd->sectionBases)
           if (isa<PotentialSpillSection>(isec) ||
               potentialSpillLists.contains(isec))
-            error("section '" + isec->name +
-                  "' cannot spill from/to INSERT section '" + os->name + "'");
+            errorOrWarn("section '" + isec->name +
+                        "' cannot spill from/to INSERT section '" + os->name +
+                        "'");
       }
     }
   }
@@ -811,8 +809,9 @@ void LinkerScript::processSectionCommands() {
     for (InputSectionDescription *isd : sc->sc.commands)
       for (InputSectionBase *sec : isd->sectionBases)
         if (sec->parent && isa<SectionClass>(sec->parent))
-          error("section '" + sec->name + "' assigned to class '" +
-                sec->parent->name + "' but unreferenced by any output section");
+          errorOrWarn("section '" + sec->name + "' assigned to class '" +
+                      sec->parent->name +
+                      "' but unreferenced by any output section");
 }
 
 void LinkerScript::processSymbolAssignments() {
