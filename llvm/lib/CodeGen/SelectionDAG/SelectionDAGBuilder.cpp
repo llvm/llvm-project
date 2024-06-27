@@ -1802,13 +1802,6 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
 
-    if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(C)) {
-      return DAG.getNode(ISD::PtrAuthGlobalAddress, getCurSDLoc(), VT,
-                         getValue(CPA->getPointer()), getValue(CPA->getKey()),
-                         getValue(CPA->getAddrDiscriminator()),
-                         getValue(CPA->getDiscriminator()));
-    }
-
     if (isa<ConstantPointerNull>(C)) {
       unsigned AS = V->getType()->getPointerAddressSpace();
       return DAG.getConstant(0, getCurSDLoc(),
