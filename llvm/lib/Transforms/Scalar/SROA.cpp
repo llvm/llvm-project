@@ -1280,7 +1280,7 @@ private:
     SmallVector<std::pair<Instruction *, Instruction *>, 4> Uses;
     Visited.insert(Root);
     Uses.push_back(std::make_pair(cast<Instruction>(*U), Root));
-    const DataLayout &DL = Root->getModule()->getDataLayout();
+    const DataLayout &DL = Root->getDataLayout();
     // If there are no loads or stores, the access is dead. We mark that as
     // a size zero access.
     Size = 0;
@@ -1527,7 +1527,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
 /// FIXME: This should be hoisted into a generic utility, likely in
 /// Transforms/Util/Local.h
 static bool isSafePHIToSpeculate(PHINode &PN) {
-  const DataLayout &DL = PN.getModule()->getDataLayout();
+  const DataLayout &DL = PN.getDataLayout();
 
   // For now, we can only do this promotion if the load is in the same block
   // as the PHI, and if there are no stores between the phi and load.
@@ -1685,7 +1685,7 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   assert(LI.isSimple() && "Only for simple loads");
   SelectHandSpeculativity Spec;
 
-  const DataLayout &DL = SI.getModule()->getDataLayout();
+  const DataLayout &DL = SI.getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
     if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
                                     &LI))
@@ -4499,7 +4499,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // them to the alloca slices.
   SmallDenseMap<LoadInst *, std::vector<LoadInst *>, 1> SplitLoadsMap;
   std::vector<LoadInst *> SplitLoads;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   for (LoadInst *LI : Loads) {
     SplitLoads.clear();
 
@@ -4793,7 +4793,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
   VectorType *SliceVecTy = nullptr;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   std::pair<Type *, IntegerType *> CommonUseTy =
       findCommonType(P.begin(), P.end(), P.endOffset());
   // Do all uses operate on the same type?
@@ -5019,7 +5019,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   unsigned NumPartitions = 0;
   bool Changed = false;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // First try to pre-split loads and stores.
   Changed |= presplitLoadsAndStores(AI, AS);
@@ -5225,7 +5225,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
     Changed = true;
     return {Changed, CFGChanged};
   }
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // Skip alloca forms that this analysis can't handle.
   auto *AT = AI.getAllocatedType();

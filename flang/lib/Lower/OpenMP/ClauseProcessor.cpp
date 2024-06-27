@@ -394,6 +394,28 @@ bool ClauseProcessor::processNumThreads(
   return false;
 }
 
+bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
+  using Order = omp::clause::Order;
+  if (auto *clause = findUniqueClause<Order>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
+        firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
+    const auto &modifier =
+        std::get<std::optional<Order::OrderModifier>>(clause->t);
+    if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
+    } else {
+      // "If order-modifier is not unconstrained, the behavior is as if the
+      // reproducible modifier is present."
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::reproducible);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processOrdered(
     mlir::omp::OrderedClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Ordered>()) {
@@ -729,7 +751,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   auto declSrc = builder.create<hlfir::DeclareOp>(
       loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
-  converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
+  converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
 }
@@ -1005,7 +1027,8 @@ bool ClauseProcessor::processReduction(
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
-        llvm::copy(reduceVarByRef, std::back_inserter(result.reduceVarByRef));
+        llvm::copy(reduceVarByRef,
+                   std::back_inserter(result.reductionVarsByRef));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionDeclSymbols));
 

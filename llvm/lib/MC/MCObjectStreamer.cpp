@@ -285,32 +285,17 @@ void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
   report_fatal_error("This file format doesn't support weak aliases.");
 }
 
-void MCObjectStreamer::changeSection(MCSection *Section,
-                                     const MCExpr *Subsection) {
+void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   changeSectionImpl(Section, Subsection);
 }
 
 bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
-                                         const MCExpr *Subsection) {
+                                         uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
-
-  int64_t IntSubsection = 0;
-  if (Subsection &&
-      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr())) {
-    getContext().reportError(Subsection->getLoc(),
-                             "cannot evaluate subsection number");
-  }
-  if (!isUInt<31>(IntSubsection)) {
-    getContext().reportError(Subsection->getLoc(),
-                             "subsection number " + Twine(IntSubsection) +
-                                 " is not within [0,2147483647]");
-  }
-
-  CurSubsectionIdx = unsigned(IntSubsection);
-  Section->switchSubsection(CurSubsectionIdx);
+  Section->switchSubsection(Subsection);
   return Created;
 }
 
@@ -345,9 +330,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                                 "' cannot have instructions");
     return;
   }
-  getAssembler().getBackend().emitInstructionBegin(*this, Inst, STI);
   emitInstructionImpl(Inst, STI);
-  getAssembler().getBackend().emitInstructionEnd(*this, Inst);
 }
 
 void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
