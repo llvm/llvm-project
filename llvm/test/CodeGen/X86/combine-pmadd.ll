@@ -98,6 +98,19 @@ define i32 @combine_pmaddwd_constant() {
   ret i32 %2
 }
 
+; ensure we don't assume pmaddwd performs add nsw
+define i32 @combine_pmaddwd_constant_nsw() {
+; CHECK-LABEL: combine_pmaddwd_constant_nsw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    retq
+  %1 = insertelement <8 x i16> undef, i16 32768, i32 0
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <8 x i32> zeroinitializer
+  %3 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %2, <8 x i16> %2)
+  %4 = extractelement <4 x i32> %3, i32 0 ; (-32768*-32768)+(-32768*-32768) = 0x80000000
+  ret i32 %4
+}
+
 define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_zero:
 ; SSE:       # %bb.0:
