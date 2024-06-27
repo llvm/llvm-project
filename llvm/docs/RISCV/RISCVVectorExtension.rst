@@ -11,13 +11,13 @@ This guide gives an overview of how RVV is modelled in LLVM IR and how the backe
 Mapping to LLVM IR types
 ========================
 
-RVV adds 32 ``VLEN`` sized registers, where ``VLEN`` is an unknown constant to the compiler. To be able to represent ``VLEN`` sized values, the RISC-V backend takes the same approach as AArch64's SVE and uses `scalable vector types <https://llvm.org/docs/LangRef.html#t-vector>`_.
+RVV adds 32 VLEN sized registers, where VLEN is an unknown constant to the compiler. To be able to represent VLEN sized values, the RISC-V backend takes the same approach as AArch64's SVE and uses `scalable vector types <https://llvm.org/docs/LangRef.html#t-vector>`_.
 
 Scalable vector types are of the form ``<vscale x n x ty>``, which indicates a vector with a multiple of ``n`` elements of type ``ty``.
 On RISC-V ``n`` and ``ty`` control LMUL and SEW respectively.
 
-LLVM supports only ``ELEN=32`` or ``ELEN=64``, so ``vscale`` is defined as ``VLEN/64`` (see ``RISCV::RVVBitsPerBlock``).
-Note this means that ``VLEN>=64``, so ``VLEN=32`` isn't currently supported.
+LLVM only supports ELEN=32 or ELEN=64, so ``vscale`` is defined as VLEN/64 (see ``RISCV::RVVBitsPerBlock``).
+Note this means that VLEN must be at least 64, so VLEN=32 isn't currently supported.
 
 +-------------------+---------------+----------------+------------------+-------------------+-------------------+-------------------+-------------------+
 |                   | LMUL=⅛        | LMUL=¼         | LMUL=½           | LMUL=1            | LMUL=2            | LMUL=4            | LMUL=8            |
@@ -175,7 +175,7 @@ The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrappin
 
 .. note::
 
-   The only ``insert_subvector`` and ``extract_subvector`` nodes that make it through lowering are those that can be performed as an exact subregister insert or extract. This means that any fixed-length vector ``insert_subvector`` and ``extract_subvector`` nodes that aren't legalized must lie on a register group boundary, so the exact ``VLEN`` must be known at compile time (i.e., compiled with ``-mrvv-vector-bits=zvl`` or ``-mllvm -riscv-v-vector-bits-max=VLEN``, or have an exact ``vscale_range`` attribute).
+   The only ``insert_subvector`` and ``extract_subvector`` nodes that make it through lowering are those that can be performed as an exact subregister insert or extract. This means that any fixed-length vector ``insert_subvector`` and ``extract_subvector`` nodes that aren't legalized must lie on a register group boundary, so the exact VLEN must be known at compile time (i.e., compiled with ``-mrvv-vector-bits=zvl`` or ``-mllvm -riscv-v-vector-bits-max=VLEN``, or have an exact ``vscale_range`` attribute).
 
 Vector predication intrinsics
 -----------------------------
@@ -195,7 +195,7 @@ The VP EVL and mask are used for the VL node's AVL and mask respectively, whilst
 Instruction selection
 =====================
 
-VL and VTYPE need to be configured correctly, so we can't just directly select the underlying vector ``MachineInstr``. Instead pseudo instructions are selected, which carry the extra information needed to emit the necessary ``vsetvli``\s later.
+``vl`` and ``vtype`` need to be configured correctly, so we can't just directly select the underlying vector ``MachineInstr``. Instead pseudo instructions are selected, which carry the extra information needed to emit the necessary ``vsetvli``\s later.
 
 .. code-block::
 
@@ -302,7 +302,7 @@ After vector registers are allocated, the ``RISCVInsertVSETVLI`` pass will inser
 The physical ``$vl`` and ``$vtype`` registers are implicitly defined by the ``PseudoVSETVLI``, and are implicitly used by the ``PseudoVADD``.
 The VTYPE operand (``209`` in this example) is encoded as per the specification via ``RISCVVType::encodeVTYPE``.
 
-``RISCVInsertVSETVLI`` performs dataflow analysis to emit as few ``vsetvli``\s as possible. It will also try to minimize the number of ``vsetvli``\s that set VL, i.e., it will emit ``vsetvli x0, x0`` if only VTYPE needs changed but VL doesn't.
+``RISCVInsertVSETVLI`` performs dataflow analysis to emit as few ``vsetvli``\s as possible. It will also try to minimize the number of ``vsetvli``\s that set VL, i.e., it will emit ``vsetvli x0, x0`` if only ``vtype`` needs changed but ``vl`` doesn't.
 
 Pseudo expansion and printing
 =============================
@@ -314,9 +314,9 @@ After scalar register allocation, the ``RISCVExpandPseudoInsts.cpp`` pass expand
    dead $x0 = VSETVLI $x1, 209, implicit-def $vtype, implicit-def $vl
    renamable $v8m2 = PseudoVADD_VV_M2 $v8m2(tied-def 0), $v8m2, $v10m2, $noreg, 5, implicit $vl, implicit $vtype
 
-Note that the vector pseudo remains as it's needed to encode the register class for the LMUL. Its VL and SEW operands are no longer used.
+Note that the vector pseudo remains as it's needed to encode the register class for the LMUL. Its AVL and SEW operands are no longer used.
 
-``RISCVAsmPrinter`` will then lower the pseudo instructions into real ``MCInsts``.
+``RISCVAsmPrinter`` will then lower the pseudo instructions into real ``MCInst``\s.
 
 .. code-block:: nasm
 
