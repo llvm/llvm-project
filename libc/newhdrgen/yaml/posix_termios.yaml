@@ -1,0 +1,107 @@
+header: termios.h
+macros: []
+types:
+  - type_name: tcflag_t
+  - type_name: struct_termios
+  - type_name: speed_t
+  - type_name: pid_t
+  - type_name: cc_t
+enums: []
+objects: []
+functions:
+  - name: cfgetispeed
+    standards: 
+      - POSIX
+    return_type: speed_t
+    arguments:
+      - type: const struct termios *
+    guard: null
+    attributes: []
+  - name: cfgetospeed
+    standards: 
+      - POSIX
+    return_type: speed_t
+    arguments:
+      - type: const struct termios *
+    guard: null
+    attributes: []
+  - name: cfsetispeed
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: struct termios *
+      - type: speed_t
+    guard: null
+    attributes: []
+  - name: cfsetospeed
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: struct termios *
+      - type: speed_t
+    guard: null
+    attributes: []
+  - name: tcgetattr
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: struct termios *
+    guard: null
+    attributes: []
+  - name: tcgetsid
+    standards: 
+      - POSIX
+    return_type: pid_t
+    arguments:
+      - type: int
+    guard: null
+    attributes: []
+  - name: tcdrain
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+    guard: null
+    attributes: []
+  - name: tcflow
+    standards: 
+      - POSIX 
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+    guard: null
+    attributes: []
+  - name: tcflush
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+    guard: null
+    attributes: []
+  - name: tcsendbreak
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+    guard: null
+    attributes: []
+  - name: tcsetattr
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+      - type: struct termios *
+    guard: null
+    attributes: []

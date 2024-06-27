@@ -1,0 +1,23 @@
+header: sys-statvfs.h
+macros: []
+types:
+  - type_name: struct_statvfs
+enums: []
+objects: []
+functions:
+  - name: statvfs
+    standards: 
+      - Linux
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: struct statvfs *__restrict
+    guard: null
+    attributes: []
+  - name: fstatvfs
+    standards: 
+      - Linux
+    return_type: int
+    arguments: 
+      - type: int
+      - type: struct statvfs *

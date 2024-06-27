@@ -1,0 +1,48 @@
+header: fcntl.h
+macros: []
+types: 
+  - type_name: off_t
+  - type_name: mode_t
+enums: []
+objects: []
+functions:
+  - name: creat
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: mode_t
+    guard: null
+    attributes: []
+  - name: fcntl
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: int
+      - type: ...
+    guard: null
+    attributes: []
+  - name: open
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: int
+      - type: ...
+    guard: null
+    attributes: []
+  - name: openat
+    standards: 
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *
+      - type: int
+      - type: ...
+    guard: null
+    attributes: []
