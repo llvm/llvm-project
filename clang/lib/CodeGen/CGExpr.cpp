@@ -41,7 +41,6 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -64,22 +63,6 @@ static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
 static llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
-
-//===--------------------------------------------------------------------===//
-//                        Defines for metadata
-//===--------------------------------------------------------------------===//
-
-// Those values are crucial to be the SAME as in ubsan runtime library.
-enum VariableTypeDescriptorKind : uint16_t {
-  /// An integer type.
-  TK_Integer = 0x0000,
-  /// A floating-point type.
-  TK_Float = 0x0001,
-  /// An _BitInt(N) type.
-  TK_BitInt = 0x0002,
-  /// Any other type. The value representation is unspecified.
-  TK_Unknown = 0xffff
-};
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -847,8 +830,14 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // Load the vptr, and mix it with TypeHash.
       llvm::Value *TypeHash =
           llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
+
+      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
-      llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
+      llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
+                                          Ty->getAsCXXRecordDecl(),
+                                          VTableAuthMode::UnsafeUbsanStrip);
+      VPtrVal = Builder.CreateBitOrPointerCast(VPtrVal, IntPtrTy);
+
       llvm::Value *Hash =
           emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);
@@ -2873,22 +2862,22 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               GlobalDecl GD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
+                                                     llvm::Type *Ty) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(GD);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   return V;
 }
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -3315,40 +3304,22 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
 ///   { i16 TypeKind, i16 TypeInfo }
 /// \endcode
 ///
-/// followed by an array of i8 containing the type name with extra information
-/// for BitInt. TypeKind is TK_Integer(0) for an integer, TK_Float(1) for a
-/// floating point value, TK_BitInt(2) for BitInt and TK_Unknown(0xFFFF) for
-/// anything else.
+/// followed by an array of i8 containing the type name. TypeKind is 0 for an
+/// integer, 1 for a floating point value, and -1 for anything else.
 llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   // Only emit each type's descriptor once.
   if (llvm::Constant *C = CGM.getTypeDescriptorFromMap(T))
     return C;
 
-  uint16_t TypeKind = TK_Unknown;
+  uint16_t TypeKind = -1;
   uint16_t TypeInfo = 0;
-  bool IsBitInt = false;
 
   if (T->isIntegerType()) {
-    TypeKind = TK_Integer;
+    TypeKind = 0;
     TypeInfo = (llvm::Log2_32(getContext().getTypeSize(T)) << 1) |
                (T->isSignedIntegerType() ? 1 : 0);
-    // Follow suggestion from https://github.com/llvm/llvm-project/issues/64100
-    // So we can write the exact amount of bits in TypeName after '\0'
-    // making it <diagnostic-like type name>.'\0'.<32-bit width>.
-    if (T->isSignedIntegerType() && T->getAs<BitIntType>()) {
-      // Do a sanity checks as we are using 32-bit type to store bit length.
-      assert((getContext().getTypeSize(T) > 0) &&
-             " non positive amount of bits in __BitInt type");
-      assert((getContext().getTypeSize(T) <= 0xFFFFFFFF) &&
-             " too many bits in __BitInt type");
-
-      // Redefine TypeKind with the actual __BitInt type if we have signed
-      // BitInt.
-      TypeKind = TK_BitInt;
-      IsBitInt = true;
-    }
   } else if (T->isFloatingType()) {
-    TypeKind = TK_Float;
+    TypeKind = 1;
     TypeInfo = getContext().getTypeSize(T);
   }
 
@@ -3358,20 +3329,6 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   CGM.getDiags().ConvertArgToString(
       DiagnosticsEngine::ak_qualtype, (intptr_t)T.getAsOpaquePtr(), StringRef(),
       StringRef(), std::nullopt, Buffer, std::nullopt);
-
-  if (IsBitInt) {
-    // The Structure is: 0 to end the string, 32 bit unsigned integer in target
-    // endianness, zero.
-    char S[6] = {'\0', '\0', '\0', '\0', '\0', '\0'};
-    const auto *EIT = T->castAs<BitIntType>();
-    uint32_t Bits = EIT->getNumBits();
-    llvm::support::endian::write32(S + 1, Bits,
-                                   getTarget().isBigEndian()
-                                       ? llvm::endianness::big
-                                       : llvm::endianness::little);
-    StringRef str = StringRef(S, sizeof(S) / sizeof(decltype(S[0])));
-    Buffer.append(str);
-  }
 
   llvm::Constant *Components[] = {
     Builder.getInt16(TypeKind), Builder.getInt16(TypeInfo),
@@ -5555,7 +5512,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5578,7 +5535,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
@@ -5635,7 +5592,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     GD = GlobalDecl(VD);
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-  CGCallee callee(calleeInfo, calleePtr);
+  CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
+  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }
 

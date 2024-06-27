@@ -93,8 +93,10 @@
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocFast.h"
@@ -324,27 +326,25 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
-/// Whether or not we should populate a PassInstrumentationCallbacks's class to
-/// pass name map.
-///
-/// This is for optimization purposes so we don't populate it if we never use
-/// it. This should be updated if new pass instrumentation wants to use the map.
-/// We currently only use this for --print-before/after.
-bool shouldPopulateClassToPassNames() {
-  return PrintPipelinePasses || !printBeforePasses().empty() ||
-         !printAfterPasses().empty() || !isFilterPassesEmpty() ||
-         TargetPassConfig::hasLimitedCodeGenPipeline();
-}
-
-// A pass for testing -print-on-crash.
+// Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
     abort();
     return PreservedAnalyses::all();
   }
-  static StringRef name() { return "TriggerCrashPass"; }
+  static StringRef name() { return "TriggerCrashModulePass"; }
+};
+
+class TriggerCrashFunctionPass
+    : public PassInfoMixin<TriggerCrashFunctionPass> {
+public:
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
+    abort();
+    return PreservedAnalyses::all();
+  }
+  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 // A pass for testing message reporting of -verify-each failures.
@@ -386,7 +386,8 @@ public:
 class RequireAllMachineFunctionPropertiesPass
     : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
-  PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+    MFPropsModifier _(*this, MF);
     return PreservedAnalyses::none();
   }
 
@@ -414,10 +415,13 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
                          PassInstrumentationCallbacks *PIC)
     : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
-  bool ShouldPopulateClassToPassNames = PIC && shouldPopulateClassToPassNames();
   if (TM)
-    TM->registerPassBuilderCallbacks(*this, ShouldPopulateClassToPassNames);
-  if (ShouldPopulateClassToPassNames) {
+    TM->registerPassBuilderCallbacks(*this);
+  if (PIC) {
+    PIC->registerClassToPassNameCallback([this, PIC]() {
+      // MSVC requires this to be captured if it's used inside decltype.
+      // Other compilers consider it an unused lambda capture.
+      (void)this;
 #define MODULE_PASS(NAME, CREATE_PASS)                                         \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
@@ -451,6 +455,7 @@ PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)                               \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "llvm/Passes/MachinePassRegistry.def"
+    });
   }
 }
 
@@ -1164,14 +1169,15 @@ parseRegAllocFastPassOptions(PassBuilder &PB, StringRef Params) {
     std::tie(ParamName, Params) = Params.split(';');
 
     if (ParamName.consume_front("filter=")) {
-      RegClassFilterFunc Filter = PB.parseRegAllocFilter(ParamName);
+      std::optional<RegClassFilterFunc> Filter =
+          PB.parseRegAllocFilter(ParamName);
       if (!Filter) {
         return make_error<StringError>(
             formatv("invalid regallocfast register filter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
       }
-      Opts.Filter = Filter;
+      Opts.Filter = *Filter;
       Opts.FilterName = ParamName;
       continue;
     }
@@ -1914,6 +1920,18 @@ Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
     MFPM.addPass(CREATE_PASS(Params.get()));                                   \
     return Error::success();                                                   \
   }
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                           \
+  if (Name == "require<" NAME ">") {                                           \
+    MFPM.addPass(                                                              \
+        RequireAnalysisPass<std::remove_reference_t<decltype(CREATE_PASS)>,    \
+                            MachineFunction>());                               \
+    return Error::success();                                                   \
+  }                                                                            \
+  if (Name == "invalidate<" NAME ">") {                                        \
+    MFPM.addPass(InvalidateAnalysisPass<                                       \
+                 std::remove_reference_t<decltype(CREATE_PASS)>>());           \
+    return Error::success();                                                   \
+  }
 #include "llvm/Passes/MachinePassRegistry.def"
 
   for (auto &C : MachineFunctionPipelineParsingCallbacks)
@@ -2161,13 +2179,14 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   return Error::success();
 }
 
-RegClassFilterFunc PassBuilder::parseRegAllocFilter(StringRef FilterName) {
+std::optional<RegClassFilterFunc>
+PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   if (FilterName == "all")
-    return allocateAllRegClasses;
+    return nullptr;
   for (auto &C : RegClassFilterParsingCallbacks)
     if (auto F = C(FilterName))
       return F;
-  return nullptr;
+  return std::nullopt;
 }
 
 static void printPassName(StringRef PassName, raw_ostream &OS) {

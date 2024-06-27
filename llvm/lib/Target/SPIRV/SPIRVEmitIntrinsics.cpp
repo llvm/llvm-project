@@ -375,7 +375,10 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"to_private", 0},
         {"__spirv_GenericCastToPtr_ToGlobal", 0},
         {"__spirv_GenericCastToPtr_ToLocal", 0},
-        {"__spirv_GenericCastToPtr_ToPrivate", 0}};
+        {"__spirv_GenericCastToPtr_ToPrivate", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToGlobal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
@@ -670,10 +673,8 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
         AggrConst = cast<Constant>(COp);
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantAggregateZero>(Op)) {
-        if (!Op->getType()->isVectorTy()) {
-          AggrConst = cast<Constant>(COp);
-          ResTy = B.getInt32Ty();
-        }
+        AggrConst = cast<Constant>(COp);
+        ResTy = Op->getType()->isVectorTy() ? COp->getType() : B.getInt32Ty();
       }
       if (AggrConst) {
         SmallVector<Value *> Args;
@@ -1260,8 +1261,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
   bool IsPhi = isa<PHINode>(I), BPrepared = false;
   for (const auto &Op : I->operands()) {
-    if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
-        isa<PHINode>(I) || isa<SwitchInst>(I))
+    if (isa<PHINode>(I) || isa<SwitchInst>(I))
       TrackConstants = false;
     if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
       unsigned OpNo = Op.getOperandNo();

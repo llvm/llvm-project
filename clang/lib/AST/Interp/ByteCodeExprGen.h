@@ -70,6 +70,18 @@ private:
   };
 };
 
+/// State encapsulating if a the variable creation has been successful,
+/// unsuccessful, or no variable has been created at all.
+struct VarCreationState {
+  std::optional<bool> S = std::nullopt;
+  VarCreationState() = default;
+  VarCreationState(bool b) : S(b) {}
+  static VarCreationState NotCreated() { return VarCreationState(); }
+
+  operator bool() const { return S && *S; }
+  bool notCreated() const { return !S; }
+};
+
 /// Compilation context for expressions.
 template <class Emitter>
 class ByteCodeExprGen : public ConstStmtVisitor<ByteCodeExprGen<Emitter>, bool>,
@@ -165,6 +177,7 @@ public:
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
   bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
+  bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -220,9 +233,8 @@ protected:
   /// Just pass evaluation on to \p E. This leaves all the parsing flags
   /// intact.
   bool delegate(const Expr *E);
-
   /// Creates and initializes a variable from the given decl.
-  bool visitVarDecl(const VarDecl *VD);
+  VarCreationState visitVarDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);

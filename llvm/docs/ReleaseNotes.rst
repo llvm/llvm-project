@@ -183,6 +183,7 @@ Changes to the RISC-V Backend
 * Zabha is no longer experimental.
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
+* ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -280,6 +281,12 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMDIBuilderInsertDeclareAtEnd``
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
+
+* Added the following functions for accessing a Target Extension Type's data:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

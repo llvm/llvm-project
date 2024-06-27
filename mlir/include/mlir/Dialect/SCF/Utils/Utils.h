@@ -120,6 +120,14 @@ LogicalResult loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
+/// Unrolls and jams this `scf.for` operation by the specified unroll factor.
+/// Returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. In case of unroll factor of 1, the function
+/// bails out without doing anything (returns success). Currently, only constant
+/// trip count that are divided by the unroll factor is supported. Currently,
+/// for operations with results are not supported.
+LogicalResult loopUnrollJamByFactor(scf::ForOp forOp, uint64_t unrollFactor);
+
 /// Transform a loop with a strictly positive step
 ///   for %i = %lb to %ub step %s
 /// into a 0-based loop with step 1
