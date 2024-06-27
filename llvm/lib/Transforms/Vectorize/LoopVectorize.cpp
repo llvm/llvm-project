@@ -4631,6 +4631,10 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
+  // Loops containing histograms are not currently supported.
+  if (!Legal->getHistograms().empty())
+    return false;
+
   return true;
 }
 
@@ -6508,8 +6512,33 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // We've proven all lanes safe to speculate, fall through.
     [[fallthrough]];
   case Instruction::Add:
+  case Instruction::Sub: {
+    auto Info = Legal->getHistogramInfo(I);
+    if (Info && VF.isVector()) {
+      const HistogramInfo *HGram = Info.value();
+      // Assume that a non-constant update value (or a constant != 1) requires
+      // a multiply, and add that into the cost.
+      InstructionCost MulCost = TTI::TCC_Free;
+      ConstantInt *RHS = dyn_cast<ConstantInt>(I->getOperand(1));
+      if (!RHS || RHS->getZExtValue() != 1)
+        MulCost = TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy);
+
+      // Find the cost of the histogram operation itself.
+      Type *PtrTy = VectorType::get(HGram->Load->getPointerOperandType(), VF);
+      Type *ScalarTy = I->getType();
+      Type *MaskTy = VectorType::get(Type::getInt1Ty(I->getContext()), VF);
+      IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
+                                  Type::getVoidTy(I->getContext()),
+                                  {PtrTy, ScalarTy, MaskTy});
+
+      // Add the costs together with the add/sub operation.
+      return TTI.getIntrinsicInstrCost(
+                 ICA, TargetTransformInfo::TCK_RecipThroughput) +
+             MulCost + TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy);
+    }
+    [[fallthrough]];
+  }
   case Instruction::FAdd:
-  case Instruction::Sub:
   case Instruction::FSub:
   case Instruction::Mul:
   case Instruction::FMul:
@@ -8426,6 +8455,36 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   };
 }
 
+VPHistogramRecipe *
+VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
+                                     ArrayRef<VPValue *> Operands) {
+  // FIXME: Support other operations.
+  unsigned Opcode = HI->Update->getOpcode();
+  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
+         "Histogram update operation must be an Add or Sub");
+
+  SmallVector<VPValue *, 3> HGramOps;
+  // Bucket address.
+  HGramOps.push_back(Operands[1]);
+  // Increment value.
+  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1), Plan));
+
+  // In case of predicated execution (due to tail-folding, or conditional
+  // execution, or both), pass the relevant mask. When there is no such mask,
+  // generate an all-true mask.
+  VPValue *Mask = nullptr;
+  if (Legal->isMaskRequired(HI->Store))
+    Mask = getBlockInMask(HI->Store->getParent());
+  else
+    Mask = Plan.getOrAddLiveIn(
+        ConstantInt::getTrue(IntegerType::getInt1Ty(HI->Load->getContext())));
+  HGramOps.push_back(Mask);
+
+  return new VPHistogramRecipe(HI, Opcode,
+                               make_range(HGramOps.begin(), HGramOps.end()),
+                               HI->Store->getDebugLoc());
+}
+
 void VPRecipeBuilder::fixHeaderPhis() {
   BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
   for (VPHeaderPHIRecipe *R : PhisToFix) {
@@ -8548,6 +8607,10 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 
   if (auto *CI = dyn_cast<CallInst>(Instr))
     return tryToWidenCall(CI, Operands, Range);
+
+  if (StoreInst *SI = dyn_cast<StoreInst>(Instr))
+    if (auto HistInfo = Legal->getHistogramInfo(SI))
+      return tryToWidenHistogram(*HistInfo, Operands);
 
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
@@ -8947,6 +9010,15 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         auto OpRange = RecipeBuilder.mapToVPValues(Instr->operands());
         Operands = {OpRange.begin(), OpRange.end()};
       }
+
+      // If this is a load instruction or a binop associated with a histogram,
+      // leave it until the store instruction to emit a combined intrinsic.
+      // Note that if the initial VF is scalar, we need to generate the normal
+      // clone recipe for these instructions. A histogram recipe will only be
+      // generated when minVF > 1.
+      if (Legal->getHistogramInfo(Instr) && !isa<StoreInst>(Instr) &&
+          !Range.Start.isScalar())
+        continue;
 
       // Invariant stores inside loop will be deleted and a single store
       // with the final reduction value will be added to the exit block
@@ -9995,6 +10067,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         "InterleavingBeneficialButDisabled",
         "the cost-model indicates that interleaving is beneficial "
         "but is explicitly disabled or interleave count is set to 1");
+    InterleaveLoop = false;
+  }
+
+  // If there is a histogram in the loop, do not just interleave without
+  // vectorizing. The order of operations will be incorrect without the
+  // histogram intrinsics, which are only used for recipes with VF > 1.
+  if (!VectorizeLoop && InterleaveLoop && !LVL.getHistograms().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving without vectorization due "
+                      << "to histogram operations.\n");
+    IntDiagMsg = std::make_pair(
+        "HistogramPreventsScalarInterleaving",
+        "Unable to interleave without vectorization due to constraints on "
+        "the order of histogram operations");
     InterleaveLoop = false;
   }
 
