@@ -148,71 +148,6 @@ struct ConstructContext {
   bool pushedScope = false; // was a scoped pushed for this construct?
 };
 
-/// Helper to gather the lower bounds of array components with non deferred
-/// shape when they are not all ones. Return an empty array attribute otherwise.
-static mlir::DenseI64ArrayAttr
-gatherComponentNonDefaultLowerBounds(mlir::Location loc,
-                                     mlir::MLIRContext *mlirContext,
-                                     const Fortran::semantics::Symbol &sym) {
-  if (Fortran::semantics::IsAllocatableOrObjectPointer(&sym))
-    return {};
-  mlir::DenseI64ArrayAttr lbs_attr;
-  if (const auto *objDetails =
-          sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    llvm::SmallVector<std::int64_t> lbs;
-    bool hasNonDefaultLbs = false;
-    for (const Fortran::semantics::ShapeSpec &bounds : objDetails->shape())
-      if (auto lb = bounds.lbound().GetExplicit()) {
-        if (auto constant = Fortran::evaluate::ToInt64(*lb)) {
-          hasNonDefaultLbs |= (*constant != 1);
-          lbs.push_back(*constant);
-        } else {
-          TODO(loc, "generate fir.dt_component for length parametrized derived "
-                    "types");
-        }
-      }
-    if (hasNonDefaultLbs) {
-      assert(static_cast<int>(lbs.size()) == sym.Rank() &&
-             "expected component bounds to be constant or deferred");
-      lbs_attr = mlir::DenseI64ArrayAttr::get(mlirContext, lbs);
-    }
-  }
-  return lbs_attr;
-}
-
-// Helper class to generate name of fir.global containing component explicit
-// default value for objects, and initial procedure target for procedure pointer
-// components.
-static mlir::FlatSymbolRefAttr gatherComponentInit(
-    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym, fir::RecordType derivedType) {
-  mlir::MLIRContext *mlirContext = &converter.getMLIRContext();
-  // Return procedure target mangled name for procedure pointer components.
-  if (const auto *procPtr =
-          sym.detailsIf<Fortran::semantics::ProcEntityDetails>()) {
-    if (std::optional<const Fortran::semantics::Symbol *> maybeInitSym =
-            procPtr->init()) {
-      // So far, do not make distinction between p => NULL() and p without init,
-      // f18 always initialize pointers to NULL anyway.
-      if (!*maybeInitSym)
-        return {};
-      return mlir::FlatSymbolRefAttr::get(mlirContext,
-                                          converter.mangleName(**maybeInitSym));
-    }
-  }
-
-  const auto *objDetails =
-      sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-  if (!objDetails || !objDetails->init().has_value())
-    return {};
-  // Object component initial value. Semantic package component object default
-  // value into compiler generated symbols that are lowered as read-only
-  // fir.global. Get the name of this global.
-  std::string name = fir::NameUniquer::getComponentInitName(
-      derivedType.getName(), toStringRef(sym.name()));
-  return mlir::FlatSymbolRefAttr::get(mlirContext, name);
-}
-
 /// Helper class to generate the runtime type info global data and the
 /// fir.type_info operations that contain the dipatch tables (if any).
 /// The type info global data is required to describe the derived type to the
@@ -278,14 +213,15 @@ private:
       parentType = mlir::cast<fir::RecordType>(converter.genType(*parent));
 
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    fir::TypeInfoOp dt;
-    mlir::OpBuilder::InsertPoint insertPointIfCreated;
-    std::tie(dt, insertPointIfCreated) =
-        builder.createTypeInfoOp(info.loc, info.type, parentType);
-    if (!insertPointIfCreated.isSet())
-      return; // fir.type_info was already built in a previous call.
+    mlir::ModuleOp module = builder.getModule();
+    fir::TypeInfoOp dt =
+        module.lookupSymbol<fir::TypeInfoOp>(info.type.getName());
+    if (dt)
+      return; // Already created.
+    auto insertPt = builder.saveInsertionPoint();
+    builder.setInsertionPoint(module.getBody(), module.getBody()->end());
+    dt = builder.create<fir::TypeInfoOp>(info.loc, info.type, parentType);
 
-    // Set init, destroy, and nofinal attributes.
     if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
                                                 /*ignorePointer=*/false))
       dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
@@ -294,12 +230,13 @@ private:
     if (!Fortran::semantics::MayRequireFinalization(info.typeSpec))
       dt->setAttr(dt.getNoFinalAttrName(), builder.getUnitAttr());
 
-    const Fortran::semantics::Scope &derivedScope =
-        DEREF(info.typeSpec.GetScope());
+    const Fortran::semantics::Scope *scope = info.typeSpec.scope();
+    if (!scope)
+      scope = info.typeSpec.typeSymbol().scope();
+    assert(scope && "failed to find type scope");
 
-    // Fill binding table region if the derived type has bindings.
     Fortran::semantics::SymbolVector bindings =
-        Fortran::semantics::CollectBindings(derivedScope);
+        Fortran::semantics::CollectBindings(*scope);
     if (!bindings.empty()) {
       builder.createBlock(&dt.getDispatchTable());
       for (const Fortran::semantics::SymbolRef &binding : bindings) {
@@ -315,33 +252,7 @@ private:
       }
       builder.create<fir::FirEndOp>(info.loc);
     }
-    // Gather info about components that is not reflected in fir.type and may be
-    // needed later: component initial values and array component non default
-    // lower bounds.
-    mlir::Block *componentInfo = nullptr;
-    for (const auto &componentName :
-         info.typeSpec.typeSymbol()
-             .get<Fortran::semantics::DerivedTypeDetails>()
-             .componentNames()) {
-      auto scopeIter = derivedScope.find(componentName);
-      assert(scopeIter != derivedScope.cend() &&
-             "failed to find derived type component symbol");
-      const Fortran::semantics::Symbol &component = scopeIter->second.get();
-      mlir::FlatSymbolRefAttr init_val =
-          gatherComponentInit(info.loc, converter, component, info.type);
-      mlir::DenseI64ArrayAttr lbs = gatherComponentNonDefaultLowerBounds(
-          info.loc, builder.getContext(), component);
-      if (init_val || lbs) {
-        if (!componentInfo)
-          componentInfo = builder.createBlock(&dt.getComponentInfo());
-        auto compName = mlir::StringAttr::get(builder.getContext(),
-                                              toStringRef(component.name()));
-        builder.create<fir::DTComponentOp>(info.loc, compName, lbs, init_val);
-      }
-    }
-    if (componentInfo)
-      builder.create<fir::FirEndOp>(info.loc);
-    builder.restoreInsertionPoint(insertPointIfCreated);
+    builder.restoreInsertionPoint(insertPt);
   }
 
   /// Store the front-end data that will be required to generate the type info

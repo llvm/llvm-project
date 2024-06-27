@@ -286,10 +286,6 @@ public:
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
 
-  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
-  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
-                   fir::RecordType parentType);
-
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
