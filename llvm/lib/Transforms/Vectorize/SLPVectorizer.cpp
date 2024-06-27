@@ -10269,7 +10269,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
-    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User)) {
+    if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
+        VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
         if (!UsedInserts.insert(VU).second)
           continue;
@@ -13768,7 +13769,8 @@ Value *BoUpSLP::vectorizeTree(
       continue;
     }
 
-    if (auto *VU = dyn_cast<InsertElementInst>(User)) {
+    if (auto *VU = dyn_cast<InsertElementInst>(User);
+        VU && VU && VU->getOperand(1) == Scalar) {
       // Skip if the scalar is another vector op or Vec is not an instruction.
       if (!Scalar->getType()->isVectorTy() && isa<Instruction>(Vec)) {
         if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
