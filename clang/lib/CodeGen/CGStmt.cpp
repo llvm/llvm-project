@@ -2629,7 +2629,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
 
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  const auto *FD = dyn_cast_if_present<FunctionDecl>(CurCodeDecl);
   llvm::StringMap<bool> FeatureMap;
   CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
 
