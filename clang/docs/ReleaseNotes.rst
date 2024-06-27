@@ -418,6 +418,10 @@ Non-comprehensive list of changes in this release
 - Added support for ``TypeLoc::dump()`` for easier debugging, and improved
   textual and JSON dumping for various ``TypeLoc``-related nodes.
 
+- Clang now emits distinct type-based alias analysis tags for incompatible
+  pointers, enabling more powerful alias analysis when accessing pointer types.
+  The new behavior can be disabledusing ``-fno-pointer-tbaa``.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -446,6 +450,7 @@ New Compiler Flags
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
 
+<<<<<<< HEAD
 - ``-Wc++23-compat`` group was added to help migrating existing codebases
   to C++23.
 
@@ -459,6 +464,10 @@ New Compiler Flags
 
 - For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
   diagnostic when an interrupt handler is declared and VFP is enabled.
+=======
+- ``-fno-pointer-tbaa`` disables emission of distinct type-based alias
+  analysis tags for incompatible pointers.
+>>>>>>> 06d4406b999a (@fixup add release notes.)
 
 Deprecated Compiler Flags
 -------------------------
