@@ -440,10 +440,8 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
            << "source handle (got " << llvm::range_size(sourceOps) << ")";
   }
 
-  LoopLikeOpInterface target =
-      dyn_cast<LoopLikeOpInterface>(*targetOps.begin());
-  LoopLikeOpInterface source =
-      dyn_cast<LoopLikeOpInterface>(*sourceOps.begin());
+  auto target = dyn_cast<LoopLikeOpInterface>(*targetOps.begin());
+  auto source = dyn_cast<LoopLikeOpInterface>(*sourceOps.begin());
   if (!target || !source)
     return emitSilenceableFailure(target->getLoc())
            << "target or source is not a loop op";

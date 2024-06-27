@@ -1220,6 +1220,7 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
 // interface methods.
 scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
     scf::ParallelOp target, scf::ParallelOp source, RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
   Block *block1 = target.getBody();
   Block *block2 = source.getBody();
   auto term1 = cast<scf::ReduceOp>(block1->getTerminator());
