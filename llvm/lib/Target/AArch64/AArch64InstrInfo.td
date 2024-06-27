@@ -6420,6 +6420,76 @@ def : Pat<(v16i8 (int_aarch64_neon_tbx1 (v16i8 V128:$Rd),
 let Predicates = [HasLUT] in {
   defm LUT2 : BaseSIMDTableLookupIndexed2<"luti2">;
   defm LUT4 : BaseSIMDTableLookupIndexed4<"luti4">;
+
+  def : Pat<(v16i8 (int_aarch64_neon_vluti2_lane (v8i8 V64:$Rn), 
+                  (v8i8 V64:$Rm), (i32 VectorIndexS32b_timm:$idx))),
+          (LUT2_B (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
+  def : Pat<(v16i8 (int_aarch64_neon_vluti2_lane (v8i8 V64:$Rn), 
+                  (v16i8 V128:$Rm), (i32 VectorIndexS32b_timm:$idx))),
+          (LUT2_B (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+  def : Pat<(v16i8 (int_aarch64_neon_vluti2_lane (v16i8 V128:$Rn), 
+                  (v8i8 V64:$Rm), (i32 VectorIndexS32b_timm:$idx))),
+          (LUT2_B V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
+  def : Pat<(v16i8 (int_aarch64_neon_vluti2_lane (v16i8 V128:$Rn), 
+                  (v16i8 V128:$Rm), (i32 VectorIndexS32b_timm:$idx))),
+          (LUT2_B V128:$Rn, V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+  def : Pat<(v8i16 (int_aarch64_neon_vluti2_lane (v4i16 V64:$Rn), 
+                    (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8f16 (int_aarch64_neon_vluti2_lane (v4f16 V64:$Rn), 
+                    (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8i16 (int_aarch64_neon_vluti2_lane (v4i16 V64:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8f16 (int_aarch64_neon_vluti2_lane (v4f16 V64:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8i16 (int_aarch64_neon_vluti2_lane (v8i16 V128:$Rn), 
+                    (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8f16 (int_aarch64_neon_vluti2_lane (v8f16 V128:$Rn), 
+                    (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8i16 (int_aarch64_neon_vluti2_lane (v8i16 VecListOne8h:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H VecListOne8h:$Rn, V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8f16 (int_aarch64_neon_vluti2_lane (v8f16 VecListOne8h:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H VecListOne8h:$Rn, V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+
+  def : Pat<(v16i8 (int_aarch64_neon_vluti4q_laneq (v16i8 VecListOne16b:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexD32b_timm:$idx))),
+            (LUT4_B VecListOne16b:$Rn, V128:$Rm,  VectorIndexD32b_timm:$idx)>;
+
+  def : Pat<(v8i16 (int_aarch64_neon_vluti4q_laneq_x2 (v8i16 VecListOne8h:$Rn1), 
+                    (v8i16 VecListOne8h:$Rn2), (v16i8 V128:$Rm), 
+                    (i32 VectorIndexS32b_timm:$idx))),
+            (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+  def : Pat<(v8f16 (int_aarch64_neon_vluti4q_laneq_x2 (v8f16 VecListOne8h:$Rn1), 
+                    (v8f16 VecListOne8h:$Rn2), (v16i8 V128:$Rm), 
+                    (i32 VectorIndexS32b_timm:$idx))),
+            (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+}
+
+let Predicates = [HasLUT, HasBF16] in {
+  def : Pat<(v8bf16 (int_aarch64_neon_vluti2_lane (v4bf16 V64:$Rn), 
+                  (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+          (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8bf16 (int_aarch64_neon_vluti2_lane (v4bf16 V64:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8bf16 (int_aarch64_neon_vluti2_lane (v8bf16 V128:$Rn), 
+                    (v8i8 V64:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexH32b_timm:$idx)>;
+  def : Pat<(v8bf16 (int_aarch64_neon_vluti2_lane (v8bf16 VecListOne8h:$Rn), 
+                    (v16i8 V128:$Rm), (i32 VectorIndexH32b_timm:$idx))),
+            (LUT2_H VecListOne8h:$Rn, V128:$Rm,  VectorIndexH32b_timm:$idx)>;
+
+  def : Pat<(v8bf16 (int_aarch64_neon_vluti4q_laneq_x2 (v8bf16 VecListOne8h:$Rn1), 
+                    (v8bf16 VecListOne8h:$Rn2), (v16i8 V128:$Rm), 
+                    (i32 VectorIndexS32b_timm:$idx))),
+            (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
 }
 
 //----------------------------------------------------------------------------
