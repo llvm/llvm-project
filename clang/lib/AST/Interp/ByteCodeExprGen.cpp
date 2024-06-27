@@ -1234,7 +1234,7 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     const Record *R = getRecord(E->getType());
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
-      return this->visitInitializer(Inits[0]);
+      return this->delegate(Inits[0]);
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
@@ -1329,22 +1329,8 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
-    // Prepare composite return value.
-    if (!Initializing) {
-      if (GlobalDecl) {
-        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
-        if (!GlobalIndex)
-          return false;
-        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-          return false;
-      } else {
-        std::optional<unsigned> LocalIndex = allocateLocal(E);
-        if (!LocalIndex)
-          return false;
-        if (!this->emitGetPtrLocal(*LocalIndex, E))
-          return false;
-      }
-    }
+    if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
+      return this->delegate(Inits[0]);
 
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
@@ -2150,7 +2136,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(SubExpr);
+    return this->delegate(SubExpr);
   }
   // If we don't end up using the materialized temporary anyway, don't
   // bother creating it.
@@ -2942,6 +2928,39 @@ bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
     return this->emitInvalid(E);
 
   return this->delegate(E->getSubExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXStdInitializerListExpr(
+    const CXXStdInitializerListExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  const ConstantArrayType *ArrayType =
+      Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
+  const Record *R = getRecord(E->getType());
+  assert(Initializing);
+  assert(SubExpr->isGLValue());
+
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+
+  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  if (isIntegralType(SecondFieldT)) {
+    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
+                         SecondFieldT, E))
+      return false;
+    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+  }
+  assert(SecondFieldT == PT_Ptr);
+
+  if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+    return false;
+  if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+    return false;
+  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
