@@ -2939,18 +2939,57 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           });
           return Changed ? &GEP : nullptr;
         }
-      } else {
+      } else if (auto *ExactIns =
+                     dyn_cast<PossiblyExactOperator>(GEP.getOperand(1))) {
         // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
         Value *V;
-        if ((has_single_bit(TyAllocSize) &&
-             match(GEP.getOperand(1),
-                   m_Exact(m_Shr(m_Value(V),
-                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
-            match(GEP.getOperand(1),
-                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          return GetElementPtrInst::Create(Builder.getInt8Ty(),
-                                           GEP.getPointerOperand(), V,
-                                           GEP.getNoWrapFlags());
+        if (ExactIns->isExact()) {
+          if ((has_single_bit(TyAllocSize) &&
+               match(GEP.getOperand(1),
+                     m_Shr(m_Value(V),
+                           m_SpecificInt(countr_zero(TyAllocSize))))) ||
+              match(GEP.getOperand(1),
+                    m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize)))) {
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), V,
+                                             GEP.getNoWrapFlags());
+          }
+        }
+        if (ExactIns->isExact() && ExactIns->hasOneUse()) {
+          // Try to canonicalize non-i8 element type to i8 if the index is an
+          // exact instruction. If the index is an exact instruction (div/shr)
+          // with a constant RHS, we can fold the non-i8 element scale into the
+          // div/shr (similiar to the mul case, just inverted).
+          const APInt *C;
+          std::optional<APInt> NewC;
+          if (has_single_bit(TyAllocSize) &&
+              match(ExactIns, m_Shr(m_Value(V), m_APInt(C))) &&
+              C->uge(countr_zero(TyAllocSize)))
+            NewC = *C - countr_zero(TyAllocSize);
+          else if (match(ExactIns, m_UDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            uint64_t Rem;
+            APInt::udivrem(*C, TyAllocSize, Quot, Rem);
+            if (Rem == 0)
+              NewC = Quot;
+          } else if (match(ExactIns, m_SDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            int64_t Rem;
+            APInt::sdivrem(*C, TyAllocSize, Quot, Rem);
+            // For sdiv we need to make sure we arent creating INT_MIN / -1.
+            if (!Quot.isAllOnes() && Rem == 0)
+              NewC = Quot;
+          }
+
+          if (NewC.has_value()) {
+            Value *NewOp = Builder.CreateBinOp(
+                static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
+                ConstantInt::get(V->getType(), *NewC));
+            cast<BinaryOperator>(NewOp)->setIsExact();
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), NewOp,
+                                             GEP.getNoWrapFlags());
+          }
         }
       }
     }
