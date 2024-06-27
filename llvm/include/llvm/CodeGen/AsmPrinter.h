@@ -144,23 +144,6 @@ public:
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
-  /// struct HandlerInfo and Handlers permit users or target extended
-  /// AsmPrinter to add their own handlers.
-  template <class H> struct HandlerInfo {
-    std::unique_ptr<H> Handler;
-    StringRef TimerName;
-    StringRef TimerDescription;
-    StringRef TimerGroupName;
-    StringRef TimerGroupDescription;
-
-    HandlerInfo(std::unique_ptr<H> Handler, StringRef TimerName,
-                StringRef TimerDescription, StringRef TimerGroupName,
-                StringRef TimerGroupDescription)
-        : Handler(std::move(Handler)), TimerName(TimerName),
-          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
-          TimerGroupDescription(TimerGroupDescription) {}
-  };
-
   // Flags representing which CFI section is required for a function/module.
   enum class CFISection : unsigned {
     None = 0, ///< Do not emit either .eh_frame or .debug_frame
@@ -206,11 +189,11 @@ protected:
 
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
-  SmallVector<HandlerInfo<AsmPrinterHandler>, 2> Handlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
 
   /// Debuginfo handler. Protected so that targets can add their own.
-  SmallVector<HandlerInfo<DebugHandlerBase>, 1> DebugHandlers;
+  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
   size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
@@ -536,12 +519,12 @@ public:
   // Overridable Hooks
   //===------------------------------------------------------------------===//
 
-  void addAsmPrinterHandler(HandlerInfo<AsmPrinterHandler> Handler) {
+  void addAsmPrinterHandler(std::unique_ptr<AsmPrinterHandler> Handler) {
     Handlers.insert(Handlers.begin(), std::move(Handler));
     NumUserHandlers++;
   }
 
-  void addDebugHandler(HandlerInfo<DebugHandlerBase> Handler) {
+  void addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler) {
     DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
     NumUserDebugHandlers++;
   }
