@@ -154,7 +154,6 @@ add_header_library(
   HDRS
     multiply_add.h
   DEPENDS
-    libc.src.__support.FPUtil.generic_hardware.fma
     libc.src.__support.common
 )
 
@@ -227,4 +226,3 @@ add_header_library(
 )
 
 add_subdirectory(generic)
-add_subdirectory(generic_hardware)
