@@ -27,8 +27,8 @@ body: |
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX6-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX6-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ;
     ; GFX8-LABEL: name: test_intrinsic_round_s32
@@ -47,8 +47,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX8-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ;
     ; GFX9-LABEL: name: test_intrinsic_round_s32
@@ -67,8 +67,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_INTRINSIC_ROUND %0
@@ -97,8 +97,8 @@ body: |
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX6-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX6-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ;
     ; GFX8-LABEL: name: test_intrinsic_round_s32_flags
@@ -117,8 +117,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX8-NEXT: $vgpr0 = COPY [[FADD]](s32)
     ;
     ; GFX9-LABEL: name: test_intrinsic_round_s32_flags
@@ -137,8 +137,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %10:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = nsz G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX9-NEXT: $vgpr0 = COPY [[FADD]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = nsz G_INTRINSIC_ROUND %0
@@ -187,8 +187,8 @@ body: |
     ; GFX6-NEXT: [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SELECT2]], [[C12]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C11]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND2]], [[AND3]]
-    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[OR]]
+    ; GFX6-NEXT: %10:_(s64) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], %10
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[FADD1]](s64)
     ;
     ; GFX8-LABEL: name: test_intrinsic_round_s64
@@ -208,8 +208,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %10:_(s64) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[FADD1]](s64)
     ;
     ; GFX9-LABEL: name: test_intrinsic_round_s64
@@ -229,8 +229,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %10:_(s64) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], %10
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[FADD1]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_INTRINSIC_ROUND %0
@@ -260,8 +260,8 @@ body: |
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C3]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX6-NEXT: %24:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %24
     ; GFX6-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
     ; GFX6-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB [[UV1]], [[INTRINSIC_TRUNC1]]
     ; GFX6-NEXT: [[FABS1:%[0-9]+]]:_(s32) = G_FABS [[FSUB1]]
@@ -269,8 +269,8 @@ body: |
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[C1]], [[C2]]
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT1]], [[C4]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C3]]
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[AND3]]
-    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX6-NEXT: %14:_(s32) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FADD]](s32), [[FADD1]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ;
@@ -291,8 +291,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %24:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %24
     ; GFX8-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
     ; GFX8-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB [[UV1]], [[INTRINSIC_TRUNC1]]
     ; GFX8-NEXT: [[FABS1:%[0-9]+]]:_(s32) = G_FABS [[FSUB1]]
@@ -300,8 +300,8 @@ body: |
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[C1]], [[C2]]
     ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT1]], [[C4]]
     ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C3]]
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[AND3]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX8-NEXT: %14:_(s32) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FADD]](s32), [[FADD1]](s32)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ;
@@ -322,8 +322,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 2147483647
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UV]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %24:_(s32) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC]], %24
     ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
     ; GFX9-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB [[UV1]], [[INTRINSIC_TRUNC1]]
     ; GFX9-NEXT: [[FABS1:%[0-9]+]]:_(s32) = G_FABS [[FSUB1]]
@@ -331,8 +331,8 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[C1]], [[C2]]
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT1]], [[C4]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C3]]
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[AND3]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX9-NEXT: %14:_(s32) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FADD]](s32), [[FADD1]](s32)
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -383,8 +383,8 @@ body: |
     ; GFX6-NEXT: [[C12:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SELECT2]], [[C12]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV]], [[C11]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND2]], [[AND3]]
-    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[OR]]
+    ; GFX6-NEXT: %45:_(s64) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], %45
     ; GFX6-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
     ; GFX6-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C2]]
@@ -404,8 +404,8 @@ body: |
     ; GFX6-NEXT: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[C9]], [[C10]]
     ; GFX6-NEXT: [[AND6:%[0-9]+]]:_(s64) = G_AND [[SELECT5]], [[C12]]
     ; GFX6-NEXT: [[AND7:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[C11]]
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[AND6]], [[AND7]]
-    ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[SELECT4]], [[OR1]]
+    ; GFX6-NEXT: %14:_(s64) = disjoint G_OR [[AND6]], [[AND7]]
+    ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[SELECT4]], %14
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD1]](s64), [[FADD3]](s64)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ;
@@ -427,8 +427,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[UV]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %25:_(s64) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], %25
     ; GFX8-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
     ; GFX8-NEXT: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INTRINSIC_TRUNC1]]
     ; GFX8-NEXT: [[FADD2:%[0-9]+]]:_(s64) = G_FADD [[UV1]], [[FNEG1]]
@@ -437,8 +437,8 @@ body: |
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[C1]], [[C2]]
     ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SELECT1]], [[C4]]
     ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[C3]]
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[AND2]], [[AND3]]
-    ; GFX8-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX8-NEXT: %14:_(s64) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX8-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD1]](s64), [[FADD3]](s64)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ;
@@ -460,8 +460,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 9223372036854775807
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[UV]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %25:_(s64) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC]], %25
     ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
     ; GFX9-NEXT: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[INTRINSIC_TRUNC1]]
     ; GFX9-NEXT: [[FADD2:%[0-9]+]]:_(s64) = G_FADD [[UV1]], [[FNEG1]]
@@ -470,8 +470,8 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[C1]], [[C2]]
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SELECT1]], [[C4]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[C3]]
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR [[AND2]], [[AND3]]
-    ; GFX9-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX9-NEXT: %14:_(s64) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX9-NEXT: [[FADD3:%[0-9]+]]:_(s64) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD1]](s64), [[FADD3]](s64)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -510,9 +510,9 @@ body: |
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C4]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: %12:_(s16) = disjoint G_OR [[AND]], [[AND1]]
     ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[OR]](s16)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT %12(s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[FPEXT5]], [[FPEXT6]]
     ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC2]](s16)
@@ -535,8 +535,8 @@ body: |
     ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C4]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %12:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %12
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FADD]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;
@@ -557,8 +557,8 @@ body: |
     ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C4]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C3]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %12:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %12
     ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FADD]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
@@ -603,9 +603,9 @@ body: |
     ; GFX6-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: %35:_(s16) = disjoint G_OR [[AND]], [[AND1]]
     ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[OR]](s16)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT %35(s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[FPEXT5]], [[FPEXT6]]
     ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
     ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
@@ -623,16 +623,16 @@ body: |
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: %14:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
     ; GFX6-NEXT: [[FPEXT12:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC3]](s16)
-    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT [[OR1]](s16)
+    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT %14(s16)
     ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s32) = G_FADD [[FPEXT12]], [[FPEXT13]]
     ; GFX6-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD3]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC2]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX8-LABEL: name: test_intrinsic_round_v2s16
@@ -656,8 +656,8 @@ body: |
     ; GFX8-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %24:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %24
     ; GFX8-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX8-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX8-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -665,13 +665,13 @@ body: |
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX8-NEXT: %14:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: test_intrinsic_round_v2s16
@@ -695,8 +695,8 @@ body: |
     ; GFX9-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %24:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %24
     ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX9-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX9-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -704,8 +704,8 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX9-NEXT: %14:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %14
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FADD]](s16), [[FADD1]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -750,9 +750,9 @@ body: |
     ; GFX6-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: %65:_(s16) = disjoint G_OR [[AND]], [[AND1]]
     ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[OR]](s16)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT %65(s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[FPEXT5]], [[FPEXT6]]
     ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
     ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
@@ -770,9 +770,9 @@ body: |
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: %46:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
     ; GFX6-NEXT: [[FPEXT12:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC3]](s16)
-    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT [[OR1]](s16)
+    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT %46(s16)
     ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s32) = G_FADD [[FPEXT12]], [[FPEXT13]]
     ; GFX6-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD3]](s32)
     ; GFX6-NEXT: [[FPEXT14:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
@@ -790,9 +790,9 @@ body: |
     ; GFX6-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX6-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX6-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
+    ; GFX6-NEXT: %25:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
     ; GFX6-NEXT: [[FPEXT19:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC6]](s16)
-    ; GFX6-NEXT: [[FPEXT20:%[0-9]+]]:_(s32) = G_FPEXT [[OR2]](s16)
+    ; GFX6-NEXT: [[FPEXT20:%[0-9]+]]:_(s32) = G_FPEXT %25(s16)
     ; GFX6-NEXT: [[FADD5:%[0-9]+]]:_(s32) = G_FADD [[FPEXT19]], [[FPEXT20]]
     ; GFX6-NEXT: [[FPTRUNC8:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD5]](s32)
     ; GFX6-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
@@ -803,18 +803,18 @@ body: |
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC2]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX6-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC8]](s16)
     ; GFX6-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX6-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C6]]
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND6]], [[C]](s32)
-    ; GFX6-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX6-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
+    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX6-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX6-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
     ; GFX6-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C]](s32)
-    ; GFX6-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
-    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
+    ; GFX6-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
+    ; GFX6-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
@@ -842,8 +842,8 @@ body: |
     ; GFX8-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %43:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %43
     ; GFX8-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX8-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX8-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -851,8 +851,8 @@ body: |
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX8-NEXT: %35:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %35
     ; GFX8-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC2]]
     ; GFX8-NEXT: [[FSUB2:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC2]], [[INTRINSIC_TRUNC2]]
     ; GFX8-NEXT: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[FSUB2]]
@@ -860,8 +860,8 @@ body: |
     ; GFX8-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX8-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
-    ; GFX8-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], [[OR2]]
+    ; GFX8-NEXT: %25:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
+    ; GFX8-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], %25
     ; GFX8-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX8-NEXT: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
@@ -870,18 +870,18 @@ body: |
     ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX8-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX8-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FADD2]](s16)
     ; GFX8-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C6]]
     ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND6]], [[C]](s32)
-    ; GFX8-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX8-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
+    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX8-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX8-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[BITCAST3]], [[C6]]
     ; GFX8-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND7]], [[C]](s32)
-    ; GFX8-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
-    ; GFX8-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
+    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR1]], [[SHL2]]
+    ; GFX8-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
     ;
@@ -909,8 +909,8 @@ body: |
     ; GFX9-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %43:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %43
     ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX9-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX9-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -918,8 +918,8 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX9-NEXT: %35:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %35
     ; GFX9-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC2]]
     ; GFX9-NEXT: [[FSUB2:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC2]], [[INTRINSIC_TRUNC2]]
     ; GFX9-NEXT: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[FSUB2]]
@@ -927,8 +927,8 @@ body: |
     ; GFX9-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX9-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX9-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
-    ; GFX9-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], [[OR2]]
+    ; GFX9-NEXT: %25:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
+    ; GFX9-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], %25
     ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
     ; GFX9-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
@@ -990,9 +990,9 @@ body: |
     ; GFX6-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX6-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX6-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
+    ; GFX6-NEXT: %77:_(s16) = disjoint G_OR [[AND]], [[AND1]]
     ; GFX6-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[OR]](s16)
+    ; GFX6-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT %77(s16)
     ; GFX6-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[FPEXT5]], [[FPEXT6]]
     ; GFX6-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD1]](s32)
     ; GFX6-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
@@ -1010,9 +1010,9 @@ body: |
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
+    ; GFX6-NEXT: %58:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
     ; GFX6-NEXT: [[FPEXT12:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC3]](s16)
-    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT [[OR1]](s16)
+    ; GFX6-NEXT: [[FPEXT13:%[0-9]+]]:_(s32) = G_FPEXT %58(s16)
     ; GFX6-NEXT: [[FADD3:%[0-9]+]]:_(s32) = G_FADD [[FPEXT12]], [[FPEXT13]]
     ; GFX6-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD3]](s32)
     ; GFX6-NEXT: [[FPEXT14:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
@@ -1030,9 +1030,9 @@ body: |
     ; GFX6-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX6-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX6-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
+    ; GFX6-NEXT: %39:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
     ; GFX6-NEXT: [[FPEXT19:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC6]](s16)
-    ; GFX6-NEXT: [[FPEXT20:%[0-9]+]]:_(s32) = G_FPEXT [[OR2]](s16)
+    ; GFX6-NEXT: [[FPEXT20:%[0-9]+]]:_(s32) = G_FPEXT %39(s16)
     ; GFX6-NEXT: [[FADD5:%[0-9]+]]:_(s32) = G_FADD [[FPEXT19]], [[FPEXT20]]
     ; GFX6-NEXT: [[FPTRUNC8:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD5]](s32)
     ; GFX6-NEXT: [[FPEXT21:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
@@ -1050,21 +1050,21 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(s16) = G_SELECT [[FCMP3]](s1), [[C2]], [[C3]]
     ; GFX6-NEXT: [[AND6:%[0-9]+]]:_(s16) = G_AND [[SELECT3]], [[C5]]
     ; GFX6-NEXT: [[AND7:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C4]]
-    ; GFX6-NEXT: [[OR3:%[0-9]+]]:_(s16) = G_OR [[AND6]], [[AND7]]
+    ; GFX6-NEXT: %18:_(s16) = disjoint G_OR [[AND6]], [[AND7]]
     ; GFX6-NEXT: [[FPEXT26:%[0-9]+]]:_(s32) = G_FPEXT [[FPTRUNC9]](s16)
-    ; GFX6-NEXT: [[FPEXT27:%[0-9]+]]:_(s32) = G_FPEXT [[OR3]](s16)
+    ; GFX6-NEXT: [[FPEXT27:%[0-9]+]]:_(s32) = G_FPEXT %18(s16)
     ; GFX6-NEXT: [[FADD7:%[0-9]+]]:_(s32) = G_FADD [[FPEXT26]], [[FPEXT27]]
     ; GFX6-NEXT: [[FPTRUNC11:%[0-9]+]]:_(s16) = G_FPTRUNC [[FADD7]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC2]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC5]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX6-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
+    ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX6-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC8]](s16)
     ; GFX6-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC11]](s16)
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX6-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
+    ; GFX6-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX6-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX6-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ;
@@ -1094,8 +1094,8 @@ body: |
     ; GFX8-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX8-NEXT: %44:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX8-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %44
     ; GFX8-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX8-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX8-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -1103,8 +1103,8 @@ body: |
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX8-NEXT: %36:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX8-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %36
     ; GFX8-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC2]]
     ; GFX8-NEXT: [[FSUB2:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC2]], [[INTRINSIC_TRUNC2]]
     ; GFX8-NEXT: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[FSUB2]]
@@ -1112,8 +1112,8 @@ body: |
     ; GFX8-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX8-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
-    ; GFX8-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], [[OR2]]
+    ; GFX8-NEXT: %28:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
+    ; GFX8-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], %28
     ; GFX8-NEXT: [[INTRINSIC_TRUNC3:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC3]]
     ; GFX8-NEXT: [[FSUB3:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC3]], [[INTRINSIC_TRUNC3]]
     ; GFX8-NEXT: [[FABS3:%[0-9]+]]:_(s16) = G_FABS [[FSUB3]]
@@ -1121,18 +1121,18 @@ body: |
     ; GFX8-NEXT: [[SELECT3:%[0-9]+]]:_(s16) = G_SELECT [[FCMP3]](s1), [[C2]], [[C3]]
     ; GFX8-NEXT: [[AND6:%[0-9]+]]:_(s16) = G_AND [[SELECT3]], [[C5]]
     ; GFX8-NEXT: [[AND7:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C4]]
-    ; GFX8-NEXT: [[OR3:%[0-9]+]]:_(s16) = G_OR [[AND6]], [[AND7]]
-    ; GFX8-NEXT: [[FADD3:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC3]], [[OR3]]
+    ; GFX8-NEXT: %18:_(s16) = disjoint G_OR [[AND6]], [[AND7]]
+    ; GFX8-NEXT: [[FADD3:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC3]], %18
     ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FADD]](s16)
     ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FADD1]](s16)
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; GFX8-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
+    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX8-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[FADD2]](s16)
     ; GFX8-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[FADD3]](s16)
     ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C]](s32)
-    ; GFX8-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; GFX8-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](s32)
+    ; GFX8-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; GFX8-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX8-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ;
@@ -1162,8 +1162,8 @@ body: |
     ; GFX9-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[SELECT]], [[C5]]
     ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[AND1]]
-    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], [[OR]]
+    ; GFX9-NEXT: %44:_(s16) = disjoint G_OR [[AND]], [[AND1]]
+    ; GFX9-NEXT: [[FADD:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC]], %44
     ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
     ; GFX9-NEXT: [[FSUB1:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC1]], [[INTRINSIC_TRUNC1]]
     ; GFX9-NEXT: [[FABS1:%[0-9]+]]:_(s16) = G_FABS [[FSUB1]]
@@ -1171,8 +1171,8 @@ body: |
     ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[FCMP1]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[SELECT1]], [[C5]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[AND3]]
-    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], [[OR1]]
+    ; GFX9-NEXT: %36:_(s16) = disjoint G_OR [[AND2]], [[AND3]]
+    ; GFX9-NEXT: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC1]], %36
     ; GFX9-NEXT: [[INTRINSIC_TRUNC2:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC2]]
     ; GFX9-NEXT: [[FSUB2:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC2]], [[INTRINSIC_TRUNC2]]
     ; GFX9-NEXT: [[FABS2:%[0-9]+]]:_(s16) = G_FABS [[FSUB2]]
@@ -1180,8 +1180,8 @@ body: |
     ; GFX9-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[FCMP2]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SELECT2]], [[C5]]
     ; GFX9-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[TRUNC2]], [[C4]]
-    ; GFX9-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[AND5]]
-    ; GFX9-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], [[OR2]]
+    ; GFX9-NEXT: %28:_(s16) = disjoint G_OR [[AND4]], [[AND5]]
+    ; GFX9-NEXT: [[FADD2:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC2]], %28
     ; GFX9-NEXT: [[INTRINSIC_TRUNC3:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC3]]
     ; GFX9-NEXT: [[FSUB3:%[0-9]+]]:_(s16) = G_FSUB [[TRUNC3]], [[INTRINSIC_TRUNC3]]
     ; GFX9-NEXT: [[FABS3:%[0-9]+]]:_(s16) = G_FABS [[FSUB3]]
@@ -1189,8 +1189,8 @@ body: |
     ; GFX9-NEXT: [[SELECT3:%[0-9]+]]:_(s16) = G_SELECT [[FCMP3]](s1), [[C2]], [[C3]]
     ; GFX9-NEXT: [[AND6:%[0-9]+]]:_(s16) = G_AND [[SELECT3]], [[C5]]
     ; GFX9-NEXT: [[AND7:%[0-9]+]]:_(s16) = G_AND [[TRUNC3]], [[C4]]
-    ; GFX9-NEXT: [[OR3:%[0-9]+]]:_(s16) = G_OR [[AND6]], [[AND7]]
-    ; GFX9-NEXT: [[FADD3:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC3]], [[OR3]]
+    ; GFX9-NEXT: %18:_(s16) = disjoint G_OR [[AND6]], [[AND7]]
+    ; GFX9-NEXT: [[FADD3:%[0-9]+]]:_(s16) = G_FADD [[INTRINSIC_TRUNC3]], %18
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FADD]](s16), [[FADD1]](s16)
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FADD2]](s16), [[FADD3]](s16)
     ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
