@@ -1136,11 +1136,6 @@ val const_nuw_mul : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
 
-(** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
-    constant integer [c2].
-    See the method [llvm::ConstantExpr::getShl]. *)
-val const_shl : llvalue -> llvalue -> llvalue
-
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the
     array [indices].
@@ -1874,9 +1869,21 @@ val builder_at_end : llcontext -> llbasicblock -> llbuilder
     See the constructor for [llvm::LLVMBuilder]. *)
 val position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
 
+(** [position_builder_before_dbg_records ip bb before_dbg_records] moves the
+    instruction builder [bb] to the position [ip], before any debug records
+    there.
+    See the constructor for [llvm::LLVMBuilder]. *)
+val position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                          llbuilder -> unit
+
 (** [position_before ins b] moves the instruction builder [b] to before the
     instruction [isn]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
 val position_before : llvalue -> llbuilder -> unit
+
+(** [position_before_dbg_records ins b] moves the instruction builder [b]
+    to before the instruction [isn] and any debug records attached to it.
+    See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
+val position_before_dbg_records : llvalue -> llbuilder -> unit
 
 (** [position_at_end bb b] moves the instruction builder [b] to the end of the
     basic block [bb]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)

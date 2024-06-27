@@ -44,6 +44,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
@@ -2856,7 +2858,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
   bool ShouldUseLifetimeStartInfo =
       (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
        Shape.ABI != coro::ABI::RetconOnce);
-  AllocaUseVisitor Visitor{AI->getModule()->getDataLayout(), DT, Shape, Checker,
+  AllocaUseVisitor Visitor{AI->getDataLayout(), DT, Shape, Checker,
                            ShouldUseLifetimeStartInfo};
   Visitor.visitPtr(*AI);
   if (!Visitor.getShouldLiveOnFrame())

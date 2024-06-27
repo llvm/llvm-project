@@ -120,6 +120,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -1474,7 +1475,8 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     for (auto *Succ : successors(&BB))
       Weights.push_back((Coverage[Succ] || !Coverage[&BB]) ? 1 : 0);
     if (Weights.size() >= 2)
-      llvm::setBranchWeights(*BB.getTerminator(), Weights);
+      llvm::setBranchWeights(*BB.getTerminator(), Weights,
+                             /*IsExpected=*/false);
   }
 
   unsigned NumCorruptCoverage = 0;
@@ -2260,7 +2262,7 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
-  setBranchWeights(*TI, Weights);
+  setBranchWeights(*TI, Weights, /*IsExpected=*/false);
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

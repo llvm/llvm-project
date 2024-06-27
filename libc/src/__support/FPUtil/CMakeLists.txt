@@ -199,10 +199,11 @@ add_header_library(
   HDRS
     dyadic_float.h
   DEPENDS
+    .fenv_impl
     .fp_bits
     .multiply_add
+    libc.src.__support.CPP.type_traits
     libc.src.__support.big_int
-    libc.src.__support.common
     libc.src.__support.macros.optimization
 )
 

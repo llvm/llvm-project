@@ -50,10 +50,11 @@ class TargetRegisterInfo;
     class MergePotentialsElt {
       unsigned Hash;
       MachineBasicBlock *Block;
+      DebugLoc BranchDebugLoc;
 
     public:
-      MergePotentialsElt(unsigned h, MachineBasicBlock *b)
-        : Hash(h), Block(b) {}
+      MergePotentialsElt(unsigned h, MachineBasicBlock *b, DebugLoc bdl)
+          : Hash(h), Block(b), BranchDebugLoc(std::move(bdl)) {}
 
       unsigned getHash() const { return Hash; }
       MachineBasicBlock *getBlock() const { return Block; }
@@ -61,6 +62,8 @@ class TargetRegisterInfo;
       void setBlock(MachineBasicBlock *MBB) {
         Block = MBB;
       }
+
+      const DebugLoc &getBranchDebugLoc() { return BranchDebugLoc; }
 
       bool operator<(const MergePotentialsElt &) const;
     };
@@ -162,8 +165,9 @@ class TargetRegisterInfo;
 
     /// Remove all blocks with hash CurHash from MergePotentials, restoring
     /// branches at ends of blocks as appropriate.
-    void RemoveBlocksWithHash(unsigned CurHash, MachineBasicBlock* SuccBB,
-                                                MachineBasicBlock* PredBB);
+    void RemoveBlocksWithHash(unsigned CurHash, MachineBasicBlock *SuccBB,
+                              MachineBasicBlock *PredBB,
+                              const DebugLoc &BranchDL);
 
     /// None of the blocks to be tail-merged consist only of the common tail.
     /// Create a block that does by splitting one.

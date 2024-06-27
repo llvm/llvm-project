@@ -19,8 +19,6 @@ llvm::DenseMap<int, int> DenseMap = {{4, 5}, {6, 7}};
 llvm::StringMap<int> StringMap = {{"foo", 123}, {"bar", 456}};
 llvm::Expected<int> ExpectedValue(8);
 llvm::Expected<int> ExpectedError(llvm::createStringError(""));
-std::optional<int> OptionalValue(9);
-std::optional<int> OptionalNone(std::nullopt);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};
 llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";
@@ -69,7 +67,5 @@ int main() {
   dont_strip(MutableArrayRef);
   dont_strip(ExpectedValue);
   dont_strip(ExpectedError);
-  dont_strip(OptionalValue);
-  dont_strip(OptionalNone);
   return result; // Non-zero return value is OK.
 }

@@ -943,6 +943,9 @@ def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12:$offset), 0>;
+def : InstAlias<"jr (${rs})",             (JALR      X0, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr (${rs})",           (JALR      X1, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 

@@ -420,7 +420,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout DL = I->getModule()->getDataLayout();
+  const DataLayout DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -687,9 +687,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     // stupid, create a new node if there are none left.
     BinaryOperator *NewOp;
     if (NodesToRewrite.empty()) {
-      Constant *Undef = UndefValue::get(I->getType());
-      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Undef,
-                                     Undef, "", I->getIterator());
+      Constant *Poison = PoisonValue::get(I->getType());
+      NewOp = BinaryOperator::Create(Instruction::BinaryOps(Opcode), Poison,
+                                     Poison, "", I->getIterator());
       if (isa<FPMathOperator>(NewOp))
         NewOp->setFastMathFlags(I->getFastMathFlags());
     } else {
@@ -767,7 +767,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 static Value *NegateValue(Value *V, Instruction *BI,
                           ReassociatePass::OrderedSet &ToRedo) {
   if (auto *C = dyn_cast<Constant>(V)) {
-    const DataLayout &DL = BI->getModule()->getDataLayout();
+    const DataLayout &DL = BI->getDataLayout();
     Constant *Res = C->getType()->isFPOrFPVectorTy()
                         ? ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)
                         : ConstantExpr::getNeg(C);
@@ -844,7 +844,13 @@ static Value *NegateValue(Value *V, Instruction *BI,
                      ->getIterator();
     }
 
+    // Check that if TheNeg is moved out of its parent block, we drop its
+    // debug location to avoid extra coverage.
+    // See test dropping_debugloc_the_neg.ll for a detailed example.
+    if (TheNeg->getParent() != InsertPt->getParent())
+      TheNeg->dropLocation();
     TheNeg->moveBefore(*InsertPt->getParent(), InsertPt);
+
     if (TheNeg->getOpcode() == Instruction::Sub) {
       TheNeg->setHasNoUnsignedWrap(false);
       TheNeg->setHasNoSignedWrap(false);
@@ -1016,7 +1022,8 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
 static BinaryOperator *ConvertShiftToMul(Instruction *Shl) {
   Constant *MulCst = ConstantInt::get(Shl->getType(), 1);
   auto *SA = cast<ConstantInt>(Shl->getOperand(1));
-  MulCst = ConstantExpr::getShl(MulCst, SA);
+  MulCst = ConstantFoldBinaryInstruction(Instruction::Shl, MulCst, SA);
+  assert(MulCst && "Constant folding of immediate constants failed");
 
   BinaryOperator *Mul = BinaryOperator::CreateMul(Shl->getOperand(0), MulCst,
                                                   "", Shl->getIterator());
@@ -1815,10 +1822,10 @@ ReassociatePass::buildMinimalMultiplyDAG(IRBuilderBase &Builder,
   }
   // Unique factors with equal powers -- we've folded them into the first one's
   // base.
-  Factors.erase(std::unique(Factors.begin(), Factors.end(),
-                            [](const Factor &LHS, const Factor &RHS) {
-                              return LHS.Power == RHS.Power;
-                            }),
+  Factors.erase(llvm::unique(Factors,
+                             [](const Factor &LHS, const Factor &RHS) {
+                               return LHS.Power == RHS.Power;
+                             }),
                 Factors.end());
 
   // Iteratively collect the base of each factor with an add power into the
@@ -1875,7 +1882,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
                                            SmallVectorImpl<ValueEntry> &Ops) {
   // Now that we have the linearized expression tree, try to optimize it.
   // Start by folding any constants that we found.
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   Constant *Cst = nullptr;
   unsigned Opcode = I->getOpcode();
   while (!Ops.empty()) {
@@ -2171,7 +2178,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
       shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
       (cast<PossiblyDisjointInst>(I)->isDisjoint() ||
        haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                           SimplifyQuery(I->getModule()->getDataLayout(),
+                           SimplifyQuery(I->getDataLayout(),
                                          /*DT=*/nullptr, /*AC=*/nullptr, I)))) {
     Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
     RedoInsts.insert(I);

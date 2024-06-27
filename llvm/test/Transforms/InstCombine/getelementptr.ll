@@ -419,18 +419,46 @@ define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
   ret ptr %R
 }
 
-define ptr @test_index_canon_const_expr_inbounds(ptr %X, i32 %Idx) {
+define ptr @test_index_canon_const_expr_inbounds() {
 ; CHECK-LABEL: @test_index_canon_const_expr_inbounds(
 ; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @Global, i64 123)
 ;
   ret ptr getelementptr inbounds (i8, ptr @Global, i32 123)
 }
 
-define ptr @test_index_canon_const_expr_nuw_nusw(ptr %X, i32 %Idx) {
+define ptr @test_index_canon_const_expr_nuw_nusw() {
 ; CHECK-LABEL: @test_index_canon_const_expr_nuw_nusw(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 123)
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @Global, i64 123)
 ;
   ret ptr getelementptr nusw nuw (i8, ptr @Global, i32 123)
+}
+
+define ptr @test_const_gep_gep_nuw() {
+; CHECK-LABEL: @test_const_gep_gep_nuw(
+; CHECK-NEXT:    ret ptr getelementptr nuw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nuw (i8, ptr getelementptr nuw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow_neg() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow_neg(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 -246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 -123), i64 -123)
+}
+
+define ptr @test_const_gep_gep_nusw_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_overflow(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 -2)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 u0x7fffffffffffffff), i64 u0x7fffffffffffffff)
 }
 
 define i1 @test17(ptr %P, i32 %I, i32 %J) {
@@ -986,8 +1014,8 @@ define i8 @test_gep_bitcast_as1(ptr addrspace(1) %arr, i16 %N) {
 ; The element size of the array matches the element size of the pointer
 define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element(
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr [[ARR:%.*]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr [[ARR:%.*]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1001,8 +1029,8 @@ define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 define i64 @test_gep_bitcast_array_same_size_element_addrspacecast(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_addrspacecast(
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ARR:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(3) [[CAST]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(3) [[CAST]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(3) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1029,8 +1057,8 @@ define i8 @test_gep_bitcast_array_different_size_element(ptr %arr, i64 %N) {
 
 define i64 @test_gep_bitcast_array_same_size_element_as1(ptr addrspace(1) %arr, i16 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_as1(
-; CHECK-NEXT:    [[V:%.*]] = shl i16 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(1) [[ARR:%.*]], i16 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i16 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(1) [[ARR:%.*]], i16 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(1) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1538,6 +1566,16 @@ define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
   ret ptr %ptr
 }
 
+define ptr @gep_sdiv_nuw(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_nuw(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr nuw %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
 define ptr @gep_ashr(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_ashr(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
@@ -1716,10 +1754,9 @@ if.else:
 
 @g = external global i8
 
-; FIXME: This is a miscompile
 define ptr @constexpr_gep_of_gep_with_narrow_type() {
 ; CHECK-LABEL: @constexpr_gep_of_gep_with_narrow_type(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 -2)
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 254)
 ;
   ret ptr getelementptr (i8, ptr getelementptr (i8, ptr @g, i8 127), i8 127)
 }
@@ -1730,6 +1767,26 @@ define ptr @gep_to_i8_nusw_nuw(ptr %p) {
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %gep = getelementptr nusw nuw i32, ptr %p, i64 1
+  ret ptr %gep
+}
+
+define ptr @gep_sel_const(i1 %c) {
+; CHECK-LABEL: @gep_sel_const(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr (i8, ptr @A, i64 5), ptr getelementptr (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr i8, ptr %sel, i64 5
+  ret ptr %gep
+}
+
+define ptr @gep_sel_const_nuw(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr nuw (i8, ptr @A, i64 5), ptr getelementptr nuw (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr nuw i8, ptr %sel, i64 5
   ret ptr %gep
 }
 
