@@ -56,6 +56,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
 EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
+  S.EvaluatingDecl = VD;
 
   if (const Expr *Init = VD->getAnyInitializer()) {
     QualType T = VD->getType();
@@ -69,6 +70,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
     EvalResult.setInvalid();
 
+  S.EvaluatingDecl = nullptr;
   return std::move(this->EvalResult);
 }
 
