@@ -10539,21 +10539,45 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                                           PrePostActionTy &) {
     // Fill up the arrays with all the mapped variables.
     MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+    CGOpenMPRuntime::TargetDataInfo Info;
 
     // Get map clause information.
-    MappableExprsHandler MEHandler(D, CGF);
-    MEHandler.generateAllInfo(CombinedInfo, OMPBuilder);
+    auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP)
+        -> llvm::OpenMPIRBuilder::MapInfosTy & {
+      CGF.Builder.restoreIP(CodeGenIP);
+      MappableExprsHandler MEHandler(D, CGF);
+      genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder);
+      return CombinedInfo;
+    };
 
-    CGOpenMPRuntime::TargetDataInfo Info;
-    // Fill up the arrays and create the arguments.
-    emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder,
-                         /*IsNonContiguous=*/true);
+    auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
+      if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
+        Info.CaptureDeviceAddrMap.try_emplace(DevVD, NewDecl);
+      }
+    };
+
+    auto CustomMapperCB = [&](unsigned int I) {
+      llvm::Value *MFunc = nullptr;
+      if (CombinedInfo.Mappers[I]) {
+        Info.HasMapper = true;
+        MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
+            cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
+      }
+      return MFunc;
+    };
+
+    // Fill up the basepointers, pointers and mapper arrays and create the
+    // arguments.
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+    InsertPointTy OffloadingArraysAllocaIP(CGF.AllocaInsertPt->getParent(),
+                                           CGF.AllocaInsertPt->getIterator());
+
+    OMPBuilder.emitOffloadingArraysAndArgs(
+        OffloadingArraysAllocaIP, CGF.Builder.saveIP(), Info, Info.RTArgs,
+        GenMapInfoCB, /*IsNonContiguous=*/true, /*ForEndCall=*/false,
+        DeviceAddrCB, CustomMapperCB);
     bool RequiresOuterTask = D.hasClausesOfKind<OMPDependClause>() ||
                              D.hasClausesOfKind<OMPNowaitClause>();
-    Info.EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
-                     llvm::codegenoptions::NoDebugInfo;
-    OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
-                                            /*ForEndCall=*/false);
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
                                           CGF.VoidPtrTy, CGM.getPointerAlign());
