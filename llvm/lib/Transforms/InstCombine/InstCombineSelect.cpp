@@ -3519,6 +3519,33 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
   return false;
 }
 
+/// Check whether the KnownBits of a select arm may be affected by the
+/// select condition.
+static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
+                             unsigned Depth) {
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
+
+  // Ignore the case where the select arm itself is affected. These cases
+  // are handled more efficiently by other optimizations.
+  if (Affected.contains(V) && Depth != 0)
+    return true;
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (isa<PHINode>(I)) {
+      if (Depth == MaxAnalysisRecursionDepth - 1)
+        return false;
+      Depth = MaxAnalysisRecursionDepth - 2;
+    }
+    return any_of(I->operands(), [&](Value *Op) {
+      return Op->getType()->isIntOrIntVectorTy() &&
+             hasAffectedValue(Op, Affected, Depth + 1);
+    });
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4024,7 +4051,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     });
     SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
     if (!CC.AffectedValues.empty()) {
-      if (!isa<Constant>(TrueVal)) {
+      if (!isa<Constant>(TrueVal) &&
+          hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
         KnownBits Known = llvm::computeKnownBits(TrueVal, /*Depth=*/0, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 1,
@@ -4032,7 +4060,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
 
       CC.Invert = true;
-      if (!isa<Constant>(FalseVal)) {
+      if (!isa<Constant>(FalseVal) &&
+          hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
         KnownBits Known = llvm::computeKnownBits(FalseVal, /*Depth=*/0, Q);
         if (Known.isConstant())
           return replaceOperand(SI, 2,
