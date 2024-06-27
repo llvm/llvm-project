@@ -18,6 +18,7 @@
 #include "CGDebugInfo.h"
 #include "CGHLSLRuntime.h"
 #include "CGOpenMPRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
 #include "TargetInfo.h"
@@ -558,8 +559,11 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     ReturnBlock.getBlock()->eraseFromParent();
   }
   if (ReturnValue.isValid()) {
+    // This only matters when ReturnValue isn't signed. ReturnValue is possibly
+    // signed only when the return is Indirect or InAlloca. In that case, a
+    // temporary alloca to store the return value isn't created.
     auto *RetAlloca =
-        dyn_cast<llvm::AllocaInst>(ReturnValue.emitRawPointer(*this));
+        dyn_cast_or_null<llvm::AllocaInst>(ReturnValue.getPointerIfNotSigned());
     if (RetAlloca && RetAlloca->use_empty()) {
       RetAlloca->eraseFromParent();
       ReturnValue = Address::invalid();
@@ -3136,4 +3140,58 @@ CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &PointerAuth,
 
   return EmitPointerAuthCommon(*this, PointerAuth, Pointer,
                                llvm::Intrinsic::ptrauth_auth);
+}
+
+llvm::Value *CodeGenFunction::EmitPointerAuthSign(QualType pointeeType,
+                                                  llvm::Value *pointer) {
+  CGPointerAuthInfo pointerAuth =
+      CGM.getPointerAuthInfoForPointeeType(pointeeType);
+  return EmitPointerAuthSign(pointerAuth, pointer);
+}
+
+llvm::Value *CodeGenFunction::EmitPointerAuthAuth(QualType pointeeType,
+                                                  llvm::Value *pointer) {
+  CGPointerAuthInfo pointerAuth =
+      CGM.getPointerAuthInfoForPointeeType(pointeeType);
+  return EmitPointerAuthAuth(pointerAuth, pointer);
+}
+
+llvm::Value *
+CodeGenFunction::EmitPointerAuthResignCall(llvm::Value *value,
+                                           const CGPointerAuthInfo &curAuth,
+                                           const CGPointerAuthInfo &newAuth) {
+  assert(curAuth && newAuth);
+
+  if (curAuth.getAuthenticationMode() !=
+          PointerAuthenticationMode::SignAndAuth ||
+      newAuth.getAuthenticationMode() !=
+          PointerAuthenticationMode::SignAndAuth) {
+    auto authedValue = EmitPointerAuthAuth(curAuth, value);
+    return EmitPointerAuthSign(newAuth, authedValue);
+  }
+  // Convert the pointer to intptr_t before signing it.
+  auto origType = value->getType();
+  value = Builder.CreatePtrToInt(value, IntPtrTy);
+
+  auto curKey = Builder.getInt32(curAuth.getKey());
+  auto newKey = Builder.getInt32(newAuth.getKey());
+
+  llvm::Value *curDiscriminator = curAuth.getDiscriminator();
+  if (!curDiscriminator)
+    curDiscriminator = Builder.getSize(0);
+
+  llvm::Value *newDiscriminator = newAuth.getDiscriminator();
+  if (!newDiscriminator)
+    newDiscriminator = Builder.getSize(0);
+
+  // call i64 @llvm.ptrauth.resign(i64 %pointer,
+  //                               i32 %curKey, i64 %curDiscriminator,
+  //                               i32 %newKey, i64 %newDiscriminator)
+  auto intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_resign);
+  value = EmitRuntimeCall(
+      intrinsic, {value, curKey, curDiscriminator, newKey, newDiscriminator});
+
+  // Convert back to the original type.
+  value = Builder.CreateIntToPtr(value, origType);
+  return value;
 }

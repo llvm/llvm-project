@@ -2151,7 +2151,8 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
 
   // Ignore argument 1, the format string. It is not currently used.
   CallArgList Args;
-  Args.add(RValue::get(BufAddr.emitRawPointer(*this)), Ctx.VoidPtrTy);
+  Args.add(RValue::get(getAsNaturalPointerTo(BufAddr, Ctx.VoidTy)),
+           Ctx.VoidPtrTy);
 
   for (const auto &Item : Layout.Items) {
     int Size = Item.getSizeByte();

@@ -1311,7 +1311,8 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
-        return Addr;
+        return CGF.AuthPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
+                                            CE->getType());
       }
       break;
 
@@ -1785,8 +1786,11 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   }
 
   // Emit as a constant.
-  auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
-                                               result.Val, resultType);
+  // Try to emit as a constant.
+  llvm::Constant *C =
+      ConstantEmitter(*this).tryEmitAbstract(result.Val, resultType);
+  if (!C)
+    return ConstantEmission();
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for

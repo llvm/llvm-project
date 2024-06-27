@@ -65,6 +65,16 @@
 // RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI,FUNC
 
 
+// RUN: %clang_cc1 -E %s -triple=aarch64 \
+// RUN:   -fptrauth-intrinsics \
+// RUN:   -fptrauth-calls \
+// RUN:   -fptrauth-returns \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-function-pointer-type-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=INTRIN,CALLS,RETS,VPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOINITFINI,FUNC
+
+
 #if __has_feature(ptrauth_intrinsics)
 // INTRIN: has_ptrauth_intrinsics
 void has_ptrauth_intrinsics() {}

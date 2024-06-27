@@ -330,8 +330,8 @@ void AggExprEmitter::withReturnValueSlot(
   if (!UseTemp)
     return;
 
-  assert(Dest.isIgnored() || Dest.emitRawPointer(CGF) !=
-                                 Src.getAggregatePointer(E->getType(), CGF));
+  assert(Dest.getAddress().isSigned() || Dest.isIgnored() ||
+         Dest.emitRawPointer(CGF) != Src.getAggregatePointer(E->getType(), CGF));
   EmitFinalDestCopy(E->getType(), Src);
 
   if (!RequiresDestruction && LifetimeStartInst) {
