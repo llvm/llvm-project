@@ -118,7 +118,7 @@ void f7(int *p) {
 
 void f8(int n) {
   int a[10] = {1};
-  int d = a[n] - a[0];
+  int d = a[n] - a[0]; // no-warning
 }
 
 int f9(const char *p1) {
@@ -130,4 +130,27 @@ int f9(const char *p1) {
 
 int f10(struct S *p1, struct S *p2) {
   return &p1->c[5] - &p2->c[5]; // no-warning
+}
+
+struct S1 {
+  int a;
+  int b; // expected-note{{Object at the right-hand side of subtraction}}
+};
+
+int f11() {
+  struct S1 s; // expected-note{{Object at the left-hand side of subtraction}}
+  return (char *)&s - (char *)&s.b; // expected-warning{{Subtraction of two pointers that}}
+}
+
+struct S2 {
+  char *p1;
+  char *p2;
+};
+
+void init_S2(struct S2 *);
+
+int f12() {
+  struct S2 s;
+  init_S2(&s);
+  return s.p1 - s.p2; // no-warning (pointers are unknown)
 }

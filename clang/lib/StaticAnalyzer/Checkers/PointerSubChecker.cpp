@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace ento;
@@ -175,12 +176,16 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
     //   do_something(&a.array[5] - &b.array[5]);
     // In this case don't emit notes.
     if (DiffDeclL != DiffDeclR) {
-      if (DiffDeclL)
-        R->addNote("Array at the left-hand side of subtraction",
-                   {DiffDeclL, C.getSourceManager()});
-      if (DiffDeclR)
-        R->addNote("Array at the right-hand side of subtraction",
-                   {DiffDeclR, C.getSourceManager()});
+      auto AddNote = [&R, &C](const ValueDecl *D, StringRef SideStr) {
+        if (D) {
+          std::string Msg = llvm::formatv(
+              "{0} at the {1}-hand side of subtraction",
+              D->getType()->isArrayType() ? "Array" : "Object", SideStr);
+          R->addNote(Msg, {D, C.getSourceManager()});
+        }
+      };
+      AddNote(DiffDeclL, "left");
+      AddNote(DiffDeclR, "right");
     }
     C.emitReport(std::move(R));
   }
