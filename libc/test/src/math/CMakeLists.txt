@@ -1933,6 +1933,21 @@ add_fp_unittest(
     libc.src.stdlib.srand
 )
 
+add_fp_unittest(
+  f16fmal_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmal
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

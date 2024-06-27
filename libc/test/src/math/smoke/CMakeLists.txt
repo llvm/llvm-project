@@ -3669,6 +3669,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16fmal_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmal
+)
+
+add_fp_unittest(
   f16fmaf128_test
   SUITE
     libc-math-smoke-tests

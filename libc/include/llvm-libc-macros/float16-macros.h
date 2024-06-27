@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_FLOAT16_MACROS_H
 #define LLVM_LIBC_MACROS_FLOAT16_MACROS_H
 
-#include "llvm-libc-types/float128.h"
+#include "../llvm-libc-types/float128.h"
 
 #if defined(__FLT16_MANT_DIG__) &&                                             \
     (!defined(__GNUC__) || __GNUC__ >= 13 || defined(__clang__)) &&            \
