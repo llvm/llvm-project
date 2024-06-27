@@ -1,0 +1,26 @@
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -mcpu=pwr8 -x mir < %s \
+# RUN:   -verify-machineinstrs --run-pass=register-coalescer -o - | FileCheck %s
+
+---
+name: check_subregs
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3
+
+    %0:g8rc_and_g8rc_nox0 = COPY $x3
+    %3:f8rc, %4:g8rc_and_g8rc_nox0 = LFSUX %0, %0
+    %5:f4rc = FRSP killed %3, implicit $rm
+    %22:vslrc = SUBREG_TO_REG 1, %5, %subreg.sub_64
+    %11:vrrc = XVCVDPSP killed %22, implicit $rm
+    $v2 = COPY %11
+    BLR8 implicit $lr8, implicit $rm, implicit $v2
+...
+
+# CHECK:         %0:g8rc_and_g8rc_nox0 = COPY $x3
+# CHECK-NEXT:    %1:f8rc, dead %2:g8rc_and_g8rc_nox0 = LFSUX %0, %0
+# CHECK-NEXT:    undef %4.sub_64:vslrc = FRSP %1, implicit $rm
+# CHECK-NEXT:    %5:vrrc = XVCVDPSP %4, implicit $rm
+# CHECK-NEXT:    $v2 = COPY %5
+# CHECK-NEXT:    BLR8 implicit $lr8, implicit $rm, implicit $v2
