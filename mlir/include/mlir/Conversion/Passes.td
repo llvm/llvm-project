@@ -40,7 +40,10 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
   let description = [{
     This is a generic pass to convert to SPIR-V.
   }];
-  let dependentDialects = ["spirv::SPIRVDialect"];
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+    "vector::VectorDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//

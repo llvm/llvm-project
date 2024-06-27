@@ -34,6 +34,66 @@ namespace mlir {
 
 using namespace mlir;
 
+//===----------------------------------------------------------------------===//
+// Vector Lowering
+//===----------------------------------------------------------------------===//
+
+int getComputeVectorSize(int64_t size) {
+  for (int i : {4, 3, 2}) {
+    if (size % i == 0)
+      return i;
+  }
+  return 1;
+}
+
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::MultiDimReductionOp op) {
+  // Unroll all reduction dimensions by size 1 for vector.multi_reduction.
+  VectorType srcVectorType = op.getSourceVectorType();
+  auto nativeSize = llvm::to_vector(srcVectorType.getShape());
+  auto dims = op.getReductionDims().getAsValueRange<IntegerAttr>();
+  for (const auto &dimAttr : dims) {
+    nativeSize[dimAttr.getZExtValue()] = 1;
+  }
+  return nativeSize;
+}
+
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::ReductionOp op) {
+  VectorType srcVectorType = op.getSourceVectorType();
+  assert(srcVectorType.getRank() == 1); // Guaranteed by semantics
+  int64_t vectorSize = getComputeVectorSize(srcVectorType.getDimSize(0));
+  return {vectorSize};
+}
+
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::TransposeOp op) {
+  VectorType vectorType = op.getResultVectorType();
+  SmallVector<int64_t> nativeSize(vectorType.getRank(), 1);
+  nativeSize.back() = getComputeVectorSize(vectorType.getShape().back());
+  return nativeSize;
+}
+
+SmallVector<int64_t> getNativeVectorShapeImpl(vector::GatherOp op) {
+  VectorType vectorType = op.getVectorType();
+  SmallVector<int64_t> nativeSize(vectorType.getRank(), 1);
+  nativeSize.back() = getComputeVectorSize(vectorType.getShape().back());
+  return nativeSize;
+}
+
+std::optional<SmallVector<int64_t>> getNativeVectorShape(Operation *op) {
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    if (auto vecType = llvm::dyn_cast<VectorType>(op->getResultTypes()[0])) {
+      SmallVector<int64_t> nativeSize(vecType.getRank(), 1);
+      nativeSize.back() = getComputeVectorSize(vecType.getShape().back());
+      return nativeSize;
+    }
+  }
+
+  return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
+      .Case<vector::MultiDimReductionOp, vector::ReductionOp,
+            vector::TransposeOp, vector::GatherOp>(
+          [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
+      .Default([](Operation *) { return std::nullopt; });
+}
+
 namespace {
 
 /// A pass to perform the SPIR-V conversion.
@@ -47,13 +107,94 @@ struct ConvertToSPIRVPass final
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
     SPIRVTypeConverter typeConverter(targetAttr);
 
+    // Unroll vectors in function signature to native vector size.
+    {
+      llvm::errs() << "Start unrolling function signature\n";
+      RewritePatternSet patterns(context);
+      // TODO: This is hardcoded to unroll with size 1. Change this later
+      SmallVector<int64_t> nativeShape(1, 1);
+      auto options = vector::UnrollVectorOptions().setNativeShape(nativeShape);
+      populateVectorUnrollFuncSignaturePatterns(patterns, options);
+      GreedyRewriteConfig config;
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        return signalPassFailure();
+      llvm::errs() << "Finish unrolling function signature\n";
+    }
+
+    // Unroll vectors to native vector size.
+    {
+      RewritePatternSet patterns(context);
+      auto options = vector::UnrollVectorOptions().setNativeShapeFn(
+          [=](auto op) { return getNativeVectorShape(op); });
+      populateVectorUnrollPatterns(patterns, options);
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+        return signalPassFailure();
+    }
+
+    // Next run canonicalization to cast away leading size-1 dimensions.
+    {
+      RewritePatternSet patterns(context);
+
+      // We need to pull in casting way leading one dims to allow cancelling
+      // some read/write ops.
+      vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+
+      // We may have vector.insert_strided_slice inserting 1-D native vectors
+      // into n-D larger vectors with the above. Break that down too. This is a
+      // companion transformation of unrolling.
+      vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
+          patterns);
+      vector::ExtractOp::getCanonicalizationPatterns(patterns, context);
+
+      // Trimming leading unit dims may generate broadcast/shape_cast ops. Clean
+      // them up.
+      vector::BroadcastOp::getCanonicalizationPatterns(patterns, context);
+      vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
+
+      vector::TransferReadOp::getCanonicalizationPatterns(patterns, context);
+      vector::TransferWriteOp::getCanonicalizationPatterns(patterns, context);
+
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+        return signalPassFailure();
+    }
+
+    // Convert vector.extract_strided_slice into a chain of vector.extract and
+    // then a chain of vector.insert ops. This helps to cancel with previous
+    // vector.insert/extract ops, especially for fP16 cases where we have
+    // mismatched vector size for transfer and compute.
+    {
+      RewritePatternSet patterns(context);
+      vector::populateVectorExtractStridedSliceToExtractInsertChainPatterns(
+          patterns, [](vector::ExtractStridedSliceOp op) {
+            return op.getSourceVectorType().getNumElements() > 4;
+          });
+      vector::InsertOp::getCanonicalizationPatterns(patterns, context);
+      vector::ExtractOp::getCanonicalizationPatterns(patterns, context);
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+        return signalPassFailure();
+    }
+
+    // Run all sorts of canonicalization patterns to clean up again.
+    {
+      RewritePatternSet patterns(context);
+      vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+      vector::InsertOp::getCanonicalizationPatterns(patterns, context);
+      vector::ExtractOp::getCanonicalizationPatterns(patterns, context);
+      vector::TransferReadOp::getCanonicalizationPatterns(patterns, context);
+      vector::TransferWriteOp::getCanonicalizationPatterns(patterns, context);
+      vector::ReductionOp::getCanonicalizationPatterns(patterns, context);
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+        return signalPassFailure();
+    }
+
     RewritePatternSet patterns(context);
     ScfToSPIRVContext scfToSPIRVContext;
 
-    // Populate patterns.
+    // Populate patterns for each dialect.
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
-    populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
+    // populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
     index::populateIndexToSPIRVPatterns(typeConverter, patterns);
     populateVectorToSPIRVPatterns(typeConverter, patterns);
