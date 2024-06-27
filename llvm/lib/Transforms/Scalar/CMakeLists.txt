@@ -48,6 +48,7 @@ add_llvm_component_library(LLVMScalarOpts
   LoopUnrollAndJamPass.cpp
   LoopVersioningLICM.cpp
   LowerAtomicPass.cpp
+  LowerConditionalStoreIntrinsic.cpp
   LowerConstantIntrinsics.cpp
   LowerExpectIntrinsic.cpp
   LowerGuardIntrinsic.cpp
