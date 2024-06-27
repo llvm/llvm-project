@@ -1155,6 +1155,11 @@ static bool isOpSibling(Operation *target, Operation *source,
 bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
                                          LoopLikeOpInterface source,
                                          Diagnostic &diag) {
+  if (target->getName() != source->getName()) {
+    diag << "target and source must be same loop type";
+    return false;
+  }
+
   bool iterSpaceEq =
       target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
       target.getLoopUpperBounds() == source.getLoopUpperBounds() &&

@@ -526,3 +526,36 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @non_matching_loop_types_err(%A: memref<2xf32>, %B: memref<2xf32>) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c1fp = arith.constant 1.0 : f32
+  %sum = memref.alloc()  : memref<2xf32>
+  // expected-error @below {{target and source must be same loop type}}
+  scf.for %i = %c0 to %c2 step %c1 {
+    %B_elem = memref.load %B[%i] : memref<2xf32>
+    %sum_elem = arith.addf %B_elem, %c1fp : f32
+    memref.store %sum_elem, %sum[%i] : memref<2xf32>
+  }
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    %sum_elem = memref.load %sum[%i] : memref<2xf32>
+    %A_elem = memref.load %A[%i] : memref<2xf32>
+    %product_elem = arith.mulf %sum_elem, %A_elem : f32
+    memref.store %product_elem, %B[%i] : memref<2xf32>
+    scf.reduce
+  }
+  memref.dealloc %sum : memref<2xf32>
+  return
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.match ops{["scf.parallel"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %fused = transform.loop.fuse_sibling %0 into %1 : (!transform.any_op,!transform.any_op) ->  !transform.any_op
+    transform.yield
+  }
+}
