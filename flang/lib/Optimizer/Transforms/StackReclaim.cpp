@@ -31,11 +31,23 @@ public:
 };
 } // namespace
 
+uint64_t getAllocaAddressSpace(Operation *op) {
+  mlir::ModuleOp module = mlir::dyn_cast_or_null<mlir::ModuleOp>(op);
+  if (!module)
+    module = op->getParentOfType<mlir::ModuleOp>();
+
+  if (mlir::Attribute addrSpace =
+          mlir::DataLayout(module).getAllocaMemorySpace())
+    return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return 0;
+}
+
 void StackReclaimPass::runOnOperation() {
   auto *op = getOperation();
   auto *context = &getContext();
   mlir::OpBuilder builder(context);
-  mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(context);
+  mlir::Type voidPtr =
+      mlir::LLVM::LLVMPointerType::get(context, getAllocaAddressSpace(op));
 
   op->walk([&](fir::DoLoopOp loopOp) {
     mlir::Location loc = loopOp.getLoc();
