@@ -608,7 +608,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBranchProbabilityInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTreeWrapperPass>();
@@ -627,7 +627,7 @@ char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
 
 INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
@@ -3425,7 +3425,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   F = &MF;
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MBFI = std::make_unique<MBFIWrapper>(
       getAnalysis<MachineBlockFrequencyInfo>());
   MLI = &getAnalysis<MachineLoopInfo>();
@@ -3726,7 +3726,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBranchProbabilityInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -3741,7 +3741,7 @@ char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStats::ID;
 
 INITIALIZE_PASS_BEGIN(MachineBlockPlacementStats, "block-placement-stats",
                       "Basic Block Placement Stats", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
                     "Basic Block Placement Stats", false, false)
@@ -3754,7 +3754,7 @@ bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
   if (!isFunctionInPrintList(F.getName()))
     return false;
 
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
 
   for (MachineBasicBlock &MBB : F) {
