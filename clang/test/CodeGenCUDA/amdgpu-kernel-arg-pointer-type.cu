@@ -16,9 +16,8 @@
 
 // HOST: define{{.*}} void @_Z22__device_stub__kernel1Pi(ptr noundef %x)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel1Pi(ptr addrspace(1){{.*}} %x.coerce)
-// CHECK:     ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
 // CHECK-NOT: ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
-// OPT: [[VAL:%.*]] = load i32, ptr addrspace(1) %x.coerce, align 4, !amdgpu.noclobber ![[MD:[0-9]+]]
+// OPT: [[VAL:%.*]] = load i32, ptr addrspace(1) %x.coerce, align 4{{$}}
 // OPT: [[INC:%.*]] = add nsw i32 [[VAL]], 1
 // OPT: store i32 [[INC]], ptr addrspace(1) %x.coerce, align 4
 // OPT: ret void
@@ -28,9 +27,8 @@ __global__ void kernel1(int *x) {
 
 // HOST: define{{.*}} void @_Z22__device_stub__kernel2Ri(ptr noundef nonnull align 4 dereferenceable(4) %x)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel2Ri(ptr addrspace(1){{.*}} nonnull align 4 dereferenceable(4) %x.coerce)
-// CHECK:     ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
 // CHECK-NOT: ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
-// OPT: [[VAL:%.*]] = load i32, ptr addrspace(1) %x.coerce, align 4, !amdgpu.noclobber ![[MD]]
+// OPT: [[VAL:%.*]] = load i32, ptr addrspace(1) %x.coerce, align 4{{$}}
 // OPT: [[INC:%.*]] = add nsw i32 [[VAL]], 1
 // OPT: store i32 [[INC]], ptr addrspace(1) %x.coerce, align 4
 // OPT: ret void
@@ -67,7 +65,7 @@ struct S {
 // OPT: [[R1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) %0, i64 8
 // OPT: [[P1:%.*]] = load ptr, ptr addrspace(4) [[R1]], align 8
 // OPT: [[G1:%.*]] ={{.*}} addrspacecast ptr [[P1]] to ptr addrspace(1)
-// OPT: [[V0:%.*]] = load i32, ptr addrspace(1) [[G0]], align 4, !amdgpu.noclobber ![[MD]]
+// OPT: [[V0:%.*]] = load i32, ptr addrspace(1) [[G0]], align 4, !amdgpu.noclobber ![[MD:[0-9]+]]
 // OPT: [[INC:%.*]] = add nsw i32 [[V0]], 1
 // OPT: store i32 [[INC]], ptr addrspace(1) [[G0]], align 4
 // OPT: [[V1:%.*]] = load float, ptr addrspace(1) [[G1]], align 4
@@ -126,9 +124,8 @@ struct SS {
 };
 // HOST: define{{.*}} void @_Z22__device_stub__kernel82SS(ptr %a.coerce)
 // COMMON-LABEL: define{{.*}} amdgpu_kernel void @_Z7kernel82SS(ptr addrspace(1){{.*}} %a.coerce)
-// CHECK:     ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
 // CHECK-NOT: ={{.*}} addrspacecast ptr addrspace(1) %{{.*}} to ptr
-// OPT: [[VAL:%.*]] = load float, ptr addrspace(1) %a.coerce, align 4, !amdgpu.noclobber ![[MD]]
+// OPT: [[VAL:%.*]] = load float, ptr addrspace(1) %a.coerce, align 4{{$}}
 // OPT: [[INC:%.*]] = fadd contract float [[VAL]], 3.000000e+00
 // OPT: store float [[INC]], ptr addrspace(1) %a.coerce, align 4
 // OPT: ret void
