@@ -1,4 +1,4 @@
-# REQUIRES: python-38, system-linux
+# REQUIRES: system-linux
 
 ## Test the functionality of extract_ir_lib
 
