@@ -7,7 +7,7 @@ Contents:
    :maxdepth: 2
 
    user-docs/Installation
-   user-docs/ScanBuild
+   user-docs/CommandLineUsage
    user-docs/UsingWithXCode
    user-docs/CrossTranslationUnit
    user-docs/TaintAnalysisConfiguration

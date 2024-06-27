@@ -1,23 +1,91 @@
-scan-build: running the analyzer from the command line
-======================================================
+Command-Line Usage: CodeChecker and scan-build
+===============================================
 
-.. contents::
-   :local:
+This document provides guidelines for running Clang Static Analyzer from the command line on whole projects.
+CodeChecker and scan-build are two CLI tools for using CSA on multiple files (tranlation units).
+Both provide a way of driving the analyzer, detecting compilation flags, and generating reports.
+CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
+Therefore CodeChecker is recommended in case you need any of the above features or just more customizability in general.
 
-What is it?
+Comparison of CodeChecker and scan-build
+----------------------------------------
+
+Static Analyzer is by design a GUI tool originally intended to be consumed by the XCode IDE.
+Its purpose is to find buggy execution paths in the program, and such paths are very hard to comprehend by looking at a non-interactive standard output.
+It is possible, however, to invoke the Static Analyzer from the command line in order to obtain analysis results, and then later view them interactively in a graphical interface.
+The following tools are used commonly to run the analyzer from the commandline.
+Both tools are wrapper scripts to drive the analysis and the underlying invocations of the Clang compiler:
+
+1. CodeChecker_ is a driver and web server that runs the Static Analyzer on your projects on demand and maintains a database of issues.
+    - Perfect for managing large amounts of Static Analyzer warnings in a collaborative environment.
+    - Generally much more feature-rich than scan-build.
+    - Supports incremental analysis: Results can be stored in a database, subsequent analysis runs can be compared to list the newly added defects.
+    - :doc:`CrossTranslationUnit` is supported fully on Linux via CodeChecker.
+    - Can run clang-tidy checkers too.
+    - Open source, but out-of-tree, i.e. not part of the LLVM project.
+
+2. scan-build_ is an old and simple command-line tool that emits static analyzer warnings as HTML files while compiling your project. You can view the analysis results in your web browser.
+    - Useful for individual developers who simply want to view static analysis results at their desk, or in a very simple collaborative environment.
+    - Works on all major platforms (Windows, Linux, macOS) and is available as a package in many Linux distributions.
+    - Does not include support for cross-translation-unit analysis.
+
+CodeChecker
 -----------
+
+Basic Usage
+~~~~~~~~~~~
+
+Install CodeChecker as described here: `CodeChecker Install Guide <https://github.com/Ericsson/codechecker/#Install-guide>`_.
+
+Create a compilation database. If you use cmake then pass the ``-DCMAKE_EXPORT_COMPILE_COMMANDS=1`` parameter to cmake. Cmake will create a ``compile_commands.json`` file.
+If you have a Makefile based or similar build system then you can log the build commands with the help of CodeChecker::
+
+    make clean
+    CodeChecker log -b "make" -o compile_commands.json
+
+Analyze your project::
+
+    CodeChecker analyze compile_commands.json -o ./reports
+
+View the analysis results.
+Print the detailed results in the command line::
+
+    CodeChecker parse --print-steps ./reports
+
+Or view the detailed results in a browser::
+
+    CodeChecker parse ./reports -e html -o ./reports_html
+    firefox ./reports_html/index.html
+
+Optional: store the analysis results in a DB::
+
+    mkdir ./ws
+    CodeChecker server -w ./ws -v 8555 &
+    CodeChecker store ./reports --name my-project --url http://localhost:8555/Default
+
+Optional: manage (categorize, suppress) the results in your web browser::
+
+    firefox http://localhost:8555/Default
+
+Detailed Usage
+~~~~~~~~~~~~~~
+
+For extended documentation please refer to the `official site of CodeChecker <https://github.com/Ericsson/codechecker/blob/master/docs/usage.md>`_!
+
+scan-build
+----------
 
 **scan-build** is a command line utility that enables a user to run the static analyzer over their codebase as part of performing a regular build (from the command line).
 
 How does it work?
------------------
+~~~~~~~~~~~~~~~~~
 
 During a project build, as source files are compiled they are also analyzed in tandem by the static analyzer.
 
 Upon completion of the build, results are then presented to the user within a web browser.
 
 Will it work with any build system?
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **scan-build** has little or no knowledge about how you build your code. It works by overriding the ``CC`` and ``CXX`` environment variables to (hopefully) change your build to use a "fake" compiler instead of the one that would normally build your project. This fake compiler executes either ``clang`` or ``gcc`` (depending on the platform) to compile your code and then executes the static analyzer to analyze your code.
 
@@ -29,27 +97,8 @@ This "poor man's interposition" works amazingly well in many cases and falls dow
 
 **Viewing static analyzer results in a web browser**
 
-Contents
---------
-
-- `Getting Started <#getting-started>`_
-  - `Basic Usage <#basic-usage>`_
-  - `For Windows Users <#for-windows-users>`_
-  - `Other Options <#other-options>`_
-  - `Output of scan-build <#output-of-scan-build>`_
-- `Recommended Usage Guidelines <#recommended-usage-guidelines>`_
-  - `Always Analyze a Project in its "Debug" Configuration <#always-analyze-a-project-in-its-debug-configuration>`_
-  - `Use Verbose Output when Debugging scan-build <#use-verbose-output-when-debugging-scan-build>`_
-  - `Run './configure' through scan-build <#run-configure-through-scan-build>`_
-- `Analyzing iPhone Projects <#analyzing-iphone-projects>`_
-
-Getting Started
----------------
-
-The ``scan-build`` command can be used to analyze an entire project by essentially interposing on a project's build process. This means that to run the analyzer using ``scan-build``, you will use ``scan-build`` to analyze the source files compiled by ``gcc``/``clang`` during a project build. This means that any files that are not compiled will also not be analyzed.
-
 Basic Usage
------------
+~~~~~~~~~~~
 
 Basic usage of ``scan-build`` is designed to be simple: just place the word "scan-build" in front of your build command::
 
@@ -75,7 +124,7 @@ It is also possible to use ``scan-build`` to analyze specific files::
 This example causes the files ``t1.c`` and ``t2.c`` to be analyzed.
 
 For Windows Users
------------------
+~~~~~~~~~~~~~~~~~
 
 Windows users must have Perl installed to use scan-build.
 
@@ -92,7 +141,7 @@ If you have unexpected compilation/make problems when running scan-build with Mi
 - If getting ``"Error : *** target pattern contains no `%'"`` while using GNU Make 3.81, try to use another version of make.
 
 Other Options
--------------
+~~~~~~~~~~~~~
 
 As mentioned above, extra options can be passed to ``scan-build``. These options prefix the build command. For example::
 
@@ -111,31 +160,31 @@ Here is a subset of useful options:
 A complete list of options can be obtained by running ``scan-build`` with no arguments.
 
 Output of scan-build
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 The output of scan-build is a set of HTML files, each one which represents a separate bug report. A single ``index.html`` file is generated for surveying all of the bugs. You can then just open ``index.html`` in a web browser to view the bug reports.
 
 Where the HTML files are generated is specified with a **-o** option to ``scan-build``. If **-o** isn't specified, a directory in ``/tmp`` is created to store the files (``scan-build`` will print a message telling you where they are). If you want to view the reports immediately after the build completes, pass **-V** to ``scan-build``.
 
 Recommended Usage Guidelines
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes a few recommendations with running the analyzer.
 
 Always Analyze a Project in its "Debug" Configuration
------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Most projects can be built in a "debug" mode that enables assertions. Assertions are picked up by the static analyzer to prune infeasible paths, which in some cases can greatly reduce the number of false positives (bogus error reports) emitted by the tool.
 
 Another option is to use ``--force-analyze-debug-code`` flag of **scan-build** tool which would enable assertions automatically.
 
 Use Verbose Output when Debugging scan-build
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``scan-build`` takes a **-v** option to emit verbose output about what it's doing; two **-v** options emit more information. Redirecting the output of ``scan-build`` to a text file (make sure to redirect standard error) is useful for filing bug reports against ``scan-build`` or the analyzer, as we can see the exact options (and files) passed to the analyzer. For more comprehensible logs, don't perform a parallel build.
 
 Run './configure' through scan-build
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If an analyzed project uses an autoconf generated ``configure`` script, you will probably need to run ``configure`` script through ``scan-build`` in order to analyze the project.
 
@@ -149,19 +198,19 @@ The reason ``configure`` also needs to be run through ``scan-build`` is because 
 Running ``configure`` typically generates makefiles that have hardwired paths to the compiler, and by running ``configure`` through ``scan-build`` that path is set to ``ccc-analyzer``.
 
 Analyzing iPhone Projects
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Conceptually Xcode projects for iPhone applications are nearly the same as their cousins for desktop applications. **scan-build** can analyze these projects as well, but users often encounter problems with just building their iPhone projects from the command line because there are a few extra preparative steps they need to take (e.g., setup code signing).
 
 Recommendation: use "Build and Analyze"
----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The absolute easiest way to analyze iPhone projects is to use the `Analyze feature in Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_ (which is based on the Clang Static Analyzer). There a user can analyze their project right from a menu without most of the setup described later.
 
 `Instructions are available <../xcode.html>`_ on this website on how to use open source builds of the analyzer as a replacement for the one bundled with Xcode.
 
 Using scan-build directly
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you wish to use **scan-build** with your iPhone project, keep the following things in mind:
 
@@ -178,7 +227,7 @@ Alternatively, if your application targets iPhoneOS 3.0::
   $ scan-build xcodebuild -configuration Debug -sdk iphonesimulator3.0
 
 Gotcha: using the right compiler
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Recall that **scan-build** analyzes your project by using a compiler to compile the project and ``clang`` to analyze your project. The script uses simple heuristics to determine which compiler should be used (it defaults to ``clang`` on Darwin and ``gcc`` on other platforms). When analyzing iPhone projects, **scan-build** may pick the wrong compiler than the one Xcode would use to build your project. For example, this could be because multiple versions of a compiler may be installed on your system, especially if you are developing for the iPhone.
 
