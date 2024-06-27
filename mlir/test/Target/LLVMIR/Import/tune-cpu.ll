@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 ; CHECK-LABEL: llvm.func @tune_cpu()

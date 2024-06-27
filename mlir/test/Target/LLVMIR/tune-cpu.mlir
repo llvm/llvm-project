@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK: define void @tune_cpu() #[[ATTRS:.*]] {
