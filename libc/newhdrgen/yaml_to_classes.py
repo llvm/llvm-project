@@ -51,7 +51,7 @@ def yaml_to_classes(yaml_data):
         arguments = [arg["type"] for arg in function_data["arguments"]]
         guard = function_data.get("guard", None)
         attributes = function_data.get("attributes", None)
-        standards = function_data.get("standards", None),
+        standards = (function_data.get("standards", None),)
         header.add_function(
             Function(
                 standards,
@@ -62,7 +62,7 @@ def yaml_to_classes(yaml_data):
                 attributes,
             )
         )
-    
+
     for object_data in yaml_data.get("objects", []):
         header.add_object(
             Object(object_data["object_name"], object_data["object_type"])

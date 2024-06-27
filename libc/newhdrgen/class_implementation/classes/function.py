@@ -16,7 +16,9 @@ class Function:
         self.standards = standards
         self.return_type = return_type
         self.name = name
-        self.arguments = [arg if isinstance(arg, str) else arg['type'] for arg in arguments]
+        self.arguments = [
+            arg if isinstance(arg, str) else arg["type"] for arg in arguments
+        ]
         self.guard = guard
         self.attributes = attributes
 
