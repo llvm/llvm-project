@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of pointer
 ! and target with target across multiple scopes
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test

@@ -1,7 +1,7 @@
 ! Offloading test checking interaction of an
 ! explicit member map from a small nested
 ! derived type
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

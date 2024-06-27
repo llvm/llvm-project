@@ -1,8 +1,7 @@
 ! Offloading test checking interaction of allocatables
 ! with multi-dimensional bounds (3-D in this case) and
 ! a target region
-! REQUIRES: flang
-! REQUIRES: amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

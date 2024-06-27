@@ -1,8 +1,7 @@
 ! Offloading test checking interaction of a
 ! two 1-D allocatable arrays with a target region
 ! while providing the map upper and lower bounds
-! REQUIRES: flang
-! REQUIRES: amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

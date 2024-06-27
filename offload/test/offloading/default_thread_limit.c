@@ -3,9 +3,7 @@
 // RUN: env LIBOMPTARGET_INFO=16 \
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
 
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-// REQUIRES: gpu
+// REQUIRES: amdgpu
 
 __attribute__((optnone)) int optnone() { return 1; }
 

@@ -1,8 +1,6 @@
 ! Basic offloading test of arrays with provided lower
 ! and upper bounds as specified by OpenMP's sectioning
-! REQUIRES: flang
-! REQUIRES: gpu
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

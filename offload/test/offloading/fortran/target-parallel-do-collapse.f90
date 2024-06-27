@@ -1,7 +1,5 @@
 ! Basic offloading test with a target region
-! REQUIRES: flang
-! REQUIRES: gpu
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-generic
 ! RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic

@@ -3,7 +3,7 @@
 ! an array with bounds when mapped to
 ! target using a combination of enter and
 ! exit directives.
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

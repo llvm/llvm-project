@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of allocatables
 ! with target in different scopes
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 module test

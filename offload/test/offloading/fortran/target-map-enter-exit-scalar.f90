@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of an
 ! enter and exit map of an scalar
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

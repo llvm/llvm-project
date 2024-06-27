@@ -2,7 +2,7 @@
 ! derived type's with a mix of explicit and
 ! implicit member mapping of arrays to target
 ! one with bounds.
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

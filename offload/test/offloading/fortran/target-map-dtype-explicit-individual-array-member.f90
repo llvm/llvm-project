@@ -1,7 +1,7 @@
 ! Offloading test checking interaction of an
 ! explicit derived type member mapping of
 ! an array when mapped to target
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

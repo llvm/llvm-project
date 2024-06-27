@@ -2,7 +2,7 @@
 ! explicit derived type mapping when mapped
 ! to target and assinging one derived type
 ! to another
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

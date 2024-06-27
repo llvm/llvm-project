@@ -2,9 +2,7 @@
 ! that checks constant indexing on device
 ! correctly works (regression test for prior
 ! bug).
-! REQUIRES: flang
-! REQUIRES: gpu
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

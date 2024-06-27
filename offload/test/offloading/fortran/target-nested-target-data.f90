@@ -1,8 +1,6 @@
 ! Offloading test for target nested inside
 ! a target data region
-! REQUIRES: flang
-! REQUIRES: gpu
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

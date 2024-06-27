@@ -1,8 +1,6 @@
 ! Basic offloading test of a regular array explicitly
 ! passed within a target region
-! REQUIRES: flang
-! REQUIRES: gpu
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

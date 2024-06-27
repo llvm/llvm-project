@@ -1,7 +1,7 @@
 ! Offloading test checking interaction of two
 ! explicit arrau member maps with bounds from
 ! two nested derived types
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

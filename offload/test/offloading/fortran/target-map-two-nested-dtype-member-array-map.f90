@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of an
 ! explicit member map utilising array bounds
-! REQUIRES: flang, amdgcn-amd-amdhsa
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main
