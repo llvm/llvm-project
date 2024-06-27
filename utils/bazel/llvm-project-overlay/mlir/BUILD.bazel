@@ -2200,6 +2200,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
         "//llvm:Support",
