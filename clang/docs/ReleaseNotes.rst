@@ -115,6 +115,7 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
