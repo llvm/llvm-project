@@ -1790,4 +1790,106 @@ define ptr @gep_sel_const_nuw(i1 %c) {
   ret ptr %gep
 }
 
+define ptr @gep_of_udiv(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_udiv(
+; CHECK-NEXT:    [[IDX:%.*]] = udiv exact i64 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = udiv exact i64 %x, 12
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_udiv_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_udiv_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = udiv exact i64 [[X:%.*]], 13
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = udiv exact i64 %x, 13
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+
+define ptr @gep_of_sdiv(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv(
+; CHECK-NEXT:    [[IDX:%.*]] = sdiv exact i64 [[X:%.*]], -36
+; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv exact i64 %x, -36
+  %r = getelementptr nusw nuw i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+
+define ptr @gep_of_sdiv_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = sdiv exact i64 [[X:%.*]], -35
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv exact i64 %x, -35
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_sdiv_fail_ub(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv_fail_ub(
+; CHECK-NEXT:    [[IDX:%.*]] = sdiv i64 [[X:%.*]], -4
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv i64 %x, -4
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_lshr(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_lshr(
+; CHECK-NEXT:    [[IDX:%.*]] = lshr exact i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = lshr exact i64 %x, 3
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_ashr(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_ashr(
+; CHECK-NEXT:    [[IDX:%.*]] = ashr exact i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = ashr exact i64 %x, 3
+  %r = getelementptr inbounds i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_lshr_fail_missing_exact(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_lshr_fail_missing_exact(
+; CHECK-NEXT:    [[IDX:%.*]] = lshr i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = lshr i64 %x, 3
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_ashr_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_ashr_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = ashr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = ashr exact i64 %x, 1
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+
 !0 = !{!"branch_weights", i32 2, i32 10}
