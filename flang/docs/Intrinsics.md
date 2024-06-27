@@ -893,16 +893,17 @@ used in constant expressions have currently no folding support at all.
 ##### `CMDSTAT`:
 
 - Synchronous execution:
-  - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
-  - -1: The processor does not support command line execution.
+  - -2: `ASYNC_NO_SUPPORT_ERR` - No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
+  - -1: `NO_SUPPORT_ERR` - The processor does not support command line execution. (system returns -1 with errno `ENOENT`)
+  - 0: `CMD_EXECUTED` - Command executed with no error.
   - \+ (positive value): An error condition occurs.
-    - 1: Fork Error (occurs only on POSIX-compatible systems).
-    - 2: Execution Error (command exits with status -1).
-    - 3: Invalid Command Error (determined by the exit code depending on the system).
-      - On Windows: exit code is 1.
-      - On POSIX-compatible systems: exit code is 127 or 126.
-    - 4: Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
-  - 0: Otherwise.
+    - 1: `FORK_ERR` - Fork Error (occurs only on POSIX-compatible systems).
+    - 2: `EXECL_ERR` - Execution Error (system returns -1 with other errno).
+    - 3: `COMMAND_EXECUTION_ERR` - Invalid Command Error (exit code 1).
+    - 4: `COMMAND_CANNOT_EXECUTE_ERR` - Command Cannot Execute Error (Linux exit code 126).
+    - 5: `COMMAND_NOT_FOUND_ERR` - Command Not Found Error (Linux exit code 127).
+    - 6: `INVALID_CL_ERR` - Invalid Command Line Error (covers all other non-zero exit codes).
+    - 7: `SIGNAL_ERR` - Signal error (either stopped or killed by signal, occurs only on POSIX-compatible systems).
 - Asynchronous execution:
   - 0 will always be assigned.
 
