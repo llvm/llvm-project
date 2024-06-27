@@ -979,6 +979,10 @@ template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float16, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, float16, double, RoundingMode);
+template void
+explain_ternary_operation_one_output_error(Operation,
+                                           const TernaryInput<long double> &,
+                                           float16, double, RoundingMode);
 #endif
 
 template <typename InputType, typename OutputType>
@@ -1130,6 +1134,10 @@ template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<double> &,
                                                    float16, double,
                                                    RoundingMode);
+template bool
+compare_ternary_operation_one_output(Operation,
+                                     const TernaryInput<long double> &, float16,
+                                     double, RoundingMode);
 #endif
 
 } // namespace internal

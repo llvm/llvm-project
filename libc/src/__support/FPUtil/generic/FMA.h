@@ -12,6 +12,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
@@ -107,7 +108,9 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                  sizeof(OutType) <= sizeof(InType),
                              OutType>
 fma(InType x, InType y, InType z) {
-  using InFPBits = fputil::FPBits<InType>;
+  using OutFPBits = FPBits<OutType>;
+  using OutStorageType = typename OutFPBits::StorageType;
+  using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
 
   constexpr int IN_EXPLICIT_MANT_LEN = InFPBits::FRACTION_LEN + 1;
@@ -115,6 +118,42 @@ fma(InType x, InType y, InType z) {
   constexpr size_t TMP_RESULT_LEN = cpp::bit_ceil(PROD_LEN + 1);
   using TmpResultType = UInt<TMP_RESULT_LEN>;
   using DyadicFloat = DyadicFloat<TMP_RESULT_LEN>;
+
+  InFPBits x_bits(x), y_bits(y), z_bits(z);
+
+  if (LIBC_UNLIKELY(x_bits.is_nan() || y_bits.is_nan() || z_bits.is_nan())) {
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan() ||
+          z_bits.is_signaling_nan())
+        raise_except_if_required(FE_INVALID);
+
+      if (x_bits.is_quiet_nan()) {
+        InStorageType x_payload = static_cast<InStorageType>(getpayload(x));
+        if ((x_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
+          return OutFPBits::quiet_nan(x_bits.sign(),
+                                      static_cast<OutStorageType>(x_payload))
+              .get_val();
+      }
+
+      if (y_bits.is_quiet_nan()) {
+        InStorageType y_payload = static_cast<InStorageType>(getpayload(y));
+        if ((y_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
+          return OutFPBits::quiet_nan(y_bits.sign(),
+                                      static_cast<OutStorageType>(y_payload))
+              .get_val();
+      }
+
+      if (z_bits.is_quiet_nan()) {
+        InStorageType z_payload = static_cast<InStorageType>(getpayload(z));
+        if ((z_payload & ~(OutFPBits::FRACTION_MASK >> 1)) == 0)
+          return OutFPBits::quiet_nan(z_bits.sign(),
+                                      static_cast<OutStorageType>(z_payload))
+              .get_val();
+      }
+
+      return OutFPBits::quiet_nan().get_val();
+    }
+  }
 
   if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
     return static_cast<OutType>(x * y + z);
@@ -137,7 +176,9 @@ fma(InType x, InType y, InType z) {
     z *= InType(InStorageType(1) << InFPBits::FRACTION_LEN);
   }
 
-  InFPBits x_bits(x), y_bits(y), z_bits(z);
+  x_bits = InFPBits(x);
+  y_bits = InFPBits(y);
+  z_bits = InFPBits(z);
   const Sign z_sign = z_bits.sign();
   Sign prod_sign = (x_bits.sign() == y_bits.sign()) ? Sign::POS : Sign::NEG;
   x_exp += x_bits.get_biased_exponent();
