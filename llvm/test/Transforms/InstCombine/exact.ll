@@ -338,9 +338,8 @@ define <2 x i1> @sdiv_icmp6_vec(<2 x i64> %X) {
 
 define i8 @mul_of_udiv(i8 %x) {
 ; CHECK-LABEL: @mul_of_udiv(
-; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i8 [[X:%.*]], 12
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[DIV]], 6
-; CHECK-NEXT:    ret i8 [[MUL]]
+; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[MUL1]]
 ;
   %div = udiv exact i8 %x, 12
   %mul = mul i8 %div, 6
@@ -349,8 +348,8 @@ define i8 @mul_of_udiv(i8 %x) {
 
 define i8 @mul_of_sdiv(i8 %x) {
 ; CHECK-LABEL: @mul_of_sdiv(
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], 12
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[DIV]], -6
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = ashr exact i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = sub nsw i8 0, [[MUL_NEG]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %div = sdiv exact i8 %x, 12
