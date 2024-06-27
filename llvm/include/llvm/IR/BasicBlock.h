@@ -219,7 +219,7 @@ public:
                             static_cast<const BasicBlock *>(this)->getModule());
   }
 
-  /// Get the data layout of the module this instruction belongs to.
+  /// Get the data layout of the module this basic block belongs to.
   ///
   /// Requires the basic block to have a parent module.
   const DataLayout &getDataLayout() const;

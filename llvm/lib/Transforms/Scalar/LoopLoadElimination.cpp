@@ -96,7 +96,7 @@ struct StoreToLoadForwardingCandidate {
     Value *LoadPtr = Load->getPointerOperand();
     Value *StorePtr = Store->getPointerOperand();
     Type *LoadType = getLoadStoreType(Load);
-    auto &DL = Load->getParent()->getDataLayout();
+    auto &DL = Load->getDataLayout();
 
     assert(LoadPtr->getType()->getPointerAddressSpace() ==
                StorePtr->getType()->getPointerAddressSpace() &&
@@ -225,7 +225,7 @@ public:
       // Only propagate if the stored values are bit/pointer castable.
       if (!CastInst::isBitOrNoopPointerCastable(
               getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getParent()->getDataLayout()))
+              Store->getDataLayout()))
         continue;
 
       Candidates.emplace_front(Load, Store);
@@ -459,7 +459,7 @@ public:
 
     Type *LoadType = Initial->getType();
     Type *StoreType = Cand.Store->getValueOperand()->getType();
-    auto &DL = Cand.Load->getParent()->getDataLayout();
+    auto &DL = Cand.Load->getDataLayout();
     (void)DL;
 
     assert(DL.getTypeSizeInBits(LoadType) == DL.getTypeSizeInBits(StoreType) &&
