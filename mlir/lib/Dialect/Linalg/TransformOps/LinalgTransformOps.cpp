@@ -3497,9 +3497,13 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
                          return true;
                        })
                        .Default([&](Operation *op) {
-                         op->emitError("not supported");
                          return false;
                        });
+
+  if (!supported) {
+    return emitSilenceableError()
+           << "this operation is not supported to convert to Winograd Conv2D";
+  }
 
   if (supported && failed(maybeTransformed)) {
     return emitSilenceableError() << "apply Winograd Conv2D failed";
