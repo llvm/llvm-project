@@ -175,7 +175,7 @@ void AArch64::PrintSupportedExtensions() {
 }
 
 void
-AArch64::printEnabledExtensions(std::set<StringRef> EnabledFeatureNames) {
+AArch64::printEnabledExtensions(const std::set<StringRef> &EnabledFeatureNames) {
   outs() << "Extensions enabled for the given AArch64 target\n\n"
          << "    " << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
