@@ -437,18 +437,9 @@ bool Vectorizer::run() {
 
     SmallVector<BasicBlock::iterator, 8> Barriers;
     Barriers.push_back(BB->begin());
-    for (Instruction &I : *BB){
-      if (auto *OrInst = dyn_cast<PossiblyDisjointInst>(&I)) {
-        Value *Op0 = OrInst->getOperand(0);
-        Value *Op1 = OrInst->getOperand(1);
-
-        if (haveNoCommonBitsSet(Op0, Op1, DL)) {
-          OrInst->setIsDisjoint(true);
-        }
-      }
+    for (Instruction &I : *BB)
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
         Barriers.push_back(I.getIterator());
-    }
     Barriers.push_back(BB->end());
 
     for (auto It = Barriers.begin(), End = std::prev(Barriers.end()); It != End;
