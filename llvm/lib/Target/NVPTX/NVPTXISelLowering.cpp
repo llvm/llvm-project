@@ -3232,9 +3232,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             if (NumElts != 1)
               return std::nullopt;
             Align PartAlign =
-                (Offsets[parti] == 0 && PAL.getParamAlignment(i))
-                    ? PAL.getParamAlignment(i).value()
-                    : DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
+                DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
             return commonAlignment(PartAlign, Offsets[parti]);
           }();
           SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
