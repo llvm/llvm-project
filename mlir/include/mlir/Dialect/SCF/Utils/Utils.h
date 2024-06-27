@@ -160,8 +160,9 @@ void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
 // Fusion related helpers
 //===----------------------------------------------------------------------===//
 
-bool checkFusionStructuralLegality(LoopLikeOpInterface &target,
-                                   LoopLikeOpInterface &source);
+/// Check structural compatibility between two loops such as iteration space.
+bool checkFusionStructuralLegality(LoopLikeOpInterface target,
+                                   LoopLikeOpInterface source);
 
 /// Given two scf.forall loops, `target` and `source`, fuses `target` into
 /// `source`. Assumes that the given loops are siblings and are independent of

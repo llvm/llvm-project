@@ -38,24 +38,6 @@ static bool hasNestedParallelOp(ParallelOp ploop) {
   return walkResult.wasInterrupted();
 }
 
-/// Verify equal iteration spaces.
-static bool equalIterationSpaces(ParallelOp firstPloop,
-                                 ParallelOp secondPloop) {
-  if (firstPloop.getNumLoops() != secondPloop.getNumLoops())
-    return false;
-
-  auto matchOperands = [&](const OperandRange &lhs,
-                           const OperandRange &rhs) -> bool {
-    // TODO: Extend this to support aliases and equal constants.
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
-  };
-  return matchOperands(firstPloop.getLowerBound(),
-                       secondPloop.getLowerBound()) &&
-         matchOperands(firstPloop.getUpperBound(),
-                       secondPloop.getUpperBound()) &&
-         matchOperands(firstPloop.getStep(), secondPloop.getStep());
-}
-
 /// Checks if the parallel loops have mixed access to the same buffers. Returns
 /// `true` if the first parallel loop writes to the same indices that the second
 /// loop reads.
@@ -156,7 +138,7 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
                           llvm::function_ref<bool(Value, Value)> mayAlias) {
   return !hasNestedParallelOp(firstPloop) &&
          !hasNestedParallelOp(secondPloop) &&
-         equalIterationSpaces(firstPloop, secondPloop) &&
+         checkFusionStructuralLegality(firstPloop, secondPloop) &&
          succeeded(verifyDependencies(firstPloop, secondPloop,
                                       firstToSecondPloopIndices, mayAlias));
 }

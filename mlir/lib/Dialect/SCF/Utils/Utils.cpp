@@ -1074,8 +1074,8 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
 // Fusion related helpers
 //===----------------------------------------------------------------------===//
 
-bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
-                                         LoopLikeOpInterface &source) {
+bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface target,
+                                         LoopLikeOpInterface source) {
   bool iterSpaceEq =
       target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
       target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
