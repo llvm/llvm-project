@@ -96,7 +96,8 @@
 # LLVM-NEXT:     Offset: 0x40
 # LLVM-OK-NEXT:  Size: 0x18
 # LLVM-BAD-NEXT: Size: 0x14
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: Android
 # LLVM-OK-NEXT:    Data size: 0x4
 # LLVM-BAD-NEXT:   Data size: 0x0
@@ -114,6 +115,7 @@
 # NOSTACK-NEXT:    Stack: Disabled
 
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 

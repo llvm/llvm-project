@@ -32,7 +32,8 @@ end:
 # OBJ-NEXT:     Name: .note.gnu.property
 # OBJ-NEXT:     Offset: 0x40
 # OBJ-NEXT:     Size: 0x28
-# OBJ-NEXT:     Note {
+# OBJ-NEXT:     Notes [
+# OBJ-NEXT:     {
 # OBJ-NEXT:       Owner: GNU
 # OBJ-NEXT:       Data size: 0x18
 # OBJ-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
@@ -40,6 +41,7 @@ end:
 # OBJ-NEXT:         AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 # OBJ-NEXT:       ]
 # OBJ-NEXT:     }
+# OBJ-NEXT:		]
 # OBJ-NEXT:   }
 # OBJ-NEXT: ]
 

@@ -12,7 +12,8 @@
 # LLVM-NEXT:     Name: .note.android.unknown
 # LLVM-NEXT:     Offset: 0x40
 # LLVM-NEXT:     Size: 0x1C
-# LLVM-NEXT:     Note {
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
 # LLVM-NEXT:       Owner: Android
 # LLVM-NEXT:       Data size: 0x5
 # LLVM-NEXT:       Type: Unknown (0x00001337)
@@ -20,6 +21,7 @@
 # LLVM-NEXT:         0000: 01234567 89
 # LLVM-NEXT:       )
 # LLVM-NEXT:     }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 

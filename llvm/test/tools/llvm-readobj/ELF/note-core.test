@@ -285,7 +285,7 @@
 # CHECK-GNU-EMPTY:
 
 # CHECK-LLVM:       Size: 0x14
-# CHECK-LLVM-NEXT:  Notes: [
+# CHECK-LLVM-NEXT:  Notes [
 # CHECK-LLVM-NEXT:  {
 # CHECK-LLVM-NEXT:   Owner: CORE
 # CHECK-LLVM-NEXT:   Data size: 0x0
