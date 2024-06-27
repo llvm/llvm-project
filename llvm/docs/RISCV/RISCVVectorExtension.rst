@@ -43,29 +43,31 @@ Note this means that ``VLEN>=64``, so ``VLEN=32`` isn't currently supported.
 Mask vector types
 -----------------
 
-As for mask vectors, they are physically represented using a layout of densely packed bits in a vector register.
+Mask vectors are physically represented using a layout of densely packed bits in a vector register.
 They are mapped to the following LLVM IR types:
 
-- <vscale x 1 x i1>
-- <vscale x 2 x i1>
-- <vscale x 4 x i1>
-- <vscale x 8 x i1>
-- <vscale x 16 x i1>
-- <vscale x 32 x i1>
-- <vscale x 64 x i1>
+- ``<vscale x 1 x i1>``
+- ``<vscale x 2 x i1>``
+- ``<vscale x 4 x i1>``
+- ``<vscale x 8 x i1>``
+- ``<vscale x 16 x i1>``
+- ``<vscale x 32 x i1>``
+- ``<vscale x 64 x i1>``
 
-Two types with the same ratio SEW/LMUL will have the same related mask type. For instance, two different comparisons one under SEW=64, LMUL=2 and the other under SEW=32, LMUL=1 will both generate a mask <vscale x 2 x i1>.
+Two types with the same SEW/LMUL ratio will have the same related mask type.
+For instance, two different comparisons one under SEW=64, LMUL=2 and the other under SEW=32, LMUL=1 will both generate a mask ``<vscale x 2 x i1>``.
 
 Representation in LLVM IR
 =========================
 
 Vector instructions can be represented in three main ways in LLVM IR:
 
-1. Regular instructions on both fixed and scalable vector types
+1. Regular instructions on both scalable and fixed-length vector types
 
    .. code-block:: llvm
 
        %c = add <vscale x 4 x i32> %a, %b
+       %f = add <4 x i32> %d, %e
 
 2. RISC-V vector intrinsics, which mirror the `C intrinsics specification <https://github.com/riscv-non-isa/rvv-intrinsic-doc>`_
 
@@ -97,7 +99,7 @@ Vector instructions can be represented in three main ways in LLVM IR:
 
    The only valid types are scalable vector types.
 
-3. :doc:`Vector predication (VP) intrinsics </Proposals/VectorPredication>`
+3. :ref:`Vector predication (VP) intrinsics <int_vp>`
 
    .. code-block:: llvm
 
@@ -108,7 +110,23 @@ Vector instructions can be represented in three main ways in LLVM IR:
 	      i32 %evl
 	    )
 
-   Unlike RISC-V intrinsics, VP intrinsics are target agnostic so they can be emitted from other optimisation passes in the middle-end (like the loop vectorizer). They also support fixed length vector types.
+   Unlike RISC-V intrinsics, VP intrinsics are target agnostic so they can be emitted from other optimisation passes in the middle-end (like the loop vectorizer). They also support fixed-length vector types.
+
+   VP intrinsics also don't have passthru operands, but tail/mask undisturbed behaviour can be emulated by using the output in a ``@llvm.vp.merge``.
+   It will get lowered as a ``vmerge``, but will be merged back into the underlying instruction's mask via ``RISCVDAGToDAGISel::performCombineVMergeAndVOps``.
+
+
+The different properties of the above representations are summarized below:
+
++----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
+|                      | AVL          | Masking         | Passthru | Scalable vectors | Fixed-length vectors | Target agnostic |
++======================+==============+=================+==========+==================+======================+=================+
+| LLVM IR instructions | Always VLMAX | No              | None     | Yes              | Yes                  | Yes             |
++----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
+| RVV intrinsics       | Yes          | Yes             | Yes      | Yes              | No                   | No              |
++----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
+| VP intrinsics        | Yes (EVL)    | Yes             | No       | Yes              | Yes                  | Yes             |
++----------------------+--------------+-----------------+----------+------------------+----------------------+-----------------+
 
 SelectionDAG lowering
 =====================
@@ -119,33 +137,31 @@ For most regular **scalable** vector LLVM IR instructions, their corresponding S
 
    t5: nxv4i32 = add t2, t4
 
-This is because the TableGen patterns for RVV are only defined for scalable vector types.
-
-RISC-V vector intrinsics only support scalable vector types, so they are also legal.
+RISC-V vector intrinsics also don't require any custom lowering.
 
 .. code-block::
 
    t12: nxv4i32 = llvm.riscv.vadd TargetConstant:i64<10056>, undef:nxv4i32, t2, t4, t6
 
-Fixed length vectors
+Fixed-length vectors
 --------------------
 
-Because there are no fixed length vector patterns, fixed length vectors need to be custom lowered and performed in a scalable "container" type:
+Because there are no fixed-length vector patterns, fixed-length vectors need to be custom lowered and performed in a scalable "container" type:
 
-1. The fixed length vector operands are inserted into scalable containers with ``insert_subvector`` nodes. The container type is chosen such that its minimum size will fit the fixed length vector (see ``getContainerForFixedLengthVector``).
-2. The operation is then performed on the container type via a **VL (vector length) node**. These are custom nodes defined in ``RISCVInstrInfoVVLPatterns.td`` that mirror target agnostic SelectionDAG nodes, as well as some RVV instructions. They contain an AVL operand, which is set to the number of elements in the fixed length vector.
-   Some nodes also have a passthru or mask operand, which will usually be set to undef and all ones when lowering fixed length vectors.
-3. The result is put back into a fixed length vector via ``extract_subvector``.
+1. The fixed-length vector operands are inserted into scalable containers with ``insert_subvector`` nodes. The container type is chosen such that its minimum size will fit the fixed-length vector (see ``getContainerForFixedLengthVector``).
+2. The operation is then performed on the container type via a **VL (vector length) node**. These are custom nodes defined in ``RISCVInstrInfoVVLPatterns.td`` that mirror target agnostic SelectionDAG nodes, as well as some RVV instructions. They contain an AVL operand, which is set to the number of elements in the fixed-length vector.
+   Some nodes also have a passthru or mask operand, which will usually be set to ``undef`` and all ones when lowering fixed-length vectors.
+3. The result is put back into a fixed-length vector via ``extract_subvector``.
 
 .. code-block::
 
-   t2: nxv2i32,ch = CopyFromReg t0, Register:nxv2i32 %0
-     t4: v4i32 = extract_subvector t2, Constant:i64<0>
+       t2: nxv2i32,ch = CopyFromReg t0, Register:nxv2i32 %0
        t6: nxv2i32,ch = CopyFromReg t0, Register:nxv2i32 %1
+     t4: v4i32 = extract_subvector t2, Constant:i64<0>
      t7: v4i32 = extract_subvector t6, Constant:i64<0>
    t8: v4i32 = add t4, t7
 
-   // custom lowered to:
+   // is custom lowered to:
 
        t2: nxv2i32,ch = CopyFromReg t0, Register:nxv2i32 %0
        t6: nxv2i32,ch = CopyFromReg t0, Register:nxv2i32 %1
@@ -153,13 +169,13 @@ Because there are no fixed length vector patterns, fixed length vectors need to 
      t16: nxv2i32 = RISCVISD::ADD_VL t2, t6, undef:nxv2i32, t15, Constant:i64<4>
    t17: v4i32 = extract_subvector t16, Constant:i64<0>
 
-VL nodes often have a passthru or mask operand, which are usually set to undef and all ones for fixed length vectors.
+VL nodes often have a passthru or mask operand, which are usually set to ``undef`` and all ones for fixed-length vectors.
 
-The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrapping and unwrapping will get combined away, and eventually we will lower all fixed vector types to scalable. Note that fixed length vectors at the interface of a function are passed in a scalable vector container.
+The ``insert_subvector`` and ``extract_subvector`` nodes responsible for wrapping and unwrapping will get combined away, and eventually we will lower all fixed-length vector types to scalable. Note that fixed-length vectors at the interface of a function are passed in a scalable vector container.
 
 .. note::
 
-   The only ``insert_subvector`` and ``extract_subvector`` nodes that make it through lowering are those that can be performed as an exact subregister insert or extract. This means that any fixed length vector ``insert_subvector`` and ``extract_subvector`` nodes that aren't legalized must lie on a register group boundary, so the exact ``VLEN`` must be known at compile time (i.e. compiled with ``-mrvv-vector-bits=zvl`` or ``-mllvm -riscv-v-vector-bits-max=VLEN``, or have an exact ``vscale_range`` attribute).
+   The only ``insert_subvector`` and ``extract_subvector`` nodes that make it through lowering are those that can be performed as an exact subregister insert or extract. This means that any fixed-length vector ``insert_subvector`` and ``extract_subvector`` nodes that aren't legalized must lie on a register group boundary, so the exact ``VLEN`` must be known at compile time (i.e., compiled with ``-mrvv-vector-bits=zvl`` or ``-mllvm -riscv-v-vector-bits-max=VLEN``, or have an exact ``vscale_range`` attribute).
 
 Vector predication intrinsics
 -----------------------------
@@ -170,56 +186,80 @@ VP intrinsics also get custom lowered via VL nodes.
 
    t12: nxv2i32 = vp_add t2, t4, t6, Constant:i64<8>
 
-   // custom lowered to:
+   // is custom lowered to:
 
    t18: nxv2i32 = RISCVISD::ADD_VL t2, t4, undef:nxv2i32, t6, Constant:i64<8>
 
-The VP EVL and mask are used for the VL node's AVL and mask respectively, whilst the passthru is set to undef. A passthru can be emulated to get tail/mask undisturbed behaviour by using ``@llvm.vp.merge``. It will get lowered as a ``vmerge``, but will likely be merged back into the underlying instruction's mask via ``RISCVDAGToDAGISel::performCombineVMergeAndVOps``.
+The VP EVL and mask are used for the VL node's AVL and mask respectively, whilst the passthru is set to ``undef``.
 
 Instruction selection
 =====================
 
-VL and VTYPE need to be configured correctly, so we can't just directly select the underlying vector MachineInstrs. Instead pseudo instructions are selected, which carry the extra information needed to emit the necessary vsetvlis later.
+VL and VTYPE need to be configured correctly, so we can't just directly select the underlying vector ``MachineInstr``. Instead pseudo instructions are selected, which carry the extra information needed to emit the necessary ``vsetvli``\s later.
 
 .. code-block::
 
-   %c:vrm2 = PseudoVADD_VV_M2 %passthru:vrm2(tied-def 0), %a:vrm2, %b:vrm2, %vl:gpr, 5
+   %c:vrm2 = PseudoVADD_VV_M2 %passthru:vrm2(tied-def 0), %a:vrm2, %b:vrm2, %vl:gpr, 5 /*sew*/, 3 /*policy*/
 
 Each vector instruction has multiple pseudo instructions defined in ``RISCVInstrInfoVPseudos.td``.
+There is a variant of each pseudo for each possible LMUL, as well as a masked variant. So a typical instruction like ``vadd.vv`` would have the following pseudos:
 
-The pseudos have operands for the AVL and SEW (encoded as a power of 2), as well as potentially the mask, policy or rounding mode if applicable.
-The passhthru operand is tied to the destination register to control the inactive/tail elements.
+.. code-block::
 
-For each possible LMUL there is a variant of the pseudo instruction, as it affects the register class needed for the operands, and similarly there are ``_MASK`` variants that control whether or not the instruction is masked.
+   %rd:vr = PseudoVADD_VV_MF8 %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_MF4 %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_MF2 %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_M1 %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm2 = PseudoVADD_VV_M2 %passthru:vrm2(tied-def 0), %rs2:vrm2, %rs1:vrm2, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm4 = PseudoVADD_VV_M4 %passthru:vrm4(tied-def 0), %rs2:vrm4, %rs1:vrm4, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm8 = PseudoVADD_VV_M8 %passthru:vrm8(tied-def 0), %rs2:vrm8, %rs1:vrm8, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_MF8_MASK %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_MF4_MASK %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_MF2_MASK %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vr = PseudoVADD_VV_M1_MASK %passthru:vr(tied-def 0), %rs2:vr, %rs1:vr, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm2 = PseudoVADD_VV_M2_MASK %passthru:vrm2(tied-def 0), %rs2:vrm2, %%rs1:vrm2, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm4 = PseudoVADD_VV_M4_MASK %passthru:vrm4(tied-def 0), %rs2:vrm4, %rs1:vrm4, mask:$v0, %avl:gpr, sew:imm, policy:imm
+   %rd:vrm8 = PseudoVADD_VV_M8_MASK %passthru:vrm8(tied-def 0), %rs2:vrm8, %rs1:vrm8, mask:$v0, %avl:gpr, sew:imm, policy:imm
 
-For scalable vectors that should use VLMAX, the AVL is set to a sentinel value of -1.
+.. note::
+
+   Whilst the SEW can be encoded in an operand, we need to use separate pseudos for each LMUL since different register groups will require different register classes: see :ref:`rvv_register_allocation`.
+
+
+Pseudos have operands for the AVL and SEW (encoded as a power of 2), as well as potentially the mask, policy or rounding mode if applicable.
+The passthru operand is tied to the destination register which will determine the inactive/tail elements.
+
+For scalable vectors that should use VLMAX, the AVL is set to a sentinel value of ``-1``.
 
 There are patterns for target agnostic SelectionDAG nodes in ``RISCVInstrInfoVSDPatterns.td``, VL nodes in ``RISCVInstrInfoVVLPatterns.td`` and RVV intrinsics in ``RISCVInstrInfoVPseudos.td``.
 
 Mask patterns
 -------------
 
-For the VL patterns we only match to masked pseudos to reduce the size of the match table, even if the node's mask is all ones and could be an unmasked pseudo. ``RISCVFoldMasks::convertToUnmasked`` will detect if the mask is all ones and convert it into its unmasked form.
-
-.. code-block::
-
-     t15: nxv4i1 = RISCVISD::VMSET_VL Constant:i32<-1>
-   t16: nxv4i32 = PseudoVADD_MASK_VV_M2 t0, t2, t4, t15, -1, 5
-
-   // gets optimized to:
-
-   t16: nxv4i32 = PseudoVADD_VV_M2 t0, t2, t4, 4, 5
-
-.. note::
-
-   Any vmset_vl can be treated as an all ones mask since the tail elements past VL are undef and can be replaced with ones.
-
-For masked pseudos the mask operand is copied to the physical ``$v0`` register with a glued ``CopyToReg`` node:
+For masked pseudos the mask operand is copied to the physical ``$v0`` register during instruction selection with a glued ``CopyToReg`` node:
 
 .. code-block::
 
      t23: ch,glue = CopyToReg t0, Register:nxv4i1 $v0, t6
    t25: nxv4i32 = PseudoVADD_VV_M2_MASK Register:nxv4i32 $noreg, t2, t4, Register:nxv4i1 $v0, TargetConstant:i64<8>, TargetConstant:i64<5>, TargetConstant:i64<1>, t23:1
+
+The patterns in ``RISCVInstrInfoVVLPatterns.td`` only match masked pseudos to reduce the size of the match table, even if the node's mask is all ones and could be an unmasked pseudo.
+``RISCVFoldMasks::convertToUnmasked`` will detect if the mask is all ones and convert it into its unmasked form.
+
+.. code-block::
+
+   $v0 = PseudoVMSET_M_B16 -1, 32
+   %rd:vrm2 = PseudoVADD_VV_M2_MASK %passthru:vrm2(tied-def 0), %rs2:vrm2, %rs1:vrm2, $v0, %avl:gpr, sew:imm, policy:imm
+
+   // gets optimized to:
+
+   %rd:vrm2 = PseudoVADD_VV_M2 %passthru:vrm2(tied-def 0), %rs2:vrm2, %rs1:vrm2, %avl:gpr, sew:imm, policy:imm
+
+.. note::
+
+   Any ``vmset.m`` can be treated as an all ones mask since the tail elements past AVL are ``undef`` and can be replaced with ones.
+
+.. _rvv_register_allocation:
 
 Register allocation
 ===================
@@ -228,20 +268,20 @@ Register allocation is split between vector and scalar registers, with vector al
 
 .. code-block::
 
-  $v8m2 = PseudoVADD_VV_M2 $v8m2(tied-def 0), $v8m2, $v10m2, %vl:gpr, 5
+  $v8m2 = PseudoVADD_VV_M2 $v8m2(tied-def 0), $v8m2, $v10m2, %vl:gpr, 5, 3
 
 .. note::
 
-   We split register allocation between vectors and scalars so that :ref:`RISCVInsertVSETVLI` can run after vector register allocation, but still before scalar register allocation as it may need to create a new virtual register to set the AVL to VLMAX.
+   Register allocation is split between vectors and scalars so that :ref:`RISCVInsertVSETVLI` can run after vector register allocation, but before scalar register allocation. It needs to be run before scalar register allocation as it may need to create a new virtual register to set the AVL to VLMAX.
 
-   Performing RISCVInsertVSETVLI after vector register allocation imposes fewer constraints on the machine scheduler since it cannot schedule instructions past vsetvlis, and it allows us to emit further vector pseudos during spilling or constant rematerialization.
+   Performing ``RISCVInsertVSETVLI`` after vector register allocation imposes fewer constraints on the machine scheduler since it cannot schedule instructions past ``vsetvli``\s, and it allows us to emit further vector pseudos during spilling or constant rematerialization.
 
 There are four register classes for vectors:
 
 - ``VR`` for vector registers (``v0``, ``v1,``, ..., ``v32``). Used when :math:`\text{LMUL} \leq 1` and mask registers.
-- ``VRM2`` for vector groups of length 2 i.e. :math:`\text{LMUL}=2` (``v0m2``, ``v2m2``, ..., ``v30m2``)
-- ``VRM4`` for vector groups of length 4 i.e. :math:`\text{LMUL}=4` (``v0m4``, ``v4m4``, ..., ``v28m4``)
-- ``VRM8`` for vector groups of length 8 i.e. :math:`\text{LMUL}=8` (``v0m8``, ``v8m8``, ..., ``v24m8``)
+- ``VRM2`` for vector groups of length 2 i.e., :math:`\text{LMUL}=2` (``v0m2``, ``v2m2``, ..., ``v30m2``)
+- ``VRM4`` for vector groups of length 4 i.e., :math:`\text{LMUL}=4` (``v0m4``, ``v4m4``, ..., ``v28m4``)
+- ``VRM8`` for vector groups of length 8 i.e., :math:`\text{LMUL}=8` (``v0m8``, ``v8m8``, ..., ``v24m8``)
 
 :math:`\text{LMUL} \lt 1` types and mask types do not benefit from having a dedicated class, so ``VR`` is used in their case.
 
@@ -252,7 +292,7 @@ Some instructions have a constraint that a register operand cannot be ``V0`` or 
 RISCVInsertVSETVLI
 ==================
 
-After vector registers are allocated, the RISCVInsertVSETVLI pass will insert the necessary vsetvlis for the pseudos.
+After vector registers are allocated, the ``RISCVInsertVSETVLI`` pass will insert the necessary ``vsetvli``\s for the pseudos.
 
 .. code-block::
 
@@ -262,19 +302,19 @@ After vector registers are allocated, the RISCVInsertVSETVLI pass will insert th
 The physical ``$vl`` and ``$vtype`` registers are implicitly defined by the ``PseudoVSETVLI``, and are implicitly used by the ``PseudoVADD``.
 The VTYPE operand (``209`` in this example) is encoded as per the specification via ``RISCVVType::encodeVTYPE``.
 
-RISCVInsertVSETVLI performs dataflow analysis to emit as few vsetvlis as possible. It will also try to minimize the number of vsetvlis that set VL, i.e. it will emit ``vsetvli x0, x0`` if only VTYPE needs changed but VL doesn't.
+``RISCVInsertVSETVLI`` performs dataflow analysis to emit as few ``vsetvli``\s as possible. It will also try to minimize the number of ``vsetvli``\s that set VL, i.e., it will emit ``vsetvli x0, x0`` if only VTYPE needs changed but VL doesn't.
 
 Pseudo expansion and printing
 =============================
 
-After scalar register allocation, the ``RISCVExpandPseudoInsts.cpp`` pass expands out the ``PseudoVSETVLI``.
+After scalar register allocation, the ``RISCVExpandPseudoInsts.cpp`` pass expands the ``PseudoVSETVLI`` instructions.
 
 .. code-block::
 
    dead $x0 = VSETVLI $x1, 209, implicit-def $vtype, implicit-def $vl
    renamable $v8m2 = PseudoVADD_VV_M2 $v8m2(tied-def 0), $v8m2, $v10m2, $noreg, 5, implicit $vl, implicit $vtype
 
-Note that the vector pseudo remains as it's needed to encode the register class for the LMUL, so the VL and SEW operands are unused.
+Note that the vector pseudo remains as it's needed to encode the register class for the LMUL. Its VL and SEW operands are no longer used.
 
 ``RISCVAsmPrinter`` will then lower the pseudo instructions into real ``MCInsts``.
 
