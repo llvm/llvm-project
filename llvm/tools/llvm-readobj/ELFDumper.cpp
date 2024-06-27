@@ -7913,7 +7913,7 @@ static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
-  ListScope L(W, "Notes");
+  ListScope L(W, "NoteSectionList");
 
   std::unique_ptr<DictScope> NoteSectionScope;
   std::unique_ptr<ListScope> NotesScope;

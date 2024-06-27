@@ -28,7 +28,7 @@
 # GNU-NEXT:   description data: 61 62 63 64
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset: 0x78
@@ -87,7 +87,7 @@
 # LLVM-NEXT: ]
 
 ## Note: the section name is <?> here because the section header table is not present.
-# LLVM-STRIPPED:      Notes [
+# LLVM-STRIPPED:      NoteSectionList [
 # LLVM-STRIPPED-NEXT:   NoteSection {
 # LLVM-STRIPPED-NEXT:     Name: <?>
 # LLVM-STRIPPED-NEXT:     Offset: 0x78
@@ -154,7 +154,7 @@ ProgramHeaders:
 # ERR1-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
 # ERR1-GNU-EMPTY:
 
-# ERR1-LLVM:      Notes [
+# ERR1-LLVM:      NoteSectionList [
 # ERR1-LLVM-NEXT:   NoteSection {
 # ERR1-LLVM-NEXT:     Name:   .note
 # ERR1-LLVM-NEXT:     Offset: 0xFFFF0000
@@ -189,7 +189,7 @@ Sections:
 # ERR2-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
 # ERR2-GNU-EMPTY:
 
-# ERR2-LLVM:      Notes [
+# ERR2-LLVM:      NoteSectionList [
 # ERR2-LLVM-NEXT:   NoteSection {
 # ERR2-LLVM-NEXT:     Name: .note
 # ERR2-LLVM-NEXT:     Offset: 0x40
@@ -212,7 +212,7 @@ Sections:
 # ERR3-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
 # ERR3-GNU-NOT: {{.}}
 
-# ERR3-LLVM:      Notes [
+# ERR3-LLVM:      NoteSectionList [
 # ERR3-LLVM-NEXT:   NoteSection {
 # ERR3-LLVM-NEXT:     Name: <?>
 # ERR3-LLVM-NEXT:     Offset: 0xFFFF0000
@@ -245,7 +245,7 @@ ProgramHeaders:
 # ERR4-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
 # ERR4-GNU-EMPTY:
 
-# ERR4-LLVM:      Notes [
+# ERR4-LLVM:      NoteSectionList [
 # ERR4-LLVM-NEXT:   NoteSection {
 # ERR4-LLVM-NEXT:     Name: <?>
 # ERR4-LLVM-NEXT:     Offset: 0x0
@@ -265,6 +265,6 @@ ProgramHeaders:
 # PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
 # PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
 
-# PHENTSIZE-WARN-LLVM:      Notes [
+# PHENTSIZE-WARN-LLVM:      NoteSectionList [
 # PHENTSIZE-WARN-LLVM-NEXT: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
 # PHENTSIZE-WARN-LLVM-NEXT: ]

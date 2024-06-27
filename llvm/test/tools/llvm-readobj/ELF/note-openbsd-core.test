@@ -35,7 +35,7 @@ ProgramHeaders:
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_REGS (regular registers)
 # GNU-NEXT:   OpenBSD@31337        0x00000000	NT_OPENBSD_FPREGS (floating point registers)
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78

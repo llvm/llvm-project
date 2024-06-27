@@ -20,7 +20,7 @@
 // GNU-NEXT:   Owner                Data size 	Description
 // GNU-NEXT:   XYZ                  0x00000000	func
 
-// LLVM:      Notes [
+// LLVM:      NoteSectionList [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.version
 // LLVM-NEXT:     Offset: 0x40

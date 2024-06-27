@@ -5,7 +5,7 @@
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --match-full-lines --check-prefix=LLVM
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --match-full-lines --check-prefix=GNU
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.nt_amd_hsa_code_object_version_0
 # LLVM-NEXT:     Offset: 0x40

@@ -11,7 +11,7 @@
 # GNU-NEXT:     <corrupt GNU_ABI_TAG>
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset:

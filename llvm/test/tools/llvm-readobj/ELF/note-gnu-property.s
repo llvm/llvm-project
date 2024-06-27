@@ -24,7 +24,7 @@
 // GNU-NEXT:     x86 feature: IBT, <unknown flags: 0xf000f000>
 // GNU-NEXT:     <corrupt type (0x2) datasz: 0x1>
 
-// LLVM:      Notes [
+// LLVM:      NoteSectionList [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.gnu.property
 // LLVM-NEXT:     Offset: 0x40

@@ -30,7 +30,7 @@ ProgramHeaders:
 # GNU-NEXT:   NetBSD-CORE          0x00000000	NT_NETBSDCORE_AUXV (ELF auxiliary vector data)
 # GNU-NEXT:   NetBSD-CORE@3615     0x00000000	PT_LWPSTATUS (ptrace_lwpstatus structure)
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x78

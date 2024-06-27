@@ -8,7 +8,7 @@
 // GNU-NEXT:   GNU                   0x00000004      NT_GNU_PROPERTY_TYPE_0 (property note)
 // GNU-NEXT:     Properties:    <corrupted GNU_PROPERTY_TYPE_0>
 
-// LLVM:      Notes [
+// LLVM:      NoteSectionList [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.gnu.property
 // LLVM-NEXT:     Offset: 0x40

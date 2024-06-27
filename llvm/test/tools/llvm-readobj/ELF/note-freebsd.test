@@ -61,7 +61,7 @@ Sections:
 # GNU-NEXT:   description data: 61 62 63 64 65 66
 # GNU-EMPTY:
 
-# LLVM:     Notes [
+# LLVM:     NoteSectionList [
 # LLVM-NEXT:  NoteSection {
 # LLVM-NEXT:    Name: .note.tag
 # LLVM-NEXT:    Offset: 0x40

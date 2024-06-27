@@ -31,7 +31,7 @@
 # GNU-NEXT:    description data: ab cd
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.foo
 # LLVM-NEXT:     Offset:

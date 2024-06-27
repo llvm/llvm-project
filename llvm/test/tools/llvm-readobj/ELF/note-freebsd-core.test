@@ -68,7 +68,7 @@ ProgramHeaders:
 # GNU-NEXT:     description data: aa bb cc dd ee ff
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0xB0

@@ -13,7 +13,7 @@
 # RUN: llvm-readobj --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES
 # RUN: llvm-readelf --notes %t.32be | FileCheck %s --match-full-lines --check-prefix=NOTES-GNU
 
-# NOTES:      Notes [
+# NOTES:      NoteSectionList [
 # NOTES-NEXT:   NoteSection {
 # NOTES-NEXT:     Name: .note.openmp
 # NOTES-NEXT:     Offset: {{.*}}

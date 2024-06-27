@@ -27,7 +27,7 @@ end:
 # ELF-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
 # ELF-NEXT:   AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 
-# OBJ:      Notes [
+# OBJ:      NoteSectionList [
 # OBJ-NEXT:   NoteSection {
 # OBJ-NEXT:     Name: .note.gnu.property
 # OBJ-NEXT:     Offset: 0x40
@@ -164,7 +164,7 @@ end:
 # ELF-ERR-NEXT:   GNU                   0x000000[[DATASIZE]]	NT_GNU_PROPERTY_TYPE_0 (property note)
 # ELF-ERR-NEXT:   AArch64 PAuth ABI core info: [[ERR]]
 
-# OBJ-ERR:      Notes [
+# OBJ-ERR:      NoteSectionList [
 # OBJ-ERR-NEXT:   NoteSection {
 # OBJ-ERR-NEXT:     Name: .note.gnu.property
 # OBJ-ERR-NEXT:     Offset: 0x40

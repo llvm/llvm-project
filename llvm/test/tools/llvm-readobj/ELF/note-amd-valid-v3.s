@@ -6,7 +6,7 @@
 # RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-readobj --notes - | FileCheck %s --match-full-lines --check-prefix=LLVM
 # RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %s | llvm-readelf --notes - | FileCheck %s --match-full-lines --check-prefix=GNU
 
-#LLVM:       Notes [
+#LLVM:       NoteSectionList [
 #LLVM-NEXT:    NoteSection {
 #LLVM-NEXT:      Name: .note
 #LLVM-NEXT:      Offset: 0x40

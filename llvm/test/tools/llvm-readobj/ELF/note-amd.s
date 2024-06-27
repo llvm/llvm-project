@@ -34,7 +34,7 @@
 // GNU-NEXT:    description data: 61 62 63 64 65 66 00
 // GNU-EMPTY:
 
-// LLVM:      Notes [
+// LLVM:      NoteSectionList [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Name: .note.no.desc
 // LLVM-NEXT:     Offset:

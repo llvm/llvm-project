@@ -7,7 +7,7 @@
 # GNU-NEXT: Android  0x00000005  Unknown note type: (0x00001337)
 # GNU-NEXT: description data: 01 23 45 67 89
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: .note.android.unknown
 # LLVM-NEXT:     Offset: 0x40

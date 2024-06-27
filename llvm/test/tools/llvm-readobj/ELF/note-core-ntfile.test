@@ -63,7 +63,7 @@ ProgramHeaders:
 # GNU-NEXT:         [stack]
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSectionList [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset:
@@ -99,7 +99,7 @@ ProgramHeaders:
 # LLVM-NEXT: }
 # LLVM-NEXT: ]
 
-# JSON:      "Notes": [
+# JSON:      "NoteSectionList": [
 # JSON-NEXT:  {
 # JSON-NEXT:      "NoteSection": {
 # JSON-NEXT:          "Name": "<?>",
