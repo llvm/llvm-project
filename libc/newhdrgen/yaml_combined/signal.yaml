@@ -102,7 +102,4 @@ functions:
       - type: __sighandler_t
     guard: null
     attributes: []
-
-
-
- 
+    

@@ -463,5 +463,3 @@ functions:
       - type: const void *
     guard: null
     attributes: []
-
-   

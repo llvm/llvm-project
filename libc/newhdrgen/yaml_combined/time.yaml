@@ -103,4 +103,3 @@ functions:
       - type: time_t *
     guard: null
     attributes: []
-

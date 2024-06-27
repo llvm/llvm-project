@@ -380,7 +380,3 @@ functions:
       - type: char *__restrict
     guard: null
     attributes: []
-
-
-
-
