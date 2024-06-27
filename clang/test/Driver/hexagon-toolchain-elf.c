@@ -2,8 +2,6 @@
 // Test standard include paths
 // -----------------------------------------------------------------------------
 
-// XFAIL: *
-
 // RUN: %clang -### --target=hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK000 %s
 // CHECK000: "-cc1" {{.*}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"

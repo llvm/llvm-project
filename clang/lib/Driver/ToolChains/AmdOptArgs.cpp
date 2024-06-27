@@ -7,6 +7,9 @@
 // Closed optimization compiler is invoked if -famd-opt is specified, or
 // if any of the closed optimization flags are specified on the command line.
 // These can also include -mllvm options as well as -f<options>
+//
+// Support is removed for -famd-opt, issue a warning.
+//
 //===----------------------------------------------------------------------===//
 
 #include "CommonArgs.h"
@@ -337,29 +340,14 @@ bool tools::checkForAMDProprietaryOptOptions(
     const ToolChain &TC, const Driver &D, const ArgList &Args,
     ArgStringList &CmdArgs, bool isLLD, bool checkOnly) {
 
-  bool ProprietaryToolChainNeeded = false;
-  std::string AltPath = D.getInstalledDir();
-  AltPath += "/../alt/bin";
   // -famd-opt enables prorietary compiler and lto
   if (Args.hasFlag(options::OPT_famd_opt, options::OPT_fno_amd_opt, false)) {
-    if (!TC.getVFS().exists(AltPath)) {
-      D.Diag(diag::warn_drv_amd_opt_not_found);
-      return false;
-    }
-    ProprietaryToolChainNeeded = true;
+    D.Diag(diag::warn_drv_amd_opt_removed);
+    return false;
   }
   // disables amd proprietary compiler
   if (Args.hasFlag(options::OPT_fno_amd_opt, options::OPT_famd_opt, false)) {
     return false;
   }
-
-  // check for more AOCC options
-  ProprietaryToolChainNeeded |= checkForPropOpts(
-      TC, D, Args, CmdArgs, isLLD, checkOnly, TC.getVFS().exists(AltPath));
-
-  if (ProprietaryToolChainNeeded && !TC.getVFS().exists(AltPath)) {
-    D.Diag(diag::warn_drv_amd_opt_not_found);
-    return false;
-  }
-  return ProprietaryToolChainNeeded;
+  return false;
 }

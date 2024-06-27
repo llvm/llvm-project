@@ -7,7 +7,7 @@
 // Check that we don't try to forward -Xclang or -mlinker-version to GCC.
 // PR12920 -- Check also we may not forward W_Group options to GCC.
 //
-// RUN: %clang -target powerpc-unknown-unknown \
+// RUN: not %clang --target=powerpc-unknown-unknown \
 // RUN:   %s \
 // RUN:   -Wall -Wdocumentation \
 // RUN:   -Xclang foo-bar \
