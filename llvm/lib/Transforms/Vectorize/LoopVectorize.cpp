@@ -2437,7 +2437,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     VPTransformState &State, VPValue *Addr, ArrayRef<VPValue *> StoredValues,
     VPValue *BlockInMask, bool NeedsMaskForGaps) {
   Instruction *Instr = Group->getInsertPos();
-  const DataLayout &DL = Instr->getModule()->getDataLayout();
+  const DataLayout &DL = Instr->getDataLayout();
 
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = getLoadStoreType(Instr);
@@ -3939,7 +3939,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
-  auto &DL = I->getModule()->getDataLayout();
+  auto &DL = I->getDataLayout();
   auto *ScalarTy = getLoadStoreType(I);
   if (hasIrregularType(ScalarTy, DL))
     return false;
@@ -4017,7 +4017,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
 
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
-  auto &DL = I->getModule()->getDataLayout();
+  auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
     return false;
 

@@ -299,7 +299,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   //     iteration, mark this successor live.
   // 3b. If we cannot prove it, conservatively assume that all successors are
   //     live.
-  auto &DL = Header->getModule()->getDataLayout();
+  auto &DL = Header->getDataLayout();
   const SimplifyQuery SQ(DL);
   for (auto *BB : RPOT) {
     Visited.insert(BB);
