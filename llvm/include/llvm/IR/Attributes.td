@@ -318,7 +318,7 @@ def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
 def SanitizeThread : EnumAttr<"sanitize_thread", IntersectPreserve, [FnAttr]>;
 
 /// TypeSanitizer is on.
-def SanitizeType : EnumAttr<"sanitize_type", [FnAttr]>;
+def SanitizeType : EnumAttr<"sanitize_type", IntersectPreserve, [FnAttr]>;
 
 /// MemorySanitizer is on.
 def SanitizeMemory : EnumAttr<"sanitize_memory", IntersectPreserve, [FnAttr]>;
