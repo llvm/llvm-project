@@ -6119,27 +6119,37 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   EVT VT = N->getValueType(0);
   unsigned ValSize = VT.getSizeInBits();
   unsigned IID = N->getConstantOperandVal(0);
+  bool IsPermLane16 = IID == Intrinsic::amdgcn_permlane16 ||
+                      IID == Intrinsic::amdgcn_permlanex16;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
   auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
                                           SDValue Src2, MVT ValT) -> SDValue {
     SmallVector<SDValue, 8> Operands;
-    Operands.push_back(DAG.getTargetConstant(IID, SL, MVT::i32));
     switch (IID) {
-    case Intrinsic::amdgcn_readfirstlane:
-      Operands.push_back(Src0);
-      break;
-    case Intrinsic::amdgcn_readlane:
-      Operands.push_back(Src0);
-      Operands.push_back(Src1);
-      break;
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+      Operands.push_back(N->getOperand(6));
+      Operands.push_back(N->getOperand(5));
+      Operands.push_back(N->getOperand(4));
+      [[fallthrough]];
     case Intrinsic::amdgcn_writelane:
-      Operands.push_back(Src0);
-      Operands.push_back(Src1);
       Operands.push_back(Src2);
+      [[fallthrough]];
+    case Intrinsic::amdgcn_readlane:
+      Operands.push_back(Src1);
+      [[fallthrough]];
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_permlane64:
+      Operands.push_back(Src0);
       break;
+    default:
+      llvm_unreachable("unhandled lane op");
     }
+
+    Operands.push_back(DAG.getTargetConstant(IID, SL, MVT::i32));
+    std::reverse(Operands.begin(), Operands.end());
 
     if (SDNode *GL = N->getGluedNode()) {
       assert(GL->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
@@ -6153,9 +6163,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 
   SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
-  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
+      IsPermLane16) {
     Src1 = N->getOperand(2);
-    if (IID == Intrinsic::amdgcn_writelane)
+    if (IID == Intrinsic::amdgcn_writelane || IsPermLane16)
       Src2 = N->getOperand(3);
   }
 
@@ -6168,10 +6179,17 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     bool IsFloat = VT.isFloatingPoint();
     Src0 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src0) : Src0,
                                 SL, MVT::i32);
-    if (Src2.getNode()) {
+
+    if (IsPermLane16) {
+      Src1 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src1) : Src1,
+                                  SL, MVT::i32);
+    }
+
+    if (IID == Intrinsic::amdgcn_writelane) {
       Src2 = DAG.getAnyExtOrTrunc(IsFloat ? DAG.getBitcast(IntVT, Src2) : Src2,
                                   SL, MVT::i32);
     }
+
     SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
     SDValue Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
     return IsFloat ? DAG.getBitcast(VT, Trunc) : Trunc;
@@ -6233,17 +6251,23 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     case MVT::bf16: {
       MVT SubVecVT = MVT::getVectorVT(EltTy, 2);
       SmallVector<SDValue, 4> Pieces;
+      SDValue Src0SubVec, Src1SubVec, Src2SubVec;
       for (unsigned i = 0, EltIdx = 0; i < ValSize / 32; i++) {
-        SDValue Src0SubVec =
-            DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
-                        DAG.getConstant(EltIdx, SL, MVT::i32));
+        Src0SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src0,
+                                 DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        SDValue Src2SubVec;
-        if (Src2)
+        if (IsPermLane16)
+          Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
+                                   DAG.getConstant(EltIdx, SL, MVT::i32));
+
+        if (IID == Intrinsic::amdgcn_writelane)
           Src2SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src2,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        Pieces.push_back(createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
+        Pieces.push_back(
+            IsPermLane16
+                ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
+                : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
         EltIdx += 2;
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
@@ -6257,7 +6281,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
   Src0 = DAG.getBitcast(VecVT, Src0);
 
-  if (Src2)
+  if (IsPermLane16)
+    Src1 = DAG.getBitcast(VecVT, Src1);
+
+  if (IID == Intrinsic::amdgcn_writelane)
     Src2 = DAG.getBitcast(VecVT, Src2);
 
   SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
@@ -8734,6 +8761,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_writelane:
+  case Intrinsic::amdgcn_permlane16:
+  case Intrinsic::amdgcn_permlanex16:
+  case Intrinsic::amdgcn_permlane64:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
