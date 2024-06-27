@@ -38,6 +38,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -966,6 +967,29 @@ Function *InstrLowerer::createRMWOrFunc() {
   // Load profile bitmap byte.
   //  %mcdc.bits = load i8, ptr %4, align 1
   auto *Bitmap = Builder.CreateLoad(Int8Ty, ArgAddr, "mcdc.bits");
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
+    // Note, just-loaded Bitmap might not be up-to-date. Use it just for
+    // early testing.
+    auto *Masked = Builder.CreateAnd(Bitmap, ArgVal);
+    auto *ShouldStore = Builder.CreateICmpNE(Masked, ArgVal);
+    auto *ThenTerm = BasicBlock::Create(Ctx, "", Fn);
+    auto *ElseTerm = BasicBlock::Create(Ctx, "", Fn);
+    // Assume updating will be rare.
+    auto *Unlikely = MDBuilder(Ctx).createUnlikelyBranchWeights();
+    Builder.CreateCondBr(ShouldStore, ThenTerm, ElseTerm, Unlikely);
+
+    IRBuilder<> ThenBuilder(ThenTerm);
+    ThenBuilder.CreateAtomicRMW(AtomicRMWInst::Or, ArgAddr, ArgVal,
+                                MaybeAlign(), AtomicOrdering::Monotonic);
+    ThenBuilder.CreateRetVoid();
+
+    IRBuilder<> ElseBuilder(ElseTerm);
+    ElseBuilder.CreateRetVoid();
+
+    return Fn;
+  }
 
   // Perform logical OR of profile bitmap byte and shifted bit offset.
   //  %8 = or i8 %mcdc.bits, %7

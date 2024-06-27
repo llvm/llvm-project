@@ -415,6 +415,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 10> ToErase;
+  DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     if (MBB->empty())
@@ -466,6 +467,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // %rctmp = G_CONSTANT ty Val
         // %rc = ASSIGN_TYPE %rctmp, %cty
         Register Reg = MI.getOperand(0).getReg();
+        bool NeedAssignType = true;
         if (MRI.hasOneUse(Reg)) {
           MachineInstr &UseMI = *MRI.use_instr_begin(Reg);
           if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
@@ -478,7 +480,20 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           Ty = TargetExtIt == TargetExtConstTypes.end()
                    ? MI.getOperand(1).getCImm()->getType()
                    : TargetExtIt->second;
-          GR->add(MI.getOperand(1).getCImm(), &MF, Reg);
+          const ConstantInt *OpCI = MI.getOperand(1).getCImm();
+          Register PrimaryReg = GR->find(OpCI, &MF);
+          if (!PrimaryReg.isValid()) {
+            GR->add(OpCI, &MF, Reg);
+          } else if (PrimaryReg != Reg &&
+                     MRI.getType(Reg) == MRI.getType(PrimaryReg)) {
+            auto *RCReg = MRI.getRegClassOrNull(Reg);
+            auto *RCPrimary = MRI.getRegClassOrNull(PrimaryReg);
+            if (!RCReg || RCPrimary == RCReg) {
+              RegsAlreadyAddedToDT[&MI] = PrimaryReg;
+              ToErase.push_back(&MI);
+              NeedAssignType = false;
+            }
+          }
         } else if (MIOp == TargetOpcode::G_FCONSTANT) {
           Ty = MI.getOperand(1).getFPImm()->getType();
         } else {
@@ -497,7 +512,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
               MI.getNumExplicitOperands() - MI.getNumExplicitDefs();
           Ty = VectorType::get(ElemTy, NumElts, false);
         }
-        insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
+        if (NeedAssignType)
+          insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MIOp == TargetOpcode::G_GLOBAL_VALUE) {
         propagateSPIRVType(&MI, GR, MRI, MIB);
       }
@@ -508,8 +524,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         --MII;
     }
   }
-  for (MachineInstr *MI : ToErase)
+  for (MachineInstr *MI : ToErase) {
+    auto It = RegsAlreadyAddedToDT.find(MI);
+    if (RegsAlreadyAddedToDT.contains(MI))
+      MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
     MI->eraseFromParent();
+  }
 
   // Address the case when IRTranslator introduces instructions with new
   // registers without SPIRVType associated.

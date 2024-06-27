@@ -182,35 +182,6 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
                                          &signatureConversion)))
     return failure();
 
-  // If bare memref pointers are being used, remap them back to memref
-  // descriptors This must be done after signature conversion to get rid of the
-  // unrealized casts.
-  if (getTypeConverter()->getOptions().useBarePtrCallConv) {
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(&llvmFuncOp.getBody().front());
-    for (const auto [idx, argTy] :
-         llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
-      auto memrefTy = dyn_cast<MemRefType>(argTy);
-      if (!memrefTy)
-        continue;
-      assert(memrefTy.hasStaticShape() &&
-             "Bare pointer convertion used with dynamically-shaped memrefs");
-      // Use a placeholder when replacing uses of the memref argument to prevent
-      // circular replacements.
-      auto remapping = signatureConversion.getInputMapping(idx);
-      assert(remapping && remapping->size == 1 &&
-             "Type converter should produce 1-to-1 mapping for bare memrefs");
-      BlockArgument newArg =
-          llvmFuncOp.getBody().getArgument(remapping->inputNo);
-      auto placeholder = rewriter.create<LLVM::UndefOp>(
-          loc, getTypeConverter()->convertType(memrefTy));
-      rewriter.replaceUsesOfBlockArgument(newArg, placeholder);
-      Value desc = MemRefDescriptor::fromStaticShape(
-          rewriter, loc, *getTypeConverter(), memrefTy, newArg);
-      rewriter.replaceOp(placeholder, {desc});
-    }
-  }
-
   // Get memref type from function arguments and set the noalias to
   // pointer arguments.
   for (const auto [idx, argTy] :

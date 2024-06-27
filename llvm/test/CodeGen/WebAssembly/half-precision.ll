@@ -246,3 +246,39 @@ define <8 x half> @nearest_v8f16_via_roundeven(<8 x half> %a) {
   %v = call <8 x half> @llvm.roundeven.v8f16(<8 x half> %a)
   ret <8 x half> %v
 }
+
+define <8 x half> @convert_s_v8f16(<8 x i16> %x) {
+; CHECK-LABEL: convert_s_v8f16:
+; CHECK:         .functype convert_s_v8f16 (v128) -> (v128)
+; CHECK-NEXT:    f16x8.convert_i16x8_s $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = sitofp <8 x i16> %x to <8 x half>
+  ret <8 x half> %a
+}
+
+define <8 x half> @convert_u_v8f16(<8 x i16> %x) {
+; CHECK-LABEL: convert_u_v8f16:
+; CHECK:         .functype convert_u_v8f16 (v128) -> (v128)
+; CHECK-NEXT:    f16x8.convert_i16x8_u $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = uitofp <8 x i16> %x to <8 x half>
+  ret <8 x half> %a
+}
+
+define <8 x i16> @trunc_sat_s_v8i16(<8 x half> %x) {
+; CHECK-LABEL: trunc_sat_s_v8i16:
+; CHECK:         .functype trunc_sat_s_v8i16 (v128) -> (v128)
+; CHECK-NEXT:    i16x8.trunc_sat_f16x8_s $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = fptosi <8 x half> %x to <8 x i16>
+  ret <8 x i16> %a
+}
+
+define <8 x i16> @trunc_sat_u_v8i16(<8 x half> %x) {
+; CHECK-LABEL: trunc_sat_u_v8i16:
+; CHECK:         .functype trunc_sat_u_v8i16 (v128) -> (v128)
+; CHECK-NEXT:    i16x8.trunc_sat_f16x8_u $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = fptoui <8 x half> %x to <8 x i16>
+  ret <8 x i16> %a
+}

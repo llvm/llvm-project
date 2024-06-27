@@ -125,6 +125,9 @@ Improvements to clang-tidy
 - Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
   to exclude headers from analysis via a RegEx.
 
+- Added argument `--allow-no-checks` to suppress "no checks enabled" error
+  when disabling all of the checks by `--checks='-*'`.
+
 New checks
 ^^^^^^^^^^
 
@@ -398,7 +401,7 @@ Changes in existing checks
   analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
   Calls to mutable function where there exists a `const` overload are also
-  handled.
+  handled. Fix crash in the case of a non-member operator call.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

@@ -400,8 +400,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
     const PseudoSourceValue *NewSV = MF.getPSVManager().getFixedStack(NewFI);
     SmallVectorImpl<MachineMemOperand *> &RefMMOs = SSRefs[SS];
-    for (unsigned i = 0, e = RefMMOs.size(); i != e; ++i)
-      RefMMOs[i]->setValue(NewSV);
+    for (MachineMemOperand *MMO : RefMMOs)
+      MMO->setValue(NewSV);
   }
 
   // Rewrite all MO_FrameIndex operands.  Look for dead stores.

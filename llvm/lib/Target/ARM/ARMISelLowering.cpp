@@ -1594,6 +1594,20 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     }
   }
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget->isTargetWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
+  // LegalizeDAG currently can't expand fp16 LDEXP/FREXP on targets where i16
+  // isn't legal.
+  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+    if (isOperationExpand(Op, MVT::f16))
+      setOperationAction(Op, MVT::f16, Promote);
+
   // We have target-specific dag combine patterns for the following nodes:
   // ARMISD::VMOVRRD  - No need to call setTargetDAGCombine
   setTargetDAGCombine(
@@ -21686,7 +21700,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   auto *VecTy = cast<FixedVectorType>(Shuffles[0]->getType());
   Type *EltTy = VecTy->getElementType();
 
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   Align Alignment = LI->getAlign();
 
   // Skip if we do not have NEON and skip illegal vector types. We can
@@ -21832,7 +21846,7 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   Type *EltTy = VecTy->getElementType();
   auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
   Align Alignment = SI->getAlign();
 
   // Skip if we do not have NEON and skip illegal vector types. We can

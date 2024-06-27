@@ -307,7 +307,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getModule()->getDataLayout(), &II, &AC)) {
+                               II.getDataLayout(), &II, &AC)) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -2511,16 +2511,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fabs: {
     Value *Cond, *TVal, *FVal;
-    if (match(II->getArgOperand(0),
-              m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
+    Value *Arg = II->getArgOperand(0);
+    Value *X;
+    // fabs (-X) --> fabs (X)
+    if (match(Arg, m_FNeg(m_Value(X)))) {
+        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+        return replaceInstUsesWith(CI, Fabs);
+    }
+
+    if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
       if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
         FastMathFlags FMF1 = II->getFastMathFlags();
-        FastMathFlags FMF2 =
-            cast<SelectInst>(II->getArgOperand(0))->getFastMathFlags();
+        FastMathFlags FMF2 = cast<SelectInst>(Arg)->getFastMathFlags();
         FMF2.setNoSignedZeros(false);
         SI->setFastMathFlags(FMF1 | FMF2);
         return SI;
@@ -2643,13 +2649,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
+    Value *Ptr = II->getArgOperand(0);
     Value *Key = II->getArgOperand(1);
     Value *Disc = II->getArgOperand(2);
 
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
-    if (auto CI = dyn_cast<CallBase>(II->getArgOperand(0))) {
+    if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -2661,6 +2668,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
+    } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
+      // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
+      // our purposes, so check for that too.
+      const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
+      if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
+        break;
+
+      // resign(ptrauth(p,ks,ds),ks,ds,kr,dr) -> ptrauth(p,kr,dr)
+      if (NeedSign && isa<ConstantInt>(II->getArgOperand(4))) {
+        auto *SignKey = cast<ConstantInt>(II->getArgOperand(3));
+        auto *SignDisc = cast<ConstantInt>(II->getArgOperand(4));
+        auto *SignAddrDisc = ConstantPointerNull::get(Builder.getPtrTy());
+        auto *NewCPA = ConstantPtrAuth::get(CPA->getPointer(), SignKey,
+                                            SignDisc, SignAddrDisc);
+        replaceInstUsesWith(
+            *II, ConstantExpr::getPointerCast(NewCPA, II->getType()));
+        return eraseInstFromFunction(*II);
+      }
+
+      // auth(ptrauth(p,k,d),k,d) -> p
+      BasePtr = Builder.CreatePtrToInt(CPA->getPointer(), II->getType());
     } else
       break;
 
@@ -2677,8 +2705,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     } else {
       // sign(0) + auth(0) = nop
       replaceInstUsesWith(*II, BasePtr);
-      eraseInstFromFunction(*II);
-      return nullptr;
+      return eraseInstFromFunction(*II);
     }
 
     SmallVector<Value *, 4> CallArgs;

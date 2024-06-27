@@ -50,6 +50,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -121,6 +123,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Loop cost is 32
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
@@ -130,6 +133,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.
 ; CHECK-EMPTY:
 ;
@@ -200,6 +204,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -271,6 +277,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Loop cost is 32
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
@@ -280,6 +287,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.
 ;
 entry:

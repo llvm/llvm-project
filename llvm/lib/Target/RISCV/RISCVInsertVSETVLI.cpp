@@ -833,7 +833,7 @@ public:
     if (isUnknown())
       OS << "unknown";
     if (hasAVLReg())
-      OS << "AVLReg=" << (unsigned)getAVLReg();
+      OS << "AVLReg=" << llvm::printReg(getAVLReg());
     if (hasAVLImm())
       OS << "AVLImm=" << (unsigned)AVLImm;
     if (hasAVLVLMAX())
