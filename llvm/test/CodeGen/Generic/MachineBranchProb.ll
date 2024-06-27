@@ -1,4 +1,5 @@
 ; RUN: llc < %s -print-after=finalize-isel -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc %s -stop-after=finalize-isel -o - | llc -passes='print<machine-branch-prob>' -x mir -filetype=null 2>&1 | FileCheck -check-prefix=NPM %s
 
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
@@ -26,6 +27,10 @@ entry:
 ; CHECK: successors: %bb.1(0x3cf3cf4b), %bb.6(0x430c30b5)
 ; CHECK: bb.6.entry:
 ; CHECK: successors: %bb.1(0x2e8ba2d7), %bb.3(0x51745d29)
+
+; NPM: Printing analysis 'Machine Branch Probability Analysis' for machine function 'test2':
+; NPM: edge %bb.4 -> %bb.6 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; NPM: edge %bb.5 -> %bb.6 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 
 sw.bb:
 ; this call will prevent simplifyCFG from optimizing the block away in ARM/AArch64.
