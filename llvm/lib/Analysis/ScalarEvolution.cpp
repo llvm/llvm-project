@@ -2615,16 +2615,16 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     bool Ok = true;
     // Check all the operands to see if they can be represented in the
     // source type of the truncate.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(Ops[i])) {
+    for (const SCEV *Op : Ops) {
+      if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(Op)) {
         if (T->getOperand()->getType() != SrcType) {
           Ok = false;
           break;
         }
         LargeOps.push_back(T->getOperand());
-      } else if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[i])) {
+      } else if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Op)) {
         LargeOps.push_back(getAnyExtendExpr(C, SrcType));
-      } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(Ops[i])) {
+      } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(Op)) {
         SmallVector<const SCEV *, 8> LargeMulOps;
         for (unsigned j = 0, f = M->getNumOperands(); j != f && Ok; ++j) {
           if (const SCEVTruncateExpr *T =
@@ -3668,13 +3668,13 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
   if (Operands.size() == 1) return Operands[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Operands[0]->getType());
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    assert(getEffectiveSCEVType(Operands[i]->getType()) == ETy &&
+  for (const SCEV *Op : llvm::drop_begin(Operands)) {
+    assert(getEffectiveSCEVType(Op->getType()) == ETy &&
            "SCEVAddRecExpr operand types don't match!");
-    assert(!Operands[i]->getType()->isPointerTy() && "Step must be integer");
+    assert(!Op->getType()->isPointerTy() && "Step must be integer");
   }
-  for (unsigned i = 0, e = Operands.size(); i != e; ++i)
-    assert(isAvailableAtLoopEntry(Operands[i], L) &&
+  for (const SCEV *Op : Operands)
+    assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
 #endif
 
@@ -3958,8 +3958,8 @@ const SCEV *ScalarEvolution::getMinMaxExpr(SCEVTypes Kind,
   // already have one, otherwise create a new one.
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
+  for (const SCEV *Op : Ops)
+    ID.AddPointer(Op);
   void *IP = nullptr;
   const SCEV *ExistingSCEV = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (ExistingSCEV)
@@ -4345,8 +4345,8 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   // already have one, otherwise create a new one.
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    ID.AddPointer(Ops[i]);
+  for (const SCEV *Op : Ops)
+    ID.AddPointer(Op);
   void *IP = nullptr;
   const SCEV *ExistingSCEV = UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
   if (ExistingSCEV)
@@ -8785,9 +8785,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
   // Compute the ExitLimit for each loop exit. Use this to populate ExitCounts
   // and compute maxBECount.
   // Do a union of all the predicates here.
-  for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
-    BasicBlock *ExitBB = ExitingBlocks[i];
-
+  for (BasicBlock *ExitBB : ExitingBlocks) {
     // We canonicalize untaken exits to br (constant), ignore them so that
     // proving an exit untaken doesn't negatively impact our ability to reason
     // about the loop as whole.
