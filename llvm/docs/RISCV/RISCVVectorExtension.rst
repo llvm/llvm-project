@@ -87,7 +87,9 @@ Vector instructions can be represented in three main ways in LLVM IR:
               <vscale x 4 x i32> %passthru,
 	      <vscale x 4 x i32> %a,
 	      <vscale x 4 x i32> %b,
-	      i64 %avl
+	      <vscale x 4 x i1> %mask,
+	      i64 %avl,
+	      i64 0 ; policy (must be an immediate)
 	    )
 
    Both allow setting the AVL as well as controlling the inactive/tail elements via the passthru operand, but the masked variant also provides operands for the mask and ``vta``/``vma`` policy bits.
