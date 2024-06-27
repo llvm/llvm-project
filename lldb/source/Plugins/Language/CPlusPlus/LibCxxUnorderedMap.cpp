@@ -114,22 +114,8 @@ lldb::ValueObjectSP lldb_private::formatters::
     if (!hash_sp || !value_sp) {
       if (!m_element_type) {
         auto compressed_pair_layout_getter = [this](ValueObject &node) {
-          ValueObjectSP first_sp = GetFirstValueOfLibCXXCompressedPair(node);
-
-          if (!first_sp)
-            return false;
-
-          m_element_type = first_sp->GetCompilerType();
-          m_element_type = m_element_type.GetTypeTemplateArgument(0);
-          m_element_type = m_element_type.GetPointeeType();
-          m_node_type = m_element_type;
-          m_element_type = m_element_type.GetTypeTemplateArgument(0);
-
-          return true;
-        };
-
-        auto compressed_pair_v2_layout_getter = [this](ValueObject &node) {
           m_element_type = node.GetCompilerType();
+          m_element_type = m_element_type.GetTypeTemplateArgument(0);
           m_element_type = m_element_type.GetPointeeType();
           m_node_type = m_element_type;
           m_element_type = m_element_type.GetTypeTemplateArgument(0);
@@ -139,10 +125,15 @@ lldb::ValueObjectSP lldb_private::formatters::
 
         auto p1_sp = m_backend.GetChildAtNamePath({"__table_", "__p1_"});
         if (p1_sp) {
+          ValueObjectSP first_sp = GetFirstValueOfLibCXXCompressedPair(*p1_sp);
+
+          if (!first_sp)
+            return {};
+
           compressed_pair_layout_getter(*p1_sp);
         } else {
           p1_sp = m_backend.GetChildAtNamePath({"__table_", "__first_node_"});
-          compressed_pair_v2_layout_getter(*p1_sp);
+          compressed_pair_layout_getter(*p1_sp);
         }
 
         // This synthetic provider is used for both unordered_(multi)map and
