@@ -5,7 +5,7 @@ target datalayout = "A5"
 @exchange = external addrspace(10) global [70 x float], align 4
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
-define amdgpu_kernel void @_Z3foov() #0 {
+define amdgpu_kernel void @_Z3foov() noinline optnone {
 entry:
 ; CHECK: s_getreg_b32 s33, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 3)
 ; CHECK: s_mul_i32 s33, s33, 4
@@ -78,8 +78,6 @@ for.inc12:                                        ; preds = %for.body6
 for.end14:                                        ; preds = %for.cond4
   ret void
 }
-
-attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx1300" "target-features"="+16-bit-insts,+bf16-cvt-insts,+bf16-pk-insts,+bf16-trans-insts,+bitop3-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+fp8-conversion-insts,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-10-insts,+gfx12-insts,+gfx13-insts,+gfx8-insts,+gfx9-insts,+permlane16-swap,+prng-inst,+tanh-insts,+wavefrontsize32" "uniform-work-group-size"="true" }
 
 !llvm.module.flags = !{!0, !1, !2}
 
