@@ -48,7 +48,6 @@ class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
 
 public:
   MachinePostDominatorTree() = default;
-  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
