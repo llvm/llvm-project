@@ -16,6 +16,7 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 import binascii
 from textwrap import dedent
 
+
 class MyResponder(MockGDBServerResponder):
     @staticmethod
     def filecheck_to_blob(fc):
@@ -51,7 +52,7 @@ class MyResponder(MockGDBServerResponder):
                 ),
                 False,
             )
-        
+
         return None, False
 
 
