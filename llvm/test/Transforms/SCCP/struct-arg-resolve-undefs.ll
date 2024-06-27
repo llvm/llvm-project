@@ -29,7 +29,7 @@ define internal i32 @f(%struct.S %s.coerce) {
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_COND]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %ev = extractvalue %struct.S %s.coerce, 0
@@ -51,7 +51,7 @@ define internal i8 @lsh(i8 %l, i32 %r) {
 ; CHECK-LABEL: define internal i8 @lsh(
 ; CHECK-SAME: i8 [[L:%.*]], i32 [[R:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 poison
 ;
 entry:
   %conv = sext i8 %l to i32

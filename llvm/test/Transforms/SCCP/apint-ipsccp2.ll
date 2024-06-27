@@ -7,7 +7,7 @@ define internal i101 @bar(i101 %A) {
 ; CHECK-NEXT:    br label %[[T:.*]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    [[B:%.*]] = call i101 @bar(i101 0)
-; CHECK-NEXT:    ret i101 undef
+; CHECK-NEXT:    ret i101 poison
 ;
   %x = icmp eq i101 %A, 0
   br i1 %x, label %T, label %F
