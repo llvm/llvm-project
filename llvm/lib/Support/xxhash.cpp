@@ -46,6 +46,9 @@
 #include "llvm/Support/Endian.h"
 
 #include <stdlib.h>
+#if defined(_MSC_VER) && defined(_M_IX86)
+#include <intrin.h>
+#endif
 
 using namespace llvm;
 using namespace support;
