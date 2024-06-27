@@ -106,6 +106,8 @@ private:
 
   bool IsText : 1;
 
+  bool IsVirtual : 1;
+
   MCDummyFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
@@ -127,7 +129,8 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+            MCSymbol *Begin);
   ~MCSection();
 
 public:
@@ -211,7 +214,7 @@ public:
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    const MCExpr *Subsection) const = 0;
+                                    uint32_t Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill
   /// instead of 0s.
@@ -219,7 +222,7 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  virtual bool isVirtualSection() const = 0;
+  bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
 

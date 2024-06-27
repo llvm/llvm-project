@@ -510,6 +510,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbnf
     libc.src.math.scalbnl
     libc.src.math.sin
+    libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinhf
     libc.src.math.sinf
@@ -536,6 +537,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.f16divf
     libc.src.math.f16fmaf
     libc.src.math.f16sqrtf
     libc.src.math.fabsf16

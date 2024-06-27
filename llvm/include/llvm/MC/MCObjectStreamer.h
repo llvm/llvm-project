@@ -43,7 +43,6 @@ class MCObjectStreamer : public MCStreamer {
   std::unique_ptr<MCAssembler> Assembler;
   bool EmitEHFrame;
   bool EmitDebugFrame;
-  unsigned CurSubsectionIdx = 0;
   struct PendingMCFixup {
     const MCSymbol *Sym;
     MCFixup Fixup;
@@ -101,7 +100,7 @@ public:
   MCDataFragment *getOrCreateDataFragment(const MCSubtargetInfo* STI = nullptr);
 
 protected:
-  bool changeSectionImpl(MCSection *Section, const MCExpr *Subsection);
+  bool changeSectionImpl(MCSection *Section, uint32_t Subsection);
 
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
@@ -122,7 +121,7 @@ public:
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction

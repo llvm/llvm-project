@@ -73,6 +73,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sincos_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sincos_test.cpp
+  DEPENDS
+    libc.src.math.sincos
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE
@@ -1888,6 +1900,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  f16divf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16divf_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.math.f16divf
 )
 
 add_fp_unittest(

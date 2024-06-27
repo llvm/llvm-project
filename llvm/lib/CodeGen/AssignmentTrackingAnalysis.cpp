@@ -891,9 +891,9 @@ public:
     DenseMap<BasicBlock *, unsigned int> BBToOrder;
     { // Init OrderToBB and BBToOrder.
       unsigned int RPONumber = 0;
-      for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-        OrderToBB[RPONumber] = *RI;
-        BBToOrder[*RI] = RPONumber;
+      for (BasicBlock *BB : RPOT) {
+        OrderToBB[RPONumber] = BB;
+        BBToOrder[BB] = RPONumber;
         Worklist.push(RPONumber);
         ++RPONumber;
       }
@@ -2192,7 +2192,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           // Skip this assignment if the affected bits are outside of the
           // variable fragment.
           if (!at::calculateFragmentIntersect(
-                  I.getModule()->getDataLayout(), Info->Base,
+                  I.getDataLayout(), Info->Base,
                   Info->OffsetInBits, Info->SizeInBits, Assign, FragInfo) ||
               (FragInfo && FragInfo->SizeInBits == 0))
             return;
@@ -2312,9 +2312,9 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   DenseMap<BasicBlock *, unsigned int> BBToOrder;
   { // Init OrderToBB and BBToOrder.
     unsigned int RPONumber = 0;
-    for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-      OrderToBB[RPONumber] = *RI;
-      BBToOrder[*RI] = RPONumber;
+    for (BasicBlock *BB : RPOT) {
+      OrderToBB[RPONumber] = BB;
+      BBToOrder[BB] = RPONumber;
       Worklist.push(RPONumber);
       ++RPONumber;
     }
