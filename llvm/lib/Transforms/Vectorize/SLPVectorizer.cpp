@@ -14060,6 +14060,16 @@ Value *BoUpSLP::vectorizeTree(
             if (GEP->hasName())
               CloneGEP->takeName(GEP);
             Ex = CloneGEP;
+          } else if (auto *VecTy =
+                         dyn_cast<FixedVectorType>(Scalar->getType())) {
+            unsigned VecTyNumElements = VecTy->getNumElements();
+            // When REVEC is enabled, we need to extract a vector.
+            // Note: The element size of Scalar may be different from the
+            // element size of Vec.
+            Ex = Builder.CreateExtractVector(
+                FixedVectorType::get(Vec->getType()->getScalarType(),
+                                     VecTyNumElements),
+                Vec, Builder.getInt64(ExternalUse.Lane * VecTyNumElements));
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
