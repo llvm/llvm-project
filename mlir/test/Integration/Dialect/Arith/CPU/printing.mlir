@@ -1,4 +1,4 @@
-// Tests arith operations on i1 type.
+// Tests printing of arith values.
 
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
@@ -9,7 +9,7 @@
 func.func @i1Printing() {
     // printing i1 values
     // print(0 : i1) = '0'; print(1 : i1) = '1'; print(-1 : i1) = '1'
-    // CHECK-NEXT: 0
+    // CHECK:      0
     // CHECK-NEXT: 1
     // CHECK-NEXT: 1
     %false = arith.constant false

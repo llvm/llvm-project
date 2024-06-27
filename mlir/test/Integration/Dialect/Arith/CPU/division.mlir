@@ -1,4 +1,6 @@
-// tests simple arithmetic operations (i.e. add/sub/mul/div) and their variants (e.g. signed/unsigned, floor/ceildiv)
+// Tests division operations and their variants (e.g. ceil/floordiv, rem etc)
+// These tests are intended to be target agnostic: they should yield the same results 
+// regardless of the target platform.
 
 // RUN: mlir-opt %s --test-lower-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \

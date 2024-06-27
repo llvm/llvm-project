@@ -1,4 +1,6 @@
-// Tests arith operations on i1 type.
+// Tests comparison operations.
+// These tests are intended to be target agnostic: they should yield the same results 
+// regardless of the target platform.
 
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
@@ -9,7 +11,7 @@
 func.func @signed_comparison_on_i1s() {
     // signed comparisons on i1s
     // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true
-    // CHECK-NEXT: 0
+    // CHECK:      0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
     // CHECK-NEXT: 1

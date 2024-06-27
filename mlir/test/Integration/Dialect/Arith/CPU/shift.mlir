@@ -1,4 +1,4 @@
-// tests arith shifting operations.
+// Tests shift operations.
 
 // RUN: mlir-opt %s --test-lower-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \

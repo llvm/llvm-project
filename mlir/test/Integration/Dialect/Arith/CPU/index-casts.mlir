@@ -1,4 +1,6 @@
-// tests arith operations on indices.
+// Tests casting on index types.
+// These tests are intended to be target agnostic: they should yield the same results 
+// regardless of the target platform.
 
 // RUN: mlir-opt %s --test-lower-to-llvm | \
 // RUN:   mlir-cpu-runner -e entry -entry-point-result=void \
@@ -8,7 +10,7 @@
 func.func @i32_neg_1_index_cast() {
     // index casting of -1 : i32 -> 2^64 - 1
     // index_cast(-1 : i32) = 2^64 - 1;
-    // CHECK-NEXT: -1
+    // CHECK:      -1
     // CHECK-NEXT: 18446744073709551615
     %c-1_i32 = arith.constant -1 : i32
     %0 = arith.index_cast %c-1_i32 : i32 to index

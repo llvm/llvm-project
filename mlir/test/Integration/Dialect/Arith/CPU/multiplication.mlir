@@ -1,4 +1,6 @@
-// Tests arith operations on i1 type.
+// Tests mul operations and their variants (e.g. extended).
+// These tests are intended to be target agnostic: they should yield the same results 
+// regardless of the target platform.
 
 // RUN: mlir-opt %s --convert-scf-to-cf --convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:             --convert-func-to-llvm --convert-arith-to-llvm | \
@@ -9,7 +11,7 @@
 func.func @mulsi_extended_on_i1() {
     // mulsi_extended on i1, tests for overflow bit
     // mulsi_extended 1, 1 : i1 = (1, 0)
-    // CHECK-NEXT: 1
+    // CHECK:      1
     // CHECK-NEXT: 0
     %true = arith.constant true
     %low, %high = arith.mulsi_extended %true, %true : i1
