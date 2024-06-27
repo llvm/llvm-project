@@ -637,8 +637,7 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
         Intrinsic::getDeclaration(M, Intrinsic::arm_smlad) :
         Intrinsic::getDeclaration(M, Intrinsic::arm_smlald);
 
-    IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
-                                BasicBlock::iterator(InsertAfter));
+    IRBuilder<NoFolder> Builder(InsertAfter->getIterator());
     Instruction *Call = Builder.CreateCall(SMLAD, Args);
     NumSMLAD++;
     return Call;
@@ -758,8 +757,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
 
   // Insert the load at the point of the original dominating load.
   LoadInst *DomLoad = DT->dominates(Base, Offset) ? Base : Offset;
-  IRBuilder<NoFolder> IRB(DomLoad->getParent(),
-                          ++BasicBlock::iterator(DomLoad));
+  IRBuilder<NoFolder> IRB(++BasicBlock::iterator(DomLoad));
 
   // Create the wide load, while making sure to maintain the original alignment
   // as this prevents ldrd from being generated when it could be illegal due to

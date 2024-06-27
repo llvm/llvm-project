@@ -158,7 +158,7 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
 
   LLVMContext &Ctx = BB.getContext();
   IRBuilder<> Builder(Ctx);
-  Builder.SetInsertPoint(&BB, ++MostEncompassingPTrue->getIterator());
+  Builder.SetInsertPoint(++MostEncompassingPTrue->getIterator());
 
   auto *MostEncompassingPTrueVTy =
       cast<VectorType>(MostEncompassingPTrue->getType());
@@ -175,7 +175,7 @@ bool SVEIntrinsicOpts::coalescePTrueIntrinsicCalls(
     if (MostEncompassingPTrueVTy != PTrueVTy) {
       ConvertFromCreated = true;
 
-      Builder.SetInsertPoint(&BB, ++ConvertToSVBool->getIterator());
+      Builder.SetInsertPoint(++ConvertToSVBool->getIterator());
       auto *ConvertFromSVBool =
           Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
                                   {PTrueVTy}, {ConvertToSVBool});

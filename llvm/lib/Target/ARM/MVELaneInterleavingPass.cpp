@@ -382,7 +382,7 @@ static bool tryInterleave(Instruction *Start,
   for (Instruction *I : Truncs) {
     LLVM_DEBUG(dbgs() << "Replacing trunc " << *I << "\n");
 
-    Builder.SetInsertPoint(I->getParent(), ++I->getIterator());
+    Builder.SetInsertPoint(++I->getIterator());
     Value *Shuf = Builder.CreateShuffleVector(I, TruncMask);
     I->replaceAllUsesWith(Shuf);
     cast<Instruction>(Shuf)->setOperand(0, I);

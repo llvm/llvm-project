@@ -476,9 +476,8 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   Value *Row = II->getOperand(0);
   Value *Col = II->getOperand(1);
 
-  BasicBlock *BB = TileDef->getParent();
   BasicBlock::iterator Iter = TileDef->getIterator();
-  IRBuilder<> Builder(BB, ++Iter);
+  IRBuilder<> Builder(++Iter);
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
