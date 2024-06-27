@@ -394,6 +394,12 @@ struct PromoteMem2Reg {
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
 
+  /// Since this pass applies analysis to every alloca over the same CFG without
+  /// modifying it, we should cache basic block's predecessors and successors
+  /// because profiling shows a bottleneck materializing them.
+  DenseMap<const BasicBlock *, SmallVector<BasicBlock *>> PredecessorCache;
+  DenseMap<const BasicBlock *, SmallVector<BasicBlock *>> SuccessorCache;
+
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
                  AssumptionCache *AC)
@@ -1046,10 +1052,14 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
     if (!LiveInBlocks.insert(BB).second)
       continue;
 
+    auto &Predecessors = PredecessorCache[BB];
+    if (Predecessors.empty())
+      Predecessors = SmallVector<BasicBlock *>(predecessors(BB));
+
     // Since the value is live into BB, it is either defined in a predecessor or
     // live into it to.  Add the preds to the worklist unless they are a
     // defining block.
-    for (BasicBlock *P : predecessors(BB)) {
+    for (BasicBlock *P : Predecessors) {
       // The value is not live into a predecessor if it defines the value.
       if (DefBlocks.count(P))
         continue;
