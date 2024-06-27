@@ -19419,7 +19419,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       // The global/flat cases need to use agent scope to consistently produce
       // the native instruction instead of a cmpxchg expansion.
       SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
-      AO = AtomicOrdering::SequentiallyConsistent;
+      AO = AtomicOrdering::Monotonic;
 
       // The v2bf16 builtin uses i16 instead of a natural bfloat type.
       if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
