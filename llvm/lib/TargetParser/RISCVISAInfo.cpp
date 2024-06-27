@@ -287,7 +287,7 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
   return Features;
 }
 
-static Error getStringErrorForInvalidExt(std::string_view ExtName) {
+static Error getStringErrorForInvalidExt(StringRef ExtName) {
   if (ExtName.size() == 1) {
     return createStringError(errc::invalid_argument,
                              "unsupported standard user-level extension '" +
