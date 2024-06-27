@@ -193,7 +193,7 @@ static llvm::BasicBlock *convertOmpOpRegions(
   if (continuationBlockPHIs) {
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     continuationBlockPHIs->reserve(continuationBlockPHITypes.size());
-    builder.SetInsertPoint(continuationBlock, continuationBlock->begin());
+    builder.SetInsertPoint(continuationBlock->begin());
     for (llvm::Type *ty : continuationBlockPHITypes)
       continuationBlockPHIs->push_back(builder.CreatePHI(ty, numYields));
   }
@@ -413,8 +413,7 @@ static LogicalResult inlineConvertOmpRegions(
     return failure();
   if (continuationBlockArgs)
     llvm::append_range(*continuationBlockArgs, phis);
-  builder.SetInsertPoint(continuationBlock,
-                         continuationBlock->getFirstInsertionPt());
+  builder.SetInsertPoint(continuationBlock->getFirstInsertionPt());
   return success();
 }
 
