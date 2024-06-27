@@ -1575,7 +1575,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
     return;
 
   AssumptionCache *AC = &IFI.GetAssumptionCache(*CB.getCaller());
-  auto &DL = CB.getCaller()->getDataLayout();
+  auto &DL = CB.getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
   // already in the caller. To do this, we might need a DT of the caller.

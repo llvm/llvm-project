@@ -15901,7 +15901,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
         // the backend to generate a umull.
         unsigned Bitwidth = I->getType()->getScalarSizeInBits();
         APInt UpperMask = APInt::getHighBitsSet(Bitwidth, Bitwidth / 2);
-        const DataLayout &DL = I->getFunction()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (!MaskedValueIsZero(OperandInstr, UpperMask, DL))
           continue;
         NumZExts++;
