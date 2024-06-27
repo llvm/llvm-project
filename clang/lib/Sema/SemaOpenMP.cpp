@@ -13433,10 +13433,14 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
       auto I = CS->body_begin();
       while (I != CS->body_end()) {
         const auto *OED = dyn_cast<OMPExecutableDirective>(*I);
-        if (!OED || !isOpenMPTeamsDirective(OED->getDirectiveKind()) ||
-            OMPTeamsFound) {
-
+        bool IsTeams = OED && isOpenMPTeamsDirective(OED->getDirectiveKind());
+        if (!IsTeams || I != CS->body_begin()) {
           OMPTeamsFound = false;
+          if (IsTeams && I != CS->body_begin()) {
+            // This is the two teams case. Since the InnerTeamsRegionLoc will
+            // point to this second one reset the iterator to the other teams.
+            --I;
+          }
           break;
         }
         ++I;
