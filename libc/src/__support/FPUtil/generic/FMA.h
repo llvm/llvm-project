@@ -266,7 +266,7 @@ fma(InType x, InType y, InType z) {
   }
 
   DyadicFloat result(prod_sign, prod_lsb_exp - InFPBits::EXP_BIAS, prod_mant);
-  result.mantissa |= sticky_bits;
+  result.mantissa |= static_cast<unsigned int>(sticky_bits);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 

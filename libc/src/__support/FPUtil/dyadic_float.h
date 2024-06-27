@@ -110,7 +110,7 @@ template <size_t Bits> struct DyadicFloat {
               .get_val();
       // volatile prevents constant propagation that would result in infinity
       // always being returned no matter the current rounding mode.
-      volatile T two(2.0);
+      volatile T two = static_cast<T>(2.0);
       T r = two * d_hi;
 
       // TODO: Whether rounding down the absolute value to max_normal should
