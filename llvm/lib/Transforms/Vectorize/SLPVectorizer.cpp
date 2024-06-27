@@ -9877,16 +9877,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     auto *SrcVecTy = getWidenedType(SrcScalarTy, VL.size());
     unsigned Opcode = ShuffleOrOp;
     unsigned VecOpcode = Opcode;
-    if (!ScalarTy->isFloatingPointTy() && !SrcScalarTy->isFloatingPointTy() &&
+    if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
         (SrcIt != MinBWs.end() || It != MinBWs.end())) {
       // Check if the values are candidates to demote.
-      unsigned SrcBWSz = DL->getTypeSizeInBits(SrcScalarTy);
+      unsigned SrcBWSz = DL->getTypeSizeInBits(SrcScalarTy->getScalarType());
       if (SrcIt != MinBWs.end()) {
         SrcBWSz = SrcIt->second.first;
+        unsigned SrcScalarTyNumElements = getNumElements(SrcScalarTy);
         SrcScalarTy = IntegerType::get(F->getContext(), SrcBWSz);
-        SrcVecTy = getWidenedType(SrcScalarTy, VL.size());
+        SrcVecTy =
+            getWidenedType(SrcScalarTy, VL.size() * SrcScalarTyNumElements);
       }
-      unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+      unsigned BWSz = DL->getTypeSizeInBits(ScalarTy->getScalarType());
       if (BWSz == SrcBWSz) {
         VecOpcode = Instruction::BitCast;
       } else if (BWSz < SrcBWSz) {
@@ -13452,14 +13454,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Instruction::CastOps VecOpcode = CI->getOpcode();
       Type *SrcScalarTy = cast<VectorType>(InVec->getType())->getElementType();
       auto SrcIt = MinBWs.find(getOperandEntry(E, 0));
-      if (!ScalarTy->isFloatingPointTy() && !SrcScalarTy->isFloatingPointTy() &&
+      if (!ScalarTy->isFPOrFPVectorTy() && !SrcScalarTy->isFPOrFPVectorTy() &&
           (SrcIt != MinBWs.end() || It != MinBWs.end() ||
-           SrcScalarTy != CI->getOperand(0)->getType())) {
+           SrcScalarTy != CI->getOperand(0)->getType()->getScalarType())) {
         // Check if the values are candidates to demote.
         unsigned SrcBWSz = DL->getTypeSizeInBits(SrcScalarTy);
         if (SrcIt != MinBWs.end())
           SrcBWSz = SrcIt->second.first;
-        unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+        unsigned BWSz = DL->getTypeSizeInBits(ScalarTy->getScalarType());
         if (BWSz == SrcBWSz) {
           VecOpcode = Instruction::BitCast;
         } else if (BWSz < SrcBWSz) {
