@@ -122,24 +122,37 @@ LoopLikeOpInterface mlir::createFused(LoopLikeOpInterface target,
                                       NewYieldValuesFn newYieldValuesFn,
                                       FuseTerminatorFn fuseTerminatorFn) {
   auto targetIterArgs = target.getRegionIterArgs();
-  auto targetInductionVar = *target.getLoopInductionVars();
+  std::optional<SmallVector<Value>> targetInductionVar =
+      target.getLoopInductionVars();
   SmallVector<Value> targetYieldOperands(target.getYieldedValues());
   auto sourceIterArgs = source.getRegionIterArgs();
-  auto sourceInductionVar = *source.getLoopInductionVars();
+  std::optional<SmallVector<Value>> sourceInductionVar =
+      *source.getLoopInductionVars();
   SmallVector<Value> sourceYieldOperands(source.getYieldedValues());
   auto sourceRegion = source.getLoopRegions().front();
-  LoopLikeOpInterface fusedLoop = *target.replaceWithAdditionalYields(
-      rewriter, source.getInits(), /*replaceInitOperandUsesInLoop=*/false,
-      newYieldValuesFn);
+
+  FailureOr<LoopLikeOpInterface> maybeFusedLoop =
+      target.replaceWithAdditionalYields(rewriter, source.getInits(),
+                                         /*replaceInitOperandUsesInLoop=*/false,
+                                         newYieldValuesFn);
+  if (failed(maybeFusedLoop))
+    llvm_unreachable("failed to replace loop");
+  LoopLikeOpInterface fusedLoop = *maybeFusedLoop;
 
   // Map control operands.
   IRMapping mapping;
-  mapping.map(targetInductionVar, *fusedLoop.getLoopInductionVars());
+  std::optional<SmallVector<Value>> fusedInductionVar =
+      fusedLoop.getLoopInductionVars();
+  if (fusedInductionVar) {
+    if (!targetInductionVar || !sourceInductionVar)
+      llvm_unreachable("expected target and source loops to have induction vars");
+    mapping.map(*targetInductionVar, *fusedInductionVar);
+    mapping.map(*sourceInductionVar, *fusedInductionVar);
+  }
   mapping.map(targetIterArgs,
               fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
   mapping.map(targetYieldOperands,
               fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
-  mapping.map(sourceInductionVar, *fusedLoop.getLoopInductionVars());
   mapping.map(sourceIterArgs,
               fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
   mapping.map(sourceYieldOperands,
