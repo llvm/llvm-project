@@ -73,6 +73,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sincos_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sincos_test.cpp
+  DEPENDS
+    libc.src.math.sincos
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE

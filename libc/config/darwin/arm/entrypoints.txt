@@ -225,6 +225,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinhf
     libc.src.math.sin
