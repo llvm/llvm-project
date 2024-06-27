@@ -12,9 +12,16 @@ module  {
   }
 
   // LLVM: define void @bar(ptr addrspace(1) %0)
-  cir.func @bar(%arg0: !cir.ptr<!s32i, addrspace(1)>) {
+  cir.func @bar(%arg0: !cir.ptr<!s32i, addrspace(target<1>)>) {
     // LLVM-NEXT: alloca ptr addrspace(1)
-    %0 = cir.alloca !cir.ptr<!s32i, addrspace(1)>, !cir.ptr<!cir.ptr<!s32i, addrspace(1)>>, ["arg", init] {alignment = 8 : i64}
+    %0 = cir.alloca !cir.ptr<!s32i, addrspace(target<1>)>, !cir.ptr<!cir.ptr<!s32i, addrspace(target<1>)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // LLVM: define void @baz(ptr %0)
+  cir.func @baz(%arg0: !cir.ptr<!s32i, addrspace(target<0>)>) {
+    // LLVM-NEXT: alloca ptr,
+    %0 = cir.alloca !cir.ptr<!s32i, addrspace(target<0>)>, !cir.ptr<!cir.ptr<!s32i, addrspace(target<0>)>>, ["arg", init] {alignment = 8 : i64}
     cir.return
   }
 }

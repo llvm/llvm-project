@@ -302,16 +302,16 @@ cir.func @cast24(%p : !u32i) {
 
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
-cir.func @cast25(%p : !cir.ptr<!u32i, addrspace(1)>) {
-  %0 = cir.cast(address_space, %p : !cir.ptr<!u32i, addrspace(1)>), !cir.ptr<!u64i, addrspace(2)> // expected-error {{requires two types differ in addrspace only}}
+cir.func @cast25(%p : !cir.ptr<!u32i, addrspace(target<1>)>) {
+  %0 = cir.cast(address_space, %p : !cir.ptr<!u32i, addrspace(target<1>)>), !cir.ptr<!u64i, addrspace(target<2>)> // expected-error {{requires two types differ in addrspace only}}
   cir.return
 }
 
 // -----
 
 !u64i = !cir.int<u, 64>
-cir.func @cast26(%p : !cir.ptr<!u64i, addrspace(1)>) {
-  %0 = cir.cast(address_space, %p : !cir.ptr<!u64i, addrspace(1)>), !u64i // expected-error {{requires !cir.ptr type for source and result}}
+cir.func @cast26(%p : !cir.ptr<!u64i, addrspace(target<1>)>) {
+  %0 = cir.cast(address_space, %p : !cir.ptr<!u64i, addrspace(target<1>)>), !u64i // expected-error {{requires !cir.ptr type for source and result}}
   cir.return
 }
 
@@ -319,7 +319,7 @@ cir.func @cast26(%p : !cir.ptr<!u64i, addrspace(1)>) {
 
 !u64i = !cir.int<u, 64>
 cir.func @cast27(%p : !u64i) {
-  %0 = cir.cast(address_space, %p : !u64i), !cir.ptr<!u64i, addrspace(1)> // expected-error {{requires !cir.ptr type for source and result}}
+  %0 = cir.cast(address_space, %p : !u64i), !cir.ptr<!u64i, addrspace(target<1>)> // expected-error {{requires !cir.ptr type for source and result}}
   cir.return
 }
 
@@ -1143,3 +1143,31 @@ cir.func @bad_goto() -> () {
   cir.label "label"
   cir.return
 } 
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @address_space1(%p : !cir.ptr<!u64i, addrspace()>) { // expected-error {{expected keyword for addrspace kind}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @address_space2(%p : !cir.ptr<!u64i, addrspace(target<>)>) { // expected-error {{expected integer value}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @address_space3(%p : !cir.ptr<!u64i, addrspace(target)>) { // expected-error {{expected '<'}}
+  cir.return
+}
+
+// -----
+
+!u64i = !cir.int<u, 64>
+cir.func @address_space4(%p : !cir.ptr<!u64i, addrspace(foobar)>) { // expected-error {{invalid addrspace kind keyword: foobar}}
+  cir.return
+}

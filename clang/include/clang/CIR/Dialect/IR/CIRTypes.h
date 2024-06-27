@@ -20,6 +20,8 @@
 
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+
 //===----------------------------------------------------------------------===//
 // CIR StructType
 //

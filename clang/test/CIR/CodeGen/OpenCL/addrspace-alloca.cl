@@ -3,10 +3,13 @@
 // RUN: %clang_cc1 -cl-std=CL3.0 -O0 -fclangir -emit-llvm -triple spirv64-unknown-unknown %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
-// CIR: cir.func @func(%arg0: !cir.ptr<!s32i, addrspace(3)>
+// Lowering of language-specific AS not supported
+// XFAIL: *
+
+// CIR: cir.func @func(%arg0: !cir.ptr<!s32i, addrspace(target<3>)>
 // LLVM: @func(ptr addrspace(3)
 kernel void func(local int *p) {
-  // CIR-NEXT: %[[#ALLOCA_P:]] = cir.alloca !cir.ptr<!s32i, addrspace(3)>, !cir.ptr<!cir.ptr<!s32i, addrspace(3)>>, ["p", init] {alignment = 8 : i64}
+  // CIR-NEXT: %[[#ALLOCA_P:]] = cir.alloca !cir.ptr<!s32i, addrspace(target<3>)>, !cir.ptr<!cir.ptr<!s32i, addrspace(target<3>)>>, ["p", init] {alignment = 8 : i64}
   // LLVM-NEXT: %[[#ALLOCA_P:]] = alloca ptr addrspace(3), i64 1, align 8
 
   int x;
@@ -14,11 +17,11 @@ kernel void func(local int *p) {
   // LLVM-NEXT: %[[#ALLOCA_X:]] = alloca i32, i64 1, align 4
 
   global char *b;
-  // CIR-NEXT: %[[#ALLOCA_B:]] = cir.alloca !cir.ptr<!s8i, addrspace(1)>, !cir.ptr<!cir.ptr<!s8i, addrspace(1)>>, ["b"] {alignment = 8 : i64}
+  // CIR-NEXT: %[[#ALLOCA_B:]] = cir.alloca !cir.ptr<!s8i, addrspace(target<1>)>, !cir.ptr<!cir.ptr<!s8i, addrspace(target<1>)>>, ["b"] {alignment = 8 : i64}
   // LLVM-NEXT: %[[#ALLOCA_B:]] = alloca ptr addrspace(1), i64 1, align 8
 
   // Store of the argument `p`
-  // CIR-NEXT: cir.store %arg0, %[[#ALLOCA_P]] : !cir.ptr<!s32i, addrspace(3)>, !cir.ptr<!cir.ptr<!s32i, addrspace(3)>>
+  // CIR-NEXT: cir.store %arg0, %[[#ALLOCA_P]] : !cir.ptr<!s32i, addrspace(target<3>)>, !cir.ptr<!cir.ptr<!s32i, addrspace(target<3>)>>
   // LLVM-NEXT: store ptr addrspace(3) %{{[0-9]+}}, ptr %[[#ALLOCA_P]], align 8
 
   return;

@@ -17,7 +17,7 @@ module  {
   }
 
   cir.func @addrspace_cast(%arg0: !cir.ptr<!s32i>) {
-    %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(2)>
+    %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(target<2>)>
     cir.return
   }
 }
@@ -30,4 +30,4 @@ module  {
 // CHECK: %0 = cir.cast(bitcast, %arg0 : !cir.ptr<!s32i>), !cir.ptr<f32>
 
 // CHECK: cir.func @addrspace_cast
-// CHECK: %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(2)>
+// CHECK: %0 = cir.cast(address_space, %arg0 : !cir.ptr<!s32i>), !cir.ptr<!s32i, addrspace(target<2>)>
