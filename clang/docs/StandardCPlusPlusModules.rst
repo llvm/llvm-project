@@ -652,14 +652,14 @@ in the future. The expected roadmap for Reduced BMIs as of Clang 19.x is:
    comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
-Experimental No Transitive Change
----------------------------------
+Experimental Non Cascade Change
+-------------------------------
 
 This section is primarily for build system vendors. For end compiler users,
 if you don't want to read it all, this is helpful to reduce recompilations
 We encourage build system vendors and end users try this out and bring feedbacks
 
-Before Clang 19, a change in BMI of any (transitive) dependency would case the
+Before Clang 19, a change in BMI of any (transitive) dependency would cause the
 outputs of the BMI to change. Starting with Clang 19, changes to non-direct
 dependencies should not directly affect the output BMI, unless they affect the
 results of the compilations. We expect that there are many more opportunities
@@ -727,9 +727,9 @@ then the contents of ``useBOnly.pcm`` remain unchanged.
 Consequently, if the build system only bases recompilation decisions on directly imported modules,
 it becomes possible to skip the recompilation of ``Use.cc``.
 It should be fine because the altered interfaces do not affect ``Use.cc`` in any way;
-there are no transitive changes.
+there are non cascade changes.
 
-When clang generates a BMI, it records the hash values of all potentially contributory BMIs
+When ``Clang`` generates a BMI, it records the hash values of all potentially contributory BMIs
 for the BMI being produced. This ensures that build systems are not required to consider
 transitively imported modules when deciding whether to recompile.
 
@@ -743,7 +743,7 @@ can go back to the transitive change mode safely at any time.
 Interactions with Reduced BMI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With reduced BMI, the no transitive change feature can be more powerful. For example,
+With reduced BMI, the non cascade change feature can be more powerful. For example,
 
 .. code-block:: c++
 
@@ -760,7 +760,7 @@ With reduced BMI, the no transitive change feature can be more powerful. For exa
 
   $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
   $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
-  $md5sum B.pcm
+  $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
 And let's change the implementation for ``A.cppm`` into:
@@ -777,7 +777,7 @@ and recompile the example:
 
   $ clang++ -std=c++20 A.cppm -c -fmodule-output=A.pcm  -fexperimental-modules-reduced-bmi -o A.o
   $ clang++ -std=c++20 B.cppm -c -fmodule-output=B.pcm  -fexperimental-modules-reduced-bmi -o B.o -fmodule-file=A=A.pcm
-  $md5sum B.pcm
+  $ md5sum B.pcm
   6c2bd452ca32ab418bf35cd141b060b9  B.pcm
 
 We should find the contents of ``B.pcm`` keeps the same. In such case, the build system is
