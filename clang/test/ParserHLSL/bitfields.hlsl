@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump -x hlsl -o - %s | Filecheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump -x hlsl -o - %s | FileCheck %s
 
 
 struct MyBitFields {
