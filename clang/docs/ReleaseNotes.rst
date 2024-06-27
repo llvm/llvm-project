@@ -71,6 +71,11 @@ C++ Specific Potentially Breaking Changes
 
   To fix this, update libstdc++ to version 14.1.1 or greater.
 
+- Clang now emits errors when Thread Safety Analysis trylock attributes are
+  applied to functions or methods with incompatible return values, such as
+  constructors, destructors, and void-returning functions. This only affects the
+  ``TRY_ACQUIRE`` and ``TRY_ACQUIRE_SHARED`` attributes (and any synonyms).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -95,10 +100,22 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Removed the global alias that was pointing to AArch64 Function Multiversioning
+  ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
+  suffix got removed from the name mangling. The alias interacts badly with
+  GlobalOpt (see the issue #96197).
+  
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  type for MSVC 1920+. This change resolves incompatibilities with code compiled
+  by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -149,6 +166,15 @@ Some of the major new features and improvements to Clang are listed
 here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
+
+- The ``\par`` documentation comment command now supports an optional
+  argument, which denotes the header of the paragraph started by
+  an instance of the ``\par`` command comment. The implementation
+  of the argument handling matches its semantics
+  `in Doxygen <https://www.doxygen.nl/manual/commands.html#cmdpar>`.
+  Namely, any text on the same line as the ``\par`` command will become
+  a header for the paragaph, and if there is no text then the command
+  will start a new paragraph.
 
 C++ Language Changes
 --------------------
@@ -270,6 +296,9 @@ Resolutions to C++ Defect Reports
 
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
+
+- Clang now performs type-only lookup for the name in ``using enum`` declaration.
+  (`CWG2877: Type-only lookup for using-enum-declarator <https://cplusplus.github.io/CWG/issues/2877.html>`_).
 
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
@@ -492,6 +521,11 @@ Attribute Changes in Clang
      };
 
 
+- Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
+  ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
+  The attributes declare constraints about a function's behavior pertaining to blocking and
+  heap memory allocation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -588,6 +622,10 @@ Improvements to Clang's diagnostics
 
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
+
+- Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
+  used rather than when they are needed for constant evaluation or when code is generated for them.
+  The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -694,6 +732,13 @@ Bug Fixes in This Version
 
 - Correctly reject declarations where a statement is required in C.
   Fixes #GH92775
+
+- Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Clang's Thread Safety Analysis now evaluates trylock success arguments of enum
+  types rather than silently defaulting to false. This fixes a class of false
+  negatives where the analysis failed to detect unchecked access to guarded
+  data.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -887,7 +932,9 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
+- Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1020,10 +1067,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The -mcpu=generic configuration now enables multivalue feature, which is
-standardized and available in all major engines. Enabling multivalue here only
-enables the language feature but does not turn on the multivalue ABI (this
-enables non-ABI uses of multivalue, like exnref).
+The -mcpu=generic configuration now enables multivalue and reference-types.
+These proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^

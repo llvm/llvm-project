@@ -1824,8 +1824,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SHA2,  AArch64::AEK_AES,   AArch64::AEK_I8MM,
                  AArch64::AEK_SSBS,  AArch64::AEK_SB,    AArch64::AEK_RAND,
                  AArch64::AEK_MTE,   AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
-                 AArch64::AEK_PAUTH, AArch64::AEK_CSSC,  AArch64::AEK_PERFMON,
-                 AArch64::AEK_WFXT}),
+                 AArch64::AEK_PAUTH, AArch64::AEK_CSSC,  AArch64::AEK_PERFMON}),
             "8.7-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
@@ -2474,7 +2473,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
-        {AArch64::ARMV9_5A, {}, {"v9.5a", "sve", "sve2", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},

@@ -884,6 +884,9 @@ will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     Visibility<[ClangOption, FlangOption]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
+def embed_dir_EQ : Joined<["--"], "embed-dir=">, Group<Preprocessor_Group>,
+    Visibility<[ClangOption, CC1Option]>, MetaVarName<"<dir>">,
+    HelpText<"Add directory to embed search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
@@ -1477,6 +1480,9 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
+def dE : Flag<["-"], "dE">, Group<d_Group>, Visibility<[CC1Option]>,
+  HelpText<"Print embed directives in -E mode in addition to normal output">,
+  MarshallingInfoFlag<PreprocessorOutputOpts<"ShowEmbedDirectives">>;
 def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
@@ -5529,10 +5535,7 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  HelpTextForVariants<[FlangOption],
-                      "Print the resource directory pathname that contains lib and "
-                      "include directories with the runtime libraries and MODULE files.">,
-  Visibility<[ClangOption, CLOption, FlangOption]>;
+  Visibility<[ClangOption, CLOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -6308,12 +6311,12 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]
@@ -8591,6 +8594,8 @@ def : Separate<["-"], "Xmicrosoft-windows-sdk-root">,
     Alias<_SLASH_winsdkdir>;
 def : Separate<["-"], "Xmicrosoft-windows-sdk-version">,
     Alias<_SLASH_winsdkversion>;
+def : Separate<["-"], "Xmicrosoft-windows-sys-root">,
+    Alias<_SLASH_winsysroot>;
 
 // Ignored:
 
@@ -8762,3 +8767,11 @@ def spirv : DXCFlag<"spirv">,
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;
+def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Disable the wasm-opt optimizer">,
+  MarshallingInfoFlag<LangOpts<"NoWasmOpt">>;
+def wasm_opt : Flag<["--"], "wasm-opt">,
+  Group<m_Group>,
+  HelpText<"Enable the wasm-opt optimizer (default)">,
+  MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;

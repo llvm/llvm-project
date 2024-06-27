@@ -255,7 +255,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
       mlir::Block *insertBlock =
           getBlockForAllocaInsert(parentOp, parentRegion);
-      size.getDefiningOp()->moveAfter(insertBlock, insertBlock->begin());
+      size.getDefiningOp()->moveBefore(&insertBlock->front());
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }
 

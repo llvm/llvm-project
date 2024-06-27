@@ -1265,8 +1265,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
-      if (actualIsAssumedRank)
-        TODO(loc, "copy-in and copy-out of assumed-rank arguments");
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
@@ -1599,9 +1597,6 @@ void prepareUserCallArguments(
         if (dataTy.isAssumedRank()) {
           dataTy =
               dataTy.getBoxTypeWithNewShape(fir::getBase(actualExv).getType());
-          if (dataTy.isAssumedRank())
-            TODO(loc, "associating assumed-rank target to pointer assumed-rank "
-                      "argument");
         }
         mlir::Value irBox = builder.createTemporary(loc, dataTy);
         fir::MutableBoxValue ptrBox(irBox,

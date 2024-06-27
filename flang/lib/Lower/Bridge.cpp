@@ -757,10 +757,16 @@ public:
         });
   }
 
-  void copyVar(mlir::Location loc, mlir::Value dst,
-               mlir::Value src) override final {
+  void copyVar(mlir::Location loc, mlir::Value dst, mlir::Value src,
+               fir::FortranVariableFlagsEnum attrs) override final {
+    bool isAllocatable =
+        bitEnumContainsAny(attrs, fir::FortranVariableFlagsEnum::allocatable);
+    bool isPointer =
+        bitEnumContainsAny(attrs, fir::FortranVariableFlagsEnum::pointer);
+
     copyVarHLFIR(loc, Fortran::lower::SymbolBox::Intrinsic{dst},
-                 Fortran::lower::SymbolBox::Intrinsic{src});
+                 Fortran::lower::SymbolBox::Intrinsic{src}, isAllocatable,
+                 isPointer);
   }
 
   void copyHostAssociateVar(
@@ -1089,6 +1095,28 @@ private:
   void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
                     Fortran::lower::SymbolBox src) {
     assert(lowerToHighLevelFIR());
+
+    bool isBoxAllocatable = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isAllocatable(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isAllocatable();
+        },
+        [](const auto &box) { return false; });
+
+    bool isBoxPointer = dst.match(
+        [](const fir::MutableBoxValue &box) { return box.isPointer(); },
+        [](const fir::FortranVariableOpInterface &box) {
+          return fir::FortranVariableOpInterface(box).isPointer();
+        },
+        [](const auto &box) { return false; });
+
+    copyVarHLFIR(loc, dst, src, isBoxAllocatable, isBoxPointer);
+  }
+
+  void copyVarHLFIR(mlir::Location loc, Fortran::lower::SymbolBox dst,
+                    Fortran::lower::SymbolBox src, bool isAllocatable,
+                    bool isPointer) {
+    assert(lowerToHighLevelFIR());
     hlfir::Entity lhs{dst.getAddr()};
     hlfir::Entity rhs{src.getAddr()};
     // Temporary_lhs is set to true in hlfir.assign below to avoid user
@@ -1105,21 +1133,7 @@ private:
           /*temporary_lhs=*/true);
     };
 
-    bool isBoxAllocatable = dst.match(
-        [](const fir::MutableBoxValue &box) { return box.isAllocatable(); },
-        [](const fir::FortranVariableOpInterface &box) {
-          return fir::FortranVariableOpInterface(box).isAllocatable();
-        },
-        [](const auto &box) { return false; });
-
-    bool isBoxPointer = dst.match(
-        [](const fir::MutableBoxValue &box) { return box.isPointer(); },
-        [](const fir::FortranVariableOpInterface &box) {
-          return fir::FortranVariableOpInterface(box).isPointer();
-        },
-        [](const auto &box) { return false; });
-
-    if (isBoxAllocatable) {
+    if (isAllocatable) {
       // Deep copy allocatable if it is allocated.
       // Note that when allocated, the RHS is already allocated with the LHS
       // shape for copy on entry in createHostAssociateVarClone.
@@ -1134,7 +1148,7 @@ private:
             copyData(lhs, rhs);
           })
           .end();
-    } else if (isBoxPointer) {
+    } else if (isPointer) {
       // Set LHS target to the target of RHS (do not copy the RHS
       // target data into the LHS target storage).
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
@@ -4107,8 +4121,8 @@ private:
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
                            hlfir::Entity &lhs, hlfir::Entity &rhs) {
-    bool lhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.lhs);
-    bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
+    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
     auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
@@ -4177,7 +4191,8 @@ private:
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-        if (details->cudaDataAttr()) {
+        if (details->cudaDataAttr() &&
+            *details->cudaDataAttr() != Fortran::common::CUDADataAttr::Pinned) {
           if (sym.owner().IsDerivedType() && IsAllocatable(sym.GetUltimate()))
             TODO(loc, "Device resident allocatable derived-type component");
           // TODO: This should probably being checked in semantic and give a
@@ -4229,8 +4244,8 @@ private:
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
     bool isInDeviceContext = isDeviceContext(builder);
-    bool isCUDATransfer = (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-                           Fortran::evaluate::HasCUDAAttrs(assign.rhs)) &&
+    bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
+                           Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
                           !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);

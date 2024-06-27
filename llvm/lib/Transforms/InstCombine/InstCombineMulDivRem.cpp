@@ -879,6 +879,24 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFMulFMF(X, NegC, &I);
 
+  if (I.hasNoNaNs() && I.hasNoSignedZeros()) {
+    // (uitofp bool X) * Y --> X ? Y : 0
+    // Y * (uitofp bool X) --> X ? Y : 0
+    // Note INF * 0 is NaN.
+    if (match(Op0, m_UIToFP(m_Value(X))) &&
+        X->getType()->isIntOrIntVectorTy(1)) {
+      auto *SI = SelectInst::Create(X, Op1, ConstantFP::get(I.getType(), 0.0));
+      SI->copyFastMathFlags(I.getFastMathFlags());
+      return SI;
+    }
+    if (match(Op1, m_UIToFP(m_Value(X))) &&
+        X->getType()->isIntOrIntVectorTy(1)) {
+      auto *SI = SelectInst::Create(X, Op0, ConstantFP::get(I.getType(), 0.0));
+      SI->copyFastMathFlags(I.getFastMathFlags());
+      return SI;
+    }
+  }
+
   // (select A, B, C) * (select A, D, E) --> select A, (B*D), (C*E)
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, Op0, Op1))
     return replaceInstUsesWith(I, V);
@@ -1679,7 +1697,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
 
   // -X / C --> X / -C
   Value *X;
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (match(I.getOperand(0), m_FNeg(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
@@ -1724,7 +1742,7 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 
   // C / -X --> -C / X
   Value *X;
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   if (match(I.getOperand(1), m_FNeg(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(NegC, X, &I);

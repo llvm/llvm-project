@@ -1432,7 +1432,6 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
   if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
     return false;
-
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }

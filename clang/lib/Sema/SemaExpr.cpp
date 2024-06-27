@@ -3711,7 +3711,7 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero) {
   bool ValueIsPositive =
       AllowZero ? ValueAPS.isNonNegative() : ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
-    Diag(E->getExprLoc(), diag::err_pragma_loop_invalid_argument_value)
+    Diag(E->getExprLoc(), diag::err_requires_positive_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
     return true;
   }
@@ -7300,8 +7300,8 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  InitListExpr *E = new (Context) InitListExpr(Context, LBraceLoc, InitArgList,
-                                               RBraceLoc);
+  InitListExpr *E =
+      new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
   E->setType(Context.VoidTy); // FIXME: just a place holder for now.
   return E;
 }
@@ -14217,6 +14217,39 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
     QualType MPTy = Context.getMemberPointerType(
         op->getType(), Context.getTypeDeclType(MD->getParent()).getTypePtr());
+
+    if (getLangOpts().PointerAuthCalls && MD->isVirtual() &&
+        !isUnevaluatedContext() && !MPTy->isDependentType()) {
+      // When pointer authentication is enabled, argument and return types of
+      // vitual member functions must be complete. This is because vitrual
+      // member function pointers are implemented using virtual dispatch
+      // thunks and the thunks cannot be emitted if the argument or return
+      // types are incomplete.
+      auto ReturnOrParamTypeIsIncomplete = [&](QualType T,
+                                               SourceLocation DeclRefLoc,
+                                               SourceLocation RetArgTypeLoc) {
+        if (RequireCompleteType(DeclRefLoc, T, diag::err_incomplete_type)) {
+          Diag(DeclRefLoc,
+               diag::note_ptrauth_virtual_function_pointer_incomplete_arg_ret);
+          Diag(RetArgTypeLoc,
+               diag::note_ptrauth_virtual_function_incomplete_arg_ret_type)
+              << T;
+          return true;
+        }
+        return false;
+      };
+      QualType RetTy = MD->getReturnType();
+      bool IsIncomplete =
+          !RetTy->isVoidType() &&
+          ReturnOrParamTypeIsIncomplete(
+              RetTy, OpLoc, MD->getReturnTypeSourceRange().getBegin());
+      for (auto *PVD : MD->parameters())
+        IsIncomplete |= ReturnOrParamTypeIsIncomplete(PVD->getType(), OpLoc,
+                                                      PVD->getBeginLoc());
+      if (IsIncomplete)
+        return QualType();
+    }
+
     // Under the MS ABI, lock down the inheritance model now.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       (void)isCompleteType(OpLoc, MPTy);
@@ -16687,6 +16720,15 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                     DeclContext *ParentContext) {
   return new (Context)
       SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc, ParentContext);
+}
+
+ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                                StringLiteral *BinaryData) {
+  EmbedDataStorage *Data = new (Context) EmbedDataStorage;
+  Data->BinaryData = BinaryData;
+  return new (Context)
+      EmbedExpr(Context, EmbedKeywordLoc, Data, /*NumOfElements=*/0,
+                Data->getDataElementCount());
 }
 
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,

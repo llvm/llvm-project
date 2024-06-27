@@ -1310,7 +1310,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
       // If NewOp is a constant and OldOp is not replace iff NewOp doesn't
       // contain and undef elements.
-      if (match(NewOp, m_ImmConstant())) {
+      if (match(NewOp, m_ImmConstant()) || NewOp == V) {
         if (isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
           return replaceOperand(Sel, Swapped ? 2 : 1, V);
         return nullptr;
@@ -1529,7 +1529,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
         !match(ReplacementHigh, m_ImmConstant(HighC)))
       return nullptr;
-    const DataLayout &DL = Sel0.getModule()->getDataLayout();
+    const DataLayout &DL = Sel0.getDataLayout();
     ReplacementLow =
         ConstantFoldCastOperand(Instruction::SExt, LowC, X->getType(), DL);
     ReplacementHigh =

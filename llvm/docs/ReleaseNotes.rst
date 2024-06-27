@@ -66,6 +66,7 @@ Changes to the LLVM IR
 
   * ``icmp``
   * ``fcmp``
+  * ``shl``
 * LLVM has switched from using debug intrinsics in textual IR to using debug
   records by default. Details of the change and instructions on how to update
   any downstream tools and tests can be found in the `migration docs
@@ -85,7 +86,16 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
-- The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
+* LLVM now has rpmalloc version 1.4.5 in-tree, as a replacement C allocator for
+  hosted toolchains. This supports several host platforms such as Mac or Unix,
+  however currently only the Windows 64-bit LLVM release uses it.
+  This has a great benefit in terms of build times on Windows when using ThinLTO
+  linking, especially on machines with lots of cores, to an order of magnitude
+  or more. Clang compilation is also improved. Please see some build timings in
+  (`#91862 <https://github.com/llvm/llvm-project/pull/91862#issue-2291033962>`_)
+  For more information, refer to the **LLVM_ENABLE_RPMALLOC** option in `CMake variables <https://llvm.org/docs/CMake.html#llvm-related-variables>`_.
+
+* The ``LLVM_ENABLE_TERMINFO`` flag has been removed. LLVM no longer depends on
   terminfo and now always uses the ``TERM`` environment variable for color
   support autodetection.
 
@@ -108,12 +118,24 @@ Changes to the AArch64 Backend
   in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
   is passed as part of ``-mcpu=`` options.
 
+* SVE and SVE2 have been moved to the default extensions list for ARMv9.0,
+  making them optional per the Arm ARM.  Existing v9.0+ CPUs in the backend that
+  support these extensions continue to have these features enabled by default
+  when specified via ``-march=`` or an ``-mcpu=`` that supports them.  The
+  attribute ``"target-features"="+v9a"`` no longer implies ``"+sve"`` and
+  ``"+sve2"`` respectively.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
+* Removed ``llvm.amdgcn.ds.fadd``, ``llvm.amdgcn.ds.fmin`` and
+  ``llvm.amdgcn.ds.fmax`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
+  `fmax` with addrspace(3) instead.
 
 Changes to the ARM Backend
 --------------------------
@@ -154,7 +176,7 @@ Changes to the RISC-V Backend
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 1.0.0 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
@@ -166,6 +188,7 @@ Changes to the RISC-V Backend
 * Zabha is no longer experimental.
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
+* ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -227,6 +250,7 @@ Changes to the C API
 
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
+  * ``LLVMConstShl``
 
 **Note:** The following changes are due to the removal of the debug info
 intrinsics from LLVM and to the introduction of debug records into LLVM.
@@ -262,6 +286,12 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMDIBuilderInsertDeclareAtEnd``
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
+
+* Added the following functions for accessing a Target Extension Type's data:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

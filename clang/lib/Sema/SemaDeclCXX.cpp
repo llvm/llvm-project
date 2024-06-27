@@ -7116,6 +7116,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     return false;
   };
 
+  if (!Record->isInvalidDecl() &&
+      Record->hasAttr<VTablePointerAuthenticationAttr>())
+    checkIncorrectVTablePointerAuthenticationAttribute(*Record);
+
   auto CompleteMemberFunction = [&](CXXMethodDecl *M) {
     // Check whether the explicitly-defaulted members are valid.
     bool Incomplete = CheckForDefaultedFunction(M);
@@ -10500,6 +10504,39 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
   }
 }
 
+void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
+    CXXRecordDecl &RD) {
+  if (RequireCompleteType(RD.getLocation(), Context.getRecordType(&RD),
+                          diag::err_incomplete_type_vtable_pointer_auth))
+    return;
+
+  const CXXRecordDecl *PrimaryBase = &RD;
+  if (PrimaryBase->hasAnyDependentBases())
+    return;
+
+  while (1) {
+    assert(PrimaryBase);
+    const CXXRecordDecl *Base = nullptr;
+    for (auto BasePtr : PrimaryBase->bases()) {
+      if (!BasePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
+        continue;
+      Base = BasePtr.getType()->getAsCXXRecordDecl();
+      break;
+    }
+    if (!Base || Base == PrimaryBase || !Base->isPolymorphic())
+      break;
+    Diag(RD.getAttr<VTablePointerAuthenticationAttr>()->getLocation(),
+         diag::err_non_top_level_vtable_pointer_auth)
+        << &RD << Base;
+    PrimaryBase = Base;
+  }
+
+  if (!RD.isPolymorphic())
+    Diag(RD.getAttr<VTablePointerAuthenticationAttr>()->getLocation(),
+         diag::err_non_polymorphic_vtable_pointer_auth)
+        << &RD;
+}
+
 void Sema::ActOnFinishCXXMemberSpecification(
     Scope *S, SourceLocation RLoc, Decl *TagDecl, SourceLocation LBrac,
     SourceLocation RBrac, const ParsedAttributesView &AttrList) {
@@ -12372,23 +12409,24 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S, AccessSpecifier AS,
 
 Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
-                                      SourceLocation EnumLoc,
-                                      SourceLocation IdentLoc,
-                                      IdentifierInfo &II, CXXScopeSpec *SS) {
+                                      SourceLocation EnumLoc, SourceRange TyLoc,
+                                      const IdentifierInfo &II, ParsedType Ty,
+                                      CXXScopeSpec *SS) {
   assert(!SS->isInvalid() && "ScopeSpec is invalid");
   TypeSourceInfo *TSI = nullptr;
-  QualType EnumTy = GetTypeFromParser(
-      getTypeName(II, IdentLoc, S, SS, /*isClassName=*/false,
-                  /*HasTrailingDot=*/false,
-                  /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
-                  /*WantNontrivialTypeSourceInfo=*/true),
-      &TSI);
+  SourceLocation IdentLoc = TyLoc.getBegin();
+  QualType EnumTy = GetTypeFromParser(Ty, &TSI);
   if (EnumTy.isNull()) {
     Diag(IdentLoc, SS && isDependentScopeSpecifier(*SS)
                        ? diag::err_using_enum_is_dependent
                        : diag::err_unknown_typename)
         << II.getName()
-        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, IdentLoc);
+        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, TyLoc.getEnd());
+    return nullptr;
+  }
+
+  if (EnumTy->isDependentType()) {
+    Diag(IdentLoc, diag::err_using_enum_is_dependent);
     return nullptr;
   }
 
@@ -16111,7 +16149,7 @@ ExprResult Sema::BuildCXXConstructExpr(
     CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl)) {
     Constructor = findInheritingConstructor(ConstructLoc, Constructor, Shadow);
-    // The only way to get here is if we did overlaod resolution to find the
+    // The only way to get here is if we did overload resolution to find the
     // shadow decl, so we don't need to worry about re-checking the trailing
     // requires clause.
     if (DiagnoseUseOfOverloadedDecl(Constructor, ConstructLoc))
@@ -18290,7 +18328,7 @@ void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
   }
 }
 
-bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                              const CXXMethodDecl *Old) {
   const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
   const auto *OldFT = Old->getType()->castAs<FunctionProtoType>();
@@ -18324,6 +18362,41 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     Diag(New->getLocation(), diag::err_mismatched_code_seg_override);
     Diag(Old->getLocation(), diag::note_previous_declaration);
     return true;
+  }
+
+  // Virtual overrides: check for matching effects.
+  const auto OldFX = Old->getFunctionEffects();
+  const auto NewFXOrig = New->getFunctionEffects();
+
+  if (OldFX != NewFXOrig) {
+    FunctionEffectSet NewFX(NewFXOrig);
+    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+    FunctionEffectSet::Conflicts Errs;
+    for (const auto &Diff : Diffs) {
+      switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
+      case FunctionEffectDiff::OverrideResult::NoAction:
+        break;
+      case FunctionEffectDiff::OverrideResult::Warn:
+        Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+            << Diff.effectName();
+        Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+            << Old->getReturnTypeSourceRange();
+        break;
+      case FunctionEffectDiff::OverrideResult::Merge: {
+        NewFX.insert(Diff.Old, Errs);
+        const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
+        FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
+        EPI.FunctionEffects = FunctionEffectsRef(NewFX);
+        QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
+                                                 NewFT->getParamTypes(), EPI);
+        New->setType(ModQT);
+        break;
+      }
+      }
+    }
+    if (!Errs.empty())
+      diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
+                                           Old->getLocation());
   }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();

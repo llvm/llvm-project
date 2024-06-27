@@ -954,6 +954,32 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       TargetExtType::get(*unwrap(C), Name, TypeParamArray, IntParamArray));
 }
 
+const char *LLVMGetTargetExtTypeName(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getName().data();
+}
+
+unsigned LLVMGetTargetExtTypeNumTypeParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumTypeParameters();
+}
+
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return wrap(Type->getTypeParameter(Idx));
+}
+
+unsigned LLVMGetTargetExtTypeNumIntParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumIntParameters();
+}
+
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getIntParameter(Idx);
+}
+
 /*===-- Operations on values ----------------------------------------------===*/
 
 /*--.. Operations on all values ............................................--*/
@@ -1743,11 +1769,6 @@ LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
 
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getXor(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getShl(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
 }
 
