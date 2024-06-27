@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/callonce.h"
+#include "src/__support/threads/linux/callonce.h"
 #include "src/__support/threads/linux/futex_utils.h"
 
 namespace LIBC_NAMESPACE {
