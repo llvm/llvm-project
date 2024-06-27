@@ -1,8 +1,21 @@
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -emit-llvm -O1 -disable-llvm-passes  -o - | FileCheck  --check-prefix=CHECK-DEFAULT-NONE %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-TYPE %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-ADDRESS %s
-// RUN: %clang_cc1 %s -x c++ -std=c++11  -triple arm64-apple-ios -fptrauth-intrinsics -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-address-discrimination -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck --check-prefix=CHECK-DEFAULT-BOTH %s
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,NODISC %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,TYPE %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,ADDR %s
+
+// RUN: %clang_cc1 %s -x c++ -std=c++11 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -emit-llvm -o - | FileCheck --check-prefixes=CHECK,BOTH %s
+
 #include <ptrauth.h>
+
 namespace test1 {
 
 #define authenticated(a...) ptrauth_cxx_vtable_pointer(a)
@@ -43,7 +56,7 @@ struct authenticated(default_key, default_address_discrimination, type_discrimin
   virtual void g();
 };
 
-struct authenticated(default_key, default_address_discrimination, custom_discrimination, 0xf00d) ExplicitCustomDiscrimination {
+struct authenticated(default_key, default_address_discrimination, custom_discrimination, 42424) ExplicitCustomDiscrimination {
   virtual ~ExplicitCustomDiscrimination();
   virtual void f();
   virtual void g();
@@ -65,11 +78,8 @@ struct authenticated(default_key, address_discrimination, type_discrimination) B
 template <typename T>
 struct PrimaryBasicStruct : BasicStruct, T {};
 template <typename T>
-struct PrimaryBasicStruct<T> *make_primary_basic(T *);
-template <typename T>
-struct SecondaryBasicStruct : T, BasicStruct {};
-template <typename T>
-struct SecondaryBasicStruct<T> *make_secondary_basic(T *);
+struct PrimaryBasicStruct<T> *make_multiple_primary(T *);
+
 template <typename T>
 struct VirtualSubClass : virtual T {
   virtual void g();
@@ -79,574 +89,476 @@ template <typename T>
 struct VirtualPrimaryStruct : virtual T, VirtualSubClass<T> {};
 template <typename T>
 struct VirtualPrimaryStruct<T> *make_virtual_primary(T *);
-template <typename T>
-struct VirtualSecondaryStruct : VirtualSubClass<T>, virtual T {};
-template <typename T>
-struct VirtualSecondaryStruct<T> *make_virtual_secondary(T *);
 
-// CHECK-DEFAULT-NONE: _ZN5test14testEPNS_14NoExplicitAuthEPNS_21ExplicitlyDisableAuthEPNS_29ExplicitAddressDiscriminationEPNS_31ExplicitNoAddressDiscriminationEPNS_29ExplicitNoExtraDiscriminationEPNS_26ExplicitTypeDiscriminationEPNS_28ExplicitCustomDiscriminationE
-void test(NoExplicitAuth *a, ExplicitlyDisableAuth *b, ExplicitAddressDiscrimination *c,
-          ExplicitNoAddressDiscrimination *d, ExplicitNoExtraDiscrimination *e,
-          ExplicitTypeDiscrimination *f, ExplicitCustomDiscrimination *g) {
+extern "C" {
+
+// CHECK: @TVDisc_NoExplicitAuth = global i32 [[DISC_DEFAULT:49565]], align 4
+int TVDisc_NoExplicitAuth = ptrauth_string_discriminator("_ZTVN5test114NoExplicitAuthE");
+
+// CHECK: @TVDisc_ExplicitlyDisableAuth = global i32 [[DISC_DISABLED:24369]], align 4
+int TVDisc_ExplicitlyDisableAuth = ptrauth_string_discriminator("_ZTVN5test121ExplicitlyDisableAuthE");
+
+// CHECK: @TVDisc_ExplicitAddressDiscrimination = global i32 [[DISC_ADDR:56943]], align 4
+int TVDisc_ExplicitAddressDiscrimination = ptrauth_string_discriminator("_ZTVN5test129ExplicitAddressDiscriminationE");
+
+// CHECK: @TVDisc_ExplicitNoAddressDiscrimination = global i32 [[DISC_NO_ADDR:6022]], align 4
+int TVDisc_ExplicitNoAddressDiscrimination = ptrauth_string_discriminator("_ZTVN5test131ExplicitNoAddressDiscriminationE");
+
+// CHECK: @TVDisc_ExplicitNoExtraDiscrimination = global i32 [[DISC_NO_EXTRA:9072]], align 4
+int TVDisc_ExplicitNoExtraDiscrimination = ptrauth_string_discriminator("_ZTVN5test129ExplicitNoExtraDiscriminationE");
+
+// CHECK: @TVDisc_ExplicitTypeDiscrimination = global i32 [[DISC_TYPE:6177]], align 4
+int TVDisc_ExplicitTypeDiscrimination = ptrauth_string_discriminator("_ZTVN5test126ExplicitTypeDiscriminationE");
+
+
+// CHECK-LABEL: define void @test_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_DEFAULT]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_DEFAULT]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_default(NoExplicitAuth *a) {
   a->f();
-  // CHECK-DEFAULT-NONE: %0 = load ptr, ptr %a.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable = load ptr, ptr %0, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %1 = ptrtoint ptr %vtable to i64
-  // CHECK-DEFAULT-NONE: %2 = call i64 @llvm.ptrauth.auth(i64 %1, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %3 = inttoptr i64 %2 to ptr
-  // CHECK-DEFAULT-NONE: %vfn = getelementptr inbounds ptr, ptr %3, i64 2
-
-  b->f();
-  // CHECK-DEFAULT-NONE: %7 = load ptr, ptr %b.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable1 = load ptr, ptr %7, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %vfn2 = getelementptr inbounds ptr, ptr %vtable1, i64 2
-
-  c->f();
-  // CHECK-DEFAULT-NONE: %11 = load ptr, ptr %c.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable3 = load ptr, ptr %11, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %12 = ptrtoint ptr %11 to i64
-  // CHECK-DEFAULT-NONE: %13 = ptrtoint ptr %vtable3 to i64
-  // CHECK-DEFAULT-NONE: %14 = call i64 @llvm.ptrauth.auth(i64 %13, i32 2, i64 %12)
-  // CHECK-DEFAULT-NONE: %15 = inttoptr i64 %14 to ptr
-  // CHECK-DEFAULT-NONE: %vfn4 = getelementptr inbounds ptr, ptr %15, i64 2
-
-  d->f();
-  // CHECK-DEFAULT-NONE: %19 = load ptr, ptr %d.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable5 = load ptr, ptr %19, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %20 = ptrtoint ptr %vtable5 to i64
-  // CHECK-DEFAULT-NONE: %21 = call i64 @llvm.ptrauth.auth(i64 %20, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %22 = inttoptr i64 %21 to ptr
-  // CHECK-DEFAULT-NONE: %vfn6 = getelementptr inbounds ptr, ptr %22, i64 2
-
-  e->f();
-  // CHECK-DEFAULT-NONE: %26 = load ptr, ptr %e.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable7 = load ptr, ptr %26, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %27 = ptrtoint ptr %vtable7 to i64
-  // CHECK-DEFAULT-NONE: %28 = call i64 @llvm.ptrauth.auth(i64 %27, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %29 = inttoptr i64 %28 to ptr
-  // CHECK-DEFAULT-NONE: %vfn8 = getelementptr inbounds ptr, ptr %29, i64 2
-
-  f->f();
-  // CHECK-DEFAULT-NONE: %33 = load ptr, ptr %f.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable9 = load ptr, ptr %33, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %34 = ptrtoint ptr %vtable9 to i64
-  // CHECK-DEFAULT-NONE: %35 = call i64 @llvm.ptrauth.auth(i64 %34, i32 2, i64 6177)
-  // CHECK-DEFAULT-NONE: %36 = inttoptr i64 %35 to ptr
-  // CHECK-DEFAULT-NONE: %vfn10 = getelementptr inbounds ptr, ptr %36, i64 2
-
-
-  g->f();
-  // CHECK-DEFAULT-NONE: %40 = load ptr, ptr %g.addr, align 8, !tbaa !2
-  // CHECK-DEFAULT-NONE: %vtable11 = load ptr, ptr %40, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %41 = ptrtoint ptr %vtable11 to i64
-  // CHECK-DEFAULT-NONE: %42 = call i64 @llvm.ptrauth.auth(i64 %41, i32 2, i64 61453)
-  // CHECK-DEFAULT-NONE: %43 = inttoptr i64 %42 to ptr
-  // CHECK-DEFAULT-NONE: %vfn12 = getelementptr inbounds ptr, ptr %43, i64 2
-
-  // basic subclass
-  make_subclass(a)->f();
-  // CHECK-DEFAULT-NONE: %vtable13 = load ptr, ptr %call, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %48 = ptrtoint ptr %vtable13 to i64
-  // CHECK-DEFAULT-NONE: %49 = call i64 @llvm.ptrauth.auth(i64 %48, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %50 = inttoptr i64 %49 to ptr
-  // CHECK-DEFAULT-NONE: %vfn14 = getelementptr inbounds ptr, ptr %50, i64 2
-
-
-  make_subclass(a)->g();
-  // CHECK-DEFAULT-NONE: %vtable16 = load ptr, ptr %call15, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %55 = ptrtoint ptr %vtable16 to i64
-  // CHECK-DEFAULT-NONE: %56 = call i64 @llvm.ptrauth.auth(i64 %55, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %57 = inttoptr i64 %56 to ptr
-  // CHECK-DEFAULT-NONE: %vfn17 = getelementptr inbounds ptr, ptr %57, i64 3
-
-  make_subclass(a)->h();
-  // CHECK-DEFAULT-NONE: %vtable19 = load ptr, ptr %call18, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %62 = ptrtoint ptr %vtable19 to i64
-  // CHECK-DEFAULT-NONE: %63 = call i64 @llvm.ptrauth.auth(i64 %62, i32 2, i64 0)
-  // CHECK-DEFAULT-NONE: %64 = inttoptr i64 %63 to ptr
-  // CHECK-DEFAULT-NONE: %vfn20 = getelementptr inbounds ptr, ptr %64, i64 4
-
-  make_subclass(b)->f();
-  // CHECK-DEFAULT-NONE: %vtable23 = load ptr, ptr %call22, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %vfn24 = getelementptr inbounds ptr, ptr %vtable23, i64 2
-
-  make_subclass(b)->g();
-  // CHECK-DEFAULT-NONE: %vtable26 = load ptr, ptr %call25, align 8, !tbaa !6
-  // CHECK-DEFAULT-NONE: %vfn27 = getelementptr inbounds ptr, ptr %vtable26, i64 3
-
-  make_subclass(b)->h();
-
-  make_subclass(c)->f();
-  make_subclass(c)->g();
-  make_subclass(c)->h();
-
-  make_subclass(d)->f();
-  make_subclass(d)->g();
-  make_subclass(d)->h();
-
-  make_subclass(e)->f();
-  make_subclass(e)->g();
-  make_subclass(e)->h();
-
-  make_subclass(f)->f();
-  make_subclass(f)->g();
-  make_subclass(f)->h();
-
-  make_subclass(g)->f();
-  make_subclass(g)->g();
-  make_subclass(g)->h();
-
-  // Basic multiple inheritance
-  make_primary_basic(a)->f();
-  make_primary_basic(b)->f();
-  make_primary_basic(c)->f();
-  make_primary_basic(d)->f();
-  make_primary_basic(e)->f();
-  make_primary_basic(f)->f();
-  make_primary_basic(g)->f();
-  make_secondary_basic(a)->f();
-  make_secondary_basic(b)->f();
-  make_secondary_basic(c)->f();
-  make_secondary_basic(d)->f();
-  make_secondary_basic(e)->f();
-  make_secondary_basic(f)->f();
-  make_secondary_basic(g)->f();
-
-  // virtual inheritance
-  make_virtual_primary(a)->f();
-  make_virtual_primary(b)->f();
-  make_virtual_primary(c)->f();
-  make_virtual_primary(d)->f();
-  make_virtual_primary(e)->f();
-  make_virtual_primary(f)->f();
-  make_virtual_primary(g)->f();
-  make_virtual_secondary(a)->f();
-  make_virtual_secondary(b)->f();
-  make_virtual_secondary(c)->f();
-  make_virtual_secondary(d)->f();
-  make_virtual_secondary(e)->f();
-  make_virtual_secondary(f)->f();
-  make_virtual_secondary(g)->f();
 }
+
+// CHECK-LABEL: define void @test_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+// CHECK-NOT:     call i64 @llvm.ptrauth.auth
+void test_disabled(ExplicitlyDisableAuth *a) {
+  a->f();
+}
+
+// CHECK-LABEL: define void @test_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// TYPE:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// TYPE:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_ADDR]])
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_ADDR]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_addr_disc(ExplicitAddressDiscrimination *a) {
+  a->f();
+}
+
+// CHECK-LABEL: define void @test_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_NO_ADDR]])
+//
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_NO_ADDR]])
+void test_no_addr_disc(ExplicitNoAddressDiscrimination *a) {
+  a->f();
+}
+
+// CHECK-LABEL: define void @test_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+void test_no_extra_disc(ExplicitNoExtraDiscrimination *a) {
+  a->f();
+}
+
+// CHECK-LABEL: define void @test_type_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_TYPE]])
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_TYPE]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_TYPE]])
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_TYPE]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_type_disc(ExplicitTypeDiscrimination *a) {
+  a->f();
+}
+
+// CHECK-LABEL: define void @test_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = load ptr, ptr {{%.*}}, align 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_custom_disc(ExplicitCustomDiscrimination *a) {
+  a->f();
+}
+
+//
+// Test some simple single inheritance cases.
+// Codegen should be the same as the simple cases above once we have a vtable.
+//
+
+// CHECK-LABEL: define void @test_subclass_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_DEFAULT]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_DEFAULT]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_subclass_default(NoExplicitAuth *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+// CHECK-NOT:     call i64 @llvm.ptrauth.auth
+void test_subclass_disabled(ExplicitlyDisableAuth *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// TYPE:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// TYPE:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_ADDR]])
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_ADDR]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_subclass_addr_disc(ExplicitAddressDiscrimination *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_no_addr_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_NO_ADDR]])
+//
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_NO_ADDR]])
+void test_subclass_no_addr_disc(ExplicitNoAddressDiscrimination *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_no_extra_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+void test_subclass_no_extra_disc(ExplicitNoExtraDiscrimination *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_type_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_TYPE]])
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_TYPE]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_TYPE]])
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_TYPE]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_subclass_type_disc(ExplicitTypeDiscrimination *a) {
+  make_subclass(a)->f();
+}
+
+// CHECK-LABEL: define void @test_subclass_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTADDR:%.*]] = call noundef ptr @_ZN5test113make_subclass
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_subclass_custom_disc(ExplicitCustomDiscrimination *a) {
+  make_subclass(a)->f();
+}
+
+
+//
+// Test some simple multiple inheritance cases.
+// Codegen should be the same as the simple cases above once we have a vtable.
+//
+
+// CHECK-LABEL: define void @test_multiple_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
+// CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_DEFAULT]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_DEFAULT]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_multiple_default(NoExplicitAuth *a) {
+  make_multiple_primary(a)->f();
+}
+
+// CHECK-LABEL: define void @test_multiple_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
+// CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+// CHECK-NOT:     call i64 @llvm.ptrauth.auth
+void test_multiple_disabled(ExplicitlyDisableAuth *a) {
+  make_multiple_primary(a)->f();
+}
+
+// CHECK-LABEL: define void @test_multiple_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[CALL:%.*]] = call noundef ptr @_ZN5test121make_multiple_primary
+// CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_multiple_custom_disc(ExplicitCustomDiscrimination *a) {
+  make_multiple_primary(a)->f();
+}
+
+//
+// Test some virtual inheritance cases.
+// Codegen should be the same as the simple cases above once we have a vtable,
+// but twice for vtt/vtable.  The names in the vtt version have "VTT" prefixes.
+//
+
+// CHECK-LABEL: define void @test_virtual_default(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTTADDR:%.*]] = call noundef ptr @_ZN5test120make_virtual_primary
+// CHECK:         [[VTTABLE:%.*]] = load ptr, ptr [[VTTADDR]], align 8
+//
+// NODISC:        [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 [[DISC_DEFAULT]])
+//
+// ADDR:          [[VTTADDRI64:%.*]] = ptrtoint ptr [[VTTADDR]] to i64
+// ADDR:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 [[VTTADDRI64]])
+//
+// BOTH:          [[VTTADDRI64:%.*]] = ptrtoint ptr [[VTTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTTADDRI64]], i64 [[DISC_DEFAULT]])
+// BOTH:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 [[BLEND]])
+
+// CHECK:         [[AUTHEDPTR:%.*]] = inttoptr i64 [[AUTHED]] to ptr
+// CHECK:         [[VBOFFPTR:%.*]] = getelementptr i8, ptr [[AUTHEDPTR]], i64 -48
+// CHECK:         [[VBOFFSET:%.*]] = load i64, ptr [[VBOFFPTR]]
+// CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[VTTADDR]], i64 [[VBOFFSET]]
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 0)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[DISC_DEFAULT]])
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[VTADDRI64]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 [[DISC_DEFAULT]])
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_virtual_default(NoExplicitAuth *a) {
+  make_virtual_primary(a)->f();
+}
+
+// CHECK-LABEL: define void @test_virtual_disabled(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK-NOT:     call i64 @llvm.ptrauth.auth
+void test_virtual_disabled(ExplicitlyDisableAuth *a) {
+  make_virtual_primary(a)->f();
+}
+
+// CHECK-LABEL: define void @test_virtual_custom_disc(ptr noundef {{%.*}}) {{#.*}} {
+// CHECK:         [[VTTADDR:%.*]] = call noundef ptr @_ZN5test120make_virtual_primary
+// CHECK:         [[VTTABLE:%.*]] = load ptr, ptr [[VTTADDR]], align 8
+//
+// NODISC:        [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 42424)
+//
+// TYPE:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 42424)
+//
+// ADDR:          [[VTTADDRI64:%.*]] = ptrtoint ptr [[VTTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTTADDRI64]], i64 42424)
+// ADDR:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTTADDRI64:%.*]] = ptrtoint ptr [[VTTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTTADDRI64]], i64 42424)
+// BOTH:          [[VTTABLEI64:%.*]] = ptrtoint ptr [[VTTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTTABLEI64]], i32 2, i64 [[BLEND]])
+
+// CHECK:         [[AUTHEDPTR:%.*]] = inttoptr i64 [[AUTHED]] to ptr
+// CHECK:         [[VBOFFPTR:%.*]] = getelementptr i8, ptr [[AUTHEDPTR]], i64 -48
+// CHECK:         [[VBOFFSET:%.*]] = load i64, ptr [[VBOFFPTR]]
+// CHECK:         [[VTADDR:%.*]] = getelementptr inbounds i8, ptr [[VTTADDR]], i64 [[VBOFFSET]]
+// CHECK:         [[VTABLE:%.*]] = load ptr, ptr [[VTADDR]], align 8
+//
+// NODISC:        [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// NODISC:        [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// TYPE:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// TYPE:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 42424)
+//
+// ADDR:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// ADDR:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// ADDR:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// ADDR:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+//
+// BOTH:          [[VTADDRI64:%.*]] = ptrtoint ptr [[VTADDR]] to i64
+// BOTH:          [[BLEND:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[VTADDRI64]], i64 42424)
+// BOTH:          [[VTABLEI64:%.*]] = ptrtoint ptr [[VTABLE]] to i64
+// BOTH:          [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[VTABLEI64]], i32 2, i64 [[BLEND]])
+void test_virtual_custom_disc(ExplicitCustomDiscrimination *a) {
+  make_virtual_primary(a)->f();
+}
+
+} // extern "C"
 } // namespace test1
-
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 37831)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 2191)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 44989)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 63209)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43275)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 19073)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 25182)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 23051)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 3267)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 57764)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 8498)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61320)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 7682)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 53776)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 49565)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6177)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 61453)
-// CHECK-DEFAULT-TYPE:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 37831)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 2191)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 44989)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 63209)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43275)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 19073)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 25182)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 23051)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 3267)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 57764)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 8498)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61320)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 7682)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 53776)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 0)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-ADDRESS:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 37831)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 2191)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 44989)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 63209)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43275)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 19073)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 25182)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 23051)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 3267)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 57764)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 8498)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61320)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 7682)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 53776)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 49565)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 27707)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 31119)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 56943)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 5268)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 6022)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 34147)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 39413)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 6177)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 29468)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 61453)
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[T:%.*]], i32 2, i64 [[T:%.*]])
-// CHECK-DEFAULT-BOTH:   [[T:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[T:%.*]], i64 43175)
