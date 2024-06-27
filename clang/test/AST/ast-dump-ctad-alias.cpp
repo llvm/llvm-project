@@ -58,7 +58,9 @@ template <typename T0>
 struct Out3 {
   template<class T1, typename T2>
   struct Foo {
-    // Deduction guide: Foo(T1, T2, V) -> Foo<T1, T2, V>;
+    // Deduction guide:
+    //   template <typename T1, typename T2, typename V>
+    //   Foo(V, T1) -> Foo<T1, T2>;
     template<class V> requires Concept<T0, V> // V in require clause of Foo deduction guide: depth 1, index: 2
     Foo(V, T1);
   };
