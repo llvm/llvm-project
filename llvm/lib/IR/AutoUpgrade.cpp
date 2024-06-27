@@ -1033,8 +1033,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
-      if (Name.starts_with("ds.fadd")) {
-        // Replaced with atomicrmw fadd, so there's no new declaration.
+      if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
+          Name.starts_with("ds.fmax")) {
+        // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
+        // declaration.
         NewFn = nullptr;
         return true;
       }
@@ -2347,6 +2349,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   AtomicRMWInst::BinOp RMWOp =
       StringSwitch<AtomicRMWInst::BinOp>(Name)
           .StartsWith("ds.fadd", AtomicRMWInst::FAdd)
+          .StartsWith("ds.fmin", AtomicRMWInst::FMin)
+          .StartsWith("ds.fmax", AtomicRMWInst::FMax)
           .StartsWith("atomic.inc.", AtomicRMWInst::UIncWrap)
           .StartsWith("atomic.dec.", AtomicRMWInst::UDecWrap);
 
