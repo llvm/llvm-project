@@ -9,23 +9,18 @@ define void @test(i32 %start) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[START]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[LOOP_EXIT_COND:%.*]] = icmp slt i32 [[TMP0]], 11
 ; CHECK-NEXT:    br i1 [[LOOP_EXIT_COND]], label [[EXIT:%.*]], label [[STUCK_PREHEADER:%.*]]
 ; CHECK:       stuck.preheader:
 ; CHECK-NEXT:    br label [[STUCK:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[INDVARS]], [[LOOP]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       stuck:
-; CHECK-NEXT:    br i1 false, label [[BACKEDGE]], label [[STUCK]]
+; CHECK-NEXT:    br i1 false, label [[BACKEDGE:%.*]], label [[STUCK]]
 ;
 entry:
   br label %loop
