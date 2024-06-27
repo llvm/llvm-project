@@ -16,12 +16,10 @@
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -35,7 +33,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -132,7 +129,7 @@ static cl::opt<bool> ClCheckRet("nsan-check-ret", cl::init(true),
 // impossible to determine the floating-point type based on the size.
 // However, for debugging purposes it can be useful to model such stores.
 static cl::opt<bool> ClPropagateNonFTConstStoresAsFT(
-    "nsan-propagate-non-ft-const-stores-as-ft", cl::init(false),
+    "nsan-propagate-non-ft-const-stores-as-ft",
     cl::desc(
         "Propagate non floating-point const stores as floating point values."
         "For debugging purposes only"),
@@ -336,6 +333,7 @@ struct MemoryExtents {
   FTValueType ValueType;
   uint64_t NumElts;
 };
+
 static MemoryExtents getMemoryExtentsOrDie(Type *FT) {
   if (const auto VT = ftValueTypeFromType(FT))
     return {*VT, 1};
@@ -451,10 +449,7 @@ public:
   Value *getShadow(Value *V) const {
     if (Constant *C = dyn_cast<Constant>(V))
       return getShadowConstant(C);
-    const auto ShadowValIt = Map.find(V);
-    assert(ShadowValIt != Map.end() && "shadow val does not exist");
-    assert(ShadowValIt->second && "shadow val is null");
-    return ShadowValIt->second;
+    return Map.find(V)->second;
   }
 
   bool empty() const { return Map.empty(); }
@@ -572,21 +567,16 @@ private:
 
   std::optional<Regex> CheckFunctionsFilter;
 };
+} // end anonymous namespace
 
-void insertModuleCtor(Module &M) {
+PreservedAnalyses
+NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
   getOrCreateSanitizerCtorAndInitFunctions(
       M, kNsanModuleCtorName, kNsanInitName, /*InitArgTypes=*/{},
       /*InitArgs=*/{},
       // This callback is invoked when the functions are created the first
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
-}
-
-} // end anonymous namespace
-
-PreservedAnalyses
-NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  insertModuleCtor(M);
 
   NumericalStabilitySanitizer Nsan(M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -797,14 +787,12 @@ void NumericalStabilitySanitizer::populateShadowStack(
   IRBuilder<> Builder(&CI);
   SmallVector<Value *, 8> ArgShadows;
   const bool ShouldCheckArgs = shouldCheckArgs(CI, TLI, CheckFunctionsFilter);
-  int ArgId = -1;
-  for (Value *Arg : CI.operands()) {
-    ++ArgId;
+  for (auto [ArgIdx, Arg] : enumerate(CI.operands())) {
     if (Config.getExtendedFPType(Arg->getType()) == nullptr)
       continue; // Not an FT value.
     Value *ArgShadow = Map.getShadow(Arg);
     ArgShadows.push_back(ShouldCheckArgs ? emitCheck(Arg, ArgShadow, Builder,
-                                                     CheckLoc::makeArg(ArgId))
+                                                     CheckLoc::makeArg(ArgIdx))
                                          : ArgShadow);
   }
 
@@ -882,7 +870,7 @@ Value *NumericalStabilitySanitizer::emitCheckInternal(Value *V, Value *ShadowV,
   }
   if (Ty->isArrayTy()) {
     Value *CheckResult = nullptr;
-    for (int I = 0, E = Ty->getArrayNumElements(); I < E; ++I) {
+    for (auto I : seq(Ty->getArrayNumElements())) {
       Value *ExtractV = Builder.CreateExtractElement(V, I);
       Value *ExtractShadowV = Builder.CreateExtractElement(ShadowV, I);
       Value *ComponentCheckResult =
@@ -895,7 +883,7 @@ Value *NumericalStabilitySanitizer::emitCheckInternal(Value *V, Value *ShadowV,
   }
   if (Ty->isStructTy()) {
     Value *CheckResult = nullptr;
-    for (int I = 0, E = Ty->getStructNumElements(); I < E; ++I) {
+    for (auto I : seq(Ty->getStructNumElements())) {
       if (Config.getExtendedFPType(Ty->getStructElementType(I)) == nullptr)
         continue; // Only check FT values.
       Value *ExtractV = Builder.CreateExtractValue(V, I);
@@ -946,11 +934,6 @@ Value *NumericalStabilitySanitizer::emitCheck(Value *V, Value *ShadowV,
       ShadowV);
 }
 
-static Instruction *getNextInstructionOrDie(Instruction &Inst) {
-  assert(Inst.getNextNode() && "instruction is a terminator");
-  return Inst.getNextNode();
-}
-
 // Inserts a check that fcmp on shadow values are consistent with that on base
 // values.
 void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
@@ -970,7 +953,7 @@ void NumericalStabilitySanitizer::emitFCmpCheck(FCmpInst &FCmp,
   // Split the basic block. On mismatch, we'll jump to the new basic block with
   // a call to the runtime for error reporting.
   BasicBlock *FCmpBB = FCmp.getParent();
-  BasicBlock *NextBB = FCmpBB->splitBasicBlock(getNextInstructionOrDie(FCmp));
+  BasicBlock *NextBB = FCmpBB->splitBasicBlock(FCmp.getNextNode());
   // Remove the newly created terminator unconditional branch.
   FCmpBB->back().eraseFromParent();
   BasicBlock *FailBB =
@@ -1074,7 +1057,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
 
 Value *NumericalStabilitySanitizer::handleLoad(LoadInst &Load, Type *VT,
                                                Type *ExtendedVT) {
-  IRBuilder<> Builder(getNextInstructionOrDie(Load));
+  IRBuilder<> Builder(Load.getNextNode());
   Builder.SetCurrentDebugLocation(Load.getDebugLoc());
   if (addrPointsToConstantData(Load.getPointerOperand())) {
     // No need to look into the shadow memory, the value is a constant. Just
@@ -1243,9 +1226,7 @@ Value *NumericalStabilitySanitizer::handleExt(const FPExtInst &Ext, Type *VT,
 }
 
 namespace {
-
 // TODO: This should be tablegen-ed.
-
 struct KnownIntrinsic {
   struct WidenedIntrinsic {
     const char *NarrowName;
@@ -1272,46 +1253,47 @@ private:
 
   static const WidenedIntrinsic kWidenedIntrinsics[];
 };
+} // namespace
 
-FunctionType *makeDoubleDouble(LLVMContext &C) {
+static FunctionType *makeDoubleDouble(LLVMContext &C) {
   return FunctionType::get(Type::getDoubleTy(C), {Type::getDoubleTy(C)}, false);
 }
 
-FunctionType *makeX86FP80X86FP80(LLVMContext &C) {
+static FunctionType *makeX86FP80X86FP80(LLVMContext &C) {
   return FunctionType::get(Type::getX86_FP80Ty(C), {Type::getX86_FP80Ty(C)},
                            false);
 }
 
-FunctionType *makeDoubleDoubleI32(LLVMContext &C) {
+static FunctionType *makeDoubleDoubleI32(LLVMContext &C) {
   return FunctionType::get(Type::getDoubleTy(C),
                            {Type::getDoubleTy(C), Type::getInt32Ty(C)}, false);
 }
 
-FunctionType *makeX86FP80X86FP80I32(LLVMContext &C) {
+static FunctionType *makeX86FP80X86FP80I32(LLVMContext &C) {
   return FunctionType::get(Type::getX86_FP80Ty(C),
                            {Type::getX86_FP80Ty(C), Type::getInt32Ty(C)},
                            false);
 }
 
-FunctionType *makeDoubleDoubleDouble(LLVMContext &C) {
+static FunctionType *makeDoubleDoubleDouble(LLVMContext &C) {
   return FunctionType::get(Type::getDoubleTy(C),
                            {Type::getDoubleTy(C), Type::getDoubleTy(C)}, false);
 }
 
-FunctionType *makeX86FP80X86FP80X86FP80(LLVMContext &C) {
+static FunctionType *makeX86FP80X86FP80X86FP80(LLVMContext &C) {
   return FunctionType::get(Type::getX86_FP80Ty(C),
                            {Type::getX86_FP80Ty(C), Type::getX86_FP80Ty(C)},
                            false);
 }
 
-FunctionType *makeDoubleDoubleDoubleDouble(LLVMContext &C) {
+static FunctionType *makeDoubleDoubleDoubleDouble(LLVMContext &C) {
   return FunctionType::get(
       Type::getDoubleTy(C),
       {Type::getDoubleTy(C), Type::getDoubleTy(C), Type::getDoubleTy(C)},
       false);
 }
 
-FunctionType *makeX86FP80X86FP80X86FP80X86FP80(LLVMContext &C) {
+static FunctionType *makeX86FP80X86FP80X86FP80X86FP80(LLVMContext &C) {
   return FunctionType::get(
       Type::getX86_FP80Ty(C),
       {Type::getX86_FP80Ty(C), Type::getX86_FP80Ty(C), Type::getX86_FP80Ty(C)},
@@ -1323,7 +1305,7 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     // This is hard because we have to model the semantics of the intrinsics,
     // e.g. llvm.x86.sse2.min.sd means extract first element, min, insert back.
     // Intrinsics that take any non-vector FT types:
-    // NOTE: Right now because of https://bugs.llvm.org/show_bug.cgi?id=45399
+    // NOTE: Right now because of https://github.com/llvm/llvm-project/issues/44744
     // for f128 we need to use makeX86FP80X86FP80 (go to a lower precision and
     // come back).
     {"llvm.sqrt.f32", Intrinsic::sqrt, makeDoubleDouble},
@@ -1416,63 +1398,63 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
 };
 
 const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
-    {LibFunc_sqrtf, "llvm.sqrt.f32"},           //
-    {LibFunc_sqrt, "llvm.sqrt.f64"},            //
-    {LibFunc_sqrtl, "llvm.sqrt.f80"},           //
-    {LibFunc_sinf, "llvm.sin.f32"},             //
-    {LibFunc_sin, "llvm.sin.f64"},              //
-    {LibFunc_sinl, "llvm.sin.f80"},             //
-    {LibFunc_cosf, "llvm.cos.f32"},             //
-    {LibFunc_cos, "llvm.cos.f64"},              //
-    {LibFunc_cosl, "llvm.cos.f80"},             //
-    {LibFunc_powf, "llvm.pow.f32"},             //
-    {LibFunc_pow, "llvm.pow.f64"},              //
-    {LibFunc_powl, "llvm.pow.f80"},             //
-    {LibFunc_expf, "llvm.exp.f32"},             //
-    {LibFunc_exp, "llvm.exp.f64"},              //
-    {LibFunc_expl, "llvm.exp.f80"},             //
-    {LibFunc_exp2f, "llvm.exp2.f32"},           //
-    {LibFunc_exp2, "llvm.exp2.f64"},            //
-    {LibFunc_exp2l, "llvm.exp2.f80"},           //
-    {LibFunc_logf, "llvm.log.f32"},             //
-    {LibFunc_log, "llvm.log.f64"},              //
-    {LibFunc_logl, "llvm.log.f80"},             //
-    {LibFunc_log10f, "llvm.log10.f32"},         //
-    {LibFunc_log10, "llvm.log10.f64"},          //
-    {LibFunc_log10l, "llvm.log10.f80"},         //
-    {LibFunc_log2f, "llvm.log2.f32"},           //
-    {LibFunc_log2, "llvm.log2.f64"},            //
-    {LibFunc_log2l, "llvm.log2.f80"},           //
-    {LibFunc_fabsf, "llvm.fabs.f32"},           //
-    {LibFunc_fabs, "llvm.fabs.f64"},            //
-    {LibFunc_fabsl, "llvm.fabs.f80"},           //
-    {LibFunc_copysignf, "llvm.copysign.f32"},   //
-    {LibFunc_copysign, "llvm.copysign.f64"},    //
-    {LibFunc_copysignl, "llvm.copysign.f80"},   //
-    {LibFunc_floorf, "llvm.floor.f32"},         //
-    {LibFunc_floor, "llvm.floor.f64"},          //
-    {LibFunc_floorl, "llvm.floor.f80"},         //
-    {LibFunc_fmaxf, "llvm.maxnum.f32"},         //
-    {LibFunc_fmax, "llvm.maxnum.f64"},          //
-    {LibFunc_fmaxl, "llvm.maxnum.f80"},         //
-    {LibFunc_fminf, "llvm.minnum.f32"},         //
-    {LibFunc_fmin, "llvm.minnum.f64"},          //
-    {LibFunc_fminl, "llvm.minnum.f80"},         //
-    {LibFunc_ceilf, "llvm.ceil.f32"},           //
-    {LibFunc_ceil, "llvm.ceil.f64"},            //
-    {LibFunc_ceill, "llvm.ceil.f80"},           //
-    {LibFunc_truncf, "llvm.trunc.f32"},         //
-    {LibFunc_trunc, "llvm.trunc.f64"},          //
-    {LibFunc_truncl, "llvm.trunc.f80"},         //
-    {LibFunc_rintf, "llvm.rint.f32"},           //
-    {LibFunc_rint, "llvm.rint.f64"},            //
-    {LibFunc_rintl, "llvm.rint.f80"},           //
-    {LibFunc_nearbyintf, "llvm.nearbyint.f32"}, //
-    {LibFunc_nearbyint, "llvm.nearbyint.f64"},  //
-    {LibFunc_nearbyintl, "llvm.nearbyint.f80"}, //
-    {LibFunc_roundf, "llvm.round.f32"},         //
-    {LibFunc_round, "llvm.round.f64"},          //
-    {LibFunc_roundl, "llvm.round.f80"},         //
+    {LibFunc_sqrtf, "llvm.sqrt.f32"},
+    {LibFunc_sqrt, "llvm.sqrt.f64"},
+    {LibFunc_sqrtl, "llvm.sqrt.f80"},
+    {LibFunc_sinf, "llvm.sin.f32"},
+    {LibFunc_sin, "llvm.sin.f64"},
+    {LibFunc_sinl, "llvm.sin.f80"},
+    {LibFunc_cosf, "llvm.cos.f32"},
+    {LibFunc_cos, "llvm.cos.f64"},
+    {LibFunc_cosl, "llvm.cos.f80"},
+    {LibFunc_powf, "llvm.pow.f32"},
+    {LibFunc_pow, "llvm.pow.f64"},
+    {LibFunc_powl, "llvm.pow.f80"},
+    {LibFunc_expf, "llvm.exp.f32"},
+    {LibFunc_exp, "llvm.exp.f64"},
+    {LibFunc_expl, "llvm.exp.f80"},
+    {LibFunc_exp2f, "llvm.exp2.f32"},
+    {LibFunc_exp2, "llvm.exp2.f64"},
+    {LibFunc_exp2l, "llvm.exp2.f80"},
+    {LibFunc_logf, "llvm.log.f32"},
+    {LibFunc_log, "llvm.log.f64"},
+    {LibFunc_logl, "llvm.log.f80"},
+    {LibFunc_log10f, "llvm.log10.f32"},
+    {LibFunc_log10, "llvm.log10.f64"},
+    {LibFunc_log10l, "llvm.log10.f80"},
+    {LibFunc_log2f, "llvm.log2.f32"},
+    {LibFunc_log2, "llvm.log2.f64"},
+    {LibFunc_log2l, "llvm.log2.f80"},
+    {LibFunc_fabsf, "llvm.fabs.f32"},
+    {LibFunc_fabs, "llvm.fabs.f64"},
+    {LibFunc_fabsl, "llvm.fabs.f80"},
+    {LibFunc_copysignf, "llvm.copysign.f32"},
+    {LibFunc_copysign, "llvm.copysign.f64"},
+    {LibFunc_copysignl, "llvm.copysign.f80"},
+    {LibFunc_floorf, "llvm.floor.f32"},
+    {LibFunc_floor, "llvm.floor.f64"},
+    {LibFunc_floorl, "llvm.floor.f80"},
+    {LibFunc_fmaxf, "llvm.maxnum.f32"},
+    {LibFunc_fmax, "llvm.maxnum.f64"},
+    {LibFunc_fmaxl, "llvm.maxnum.f80"},
+    {LibFunc_fminf, "llvm.minnum.f32"},
+    {LibFunc_fmin, "llvm.minnum.f64"},
+    {LibFunc_fminl, "llvm.minnum.f80"},
+    {LibFunc_ceilf, "llvm.ceil.f32"},
+    {LibFunc_ceil, "llvm.ceil.f64"},
+    {LibFunc_ceill, "llvm.ceil.f80"},
+    {LibFunc_truncf, "llvm.trunc.f32"},
+    {LibFunc_trunc, "llvm.trunc.f64"},
+    {LibFunc_truncl, "llvm.trunc.f80"},
+    {LibFunc_rintf, "llvm.rint.f32"},
+    {LibFunc_rint, "llvm.rint.f64"},
+    {LibFunc_rintl, "llvm.rint.f80"},
+    {LibFunc_nearbyintf, "llvm.nearbyint.f32"},
+    {LibFunc_nearbyint, "llvm.nearbyint.f64"},
+    {LibFunc_nearbyintl, "llvm.nearbyint.f80"},
+    {LibFunc_roundf, "llvm.round.f32"},
+    {LibFunc_round, "llvm.round.f64"},
+    {LibFunc_roundl, "llvm.round.f80"},
 };
 
 const char *KnownIntrinsic::get(LibFunc LFunc) {
@@ -1490,8 +1472,6 @@ const KnownIntrinsic::WidenedIntrinsic *KnownIntrinsic::widen(StringRef Name) {
   }
   return nullptr;
 }
-
-} // namespace
 
 // Returns the name of the LLVM intrinsic corresponding to the given function.
 static const char *getIntrinsicFromLibfunc(Function &Fn, Type *VT,
@@ -1652,7 +1632,7 @@ Value *NumericalStabilitySanitizer::createShadowValueWithOperandsAvailable(
     return Shadow;
   }
 
-  IRBuilder<> Builder(getNextInstructionOrDie(Inst));
+  IRBuilder<> Builder(Inst.getNextNode());
   Builder.SetCurrentDebugLocation(Inst.getDebugLoc());
 
   if (auto *Trunc = dyn_cast<FPTruncInst>(&Inst))
@@ -1790,7 +1770,7 @@ void NumericalStabilitySanitizer::propagateFTStore(
 void NumericalStabilitySanitizer::propagateNonFTStore(
     StoreInst &Store, Type *VT, const ValueToShadowMap &Map) {
   Value *PtrOp = Store.getPointerOperand();
-  IRBuilder<> Builder(getNextInstructionOrDie(Store));
+  IRBuilder<> Builder(Store.getNextNode());
   Builder.SetCurrentDebugLocation(Store.getDebugLoc());
   Value *Dst = PtrOp;
   TypeSize SlotSize = DL.getTypeStoreSize(VT);
@@ -1810,7 +1790,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     Type *ShadowTypeIntTy = Type::getIntNTy(Context, 8 * LoadSizeBytes);
     Type *ShadowValueIntTy =
         Type::getIntNTy(Context, 8 * kShadowScale * LoadSizeBytes);
-    IRBuilder<> LoadBuilder(getNextInstructionOrDie(*Load));
+    IRBuilder<> LoadBuilder(Load->getNextNode());
     Builder.SetCurrentDebugLocation(Store.getDebugLoc());
     Value *LoadSrc = Load->getPointerOperand();
     // Read the shadow type and value at load time. The type has the same size
@@ -1840,12 +1820,13 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     ++NumInstrumentedNonFTMemcpyStores;
     return;
   }
-  if (Constant * C; ClPropagateNonFTConstStoresAsFT /* off by default */ &&
+  // ClPropagateNonFTConstStoresAsFT is by default false.
+  if (Constant *C; ClPropagateNonFTConstStoresAsFT &&
                     (C = dyn_cast<Constant>(StoredValue))) {
     // This might be a fp constant stored as an int. Bitcast and store if it has
     // appropriate size.
     Type *BitcastTy = nullptr; // The FT type to bitcast to.
-    if (ConstantInt *CInt = dyn_cast<ConstantInt>(C)) {
+    if (auto *CInt = dyn_cast<ConstantInt>(C)) {
       switch (CInt->getType()->getScalarSizeInBits()) {
       case 32:
         BitcastTy = Type::getFloatTy(Context);
@@ -1859,7 +1840,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
       default:
         break;
       }
-    } else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C)) {
+    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
       const int NumElements =
           cast<VectorType>(CDV->getType())->getElementCount().getFixedValue();
       switch (CDV->getType()->getScalarSizeInBits()) {
@@ -1900,7 +1881,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
 void NumericalStabilitySanitizer::propagateShadowValues(
     Instruction &Inst, const TargetLibraryInfo &TLI,
     const ValueToShadowMap &Map) {
-  if (StoreInst *Store = dyn_cast<StoreInst>(&Inst)) {
+  if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
     Value *StoredValue = Store->getValueOperand();
     Type *VT = StoredValue->getType();
     Type *ExtendedVT = Config.getExtendedFPType(VT);
@@ -1909,12 +1890,12 @@ void NumericalStabilitySanitizer::propagateShadowValues(
     return propagateFTStore(*Store, VT, ExtendedVT, Map);
   }
 
-  if (FCmpInst *FCmp = dyn_cast<FCmpInst>(&Inst)) {
+  if (auto *FCmp = dyn_cast<FCmpInst>(&Inst)) {
     emitFCmpCheck(*FCmp, Map);
     return;
   }
 
-  if (CallBase *CB = dyn_cast<CallBase>(&Inst)) {
+  if (auto *CB = dyn_cast<CallBase>(&Inst)) {
     maybeAddSuffixForNsanInterface(CB);
     if (CallInst *CI = dyn_cast<CallInst>(&Inst))
       maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
@@ -1926,7 +1907,7 @@ void NumericalStabilitySanitizer::propagateShadowValues(
     return;
   }
 
-  if (ReturnInst *RetInst = dyn_cast<ReturnInst>(&Inst)) {
+  if (auto *RetInst = dyn_cast<ReturnInst>(&Inst)) {
     if (!ClCheckRet)
       return;
 
@@ -1989,7 +1970,7 @@ static void moveFastMathFlags(Function &F,
 
 bool NumericalStabilitySanitizer::sanitizeFunction(
     Function &F, const TargetLibraryInfo &TLI) {
-  if (F.empty() || !F.hasFnAttribute(Attribute::SanitizeNumericalStability))
+  if (!F.hasFnAttribute(Attribute::SanitizeNumericalStability))
     return false;
 
   // This is required to prevent instrumenting call to __nsan_init from within
@@ -2088,8 +2069,8 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   // Collect all instructions before processing, as creating shadow values
   // creates new instructions inside the function.
   std::vector<Instruction *> OriginalInstructions;
-  for (auto &BB : F)
-    for (auto &Inst : BB)
+  for (BasicBlock &BB : F)
+    for (Instruction &Inst : BB)
       OriginalInstructions.emplace_back(&Inst);
 
   moveFastMathFlags(F, OriginalInstructions);
@@ -2120,7 +2101,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   // The last pass populates shadow phis with shadow values.
   for (PHINode *Phi : OriginalPhis) {
     PHINode *ShadowPhi = dyn_cast<PHINode>(ValueToShadow.getShadow(Phi));
-    for (int I = 0, E = Phi->getNumOperands(); I < E; ++I) {
+    for (unsigned I : seq(Phi->getNumOperands())) {
       Value *V = Phi->getOperand(I);
       Value *Shadow = ValueToShadow.getShadow(V);
       BasicBlock *IncomingBB = Phi->getIncomingBlock(I);
@@ -2141,12 +2122,12 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
 // memory.
 bool NumericalStabilitySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> Builder(MI);
-  if (MemSetInst *M = dyn_cast<MemSetInst>(MI)) {
+  if (auto *M = dyn_cast<MemSetInst>(MI)) {
     Builder.CreateCall(
         NsanSetValueUnknown,
         {/*Address=*/M->getArgOperand(0),
          /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
-  } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(MI)) {
+  } else if (auto *M = dyn_cast<MemTransferInst>(MI)) {
     Builder.CreateCall(
         NsanCopyValues,
         {/*Destination=*/M->getArgOperand(0),
