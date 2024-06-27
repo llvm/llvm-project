@@ -1579,7 +1579,6 @@ void fir::TypeInfoOp::build(mlir::OpBuilder &builder,
                             fir::RecordType parentType,
                             llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
-  result.addRegion();
   result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(type.getName()));
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
