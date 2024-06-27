@@ -184,12 +184,10 @@ defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
-let SubtargetPredicate = isGFX1210Plus in {
+let SubtargetPredicate = isGFX1210Plus, SchedRW = [WriteIntMul] in {
 defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
-let SchedRW = [WriteDoubleAdd] in {
 defm V_MAD_NC_U64_U32 : VOP3Inst <"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
 defm V_MAD_NC_I64_I32 : VOP3Inst <"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
-} // End SchedRW = [WriteDoubleAdd]
 }
 
 let SchedRW = [WriteDoubleAdd] in {

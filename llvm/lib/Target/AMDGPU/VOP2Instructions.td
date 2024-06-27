@@ -847,8 +847,11 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 }
 
 let SubtargetPredicate = isGFX1210Plus in {
+let SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
+} // End SchedRW = [Write64Bit]
+let SchedRW = [WriteDouble] in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End SubtargetPredicate = HasGFX1210Insts
 } // End isReMaterializable = 1
