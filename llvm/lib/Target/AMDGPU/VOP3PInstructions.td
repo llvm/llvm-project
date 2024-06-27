@@ -1588,7 +1588,7 @@ def VOP_WMMA_LD_SCALE : VOP3P_Profile<VOPProfile<[untyped, i32, i32, untyped]>> 
 }
 
 let WaveSizePredicate = isWave32 in {
-let SubtargetPredicate = isGFX1210Only in {
+let SubtargetPredicate = isGFX121xOnly in {
 defm V_WMMA_F32_16X16X4_F32_w32       : WMMAInstGFX12<"v_wmma_f32_16x16x4_f32",       F32_F32_WMMA_w32, "_w32">;
 defm V_WMMA_F32_16X16X16_XF32_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x16_xf32",     F32_XF32_WMMA_w32, "_w32">;
 
@@ -1628,7 +1628,7 @@ defm V_WMMA_SCALE_BF16_16x16x128_F8F6F4_w32 : WMMAInstGFX12<"v_wmma_scale_bf16_1
 } // End is_wmma_xdl = 1.
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3PInst<"v_wmma_ld_scale_paired_b32", VOP_WMMA_LD_SCALE>;
-} // End SubtargetPredicate = isGFX1210Only
+} // End SubtargetPredicate = isGFX121xOnly
 
 let SubtargetPredicate = HasGFX1211GEMMInsts in {
 defm V_WMMA_F64_16X16X4_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",       F64_F64X4_WMMA_w32, "_w32">;
@@ -1769,7 +1769,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = isGFX12PlusNot12_10 in {
 }
 
 let WaveSizePredicate = isWave32 in {
-let SubtargetPredicate = isGFX1210Only in {
+let SubtargetPredicate = isGFX121xOnly in {
   defm : WMMAPat<"V_WMMA_F32_16X16X4_F32_w32",       int_amdgcn_wmma_f32_16x16x4_f32,       F32_F32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X16_XF32_w32",     int_amdgcn_wmma_f32_16x16x16_xf32,     F32_XF32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_F32_16X16X32_BF16_w32",     int_amdgcn_wmma_f32_16x16x32_bf16,     F32_BF16X32_WMMA_w32>;
@@ -1803,7 +1803,7 @@ let SubtargetPredicate = isGFX1210Only in {
   def : SWMMACPat<V_SWMMAC_F16_16X16X128_BF8_BF8_w32_twoaddr, int_amdgcn_swmmac_f16_16x16x128_bf8_bf8, F16_FP8BF8X128_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_I32_16X16X128_IU8_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x128_iu8,     I32_IU8X128_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_I32_16X16X256_IU4_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x256_iu4,     I32_IU4X256_SWMMAC_w32>;
-} // End SubtargetPredicate = isGFX1210Only
+} // End SubtargetPredicate = isGFX121xOnly
 
 let SubtargetPredicate = HasGFX1211GEMMInsts in {
   defm : WMMAPat<"V_WMMA_F64_16X16X4_F64_w32",  int_amdgcn_wmma_f64_16x16x4_f64,  F64_F64X4_WMMA_w32>;
