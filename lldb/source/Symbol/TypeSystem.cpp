@@ -386,7 +386,7 @@ void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
 }
 // END SWIFT
 bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
-  if (language == eLanguageTypeUnknown)
+  if (language == eLanguageTypeUnknown || language >= eNumLanguageTypes)
     return false;
 
   LanguageSet languages =
