@@ -202,7 +202,7 @@ TEST_F(InstrOrderInvalidationTest, InsertInvalidation) {
   EXPECT_TRUE(BB->isInstrOrderValid());
 
   // Invalidate orders.
-  IRBuilder<> Builder(I2->getIterator());
+  IRBuilder<> Builder(BB, I2->getIterator());
   Instruction *I1a = Builder.CreateCall(Nop);
   EXPECT_FALSE(BB->isInstrOrderValid());
   EXPECT_TRUE(I1->comesBefore(I1a));

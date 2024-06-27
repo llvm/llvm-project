@@ -918,7 +918,7 @@ bool GCOVProfiler::emitProfileNotes(
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
           const Edge &E = *MST.allEdges()[I];
-          IRBuilder<> Builder(E.Place->getFirstInsertionPt());
+          IRBuilder<> Builder(E.Place, E.Place->getFirstInsertionPt());
           Value *V = Builder.CreateConstInBoundsGEP2_64(
               Counters->getValueType(), Counters, 0, I);
           // Disable sanitizers to decrease size bloat. We don't expect

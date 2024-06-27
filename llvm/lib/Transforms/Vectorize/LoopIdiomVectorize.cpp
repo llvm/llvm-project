@@ -646,7 +646,7 @@ Value *LoopIdiomVectorize::expandFindMismatch(
   //  3. We didn't find a mismatch in the vector loop, so we return MaxLen.
   //  4. We exitted the vector loop early due to a mismatch and need to return
   //  the index that we found.
-  Builder.SetInsertPoint(EndBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(EndBlock, EndBlock->getFirstInsertionPt());
   PHINode *ResPhi = Builder.CreatePHI(ResType, 4, "mismatch_result");
   ResPhi->addIncoming(MaxLen, LoopIncBlock);
   ResPhi->addIncoming(IndexPhi, LoopStartBlock);

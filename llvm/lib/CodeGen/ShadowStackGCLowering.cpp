@@ -351,7 +351,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
 
   // Build the shadow stack entry at the very start of the function.
   BasicBlock::iterator IP = F.getEntryBlock().begin();
-  IRBuilder<> AtEntry(IP);
+  IRBuilder<> AtEntry(IP->getParent(), IP);
 
   Instruction *StackEntry =
       AtEntry.CreateAlloca(ConcreteStackEntryTy, nullptr, "gc_frame");
@@ -384,7 +384,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // shadow stack.
   while (isa<StoreInst>(IP))
     ++IP;
-  AtEntry.SetInsertPoint(IP);
+  AtEntry.SetInsertPoint(IP->getParent(), IP);
 
   // Push the entry onto the shadow stack.
   Instruction *EntryNextPtr = CreateGEP(Context, AtEntry, ConcreteStackEntryTy,
