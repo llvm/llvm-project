@@ -1539,3 +1539,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
+
+// Warnings about using the non-standard extension having an explicit specialization
+// with a storage class specifier.
+def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
