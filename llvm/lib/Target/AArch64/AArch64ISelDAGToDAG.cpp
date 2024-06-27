@@ -5352,46 +5352,14 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       break;
     }
     case Intrinsic::aarch64_sme_readz_x2: {
-      if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ(Node, 2,
-                                     AArch64::MOVAZ_VG2_2ZMXI_B_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ(Node, 2, 
-                                     AArch64::MOVAZ_VG2_2ZMXI_H_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ(Node, 2,
-                                     AArch64::MOVAZ_VG2_2ZMXI_S_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ(Node, 2,
-                                     AArch64::MOVAZ_VG2_2ZMXI_D_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      }
-      break;
+      SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_VG2_2ZMXI_PSEUDO, 7, 1,
+                             AArch64::ZA);
+      return;
     }
     case Intrinsic::aarch64_sme_readz_x4: {
-      if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ(Node, 4,
-                                     AArch64::MOVAZ_VG4_4ZMXI_B_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-                 VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ(Node, 4,
-                                     AArch64::MOVAZ_VG4_4ZMXI_H_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ(Node, 4,
-                                     AArch64::MOVAZ_VG4_4ZMXI_S_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ(Node, 4, 
-                                     AArch64::MOVAZ_VG4_4ZMXI_D_PSEUDO, 7, 1, AArch64::ZA);
-        return;
-      }
-      break;
+      SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_VG4_4ZMXI_PSEUDO, 7, 1,
+                             AArch64::ZA);
+      return;
     }
     case Intrinsic::swift_async_context_addr: {
       SDLoc DL(Node);

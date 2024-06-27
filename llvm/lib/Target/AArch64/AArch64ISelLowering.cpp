@@ -3011,6 +3011,11 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
     MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
     StartIdx++;
   } else {
+    // Avoids all instructions with mnemonic za.<sz>[Reg, Imm,
+    if (MI.getOperand(0).isReg() && !MI.getOperand(1).isImm()) {
+      MIB.add(MI.getOperand(0)); // Output ZPR
+      ++StartIdx;
+    }
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
   }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
@@ -3203,16 +3208,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZero(MI, BB);
   case AArch64::ZERO_T_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
-  case AArch64::MOVAZ_VG2_2ZMXI_B_PSEUDO:
-  case AArch64::MOVAZ_VG2_2ZMXI_H_PSEUDO:
-  case AArch64::MOVAZ_VG2_2ZMXI_S_PSEUDO:
-  case AArch64::MOVAZ_VG2_2ZMXI_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_VG2_2ZMXI, AArch64::ZA, MI, BB);
-  case AArch64::MOVAZ_VG4_4ZMXI_B_PSEUDO:
-  case AArch64::MOVAZ_VG4_4ZMXI_H_PSEUDO:
-  case AArch64::MOVAZ_VG4_4ZMXI_S_PSEUDO:
-  case AArch64::MOVAZ_VG4_4ZMXI_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_VG4_4ZMXI, AArch64::ZA, MI, BB);
   }
 }
 

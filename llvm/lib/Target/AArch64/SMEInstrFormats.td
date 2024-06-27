@@ -4296,7 +4296,7 @@ class sme2_mova_array_to_vec_vg24_multi<bits<4>op, RegisterOperand vector_ty,
 // move array to vector, two registers.
 multiclass sme2_mova_array_to_vec_vg2_multi<bits<3> opc, string mnemonic> {
   def NAME : sme2_mova_array_to_vec_vg24_multi<{opc,?}, ZZ_d_mul_r, MatrixOp64,
-                                               mnemonic, "vgx2"> {
+                                               mnemonic, "vgx2">, SMEPseudo2Instr<NAME, 1>{
     bits<4> Zd;
     let Inst{4-1} = Zd;
   }
@@ -4370,16 +4370,13 @@ multiclass sme2_mova_array_to_vec_vg2_multi<bits<3> opc, string mnemonic> {
 
 multiclass sme2_movaz_array_to_vec_vg2_multi<string mnemonic> {
   defm NAME : sme2_mova_array_to_vec_vg2_multi<0b010, mnemonic>;
-  def NAME # _B_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZ_b_mul_r, SMEMatrixArray>;
-  def NAME # _H_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZ_h_mul_r, SMEMatrixArray>;
-  def NAME # _S_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZ_s_mul_r, SMEMatrixArray>;
-  def NAME # _D_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZ_d_mul_r, SMEMatrixArray>;
+  def NAME # _PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZ_d_mul_r, SMEMatrixArray>;
 }
 
 // move array to vector, four registers
 multiclass sme2_mova_array_to_vec_vg4_multi<bits<4> opc, string mnemonic> {
   def NAME : sme2_mova_array_to_vec_vg24_multi<opc, ZZZZ_d_mul_r, MatrixOp64,
-                                               mnemonic, "vgx4"> {
+                                               mnemonic, "vgx4">, SMEPseudo2Instr<NAME, 1> {
     bits<3> Zd;
     let Inst{4-2} = Zd;
   }
@@ -4453,10 +4450,7 @@ multiclass sme2_mova_array_to_vec_vg4_multi<bits<4> opc, string mnemonic> {
 
 multiclass sme2_movaz_array_to_vec_vg4_multi<string mnemonic> {
   defm NAME : sme2_mova_array_to_vec_vg4_multi<0b1100, mnemonic>;
-  def NAME # _B_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZZZ_b_mul_r, SMEMatrixArray>;
-  def NAME # _H_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZZZ_h_mul_r, SMEMatrixArray>;
-  def NAME # _S_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZZZ_s_mul_r, SMEMatrixArray>;
-  def NAME # _D_PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZZZ_d_mul_r, SMEMatrixArray>;
+  def NAME # _PSEUDO : sme2_movaz_array_to_tile_pseudo<NAME, sme_elm_idx0_7, ZZZZ_d_mul_r, SMEMatrixArray>;
 }
 
 //===----------------------------------------------------------------------===//
