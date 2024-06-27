@@ -81,6 +81,95 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   }
 }
 
+ConstantRangeList
+ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
+  assert(getBitWidth() == CRL.getBitWidth() &&
+         "ConstantRangeList bitwidths don't agree!");
+  // Handle common cases.
+  if (empty())
+    return CRL;
+  if (CRL.empty())
+    return *this;
+
+  ConstantRangeList Result;
+  size_t i = 0, j = 0;
+  // "PreviousRange" tracks the lowest unioned range that is being processed.
+  // Its lower is fixed and the upper may be updated over iterations.
+  ConstantRange PreviousRange(getBitWidth(), false);
+  if (Ranges[i].getLower().slt(CRL.Ranges[j].getLower())) {
+    PreviousRange = Ranges[i++];
+  } else {
+    PreviousRange = CRL.Ranges[j++];
+  }
+
+  // Try to union "PreviousRange" and "CR". If they are disjoint, push
+  // "PreviousRange" to the result and assign it to "CR", a new union range.
+  // Otherwise, update the upper of "PreviousRange" to cover "CR". Note that,
+  // the lower of "PreviousRange" is always less or equal the lower of "CR".
+  auto UnionAndUpdateRange = [&PreviousRange,
+                              &Result](const ConstantRange &CR) {
+    if (PreviousRange.getUpper().slt(CR.getLower())) {
+      Result.Ranges.push_back(PreviousRange);
+      PreviousRange = CR;
+    } else {
+      PreviousRange = ConstantRange(
+          PreviousRange.getLower(),
+          APIntOps::smax(PreviousRange.getUpper(), CR.getUpper()));
+    }
+  };
+  while (i < size() || j < CRL.size()) {
+    if (j == CRL.size() ||
+        (i < size() && Ranges[i].getLower().slt(CRL.Ranges[j].getLower()))) {
+      // Merge PreviousRange with this.
+      UnionAndUpdateRange(Ranges[i++]);
+    } else {
+      // Merge PreviousRange with CRL.
+      UnionAndUpdateRange(CRL.Ranges[j++]);
+    }
+  }
+  Result.Ranges.push_back(PreviousRange);
+  return Result;
+}
+
+ConstantRangeList
+ConstantRangeList::intersectWith(const ConstantRangeList &CRL) const {
+  assert(getBitWidth() == CRL.getBitWidth() &&
+         "ConstantRangeList bitwidths don't agree!");
+
+  // Handle common cases.
+  if (empty())
+    return *this;
+  if (CRL.empty())
+    return CRL;
+
+  ConstantRangeList Result;
+  size_t i = 0, j = 0;
+  while (i < size() && j < CRL.size()) {
+    auto &Range = this->Ranges[i];
+    auto &OtherRange = CRL.Ranges[j];
+
+    // The intersection of two Ranges is (max(lowers), min(uppers)), and it's
+    // possible that max(lowers) > min(uppers) if they don't have intersection.
+    // Add the intersection to result only if it's non-empty.
+    // To keep simple, we don't call ConstantRange::intersectWith() as it
+    // considers the complex upper wrapped case and may result two ranges,
+    // like (2, 8) && (6, 4) = {(2, 4), (6, 8)}.
+    APInt Start = APIntOps::smax(Range.getLower(), OtherRange.getLower());
+    APInt End = APIntOps::smin(Range.getUpper(), OtherRange.getUpper());
+    if (Start.slt(End))
+      Result.Ranges.push_back(ConstantRange(Start, End));
+
+    // Move to the next Range in one list determined by the uppers.
+    // For example: A = {(0, 2), (4, 8)}; B = {(-2, 5), (6, 10)}
+    // We need to intersect three pairs: A0 && B0; A1 && B0; A1 && B1.
+    if (Range.getUpper().slt(OtherRange.getUpper()))
+      i++;
+    else
+      j++;
+  }
+  return Result;
+}
+
 void ConstantRangeList::print(raw_ostream &OS) const {
   interleaveComma(Ranges, OS, [&](ConstantRange CR) {
     OS << "(" << CR.getLower() << ", " << CR.getUpper() << ")";

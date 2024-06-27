@@ -218,6 +218,11 @@ public:
   bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
                                                   MachineIRBuilder &B) const;
 
+  bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
+                      Intrinsic::ID IID) const;
+
+  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;

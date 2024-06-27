@@ -134,6 +134,7 @@ enum class CudaArch {
   GFX1300,
   GFX1301,
   GFX1302,
+  AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
   LAST,
