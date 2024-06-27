@@ -1117,8 +1117,7 @@ def : InstRW<[V2Write_0or1cyc_1I], (instregex "^MOVZ[WX]i$")>;
 def : SchedAlias<WriteIEReg, V2Write_2cyc_1M>;
 
 // Conditional compare
-def : InstRW<[V2Write_1cyc_1F],
-            (instregex "^CCMP(W|X)(i|r)", "^CCMN(W|X)(i|r)")>;
+def : InstRW<[V2Write_1cyc_1F], (instregex "^CCM[NP][WX][ir]")>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
