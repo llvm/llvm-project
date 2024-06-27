@@ -17,7 +17,7 @@
 # CHECK-NEXT: Info: 0
 # CHECK-NEXT: AddressAlignment: 8
 
-# CHECK:	  Size: 0x20
+# CHECK:      Size: 0x20
 # CHECK-NEXT: Notes [
 # CHECK-NEXT: {
 # CHECK-NEXT:   Owner: GNU
