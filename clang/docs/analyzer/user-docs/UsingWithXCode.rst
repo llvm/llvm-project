@@ -4,9 +4,6 @@ Running the analyzer within Xcode
 .. contents::
    :local:
 
-What is it?
------------
-
 Since Xcode 3.2, users have been able to run the Clang Static Analyzer `directly within Xcode <https://developer.apple.com/library/ios/recipes/xcode_help-source_editor/chapters/Analyze.html#//apple_ref/doc/uid/TP40009975-CH4-SW1>`_.
 
 It integrates directly with the Xcode build system and presents analysis results directly within Xcode's editor.
@@ -25,7 +22,7 @@ Key features:
 
 - **Integrated workflow:** Results are integrated within Xcode. There is no experience of using a separate tool, and activating the analyzer requires a single keystroke or mouse click.
 - **Transparency:** Works effortlessly with Xcode projects (including iPhone projects).
-- **Cons:** Doesn't work well with non-Xcode projects. For those, consider using `scan-build <scan-build.html>`_.
+- **Cons:** Doesn't work well with non-Xcode projects. For those, consider :doc:`CommandLineUsage`.
 
 Getting Started
 ---------------
@@ -42,7 +39,7 @@ Why try open source builds?
 
 The advantage of using open source analyzer builds (provided on this website) is that they are often newer than the analyzer provided with Xcode, and thus can contain bug fixes, new checks, or simply better analysis.
 
-On the other hand, new checks can be experimental, with results of variable quality. Users are encouraged to `file bug reports <filing_bugs.html>`_ (for any version of the analyzer) where they encounter false positives or other issues.
+On the other hand, new checks can be experimental, with results of variable quality. Users are encouraged to file bug reports (for any version of the analyzer) where they encounter false positives or other issues here: :doc:`FilingBugs`.
 
 set-xcode-analyzer
 ------------------
