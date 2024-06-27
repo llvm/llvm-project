@@ -41,6 +41,8 @@ bool getEmitCompactUnwindNonCanonical();
 
 bool getShowMCInst();
 
+bool getSSE2AVX();
+
 bool getFatalWarnings();
 
 bool getNoWarn();

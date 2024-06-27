@@ -42,6 +42,7 @@ MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
 MCOPT(bool, ShowMCInst)
+MCOPT(bool, SSE2AVX)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
@@ -107,6 +108,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::desc("Emit internal instruction representation to assembly file"));
   MCBINDOPT(ShowMCInst);
 
+  static cl::opt<bool> SSE2AVX(
+      "msse2avx", cl::desc("Convert SSE Instructions to AVX Instructions"));
+  MCBINDOPT(SSE2AVX);
+
   static cl::opt<bool> FatalWarnings("fatal-warnings",
                                      cl::desc("Treat warnings as errors"));
   MCBINDOPT(FatalWarnings);
@@ -156,6 +161,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
+  Options.SSE2AVX = getSSE2AVX();
   Options.ABIName = getABIName();
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();

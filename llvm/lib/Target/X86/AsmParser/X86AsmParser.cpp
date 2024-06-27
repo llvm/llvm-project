@@ -58,6 +58,10 @@ static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
 
 namespace {
 
+// Including the generated SSE2AVX compression tables.
+#define GET_X86_SSE2AVX_TABLE
+#include "X86GenInstrMapping.inc"
+
 static const char OpPrecedence[] = {
     0,  // IC_OR
     1,  // IC_XOR
@@ -4141,6 +4145,15 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   return Match_Success;
 }
 
+void ReplaceSSE2AVXOpcode(llvm::MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I != Table.end() && I->OldOpc == Opcode) {
+    Inst.setOpcode(I->NewOpc);
+  }
+}
+
 bool X86AsmParser::matchAndEmitATTInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
@@ -4159,6 +4172,13 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SwitchMode(X86::Is16Bit);
     ForcedDataPrefix = 0;
   }
+
+  // When "-msse2avx" option is enabled ReplaceSSE2AVXOpcode method will
+  // replace SSE instruction with equivalent AVX instruction using mapping given
+  // in table GET_X86_SSE2AVX_TABLE
+  if (MCOptions.SSE2AVX)
+    ReplaceSSE2AVXOpcode(Inst);
+
   switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
