@@ -78,6 +78,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
