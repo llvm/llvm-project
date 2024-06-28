@@ -521,7 +521,7 @@ public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
                         AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
                         OptimizationRemarkEmitter *ORE)
-      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), AA(AA), DT(DT),
+      : Func(F), DL(F.getDataLayout()), TTI(TTI), AA(AA), DT(DT),
         LI(LI), ORE(ORE) {}
 
   unsigned getNumOps(Type *VT) {
@@ -2462,7 +2462,7 @@ public:
     RemarkGenerator(const MapVector<Value *, MatrixTy> &Inst2Matrix,
                     OptimizationRemarkEmitter &ORE, Function &Func)
         : Inst2Matrix(Inst2Matrix), ORE(ORE), Func(Func),
-          DL(Func.getParent()->getDataLayout()) {}
+          DL(Func.getDataLayout()) {}
 
     /// Return all leaves of the expressions in \p ExprsInSubprogram. Those are
     /// instructions in Inst2Matrix returning void or without any users in
