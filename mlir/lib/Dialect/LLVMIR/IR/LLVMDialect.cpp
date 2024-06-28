@@ -825,7 +825,7 @@ Type GEPOp::getResultPtrElementType() {
 void LoadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Read::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause
@@ -902,7 +902,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
 void StoreOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Write::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause

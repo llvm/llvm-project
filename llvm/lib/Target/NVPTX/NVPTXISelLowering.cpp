@@ -3232,9 +3232,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             if (NumElts != 1)
               return std::nullopt;
             Align PartAlign =
-                (Offsets[parti] == 0 && PAL.getParamAlignment(i))
-                    ? PAL.getParamAlignment(i).value()
-                    : DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
+                DL.getABITypeAlign(EltVT.getTypeForEVT(F->getContext()));
             return commonAlignment(PartAlign, Offsets[parti]);
           }();
           SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
@@ -4591,7 +4589,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_atomic_exch_gen_i_sys:
   case Intrinsic::nvvm_atomic_xor_gen_i_cta:
   case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = getValueType(DL, I.getType());
     Info.ptrVal = I.getArgOperand(0);
@@ -4604,7 +4602,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldu_global_i:
   case Intrinsic::nvvm_ldu_global_f:
   case Intrinsic::nvvm_ldu_global_p: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     if (Intrinsic == Intrinsic::nvvm_ldu_global_i)
       Info.memVT = getValueType(DL, I.getType());
@@ -4622,7 +4620,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldg_global_i:
   case Intrinsic::nvvm_ldg_global_f:
   case Intrinsic::nvvm_ldg_global_p: {
-    auto &DL = I.getModule()->getDataLayout();
+    auto &DL = I.getDataLayout();
 
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     if (Intrinsic == Intrinsic::nvvm_ldg_global_i)
@@ -5038,7 +5036,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 /// ensures that alignment is 16 or greater.
 Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
     const Function *F, Type *ArgTy, const DataLayout &DL) const {
-  const uint64_t ABITypeAlign = DL.getABITypeAlign(ArgTy).value();
+  // Capping the alignment to 128 bytes as that is the maximum alignment
+  // supported by PTX.
+  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
 
   // If a function has linkage different from internal or private, we
   // must use default ABI alignment as external users rely on it. Same
@@ -5048,10 +5048,10 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
                          /*IgnoreCallbackUses=*/false,
                          /*IgnoreAssumeLikeCalls=*/true,
                          /*IgnoreLLVMUsed=*/true))
-    return Align(ABITypeAlign);
+    return ABITypeAlign;
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return Align(std::max(uint64_t(16), ABITypeAlign));
+  return std::max(Align(16), ABITypeAlign);
 }
 
 /// Helper for computing alignment of a device function byval parameter.
@@ -5215,103 +5215,131 @@ bool NVPTXTargetLowering::allowUnsafeFPMath(MachineFunction &MF) const {
   return F.getFnAttribute("unsafe-fp-math").getValueAsBool();
 }
 
+static bool isConstZero(const SDValue &Operand) {
+  const auto *Const = dyn_cast<ConstantSDNode>(Operand);
+  return Const && Const->getZExtValue() == 0;
+}
+
 /// PerformADDCombineWithOperands - Try DAG combinations for an ADD with
 /// operands N0 and N1.  This is a helper for PerformADDCombine that is
 /// called with the default operands, and if that fails, with commuted
 /// operands.
-static SDValue PerformADDCombineWithOperands(
-    SDNode *N, SDValue N0, SDValue N1, TargetLowering::DAGCombinerInfo &DCI,
-    const NVPTXSubtarget &Subtarget, CodeGenOptLevel OptLevel) {
-  SelectionDAG  &DAG = DCI.DAG;
-  // Skip non-integer, non-scalar case
-  EVT VT=N0.getValueType();
-  if (VT.isVector())
+static SDValue
+PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                              TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N0.getValueType();
+
+  // Since integer multiply-add costs the same as integer multiply
+  // but is more costly than integer add, do the fusion only when
+  // the mul is only used in the add.
+  // TODO: this may not be true for later architectures, consider relaxing this
+  if (!N0.getNode()->hasOneUse())
     return SDValue();
 
   // fold (add (mul a, b), c) -> (mad a, b, c)
   //
-  if (N0.getOpcode() == ISD::MUL) {
-    assert (VT.isInteger());
-    // For integer:
-    // Since integer multiply-add costs the same as integer multiply
-    // but is more costly than integer add, do the fusion only when
-    // the mul is only used in the add.
-    if (OptLevel == CodeGenOptLevel::None || VT != MVT::i32 ||
-        !N0.getNode()->hasOneUse())
+  if (N0.getOpcode() == ISD::MUL)
+    return DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT, N0.getOperand(0),
+                           N0.getOperand(1), N1);
+
+  // fold (add (select cond, 0, (mul a, b)), c)
+  //   -> (select cond, c, (mad a, b, c))
+  //
+  if (N0.getOpcode() == ISD::SELECT) {
+    unsigned ZeroOpNum;
+    if (isConstZero(N0->getOperand(1)))
+      ZeroOpNum = 1;
+    else if (isConstZero(N0->getOperand(2)))
+      ZeroOpNum = 2;
+    else
       return SDValue();
 
-    // Do the folding
-    return DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT,
-                       N0.getOperand(0), N0.getOperand(1), N1);
-  }
-  else if (N0.getOpcode() == ISD::FMUL) {
-    if (VT == MVT::f32 || VT == MVT::f64) {
-      const auto *TLI = static_cast<const NVPTXTargetLowering *>(
-          &DAG.getTargetLoweringInfo());
-      if (!TLI->allowFMA(DAG.getMachineFunction(), OptLevel))
-        return SDValue();
+    SDValue M = N0->getOperand((ZeroOpNum == 1) ? 2 : 1);
+    if (M->getOpcode() != ISD::MUL || !M.getNode()->hasOneUse())
+      return SDValue();
 
-      // For floating point:
-      // Do the fusion only when the mul has less than 5 uses and all
-      // are add.
-      // The heuristic is that if a use is not an add, then that use
-      // cannot be fused into fma, therefore mul is still needed anyway.
-      // If there are more than 4 uses, even if they are all add, fusing
-      // them will increase register pressue.
-      //
-      int numUses = 0;
-      int nonAddCount = 0;
-      for (const SDNode *User : N0.getNode()->uses()) {
-        numUses++;
-        if (User->getOpcode() != ISD::FADD)
-          ++nonAddCount;
-      }
+    SDValue MAD = DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT,
+                                  M->getOperand(0), M->getOperand(1), N1);
+    return DCI.DAG.getSelect(SDLoc(N), VT, N0->getOperand(0),
+                             ((ZeroOpNum == 1) ? N1 : MAD),
+                             ((ZeroOpNum == 1) ? MAD : N1));
+  }
+
+  return SDValue();
+}
+
+static SDValue
+PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                               TargetLowering::DAGCombinerInfo &DCI,
+                               CodeGenOptLevel OptLevel) {
+  EVT VT = N0.getValueType();
+  if (N0.getOpcode() == ISD::FMUL) {
+    const auto *TLI = static_cast<const NVPTXTargetLowering *>(
+        &DCI.DAG.getTargetLoweringInfo());
+    if (!TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel))
+      return SDValue();
+
+    // For floating point:
+    // Do the fusion only when the mul has less than 5 uses and all
+    // are add.
+    // The heuristic is that if a use is not an add, then that use
+    // cannot be fused into fma, therefore mul is still needed anyway.
+    // If there are more than 4 uses, even if they are all add, fusing
+    // them will increase register pressue.
+    //
+    int numUses = 0;
+    int nonAddCount = 0;
+    for (const SDNode *User : N0.getNode()->uses()) {
+      numUses++;
+      if (User->getOpcode() != ISD::FADD)
+        ++nonAddCount;
       if (numUses >= 5)
         return SDValue();
-      if (nonAddCount) {
-        int orderNo = N->getIROrder();
-        int orderNo2 = N0.getNode()->getIROrder();
-        // simple heuristics here for considering potential register
-        // pressure, the logics here is that the differnce are used
-        // to measure the distance between def and use, the longer distance
-        // more likely cause register pressure.
-        if (orderNo - orderNo2 < 500)
-          return SDValue();
-
-        // Now, check if at least one of the FMUL's operands is live beyond the node N,
-        // which guarantees that the FMA will not increase register pressure at node N.
-        bool opIsLive = false;
-        const SDNode *left = N0.getOperand(0).getNode();
-        const SDNode *right = N0.getOperand(1).getNode();
-
-        if (isa<ConstantSDNode>(left) || isa<ConstantSDNode>(right))
-          opIsLive = true;
-
-        if (!opIsLive)
-          for (const SDNode *User : left->uses()) {
-            int orderNo3 = User->getIROrder();
-            if (orderNo3 > orderNo) {
-              opIsLive = true;
-              break;
-            }
-          }
-
-        if (!opIsLive)
-          for (const SDNode *User : right->uses()) {
-            int orderNo3 = User->getIROrder();
-            if (orderNo3 > orderNo) {
-              opIsLive = true;
-              break;
-            }
-          }
-
-        if (!opIsLive)
-          return SDValue();
-      }
-
-      return DAG.getNode(ISD::FMA, SDLoc(N), VT,
-                         N0.getOperand(0), N0.getOperand(1), N1);
     }
+    if (nonAddCount) {
+      int orderNo = N->getIROrder();
+      int orderNo2 = N0.getNode()->getIROrder();
+      // simple heuristics here for considering potential register
+      // pressure, the logics here is that the differnce are used
+      // to measure the distance between def and use, the longer distance
+      // more likely cause register pressure.
+      if (orderNo - orderNo2 < 500)
+        return SDValue();
+
+      // Now, check if at least one of the FMUL's operands is live beyond the
+      // node N, which guarantees that the FMA will not increase register
+      // pressure at node N.
+      bool opIsLive = false;
+      const SDNode *left = N0.getOperand(0).getNode();
+      const SDNode *right = N0.getOperand(1).getNode();
+
+      if (isa<ConstantSDNode>(left) || isa<ConstantSDNode>(right))
+        opIsLive = true;
+
+      if (!opIsLive)
+        for (const SDNode *User : left->uses()) {
+          int orderNo3 = User->getIROrder();
+          if (orderNo3 > orderNo) {
+            opIsLive = true;
+            break;
+          }
+        }
+
+      if (!opIsLive)
+        for (const SDNode *User : right->uses()) {
+          int orderNo3 = User->getIROrder();
+          if (orderNo3 > orderNo) {
+            opIsLive = true;
+            break;
+          }
+        }
+
+      if (!opIsLive)
+        return SDValue();
+    }
+
+    return DCI.DAG.getNode(ISD::FMA, SDLoc(N), VT, N0.getOperand(0),
+                           N0.getOperand(1), N1);
   }
 
   return SDValue();
@@ -5332,18 +5360,44 @@ static SDValue PerformStoreRetvalCombine(SDNode *N) {
 ///
 static SDValue PerformADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
-                                 const NVPTXSubtarget &Subtarget,
+                                 CodeGenOptLevel OptLevel) {
+  if (OptLevel == CodeGenOptLevel::None)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Skip non-integer, non-scalar case
+  EVT VT = N0.getValueType();
+  if (VT.isVector() || VT != MVT::i32)
+    return SDValue();
+
+  // First try with the default operand order.
+  if (SDValue Result = PerformADDCombineWithOperands(N, N0, N1, DCI))
+    return Result;
+
+  // If that didn't work, try again with the operands commuted.
+  return PerformADDCombineWithOperands(N, N1, N0, DCI);
+}
+
+/// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
+///
+static SDValue PerformFADDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
+  EVT VT = N0.getValueType();
+  if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
+    return SDValue();
+
   // First try with the default operand order.
-  if (SDValue Result =
-          PerformADDCombineWithOperands(N, N0, N1, DCI, Subtarget, OptLevel))
+  if (SDValue Result = PerformFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
     return Result;
 
   // If that didn't work, try again with the operands commuted.
-  return PerformADDCombineWithOperands(N, N1, N0, DCI, Subtarget, OptLevel);
+  return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
 static SDValue PerformANDCombine(SDNode *N,
@@ -5876,8 +5930,9 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
     default: break;
     case ISD::ADD:
+      return PerformADDCombine(N, DCI, OptLevel);
     case ISD::FADD:
-      return PerformADDCombine(N, DCI, STI, OptLevel);
+      return PerformFADDCombine(N, DCI, OptLevel);
     case ISD::MUL:
       return PerformMULCombine(N, DCI, OptLevel);
     case ISD::SHL:

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/linux/rwlock.h"
@@ -37,7 +38,6 @@
 #include "src/unistd/fork.h"
 #include "test/IntegrationTest/test.h"
 #include <errno.h>
-#include <optional>
 #include <pthread.h>
 #include <time.h>
 

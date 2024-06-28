@@ -558,9 +558,9 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 /// This returns true if there were any known values.
 bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
-    ConstantPreference Preference, DenseSet<Value *> &RecursionSet,
+    ConstantPreference Preference, SmallPtrSet<Value *, 4> &RecursionSet,
     Instruction *CxtI) {
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
 
   // This method walks up use-def chains recursively.  Because of this, we could
   // get into an infinite loop going around loops in the use-def chain.  To
@@ -757,7 +757,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     // may result in comparison of values from two different loop iterations.
     // FIXME: This check is broken if LoopHeaders is not populated.
     if (PN && PN->getParent() == BB && !LoopHeaders.contains(BB)) {
-      const DataLayout &DL = PN->getModule()->getDataLayout();
+      const DataLayout &DL = PN->getDataLayout();
       // We can do this simplification if any comparisons fold to true or false.
       // See if any do.
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
@@ -1008,7 +1008,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   // constant.
   if (Instruction *I = dyn_cast<Instruction>(Condition)) {
     Value *SimpleVal =
-        ConstantFoldInstruction(I, BB->getModule()->getDataLayout(), TLI);
+        ConstantFoldInstruction(I, BB->getDataLayout(), TLI);
     if (SimpleVal) {
       I->replaceAllUsesWith(SimpleVal);
       if (isInstructionTriviallyDead(I, TLI))
@@ -1178,7 +1178,7 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
   BasicBlock *CurrentPred = BB->getSinglePredecessor();
   unsigned Iter = 0;
 
-  auto &DL = BB->getModule()->getDataLayout();
+  auto &DL = BB->getDataLayout();
 
   while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
     auto *PBI = dyn_cast<BranchInst>(CurrentPred->getTerminator());
@@ -1324,7 +1324,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // If this is a load on a phi pointer, phi-translate it and search
     // for available load/store to the pointer in predecessors.
     Type *AccessTy = LoadI->getType();
-    const auto &DL = LoadI->getModule()->getDataLayout();
+    const auto &DL = LoadI->getDataLayout();
     MemoryLocation Loc(LoadedPtr->DoPHITranslation(LoadBB, PredBB),
                        LocationSize::precise(DL.getTypeStoreSize(AccessTy)),
                        AATags);
@@ -2196,7 +2196,7 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   unsigned OneCount = 0;
   BasicBlock *ZeroPred = nullptr;
   BasicBlock *OnePred = nullptr;
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   for (BasicBlock *P : predecessors(PredBB)) {
     // If PredPred ends with IndirectBrInst, we can't handle it.
     if (isa<IndirectBrInst>(P->getTerminator()))
@@ -2710,7 +2710,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     // phi translation.
     if (Value *IV = simplifyInstruction(
             New,
-            {BB->getModule()->getDataLayout(), TLI, nullptr, nullptr, New})) {
+            {BB->getDataLayout(), TLI, nullptr, nullptr, New})) {
       ValueMapping[&*BI] = IV;
       if (!New->mayHaveSideEffects()) {
         New->eraseFromParent();
@@ -3071,7 +3071,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
   BasicBlock *TrueDest = BI->getSuccessor(0);
   BasicBlock *FalseDest = BI->getSuccessor(1);
 
-  auto &DL = BB->getModule()->getDataLayout();
+  auto &DL = BB->getDataLayout();
   bool TrueDestIsSafe = false;
   bool FalseDestIsSafe = false;
 

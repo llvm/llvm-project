@@ -99,7 +99,7 @@ void test_flat_global_max_f64(__global double *addr, double x){
 }
 
 // CHECK-LABEL: test_ds_add_local_f64
-// CHECK: call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %{{.*}}, double %{{.*}},
+// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, double %{{.+}} seq_cst, align 8
 // GFX90A:  test_ds_add_local_f64$local
 // GFX90A:  ds_add_rtn_f64
 void test_ds_add_local_f64(__local double *addr, double x){
@@ -108,7 +108,7 @@ void test_ds_add_local_f64(__local double *addr, double x){
 }
 
 // CHECK-LABEL: test_ds_addf_local_f32
-// CHECK: call float @llvm.amdgcn.ds.fadd.f32(ptr addrspace(3) %{{.*}}, float %{{.*}},
+// CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, float %{{.+}} seq_cst, align 4
 // GFX90A-LABEL:  test_ds_addf_local_f32$local
 // GFX90A:  ds_add_rtn_f32
 void test_ds_addf_local_f32(__local float *addr, float x){

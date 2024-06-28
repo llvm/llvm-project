@@ -3347,6 +3347,9 @@ below. If multiple flags are present, the last one is used.
   By default, Clang does not emit type information for types that are defined
   but not used in a program. To retain the debug info for these unused types,
   the negation **-fno-eliminate-unused-debug-types** can be used.
+  This can be particulary useful on Windows, when using NATVIS files that
+  can reference const symbols that would otherwise be stripped, even in full
+  debug or standalone debug modes.
 
 Controlling Macro Debug Info Generation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

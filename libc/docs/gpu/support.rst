@@ -190,6 +190,8 @@ strtold        |check|
 strtoll        |check|
 strtoul        |check|
 strtoull       |check|
+srand          |check|
+rand           |check|
 =============  =========  ============
 
 inttypes.h

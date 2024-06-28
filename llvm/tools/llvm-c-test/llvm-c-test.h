@@ -36,7 +36,7 @@ int llvm_calc(void);
 int llvm_disassemble(void);
 
 // debuginfo.c
-int llvm_test_dibuilder(bool NewDebugInfoFormat);
+int llvm_test_dibuilder(void);
 int llvm_get_di_tag(void);
 int llvm_di_type_get_name(void);
 

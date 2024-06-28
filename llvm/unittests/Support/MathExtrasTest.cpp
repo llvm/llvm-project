@@ -459,15 +459,37 @@ TEST(MathExtras, DivideNearest) {
   EXPECT_EQ(divideNearest(14, 3), 5u);
   EXPECT_EQ(divideNearest(15, 3), 5u);
   EXPECT_EQ(divideNearest(0, 3), 0u);
+  EXPECT_EQ(divideNearest(5, 4), 1u);
+  EXPECT_EQ(divideNearest(6, 4), 2u);
+  EXPECT_EQ(divideNearest(3, 1), 3u);
+  EXPECT_EQ(divideNearest(3, 6), 1u);
+  EXPECT_EQ(divideNearest(3, 7), 0u);
   EXPECT_EQ(divideNearest(std::numeric_limits<uint32_t>::max(), 2),
-            2147483648u);
+            std::numeric_limits<uint32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max(), 2),
+            std::numeric_limits<uint64_t>::max() / 2 + 1);
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max(), 1),
+            std::numeric_limits<uint64_t>::max());
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max() - 1,
+                          std::numeric_limits<uint64_t>::max()),
+            1u);
 }
 
 TEST(MathExtras, DivideCeil) {
   EXPECT_EQ(divideCeil(14, 3), 5u);
   EXPECT_EQ(divideCeil(15, 3), 5u);
   EXPECT_EQ(divideCeil(0, 3), 0u);
-  EXPECT_EQ(divideCeil(std::numeric_limits<uint32_t>::max(), 2), 2147483648u);
+  EXPECT_EQ(divideCeil(5, 4), 2u);
+  EXPECT_EQ(divideCeil(6, 4), 2u);
+  EXPECT_EQ(divideCeil(3, 1), 3u);
+  EXPECT_EQ(divideCeil(3, 6), 1u);
+  EXPECT_EQ(divideCeil(3, 7), 1u);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint32_t>::max(), 2),
+            std::numeric_limits<uint32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint64_t>::max(), 2),
+            std::numeric_limits<uint64_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint64_t>::max(), 1),
+            std::numeric_limits<uint64_t>::max());
 
   EXPECT_EQ(divideCeilSigned(14, 3), 5);
   EXPECT_EQ(divideCeilSigned(15, 3), 5);
@@ -479,8 +501,14 @@ TEST(MathExtras, DivideCeil) {
   EXPECT_EQ(divideCeilSigned(0, -3), 0);
   EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), 2),
             std::numeric_limits<int32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::max(), 2),
+            std::numeric_limits<int64_t>::max() / 2 + 1);
   EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), -2),
             std::numeric_limits<int32_t>::min() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::max(), -2),
+            std::numeric_limits<int64_t>::min() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::min(), 1),
+            std::numeric_limits<int64_t>::min());
 }
 
 TEST(MathExtras, DivideFloorSigned) {
@@ -494,8 +522,14 @@ TEST(MathExtras, DivideFloorSigned) {
   EXPECT_EQ(divideFloorSigned(0, -3), 0);
   EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), 2),
             std::numeric_limits<int32_t>::max() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::max(), 2),
+            std::numeric_limits<int64_t>::max() / 2);
   EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), -2),
             std::numeric_limits<int32_t>::min() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::max(), -2),
+            std::numeric_limits<int64_t>::min() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::min(), 1),
+            std::numeric_limits<int64_t>::min());
 }
 
 TEST(MathExtras, Mod) {

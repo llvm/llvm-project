@@ -1934,9 +1934,8 @@ static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
     DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands) {
   // Prune out obviously bad instructions to move. Each instruction must have
-  // exactly zero or one use, and we check later that use is by a single, common
-  // PHI instruction in the successor.
-  bool HasUse = !Insts.front()->user_empty();
+  // the same number of uses, and we check later that the uses are consistent.
+  std::optional<unsigned> NumUses;
   for (auto *I : Insts) {
     // These instructions may change or break semantics if moved.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
@@ -1956,10 +1955,9 @@ static bool canSinkInstructions(
       if (C->isInlineAsm() || C->cannotMerge() || C->isConvergent())
         return false;
 
-    // Each instruction must have zero or one use.
-    if (HasUse && !I->hasOneUse())
-      return false;
-    if (!HasUse && !I->user_empty())
+    if (!NumUses)
+      NumUses = I->getNumUses();
+    else if (NumUses != I->getNumUses())
       return false;
   }
 
@@ -1987,8 +1985,7 @@ static bool canSinkInstructions(
   // then the other phi operands must match the instructions from Insts. This
   // also has to hold true for any phi nodes that would be created as a result
   // of sinking. Both of these cases are represented by PhiOperands.
-  if (HasUse) {
-    const Use &U = *I0->use_begin();
+  for (const Use &U : I0->uses()) {
     auto It = PHIOperands.find(&U);
     if (It == PHIOperands.end())
       // There may be uses in other blocks when sinking into a loop header.
@@ -2138,11 +2135,11 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       I0->andIRFlags(I);
     }
 
-  if (!I0->user_empty()) {
-    // canSinkLastInstruction checked that all instructions were used by
-    // one and only one PHI node. Find that now, RAUW it to our common
-    // instruction and nuke it.
-    auto *PN = cast<PHINode>(*I0->user_begin());
+  for (User *U : make_early_inc_range(I0->users())) {
+    // canSinkLastInstruction checked that all instructions are only used by
+    // phi nodes in a way that allows replacing the phi node with the common
+    // instruction.
+    auto *PN = cast<PHINode>(U);
     PN->replaceAllUsesWith(I0);
     PN->eraseFromParent();
   }
@@ -4905,7 +4902,7 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // There might be duplicate constants in the list, which the switch
   // instruction can't handle, remove them now.
   array_pod_sort(Values.begin(), Values.end(), ConstantIntSortPredicate);
-  Values.erase(std::unique(Values.begin(), Values.end()), Values.end());
+  Values.erase(llvm::unique(Values), Values.end());
 
   // If Extra was used, we require at least two switch values to do the
   // transformation.  A switch with one value is just a conditional branch.
@@ -5821,7 +5818,8 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   for (auto &ForwardingNode : ForwardingNodes) {
     PHINode *Phi = ForwardingNode.first;
     SmallVectorImpl<int> &Indexes = ForwardingNode.second;
-    if (Indexes.size() < 2)
+    // Check if it helps to fold PHI.
+    if (Indexes.size() < 2 && !llvm::is_contained(Phi->incoming_values(), SI->getCondition()))
       continue;
 
     for (int Index : Indexes)
@@ -6595,7 +6593,7 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  const DataLayout &DL = PhiBlock->getDataLayout();
   Constant *DefaultConst = ConstantFoldCompareInstOperands(
       CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
@@ -7752,7 +7750,7 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
                        ArrayRef<WeakVH> LoopHeaders) {
-  return SimplifyCFGOpt(TTI, DTU, BB->getModule()->getDataLayout(), LoopHeaders,
+  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), LoopHeaders,
                         Options)
       .run(BB);
 }

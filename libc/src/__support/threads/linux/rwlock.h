@@ -63,7 +63,7 @@ public:
     WaitingQueue &queue;
     bool is_pshared;
 
-    LIBC_INLINE constexpr Guard(WaitingQueue &queue, bool is_pshared)
+    LIBC_INLINE Guard(WaitingQueue &queue, bool is_pshared)
         : queue(queue), is_pshared(is_pshared) {
       queue.lock(cpp::nullopt, is_pshared);
     }
@@ -189,6 +189,7 @@ public:
       case Role::Writer:
         return !has_active_writer() && !has_pending_writer();
       }
+      __builtin_unreachable();
     } else
       return !has_acitve_owner();
   }
@@ -370,8 +371,9 @@ private:
 public:
   LIBC_INLINE constexpr RwLock(Role preference = Role::Reader,
                                bool is_pshared = false)
-      : is_pshared(is_pshared), preference(static_cast<unsigned>(preference)),
-        state(0), writer_tid(0), queue() {}
+      : is_pshared(is_pshared),
+        preference(static_cast<unsigned>(preference) & 1u), state(0),
+        writer_tid(0), queue() {}
 
   [[nodiscard]]
   LIBC_INLINE LockResult try_read_lock() {

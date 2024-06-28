@@ -395,7 +395,8 @@ public:
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
                              unsigned Op);
-
+  void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs, unsigned Op,
+                              unsigned MaxIdx, unsigned Scale);
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
@@ -1997,6 +1998,34 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, I),
                 CurDAG->getTargetExtractSubreg(AArch64::zsub0 + I, DL, VT,
                                                SDValue(Mov, 0)));
+  // Copy chain
+  unsigned ChainIdx = NumVecs;
+  ReplaceUses(SDValue(N, ChainIdx), SDValue(Mov, 1));
+  CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
+                                                 unsigned Op, unsigned MaxIdx,
+                                                 unsigned Scale) {
+
+  SDValue SliceBase = N->getOperand(3);
+  SDValue Base, Offset;
+  if (!SelectSMETileSlice(SliceBase, MaxIdx, Base, Offset, Scale))
+    return;
+  // The correct Za tile number is computed in Machine Instruction
+  // See EmitZAInstr
+  // DAG cannot select Za tile as an output register with ZReg
+  SDLoc DL(N);
+  SDValue Ops[] = {/*TileNum*/ N->getOperand(2), Base, Offset,
+                   /*Chain*/ N->getOperand(0)};
+  SDNode *Mov = CurDAG->getMachineNode(Op, DL, {MVT::Untyped, MVT::Other}, Ops);
+
+  EVT VT = N->getValueType(0);
+  for (unsigned I = 0; I < NumVecs; ++I)
+    ReplaceUses(SDValue(N, I),
+                CurDAG->getTargetExtractSubreg(AArch64::zsub0 + I, DL, VT,
+                                               SDValue(Mov, 0)));
+
   // Copy chain
   unsigned ChainIdx = NumVecs;
   ReplaceUses(SDValue(N, ChainIdx), SDValue(Mov, 1));
@@ -4359,7 +4388,9 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   //   N1 = SRL_PRED true, V, splat(imm)  --> rotr amount
   //   N0 = SHL_PRED true, V, splat(bits-imm)
   //   V = (xor x, y)
-  if (VT.isScalableVector() && Subtarget->hasSVE2orSME()) {
+  if (VT.isScalableVector() &&
+      (Subtarget->hasSVE2() ||
+       (Subtarget->hasSME() && Subtarget->isStreaming()))) {
     if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
         N1.getOpcode() != AArch64ISD::SRL_PRED)
       std::swap(N0, N1);
@@ -5242,6 +5273,74 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       SelectMultiVectorMove<7, 1>(Node, 4, AArch64::ZA,
                                   AArch64::MOVA_VG4_4ZMXI);
       return;
+    }
+    case Intrinsic::aarch64_sme_readz_horiz_x2: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_B_PSEUDO, 14, 2);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_H_PSEUDO, 6, 2);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_S_PSEUDO, 2, 2);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_D_PSEUDO, 0, 2);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_readz_vert_x2: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_B_PSEUDO, 14, 2);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_H_PSEUDO, 6, 2);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_S_PSEUDO, 2, 2);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_D_PSEUDO, 0, 2);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_readz_horiz_x4: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_B_PSEUDO, 12, 4);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_H_PSEUDO, 4, 4);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_S_PSEUDO, 0, 4);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_D_PSEUDO, 0, 4);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_readz_vert_x4: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_B_PSEUDO, 12, 4);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_H_PSEUDO, 4, 4);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_S_PSEUDO, 0, 4);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_D_PSEUDO, 0, 4);
+        return;
+      }
+      break;
     }
     case Intrinsic::swift_async_context_addr: {
       SDLoc DL(Node);

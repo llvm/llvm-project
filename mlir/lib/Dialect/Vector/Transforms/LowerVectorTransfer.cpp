@@ -429,20 +429,24 @@ namespace {
 ///   result type.
 /// - The permutation map doesn't perform permutation (broadcasting is allowed).
 struct TransferReadToVectorLoadLowering
-    : public OpRewritePattern<vector::TransferReadOp> {
+    : public MaskableOpRewritePattern<vector::TransferReadOp> {
   TransferReadToVectorLoadLowering(MLIRContext *context,
                                    std::optional<unsigned> maxRank,
                                    PatternBenefit benefit = 1)
-      : OpRewritePattern<vector::TransferReadOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::TransferReadOp>(context, benefit),
         maxTransferRank(maxRank) {}
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp read,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp read,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     if (maxTransferRank && read.getVectorType().getRank() > *maxTransferRank) {
       return rewriter.notifyMatchFailure(
           read, "vector type is greater than max transfer rank");
     }
 
+    if (maskOp)
+      return rewriter.notifyMatchFailure(read, "Masked case not supported");
     SmallVector<unsigned> broadcastedDims;
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
@@ -485,7 +489,7 @@ struct TransferReadToVectorLoadLowering
       return rewriter.notifyMatchFailure(read, "out-of-bounds needs mask");
 
     // Create vector load op.
-    Operation *loadOp;
+    Operation *res;
     if (read.getMask()) {
       if (read.getVectorType().getRank() != 1)
         // vector.maskedload operates on 1-D vectors.
@@ -495,24 +499,20 @@ struct TransferReadToVectorLoadLowering
 
       Value fill = rewriter.create<vector::SplatOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
-      loadOp = rewriter.create<vector::MaskedLoadOp>(
+      res = rewriter.create<vector::MaskedLoadOp>(
           read.getLoc(), unbroadcastedVectorType, read.getSource(),
           read.getIndices(), read.getMask(), fill);
     } else {
-      loadOp = rewriter.create<vector::LoadOp>(
+      res = rewriter.create<vector::LoadOp>(
           read.getLoc(), unbroadcastedVectorType, read.getSource(),
           read.getIndices());
     }
 
     // Insert a broadcasting op if required.
-    if (!broadcastedDims.empty()) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          read, read.getVectorType(), loadOp->getResult(0));
-    } else {
-      rewriter.replaceOp(read, loadOp->getResult(0));
-    }
-
-    return success();
+    if (!broadcastedDims.empty())
+      res = rewriter.create<vector::BroadcastOp>(
+          read.getLoc(), read.getVectorType(), res->getResult(0));
+    return res->getResult(0);
   }
 
   std::optional<unsigned> maxTransferRank;
@@ -581,19 +581,23 @@ struct VectorStoreToMemrefStoreLowering
 /// - The permutation map is the minor identity map (neither permutation nor
 ///   broadcasting is allowed).
 struct TransferWriteToVectorStoreLowering
-    : public OpRewritePattern<vector::TransferWriteOp> {
+    : public MaskableOpRewritePattern<vector::TransferWriteOp> {
   TransferWriteToVectorStoreLowering(MLIRContext *context,
                                      std::optional<unsigned> maxRank,
                                      PatternBenefit benefit = 1)
-      : OpRewritePattern<vector::TransferWriteOp>(context, benefit),
+      : MaskableOpRewritePattern<vector::TransferWriteOp>(context, benefit),
         maxTransferRank(maxRank) {}
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp write,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferWriteOp write,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     if (maxTransferRank && write.getVectorType().getRank() > *maxTransferRank) {
       return rewriter.notifyMatchFailure(
           write, "vector type is greater than max transfer rank");
     }
+    if (maskOp)
+      return rewriter.notifyMatchFailure(write, "Masked case not supported");
 
     // Permutations are handled by VectorToSCF or
     // populateVectorTransferPermutationMapLoweringPatterns.
@@ -645,14 +649,16 @@ struct TransferWriteToVectorStoreLowering
                    << write;
             });
 
-      rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
-          write, write.getSource(), write.getIndices(), write.getMask(),
-          write.getVector());
+      rewriter.create<vector::MaskedStoreOp>(
+          write.getLoc(), write.getSource(), write.getIndices(),
+          write.getMask(), write.getVector());
     } else {
-      rewriter.replaceOpWithNewOp<vector::StoreOp>(
-          write, write.getVector(), write.getSource(), write.getIndices());
+      rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
+                                       write.getSource(), write.getIndices());
     }
-    return success();
+    // There's no return value for StoreOps. Use Value() to signal success to
+    // matchAndRewrite.
+    return Value();
   }
 
   std::optional<unsigned> maxTransferRank;

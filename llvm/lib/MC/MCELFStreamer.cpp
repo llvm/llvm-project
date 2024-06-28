@@ -70,7 +70,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
                                    uint64_t Offset) {
   auto *Symbol = cast<MCSymbolELF>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
@@ -102,19 +102,19 @@ void MCELFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
 // needs to be aligned to at least the bundle size.
 static void setSectionAlignmentForBundling(const MCAssembler &Assembler,
                                            MCSection *Section) {
-  if (Section && Assembler.isBundlingEnabled() && Section->hasInstructions())
+  if (Assembler.isBundlingEnabled() && Section->hasInstructions())
     Section->ensureMinAlignment(Align(Assembler.getBundleAlignSize()));
 }
 
-void MCELFStreamer::changeSection(MCSection *Section,
-                                  const MCExpr *Subsection) {
-  MCSection *CurSection = getCurrentSectionOnly();
-  if (CurSection && isBundleLocked())
-    report_fatal_error("Unterminated .bundle_lock when changing a section");
-
+void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
-  // Ensure the previous section gets aligned if necessary.
-  setSectionAlignmentForBundling(Asm, CurSection);
+  if (auto *F = getCurrentFragment()) {
+    if (isBundleLocked())
+      report_fatal_error("Unterminated .bundle_lock when changing a section");
+
+    // Ensure the previous section gets aligned if necessary.
+    setSectionAlignmentForBundling(Asm, F->getParent());
+  }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
   const MCSymbol *Grp = SectionELF->getGroup();
   if (Grp)
@@ -629,8 +629,8 @@ void MCELFStreamer::finishImpl() {
   }
 
   // Ensure the last section gets aligned if necessary.
-  MCSection *CurSection = getCurrentSectionOnly();
-  setSectionAlignmentForBundling(getAssembler(), CurSection);
+  if (MCFragment *F = getCurrentFragment())
+    setSectionAlignmentForBundling(getAssembler(), F->getParent());
 
   finalizeCGProfile();
   emitFrames(nullptr);

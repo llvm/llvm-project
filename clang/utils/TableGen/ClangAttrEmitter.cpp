@@ -105,9 +105,9 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
+      .EndsWith("Decl *", "Record.readDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">(LocalDeclID(Record.readInt()))")
+                              ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
@@ -903,13 +903,15 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
+    bool isCovered;
 
   public:
     EnumArgument(const Record &Arg, StringRef Attr)
         : Argument(Arg, Attr), values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")),
+          isCovered(Arg.getValueAsBit("IsCovered")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -993,7 +995,7 @@ namespace {
         OS << "      OS << \" " << I << "\";\n";
         OS << "      break;\n";
       }
-      if (isExternal) {
+      if (!isCovered) {
         OS << "    default:\n";
         OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
@@ -1036,7 +1038,7 @@ namespace {
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
       }
-      if (isExternal) {
+      if (!isCovered) {
         OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
@@ -1050,6 +1052,7 @@ namespace {
     StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
     bool isExternal;
+    bool isCovered;
 
   protected:
     void writeValueImpl(raw_ostream &OS) const override {
@@ -1068,7 +1071,8 @@ namespace {
           values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
           uniques(uniqueEnumsInOrder(enums)),
-          isExternal(Arg.getValueAsBit("IsExternalType")) {
+          isExternal(Arg.getValueAsBit("IsExternalType")),
+          isCovered(Arg.getValueAsBit("IsCovered")) {
       StringRef Type = Arg.getValueAsString("Type");
       shortType = isExternal ? Type.rsplit("::").second : Type;
       // If shortType didn't contain :: at all rsplit will give us an empty
@@ -1110,6 +1114,10 @@ namespace {
         OS << "    case " << fullType << "::" << UI << ":\n";
         OS << "      OS << \" " << UI << "\";\n";
         OS << "      break;\n";
+      }
+      if (!isCovered) {
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "      }\n";
       OS << "    }\n";
@@ -1167,6 +1175,9 @@ namespace {
         if (Uniques.insert(enums[I]).second)
           OS << "  case " << fullType << "::" << enums[I] << ": return \""
              << values[I] << "\";\n";
+      }
+      if (!isCovered) {
+        OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
          << "  llvm_unreachable(\"No enumerator with that value\");\n"
@@ -2565,6 +2576,32 @@ static void emitClangAttrIdentifierArgList(RecordKeeper &Records, raw_ostream &O
     });
   }
   OS << "#endif // CLANG_ATTR_IDENTIFIER_ARG_LIST\n\n";
+}
+
+// Emits the indexed-argument-is-identifier property for attributes.
+static void emitClangAttrStrictIdentifierArgAtIndexList(RecordKeeper &Records,
+                                                        raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST)\n";
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+
+  for (const auto *Attr : Attrs) {
+    if (!Attr->getValueAsBit("StrictEnumParameters"))
+      continue;
+    // Determine whether the first argument is an identifier.
+    std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
+    uint64_t enumAtIndex = 0;
+    for (size_t i = 0; i < Args.size(); i++) {
+      enumAtIndex |= ((uint64_t)isIdentifierArgument(Args[0])) << i;
+    }
+    if (!enumAtIndex)
+      continue;
+
+    // All these spellings take an identifier argument.
+    forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
+      OS << ".Case(\"" << S.name() << "\", " << enumAtIndex << "ull)\n";
+    });
+  }
+  OS << "#endif // CLANG_ATTR_STRICT_IDENTIFIER_ARG_AT_INDEX_LIST\n\n";
 }
 
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
@@ -4948,6 +4985,7 @@ void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS) {
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrStrictIdentifierArgAtIndexList(Records, OS);
 }
 
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,

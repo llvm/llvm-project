@@ -1455,9 +1455,7 @@ protected:
 public:
   static bool classof(const Value *V) {
     if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
-      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr) ||
-             Instr->getIntrinsicID() ==
-                 Intrinsic::instrprof_mcdc_condbitmap_update;
+      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
     return false;
   }
   // The name of the instrumented function.
@@ -1618,42 +1616,13 @@ public:
   /// \return The index of the TestVector Bitmap upon which this intrinsic
   /// acts.
   ConstantInt *getBitmapIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
   }
 
   /// \return The address of the corresponding condition bitmap containing
   /// the index of the TestVector to update within the TestVector Bitmap.
   Value *getMCDCCondBitmapAddr() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
-  }
-};
-
-/// This represents the llvm.instrprof.mcdc.condbitmap.update intrinsic.
-/// It does not pertain to global bitmap updates or parameters and so doesn't
-/// inherit from InstrProfMCDCBitmapInstBase.
-class InstrProfMCDCCondBitmapUpdate : public InstrProfInstBase {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_condbitmap_update;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-
-  /// \return The ID of the condition to update.
-  ConstantInt *getCondID() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
-  }
-
-  /// \return The address of the corresponding condition bitmap.
-  Value *getMCDCCondBitmapAddr() const {
     return cast<Value>(const_cast<Value *>(getArgOperand(3)));
-  }
-
-  /// \return The boolean value to set in the condition bitmap for the
-  /// corresponding condition ID. This represents how the condition evaluated.
-  Value *getCondBool() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
   }
 };
 

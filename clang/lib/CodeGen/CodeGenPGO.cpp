@@ -1207,8 +1207,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                          ArrayRef(Args, 4));
     else
       Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
-          ArrayRef(Args));
+          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
   }
 }
 
@@ -1260,9 +1259,8 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   // from a pointer to a dedicated temporary value on the stack that is itself
   // updated via emitMCDCCondBitmapReset() and emitMCDCCondBitmapUpdate(). The
   // index represents an executed test vector.
-  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+  llvm::Value *Args[4] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(0), // Unused
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
                           MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(

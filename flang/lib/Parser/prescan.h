@@ -214,7 +214,7 @@ private:
   int prescannerNesting_{0};
   int continuationLines_{0};
   bool isPossibleMacroCall_{false};
-  bool afterIncludeDirective_{false};
+  bool afterPreprocessingDirective_{false};
   bool disableSourceContinuation_{false};
 
   Provenance startProvenance_;

@@ -5678,6 +5678,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       !isa_and_nonnull<FunctionDecl>(TargetDecl))
     EmitKCFIOperandBundle(ConcreteCallee, BundleList);
 
+  // Add the pointer-authentication bundle.
+  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
+
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
@@ -5989,12 +5992,12 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 /* VarArg handling */
 
-Address CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr) {
-  VAListAddr = VE->isMicrosoftABI()
-                 ? EmitMSVAListRef(VE->getSubExpr())
-                 : EmitVAListRef(VE->getSubExpr());
+RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
+                                  AggValueSlot Slot) {
+  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
+                                    : EmitVAListRef(VE->getSubExpr());
   QualType Ty = VE->getType();
   if (VE->isMicrosoftABI())
-    return CGM.getTypes().getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty);
-  return CGM.getTypes().getABIInfo().EmitVAArg(*this, VAListAddr, Ty);
+    return CGM.getTypes().getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  return CGM.getTypes().getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }

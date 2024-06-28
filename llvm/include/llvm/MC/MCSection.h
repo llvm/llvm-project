@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -104,6 +106,10 @@ private:
 
   bool IsRegistered : 1;
 
+  bool IsText : 1;
+
+  bool IsVirtual : 1;
+
   MCDummyFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
@@ -124,9 +130,9 @@ protected:
   // TODO Make Name private when possible.
   StringRef Name;
   SectionVariant Variant;
-  SectionKind Kind;
 
-  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
+            MCSymbol *Begin);
   ~MCSection();
 
 public:
@@ -134,7 +140,7 @@ public:
   MCSection &operator=(const MCSection &) = delete;
 
   StringRef getName() const { return Name; }
-  SectionKind getKind() const { return Kind; }
+  bool isText() const { return IsText; }
 
   SectionVariant getVariant() const { return Variant; }
 
@@ -204,13 +210,11 @@ public:
     CurFragList->Tail = &F;
   }
 
-  void switchSubsection(unsigned Subsection);
-
   void dump() const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,
-                                    const MCExpr *Subsection) const = 0;
+                                    uint32_t Subsection) const = 0;
 
   /// Return true if a .align directive should use "optimized nops" to fill
   /// instead of 0s.
@@ -218,20 +222,13 @@ public:
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
-  virtual bool isVirtualSection() const = 0;
+  bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
 
   /// Add a pending label for the requested subsection. This label will be
   /// associated with a fragment in flushPendingLabels()
   void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
-
-  /// Associate all pending labels in a subsection with a fragment.
-  void flushPendingLabels(MCFragment *F, unsigned Subsection);
-
-  /// Associate all pending labels with empty data fragments. One fragment
-  /// will be created for each subsection as necessary.
-  void flushPendingLabels();
 };
 
 } // end namespace llvm
