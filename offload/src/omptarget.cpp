@@ -443,10 +443,10 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
   Rc = DeviceOrErr->allocData(Size, nullptr, Kind);
   DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(Rc));
-  void *FakeHstPtr;
+  void *FakeHstPtr = nullptr;
   if (DeviceOrErr->notifyDataMapped(nullptr, Rc, Size, FakeHstPtr))
     return nullptr;
-  return FakeHstPtr;
+  return FakeHstPtr ? FakeHstPtr : Rc;
 }
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,

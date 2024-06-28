@@ -2136,6 +2136,7 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
 
 Error GPUSanTy::notifyDataMapped(void *DevicePtr, uint64_t Size,
                                  void *&FakeHstPtr) {
+  FakeHstPtr = nullptr;
   if (NewFns.empty())
     return Plugin::success();
   uint64_t Slot = SlotCnt--;
