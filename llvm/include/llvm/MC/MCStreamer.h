@@ -255,14 +255,14 @@ class MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
-
 protected:
   MCFragment *CurFrag = nullptr;
 
   MCStreamer(MCContext &Ctx);
+
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -399,7 +399,9 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
+  MCSection *getCurrentSectionOnly() const {
+    return CurFrag->getParent();
+  }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
@@ -407,6 +409,8 @@ public:
       return SectionStack.back().second;
     return MCSectionSubPair();
   }
+
+  MCFragment *getCurrentFragment() const;
 
   /// Returns an index to represent the order a symbol was emitted in.
   /// (zero if we did not emit that symbol)
@@ -433,15 +437,8 @@ public:
   virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
   bool switchSection(MCSection *Section, const MCExpr *);
 
-  /// Set the current section where code is being emitted to \p Section.
-  /// This is required to update CurSection. This version does not call
-  /// changeSection.
-  void switchSectionNoChange(MCSection *Section) {
-    assert(Section && "Cannot switch to a null section!");
-    MCSectionSubPair curSection = SectionStack.back().first;
-    SectionStack.back().second = curSection;
-    SectionStack.back().first = MCSectionSubPair(Section, 0);
-  }
+  /// Similar to switchSection, but does not print the section directive.
+  virtual void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);

@@ -142,11 +142,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(CurFrag->getParent() == getCurrentSection().first);
-  return CurFrag;
-}
-
 static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCAssembler &Assembler,
                                  const MCSubtargetInfo *STI) {
@@ -311,6 +306,11 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   CurFrag = Section->CurFragList->Tail;
 
   return getAssembler().registerSection(*Section);
+}
+
+void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
+  MCStreamer::switchSectionNoPrint(Section);
+  changeSection(Section, 0);
 }
 
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
