@@ -12342,7 +12342,10 @@ def err_hlsl_missing_semantic_annotation : Error<
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
-def err_hlsl_unsupported_register_type : Error<"invalid resource class specifier '%0' used; expected 'b', 's', 't', or 'u'">;
+def err_hlsl_mismatching_register_resource_type_and_name: Error<"invalid register name prefix '%0' for register resource type '%1' (expected %select{'t'|'u'|'b'|'s'}2)">;
+def err_hlsl_mismatching_register_builtin_type_and_name: Error<"invalid register name prefix '%0' for '%1' (expected %2)">;
+def err_hlsl_unsupported_register_prefix : Error<"invalid resource class specifier '%0' used; expected 't', 'u', 'b', or 's'">;
+def err_hlsl_unsupported_register_resource_type : Error<"invalid resource '%0' used">;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,

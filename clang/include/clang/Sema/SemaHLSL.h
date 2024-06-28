@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Sema/Sema.h"
 #include <initializer_list>
 
 namespace clang {
@@ -31,6 +32,7 @@ class SemaHLSL : public SemaBase {
 public:
   SemaHLSL(Sema &S);
 
+  HLSLResourceAttr *mergeHLSLResourceAttr(bool CBuffer);
   Decl *ActOnStartBuffer(Scope *BufferScope, bool CBuffer, SourceLocation KwLoc,
                          IdentifierInfo *Ident, SourceLocation IdentLoc,
                          SourceLocation LBrace);
