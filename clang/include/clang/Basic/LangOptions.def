@@ -168,6 +168,8 @@ LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
 LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, "incorporate address discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discrimination in authenticated vtable pointers")
 LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
+BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
+               "Use type discrimination when signing function pointers")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
 LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
@@ -469,9 +471,6 @@ ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              "Rely on strict definition of flexible arrays")
 
 COMPATIBLE_VALUE_LANGOPT(MaxTokens, 32, 0, "Max number of tokens per TU or 0")
-
-BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
-               "Use type discrimination when signing function pointers")
 
 ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAddressScopeKind::None,
              "Scope of return address signing")

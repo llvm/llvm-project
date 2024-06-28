@@ -3415,6 +3415,8 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthVTPtrTypeDiscrimination =
       Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
+  Opts.PointerAuthFunctionTypeDiscrimination =
+      Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -4782,9 +4784,6 @@ bool CompilerInvocation::CreateFromArgsImpl(
                 Diags);
   if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
     LangOpts.ObjCExceptions = 1;
-
-  LangOpts.PointerAuthFunctionTypeDiscrimination =
-      Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
 
   for (auto Warning : Res.getDiagnosticOpts().Warnings) {
     if (Warning == "misexpect" &&

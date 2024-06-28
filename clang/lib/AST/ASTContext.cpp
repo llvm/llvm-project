@@ -3155,8 +3155,8 @@ ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
 /// other. Therefore this encoding function must be careful to only distinguish
 /// types if there is no third type with which they are both required to be
 /// compatible.
-static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
-                                             QualType QT) {
+static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
+                                             raw_ostream &OS, QualType QT) {
   // FIXME: Consider address space qualifiers.
   const Type *T = QT.getCanonicalType().getTypePtr();
 
@@ -3242,9 +3242,9 @@ static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
     // FIXME: If we add a "custom discriminator" function type attribute we
     // should encode functions as their discriminators.
     OS << "F";
-    auto *FuncType = cast<FunctionType>(T);
+    const auto *FuncType = cast<FunctionType>(T);
     encodeTypeForFunctionPointerAuth(Ctx, OS, FuncType->getReturnType());
-    if (auto *FPT = dyn_cast<FunctionProtoType>(FuncType)) {
+    if (const auto *FPT = dyn_cast<FunctionProtoType>(FuncType)) {
       for (QualType Param : FPT->param_types()) {
         Param = Ctx.getSignatureParameterType(Param);
         encodeTypeForFunctionPointerAuth(Ctx, OS, Param);
@@ -3258,7 +3258,7 @@ static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
 
   case Type::MemberPointer: {
     OS << "M";
-    auto *MPT = T->getAs<MemberPointerType>();
+    const auto *MPT = T->getAs<MemberPointerType>();
     encodeTypeForFunctionPointerAuth(Ctx, OS, QualType(MPT->getClass(), 0));
     encodeTypeForFunctionPointerAuth(Ctx, OS, MPT->getPointeeType());
     return;
@@ -3276,7 +3276,7 @@ static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
     return;
 
   case Type::Builtin: {
-    const BuiltinType *BTy = T->getAs<BuiltinType>();
+    const auto *BTy = T->getAs<BuiltinType>();
     switch (BTy->getKind()) {
 #define SIGNED_TYPE(Id, SingletonId)                                           \
   case BuiltinType::Id:                                                        \
@@ -3358,8 +3358,8 @@ static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
     }
   }
   case Type::Record: {
-    RecordDecl *RD = T->getAs<RecordType>()->getDecl();
-    IdentifierInfo *II = RD->getIdentifier();
+    const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
+    const IdentifierInfo *II = RD->getIdentifier();
     if (!II)
       if (const TypedefNameDecl *Typedef = RD->getTypedefNameForAnonDecl())
         II = Typedef->getDeclName().getAsIdentifierInfo();
@@ -3384,7 +3384,7 @@ static void encodeTypeForFunctionPointerAuth(ASTContext &Ctx, raw_ostream &OS,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 

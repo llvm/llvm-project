@@ -15,7 +15,6 @@
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/SipHash.h"
 
 using namespace clang;
