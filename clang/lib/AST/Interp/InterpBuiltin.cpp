@@ -609,8 +609,8 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const Function *Func,
                                       const CallExpr *Call) {
-  PrimType PtrT =
-      S.getContext().classify(Call->getArg(0)->getType()).value_or(PT_Ptr);
+  assert(Call->getArg(0)->isLValue());
+  PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
 
   if (PtrT == PT_FnPtr) {
     const FunctionPointer &Arg = S.Stk.peek<FunctionPointer>();

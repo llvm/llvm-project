@@ -36,6 +36,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -8830,6 +8831,11 @@ bool X86InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   unsigned Opcode = MI.getOpcode();
   if (Opcode == X86::ENDBR64 || Opcode == X86::ENDBR32 ||
       Opcode == X86::PLDTILECFGV)
+    return true;
+
+  // Frame setup and destory can't be scheduled around.
+  if (MI.getFlag(MachineInstr::FrameSetup) ||
+      MI.getFlag(MachineInstr::FrameDestroy))
     return true;
 
   return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);

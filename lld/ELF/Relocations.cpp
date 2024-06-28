@@ -492,7 +492,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela)
+  // This generalises to relocation types with implicit addends.
+  if (RelTy::HasAddend)
     return 0;
 
   RelType type = rel.getType(config->isMips64EL);
@@ -1448,7 +1449,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
-  int64_t addend = RelTy::IsRela
+  int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);

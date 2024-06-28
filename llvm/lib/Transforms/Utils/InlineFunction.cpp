@@ -1575,7 +1575,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
     return;
 
   AssumptionCache *AC = &IFI.GetAssumptionCache(*CB.getCaller());
-  auto &DL = CB.getCaller()->getParent()->getDataLayout();
+  auto &DL = CB.getDataLayout();
 
   // To avoid inserting redundant assumptions, we should check for assumptions
   // already in the caller. To do this, we might need a DT of the caller.
@@ -1638,7 +1638,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
                                   InlineFunctionInfo &IFI,
                                   MaybeAlign ByValAlignment) {
   Function *Caller = TheCall->getFunction();
-  const DataLayout &DL = Caller->getParent()->getDataLayout();
+  const DataLayout &DL = Caller->getDataLayout();
 
   // If the called function is readonly, then it could not mutate the caller's
   // copy of the byval'd memory.  In this case, it is safe to elide the copy and
@@ -2293,7 +2293,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // callee.
     ScopedAliasMetadataDeepCloner SAMetadataCloner(CB.getCalledFunction());
 
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
 
     // Calculate the vector of arguments to pass into the function cloner, which
     // matches up the formal to the actual argument values.
@@ -2627,7 +2627,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       ConstantInt *AllocaSize = nullptr;
       if (ConstantInt *AIArraySize =
           dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto &DL = Caller->getParent()->getDataLayout();
+        auto &DL = Caller->getDataLayout();
         Type *AllocaType = AI->getAllocatedType();
         TypeSize AllocaTypeSize = DL.getTypeAllocSize(AllocaType);
         uint64_t AllocaArraySize = AIArraySize->getLimitedValue();
@@ -3033,7 +3033,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if (PHI) {
     AssumptionCache *AC =
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
-    auto &DL = Caller->getParent()->getDataLayout();
+    auto &DL = Caller->getDataLayout();
     if (Value *V = simplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();

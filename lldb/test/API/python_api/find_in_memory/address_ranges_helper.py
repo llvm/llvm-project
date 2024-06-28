@@ -15,7 +15,7 @@ def GetAlignedRange(test_base):
 
 def GetStackRange(test_base):
     frame = test_base.thread.GetSelectedFrame()
-    ex = frame.EvaluateExpression("stack_pointer")
+    ex = frame.EvaluateExpression("&stack_pointer")
     test_base.assertTrue(ex.IsValid())
     return GetRangeFromAddrValue(test_base, ex)
 

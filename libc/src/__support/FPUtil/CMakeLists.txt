@@ -154,7 +154,6 @@ add_header_library(
   HDRS
     multiply_add.h
   DEPENDS
-    .fma
     libc.src.__support.common
 )
 
@@ -199,6 +198,7 @@ add_header_library(
   HDRS
     dyadic_float.h
   DEPENDS
+    .fenv_impl
     .fp_bits
     .multiply_add
     libc.src.__support.CPP.type_traits

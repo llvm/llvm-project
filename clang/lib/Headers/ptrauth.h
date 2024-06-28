@@ -32,6 +32,10 @@ typedef enum {
      The extra data is always 0. */
   ptrauth_key_function_pointer = ptrauth_key_process_independent_code,
 
+  /* The key used to sign C++ v-table pointers.
+     The extra data is always 0. */
+  ptrauth_key_cxx_vtable_pointer = ptrauth_key_process_independent_data,
+
   /* Other pointers signed under the ABI use private ABI rules. */
 
 } ptrauth_key;
@@ -205,6 +209,12 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_sign_generic_data(__value, __data)                             \
   __builtin_ptrauth_sign_generic_data(__value, __data)
 
+/* C++ vtable pointer signing class attribute */
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)                    \
+  [[clang::ptrauth_vtable_pointer(key, address_discrimination,                 \
+                                  extra_discrimination)]]
+
 #else
 
 #define ptrauth_strip(__value, __key)                                          \
@@ -270,6 +280,10 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__data;                                                              \
     ((ptrauth_generic_signature_t)0);                                          \
   })
+
+
+#define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
+                                   extra_discrimination...)
 
 #endif /* __has_feature(ptrauth_intrinsics) */
 

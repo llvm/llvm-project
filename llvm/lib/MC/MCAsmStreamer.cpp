@@ -511,7 +511,7 @@ void MCAsmStreamer::emitExplicitComments() {
 }
 
 void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  assert(Section && "Cannot switch to a null section!");
+  MCStreamer::changeSection(Section, Subsection);
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
   } else {
@@ -2208,7 +2208,7 @@ void MCAsmStreamer::emitWinEHHandlerData(SMLoc Loc) {
 
   MCSection *TextSec = &CurFrame->Function->getSection();
   MCSection *XData = getAssociatedXDataSection(TextSec);
-  switchSectionNoChange(XData);
+  switchSectionNoPrint(XData);
 
   OS << "\t.seh_handlerdata";
   EmitEOL();
@@ -2625,7 +2625,7 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
   if (MAI->usesDwarfFileAndLocDirectives())
     return;
 
-  switchSectionNoChange(Section);
+  switchSectionNoPrint(Section);
 
   MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());
 
