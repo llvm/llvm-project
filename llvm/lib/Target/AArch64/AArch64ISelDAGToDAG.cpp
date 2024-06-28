@@ -396,7 +396,8 @@ public:
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
                              unsigned Op);
   void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
-                                unsigned Op, unsigned MaxIdx, unsigned Scale, unsigned BaseReg = 0);
+                              unsigned Op, unsigned MaxIdx, unsigned Scale,
+                              unsigned BaseReg = 0);
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
@@ -5295,7 +5296,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_S_PSEUDO, 2, 2);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_D_PSEUDO,0, 2);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_D_PSEUDO, 0, 2);
         return;
       }
       break;

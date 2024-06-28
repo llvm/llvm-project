@@ -2944,22 +2944,6 @@ AArch64TargetLowering::EmitTileLoad(unsigned Opc, unsigned BaseReg,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitTileMovaz(unsigned Opc, unsigned BaseReg,
-                                     MachineInstr &MI,
-                                     MachineBasicBlock *BB) const {
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
-
-  MIB.add(MI.getOperand(0));             // ZReg
-  MIB.addReg(BaseReg, RegState::Define); // add as output
-  MIB.addReg(BaseReg);                   // add as input
-  MIB.add(MI.getOperand(1));             // slice index register
-  MIB.add(MI.getOperand(2));             // slice index offset
-  MI.eraseFromParent();                  // The pseudo is gone now.
-  return BB;
-}
-
-MachineBasicBlock *
 AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB =
