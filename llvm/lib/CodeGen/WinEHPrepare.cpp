@@ -25,6 +25,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
