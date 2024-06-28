@@ -1489,7 +1489,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     }
 
     // Calculate symbol size
-    const DataLayout &DL = Global.getParent()->getDataLayout();
+    const DataLayout &DL = Global.getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
 
     DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,

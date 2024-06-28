@@ -15542,7 +15542,7 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
 
   const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
@@ -16032,7 +16032,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
         // the backend to generate a umull.
         unsigned Bitwidth = I->getType()->getScalarSizeInBits();
         APInt UpperMask = APInt::getHighBitsSet(Bitwidth, Bitwidth / 2);
-        const DataLayout &DL = I->getFunction()->getParent()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (!MaskedValueIsZero(OperandInstr, UpperMask, DL))
           continue;
         NumZExts++;
@@ -24143,7 +24143,7 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
   const GlobalValue *GV = GN->getGlobal();
   Type *T = GV->getValueType();
   if (!T->isSized() ||
-      Offset > GV->getParent()->getDataLayout().getTypeAllocSize(T))
+      Offset > GV->getDataLayout().getTypeAllocSize(T))
     return SDValue();
 
   SDLoc DL(GN);
