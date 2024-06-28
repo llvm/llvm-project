@@ -291,6 +291,7 @@
 # CHECK-LLVM-NEXT:   Data size: 0x0
 # CHECK-LLVM-NEXT:   Type: [[DESC]]
 # CHECK-LLVM-NEXT:  }
+# CHECK-LLVM-NEXT:  ]
 
 --- !ELF
 FileHeader:

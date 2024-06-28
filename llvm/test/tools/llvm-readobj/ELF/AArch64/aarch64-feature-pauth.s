@@ -41,7 +41,7 @@ end:
 # OBJ-NEXT:         AArch64 PAuth ABI core info: platform [[PLATFORM]], version [[VERSION]]
 # OBJ-NEXT:       ]
 # OBJ-NEXT:     }
-# OBJ-NEXT:		]
+# OBJ-NEXT:    ]
 # OBJ-NEXT:   }
 # OBJ-NEXT: ]
 

@@ -1,4 +1,4 @@
-## Test that note values are interpreted correctly for core files with multiple sections.
+## Test that note values are interpreted correctly for files with multiple sections.
 
 ## Check NT_PRSTATUS + NT_PRPSINFO.
 # RUN: yaml2obj %s -DTYPE1=0x1 -DTYPE2=0x3 -o %t1.o
