@@ -97,12 +97,10 @@ Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
     case RecurKind::FMinimum:
       return Intrinsic::vp_reduce_fminimum;
     default:
-      return Intrinsic::not_intrinsic;
+      llvm_unreachable("No VPIntrinsic for this reduction");
     }
   };
   auto VPID = GetForRecurKind(Kind);
-  assert(VPID != Intrinsic::not_intrinsic &&
-         "No VPIntrinsic for this reduction");
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
 }
 
