@@ -515,6 +515,10 @@ static Value *simplifyX86pmadd(IntrinsicInst &II,
          ResTy->getScalarSizeInBits() == (2 * ArgTy->getScalarSizeInBits()) &&
          "Unexpected PMADD types");
 
+  // Multiply by undef -> zero (NOT undef!) as other arg could still be zero.
+  if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
   // Multiply by zero.
   if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
     return ConstantAggregateZero::get(ResTy);
