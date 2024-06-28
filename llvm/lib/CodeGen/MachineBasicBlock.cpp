@@ -315,6 +315,12 @@ bool MachineBasicBlock::isLegalToHoistInto() const {
   return true;
 }
 
+bool MachineBasicBlock::hasName() const {
+  if (const BasicBlock *LBB = getBasicBlock())
+    return LBB->hasName();
+  return false;
+}
+
 StringRef MachineBasicBlock::getName() const {
   if (const BasicBlock *LBB = getBasicBlock())
     return LBB->getName();

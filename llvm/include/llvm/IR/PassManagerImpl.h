@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_PASSMANAGERIMPL_H
 #define LLVM_IR_PASSMANAGERIMPL_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"

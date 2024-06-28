@@ -2359,7 +2359,8 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     return nullptr;
 
   Value *Ptr = CI->getArgOperand(0);
-  if (!isa<PointerType>(Ptr->getType())) // Malformed.
+  PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
+  if (!PtrTy) // Malformed.
     return nullptr;
 
   Value *Val = CI->getArgOperand(1);
@@ -2404,6 +2405,11 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
   SyncScope::ID SSID = Ctx.getOrInsertSyncScopeID("agent");
   AtomicRMWInst *RMW =
       Builder.CreateAtomicRMW(RMWOp, Ptr, Val, std::nullopt, Order, SSID);
+
+  if (PtrTy->getAddressSpace() != 3) {
+    RMW->setMetadata("amdgpu.no.fine.grained.memory",
+                     MDNode::get(F->getContext(), {}));
+  }
 
   if (IsVolatile)
     RMW->setVolatile(true);

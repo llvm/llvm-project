@@ -31,7 +31,7 @@ class LinkInModulesPass : public PassInfoMixin<LinkInModulesPass> {
   bool ShouldLinkFiles;
 
 public:
-  LinkInModulesPass(clang::BackendConsumer *BC, bool ShouldLinkFiles = true);
+  LinkInModulesPass(clang::BackendConsumer *BC);
 
   PreservedAnalyses run(Module &M, AnalysisManager<Module> &);
   static bool isRequired() { return true; }

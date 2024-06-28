@@ -3645,6 +3645,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16fma_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fma_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fma
+)
+
+add_fp_unittest(
   f16fmaf_test
   SUITE
     libc-math-smoke-tests
@@ -3654,6 +3666,30 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fmaf
+)
+
+add_fp_unittest(
+  f16fmal_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmal
+)
+
+add_fp_unittest(
+  f16fmaf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmaf128_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmaf128
 )
 
 add_fp_unittest(

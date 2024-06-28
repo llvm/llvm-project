@@ -787,14 +787,14 @@ char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
                       "Early If Converter", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
                     "Early If Converter", false, false)
 
 void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
@@ -1142,12 +1142,12 @@ char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
 INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator", false,
                     false)
 
 void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
@@ -1222,7 +1222,7 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
   IfConv.runOnMachineFunction(MF);

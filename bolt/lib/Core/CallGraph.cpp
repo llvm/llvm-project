@@ -1,4 +1,4 @@
-//===- bolt/Passes/CallGraph.cpp ------------------------------------------===//
+//===- bolt/Core/CallGraph.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/CallGraph.h"
+#include "bolt/Core/CallGraph.h"
 
 #define DEBUG_TYPE "callgraph"
 
 #if defined(__x86_64__) && !defined(_MSC_VER)
-#  if (!defined USE_SSECRC)
-#    define USE_SSECRC
-#  endif
+#if (!defined USE_SSECRC)
+#define USE_SSECRC
+#endif
 #else
-#  undef USE_SSECRC
+#undef USE_SSECRC
 #endif
 
 static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
@@ -50,7 +50,7 @@ static inline size_t hash_int64_pair(int64_t k1, int64_t k2) {
   // crc32 is commutative, so we need to perturb k1 so that (k1, k2) hashes
   // differently from (k2, k1).
   k1 += k1;
-  __asm("crc32q %1, %0\n" : "+r" (k1) : "rm"(k2));
+  __asm("crc32q %1, %0\n" : "+r"(k1) : "rm"(k2));
   return k1;
 #else
   return (hash_int64(k1) << 1) ^ hash_int64(k2);
@@ -118,5 +118,5 @@ void CallGraph::adjustArcWeights() {
   }
 }
 
-}
-}
+} // namespace bolt
+} // namespace llvm

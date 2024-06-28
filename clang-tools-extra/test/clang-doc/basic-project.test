@@ -57,8 +57,8 @@
 // HTML-SHAPE-NEXT: <meta charset="utf-8"/>
 // HTML-SHAPE-NEXT: <title>class Shape</title>
 // HTML-SHAPE-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
-// HTML-SHAPE-NEXT: <script src="../index.js"></script>
-// HTML-SHAPE-NEXT: <script src="../index_json.js"></script>
+// HTML-SHAPE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-SHAPE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-SHAPE-NEXT: <header id="project-title"></header>
 // HTML-SHAPE-NEXT: <main>
 // HTML-SHAPE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -122,8 +122,8 @@
 // HTML-CALC-NEXT: <meta charset="utf-8"/>
 // HTML-CALC-NEXT: <title>class Calculator</title>
 // HTML-CALC-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
-// HTML-CALC-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CALC-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CALC-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CALC-NEXT: <header id="project-title"></header>
 // HTML-CALC-NEXT: <main>
 // HTML-CALC-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -200,8 +200,8 @@
 // HTML-RECTANGLE-NEXT: <meta charset="utf-8"/>
 // HTML-RECTANGLE-NEXT: <title>class Rectangle</title>
 // HTML-RECTANGLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
-// HTML-RECTANGLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-RECTANGLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-RECTANGLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-RECTANGLE-NEXT: <header id="project-title"></header>
 // HTML-RECTANGLE-NEXT: <main>
 // HTML-RECTANGLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
@@ -281,8 +281,8 @@
 // HTML-CIRCLE-NEXT: <meta charset="utf-8"/>
 // HTML-CIRCLE-NEXT: <title>class Circle</title>
 // HTML-CIRCLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
-// HTML-CIRCLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CIRCLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CIRCLE-NEXT: <script src="{{.*}}index.js"></script>
 // HTML-CIRCLE-NEXT: <header id="project-title"></header>
 // HTML-CIRCLE-NEXT: <main>
 // HTML-CIRCLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>

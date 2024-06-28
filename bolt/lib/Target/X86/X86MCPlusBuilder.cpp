@@ -328,19 +328,19 @@ public:
     return false;
   }
 
-  bool isReversibleBranch(const MCInst &Inst) const override {
-    if (isDynamicBranch(Inst))
-      return false;
-
+  bool isUnsupportedInstruction(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     default:
-      return true;
+      return false;
+
     case X86::LOOP:
     case X86::LOOPE:
     case X86::LOOPNE:
     case X86::JECXZ:
     case X86::JRCXZ:
-      return false;
+      // These have a short displacement, and therefore (often) break after
+      // basic block relayout.
+      return true;
     }
   }
 
@@ -1879,11 +1879,9 @@ public:
         continue;
       }
 
-      // Handle conditional branches and ignore indirect branches
-      if (isReversibleBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
-        // Indirect branch
+      // Ignore indirect branches
+      if (getCondCode(*I) == X86::COND_INVALID)
         return false;
-      }
 
       if (CondBranch == nullptr) {
         const MCSymbol *TargetBB = getTargetSymbol(*I);
