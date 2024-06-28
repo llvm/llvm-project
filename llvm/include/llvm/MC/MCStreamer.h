@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
@@ -254,7 +255,13 @@ class MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
+
 protected:
+  MCFragment *CurFrag = nullptr;
+
   MCStreamer(MCContext &Ctx);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
@@ -406,12 +413,6 @@ public:
   unsigned getSymbolOrder(const MCSymbol *Sym) const {
     return SymbolOrdering.lookup(Sym);
   }
-
-  /// Update streamer for a new active section.
-  ///
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {

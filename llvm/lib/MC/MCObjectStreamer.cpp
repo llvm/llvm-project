@@ -143,7 +143,8 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 }
 
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  return getCurrentSectionOnly()->curFragList()->Tail;
+  assert(CurFrag->getParent() == getCurrentSection().first);
+  return CurFrag;
 }
 
 static bool canReuseDataFragment(const MCDataFragment &F,
@@ -167,7 +168,7 @@ static bool canReuseDataFragment(const MCDataFragment &F,
 
 MCDataFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
-  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  auto *F = dyn_cast<MCDataFragment>(getCurrentFragment());
   if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
     F = getContext().allocFragment<MCDataFragment>();
     insert(F);
@@ -307,6 +308,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
                        {Subsection, MCSection::FragList{F, F}});
   }
   Section->CurFragList = &Subsections[I].second;
+  CurFrag = Section->CurFragList->Tail;
 
   return getAssembler().registerSection(*Section);
 }
