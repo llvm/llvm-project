@@ -1902,7 +1902,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
               return false;
           if (auto *SI = dyn_cast<SelectInst>(V))
-            if (!isa<VectorType>(SI->getOperand(0)->getType()))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
+                SI->getOperand(0)->getType() !=
+                    cast<SelectInst>(FrontV)->getOperand(0)->getType())
               return false;
           if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
             return false;
@@ -2584,7 +2586,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();

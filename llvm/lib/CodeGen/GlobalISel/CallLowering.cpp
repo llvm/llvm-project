@@ -733,7 +733,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   const unsigned NumArgs = Args.size();
 

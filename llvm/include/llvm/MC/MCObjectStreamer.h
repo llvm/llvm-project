@@ -26,8 +26,6 @@ class MCAssembler;
 class MCCodeEmitter;
 class MCSubtargetInfo;
 class MCExpr;
-class MCFragment;
-class MCDataFragment;
 class MCAsmBackend;
 class raw_ostream;
 class raw_pwrite_stream;
@@ -85,12 +83,13 @@ public:
   void emitFrames(MCAsmBackend *MAB);
   void emitCFISections(bool EH, bool Debug) override;
 
-  MCFragment *getCurrentFragment() const;
-
   void insert(MCFragment *F) {
-    MCSection *CurSection = getCurrentSectionOnly();
-    CurSection->addFragment(*F);
-    F->setParent(CurSection);
+    auto *Sec = CurFrag->getParent();
+    F->setParent(Sec);
+    F->setLayoutOrder(CurFrag->getLayoutOrder() + 1);
+    CurFrag->Next = F;
+    CurFrag = F;
+    Sec->curFragList()->Tail = F;
   }
 
   /// Get a data fragment to write into, creating a new one if the current
@@ -122,6 +121,7 @@ public:
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction

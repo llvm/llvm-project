@@ -193,7 +193,7 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
     if (PreInits) {
       // CompoundStmts and DeclStmts are used as lists of PreInit statements and
       // declarations. Since declarations must be visible in the the following
-      // that they initialize, unpack the ComboundStmt they are nested in.
+      // that they initialize, unpack the CompoundStmt they are nested in.
       SmallVector<const Stmt *> PreInitStmts;
       if (auto *PreInitCompound = dyn_cast<CompoundStmt>(PreInits))
         llvm::append_range(PreInitStmts, PreInitCompound->body());
@@ -1411,7 +1411,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_end_declare_variant:
     case OMPD_unknown:
     default:
-      llvm_unreachable("Enexpected directive with task reductions.");
+      llvm_unreachable("Unexpected directive with task reductions.");
     }
 
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(TaskRedRef)->getDecl());
@@ -1766,7 +1766,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    // The cleanup callback that finalizes all variabels at the given location,
+    // The cleanup callback that finalizes all variables at the given location,
     // thus calls destructors etc.
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
@@ -6506,7 +6506,7 @@ static void emitOMPAtomicCompareExpr(
   }
 
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {
-    // fail clause was not mentionend on the
+    // fail clause was not mentioned on the
     // "#pragma omp atomic compare" construct.
     CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
         CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
@@ -7920,7 +7920,7 @@ void CodeGenFunction::EmitOMPGenericLoopDirective(
 
 void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
     const OMPLoopDirective &S) {
-  // Emit combined directive as if its consituent constructs are 'parallel'
+  // Emit combined directive as if its constituent constructs are 'parallel'
   // and 'for'.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
