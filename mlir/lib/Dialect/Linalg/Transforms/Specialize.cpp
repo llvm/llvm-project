@@ -100,32 +100,33 @@ enum class IndexMatchResult {
   Mismatch    // none of the above.
 };
 
-// Matches position of indices appearing the affine map of operand
-// with what is expected in non-transposed case. e.g.
-//  consider the A matrix in `C[M,N] = A[M,K] * B[K,N]`. Below, we
-//  check whether the index map of A is identity (match), transposed, or
-//  something completely different (mis-match).
-// The naming and explanation is in terms of A, but the function checks
-// effectively maps for all A, B, C i.e. C<M,N>, A<M, K>, B<K,N>.
-static IndexMatchResult matchOperandMap(AffineMap map, unsigned batchSize,
-                                        unsigned expectedPosOfM,
-                                        unsigned expectedPosOfK) {
+// Checks whether the input Affine `map` contains two consecutive dims that
+// can be interpreted as accessing a 2D matrix. It is assumed that the row
+// column dimension are adjacent axis (in this order) and start at
+// `rowDimIdx` in the input map.
+//
+//  e.g. consider A matrix in `C[M,N] = A[M,K] * B[K,N]`. We will check
+//  whether the map of A is identity (match), transposed, or something
+//  completely different (mis-match). Similar for B and C.
+static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
+                                        unsigned expectedPosOfRowDim,
+                                        unsigned expectedPosOfColDim) {
   // Get the matrix multiply indices. They are past the batch indices.
-  auto exprOfM = map.getResults()[batchSize];
-  auto exprOfK = map.getResults()[batchSize + 1];
+  auto exprOfRowDim = map.getResults()[rowDimIdx];
+  auto exprOfColDim = map.getResults()[rowDimIdx + 1];
 
-  // They should be pure dim ids.
-  if (exprOfM.getKind() != AffineExprKind::DimId ||
-      exprOfK.getKind() != AffineExprKind::DimId)
+  // They should be pure dimension ids.
+  if (exprOfRowDim.getKind() != AffineExprKind::DimId ||
+      exprOfColDim.getKind() != AffineExprKind::DimId)
     return IndexMatchResult::Mismatch;
 
-  auto posM = cast<AffineDimExpr>(exprOfM).getPosition();
-  auto posK = cast<AffineDimExpr>(exprOfK).getPosition();
+  auto posRowDim = cast<AffineDimExpr>(exprOfRowDim).getPosition();
+  auto posColDim = cast<AffineDimExpr>(exprOfColDim).getPosition();
 
-  if (expectedPosOfM == posM && expectedPosOfK == posK)
+  if (expectedPosOfRowDim == posRowDim && expectedPosOfColDim == posColDim)
     return IndexMatchResult::Match;
 
-  if (expectedPosOfM == posK && expectedPosOfK == posM)
+  if (expectedPosOfRowDim == posColDim && expectedPosOfColDim == posRowDim)
     return IndexMatchResult::Transposed;
 
   return IndexMatchResult::Mismatch;
@@ -149,15 +150,36 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   if (genericOp.getNumDpsInputs() != 2 || genericOp.getNumDpsInits() != 1)
     return failure();
 
-  // Linalg generic contraction can be across multiple axis but for matmul
-  // variants it must be one.
-  if (genericOp.getNumReductionLoops() != 1)
-    return failure();
-
-  // Must be projected permutations.
+  // Early exit if not projected permutations.
   auto mapRange = genericOp.getIndexingMapsArray();
   if (llvm::any_of(mapRange,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
+    return failure();
+
+  // Linalg generic contraction can be across multiple axis e.g.
+  // ```
+  //      linalg.generic
+  //           {indexing_maps = [affine_map<(m, n, k1, k2) -> (m, k1, k2)>,
+  //                             affine_map<(m, n, k1, k2) -> (k2, k1, n)>,
+  //                             affine_map<(m, n, k1, k2) -> (m, n)>],
+  //           iterator_types = ["parallel", "parallel",
+  //                             "reduction", "reduction"]}
+  //           ins(%A, %B : tensor<10x20x30xf32>, tensor<30x20x40xf32>)
+  //           outs(%C : tensor<10x40xf32>) {
+  //           ^bb0(%a: f32, %b: f32, %c: f32):
+  //                 %1 = arith.mulf %a, %b : f32
+  //                 %2 = arith.addf %c, %1 : f32
+  //                 linalg.yield %2 : f32
+  //      } -> tensor<10x40xf32>
+  //  ```
+  //  In above contraction, there are two reduction dimensions {k1, k2}
+  //  and although a valid linalg contraction, it is not a named-op
+  //  matrix multiply kind. Therefore, reject multi-dim reduction.
+  auto res = inferContractionDims(genericOp);
+  if (!succeeded(res))
+    return failure();
+  auto dims = *res;
+  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
     return failure();
 
   if (!mlir::linalg::detail::isContractionBody(
@@ -170,15 +192,6 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
           }))
     return failure();
 
-  auto res = inferContractionDims(genericOp);
-  assert(succeeded(res) && "unexpected failure to infer contraction dims");
-  auto dims = *res;
-
-  // Other than `batch`, other dim sizes must be 1 for linalg.*_matmul_*.
-  // Note that linalg contraction can have more than one contraction dimension.
-  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
-    return failure();
-
   // Check rank of operands
   auto indexingMaps = genericOp.getIndexingMapsArray();
   if (llvm::any_of(indexingMaps, [&dims](AffineMap m) {
@@ -187,16 +200,16 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
       }))
     return failure();
 
-  auto batchSize = dims.batch.size();
-  if (indexingMaps[0].getNumDims() != batchSize + 3)
+  auto numOfBatchDims = dims.batch.size();
+  if (indexingMaps[0].getNumDims() != numOfBatchDims + 3)
     return failure();
 
-  if (batchSize) {
+  if (numOfBatchDims) {
     // Each operand in a linalg generic contraction  could express different
     // permutations for its batch dimension. But for named op it must be
     // identity since separate maps are not specified.
-    if (llvm::any_of(indexingMaps, [batchSize](AffineMap m) {
-          for (unsigned i = 0; i < batchSize; ++i) {
+    if (llvm::any_of(indexingMaps, [numOfBatchDims](AffineMap m) {
+          for (unsigned i = 0; i < numOfBatchDims; ++i) {
             auto expr = m.getResults()[i];
             if (expr.getKind() != AffineExprKind::DimId ||
                 cast<AffineDimExpr>(expr).getPosition() != i)
@@ -207,9 +220,12 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
       return failure();
   }
 
-  auto a = matchOperandMap(indexingMaps[0], batchSize, dims.m[0], dims.k[0]);
-  auto b = matchOperandMap(indexingMaps[1], batchSize, dims.k[0], dims.n[0]);
-  auto c = matchOperandMap(indexingMaps[2], batchSize, dims.m[0], dims.n[0]);
+  auto a =
+      matchOperandMap(indexingMaps[0], numOfBatchDims, dims.m[0], dims.k[0]);
+  auto b =
+      matchOperandMap(indexingMaps[1], numOfBatchDims, dims.k[0], dims.n[0]);
+  auto c =
+      matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
 
   if (llvm::any_of(ArrayRef<IndexMatchResult>{a, b, c}, [](IndexMatchResult r) {
         return r == IndexMatchResult::Mismatch;
@@ -221,7 +237,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return failure();
 
   /// Codegen the different matmul variants.
-  if (batchSize) {
+  if (numOfBatchDims) {
     if (a == IndexMatchResult::Transposed)
       return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
                                                                genericOp);
