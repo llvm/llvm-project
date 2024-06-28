@@ -22,7 +22,6 @@ from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
 
-
 def yaml_to_classes(yaml_data):
     """
     Convert YAML data to header classes.
@@ -103,53 +102,70 @@ def fill_public_api(header_str, h_def_content):
     return h_def_content.replace("%%public_api()", header_str, 1)
 
 
+def parse_function_details(details):
+    """
+    Parse function details from a list of strings and return a Function object.
+
+    Args:
+        details: A list containing function details
+
+    Returns:
+        Function: An instance of Function initialized with the details.
+    """
+    name, standards, return_type, arguments, guard, attributes = details
+    standards = standards.split(",") if standards != "null" else []
+    arguments = [arg.strip() for arg in arguments.split(",")]
+    attributes = attributes.split(",") if attributes != "null" else []
+
+    return Function(
+        name=name,
+        standards=standards,
+        return_type=return_type,
+        arguments=arguments,
+        guard=guard if guard != "null" else None,
+        attributes=attributes if attributes else None
+    )
+
+
 def add_function_to_yaml(yaml_file, function_details):
     """
     Add a function to the YAML file.
 
     Args:
         yaml_file: The path to the YAML file.
-        function_details: A list containing function details:
-        (name, return_type, guard, attributes, arguments, standards).
-        
+        function_details: A list containing function details (name, standards, return_type, arguments, guard, attributes).
     """
+    new_function = parse_function_details(function_details)
     
-    class IndentYamlListDumper(yaml.Dumper):
-        def increase_indent(self, flow=False, indentless=False):
-            return super(IndentYamlListDumper, self).increase_indent(flow, False)
-
-    name, return_type, guard, attributes, arguments, standards = function_details
-    attributes = attributes.split(",") if attributes != "null" else []
-    arguments = [{"type": arg.strip()} for arg in arguments.split(",")]
-    standards = standards.split(",") if standards != "null" else []
-
-    new_function = {
-        "name": name,
-        "standard": standards,
-        "return_type": return_type,
-        "arguments": arguments,
-    }
-
-    if guard != "null":
-        new_function["guard"] = guard
-
-    if attributes:
-        new_function["attributes"] = attributes
-
     with open(yaml_file, "r") as f:
         yaml_data = yaml.safe_load(f)
 
     if "functions" not in yaml_data:
         yaml_data["functions"] = []
 
-    yaml_data["functions"].append(new_function)
+    function_dict = {
+        "name": new_function.name,
+        "standards": new_function.standards,
+        "return_type": new_function.return_type,
+        "arguments": [{"type": arg} for arg in new_function.arguments],
+    }
+
+    if new_function.guard:
+        function_dict["guard"] = new_function.guard
+
+    if new_function.attributes:
+        function_dict["attributes"] = new_function.attributes
+
+    yaml_data["functions"].append(function_dict)
+
+    class IndentYamlListDumper(yaml.Dumper):
+        def increase_indent(self, flow=False, indentless=False):
+            return super(IndentYamlListDumper, self).increase_indent(flow, False)
 
     with open(yaml_file, "w") as f:
-        yaml.dump(
-            yaml_data, f, Dumper=IndentYamlListDumper, default_flow_style=False, sort_keys=False
-        )
+        yaml.dump(yaml_data, f, Dumper=IndentYamlListDumper, default_flow_style=False, sort_keys=False)
 
-    print(f"Added function {name} to {yaml_file}")
+    print(f"Added function {new_function.name} to {yaml_file}")
 
 
 def main(yaml_file, h_def_file, output_dir, add_function=None):
@@ -201,11 +217,11 @@ if __name__ == "__main__":
         nargs=6,
         metavar=(
             "NAME",
+            "STANDARDS",
             "RETURN_TYPE",
+            "ARGUMENTS",
             "GUARD",
             "ATTRIBUTES",
-            "ARGUMENTS",
-            "STANDARDS",
         ),
         help="Add a function to the YAML file",
     )
