@@ -1031,8 +1031,8 @@ declare float @llvm.amdgcn.sin.f32(float) nounwind readnone
 
 define float @sin_fneg_f32(float %x) {
 ; CHECK-LABEL: @sin_fneg_f32(
-; CHECK-NEXT:    [[X_FNEG:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SIN]]
 ;
   %x.fneg = fneg float %x
@@ -1054,8 +1054,8 @@ define float @sin_fabs_f32(float %x) {
 define float @sin_fabs_fneg_f32(float %x) {
 ; CHECK-LABEL: @sin_fabs_fneg_f32(
 ; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[X_FABS_FNEG:%.*]] = fneg float [[X_FABS]]
-; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS_FNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SIN]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -1067,8 +1067,8 @@ define float @sin_fabs_fneg_f32(float %x) {
 define float @sin_fabs_fneg_fast_f32(float %x) {
 ; CHECK-LABEL: @sin_fabs_fneg_fast_f32(
 ; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[X_FABS_FNEG:%.*]] = fneg float [[X_FABS]]
-; CHECK-NEXT:    [[SIN:%.*]] = call fast float @llvm.amdgcn.sin.f32(float [[X_FABS_FNEG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SIN]]
 ;
   %x.fabs = call fast float @llvm.fabs.f32(float %x)
