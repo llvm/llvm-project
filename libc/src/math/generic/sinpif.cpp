@@ -30,23 +30,6 @@
 
 namespace LIBC_NAMESPACE {
 
-float tof(int i) {
-    return *(float * )&i;
-}
-
-int toi(float f) {
-    return *(int *)&f;
-}
-
-
-double dtof(long i) {
-    return *(double * )&i;
-}
-
-long dtoi(double f) {
-    return *(long *)&f;
-}
-
 LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
