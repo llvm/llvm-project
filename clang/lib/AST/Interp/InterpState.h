@@ -123,6 +123,10 @@ public:
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+
+  llvm::SmallVector<
+      std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
+      SeenGlobalTemporaries;
 };
 
 } // namespace interp
