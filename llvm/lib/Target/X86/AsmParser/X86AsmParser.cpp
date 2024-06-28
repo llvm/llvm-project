@@ -4513,6 +4513,12 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
         /*Len=*/0, UnsizedMemOp->getMemFrontendSize());
   }
 
+  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
+  // replace SSE instruction with equivalent AVX instruction using mapping given
+  // in table GET_X86_SSE2AVX_TABLE
+  if (MCOptions.SSE2AVX)
+    replaceSSE2AVXOpcode(Inst);
+
   // If exactly one matched, then we treat that as a successful match (and the
   // instruction will already have been filled in correctly, since the failing
   // matches won't have modified it).
