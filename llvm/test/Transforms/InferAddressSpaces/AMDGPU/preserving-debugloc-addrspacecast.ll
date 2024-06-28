@@ -3,7 +3,7 @@
 ; Check that InferAddressSpaces's cloneInstructionWithNewAddressSpace() propagates
 ; the debug location to new addrspacecast instruction which casts `%p` in the following test.
 
-@c0 = addrspace(4) global ptr undef
+@c0 = addrspace(4) global ptr poison
 
 define float @generic_ptr_from_constant() !dbg !5 {
 ; CHECK-LABEL: define float @generic_ptr_from_constant(
@@ -31,4 +31,3 @@ define float @generic_ptr_from_constant() !dbg !5 {
 !8 = !DILocation(line: 1, column: 1, scope: !5)
 !9 = !DILocation(line: 2, column: 1, scope: !5)
 !10 = !DILocation(line: 3, column: 1, scope: !5)
-
