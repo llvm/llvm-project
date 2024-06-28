@@ -12244,6 +12244,14 @@ public:
   finalize(ArrayRef<int> ExtMask, unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
     IsFinalized = true;
+    SmallVector<int> NewExtMask(ExtMask);
+    if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
+                                             CommonMask);
+      transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
+                                             NewExtMask);
+      ExtMask = NewExtMask;
+    }
     if (Action) {
       Value *Vec = InVectors.front();
       if (InVectors.size() == 2) {
