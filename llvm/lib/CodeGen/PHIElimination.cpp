@@ -219,11 +219,6 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
     MF.deleteMachineInstr(I.first);
   }
 
-  // TODO: we should use the incremental DomTree updater here.
-  if (Changed)
-    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-      MDT->getDomTree().getBase().recalculate(MF);
-
   LoweredPHIs.clear();
   ImpDefs.clear();
   VRegPHIUseCount.clear();
@@ -703,8 +698,7 @@ void PHIElimination::analyzePHINodes(const MachineFunction& MF) {
   }
 }
 
-bool PHIElimination::SplitPHIEdges(MachineFunction &MF,
-                                   MachineBasicBlock &MBB,
+bool PHIElimination::SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineLoopInfo *MLI,
                                    std::vector<SparseBitVector<>> *LiveInSets) {
   if (MBB.empty() || !MBB.front().isPHI() || MBB.isEHPad())
