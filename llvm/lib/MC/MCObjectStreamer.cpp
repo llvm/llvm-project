@@ -294,9 +294,21 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
-  bool Created = getAssembler().registerSection(*Section);
-  Section->switchSubsection(Subsection);
-  return Created;
+  auto &Subsections = Section->Subsections;
+  size_t I = 0, E = Subsections.size();
+  while (I != E && Subsections[I].first < Subsection)
+    ++I;
+  // If the subsection number is not in the sorted Subsections list, create a
+  // new fragment list.
+  if (I == E || Subsections[I].first != Subsection) {
+    auto *F = getContext().allocFragment<MCDataFragment>();
+    F->setParent(Section);
+    Subsections.insert(Subsections.begin() + I,
+                       {Subsection, MCSection::FragList{F, F}});
+  }
+  Section->CurFragList = &Subsections[I].second;
+
+  return getAssembler().registerSection(*Section);
 }
 
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -330,9 +342,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                                 "' cannot have instructions");
     return;
   }
-  getAssembler().getBackend().emitInstructionBegin(*this, Inst, STI);
   emitInstructionImpl(Inst, STI);
-  getAssembler().getBackend().emitInstructionEnd(*this, Inst);
 }
 
 void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,

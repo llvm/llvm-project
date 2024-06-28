@@ -692,7 +692,7 @@ void LoopVectorizationLegality::addInductionPhi(
     InductionCastsToIgnore.insert(*Casts.begin());
 
   Type *PhiTy = Phi->getType();
-  const DataLayout &DL = Phi->getModule()->getDataLayout();
+  const DataLayout &DL = Phi->getDataLayout();
 
   // Get the widest type.
   if (!PhiTy->isFloatingPointTy()) {

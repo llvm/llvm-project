@@ -6595,7 +6595,8 @@ like pointers to an object of type ``T``:
   private:
     int *valuePointer;
   public:
-    int *getInt() { return &valuePointer; }
+    IntPointer(const IntOwner&);
+    int *getInt() { return valuePointer; }
   };
 
 The argument ``T`` is optional and is ignored.
@@ -6611,12 +6612,8 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
 .. code-block:: c++
 
   int f() {
-    IntPointer P;
-    if (true) {
-      IntOwner O(7);
-      P = IntPointer(O); // P "points into" O
-    } // P is dangling
-    return P.get(); // error: Using a dangling Pointer.
+    IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
+    P.getInt(); // P is dangling
   }
 
 }];

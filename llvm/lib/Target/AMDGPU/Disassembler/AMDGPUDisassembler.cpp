@@ -564,15 +564,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           break;
       }
 
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+
     } else if (Bytes.size() >= 16 &&
                STI.hasFeature(AMDGPU::FeatureGFX950Insts)) {
       DecoderUInt128 DecW = eat16Bytes(Bytes);
       if (tryDecodeInst(DecoderTableGFX940128, MI, DecW, Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
@@ -641,10 +644,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX1364, DecoderTableGFX13_FAKE1664, MI, QW,
                         Address, CS))
         break;
-    }
 
-    // Reinitialize Bytes
-    Bytes = Bytes_.slice(0, MaxInstBytesNum);
+      // Reinitialize Bytes
+      Bytes = Bytes_.slice(0, MaxInstBytesNum);
+    }
 
     // Try decode 32-bit instruction
     if (Bytes.size() >= 4) {

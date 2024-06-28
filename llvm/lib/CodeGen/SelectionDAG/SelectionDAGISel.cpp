@@ -1455,13 +1455,12 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
   llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
   if (!EHInfo)
     return;
-  for (auto MBBI = MF->begin(), E = MF->end(); MBBI != E; ++MBBI) {
-    MachineBasicBlock *MBB = &*MBBI;
-    const BasicBlock *BB = MBB->getBasicBlock();
+  for (MachineBasicBlock &MBB : *MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
     int State = EHInfo->BlockToStateMap[BB];
     if (BB->getFirstMayFaultInst()) {
       // Report IP range only for blocks with Faulty inst
-      auto MBBb = MBB->getFirstNonPHI();
+      auto MBBb = MBB.getFirstNonPHI();
       MachineInstr *MIb = &*MBBb;
       if (MIb->isTerminator())
         continue;
@@ -1470,16 +1469,16 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
       MCSymbol *BeginLabel = MMI.getContext().createTempSymbol();
       MCSymbol *EndLabel = MMI.getContext().createTempSymbol();
       EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
-      BuildMI(*MBB, MBBb, SDB->getCurDebugLoc(),
+      BuildMI(MBB, MBBb, SDB->getCurDebugLoc(),
               TII->get(TargetOpcode::EH_LABEL))
           .addSym(BeginLabel);
-      auto MBBe = MBB->instr_end();
+      auto MBBe = MBB.instr_end();
       MachineInstr *MIe = &*(--MBBe);
       // insert before (possible multiple) terminators
       while (MIe->isTerminator())
         MIe = &*(--MBBe);
       ++MBBe;
-      BuildMI(*MBB, MBBe, SDB->getCurDebugLoc(),
+      BuildMI(MBB, MBBe, SDB->getCurDebugLoc(),
               TII->get(TargetOpcode::EH_LABEL))
           .addSym(EndLabel);
     }
@@ -2125,8 +2124,8 @@ SelectionDAGISel::FinishBasicBlock() {
     // from the original BB before switch expansion.  Note that PHI nodes can
     // occur multiple times in PHINodesToUpdate.  We have to be very careful to
     // handle them the right number of times.
-    for (unsigned i = 0, e = Succs.size(); i != e; ++i) {
-      FuncInfo->MBB = Succs[i];
+    for (MachineBasicBlock *Succ : Succs) {
+      FuncInfo->MBB = Succ;
       FuncInfo->InsertPt = FuncInfo->MBB->end();
       // FuncInfo->MBB may have been removed from the CFG if a branch was
       // constant folded.
