@@ -21,8 +21,8 @@ define i4 @nuw_preserve_non_zero(i4 %a, i4 %b, i4 %c) {
 ; CHECK-NEXT:    [[A0:%.*]] = add nuw i4 [[A]], 1
 ; CHECK-NEXT:    [[B0:%.*]] = add nuw i4 [[B]], 1
 ; CHECK-NEXT:    [[C0:%.*]] = add nuw i4 [[C]], 1
-; CHECK-NEXT:    [[V0:%.*]] = mul i4 [[B0]], [[A0]]
-; CHECK-NEXT:    [[V1:%.*]] = mul i4 [[V0]], [[C0]]
+; CHECK-NEXT:    [[V0:%.*]] = mul nuw i4 [[B0]], [[A0]]
+; CHECK-NEXT:    [[V1:%.*]] = mul nuw i4 [[V0]], [[C0]]
 ; CHECK-NEXT:    ret i4 [[V1]]
 ;
   %a0 = add nuw i4 %a, 1
@@ -40,9 +40,9 @@ define i4 @re_order_mul_nuw(i4 %xx0, i4 %xx1, i4 %xx2, i4 %xx3) {
 ; CHECK-NEXT:    [[X1:%.*]] = add nuw i4 [[XX1]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw i4 [[XX2]], 1
 ; CHECK-NEXT:    [[X3:%.*]] = add nuw i4 [[XX3]], 1
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul i4 [[X1]], [[X0]]
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul i4 [[MUL_B]], [[X2]]
-; CHECK-NEXT:    [[MUL_C:%.*]] = mul i4 [[MUL_A]], [[X3]]
+; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw i4 [[X1]], [[X0]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i4 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw i4 [[MUL_A]], [[X3]]
 ; CHECK-NEXT:    ret i4 [[MUL_C]]
 ;
   %x0 = add nuw i4 %xx0, 1
@@ -88,9 +88,9 @@ define i4 @re_order_mul_nsw(i4 %xx0, i4 %xx1, i4 %xx2, i4 %xx3) {
 ; CHECK-NEXT:    [[X1:%.*]] = call i4 @llvm.smax.i4(i4 [[X1_NZ]], i4 1)
 ; CHECK-NEXT:    [[X2:%.*]] = call i4 @llvm.smax.i4(i4 [[X2_NZ]], i4 1)
 ; CHECK-NEXT:    [[X3:%.*]] = call i4 @llvm.smax.i4(i4 [[X3_NZ]], i4 1)
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul i4 [[X1]], [[X0]]
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul i4 [[MUL_B]], [[X2]]
-; CHECK-NEXT:    [[MUL_C:%.*]] = mul i4 [[MUL_A]], [[X3]]
+; CHECK-NEXT:    [[MUL_B:%.*]] = mul nsw i4 [[X1]], [[X0]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nsw i4 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_C:%.*]] = mul nsw i4 [[MUL_A]], [[X3]]
 ; CHECK-NEXT:    ret i4 [[MUL_C]]
 ;
   %x0_nz = add nuw i4 %xx0, 1
@@ -114,9 +114,9 @@ define i4 @re_order_mul_nsw_nuw(i4 %xx0, i4 %xx1, i4 %xx2, i4 %xx3) {
 ; CHECK-NEXT:    [[X1:%.*]] = add nuw i4 [[XX1]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw i4 [[XX2]], 1
 ; CHECK-NEXT:    [[X3:%.*]] = add nuw i4 [[XX3]], 1
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul i4 [[X1]], [[X0]]
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul i4 [[MUL_B]], [[X2]]
-; CHECK-NEXT:    [[MUL_C:%.*]] = mul i4 [[MUL_A]], [[X3]]
+; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw nsw i4 [[X1]], [[X0]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw nsw i4 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw nsw i4 [[MUL_A]], [[X3]]
 ; CHECK-NEXT:    ret i4 [[MUL_C]]
 ;
   %x0 = add nuw i4 %xx0, 1
