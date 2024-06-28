@@ -640,14 +640,14 @@ struct ArgumentVerifier {
   using Key = std::string_view;
   // Needed for implicit compare with keys.
   constexpr operator Key() const { return key; }
-  Key key; // intrinsic name
+  Key key;
   ArgumentVerifierFunc verifier;
 };
 
 static constexpr int lastArg{-1};
 static constexpr int firstArg{0};
 
-static const Expr<SomeType> &getArg(
+static const Expr<SomeType> &GetArg(
     int position, const std::vector<Expr<SomeType>> &args) {
   if (position == lastArg) {
     CHECK(!args.empty());
@@ -673,9 +673,9 @@ static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
 template <int lb, int ub>
 static bool VerifyInRangeIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
-  if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&getArg(firstArg, args).u)) {
-    const bool isInRange{
+  if (const auto *someReal{
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)}) {
+    bool isInRange{
         std::visit([&](const auto &x) -> bool { return IsInRange(x, lb, ub); },
             someReal->u)};
     if (!isInRange) {
@@ -691,7 +691,7 @@ template <int argPosition, const char *argName>
 static bool VerifyStrictlyPositiveIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
   if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&getArg(argPosition, args).u)) {
+          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
     const bool isStrictlyPositive{std::visit(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
@@ -714,7 +714,7 @@ template <int argPosition, const char *argName>
 static bool VerifyNotZeroIfReal(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
   if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&getArg(argPosition, args).u)) {
+          std::get_if<Expr<SomeReal>>(&GetArg(argPosition, args).u)) {
     const bool isNotZero{std::visit(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
@@ -735,7 +735,7 @@ static bool VerifyNotZeroIfReal(
 static bool VerifyNotZeroIfComplex(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
   if (const auto *someComplex =
-          std::get_if<Expr<SomeComplex>>(&getArg(firstArg, args).u)) {
+          std::get_if<Expr<SomeComplex>>(&GetArg(firstArg, args).u)) {
     const bool isNotZero{std::visit(
         [&](const auto &z) -> bool {
           using T = typename std::decay_t<decltype(z)>::Result;
@@ -757,7 +757,7 @@ static bool VerifyNotZeroIfComplex(
 static bool VerifyGammaLikeArgument(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
   if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&getArg(firstArg, args).u)) {
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
     const bool isValid{std::visit(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
@@ -783,12 +783,12 @@ static bool VerifyGammaLikeArgument(
 static bool VerifyAtan2LikeArguments(
     const std::vector<Expr<SomeType>> &args, FoldingContext &context) {
   if (const auto *someReal =
-          std::get_if<Expr<SomeReal>>(&getArg(firstArg, args).u)) {
+          std::get_if<Expr<SomeReal>>(&GetArg(firstArg, args).u)) {
     const bool isValid{std::visit(
         [&](const auto &typedExpr) -> bool {
           using T = typename std::decay_t<decltype(typedExpr)>::Result;
           auto x{GetScalarConstantValue<T>(typedExpr)};
-          auto y{GetScalarConstantValue<T>(getArg(lastArg, args))};
+          auto y{GetScalarConstantValue<T>(GetArg(lastArg, args))};
           if (x && y) {
             return !(x->IsZero() && y->IsZero());
           }
