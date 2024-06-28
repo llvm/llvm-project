@@ -22,61 +22,84 @@ namespace llvm {
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 class GenericDomTreeUpdater {
-  DerivedT &derived();
-  const DerivedT &derived() const;
+  DerivedT &derived() { return *static_cast<DerivedT *>(this); }
+  const DerivedT &derived() const {
+    return *static_cast<const DerivedT *>(this);
+  }
 
 public:
   enum class UpdateStrategy : unsigned char { Eager = 0, Lazy = 1 };
   using BasicBlockT = typename DomTreeT::NodeType;
 
-  explicit GenericDomTreeUpdater(UpdateStrategy Strategy_);
-  GenericDomTreeUpdater(DomTreeT &DT_, UpdateStrategy Strategy_);
-  GenericDomTreeUpdater(DomTreeT *DT_, UpdateStrategy Strategy_);
-  GenericDomTreeUpdater(PostDomTreeT &PDT_, UpdateStrategy Strategy_);
-  GenericDomTreeUpdater(PostDomTreeT *PDT_, UpdateStrategy Strategy_);
+  explicit GenericDomTreeUpdater(UpdateStrategy Strategy_)
+      : Strategy(Strategy_) {}
+  GenericDomTreeUpdater(DomTreeT &DT_, UpdateStrategy Strategy_)
+      : DT(&DT_), Strategy(Strategy_) {}
+  GenericDomTreeUpdater(DomTreeT *DT_, UpdateStrategy Strategy_)
+      : DT(DT_), Strategy(Strategy_) {}
+  GenericDomTreeUpdater(PostDomTreeT &PDT_, UpdateStrategy Strategy_)
+      : PDT(&PDT_), Strategy(Strategy_) {}
+  GenericDomTreeUpdater(PostDomTreeT *PDT_, UpdateStrategy Strategy_)
+      : PDT(PDT_), Strategy(Strategy_) {}
   GenericDomTreeUpdater(DomTreeT &DT_, PostDomTreeT &PDT_,
-                        UpdateStrategy Strategy_);
+                        UpdateStrategy Strategy_)
+      : DT(&DT_), PDT(&PDT_), Strategy(Strategy_) {}
   GenericDomTreeUpdater(DomTreeT *DT_, PostDomTreeT *PDT_,
-                        UpdateStrategy Strategy_);
+                        UpdateStrategy Strategy_)
+      : DT(DT_), PDT(PDT_), Strategy(Strategy_) {}
 
-  ~GenericDomTreeUpdater();
+  ~GenericDomTreeUpdater() { flush(); }
 
   /// Returns true if the current strategy is Lazy.
-  bool isLazy() const;
+  bool isLazy() const { return Strategy == UpdateStrategy::Lazy; }
 
   /// Returns true if the current strategy is Eager.
-  bool isEager() const;
+  bool isEager() const { return Strategy == UpdateStrategy::Eager; }
 
   /// Returns true if it holds a DomTreeT.
-  bool hasDomTree() const;
+  bool hasDomTree() const { return DT != nullptr; }
 
   /// Returns true if it holds a PostDomTreeT.
-  bool hasPostDomTree() const;
+  bool hasPostDomTree() const { return PDT != nullptr; }
 
   /// Returns true if there is BasicBlockT awaiting deletion.
   /// The deletion will only happen until a flush event and
   /// all available trees are up-to-date.
   /// Returns false under Eager UpdateStrategy.
-  bool hasPendingDeletedBB() const;
+  bool hasPendingDeletedBB() const { return !DeletedBBs.empty(); }
 
   /// Returns true if DelBB is awaiting deletion.
   /// Returns false under Eager UpdateStrategy.
-  bool isBBPendingDeletion(BasicBlockT *DelBB) const;
+  bool isBBPendingDeletion(BasicBlockT *DelBB) const {
+    if (Strategy == UpdateStrategy::Eager || DeletedBBs.empty())
+      return false;
+    return DeletedBBs.contains(DelBB);
+  }
 
   /// Returns true if either of DT or PDT is valid and the tree has at
   /// least one update pending. If DT or PDT is nullptr it is treated
   /// as having no pending updates. This function does not check
   /// whether there is MachineBasicBlock awaiting deletion.
   /// Returns false under Eager UpdateStrategy.
-  bool hasPendingUpdates() const;
+  bool hasPendingUpdates() const {
+    return hasPendingDomTreeUpdates() || hasPendingPostDomTreeUpdates();
+  }
 
   /// Returns true if there are DomTreeT updates queued.
   /// Returns false under Eager UpdateStrategy or DT is nullptr.
-  bool hasPendingDomTreeUpdates() const;
+  bool hasPendingDomTreeUpdates() const {
+    if (!DT)
+      return false;
+    return PendUpdates.size() != PendDTUpdateIndex;
+  }
 
   /// Returns true if there are PostDomTreeT updates queued.
   /// Returns false under Eager UpdateStrategy or PDT is nullptr.
-  bool hasPendingPostDomTreeUpdates() const;
+  bool hasPendingPostDomTreeUpdates() const {
+    if (!PDT)
+      return false;
+    return PendUpdates.size() != PendPDTUpdateIndex;
+  }
 
   ///@{
   /// \name Mutation APIs
@@ -166,7 +189,11 @@ public:
   /// Apply all pending updates to available trees and flush all BasicBlocks
   /// awaiting deletion.
 
-  void flush();
+  void flush() {
+    applyDomTreeUpdates();
+    applyPostDomTreeUpdates();
+    dropOutOfDateUpdates();
+  }
 
   ///@}
 
@@ -185,7 +212,10 @@ protected:
   bool IsRecalculatingPostDomTree = false;
 
   /// Returns true if the update is self dominance.
-  bool isSelfDominance(typename DomTreeT::UpdateType Update) const;
+  bool isSelfDominance(typename DomTreeT::UpdateType Update) const {
+    // Won't affect DomTree and PostDomTree.
+    return Update.getFrom() == Update.getTo();
+  }
 
   /// Helper function to apply all pending DomTree updates.
   void applyDomTreeUpdates();

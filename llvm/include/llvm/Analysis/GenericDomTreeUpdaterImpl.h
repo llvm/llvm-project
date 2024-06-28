@@ -23,116 +23,6 @@
 namespace llvm {
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-DerivedT &GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::derived() {
-  return *static_cast<DerivedT *>(this);
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-const DerivedT &
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::derived() const {
-  return *static_cast<const DerivedT *>(this);
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    UpdateStrategy Strategy_)
-    : Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    DomTreeT &DT_, UpdateStrategy Strategy_)
-    : DT(&DT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    DomTreeT *DT_, UpdateStrategy Strategy_)
-    : DT(DT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    PostDomTreeT &PDT_, UpdateStrategy Strategy_)
-    : PDT(&PDT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    PostDomTreeT *PDT_, UpdateStrategy Strategy_)
-    : PDT(PDT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    DomTreeT &DT_, PostDomTreeT &PDT_, UpdateStrategy Strategy_)
-    : DT(&DT_), PDT(&PDT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::GenericDomTreeUpdater(
-    DomTreeT *DT_, PostDomTreeT *PDT_, UpdateStrategy Strategy_)
-    : DT(DT_), PDT(PDT_), Strategy(Strategy_) {}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-GenericDomTreeUpdater<DerivedT, DomTreeT,
-                      PostDomTreeT>::~GenericDomTreeUpdater() {
-  flush();
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::isLazy() const {
-  return Strategy == UpdateStrategy::Lazy;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::isEager() const {
-  return Strategy == UpdateStrategy::Eager;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::hasDomTree()
-    const {
-  return DT != nullptr;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::hasPostDomTree()
-    const {
-  return DT != nullptr;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::hasPendingDeletedBB() const {
-  return !DeletedBBs.empty();
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::
-    isBBPendingDeletion(BasicBlockT *DelBB) const {
-  if (Strategy == UpdateStrategy::Eager || DeletedBBs.empty())
-    return false;
-  return DeletedBBs.contains(DelBB);
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::hasPendingUpdates() const {
-  return hasPendingDomTreeUpdates() || hasPendingPostDomTreeUpdates();
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::hasPendingDomTreeUpdates() const {
-  if (!DT)
-    return false;
-  return PendUpdates.size() != PendDTUpdateIndex;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT,
-                           PostDomTreeT>::hasPendingPostDomTreeUpdates() const {
-  if (!PDT)
-    return false;
-  return PendUpdates.size() != PendPDTUpdateIndex;
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 template <typename FuncT>
 void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::recalculate(
     FuncT &F) {
@@ -259,13 +149,6 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::getPostDomTree() {
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-void GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::flush() {
-  applyDomTreeUpdates();
-  applyPostDomTreeUpdates();
-  dropOutOfDateUpdates();
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 LLVM_DUMP_METHOD void
 GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -358,13 +241,6 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
     OS << BB << ")\n";
   }
 #endif
-}
-
-template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
-bool GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::isSelfDominance(
-    typename DomTreeT::UpdateType Update) const {
-  // Won't affect DomTree and PostDomTree.
-  return Update.getFrom() == Update.getTo();
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
