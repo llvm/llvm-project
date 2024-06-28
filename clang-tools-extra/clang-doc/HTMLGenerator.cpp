@@ -56,7 +56,7 @@ public:
   operator bool() = delete;
 
   bool isSelfClosing() const;
-  const char* c_str() const;
+  const char *c_str() const;
 
 private:
   TagType Value;
@@ -137,7 +137,7 @@ bool HTMLTag::isSelfClosing() const {
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
-const char* HTMLTag::c_str() const {
+const char *HTMLTag::c_str() const {
   switch (Value) {
   case HTMLTag::TAG_A:
     return "a";
