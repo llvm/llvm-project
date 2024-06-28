@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
@@ -891,9 +892,9 @@ public:
     DenseMap<BasicBlock *, unsigned int> BBToOrder;
     { // Init OrderToBB and BBToOrder.
       unsigned int RPONumber = 0;
-      for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-        OrderToBB[RPONumber] = *RI;
-        BBToOrder[*RI] = RPONumber;
+      for (BasicBlock *BB : RPOT) {
+        OrderToBB[RPONumber] = BB;
+        BBToOrder[BB] = RPONumber;
         Worklist.push(RPONumber);
         ++RPONumber;
       }
@@ -2184,7 +2185,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
       if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         ProcessDbgRecord(DII, InstDeclares);
       } else if (auto Info = getUntaggedStoreAssignmentInfo(
-                     I, Fn.getParent()->getDataLayout())) {
+                     I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
         auto HandleDbgAssignForStore = [&](auto *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
@@ -2192,7 +2193,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           // Skip this assignment if the affected bits are outside of the
           // variable fragment.
           if (!at::calculateFragmentIntersect(
-                  I.getModule()->getDataLayout(), Info->Base,
+                  I.getDataLayout(), Info->Base,
                   Info->OffsetInBits, Info->SizeInBits, Assign, FragInfo) ||
               (FragInfo && FragInfo->SizeInBits == 0))
             return;
@@ -2312,9 +2313,9 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   DenseMap<BasicBlock *, unsigned int> BBToOrder;
   { // Init OrderToBB and BBToOrder.
     unsigned int RPONumber = 0;
-    for (auto RI = RPOT.begin(), RE = RPOT.end(); RI != RE; ++RI) {
-      OrderToBB[RPONumber] = *RI;
-      BBToOrder[*RI] = RPONumber;
+    for (BasicBlock *BB : RPOT) {
+      OrderToBB[RPONumber] = BB;
+      BBToOrder[BB] = RPONumber;
       Worklist.push(RPONumber);
       ++RPONumber;
     }
@@ -2800,7 +2801,7 @@ DebugAssignmentTrackingAnalysis::run(Function &F,
   if (!isAssignmentTrackingEnabled(*F.getParent()))
     return FunctionVarLocs();
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   FunctionVarLocsBuilder Builder;
   analyzeFunction(F, DL, &Builder);

@@ -136,15 +136,6 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
-uint64_t AMDGPUAsmPrinter::getMCExprValue(const MCExpr *Value, MCContext &Ctx) {
-  int64_t Val;
-  if (!Value->evaluateAsAbsolute(Val)) {
-    Ctx.reportError(SMLoc(), "could not resolve expression when required.");
-    return 0;
-  }
-  return static_cast<uint64_t>(Val);
-}
-
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Init target streamer if it has not yet happened
   if (!IsTargetStreamerInitialized)
@@ -249,14 +240,14 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
       STM, KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
-      getMCExprValue(CurrentProgramInfo.NumVGPRsForWavesPerEU, Context),
-      getMCExprValue(CurrentProgramInfo.NumSGPRsForWavesPerEU, Context) -
-          IsaInfo::getNumExtraSGPRs(
-              &STM, getMCExprValue(CurrentProgramInfo.VCCUsed, Context),
-              getMCExprValue(CurrentProgramInfo.FlatUsed, Context),
-              getTargetStreamer()->getTargetID()->isXnackOnOrAny()),
-      getMCExprValue(CurrentProgramInfo.VCCUsed, Context),
-      getMCExprValue(CurrentProgramInfo.FlatUsed, Context));
+      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      MCBinaryExpr::createSub(
+          CurrentProgramInfo.NumSGPRsForWavesPerEU,
+          AMDGPUMCExpr::createExtraSGPRs(
+              CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
+              getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Context),
+          Context),
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
 }
@@ -333,7 +324,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       report_fatal_error("symbol '" + Twine(GVSym->getName()) +
                          "' is already defined");
 
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     Align Alignment = GV->getAlign().value_or(Align(4));
 
@@ -431,9 +422,10 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
                               false);
 }
 
-uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
+const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
 
@@ -461,16 +453,28 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
   }
+  if (UserSGPRInfo.hasPrivateSegmentSize()) {
+    KernelCodeProperties |=
+        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
+  }
   if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
 
-  if (getMCExprValue(CurrentProgramInfo.DynamicCallStack, MF.getContext()) &&
-      CodeObjectVersion >= AMDGPU::AMDHSA_COV5)
-    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK;
+  // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
+  // un-evaluatable at this point so it cannot be conditionally checked here.
+  // Instead, we'll directly shift the possibly unknown MCExpr into its place
+  // and bitwise-or it into KernelCodeProperties.
+  const MCExpr *KernelCodePropExpr =
+      MCConstantExpr::create(KernelCodeProperties, Ctx);
+  const MCExpr *OrValue = MCConstantExpr::create(
+      amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK_SHIFT, Ctx);
+  OrValue = MCBinaryExpr::createShl(CurrentProgramInfo.DynamicCallStack,
+                                    OrValue, Ctx);
+  KernelCodePropExpr = MCBinaryExpr::createOr(KernelCodePropExpr, OrValue, Ctx);
 
-  return KernelCodeProperties;
+  return KernelCodePropExpr;
 }
 
 MCKernelDescriptor
@@ -493,11 +497,15 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 
   KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM, Ctx);
   KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2(Ctx);
-  KernelDescriptor.kernel_code_properties =
-      MCConstantExpr::create(getAmdhsaKernelCodeProperties(MF), Ctx);
+  KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
 
-  assert(STM.hasGFX90AInsts() ||
-         getMCExprValue(CurrentProgramInfo.ComputePGMRSrc3GFX90A, Ctx) == 0);
+  int64_t PGRM_Rsrc3 = 1;
+  bool EvaluatableRsrc3 =
+      CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(PGRM_Rsrc3);
+  (void)PGRM_Rsrc3;
+  (void)EvaluatableRsrc3;
+  assert(STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
+         static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3GFX90A;
 
   KernelDescriptor.kernarg_preload = MCConstantExpr::create(
@@ -793,7 +801,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // The calculations related to SGPR/VGPR blocks are
   // duplicated in part in AMDGPUAsmParser::calculateGPRBlocks, and could be
   // unified.
-  const MCExpr *ExtraSGPRs = AMDGPUVariadicMCExpr::createExtraSGPRs(
+  const MCExpr *ExtraSGPRs = AMDGPUMCExpr::createExtraSGPRs(
       ProgInfo.VCCUsed, ProgInfo.FlatUsed,
       getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Ctx);
 
@@ -854,7 +862,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
     // FIXME: We should be using the number of registers determined during
     // calling convention lowering to legalize the types.
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     unsigned PSArgCount = 0;
     unsigned IntermediateVGPR = 0;
     for (auto &Arg : F.args()) {
@@ -886,27 +894,27 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
         }
       }
     }
-    ProgInfo.NumSGPR = AMDGPUVariadicMCExpr::createMax(
+    ProgInfo.NumSGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumSGPR, CreateExpr(WaveDispatchNumSGPR)}, Ctx);
 
-    ProgInfo.NumArchVGPR = AMDGPUVariadicMCExpr::createMax(
+    ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
 
-    ProgInfo.NumVGPR = AMDGPUVariadicMCExpr::createTotalNumVGPR(
+    ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum
   // number of waves per execution unit request.
   unsigned MaxWaves = MFI->getMaxWavesPerEU();
-  ProgInfo.NumSGPRsForWavesPerEU = AMDGPUVariadicMCExpr::createMax(
-      {ProgInfo.NumSGPR, CreateExpr(1ul),
-       CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
-      Ctx);
-  ProgInfo.NumVGPRsForWavesPerEU = AMDGPUVariadicMCExpr::createMax(
-      {ProgInfo.NumVGPR, CreateExpr(1ul),
-       CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
-      Ctx);
+  ProgInfo.NumSGPRsForWavesPerEU =
+      AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, CreateExpr(1ul),
+                               CreateExpr(STM.getMinNumSGPRs(MaxWaves))},
+                              Ctx);
+  ProgInfo.NumVGPRsForWavesPerEU =
+      AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
+                               CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
+                              Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {
@@ -955,10 +963,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                              unsigned Granule) {
     const MCExpr *OneConst = CreateExpr(1ul);
     const MCExpr *GranuleConst = CreateExpr(Granule);
-    const MCExpr *MaxNumGPR =
-        AMDGPUVariadicMCExpr::createMax({NumGPR, OneConst}, Ctx);
+    const MCExpr *MaxNumGPR = AMDGPUMCExpr::createMax({NumGPR, OneConst}, Ctx);
     const MCExpr *AlignToGPR =
-        AMDGPUVariadicMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
+        AMDGPUMCExpr::createAlignTo(MaxNumGPR, GranuleConst, Ctx);
     const MCExpr *DivGPR =
         MCBinaryExpr::createDiv(AlignToGPR, GranuleConst, Ctx);
     const MCExpr *SubGPR = MCBinaryExpr::createSub(DivGPR, OneConst, Ctx);
@@ -1000,7 +1007,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
     const MCExpr *Ceil =
-        AMDGPUVariadicMCExpr::createAlignTo(Numerator, Denominator, Ctx);
+        AMDGPUMCExpr::createAlignTo(Numerator, Denominator, Ctx);
     return MCBinaryExpr::createDiv(Ceil, Denominator, Ctx);
   };
 
@@ -1073,7 +1080,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
 
-  ProgInfo.Occupancy = AMDGPUVariadicMCExpr::createOccupancy(
+  ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize), ProgInfo.NumSGPRsForWavesPerEU,
       ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
 
@@ -1265,8 +1272,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   // ScratchSize is in bytes, 16 aligned.
   MD->setScratchSize(
       CC,
-      AMDGPUVariadicMCExpr::createAlignTo(CurrentProgramInfo.ScratchSize,
-                                          MCConstantExpr::create(16, Ctx), Ctx),
+      AMDGPUMCExpr::createAlignTo(CurrentProgramInfo.ScratchSize,
+                                  MCConstantExpr::create(16, Ctx), Ctx),
       Ctx);
 
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
@@ -1396,6 +1403,9 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
 
   if (UserSGPRInfo.hasFlatScratchInit())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
+
+  if (UserSGPRInfo.hasPrivateSegmentSize())
+    Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
 
   if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;

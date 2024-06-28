@@ -335,7 +335,7 @@ class EventAPITestCase(TestBase):
         if state == lldb.eStateStopped:
             restart = lldb.SBProcess.GetRestartedFromEvent(event)
 
-        if expected_state != None:
+        if expected_state is not None:
             self.assertEqual(
                 state, expected_state, "Primary thread got the correct event"
             )

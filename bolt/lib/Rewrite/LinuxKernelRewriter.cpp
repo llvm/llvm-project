@@ -273,9 +273,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
+  void processAltInstructionsPostCFG();
   Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
                                bool AltInstHasPadLen, bool ParseOnly);
-  Error rewriteAltInstructions();
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -295,9 +295,6 @@ public:
     if (Error E = processSMPLocks())
       return E;
 
-    if (Error E = readORCTables())
-      return E;
-
     if (Error E = readStaticCalls())
       return E;
 
@@ -313,6 +310,11 @@ public:
     if (Error E = readAltInstructions())
       return E;
 
+    // Some ORC entries could be linked to alternative instruction
+    // sequences. Hence, we read ORC after .altinstructions.
+    if (Error E = readORCTables())
+      return E;
+
     if (Error E = readPCIFixupTable())
       return E;
 
@@ -326,6 +328,8 @@ public:
     if (Error E = processORCPostCFG())
       return E;
 
+    processAltInstructionsPostCFG();
+
     return Error::success();
   }
 
@@ -333,9 +337,6 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
-      return E;
-
-    if (Error E = rewriteAltInstructions())
       return E;
 
     if (Error E = rewriteParaInstructions())
@@ -564,11 +565,28 @@ Error LinuxKernelRewriter::readORCTables() {
     if (!BF->hasInstructions())
       continue;
 
-    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
-    if (!Inst)
+    const uint64_t Offset = IP - BF->getAddress();
+    MCInst *Inst = BF->getInstructionAtOffset(Offset);
+    if (!Inst) {
+      // Check if there is an alternative instruction(s) at this IP. Multiple
+      // alternative instructions can take a place of a single original
+      // instruction and each alternative can have a separate ORC entry.
+      // Since ORC table is shared between all alternative sequences, there's
+      // a requirement that only one (out of many) sequences can have an
+      // instruction from the ORC table to avoid ambiguities/conflicts.
+      //
+      // For now, we have limited support for alternatives. I.e. we still print
+      // functions with them, but will not change the code in the output binary.
+      // As such, we can ignore alternative ORC entries. They will be preserved
+      // in the binary, but will not get printed in the instruction stream.
+      Inst = BF->getInstructionContainingOffset(Offset);
+      if (Inst || BC.MIB->hasAnnotation(*Inst, "AltInst"))
+        continue;
+
       return createStringError(
           errc::executable_format_error,
           "no instruction at address 0x%" PRIx64 " in .orc_unwind_ip", IP);
+    }
 
     // Some addresses will have two entries associated with them. The first
     // one being a "weak" section terminator. Since we ignore the terminator,
@@ -1441,7 +1459,7 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
       AltBF->setIgnored();
     }
 
-    if (!BF || !BC.shouldEmit(*BF))
+    if (!BF || !BF->hasInstructions())
       continue;
 
     if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
@@ -1486,12 +1504,11 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteAltInstructions() {
-  // Disable output of functions with alt instructions before the rewrite
-  // support is complete.
+void LinuxKernelRewriter::processAltInstructionsPostCFG() {
+  // Disable optimization and output of functions with alt instructions before
+  // the rewrite support is complete. Alt instructions can modify the control
+  // flow, hence we may end up deleting seemingly unreachable code.
   skipFunctionsWithAnnotation("AltInst");
-
-  return Error::success();
 }
 
 /// When the Linux kernel needs to handle an error associated with a given PCI

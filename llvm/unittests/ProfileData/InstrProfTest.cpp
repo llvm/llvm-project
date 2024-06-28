@@ -829,7 +829,7 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
         {getCalleeAddress(vtable2), 2},
     };
     Record1.addValueData(IPVK_VTableTarget, 0, VD0, 3, nullptr);
-    Record1.addValueData(IPVK_VTableTarget, 2, VD2, 2, nullptr);
+    Record1.addValueData(IPVK_VTableTarget, 1, VD2, 2, nullptr);
   }
 
   Writer.addRecord(std::move(Record1), getProfWeight(), Err);
@@ -1050,7 +1050,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record11.addValueData(IPVK_VTableTarget, 3, VD4, 3, nullptr);
+    Record11.addValueData(IPVK_VTableTarget, 2, VD4, 3, nullptr);
   }
 
   // A different record for the same caller.
@@ -1086,7 +1086,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     InstrProfValueData VD4[] = {{getCalleeAddress(vtable1), 1},
                                 {getCalleeAddress(vtable2), 2},
                                 {getCalleeAddress(vtable3), 3}};
-    Record12.addValueData(IPVK_VTableTarget, 3, VD4, 3, nullptr);
+    Record12.addValueData(IPVK_VTableTarget, 2, VD4, 3, nullptr);
   }
 
   Writer.addRecord(std::move(Record11), Err);

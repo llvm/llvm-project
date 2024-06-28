@@ -85,7 +85,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Sect, const MCExpr *Subsect) override;
+  void changeSection(MCSection *Sect, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
@@ -155,16 +155,16 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   if (SegName == "__TEXT" && SecName == "__eh_frame")
     return true;
 
-  if (SegName == "__DATA" && (SecName == "__nl_symbol_ptr" ||
-                              SecName == "__thread_ptr"))
+  if (SegName == "__DATA" &&
+      (SecName == "__llvm_addrsig" || SecName == "__nl_symbol_ptr" ||
+       SecName == "__thread_ptr"))
     return true;
-  if (SegName == "__LLVM" && SecName == "__cg_profile")
+  if (SegName == "__LLVM" && (SecName == "__cg_profile"))
     return true;
   return false;
 }
 
-void MCMachOStreamer::changeSection(MCSection *Section,
-                                    const MCExpr *Subsection) {
+void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // Change the section normally.
   bool Created = changeSectionImpl(Section, Subsection);
   const MCSectionMachO &MSec = *cast<MCSectionMachO>(Section);
@@ -554,14 +554,13 @@ void MCMachOStreamer::finalizeCGProfile() {
   // and set its size now so that it's accounted for in layout.
   MCSection *CGProfileSection = Asm.getContext().getMachOSection(
       "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
-  Asm.registerSection(*CGProfileSection);
-  auto *Frag = getContext().allocFragment<MCDataFragment>();
-  Frag->setParent(CGProfileSection);
-  CGProfileSection->addFragment(*Frag);
+  changeSection(CGProfileSection);
   // For each entry, reserve space for 2 32-bit indices and a 64-bit count.
   size_t SectionBytes =
       Asm.CGProfile.size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
-  Frag->getContents().resize(SectionBytes);
+  cast<MCDataFragment>(*CGProfileSection->begin())
+      .getContents()
+      .resize(SectionBytes);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -596,7 +595,7 @@ void MCMachOStreamer::createAddrSigSection() {
   // to be computed immediately after in order for it to be exported correctly.
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  Asm.registerSection(*AddrSigSection);
+  changeSection(AddrSigSection);
   auto *Frag = getContext().allocFragment<MCDataFragment>();
   Frag->setParent(AddrSigSection);
   AddrSigSection->addFragment(*Frag);

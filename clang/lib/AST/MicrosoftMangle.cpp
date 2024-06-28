@@ -159,9 +159,9 @@ public:
                                 const MethodVFTableLocation &ML,
                                 raw_ostream &Out) override;
   void mangleThunk(const CXXMethodDecl *MD, const ThunkInfo &Thunk,
-                   raw_ostream &) override;
+                   bool ElideOverrideInfo, raw_ostream &) override;
   void mangleCXXDtorThunk(const CXXDestructorDecl *DD, CXXDtorType Type,
-                          const ThisAdjustment &ThisAdjustment,
+                          const ThunkInfo &Thunk, bool ElideOverrideInfo,
                           raw_ostream &) override;
   void mangleCXXVFTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
@@ -169,6 +169,8 @@ public:
   void mangleCXXVBTable(const CXXRecordDecl *Derived,
                         ArrayRef<const CXXRecordDecl *> BasePath,
                         raw_ostream &Out) override;
+
+  void mangleCXXVTable(const CXXRecordDecl *, raw_ostream &) override;
   void mangleCXXVirtualDisplacementMap(const CXXRecordDecl *SrcRD,
                                        const CXXRecordDecl *DstRD,
                                        raw_ostream &Out) override;
@@ -372,6 +374,11 @@ public:
   void mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                    const CXXMethodDecl *MD,
                                    StringRef Prefix = "$");
+  void mangleFunctionPointer(const FunctionDecl *FD,
+                             const NonTypeTemplateParmDecl *PD,
+                             QualType TemplateArgType);
+  void mangleVarDecl(const VarDecl *VD, const NonTypeTemplateParmDecl *PD,
+                     QualType TemplateArgType);
   void mangleMemberFunctionPointerInClassNTTP(const CXXRecordDecl *RD,
                                               const CXXMethodDecl *MD);
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
@@ -442,8 +449,8 @@ private:
   void mangleDecayedArrayType(const ArrayType *T);
   void mangleArrayType(const ArrayType *T);
   void mangleFunctionClass(const FunctionDecl *FD);
-  void mangleCallingConvention(CallingConv CC);
-  void mangleCallingConvention(const FunctionType *T);
+  void mangleCallingConvention(CallingConv CC, SourceRange Range);
+  void mangleCallingConvention(const FunctionType *T, SourceRange Range);
   void mangleIntegerLiteral(const llvm::APSInt &Number,
                             const NonTypeTemplateParmDecl *PD = nullptr,
                             QualType TemplateArgType = QualType());
@@ -799,6 +806,50 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
     mangleNumber(VBTableOffset);
 }
 
+void MicrosoftCXXNameMangler::mangleFunctionPointer(
+    const FunctionDecl *FD, const NonTypeTemplateParmDecl *PD,
+    QualType TemplateArgType) {
+  // <func-ptr> ::= $1? <mangled-name>
+  // <func-ptr> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 1? <mangled-name>
+  Out << '$';
+
+  if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << "1?";
+  mangleName(FD);
+  mangleFunctionEncoding(FD, /*ShouldMangle=*/true);
+}
+
+void MicrosoftCXXNameMangler::mangleVarDecl(const VarDecl *VD,
+                                            const NonTypeTemplateParmDecl *PD,
+                                            QualType TemplateArgType) {
+  // <var-ptr> ::= $1? <mangled-name>
+  // <var-ptr> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 1? <mangled-name>
+  Out << '$';
+
+  if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << "1?";
+  mangleName(VD);
+  mangleVariableEncoding(VD);
+}
+
 void MicrosoftCXXNameMangler::mangleMemberFunctionPointerInClassNTTP(
     const CXXRecordDecl *RD, const CXXMethodDecl *MD) {
   // <nttp-class-member-function-pointer> ::= <member-function-pointer>
@@ -839,7 +890,8 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
   Out << "$B";
   mangleNumber(OffsetInVFTable);
   Out << 'A';
-  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>());
+  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>(),
+                          MD->getSourceRange());
 }
 
 void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
@@ -1555,6 +1607,9 @@ void MicrosoftCXXNameMangler::mangleIntegerLiteral(
     const llvm::APSInt &Value, const NonTypeTemplateParmDecl *PD,
     QualType TemplateArgType) {
   // <integer-literal> ::= $0 <number>
+  // <integer-literal> ::= <auto-nttp>
+  //
+  // <auto-nttp> ::= $ M <type> 0 <number>
   Out << "$";
 
   // Since MSVC 2019, add 'M[<type>]' after '$' for auto template parameter when
@@ -1632,7 +1687,10 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   //                ::= <member-data-pointer>
   //                ::= <member-function-pointer>
   //                ::= $ <constant-value>
+  //                ::= $ <auto-nttp-constant-value>
   //                ::= <template-args>
+  //
+  // <auto-nttp-constant-value> ::= M <type> <constant-value>
   //
   // <constant-value> ::= 0 <number>                   # integer
   //                  ::= 1 <mangled-name>             # address of D
@@ -1681,15 +1739,17 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
         mangleMemberFunctionPointer(
             MD->getParent()->getMostRecentNonInjectedDecl(), MD);
       } else {
-        Out << "$1?";
-        mangleName(FD);
-        mangleFunctionEncoding(FD, /*ShouldMangle=*/true);
+        mangleFunctionPointer(FD, cast<NonTypeTemplateParmDecl>(Parm),
+                              TA.getParamTypeForDecl());
       }
     } else if (TA.getParamTypeForDecl()->isRecordType()) {
       Out << "$";
       auto *TPO = cast<TemplateParamObjectDecl>(ND);
       mangleTemplateArgValue(TPO->getType().getUnqualifiedType(),
                              TPO->getValue(), TplArgKind::ClassNTTP);
+    } else if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+      mangleVarDecl(VD, cast<NonTypeTemplateParmDecl>(Parm),
+                    TA.getParamTypeForDecl());
     } else {
       mangle(ND, "$1?");
     }
@@ -2612,6 +2672,8 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -2709,7 +2771,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
     mangleQualifiers(Quals, /*IsMember=*/false);
   }
 
-  mangleCallingConvention(CC);
+  mangleCallingConvention(CC, Range);
 
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)
@@ -2890,7 +2952,8 @@ void MicrosoftCXXNameMangler::mangleFunctionClass(const FunctionDecl *FD) {
     Out << 'Y';
   }
 }
-void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
+void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC,
+                                                      SourceRange Range) {
   // <calling-convention> ::= A # __cdecl
   //                      ::= B # __export __cdecl
   //                      ::= C # __pascal
@@ -2903,7 +2966,10 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
   //                      ::= J # __export __fastcall
   //                      ::= Q # __vectorcall
   //                      ::= S # __attribute__((__swiftcall__)) // Clang-only
-  //                      ::= T # __attribute__((__swiftasynccall__))
+  //                      ::= W # __attribute__((__swiftasynccall__))
+  //                      ::= U # __attribute__((__preserve_most__))
+  //                      ::= V # __attribute__((__preserve_none__)) //
+  //                      Clang-only
   //                            // Clang-only
   //                      ::= w # __regcall
   //                      ::= x # __regcall4
@@ -2915,28 +2981,55 @@ void MicrosoftCXXNameMangler::mangleCallingConvention(CallingConv CC) {
 
   switch (CC) {
     default:
-      llvm_unreachable("Unsupported CC for mangling");
+      break;
     case CC_Win64:
     case CC_X86_64SysV:
-    case CC_C: Out << 'A'; break;
-    case CC_X86Pascal: Out << 'C'; break;
-    case CC_X86ThisCall: Out << 'E'; break;
-    case CC_X86StdCall: Out << 'G'; break;
-    case CC_X86FastCall: Out << 'I'; break;
-    case CC_X86VectorCall: Out << 'Q'; break;
-    case CC_Swift: Out << 'S'; break;
-    case CC_SwiftAsync: Out << 'W'; break;
-    case CC_PreserveMost: Out << 'U'; break;
+    case CC_C:
+      Out << 'A';
+      return;
+    case CC_X86Pascal:
+      Out << 'C';
+      return;
+    case CC_X86ThisCall:
+      Out << 'E';
+      return;
+    case CC_X86StdCall:
+      Out << 'G';
+      return;
+    case CC_X86FastCall:
+      Out << 'I';
+      return;
+    case CC_X86VectorCall:
+      Out << 'Q';
+      return;
+    case CC_Swift:
+      Out << 'S';
+      return;
+    case CC_SwiftAsync:
+      Out << 'W';
+      return;
+    case CC_PreserveMost:
+      Out << 'U';
+      return;
+    case CC_PreserveNone:
+      Out << 'V';
+      return;
     case CC_X86RegCall:
       if (getASTContext().getLangOpts().RegCall4)
         Out << "x";
       else
         Out << "w";
-      break;
+      return;
   }
+
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "cannot mangle this calling convention yet");
+  Diags.Report(Range.getBegin(), DiagID) << Range;
 }
-void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T) {
-  mangleCallingConvention(T->getCallConv());
+void MicrosoftCXXNameMangler::mangleCallingConvention(const FunctionType *T,
+                                                      SourceRange Range) {
+  mangleCallingConvention(T->getCallConv(), Range);
 }
 
 void MicrosoftCXXNameMangler::mangleThrowSpecification(
@@ -3656,6 +3749,7 @@ void MicrosoftMangleContextImpl::mangleVirtualMemPtrThunk(
 
 void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
                                              const ThunkInfo &Thunk,
+                                             bool /*ElideOverrideInfo*/,
                                              raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
@@ -3677,9 +3771,11 @@ void MicrosoftMangleContextImpl::mangleThunk(const CXXMethodDecl *MD,
       DeclForFPT->getType()->castAs<FunctionProtoType>(), MD);
 }
 
-void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
-    const CXXDestructorDecl *DD, CXXDtorType Type,
-    const ThisAdjustment &Adjustment, raw_ostream &Out) {
+void MicrosoftMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
+                                                    CXXDtorType Type,
+                                                    const ThunkInfo &Thunk,
+                                                    bool /*ElideOverrideInfo*/,
+                                                    raw_ostream &Out) {
   // FIXME: Actually, the dtor thunk should be emitted for vector deleting
   // dtors rather than scalar deleting dtors. Just use the vector deleting dtor
   // mangling manually until we support both deleting dtor types.
@@ -3688,6 +3784,7 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";
   Mangler.mangleName(DD->getParent());
+  auto &Adjustment = Thunk.This;
   mangleThunkThisAdjustment(DD->getAccess(), Adjustment, Mangler, MHO);
   Mangler.mangleFunctionType(DD->getType()->castAs<FunctionProtoType>(), DD);
 }
@@ -3710,6 +3807,12 @@ void MicrosoftMangleContextImpl::mangleCXXVFTable(
   for (const CXXRecordDecl *RD : BasePath)
     Mangler.mangleName(RD);
   Mangler.getStream() << '@';
+}
+
+void MicrosoftMangleContextImpl::mangleCXXVTable(const CXXRecordDecl *Derived,
+                                                 raw_ostream &Out) {
+  // TODO: Determine appropriate mangling for MSABI
+  mangleCXXVFTable(Derived, {}, Out);
 }
 
 void MicrosoftMangleContextImpl::mangleCXXVBTable(

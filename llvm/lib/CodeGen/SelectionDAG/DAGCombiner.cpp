@@ -5213,6 +5213,7 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+  bool IsSigned = Opcode == ISD::AVGCEILS || Opcode == ISD::AVGFLOORS;
 
   // fold (avg c1, c2)
   if (SDValue C = DAG.FoldConstantArithmetic(Opcode, DL, VT, {N0, N1}))
@@ -5248,33 +5249,19 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
 
   // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
   // fold avgs(sext(x), sext(y)) -> sext(avgs(x, y))
-  if (sd_match(
-          N, m_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+  if (!IsSigned &&
+      sd_match(N, m_BinOp(Opcode, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
       X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGFLOORU, X.getValueType())) {
-    SDValue AvgFloorU = DAG.getNode(ISD::AVGFLOORU, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgFloorU);
+      hasOperation(Opcode, X.getValueType())) {
+    SDValue AvgU = DAG.getNode(Opcode, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgU);
   }
-  if (sd_match(
-          N, m_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+  if (IsSigned &&
+      sd_match(N, m_BinOp(Opcode, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
       X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGCEILU, X.getValueType())) {
-    SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgCeilU);
-  }
-  if (sd_match(
-          N, m_BinOp(ISD::AVGFLOORS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
-      X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGFLOORS, X.getValueType())) {
-    SDValue AvgFloorS = DAG.getNode(ISD::AVGFLOORS, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgFloorS);
-  }
-  if (sd_match(
-          N, m_BinOp(ISD::AVGCEILS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
-      X.getValueType() == Y.getValueType() &&
-      hasOperation(ISD::AVGCEILS, X.getValueType())) {
-    SDValue AvgCeilS = DAG.getNode(ISD::AVGCEILS, DL, X.getValueType(), X, Y);
-    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgCeilS);
+      hasOperation(Opcode, X.getValueType())) {
+    SDValue AvgS = DAG.getNode(Opcode, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgS);
   }
 
   // Fold avgflooru(x,y) -> avgceilu(x,y-1) iff y != 0
@@ -26473,12 +26460,13 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       return N1.getOperand(0);
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
-    if (isNullConstant(N2) &&
-        VT.isScalableVector() == SrcVT.isScalableVector()) {
-      if (VT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements())
+    if (isNullConstant(N2)) {
+      if (VT.knownBitsGE(SrcVT) &&
+          !(VT.isFixedLengthVector() && SrcVT.isScalableVector()))
         return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
                            VT, N0, N1.getOperand(0), N2);
-      else
+      else if (VT.knownBitsLE(SrcVT) &&
+               !(VT.isScalableVector() && SrcVT.isFixedLengthVector()))
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N),
                            VT, N1.getOperand(0), N2);
     }
