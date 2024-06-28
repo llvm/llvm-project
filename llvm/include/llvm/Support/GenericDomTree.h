@@ -65,7 +65,7 @@ template <class NodeT> class DomTreeNodeBase {
   mutable unsigned DFSNumIn = ~0;
   mutable unsigned DFSNumOut = ~0;
 
- public:
+public:
   DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom)
       : TheBB(BB), IDom(iDom), Level(IDom ? IDom->Level + 1 : 0) {}
 
@@ -113,12 +113,10 @@ template <class NodeT> class DomTreeNodeBase {
       OtherChildren.insert(Nd);
     }
 
-    for (const DomTreeNodeBase *I : *this) {
+    return llvm::any_of(*this, [&](const DomTreeNodeBase *I) {
       const NodeT *N = I->getBlock();
-      if (OtherChildren.count(N) == 0)
-        return true;
-    }
-    return false;
+      return OtherChildren.count(N) == 0;
+    });
   }
 
   void setIDom(DomTreeNodeBase *NewIDom) {
@@ -239,7 +237,7 @@ template <typename NodeT> struct DomTreeNodeTraits {
 /// various graphs in the LLVM IR or in the code generator.
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase {
- public:
+public:
   static_assert(std::is_pointer_v<typename GraphTraits<NodeT *>::NodeRef>,
                 "Currently DominatorTreeBase supports only pointer nodes");
   using NodeTrait = DomTreeNodeTraits<NodeT>;
@@ -273,7 +271,7 @@ protected:
 
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
 
- public:
+public:
   DominatorTreeBase() = default;
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
@@ -852,18 +850,9 @@ protected:
            "NewBB should have a single successor!");
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    SmallVector<NodeRef, 4> PredBlocks(inverse_children<N>(NewBB));
+    const SmallVector<NodeRef, 4> PredBlocks(inverse_children<N>(NewBB));
 
     assert(!PredBlocks.empty() && "No predblocks?");
-
-    bool NewBBDominatesNewBBSucc = true;
-    for (auto *Pred : inverse_children<N>(NewBBSucc)) {
-      if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
-          isReachableFromEntry(Pred)) {
-        NewBBDominatesNewBBSucc = false;
-        break;
-      }
-    }
 
     // Find NewBB's immediate dominator and create new dominator tree node for
     // NewBB.
@@ -885,6 +874,12 @@ protected:
         NewBBIDom = findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
     }
 
+    bool NewBBDominatesNewBBSucc =
+      llvm::none_of(inverse_children<N>(NewBBSucc), [=](const auto *Pred) {
+        return Pred != NewBB && !dominates(NewBBSucc, Pred) &&
+          isReachableFromEntry(Pred);
+      });
+
     // Create the new dominator tree node... and set the idom of NewBB.
     DomTreeNodeBase<NodeT> *NewBBNode = addNewBlock(NewBB, NewBBIDom);
 
@@ -896,7 +891,7 @@ protected:
     }
   }
 
- private:
+private:
   bool dominatedBySlowTreeWalk(const DomTreeNodeBase<NodeT> *A,
                                const DomTreeNodeBase<NodeT> *B) const {
     assert(A != B);
