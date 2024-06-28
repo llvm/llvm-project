@@ -16,7 +16,7 @@
 	unpcklpd	xmm0, xmm1                      # xmm0 = xmm0[0],xmm1[0]
 # CHECK-NEXT: vaddpd  %xmm1, %xmm0, %xmm0
 	addpd	xmm0, xmm1
-# CHECK-NEXT: vmovapd %xmm0, -464(%rbp)	
+# CHECK-NEXT: vmovapd %xmm0, -464(%rbp)
 	movapd	xmmword ptr [rbp - 464], xmm0
 # CHECK-NEXT: vmovaps -304(%rbp), %xmm1
 	movaps	xmm1, xmmword ptr [rbp - 304]
@@ -50,7 +50,7 @@
 	pblendw	xmm0, xmm1, 170                 # xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 # CHECK-NEXT: vmovdqa %xmm0, -576(%rbp)
 	movdqa	xmmword ptr [rbp - 576], xmm0
-# CHECK-NEXT: vphsubw %xmm1, %xmm0, %xmm0	
+# CHECK-NEXT: vphsubw %xmm1, %xmm0, %xmm0
 	phsubw	xmm0, xmm1
 # CHECK-NEXT: vmovdqa %xmm0, -592(%rbp)
 	movdqa	xmmword ptr [rbp - 592], xmm0

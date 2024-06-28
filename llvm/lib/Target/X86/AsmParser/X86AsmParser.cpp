@@ -3749,7 +3749,22 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+void replaceSSE2AVXOpcode(MCInst &Inst) {
+  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
+  unsigned Opcode = Inst.getOpcode();
+  const auto I = llvm::lower_bound(Table, Opcode);
+  if (I != Table.end() && I->OldOpc == Opcode) {
+    Inst.setOpcode(I->NewOpc);
+  }
+}
+
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
+  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
+  // replace SSE instruction with equivalent AVX instruction using mapping given
+  // in table GET_X86_SSE2AVX_TABLE
+  if (MCOptions.SSE2AVX)
+    replaceSSE2AVXOpcode(Inst);
+
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
@@ -4145,15 +4160,6 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   return Match_Success;
 }
 
-void replaceSSE2AVXOpcode(llvm::MCInst &Inst) {
-  ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
-  unsigned Opcode = Inst.getOpcode();
-  const auto I = llvm::lower_bound(Table, Opcode);
-  if (I != Table.end() && I->OldOpc == Opcode) {
-    Inst.setOpcode(I->NewOpc);
-  }
-}
-
 bool X86AsmParser::matchAndEmitATTInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
@@ -4172,12 +4178,6 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SwitchMode(X86::Is16Bit);
     ForcedDataPrefix = 0;
   }
-
-  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
-  // replace SSE instruction with equivalent AVX instruction using mapping given
-  // in table GET_X86_SSE2AVX_TABLE
-  if (MCOptions.SSE2AVX)
-    replaceSSE2AVXOpcode(Inst);
 
   switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
@@ -4512,12 +4512,6 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
         AOK_SizeDirective, UnsizedMemOp->getStartLoc(),
         /*Len=*/0, UnsizedMemOp->getMemFrontendSize());
   }
-
-  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
-  // replace SSE instruction with equivalent AVX instruction using mapping given
-  // in table GET_X86_SSE2AVX_TABLE
-  if (MCOptions.SSE2AVX)
-    replaceSSE2AVXOpcode(Inst);
 
   // If exactly one matched, then we treat that as a successful match (and the
   // instruction will already have been filled in correctly, since the failing
