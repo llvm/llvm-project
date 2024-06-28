@@ -568,7 +568,7 @@ void traverseType(QualType T, register_binding_flags &r) {
       case llvm::hlsl::ResourceClass::Sampler: {
         r.sampler = true;
         break;
-      }     
+      }
       }
     }
 
@@ -639,7 +639,7 @@ register_binding_flags HLSLFillRegisterBindingFlags(Sema &S, Decl *D) {
       case llvm::hlsl::ResourceClass::Sampler: {
         r.sampler = true;
         break;
-      }      
+      }
       }
     } else {
       if (SamplerUAVOrSRV->getType()->isBuiltinType())
@@ -676,9 +676,10 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
-  if (dyn_cast<VarDecl>(D)) {  
-    if (SemaRef.RequireCompleteType(D->getBeginLoc(), cast<ValueDecl>(D)->getType(),
-                              diag::err_incomplete_type))
+  if (dyn_cast<VarDecl>(D)) {
+    if (SemaRef.RequireCompleteType(D->getBeginLoc(),
+                                    cast<ValueDecl>(D)->getType(),
+                                    diag::err_incomplete_type))
       return;
   }
   StringRef Space = "space0";
