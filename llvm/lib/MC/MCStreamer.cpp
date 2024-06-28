@@ -118,6 +118,12 @@ ArrayRef<MCDwarfFrameInfo> MCStreamer::getDwarfFrameInfos() const {
   return DwarfFrameInfos;
 }
 
+MCFragment *MCStreamer::getCurrentFragment() const {
+  assert(!getCurrentSection().first ||
+         CurFrag->getParent() == getCurrentSection().first);
+  return CurFrag;
+}
+
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
 void MCStreamer::addExplicitComment(const Twine &T) {}
@@ -1218,7 +1224,9 @@ void MCStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {}
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
-void MCStreamer::changeSection(MCSection *, uint32_t) {}
+void MCStreamer::changeSection(MCSection *Section, uint32_t) {
+  CurFrag = &Section->getDummyFragment();
+}
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
@@ -1288,6 +1296,12 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
   }
   switchSection(Section, Subsec);
   return false;
+}
+
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  CurFrag = &Section->getDummyFragment();
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

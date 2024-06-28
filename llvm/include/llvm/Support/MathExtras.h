@@ -435,7 +435,8 @@ inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
 }
 
 /// Returns the integer ceil(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow.
+/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
+/// is -1.
 inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
   assert(Denominator && "Division by zero");
   if (!Numerator)
@@ -448,7 +449,8 @@ inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
 }
 
 /// Returns the integer floor(Numerator / Denominator). Signed version.
-/// Guaranteed to never overflow.
+/// Guaranteed to never overflow, unless Numerator is INT64_MIN and Denominator
+/// is -1.
 inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
   assert(Denominator && "Division by zero");
   if (!Numerator)
