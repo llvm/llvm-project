@@ -153,7 +153,7 @@ sqrt(InType x) {
         y |= 1 << 1;
       }
       // Sticky bit.
-      y |= r != 0;
+      y |= static_cast<unsigned int>(r != 0);
 
       DyadicFloat yd(Sign::POS, (x_exp >> 1) - 2 - InFPBits::FRACTION_LEN, y);
       return yd.template as<OutType, /*ShouldSignalExceptions=*/true>();
