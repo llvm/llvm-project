@@ -38,6 +38,8 @@ public:
       GenericDomTreeUpdater<DomTreeUpdater, DominatorTree, PostDominatorTree>;
   using Base::Base;
 
+  ~DomTreeUpdater() { flush(); }
+
   ///@{
   /// \name Mutation APIs
   ///
