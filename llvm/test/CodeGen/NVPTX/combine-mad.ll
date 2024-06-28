@@ -134,3 +134,52 @@ define i32 @test3(i32 %n, i32 %m, i32 %s) {
   %mul = mul i32 %sel, %m
   ret i32 %mul
 }
+
+;; (add (select 0, (mul a, b)), c) -> (select (mad a, b, c), c)
+define i32 @test4(i32 %a, i32 %b, i32 %c, i1 %p) {
+; CHECK-LABEL: test4(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u8 %rs1, [test4_param_3];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    ld.param.u32 %r1, [test4_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [test4_param_1];
+; CHECK-NEXT:    ld.param.u32 %r3, [test4_param_2];
+; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    selp.b32 %r5, %r4, %r3, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    ret;
+  %mul = mul i32 %a, %b
+  %sel = select i1 %p, i32 %mul, i32 0
+  %add = add i32 %c, %sel
+  ret i32 %add
+}
+
+define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
+; CHECK-LABEL: test4_rev(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u8 %rs1, [test4_rev_param_3];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    ld.param.u32 %r1, [test4_rev_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [test4_rev_param_1];
+; CHECK-NEXT:    ld.param.u32 %r3, [test4_rev_param_2];
+; CHECK-NEXT:    mad.lo.s32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    selp.b32 %r5, %r3, %r4, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r5;
+; CHECK-NEXT:    ret;
+  %mul = mul i32 %a, %b
+  %sel = select i1 %p, i32 0, i32 %mul
+  %add = add i32 %c, %sel
+  ret i32 %add
+}

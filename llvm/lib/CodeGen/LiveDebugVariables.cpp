@@ -764,9 +764,9 @@ void LDVImpl::print(raw_ostream &OS) {
 #endif
 
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
-  for (unsigned i = 0, e = locations.size(); i != e; ++i)
-    if (locations[i].isReg() && locations[i].getReg().isVirtual())
-      LDV->mapVirtReg(locations[i].getReg(), this);
+  for (const MachineOperand &MO : locations)
+    if (MO.isReg() && MO.getReg().isVirtual())
+      LDV->mapVirtReg(MO.getReg(), this);
 }
 
 UserValue *
@@ -1254,9 +1254,9 @@ void LDVImpl::computeIntervals() {
   LexicalScopes LS;
   LS.initialize(*MF);
 
-  for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
-    userValues[i]->mapVirtRegs(this);
+  for (const auto &UV : userValues) {
+    UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
+    UV->mapVirtRegs(this);
   }
 }
 

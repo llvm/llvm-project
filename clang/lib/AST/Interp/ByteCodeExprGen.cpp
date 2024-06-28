@@ -2695,7 +2695,18 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
     return true;
   assert(!Initializing);
 
-  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(E->getGuidDecl());
+  const MSGuidDecl *GuidDecl = E->getGuidDecl();
+  const RecordDecl *RD = GuidDecl->getType()->getAsRecordDecl();
+  assert(RD);
+  // If the definiton of the result type is incomplete, just return a dummy.
+  // If (and when) that is read from, we will fail, but not now.
+  if (!RD->isCompleteDefinition()) {
+    if (std::optional<unsigned> I = P.getOrCreateDummy(GuidDecl))
+      return this->emitGetPtrGlobal(*I, E);
+    return false;
+  }
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(GuidDecl);
   if (!GlobalIndex)
     return false;
   if (!this->emitGetPtrGlobal(*GlobalIndex, E))
@@ -2703,7 +2714,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(this->getRecord(E->getType()));
 
-  const APValue &V = E->getGuidDecl()->getAsAPValue();
+  const APValue &V = GuidDecl->getAsAPValue();
   if (V.getKind() == APValue::None)
     return true;
 
@@ -2928,6 +2939,39 @@ bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
     return this->emitInvalid(E);
 
   return this->delegate(E->getSubExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXStdInitializerListExpr(
+    const CXXStdInitializerListExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  const ConstantArrayType *ArrayType =
+      Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
+  const Record *R = getRecord(E->getType());
+  assert(Initializing);
+  assert(SubExpr->isGLValue());
+
+  if (!this->visit(SubExpr))
+    return false;
+  if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+
+  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  if (isIntegralType(SecondFieldT)) {
+    if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()),
+                         SecondFieldT, E))
+      return false;
+    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+  }
+  assert(SecondFieldT == PT_Ptr);
+
+  if (!this->emitGetFieldPtr(R->getField(0u)->Offset, E))
+    return false;
+  if (!this->emitConst(static_cast<APSInt>(ArrayType->getSize()), PT_Uint64, E))
+    return false;
+  if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+    return false;
+  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
