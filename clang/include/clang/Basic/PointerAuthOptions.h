@@ -219,21 +219,15 @@ struct PointerAuthOptions {
   /// The ABI for C function pointers.
   PointerAuthSchema FunctionPointers;
 
-  /// The ABI for block invocation function pointers.
-  PointerAuthSchema BlockInvocationFunctionPointers;
-
-  /// The ABI for block object copy/destroy function pointers.
-  PointerAuthSchema BlockHelperFunctionPointers;
-
-  /// The ABI for __block variable copy/destroy function pointers.
-  PointerAuthSchema BlockByrefHelperFunctionPointers;
-
-  /// The ABI for Objective-C method lists.
-  PointerAuthSchema ObjCMethodListFunctionPointers;
-
   /// The ABI for C++ virtual table pointers (the pointer to the table
   /// itself) as installed in an actual class instance.
   PointerAuthSchema CXXVTablePointers;
+
+  /// TypeInfo has external ABI requirements and is emitted without
+  /// actually having parsed the libcxx definition, so we can't simply
+  /// perform a look up. The settings for this should match the exact
+  /// specification in type_info.h
+  PointerAuthSchema CXXTypeInfoVTablePointer;
 
   /// The ABI for C++ virtual table pointers as installed in a VTT.
   PointerAuthSchema CXXVTTVTablePointers;
@@ -246,6 +240,18 @@ struct PointerAuthOptions {
 
   /// The ABI for C++ member function pointers.
   PointerAuthSchema CXXMemberFunctionPointers;
+
+  /// The ABI for block invocation function pointers.
+  PointerAuthSchema BlockInvocationFunctionPointers;
+
+  /// The ABI for block object copy/destroy function pointers.
+  PointerAuthSchema BlockHelperFunctionPointers;
+
+  /// The ABI for __block variable copy/destroy function pointers.
+  PointerAuthSchema BlockByrefHelperFunctionPointers;
+
+  /// The ABI for Objective-C method lists.
+  PointerAuthSchema ObjCMethodListFunctionPointers;
 };
 
 } // end namespace clang

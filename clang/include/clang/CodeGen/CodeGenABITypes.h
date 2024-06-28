@@ -125,6 +125,7 @@ llvm::Constant *getConstantSignedPointer(CodeGenModule &CGM,
                                          unsigned key,
                                          llvm::Constant *storageAddress,
                                          llvm::ConstantInt *otherDiscriminator);
+
 /// Given the language and code-generation options that Clang was configured
 /// with, set the default LLVM IR attributes for a function definition.
 /// The attributes set here are mostly global target-configuration and

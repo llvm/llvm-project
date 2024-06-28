@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -mllvm -ptrauth-emit-wrapper-globals=0 -triple arm64-apple-ios -fptrauth-calls -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV1A = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr ptrauth (ptr @_ZNK1A3abcEv, i32 0, i64 12401, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2)), ptr null] }, align 8
-// CHECK: @_ZTV4Base = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr ptrauth (ptr @_ZNK4Base3abcEv, i32 0, i64 64320, ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV4Base, i32 0, i32 0, i32 2)), ptr null] }, align 8
-// CHECK: @_ZTV8Derived2 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr ptrauth (ptr @_ZNK8Derived23efgEv, i32 0, i64 36603, ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV8Derived2, i32 0, i32 0, i32 3)), ptr null] }, align 8
-// CHECK: @_ZTV2D2 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr ptrauth (ptr @_ZNK2D23abcEv, i32 0, i64 20222, ptr getelementptr inbounds ({ [5 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 3)), ptr null] }, align 8
+// CHECK: @_ZTV1A = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK1A3abcEv.ptrauth, ptr null] }
+// CHECK: @_ZTV4Base = unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZNK4Base3abcEv.ptrauth, ptr null] }
+// CHECK: @_ZTV8Derived2 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK8Derived23efgEv.ptrauth, ptr null] }
+// CHECK: @_ZTV2D2 = unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZNK2D23abcEv.ptrauth, ptr null] }
 
 struct A {
   virtual const char* abc(void) const;
