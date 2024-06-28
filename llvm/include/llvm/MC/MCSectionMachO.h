@@ -75,7 +75,6 @@ public:
                             raw_ostream &OS,
                             uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
 
   void allocAtoms();
   const MCSymbol *getAtom(size_t I) const;

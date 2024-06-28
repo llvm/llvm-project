@@ -1345,9 +1345,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_ordered_add:
-  case Intrinsic::amdgcn_ds_ordered_swap:
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
+  case Intrinsic::amdgcn_ds_ordered_swap: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
@@ -1612,8 +1610,6 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
-  case Intrinsic::amdgcn_ds_fmax:
-  case Intrinsic::amdgcn_ds_fmin:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
@@ -9309,15 +9305,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax: {
-    MemSDNode *M = cast<MemSDNode>(Op);
-    unsigned Opc = IntrID == Intrinsic::amdgcn_ds_fmin ? ISD::ATOMIC_LOAD_FMIN
-                                                       : ISD::ATOMIC_LOAD_FMAX;
-    return DAG.getAtomic(Opc, SDLoc(Op), M->getMemoryVT(), M->getOperand(0),
-                         M->getOperand(2), M->getOperand(3),
-                         M->getMemOperand());
-  }
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
@@ -16749,13 +16736,20 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     if (Subtarget->hasBufferFlatGlobalAtomicsF64() && Ty->isDoubleTy())
       return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
-    if (AS != AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
-      // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
-      if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
-      if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    if (AS != AMDGPUAS::FLAT_ADDRESS) {
+      if (Ty->isFloatTy()) {
+        // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
+        if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+        if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      } else {
+        // gfx908
+        if (RMW->use_empty() &&
+            Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() && isHalf2(Ty))
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      }
     }
 
     // flat atomic fadd f32: gfx940, gfx11+.

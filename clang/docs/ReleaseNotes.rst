@@ -104,7 +104,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -115,6 +115,7 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -738,6 +739,9 @@ Bug Fixes in This Version
   types rather than silently defaulting to false. This fixes a class of false
   negatives where the analysis failed to detect unchecked access to guarded
   data.
+
+- ``__is_trivially_equality_comparable`` no longer returns true for types which
+  have a constrained defaulted comparison operator (#GH89293).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

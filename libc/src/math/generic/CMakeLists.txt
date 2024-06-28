@@ -262,6 +262,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sincos
+  SRCS
+    sincos.cpp
+  HDRS
+    ../sincos.h
+  DEPENDS
+    .range_reduction_double
+    .sincos_eval
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sincosf
   SRCS
     sincosf.cpp
@@ -3768,11 +3790,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16fma
+  SRCS
+    f16fma.cpp
+  HDRS
+    ../f16fma.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O0 -ggdb3
+)
+
+add_entrypoint_object(
   f16fmaf
   SRCS
     f16fmaf.cpp
   HDRS
     ../f16fmaf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16fmal
+  SRCS
+    f16fmal.cpp
+  HDRS
+    ../f16fmal.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16fmaf128
+  SRCS
+    f16fmaf128.cpp
+  HDRS
+    ../f16fmaf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.fma
