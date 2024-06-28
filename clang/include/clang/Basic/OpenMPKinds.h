@@ -371,7 +371,7 @@ bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
 
 /// Checks if the specified directive is considered as "executable". This
 /// combines the OpenMP categories of "executable" and "subsidiary", plus
-/// any other directives that are should be treated as executable.
+/// any other directives that should be treated as executable.
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
