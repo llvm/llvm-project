@@ -1117,7 +1117,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
       os << "return ::mlir::success();\n";
     }
-    os << "};\n";
+    os << "}\n";
   }
   os << "};\n\n";
 }
