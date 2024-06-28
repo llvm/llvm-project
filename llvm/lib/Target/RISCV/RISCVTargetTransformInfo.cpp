@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
@@ -35,6 +36,72 @@ static cl::opt<unsigned> SLPMaxVF(
         "Overrides result used for getMaximumVF query which is used "
         "exclusively by SLP vectorizer."),
     cl::Hidden);
+
+bool RISCVTTIImpl::getMemoryRefInfo(SmallVectorImpl<MemoryRefInfo> &Interesting,
+                                    IntrinsicInst *II) const {
+  const DataLayout &DL = getDataLayout();
+  Intrinsic::ID IntNo = II->getIntrinsicID();
+  LLVMContext &C = II->getContext();
+  bool HasMask = false;
+
+  switch (IntNo) {
+  case Intrinsic::riscv_vle_mask:
+  case Intrinsic::riscv_vse_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vle:
+  case Intrinsic::riscv_vse: {
+    bool IsWrite = II->getType()->isVoidTy();
+    Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 1 - HasMask;
+    MaybeAlign Alignment =
+        II->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::get(MaskType, 1);
+    if (HasMask)
+      Mask = II->getArgOperand(VLIndex - 1);
+    Value *EVL = II->getArgOperand(VLIndex);
+    Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Alignment, Mask,
+                             EVL);
+    return true;
+  }
+  case Intrinsic::riscv_vlse_mask:
+  case Intrinsic::riscv_vsse_mask:
+    HasMask = true;
+    [[fallthrough]];
+  case Intrinsic::riscv_vlse:
+  case Intrinsic::riscv_vsse: {
+    bool IsWrite = II->getType()->isVoidTy();
+    Type *Ty = IsWrite ? II->getArgOperand(0)->getType() : II->getType();
+    const auto *RVVIInfo = RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
+    unsigned VLIndex = RVVIInfo->VLOperand;
+    unsigned PtrOperandNo = VLIndex - 2 - HasMask;
+    MaybeAlign Alignment =
+        II->getArgOperand(PtrOperandNo)->getPointerAlignment(DL);
+
+    Value *Stride = II->getArgOperand(PtrOperandNo + 1);
+    // Use the pointer alignment as the element alignment if the stride is a
+    // multiple of the pointer alignment. Otherwise, the element alignment
+    // should be Align(1).
+    unsigned PointerAlign = Alignment.valueOrOne().value();
+    if (!isa<ConstantInt>(Stride) ||
+        cast<ConstantInt>(Stride)->getZExtValue() % PointerAlign != 0)
+      Alignment = Align(1);
+
+    Type *MaskType = Ty->getWithNewType(Type::getInt1Ty(C));
+    Value *Mask = ConstantInt::get(MaskType, 1);
+    if (HasMask)
+      Mask = II->getArgOperand(VLIndex - 1);
+    Value *EVL = II->getArgOperand(VLIndex);
+    Interesting.emplace_back(II, PtrOperandNo, IsWrite, Ty, Alignment, Mask,
+                             EVL, Stride);
+    return true;
+  }
+  }
+  return false;
+}
 
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
