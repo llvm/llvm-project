@@ -191,7 +191,7 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
 /// Aggregates various functions for hoisting computations out of loop.
-static bool hoistArithmetics(Instruction &I, Loop &L,
+static bool hoistArithmetics(TargetTransformInfo *TTI, Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
@@ -467,9 +467,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                          MSSAU, &SafetyInfo, Flags, ORE);
   Flags.setIsSink(false);
   if (Preheader)
-    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
-                           MSSAU, SE, &SafetyInfo, Flags, ORE, LoopNestMode,
-                           LicmAllowSpeculation);
+    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI,
+                           TTI, L, MSSAU, SE, &SafetyInfo, Flags, ORE,
+                           LoopNestMode, LicmAllowSpeculation);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -873,9 +873,9 @@ public:
 ///
 bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                        DominatorTree *DT, AssumptionCache *AC,
-                       TargetLibraryInfo *TLI, Loop *CurLoop,
-                       MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
-                       ICFLoopSafetyInfo *SafetyInfo,
+                       TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+                       Loop *CurLoop, MemorySSAUpdater &MSSAU,
+                       ScalarEvolution *SE, ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
                        OptimizationRemarkEmitter *ORE, bool LoopNestMode,
                        bool AllowSpeculation) {
@@ -987,7 +987,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
       // Try to reassociate instructions so that part of computations can be
       // done out of loop.
-      if (hoistArithmetics(I, *CurLoop, *SafetyInfo, MSSAU, AC, DT)) {
+      if (hoistArithmetics(TTI, I, *CurLoop, *SafetyInfo, MSSAU, AC, DT)) {
         Changed = true;
         continue;
       }
@@ -2406,8 +2406,11 @@ bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
 /// Try to simplify things like (A < INV_1 AND icmp A < INV_2) into (A <
 /// min(INV_1, INV_2)), if INV_1 and INV_2 are both loop invariants and their
 /// minimun can be computed outside of loop, and X is not a loop-invariant.
-static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
-                        MemorySSAUpdater &MSSAU) {
+static bool hoistMinMax(TargetTransformInfo *TTI, Instruction &I, Loop &L,
+                        ICFLoopSafetyInfo &SafetyInfo, MemorySSAUpdater &MSSAU) {
+  if (TTI->needsPreserveRangeInfoInVerification())
+    return false;
+
   bool Inverse = false;
   using namespace PatternMatch;
   Value *Cond1, *Cond2;
@@ -2779,14 +2782,14 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   return true;
 }
 
-static bool hoistArithmetics(Instruction &I, Loop &L,
+static bool hoistArithmetics(TargetTransformInfo *TTI, Instruction &I, Loop &L,
                              ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT) {
   // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
   // into (x < min(INV1, INV2)), and hoisting the invariant part of this
   // expression out of the loop.
-  if (hoistMinMax(I, L, SafetyInfo, MSSAU)) {
+  if (hoistMinMax(TTI, I, L, SafetyInfo, MSSAU)) {
     ++NumHoisted;
     ++NumMinMaxHoisted;
     return true;

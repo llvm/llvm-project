@@ -3477,6 +3477,9 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
                                 DomTreeUpdater *DTU, const DataLayout &DL) {
+  if (TTI.needsPreserveRangeInfoInVerification())
+    return false;
+
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which

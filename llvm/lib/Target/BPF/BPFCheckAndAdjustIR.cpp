@@ -54,7 +54,6 @@ private:
   void checkIR(Module &M);
   bool adjustIR(Module &M);
   bool removePassThroughBuiltin(Module &M);
-  bool removeCompareBuiltin(Module &M);
   bool sinkMinMax(Module &M);
   bool removeGEPBuiltins(Module &M);
   bool insertASpaceCasts(Module &M);
@@ -127,46 +126,6 @@ bool BPFCheckAndAdjustIR::removePassThroughBuiltin(Module &M) {
         Changed = true;
         Value *Arg = Call->getArgOperand(1);
         Call->replaceAllUsesWith(Arg);
-        ToBeDeleted = Call;
-      }
-  return Changed;
-}
-
-bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
-  // Remove __builtin_bpf_compare()'s which are used to prevent
-  // certain IR optimizations. Now major IR optimizations are done,
-  // remove them.
-  bool Changed = false;
-  CallInst *ToBeDeleted = nullptr;
-  for (Function &F : M)
-    for (auto &BB : F)
-      for (auto &I : BB) {
-        if (ToBeDeleted) {
-          ToBeDeleted->eraseFromParent();
-          ToBeDeleted = nullptr;
-        }
-
-        auto *Call = dyn_cast<CallInst>(&I);
-        if (!Call)
-          continue;
-        auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
-        if (!GV)
-          continue;
-        if (!GV->getName().starts_with("llvm.bpf.compare"))
-          continue;
-
-        Changed = true;
-        Value *Arg0 = Call->getArgOperand(0);
-        Value *Arg1 = Call->getArgOperand(1);
-        Value *Arg2 = Call->getArgOperand(2);
-
-        auto OpVal = cast<ConstantInt>(Arg0)->getValue().getZExtValue();
-        CmpInst::Predicate Opcode = (CmpInst::Predicate)OpVal;
-
-        auto *ICmp = new ICmpInst(Opcode, Arg1, Arg2);
-        ICmp->insertBefore(Call);
-
-        Call->replaceAllUsesWith(ICmp);
         ToBeDeleted = Call;
       }
   return Changed;
@@ -532,12 +491,7 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
 }
 
 bool BPFCheckAndAdjustIR::adjustIR(Module &M) {
-  bool Changed = removePassThroughBuiltin(M);
-  Changed = removeCompareBuiltin(M) || Changed;
-  Changed = sinkMinMax(M) || Changed;
-  Changed = removeGEPBuiltins(M) || Changed;
-  Changed = insertASpaceCasts(M) || Changed;
-  return Changed;
+  return removePassThroughBuiltin(M);
 }
 
 bool BPFCheckAndAdjustIR::runOnModule(Module &M) {
