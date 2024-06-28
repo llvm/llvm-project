@@ -12079,12 +12079,15 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
-static void NoteImplicitDeductionGuide(Sema &S, CXXDeductionGuideDecl *DG) {
-  // We want to always print synthesized deduction guides for type aliases.
-  // They would retain the explicit bit of the corresponding constructor.
+static void NoteImplicitDeductionGuide(Sema &S, FunctionDecl *Fn) {
+  auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
+  if (!DG)
+    return;
   TemplateDecl *OriginTemplate =
       DG->getDeclName().getCXXDeductionGuideTemplate();
-  if (!DG->isImplicit() && (!OriginTemplate || !OriginTemplate->isTypeAlias()))
+  // We want to always print synthesized deduction guides for type aliases.
+  // They would retain the explicit bit of the corresponding constructor.
+  if (!(DG->isImplicit() || (OriginTemplate && OriginTemplate->isTypeAlias())))
     return;
   std::string FunctionProto;
   llvm::raw_string_ostream OS(FunctionProto);
@@ -12099,9 +12102,9 @@ static void NoteImplicitDeductionGuide(Sema &S, CXXDeductionGuideDecl *DG) {
       // aliases.
       // FIXME: Add a test once https://github.com/llvm/llvm-project/pull/96686
       // gets merged.
-      assert(
-          OriginTemplate->isTypeAlias() &&
-          "Only deduction guides for type aliases can have no template Decls");
+      assert(OriginTemplate->isTypeAlias() &&
+             "Non-template implicit deduction guides are only possible for "
+             "type aliases");
       DG->print(OS);
       S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
           << FunctionProto;
@@ -12182,12 +12185,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   // We prefer adding such notes at the end of the deduction failure because
   // duplicate code snippets appearing in the diagnostic would likely become
   // noisy.
-  auto _ = llvm::make_scope_exit([&] {
-    auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
-    if (!DG)
-      return;
-    NoteImplicitDeductionGuide(S, DG);
-  });
+  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:
