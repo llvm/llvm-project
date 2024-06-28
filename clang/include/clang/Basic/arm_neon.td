@@ -2097,7 +2097,7 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "r
   def VSTL1_LANE  : WInst<"vstl1_lane", "v*(.!)I", "QUlQlUlldQdPlQPl">;
 }
 
-//Lookup table read with 2-bit/4-bit indices
+// Lookup table read with 2-bit/4-bit indices
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
   def VLUTI2_B    : SInst<"vluti2_lane",    "Q.(qU)I",   "cUcPcQcQUcQPc">;
   def VLUTI2_B_Q  : SInst<"vluti2_laneq",   "Q.(QU)I",   "cUcPcQcQUcQPc">;
