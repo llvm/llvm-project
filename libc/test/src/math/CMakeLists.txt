@@ -1963,19 +1963,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  f16sqrtl_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    f16sqrtl_test.cpp
-  HDRS
-    SqrtTest.h
-  DEPENDS
-    libc.src.math.f16sqrtl
-)
-
-add_fp_unittest(
   f16fmaf_test
   NEED_MPFR
   SUITE
@@ -2016,6 +2003,19 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.f16sqrt
+)
+
+add_fp_unittest(
+  f16sqrtl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16sqrtl_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtl
 )
 
 add_subdirectory(generic)
