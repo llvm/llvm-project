@@ -111,34 +111,9 @@
     #elif   DECIMAL_DIG < 10
         #error "Mandatory macro DECIMAL_DIG is invalid."
     #endif
-
-    #if __FINITE_MATH_ONLY__ == 0
-        #ifndef INFINITY
-            #error "Mandatory macro INFINITY is missing."
-        #endif
-        #ifndef NAN
-            #error "Mandatory macro NAN is missing."
-        #endif
-    #else
-        #ifdef INFINITY
-            #error "Macro INFINITY should not be defined."
-        #endif
-
-        #ifdef NAN
-            #error "Macro NAN should not be defined."
-        #endif
-    #endif
 #else
     #ifdef DECIMAL_DIG
         #error "Macro DECIMAL_DIG should not be defined."
-    #endif
-
-    #ifdef INFINITY
-        #error "Macro INFINITY should not be defined."
-    #endif
-
-    #ifdef NAN
-        #error "Macro NAN should not be defined."
     #endif
 #endif
 
@@ -236,6 +211,21 @@
     #error "Mandatory macros {FLT,DBL,LDBL}_MAX_10_EXP are invalid."
 #endif
 
+#if __STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)
+  #ifndef INFINITY
+    #error "Mandatory macro INFINITY is missing."
+  #endif
+  #ifndef NAN
+    #error "Mandatory macro NAN is missing."
+  #endif
+#else
+  #ifdef INFINITY
+    #error "Macro INFINITY should not be defined."
+  #endif
+  #ifdef NAN
+    #error "Macro NAN should not be defined."
+  #endif
+#endif
 
 /* Internal consistency checks */
 _Static_assert(FLT_RADIX == __FLT_RADIX__, "");
@@ -273,3 +263,9 @@ _Static_assert(LDBL_MAX_EXP == __LDBL_MAX_EXP__, "");
 _Static_assert(FLT_MAX_10_EXP == __FLT_MAX_10_EXP__, "");
 _Static_assert(DBL_MAX_10_EXP == __DBL_MAX_10_EXP__, "");
 _Static_assert(LDBL_MAX_10_EXP == __LDBL_MAX_10_EXP__, "");
+
+#if (__STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)) && __FINITE_MATH_ONLY__ == 0
+// Ensure INFINITY and NAN are suitable for use in a constant expression.
+float f1 = INFINITY;
+float f2 = NAN;
+#endif

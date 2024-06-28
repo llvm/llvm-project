@@ -95,10 +95,6 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
     (defined(__cplusplus) && __cplusplus >= 201103L)
 #define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
-#if defined(__FINITE_MATH_ONLY__) && !__FINITE_MATH_ONLY__
-#  define INFINITY (__builtin_infinity())
-#  define NAN (__builtin_nan(""))
-#endif
 #endif
 #define FLT_ROUNDS (__builtin_flt_rounds())
 #define FLT_RADIX __FLT_RADIX__
@@ -159,6 +155,13 @@
 #  define FLT_HAS_SUBNORM __FLT_HAS_DENORM__
 #  define DBL_HAS_SUBNORM __DBL_HAS_DENORM__
 #  define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
+#endif
+
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+   /* C23 5.2.5.3.3p29-30 */
+#  define INFINITY (__builtin_inf())
+#  define NAN (__builtin_nan(""))
 #endif
 
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__
