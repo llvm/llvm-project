@@ -535,7 +535,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
 
-  if (opts::Verbosity >= 2) {
+  if (opts::Verbosity >= 1) {
     outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
            << " functions with similar names\n";
   }
