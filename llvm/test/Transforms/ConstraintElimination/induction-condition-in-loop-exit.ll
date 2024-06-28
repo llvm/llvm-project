@@ -364,6 +364,45 @@ exit:
   ret i1 %t
 }
 
+define i1 @multi_exiting_loop_eq_same_unique_exit_var_compare_not_known_due_to_start(ptr %s, i32 %N) {
+; CHECK-LABEL: define i1 @multi_exiting_loop_eq_same_unique_exit_var_compare_not_known_due_to_start(
+; CHECK-SAME: ptr [[S:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[S]], i32 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[LATCH_C:%.*]] = icmp ult i8 [[TMP0]], 10
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i32 [[IV]], [[N]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop.latch ]
+  %exitcond.not = icmp eq i32 %iv, %N
+  br i1 %exitcond.not, label %exit, label %loop.latch
+
+loop.latch:
+  %arrayidx = getelementptr inbounds i8, ptr %s, i32 %iv
+  %0 = load i8, ptr %arrayidx, align 1
+  %latch.c = icmp ult i8 %0, 10
+  %iv.next = add nuw nsw i32 %iv, 1
+  br i1 %latch.c, label %loop.header, label %exit
+
+exit:
+  %c = icmp ule i32 %iv, %N
+  ret i1 %c
+}
+
 define i1 @multi_exiting_loop_ne_same_unique_exit_const_compare_known(ptr %s) {
 ; CHECK-LABEL: define i1 @multi_exiting_loop_ne_same_unique_exit_const_compare_known(
 ; CHECK-SAME: ptr [[S:%.*]]) {
@@ -441,3 +480,5 @@ exit:
   %u = icmp ult i32 %iv, 1235
   ret i1 %u
 }
+
+
