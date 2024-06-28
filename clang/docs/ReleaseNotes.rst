@@ -116,6 +116,7 @@ ABI Changes in This Version
   compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by
   earlier versions of Clang unless such code is built with the compiler option
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+  (GH#70899).
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
