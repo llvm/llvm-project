@@ -73,12 +73,4 @@ executable("lldb-server") {
   if (current_os == "android") {
     output_dir = "$root_build_dir/runtimes_ndk_cxx/$crt_current_target_arch"
   }
-
-  if (current_os == "mac") {
-    ldflags = [ "-Wl,-dead_strip" ]
-  } else if (current_os == "win") {
-    ldflags = [ "/OPT:REF" ]
-  } else {
-    ldflags = [ "-Wl,--gc-sections" ]
-  }
 }
