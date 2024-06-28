@@ -8872,55 +8872,6 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
                                          PLoc.getLine(), PLoc.getColumn(),
                                          SrcLocStrSize);
 }
-
-/// Emit the arrays used to pass the captures and map information to the
-/// offloading runtime library. If there is no map or capture information,
-/// return nullptr by reference.
-static void emitOffloadingArrays(
-    CodeGenFunction &CGF, MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
-    CGOpenMPRuntime::TargetDataInfo &Info, llvm::OpenMPIRBuilder &OMPBuilder,
-    bool IsNonContiguous = false) {
-  CodeGenModule &CGM = CGF.CGM;
-
-  // Reset the array information.
-  Info.clearArrayInfo();
-  Info.NumberOfPtrs = CombinedInfo.BasePointers.size();
-
-  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
-                         CGF.AllocaInsertPt->getIterator());
-  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
-                          CGF.Builder.GetInsertPoint());
-
-  auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
-    return emitMappingInformation(CGF, OMPBuilder, MapExpr);
-  };
-  if (CGM.getCodeGenOpts().getDebugInfo() !=
-      llvm::codegenoptions::NoDebugInfo) {
-    CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
-    llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
-                    FillInfoMap);
-  }
-
-  auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
-    if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
-      Info.CaptureDeviceAddrMap.try_emplace(DevVD, NewDecl);
-    }
-  };
-
-  auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Value *MFunc = nullptr;
-    if (CombinedInfo.Mappers[I]) {
-      Info.HasMapper = true;
-      MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
-          cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
-    }
-    return MFunc;
-  };
-  OMPBuilder.emitOffloadingArrays(AllocaIP, CodeGenIP, CombinedInfo, Info,
-                                  /*IsNonContiguous=*/true, DeviceAddrCB,
-                                  CustomMapperCB);
-}
 /// Emit the arrays used to pass the captures and map information to the
 /// offloading runtime library. If there is no map or capture information,
 /// return nullptr by reference.
