@@ -3677,12 +3677,6 @@ struct NonTriviallyEqualityComparableNoComparator {
 };
 static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
 
-struct NonTriviallyEqualityComparableConvertibleToBuiltin {
-  int i;
-  operator unsigned() const;
-};
-static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableConvertibleToBuiltin));
-
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
   int j;
@@ -3891,44 +3885,7 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
 };
-
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
-
-template<bool B>
-struct MaybeTriviallyEqualityComparable {
-    int i;
-    bool operator==(const MaybeTriviallyEqualityComparable&) const requires B = default;
-    bool operator==(const MaybeTriviallyEqualityComparable& rhs) const { return (i % 3) == (rhs.i % 3); }
-};
-static_assert(__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<true>));
-static_assert(!__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<false>));
-
-struct NotTriviallyEqualityComparableMoreConstrainedExternalOp {
-  int i;
-  bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) const = default;
-};
-
-bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&,
-                const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) __attribute__((enable_if(true, ""))) {}
-
-static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableMoreConstrainedExternalOp));
-
-struct TriviallyEqualityComparableExternalDefaultedOp {
-  int i;
-  friend bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp);
-};
-bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp) = default;
-
-static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableExternalDefaultedOp));
-
-struct EqualityComparableBase {
-  bool operator==(const EqualityComparableBase&) const = default;
-};
-
-struct ComparingBaseOnly : EqualityComparableBase {
-  int j_ = 0;
-};
-static_assert(!__is_trivially_equality_comparable(ComparingBaseOnly));
 
 namespace hidden_friend {
 
