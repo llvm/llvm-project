@@ -60,7 +60,6 @@ enum PGOCtxProfileBlockIDs {
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
 class PGOCtxProfileWriter final {
-  SmallVector<char, 1 << 20> Buff;
   BitstreamWriter Writer;
 
   void writeCounters(const ctx_profile::ContextNode &Node);
