@@ -21,6 +21,15 @@ using LlvmLibcSinpifExhaustiveTest =
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
+// Range: [0, Inf]
 TEST_F(LlvmLibcSinpifExhaustiveTest, PostiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
+}
+
+// Range: [-Inf, 0]
+static constexpr uint32_t NEG_START = 0xb000'0000U;
+static constexpr uint32_t NEG_STOP = 0xff80'0000U;
+
+TEST_F(LlvmLibcSinpifExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

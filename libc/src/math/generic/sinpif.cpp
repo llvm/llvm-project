@@ -78,13 +78,15 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   // |x| <= 1/16
   if (LIBC_UNLIKELY(x_abs <= 0x3d80'0000U)) {
 
-    if (LIBC_UNLIKELY(x_abs < 0x33FC'1538U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x33CD'01D7U)) {
       if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
-
-      double xdpi =  xd * 0x1.921fb54442d18p1; // pi
+      
+      // For very small values we can approximate sinpi(x) with x * pi
+      // An exhaustive test shows that this is accurate for |x| < 9.546391 × 10-8
+      double xdpi =  xd * 0x1.921fb54442d18p1;
       return static_cast<float>(xdpi);
     }
 
