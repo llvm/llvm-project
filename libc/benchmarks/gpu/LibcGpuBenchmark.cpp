@@ -92,7 +92,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   for (int i = 0; i < overhead_iterations; i++)
     overhead = cpp::min(overhead, LIBC_NAMESPACE::overhead());
 
-  for (uint64_t time_budget = options.max_duration; time_budget != 0;) {
+  for (int64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
     const clock_t start = static_cast<double>(clock());
     for (uint32_t i = 0; i < iterations; i++) {
