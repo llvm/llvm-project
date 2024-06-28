@@ -1265,9 +1265,7 @@ public:
 
   /// Return the DataLayout associated with the module this SCEV instance is
   /// operating on.
-  const DataLayout &getDataLayout() const {
-    return F.getDataLayout();
-  }
+  const DataLayout &getDataLayout() const { return DL; }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
   const SCEVPredicate *getComparePredicate(ICmpInst::Predicate Pred,
@@ -1372,6 +1370,9 @@ private:
 
   /// The function we are analyzing.
   Function &F;
+
+  /// Data layout of the module.
+  const DataLayout &DL;
 
   /// Does the module have any calls to the llvm.experimental.guard intrinsic
   /// at all?  If this is false, we avoid doing work that will only help if
