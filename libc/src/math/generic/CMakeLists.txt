@@ -3803,6 +3803,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16divl
+  SRCS
+    f16divl.cpp
+  HDRS
+    ../f16divl.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.generic.div
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16divf128
   SRCS
     f16divf128.cpp
