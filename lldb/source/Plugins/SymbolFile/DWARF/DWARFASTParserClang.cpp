@@ -237,20 +237,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   return type_sp;
 }
 
-static void ForcefullyCompleteType(CompilerType type) {
-  bool started = TypeSystemClang::StartTagDeclarationDefinition(type);
-  lldbassert(started && "Unable to start a class type definition.");
-  TypeSystemClang::CompleteTagDeclarationDefinition(type);
-  const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  auto ts_sp = type.GetTypeSystem();
-  auto ts = ts_sp.dyn_cast_or_null<TypeSystemClang>();
-  if (ts)
-    ts->SetDeclIsForcefullyCompleted(td);
-}
-
-/// This function serves a similar purpose as RequireCompleteType above, but it
-/// avoids completing the type if it is not immediately necessary. It only
-/// ensures we _can_ complete the type later.
+/// This function ensures we are able to add members (nested types, functions,
+/// etc.) to this type. It does so by starting its definition even if one cannot
+/// be found in the debug info. This means the type may need to be "forcibly
+/// completed" later -- see CompleteTypeFromDWARF).
 static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
                                            ClangASTImporter &ast_importer,
                                            clang::DeclContext *decl_ctx,
@@ -260,14 +250,12 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
   if (!tag_decl_ctx)
     return; // Non-tag context are always ready.
 
-  // We have already completed the type, or we have found its definition and are
-  // ready to complete it later (cf. ParseStructureLikeDIE).
+  // We have already completed the type or it is already prepared.
   if (tag_decl_ctx->isCompleteDefinition() || tag_decl_ctx->isBeingDefined())
     return;
 
-  // We reach this point of the tag was present in the debug info as a
-  // declaration only. If it was imported from another AST context (in the
-  // gmodules case), we can complete the type by doing a full import.
+  // If this tag was imported from another AST context (in the gmodules case),
+  // we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
   CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
@@ -281,9 +269,9 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
         type_name_cstr ? type_name_cstr : "", die.GetOffset());
   }
 
-  // We don't have a type definition and/or the import failed. We must
-  // forcefully complete the type to avoid crashes.
-  ForcefullyCompleteType(type);
+  // We don't have a type definition and/or the import failed, but we need to
+  // add members to it. Start the definition to make that possible.
+  tag_decl_ctx->startDefinition();
 }
 
 ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
@@ -1098,85 +1086,53 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   if (!TypeSystemClang::IsCXXClassType(class_opaque_type))
     return {};
 
-  if (class_opaque_type.IsBeingDefined()) {
-    // We have a C++ member function with no children (this
-    // pointer!) and clang will get mad if we try and make
-    // a function that isn't well formed in the DWARF, so
-    // we will just skip it...
-    if (!is_static && !die.HasChildren())
-      return {true, nullptr};
+  PrepareContextToReceiveMembers(
+      m_ast, GetClangASTImporter(),
+      TypeSystemClang::GetDeclContextForType(class_opaque_type), die,
+      attrs.name.GetCString());
 
-    const bool is_attr_used = false;
-    // Neither GCC 4.2 nor clang++ currently set a valid
-    // accessibility in the DWARF for C++ methods...
-    // Default to public for now...
-    const auto accessibility = attrs.accessibility == eAccessNone
-                                   ? eAccessPublic
-                                   : attrs.accessibility;
+  // We have a C++ member function with no children (this pointer!) and clang
+  // will get mad if we try and make a function that isn't well formed in the
+  // DWARF, so we will just skip it...
+  if (!is_static && !die.HasChildren())
+    return {true, nullptr};
 
-    clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
-        class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
-        attrs.mangled_name, clang_type, accessibility, attrs.is_virtual,
-        is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
-        attrs.is_artificial);
+  const bool is_attr_used = false;
+  // Neither GCC 4.2 nor clang++ currently set a valid
+  // accessibility in the DWARF for C++ methods...
+  // Default to public for now...
+  const auto accessibility =
+      attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
 
-    if (cxx_method_decl) {
-      LinkDeclContextToDIE(cxx_method_decl, die);
+  clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
+      class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
+      attrs.mangled_name, clang_type, accessibility, attrs.is_virtual,
+      is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
+      attrs.is_artificial);
 
-      ClangASTMetadata metadata;
-      metadata.SetUserID(die.GetID());
+  if (cxx_method_decl) {
+    LinkDeclContextToDIE(cxx_method_decl, die);
 
-      char const *object_pointer_name =
-          attrs.object_pointer ? attrs.object_pointer.GetName() : nullptr;
-      if (object_pointer_name) {
-        metadata.SetObjectPtrName(object_pointer_name);
-        LLDB_LOGF(log,
-                  "Setting object pointer name: %s on method "
-                  "object %p.\n",
-                  object_pointer_name, static_cast<void *>(cxx_method_decl));
-      }
-      m_ast.SetMetadata(cxx_method_decl, metadata);
-    } else {
-      ignore_containing_context = true;
+    ClangASTMetadata metadata;
+    metadata.SetUserID(die.GetID());
+
+    char const *object_pointer_name =
+        attrs.object_pointer ? attrs.object_pointer.GetName() : nullptr;
+    if (object_pointer_name) {
+      metadata.SetObjectPtrName(object_pointer_name);
+      LLDB_LOGF(log, "Setting object pointer name: %s on method object %p.\n",
+                object_pointer_name, static_cast<void *>(cxx_method_decl));
     }
-
-    // Artificial methods are always handled even when we
-    // don't create a new declaration for them.
-    const bool type_handled = cxx_method_decl != nullptr || attrs.is_artificial;
-
-    return {type_handled, nullptr};
+    m_ast.SetMetadata(cxx_method_decl, metadata);
+  } else {
+    ignore_containing_context = true;
   }
 
-  // We were asked to parse the type for a method in a
-  // class, yet the class hasn't been asked to complete
-  // itself through the clang::ExternalASTSource protocol,
-  // so we need to just have the class complete itself and
-  // do things the right way, then our
-  // DIE should then have an entry in the
-  // dwarf->GetDIEToType() map. First
-  // we need to modify the dwarf->GetDIEToType() so it
-  // doesn't think we are trying to parse this DIE
-  // anymore...
-  dwarf->GetDIEToType().erase(die.GetDIE());
+  // Artificial methods are always handled even when we
+  // don't create a new declaration for them.
+  const bool type_handled = cxx_method_decl != nullptr || attrs.is_artificial;
 
-  // Now we get the full type to force our class type to
-  // complete itself using the clang::ExternalASTSource
-  // protocol which will parse all base classes and all
-  // methods (including the method for this DIE).
-  class_type->GetFullCompilerType();
-
-  // The type for this DIE should have been filled in the
-  // function call above.
-  Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
-  if (type_ptr && type_ptr != DIE_IS_BEING_PARSED)
-    return {true, type_ptr->shared_from_this()};
-
-  // The previous comment isn't actually true if the class wasn't
-  // resolved using the current method's parent DIE as source
-  // data. We need to ensure that we look up the method correctly
-  // in the class and then link the method's DIE to the unique
-  // CXXMethodDecl appropriately.
-  return {true, nullptr};
+  return {type_handled, nullptr};
 }
 
 TypeSP
@@ -1907,72 +1863,21 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                            *unique_ast_entry_up);
 
-  if (!attrs.is_forward_declaration) {
-    // Always start the definition for a class type so that if the class
-    // has child classes or types that require the class to be created
-    // for use as their decl contexts the class will be ready to accept
-    // these child definitions.
-    if (!def_die.HasChildren()) {
-      // No children for this struct/union/class, lets finish it
-      if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
-        TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
-      } else {
-        dwarf->GetObjectFile()->GetModule()->ReportError(
-
-            "DWARF DIE {0:x16} named \"{1}\" was not able to start its "
-            "definition.\nPlease file a bug and attach the file at the "
-            "start of this error message",
-            def_die.GetID(), attrs.name.GetCString());
-      }
-
-      // Setting authority byte size and alignment for empty structures.
-      //
-      // If the byte size or alignmenet of the record is specified then
-      // overwrite the ones that would be computed by Clang.
-      // This is only needed as LLDB's TypeSystemClang is always in C++ mode,
-      // but some compilers such as GCC and Clang give empty structs a size of 0
-      // in C mode (in contrast to the size of 1 for empty structs that would be
-      // computed in C++ mode).
-      if (attrs.byte_size || attrs.alignment) {
-        clang::RecordDecl *record_decl =
-            TypeSystemClang::GetAsRecordDecl(clang_type);
-        if (record_decl) {
-          ClangASTImporter::LayoutInfo layout;
-          layout.bit_size = attrs.byte_size.value_or(0) * 8;
-          layout.alignment = attrs.alignment.value_or(0) * 8;
-          GetClangASTImporter().SetRecordLayout(record_decl, layout);
-        }
-      }
-    } else if (clang_type_was_created) {
-      // Start the definition if the class is not objective C since the
-      // underlying decls respond to isCompleteDefinition(). Objective
-      // C decls don't respond to isCompleteDefinition() so we can't
-      // start the declaration definition right away. For C++
-      // class/union/structs we want to start the definition in case the
-      // class is needed as the declaration context for a contained class
-      // or type without the need to complete that type..
-
-      if (attrs.class_language != eLanguageTypeObjC &&
-          attrs.class_language != eLanguageTypeObjC_plus_plus)
-        TypeSystemClang::StartTagDeclarationDefinition(clang_type);
-
-      // Leave this as a forward declaration until we need to know the
-      // details of the type. lldb_private::Type will automatically call
-      // the SymbolFile virtual function
-      // "SymbolFileDWARF::CompleteType(Type *)" When the definition
-      // needs to be defined.
-      assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
-                 ClangUtil::RemoveFastQualifiers(clang_type)
-                     .GetOpaqueQualType()) &&
-             "Type already in the forward declaration map!");
-      // Can't assume m_ast.GetSymbolFile() is actually a
-      // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
-      // binaries.
-      dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
-          ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
-          *def_die.GetDIERef());
-      m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
-    }
+  if (clang_type_was_created) {
+    // Leave this as a forward declaration until we need to know the
+    // details of the type. lldb_private::Type will automatically call
+    // the SymbolFile virtual function
+    // "SymbolFileDWARF::CompleteType(Type *)" When the definition
+    // needs to be defined.
+    bool inserted =
+        dwarf->GetForwardDeclCompilerTypeToDIE()
+            .try_emplace(
+                ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
+                *def_die.GetDIERef())
+            .second;
+    assert(inserted && "Type already in the forward declaration map!");
+    (void)inserted;
+    m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
   }
 
   // If we made a clang type, set the trivial abi if applicable: We only
@@ -2206,87 +2111,82 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   ClangASTImporter::LayoutInfo layout_info;
   std::vector<DWARFDIE> contained_type_dies;
 
-  if (die.HasChildren()) {
-    const bool type_is_objc_object_or_interface =
-        TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type);
-    if (type_is_objc_object_or_interface) {
-      // For objective C we don't start the definition when the class is
-      // created.
-      TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+  if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
+    return false; // No definition, cannot complete.
+
+  // Start the definition if the type is not being defined already. This can
+  // happen (e.g.) when adding nested types to a class type -- see
+  // PrepareContextToReceiveMembers.
+  if (!clang_type.IsBeingDefined())
+    TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+
+  AccessType default_accessibility = eAccessNone;
+  if (tag == DW_TAG_structure_type) {
+    default_accessibility = eAccessPublic;
+  } else if (tag == DW_TAG_union_type) {
+    default_accessibility = eAccessPublic;
+  } else if (tag == DW_TAG_class_type) {
+    default_accessibility = eAccessPrivate;
+  }
+
+  std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
+  // Parse members and base classes first
+  std::vector<DWARFDIE> member_function_dies;
+
+  DelayedPropertyList delayed_properties;
+  ParseChildMembers(die, clang_type, bases, member_function_dies,
+                    contained_type_dies, delayed_properties,
+                    default_accessibility, layout_info);
+
+  // Now parse any methods if there were any...
+  for (const DWARFDIE &die : member_function_dies)
+    dwarf->ResolveType(die);
+
+  if (TypeSystemClang::IsObjCObjectOrInterfaceType(clang_type)) {
+    ConstString class_name(clang_type.GetTypeName());
+    if (class_name) {
+      dwarf->GetObjCMethods(class_name, [&](DWARFDIE method_die) {
+        method_die.ResolveType();
+        return true;
+      });
+
+      for (DelayedAddObjCClassProperty &property : delayed_properties)
+        property.Finalize();
+    }
+  }
+
+  if (!bases.empty()) {
+    // Make sure all base classes refer to complete types and not forward
+    // declarations. If we don't do this, clang will crash with an
+    // assertion in the call to clang_type.TransferBaseClasses()
+    for (const auto &base_class : bases) {
+      clang::TypeSourceInfo *type_source_info = base_class->getTypeSourceInfo();
+      if (type_source_info)
+        TypeSystemClang::RequireCompleteType(
+            m_ast.GetType(type_source_info->getType()));
     }
 
-    AccessType default_accessibility = eAccessNone;
-    if (tag == DW_TAG_structure_type) {
-      default_accessibility = eAccessPublic;
-    } else if (tag == DW_TAG_union_type) {
-      default_accessibility = eAccessPublic;
-    } else if (tag == DW_TAG_class_type) {
-      default_accessibility = eAccessPrivate;
-    }
-
-    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
-    // Parse members and base classes first
-    std::vector<DWARFDIE> member_function_dies;
-
-    DelayedPropertyList delayed_properties;
-    ParseChildMembers(die, clang_type, bases, member_function_dies,
-                      contained_type_dies, delayed_properties,
-                      default_accessibility, layout_info);
-
-    // Now parse any methods if there were any...
-    for (const DWARFDIE &die : member_function_dies)
-      dwarf->ResolveType(die);
-
-    if (type_is_objc_object_or_interface) {
-      ConstString class_name(clang_type.GetTypeName());
-      if (class_name) {
-        dwarf->GetObjCMethods(class_name, [&](DWARFDIE method_die) {
-          method_die.ResolveType();
-          return true;
-        });
-
-        for (DelayedAddObjCClassProperty &property : delayed_properties)
-          property.Finalize();
-      }
-    }
-
-    if (!bases.empty()) {
-      // Make sure all base classes refer to complete types and not forward
-      // declarations. If we don't do this, clang will crash with an
-      // assertion in the call to clang_type.TransferBaseClasses()
-      for (const auto &base_class : bases) {
-        clang::TypeSourceInfo *type_source_info =
-            base_class->getTypeSourceInfo();
-        if (type_source_info)
-          TypeSystemClang::RequireCompleteType(
-              m_ast.GetType(type_source_info->getType()));
-      }
-
-      m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
-                                std::move(bases));
-    }
+    m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(), std::move(bases));
   }
 
   m_ast.AddMethodOverridesForCXXRecordType(clang_type.GetOpaqueQualType());
   TypeSystemClang::BuildIndirectFields(clang_type);
   TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
 
-  if (!layout_info.field_offsets.empty() || !layout_info.base_offsets.empty() ||
-      !layout_info.vbase_offsets.empty()) {
-    if (type)
-      layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
-    if (layout_info.bit_size == 0)
-      layout_info.bit_size =
-          die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
-    if (layout_info.alignment == 0)
-      layout_info.alignment =
-          die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
+  if (type)
+    layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
+  if (layout_info.bit_size == 0)
+    layout_info.bit_size =
+        die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  if (layout_info.alignment == 0)
+    layout_info.alignment =
+        die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
-    clang::CXXRecordDecl *record_decl =
-        m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
-    if (record_decl)
-      GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
-  }
+  clang::CXXRecordDecl *record_decl =
+      m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
+  if (record_decl)
+    GetClangASTImporter().SetRecordLayout(record_decl, layout_info);
+
   // Now parse all contained types inside of the class. We make forward
   // declarations to all classes, but we need the CXXRecordDecl to have decls
   // for all contained types because we don't get asked for them via the
@@ -2334,15 +2234,25 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
   case DW_TAG_class_type:
-    return CompleteRecordType(die, type, clang_type);
+    CompleteRecordType(die, type, clang_type);
+    break;
   case DW_TAG_enumeration_type:
-    return CompleteEnumType(die, type, clang_type);
+    CompleteEnumType(die, type, clang_type);
+    break;
   default:
     assert(false && "not a forward clang type decl!");
     break;
   }
 
-  return false;
+  // If the type is still not fully defined at this point, it means we weren't
+  // able to find its definition. We must forcefully complete it to preserve
+  // clang AST invariants.
+  if (clang_type.IsBeingDefined()) {
+    TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
+    m_ast.SetDeclIsForcefullyCompleted(ClangUtil::GetAsTagDecl(clang_type));
+  }
+
+  return true;
 }
 
 void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(

@@ -268,7 +268,7 @@ class StackSafetyLocalAnalysis {
 
 public:
   StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
-      : F(F), DL(F.getParent()->getDataLayout()), SE(SE),
+      : F(F), DL(F.getDataLayout()), SE(SE),
         PointerSize(DL.getPointerSizeInBits()),
         UnknownRange(PointerSize, true) {}
 
@@ -852,7 +852,7 @@ GVToSSI createGlobalStackSafetyInfo(
     }
 
   uint32_t PointerSize =
-      Copy.begin()->first->getParent()->getDataLayout().getPointerSizeInBits();
+      Copy.begin()->first->getDataLayout().getPointerSizeInBits();
   StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy));
 
   for (const auto &F : SSDFA.run()) {

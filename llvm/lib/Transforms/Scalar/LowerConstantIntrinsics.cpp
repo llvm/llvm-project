@@ -103,7 +103,7 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   bool HasDeadBlocks = false;
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   SmallVector<WeakTrackingVH, 8> Worklist;
 
   ReversePostOrderTraversal<Function *> RPOT(&F);

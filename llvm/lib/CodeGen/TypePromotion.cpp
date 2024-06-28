@@ -924,7 +924,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   SafeToPromote.clear();
   SafeWrap.clear();
   bool MadeChange = false;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
