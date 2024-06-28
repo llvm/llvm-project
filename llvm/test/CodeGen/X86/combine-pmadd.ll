@@ -88,53 +88,47 @@ define <4 x i32> @combine_pmaddwd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
   ret <4 x i32> %4
 }
 
-; TODO
-define i32 @combine_pmaddwd_constant() {
+; TODO: [2] = (-5*13)+(6*-15) = -155 = 4294967141
+define <4 x i32> @combine_pmaddwd_constant() {
 ; SSE-LABEL: combine_pmaddwd_constant:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmovsxbw {{.*#+}} xmm0 = [65535,2,3,65532,65531,6,7,65528]
 ; SSE-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [65531,7,65527,65525,13,65521,17,65517]
-; SSE-NEXT:    pextrd $2, %xmm0, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pmaddwd_constant:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [65535,2,3,65532,65531,6,7,65528]
 ; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [65531,7,65527,65525,13,65521,17,65517]
-; AVX-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8>, <8 x i16> <i16 -5, i16 7, i16 -9, i16 -11, i16 13, i16 -15, i16 17, i16 -19>)
-  %2 = extractelement <4 x i32> %1, i32 2 ; (-5*13)+(6*-15) = -155
-  ret i32 %2
+  ret <4 x i32> %1
 }
 
 ; ensure we don't assume pmaddwd performs add nsw
-define i32 @combine_pmaddwd_constant_nsw() {
+; TODO: (-32768*-32768)+(-32768*-32768) = 0x80000000 = 2147483648
+define <4 x i32> @combine_pmaddwd_constant_nsw() {
 ; SSE-LABEL: combine_pmaddwd_constant_nsw:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; SSE-NEXT:    pmaddwd %xmm0, %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddwd_constant_nsw:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX1-NEXT:    vpmaddwd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddwd_constant_nsw:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX2-NEXT:    vpmaddwd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    retq
   %1 = insertelement <8 x i16> undef, i16 32768, i32 0
   %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <8 x i32> zeroinitializer
   %3 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %2, <8 x i16> %2)
-  %4 = extractelement <4 x i32> %3, i32 0 ; (-32768*-32768)+(-32768*-32768) = 0x80000000
-  ret i32 %4
+  ret <4 x i32> %3
 }
 
 define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
