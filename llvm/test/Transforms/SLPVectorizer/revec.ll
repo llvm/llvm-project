@@ -40,6 +40,13 @@ entry:
 }
 
 define void @test2(ptr %in, ptr %out) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i16>, ptr [[IN:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> [[TMP0]], <16 x i16> [[TMP0]])
+; CHECK-NEXT:    store <16 x i16> [[TMP1]], ptr [[OUT:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = getelementptr i16, ptr %in, i64 8
   %1 = load <8 x i16>, ptr %in, align 2

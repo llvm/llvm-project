@@ -13498,7 +13498,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-                ScalarArg->getType() &&
+                ScalarArg->getType()->getScalarType() &&
             It == MinBWs.end()) {
           auto *CastTy =
               getWidenedType(ScalarArg->getType(), VecTy->getNumElements());
