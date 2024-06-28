@@ -2969,10 +2969,14 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   const SCEV *StrideMinusOne =
       SE->getMinusSCEV(CastedStride, SE->getOne(CastedStride->getType()));
 
+  bool IsSingleIterationLoop =
+      BTCRange.isSingleElement() && BTCRange.getSingleElement()->isZero();
+
   // Stride - 1 exactly equal to BTC is a special case for which the loop should
-  // not be versioned. Otherwise, the loop should not be versioned if the range
+  // not be versioned. Single-iteration loops are likely unprofitable to
+  // version. Otherwise, the loop should not be versioned if the range
   // difference is all positive.
-  if (StrideMinusOne == BTC ||
+  if (StrideMinusOne == BTC || IsSingleIterationLoop ||
       StrideRange.difference(BTCRange).isAllPositive()) {
     LLVM_DEBUG(dbgs() << "LAA: Not versioning with Stride==1 predicate.\n");
     return;

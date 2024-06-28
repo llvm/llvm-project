@@ -11,12 +11,8 @@ define void @false.equal.predicate(ptr %arg, ptr %arg1, i1 %arg2) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %load == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep10 = getelementptr double, ptr %gep8, i64 %mul:
-; CHECK-NEXT:        {(8 + %arg1),+,(8 * (sext i32 %load to i64))<nsw>}<%loop.body>
-; CHECK-NEXT:        --> {(8 + %arg1),+,8}<%loop.body>
 ;
 entry:
   %load = load i32, ptr %arg, align 4
