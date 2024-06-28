@@ -851,42 +851,29 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   CurContext->addDecl(D);
   PushDeclContext(S, D);
 
-  if (getLangOpts().HLSL) {
-    // exported functions cannot be in an unnamed namespace
-    for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
-      if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
-        if (ND->isAnonymousNamespace()) {
-          Diag(ExportLoc, diag::err_export_within_anonymous_namespace);
-          Diag(ND->getLocation(), diag::note_anonymous_namespace);
-          D->setInvalidDecl();
-          return D;
-        }
-      }
-    }
-    return D;
-  }
-
   // C++2a [module.interface]p1:
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
-  if (!isCurrentModulePurview()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
-    D->setInvalidDecl();
-    return D;
-  } else if (currentModuleIsImplementation()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
-    Diag(ModuleScopes.back().BeginLoc,
-         diag::note_not_module_interface_add_export)
-        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
-    D->setInvalidDecl();
-    return D;
-  } else if (ModuleScopes.back().Module->Kind ==
-             Module::PrivateModuleFragment) {
-    Diag(ExportLoc, diag::err_export_in_private_module_fragment);
-    Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
-    D->setInvalidDecl();
-    return D;
+  if (!getLangOpts().HLSL) {
+    if (!isCurrentModulePurview()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+      D->setInvalidDecl();
+      return D;
+    } else if (currentModuleIsImplementation()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
+      Diag(ModuleScopes.back().BeginLoc,
+          diag::note_not_module_interface_add_export)
+          << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+      D->setInvalidDecl();
+      return D;
+    } else if (ModuleScopes.back().Module->Kind ==
+              Module::PrivateModuleFragment) {
+      Diag(ExportLoc, diag::err_export_in_private_module_fragment);
+      Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+      D->setInvalidDecl();
+      return D;
+    }
   }
 
   for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
@@ -906,7 +893,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
       //
       // Defer exporting the namespace until after we leave it, in order to
       // avoid marking all subsequent declarations in the namespace as exported.
-      if (!DeferredExportedNamespaces.insert(ND).second)
+      if (!getLangOpts().HLSL && !DeferredExportedNamespaces.insert(ND).second)
         break;
     }
   }
@@ -921,7 +908,9 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     return D;
   }
 
-  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+  if (!getLangOpts().HLSL)
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+
   return D;
 }
 
@@ -941,16 +930,9 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
 
   // HLSL: export declaration is valid only on functions
   if (S.getLangOpts().HLSL) {
-    auto *FD = dyn_cast<FunctionDecl>(D);
-    if (!FD) {
-      if (auto *ED2 = dyn_cast<ExportDecl>(D)) {
-        S.Diag(ED2->getBeginLoc(), diag::err_export_within_export);
-        if (auto *ED1 = dyn_cast<ExportDecl>(D->getDeclContext()))
-          S.Diag(ED1->getBeginLoc(), diag::note_export);
-      }
-      else {
-        S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
-      }
+    // Export-within-export was already diagnosed in ActOnStartExportDecl
+    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+      S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;
     }

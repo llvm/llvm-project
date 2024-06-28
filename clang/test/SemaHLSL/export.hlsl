@@ -19,6 +19,12 @@ export { // expected-note {{export block begins here}}
     }
 }
 
+export { // expected-note {{export block begins here}}
+    export { // expected-error {{export declaration appears within another export declaration}}
+        void f();
+    }
+}
+
 void export f7() {} // expected-error {{expected unqualified-id}}
 
 export static void f8() {} // expected-error {{declaration of 'f8' with internal linkage cannot be exported}}
