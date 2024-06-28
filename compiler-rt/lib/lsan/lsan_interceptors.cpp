@@ -525,7 +525,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
 #    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN
 #  endif  // SANITIZER_INTERCEPT_TIMEDJOIN
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 INTERCEPTOR(void, _exit, int status) {
   if (status == 0 && HasReportedLeaks()) status = common_flags()->exitcode;

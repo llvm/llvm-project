@@ -43,8 +43,8 @@ using namespace llvm;
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
                                                   unsigned AddressSpace,
-                                                  Module *M) {
-  Constant *StrConstant = ConstantDataArray::getString(Context, Str);
+                                                  Module *M, bool AddNull) {
+  Constant *StrConstant = ConstantDataArray::getString(Context, Str, AddNull);
   if (!M)
     M = BB->getParent()->getParent();
   auto *GV = new GlobalVariable(
@@ -1029,17 +1029,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
     UseFMF = FMFSource->getFastMathFlags();
 
   CallInst *C;
-  bool HasRoundingMD = false;
-  switch (ID) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD) {
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
     C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
                         nullptr, Name);
@@ -1063,9 +1053,8 @@ Value *IRBuilderBase::CreateFCmpHelper(
     return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
   }
 
-  if (auto *LC = dyn_cast<Constant>(LHS))
-    if (auto *RC = dyn_cast<Constant>(RHS))
-      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  if (auto *V = Folder.FoldCmp(P, LHS, RHS))
+    return V;
   return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
 }
 
@@ -1088,17 +1077,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   llvm::SmallVector<Value *, 6> UseArgs;
 
   append_range(UseArgs, Args);
-  bool HasRoundingMD = false;
-  switch (Callee->getIntrinsicID()) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD)
+
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
   UseArgs.push_back(getConstrainedFPExcept(Except));
 

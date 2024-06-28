@@ -145,6 +145,8 @@ CXXPattern::CXXPattern(const StringInit &Code, StringRef Name)
 const CXXPredicateCode &
 CXXPattern::expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
                        function_ref<void(raw_ostream &)> AddComment) const {
+  assert(!IsApply && "'apply' CXX patterns should be handled differently!");
+
   std::string Result;
   raw_string_ostream OS(Result);
 
@@ -153,8 +155,6 @@ CXXPattern::expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
 
   CodeExpander Expander(RawCode, CE, Locs, /*ShowExpansions*/ false);
   Expander.emit(OS);
-  if (IsApply)
-    return CXXPredicateCode::getApplyCode(std::move(Result));
   return CXXPredicateCode::getMatchCode(std::move(Result));
 }
 

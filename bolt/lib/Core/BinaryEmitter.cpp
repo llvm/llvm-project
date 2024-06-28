@@ -194,6 +194,7 @@ private:
 
 void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   Streamer.initSections(false, *BC.STI);
+  Streamer.setUseAssemblerInfoForParsing(false);
 
   if (opts::UpdateDebugSections && BC.isELF()) {
     // Force the emission of debug line info into allocatable section to ensure
@@ -226,6 +227,7 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   // TODO Enable for Mach-O once BinaryContext::getDataSection supports it.
   if (BC.isELF())
     AddressMap::emit(Streamer, BC);
+  Streamer.setUseAssemblerInfoForParsing(true);
 }
 
 void BinaryEmitter::emitFunctions() {
@@ -813,7 +815,9 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
   // determining its destination.
   std::map<MCSymbol *, uint64_t> LabelCounts;
   if (opts::JumpTables > JTS_SPLIT && !JT.Counts.empty()) {
-    MCSymbol *CurrentLabel = JT.Labels.at(0);
+    auto It = JT.Labels.find(0);
+    assert(It != JT.Labels.end());
+    MCSymbol *CurrentLabel = It->second;
     uint64_t CurrentLabelCount = 0;
     for (unsigned Index = 0; Index < JT.Entries.size(); ++Index) {
       auto LI = JT.Labels.find(Index * JT.EntrySize);

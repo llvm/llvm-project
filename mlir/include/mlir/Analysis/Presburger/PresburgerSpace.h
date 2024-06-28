@@ -236,7 +236,7 @@ public:
   /// symbol count, either a chunk of dimensional variables immediately before
   /// the split become symbols, or some of the symbols immediately after the
   /// split become dimensions.
-  void setVarSymbolSeperation(unsigned newSymbolCount);
+  void setVarSymbolSeparation(unsigned newSymbolCount);
 
   /// Swaps the posA^th variable of kindA and posB^th variable of kindB.
   void swapVar(VarKind kindA, VarKind kindB, unsigned posA, unsigned posB);

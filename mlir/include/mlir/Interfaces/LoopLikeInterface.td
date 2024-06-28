@@ -93,51 +93,59 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        If there is a single induction variable return it, otherwise return
-        std::nullopt.
+        Return all induction variables, if they exist. If the op has no notion of
+        induction variable, then return std::nullopt. If it does have
+        a notion but an instance doesn't have induction variables, then
+        return empty vector.
       }],
-      /*retTy=*/"::std::optional<::mlir::Value>",
-      /*methodName=*/"getSingleInductionVar",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::Value>>",
+      /*methodName=*/"getLoopInductionVars",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return the single lower bound value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all lower bounds, if they exist. If the op has no notion of
+        lower bounds, then return std::nullopt. If it does have
+        a notion but an instance doesn't have lower bounds, then
+        return empty vector.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleLowerBound",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getLoopLowerBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return the single step value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all steps, if they exist. If the op has no notion of
+        steps, then return std::nullopt. If it does have
+        a notion but an instance doesn't have steps, then
+        return empty vector.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleStep",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getLoopSteps",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
-        Return the single upper bound value or attribute if it exists, otherwise
-        return std::nullopt.
+        Return all upper bounds, if they exist. If the op has no notion of
+        lower bounds, then return std::nullopt. If it does have
+        a notion but an instance doesn't have lower bounds, then
+        return empty vector.
       }],
-      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
-      /*methodName=*/"getSingleUpperBound",
+      /*retTy=*/"::std::optional<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"getLoopUpperBounds",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return std::nullopt;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -235,6 +243,39 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   }];
 
   let extraSharedClassDeclaration = [{
+    /// If there is a single induction variable return it, otherwise return
+    /// std::nullopt.
+    ::std::optional<::mlir::Value> getSingleInductionVar() {
+      auto inductionVars = $_op.getLoopInductionVars();
+      if (inductionVars.has_value() && (*inductionVars).size() == 1)
+          return (*inductionVars)[0];
+        return std::nullopt;
+    }
+    /// Return the single lower bound value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleLowerBound() {
+      auto lowerBounds = $_op.getLoopLowerBounds();
+      if (lowerBounds.has_value() && (*lowerBounds).size() == 1)
+          return (*lowerBounds)[0];
+      return std::nullopt;
+    }
+    /// Return the single step value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleStep() {
+      auto steps = $_op.getLoopSteps();
+      if (steps.has_value() && (*steps).size() == 1)
+          return (*steps)[0];
+      return std::nullopt;
+    }
+    /// Return the single upper bound value or attribute if it exists, otherwise
+    /// return std::nullopt.
+    ::std::optional<::mlir::OpFoldResult> getSingleUpperBound() {
+      auto upperBounds = $_op.getLoopUpperBounds();
+      if (upperBounds.has_value() && (*upperBounds).size() == 1)
+          return (*upperBounds)[0];
+      return std::nullopt;
+    }
+
     /// Append the specified additional "init" operands: replace this loop with
     /// a new loop that has the additional init operands. The loop body of this
     /// loop is moved over to the new loop.

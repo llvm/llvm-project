@@ -419,7 +419,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     if (converted) {
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
-        int symRank{GetRank(symTS->shape())};
+        int symRank{symTS->Rank()};
         if (IsImpliedShape(symbol)) {
           if (folded.Rank() == symRank) {
             return ArrayConstantBoundChanger{
@@ -442,7 +442,8 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                     context, GetRawLowerBounds(context, NamedEntity{symbol}))}
                 .Expand(std::move(folded));
           } else if (auto resultShape{GetShape(context, folded)}) {
-            if (CheckConformance(context.messages(), symTS->shape(),
+            CHECK(symTS->shape()); // Assumed-ranks cannot be initialized.
+            if (CheckConformance(context.messages(), *symTS->shape(),
                     *resultShape, CheckConformanceFlags::None,
                     "initialized object", "initialization expression")
                     .value_or(false /*fail if not known now to conform*/)) {
@@ -507,43 +508,6 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   return std::nullopt;
 }
 
-static bool IsNonLocal(const semantics::Symbol &symbol) {
-  return semantics::IsDummy(symbol) || symbol.has<semantics::UseDetails>() ||
-      symbol.owner().kind() == semantics::Scope::Kind::Module ||
-      semantics::FindCommonBlockContaining(symbol) ||
-      symbol.has<semantics::HostAssocDetails>();
-}
-
-static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
-    const semantics::Symbol &lastSymbol, DescriptorInquiry::Field field,
-    const semantics::Scope &localScope) {
-  if (IsNonLocal(firstSymbol)) {
-    return true;
-  }
-  if (&localScope != &firstSymbol.owner()) {
-    return true;
-  }
-  // Inquiries on local objects may not access a deferred bound or length.
-  // (This code used to be a switch, but it proved impossible to write it
-  // thus without running afoul of bogus warnings from different C++
-  // compilers.)
-  if (field == DescriptorInquiry::Field::Rank) {
-    return true; // always known
-  }
-  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
-  if (field == DescriptorInquiry::Field::LowerBound ||
-      field == DescriptorInquiry::Field::Extent ||
-      field == DescriptorInquiry::Field::Stride) {
-    return object && !object->shape().CanBeDeferredShape();
-  }
-  if (field == DescriptorInquiry::Field::Len) {
-    return object && object->type() &&
-        object->type()->category() == semantics::DeclTypeSpec::Character &&
-        !object->type()->characterTypeSpec().length().isDeferred();
-  }
-  return false;
-}
-
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
     : public AnyTraverse<CheckSpecificationExprHelper,
@@ -551,9 +515,10 @@ class CheckSpecificationExprHelper
 public:
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<CheckSpecificationExprHelper, Result>;
-  explicit CheckSpecificationExprHelper(
-      const semantics::Scope &s, FoldingContext &context)
-      : Base{*this}, scope_{s}, context_{context} {}
+  explicit CheckSpecificationExprHelper(const semantics::Scope &s,
+      FoldingContext &context, bool forElementalFunctionResult)
+      : Base{*this}, scope_{s}, context_{context},
+        forElementalFunctionResult_{forElementalFunctionResult} {}
   using Base::operator();
 
   Result operator()(const CoarrayRef &) const { return "coindexed reference"; }
@@ -572,7 +537,10 @@ public:
              "reference variable '"s +
           ultimate.name().ToString() + "'";
     } else if (IsDummy(ultimate)) {
-      if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
+      if (!inInquiry_ && forElementalFunctionResult_) {
+        return "dependence on value of dummy argument '"s +
+            ultimate.name().ToString() + "'";
+      } else if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
       } else if (!inInquiry_ &&
@@ -629,8 +597,8 @@ public:
     // expressions will have been converted to expressions over descriptor
     // inquiries by Fold().
     // Catch REAL, ALLOCATABLE :: X(:); REAL :: Y(SIZE(X))
-    if (IsPermissibleInquiry(x.base().GetFirstSymbol(),
-            x.base().GetLastSymbol(), x.field(), scope_)) {
+    if (IsPermissibleInquiry(
+            x.base().GetFirstSymbol(), x.base().GetLastSymbol(), x.field())) {
       auto restorer{common::ScopedSet(inInquiry_, true)};
       return (*this)(x.base());
     } else if (IsConstantExpr(x)) {
@@ -641,10 +609,18 @@ public:
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
-    if (scope_.IsDerivedType() && !IsConstantExpr(inq) &&
-        inq.base() /* X%T, not local T */) { // C750, C754
-      return "non-constant reference to a type parameter inquiry not "
-             "allowed for derived type components or type parameter values";
+    if (scope_.IsDerivedType()) {
+      if (!IsConstantExpr(inq) &&
+          inq.base() /* X%T, not local T */) { // C750, C754
+        return "non-constant reference to a type parameter inquiry not allowed "
+               "for derived type components or type parameter values";
+      }
+    } else if (inq.base() &&
+        IsInquiryAlwaysPermissible(inq.base()->GetFirstSymbol())) {
+      auto restorer{common::ScopedSet(inInquiry_, true)};
+      return (*this)(inq.base());
+    } else if (!IsConstantExpr(inq)) {
+      return "non-constant type parameter inquiry not allowed for local object";
     }
     return std::nullopt;
   }
@@ -674,7 +650,8 @@ public:
               return std::holds_alternative<characteristics::DummyProcedure>(
                   dummy.u);
             })};
-        if (iter != procChars->dummyArguments.end()) {
+        if (iter != procChars->dummyArguments.end() &&
+            ultimate.name().ToString() != "__builtin_c_funloc") {
           return "reference to function '"s + ultimate.name().ToString() +
               "' with dummy procedure argument '" + iter->name + '\'';
         }
@@ -719,19 +696,19 @@ public:
                 intrin.name == "is_contiguous") { // ok
             } else if (intrin.name == "len" &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Len,
-                    scope_)) { // ok
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::Len)) { // ok
             } else if (intrin.name == "lbound" &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
                     dataRef->GetLastSymbol(),
-                    DescriptorInquiry::Field::LowerBound, scope_)) { // ok
+                    DescriptorInquiry::Field::LowerBound)) { // ok
             } else if ((intrin.name == "shape" || intrin.name == "size" ||
                            intrin.name == "sizeof" ||
                            intrin.name == "storage_size" ||
                            intrin.name == "ubound") &&
                 IsPermissibleInquiry(dataRef->GetFirstSymbol(),
-                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Extent,
-                    scope_)) { // ok
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::Extent)) { // ok
             } else {
               return "non-constant inquiry function '"s + intrin.name +
                   "' not allowed for local object";
@@ -750,32 +727,86 @@ private:
   // Contextual information: this flag is true when in an argument to
   // an inquiry intrinsic like SIZE().
   mutable bool inInquiry_{false};
+  bool forElementalFunctionResult_{false}; // F'2023 C15121
   const std::set<std::string> badIntrinsicsForComponents_{
       "allocated", "associated", "extends_type_of", "present", "same_type_as"};
+
+  bool IsInquiryAlwaysPermissible(const semantics::Symbol &) const;
+  bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
+      const semantics::Symbol &lastSymbol,
+      DescriptorInquiry::Field field) const;
 };
 
-template <typename A>
-void CheckSpecificationExpr(
-    const A &x, const semantics::Scope &scope, FoldingContext &context) {
-  if (auto why{CheckSpecificationExprHelper{scope, context}(x)}) {
-    context.messages().Say(
-        "Invalid specification expression: %s"_err_en_US, *why);
+bool CheckSpecificationExprHelper::IsInquiryAlwaysPermissible(
+    const semantics::Symbol &symbol) const {
+  if (&symbol.owner() != &scope_ || symbol.has<semantics::UseDetails>() ||
+      symbol.owner().kind() == semantics::Scope::Kind::Module ||
+      semantics::FindCommonBlockContaining(symbol) ||
+      symbol.has<semantics::HostAssocDetails>()) {
+    return true; // it's nonlocal
+  } else if (semantics::IsDummy(symbol) && !forElementalFunctionResult_) {
+    return true;
+  } else {
+    return false;
   }
 }
 
-template void CheckSpecificationExpr(
-    const Expr<SomeType> &, const semantics::Scope &, FoldingContext &);
-template void CheckSpecificationExpr(
-    const Expr<SomeInteger> &, const semantics::Scope &, FoldingContext &);
-template void CheckSpecificationExpr(
-    const Expr<SubscriptInteger> &, const semantics::Scope &, FoldingContext &);
+bool CheckSpecificationExprHelper::IsPermissibleInquiry(
+    const semantics::Symbol &firstSymbol, const semantics::Symbol &lastSymbol,
+    DescriptorInquiry::Field field) const {
+  if (IsInquiryAlwaysPermissible(firstSymbol)) {
+    return true;
+  }
+  // Inquiries on local objects may not access a deferred bound or length.
+  // (This code used to be a switch, but it proved impossible to write it
+  // thus without running afoul of bogus warnings from different C++
+  // compilers.)
+  if (field == DescriptorInquiry::Field::Rank) {
+    return true; // always known
+  }
+  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
+  if (field == DescriptorInquiry::Field::LowerBound ||
+      field == DescriptorInquiry::Field::Extent ||
+      field == DescriptorInquiry::Field::Stride) {
+    return object && !object->shape().CanBeDeferredShape();
+  }
+  if (field == DescriptorInquiry::Field::Len) {
+    return object && object->type() &&
+        object->type()->category() == semantics::DeclTypeSpec::Character &&
+        !object->type()->characterTypeSpec().length().isDeferred();
+  }
+  return false;
+}
+
+template <typename A>
+void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
+    FoldingContext &context, bool forElementalFunctionResult) {
+  if (auto why{CheckSpecificationExprHelper{
+          scope, context, forElementalFunctionResult}(x)}) {
+    context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
+        forElementalFunctionResult ? " for elemental function result" : "",
+        *why);
+  }
+}
+
+template void CheckSpecificationExpr(const Expr<SomeType> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
+template void CheckSpecificationExpr(const Expr<SomeInteger> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
+template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    const semantics::Scope &, FoldingContext &);
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
-    const semantics::Scope &, FoldingContext &);
+    const semantics::Scope &, FoldingContext &,
+    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
-    FoldingContext &);
+    FoldingContext &, bool forElementalFunctionResult);
 
 // IsContiguous() -- 9.5.4
 class IsContiguousHelper
@@ -801,8 +832,14 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
-    } else if (ultimate.has<semantics::AssocEntityDetails>()) {
-      return Base::operator()(ultimate); // use expr
+    } else if (const auto *details{
+                   ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      // RANK(*) associating entity is contiguous.
+      if (details->IsAssumedSize()) {
+        return true;
+      } else {
+        return Base::operator()(ultimate); // use expr
+      }
     } else if (semantics::IsPointer(ultimate) ||
         semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
       return std::nullopt;

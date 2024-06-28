@@ -54,7 +54,7 @@ public:
   // to regular printf for the device compilation.
   // Try to keep the inline implementations as small as possible.
   template <typename... Args>
-  [[noreturn]] RT_API_ATTRS const char *Crash(
+  [[noreturn]] RT_DEVICE_NOINLINE RT_API_ATTRS const char *Crash(
       const char *message, Args... args) const {
 #if !defined(RT_DEVICE_COMPILATION)
     // Invoke handler set up by the test harness.

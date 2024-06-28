@@ -405,17 +405,21 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
           // when going over the *slow* GDB remote transfer mechanism we first
           // check the hashes of the files - and only do the actual transfer if
           // they differ
-          uint64_t high_local, high_remote, low_local, low_remote;
           auto MD5 = llvm::sys::fs::md5_contents(module_cache_spec.GetPath());
           if (!MD5)
             return Status(MD5.getError());
-          std::tie(high_local, low_local) = MD5->words();
 
-          m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec(),
-                                             low_remote, high_remote);
-          if (low_local != low_remote || high_local != high_remote) {
+          Log *log = GetLog(LLDBLog::Platform);
+          bool requires_transfer = true;
+          llvm::ErrorOr<llvm::MD5::MD5Result> remote_md5 =
+              m_remote_platform_sp->CalculateMD5(module_spec.GetFileSpec());
+          if (std::error_code ec = remote_md5.getError())
+            LLDB_LOG(log, "couldn't get md5 sum from remote: {0}",
+                     ec.message());
+          else
+            requires_transfer = *MD5 != *remote_md5;
+          if (requires_transfer) {
             // bring in the remote file
-            Log *log = GetLog(LLDBLog::Platform);
             LLDB_LOGF(log,
                       "[%s] module %s/%s needs to be replaced from remote copy",
                       (IsHost() ? "host" : "remote"),

@@ -35,7 +35,7 @@ set(GWP_ASAN_UNIT_TEST_HEADERS
   harness.h)
 
 add_custom_target(GwpAsanUnitTests)
-set_target_properties(GwpAsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(GwpAsanUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 set(GWP_ASAN_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS} -ldl
@@ -67,7 +67,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST GWP_ASAN_SUPPORTED_ARCH)
 
   set_target_properties(${GWP_ASAN_TEST_RUNTIME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
 
   set(GwpAsanTestObjects)
   generate_compiler_rt_tests(GwpAsanTestObjects

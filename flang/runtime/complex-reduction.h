@@ -69,49 +69,91 @@ long_double_Complex_t RTNAME(DotProductComplex10)(DOT_PRODUCT_ARGS);
 CFloat128ComplexType RTNAME(DotProductComplex16)(DOT_PRODUCT_ARGS);
 #endif
 
-#define REDUCE_ARGS(T) \
-  T##_op operation, const struct CppDescriptor *x, \
-      const struct CppDescriptor *y, const char *source, int line, \
-      int dim /*=0*/, const struct CppDescriptor *mask /*=NULL*/, \
-      const T *identity /*=NULL*/, _Bool ordered /*=true*/
+#define REDUCE_ARGS(T, OP) \
+  OP operation, const struct CppDescriptor *x, const struct CppDescriptor *y, \
+      const char *source, int line, int dim /*=0*/, \
+      const struct CppDescriptor *mask /*=NULL*/, const T *identity /*=NULL*/, \
+      _Bool ordered /*=true*/
 #define REDUCE_ARG_NAMES \
   operation, x, y, source, line, dim, mask, identity, ordered
 
-typedef float_Complex_t (*float_Complex_t_op)(
+typedef float_Complex_t (*float_Complex_t_ref_op)(
     const float_Complex_t *, const float_Complex_t *);
-typedef double_Complex_t (*double_Complex_t_op)(
+typedef float_Complex_t (*float_Complex_t_value_op)(
+    float_Complex_t, float_Complex_t);
+typedef double_Complex_t (*double_Complex_t_ref_op)(
     const double_Complex_t *, const double_Complex_t *);
-typedef long_double_Complex_t (*long_double_Complex_t_op)(
+typedef double_Complex_t (*double_Complex_t_value_op)(
+    double_Complex_t, double_Complex_t);
+typedef long_double_Complex_t (*long_double_Complex_t_ref_op)(
     const long_double_Complex_t *, const long_double_Complex_t *);
+typedef long_double_Complex_t (*long_double_Complex_t_value_op)(
+    long_double_Complex_t, long_double_Complex_t);
 
-float_Complex_t RTNAME(ReduceComplex2)(REDUCE_ARGS(float_Complex_t));
-float_Complex_t RTNAME(ReduceComplex3)(REDUCE_ARGS(float_Complex_t));
-float_Complex_t RTNAME(ReduceComplex4)(REDUCE_ARGS(float_Complex_t));
-double_Complex_t RTNAME(ReduceComplex8)(REDUCE_ARGS(double_Complex_t));
-long_double_Complex_t RTNAME(ReduceComplex10)(
-    REDUCE_ARGS(long_double_Complex_t));
+float_Complex_t RTNAME(ReduceComplex2Ref)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_ref_op));
+float_Complex_t RTNAME(ReduceComplex2Value)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_value_op));
+float_Complex_t RTNAME(ReduceComplex3Ref)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_ref_op));
+float_Complex_t RTNAME(ReduceComplex3Value)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_value_op));
+float_Complex_t RTNAME(ReduceComplex4Ref)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_ref_op));
+float_Complex_t RTNAME(ReduceComplex4Value)(
+    REDUCE_ARGS(float_Complex_t, float_Complex_t_value_op));
+double_Complex_t RTNAME(ReduceComplex8Ref)(
+    REDUCE_ARGS(double_Complex_t, double_Complex_t_ref_op));
+double_Complex_t RTNAME(ReduceComplex8Value)(
+    REDUCE_ARGS(double_Complex_t, double_Complex_t_value_op));
+long_double_Complex_t RTNAME(ReduceComplex10Ref)(
+    REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_ref_op));
+long_double_Complex_t RTNAME(ReduceComplex10Value)(
+    REDUCE_ARGS(long_double_Complex_t, long_double_Complex_t_value_op));
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-typedef CFloat128ComplexType (*CFloat128ComplexType_op)(
+typedef CFloat128ComplexType (*CFloat128ComplexType_ref_op)(
     const CFloat128ComplexType *, const CFloat128ComplexType *);
-CFloat128ComplexType RTNAME(ReduceComplex16)(REDUCE_ARGS(CFloat128ComplexType));
+typedef CFloat128ComplexType (*CFloat128ComplexType_value_op)(
+    CFloat128ComplexType, CFloat128ComplexType);
+CFloat128ComplexType RTNAME(ReduceComplex16Ref)(
+    REDUCE_ARGS(CFloat128ComplexType, CFloat128ComplexType_ref_op));
+CFloat128ComplexType RTNAME(ReduceComplex16Value)(
+    REDUCE_ARGS(CFloat128ComplexType, CFloat128ComplexType_value_op));
 #endif
 
-#define REDUCE_DIM_ARGS(T) \
-  struct CppDescriptor *result, T##_op operation, \
-      const struct CppDescriptor *x, const struct CppDescriptor *y, \
-      const char *source, int line, int dim, \
+#define REDUCE_DIM_ARGS(T, OP) \
+  struct CppDescriptor *result, OP operation, const struct CppDescriptor *x, \
+      const struct CppDescriptor *y, const char *source, int line, int dim, \
       const struct CppDescriptor *mask /*=NULL*/, const T *identity /*=NULL*/, \
       _Bool ordered /*=true*/
 #define REDUCE_DIM_ARG_NAMES \
   result, operation, x, y, source, line, dim, mask, identity, ordered
 
-void RTNAME(ReduceComplex2Dim)(REDUCE_DIM_ARGS(float_Complex_t));
-void RTNAME(ReduceComplex3Dim)(REDUCE_DIM_ARGS(float_Complex_t));
-void RTNAME(ReduceComplex4Dim)(REDUCE_DIM_ARGS(float_Complex_t));
-void RTNAME(ReduceComplex8Dim)(REDUCE_DIM_ARGS(double_Complex_t));
-void RTNAME(ReduceComplex10Dim)(REDUCE_DIM_ARGS(long_double_Complex_t));
+void RTNAME(ReduceComplex2DimRef)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_ref_op));
+void RTNAME(ReduceComplex2DimValue)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_value_op));
+void RTNAME(ReduceComplex3DimRef)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_ref_op));
+void RTNAME(ReduceComplex3DimValue)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_value_op));
+void RTNAME(ReduceComplex4DimRef)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_ref_op));
+void RTNAME(ReduceComplex4DimValue)(
+    REDUCE_DIM_ARGS(float_Complex_t, float_Complex_t_value_op));
+void RTNAME(ReduceComplex8DimRef)(
+    REDUCE_DIM_ARGS(double_Complex_t, double_Complex_t_ref_op));
+void RTNAME(ReduceComplex8DimValue)(
+    REDUCE_DIM_ARGS(double_Complex_t, double_Complex_t_value_op));
+void RTNAME(ReduceComplex10DimRef)(
+    REDUCE_DIM_ARGS(long_double_Complex_t, long_double_Complex_t_ref_op));
+void RTNAME(ReduceComplex10DimValue)(
+    REDUCE_DIM_ARGS(long_double_Complex_t, long_double_Complex_t_value_op));
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-void RTNAME(ReduceComplex16Dim)(REDUCE_DIM_ARGS(CFloat128ComplexType));
+void RTNAME(ReduceComplex16DimRef)(
+    REDUCE_DIM_ARGS(CFloat128ComplexType, CFloat128ComplexType_ref_op));
+void RTNAME(ReduceComplex16DimValue)(
+    REDUCE_DIM_ARGS(CFloat128ComplexType, CFloat128ComplexType_value_op));
 #endif
 
 #endif // FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_

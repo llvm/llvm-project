@@ -148,6 +148,7 @@ def : GINodeEquiv<G_BUILD_VECTOR, build_vector>;
 def : GINodeEquiv<G_FCEIL, fceil>;
 def : GINodeEquiv<G_FCOS, fcos>;
 def : GINodeEquiv<G_FSIN, fsin>;
+def : GINodeEquiv<G_FTAN, ftan>;
 def : GINodeEquiv<G_FABS, fabs>;
 def : GINodeEquiv<G_FSQRT, fsqrt>;
 def : GINodeEquiv<G_FFLOOR, ffloor>;

@@ -19,6 +19,9 @@
 
 namespace llvm {
 
+using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
+using AnchorMap = std::map<LineLocation, FunctionId>;
+
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
   Module &M;
@@ -27,8 +30,8 @@ class SampleProfileMatcher {
   const ThinOrFullLTOPhase LTOPhase;
   SampleProfileMap FlattenedProfiles;
   // For each function, the matcher generates a map, of which each entry is a
-  // mapping from the source location of current build to the source location in
-  // the profile.
+  // mapping from the source location of current build to the source location
+  // in the profile.
   StringMap<LocToLocMap> FuncMappings;
 
   // Match state for an anchor/callsite.
@@ -95,18 +98,13 @@ private:
     return nullptr;
   }
   void runOnFunction(Function &F);
-  void findIRAnchors(const Function &F,
-                     std::map<LineLocation, StringRef> &IRAnchors);
-  void findProfileAnchors(
-      const FunctionSamples &FS,
-      std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors);
+  void findIRAnchors(const Function &F, AnchorMap &IRAnchors);
+  void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors);
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
-  void recordCallsiteMatchStates(
-      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, std::unordered_set<FunctionId>>
-          &ProfileAnchors,
-      const LocToLocMap *IRToProfileLocationMap);
+  void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
+                                 const AnchorMap &ProfileAnchors,
+                                 const LocToLocMap *IRToProfileLocationMap);
 
   bool isMismatchState(const enum MatchState &State) {
     return State == MatchState::InitialMismatch ||
@@ -143,11 +141,25 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  void runStaleProfileMatching(
-      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, std::unordered_set<FunctionId>>
-          &ProfileAnchors,
-      LocToLocMap &IRToProfileLocationMap);
+  // This function implements the Myers diff algorithm used for stale profile
+  // matching. The algorithm provides a simple and efficient way to find the
+  // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
+  // sequences. For more details, refer to the paper 'An O(ND) Difference
+  // Algorithm and Its Variations' by Eugene W. Myers.
+  // In the scenario of profile fuzzy matching, the two sequences are the IR
+  // callsite anchors and profile callsite anchors. The subsequence equivalent
+  // parts from the resulting SES are used to remap the IR locations to the
+  // profile locations. As the number of function callsite is usually not big,
+  // we currently just implements the basic greedy version(page 6 of the paper).
+  LocToLocMap
+  longestCommonSequence(const AnchorList &IRCallsiteAnchors,
+                        const AnchorList &ProfileCallsiteAnchors) const;
+  void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
+                            const AnchorMap &IRAnchors,
+                            LocToLocMap &IRToProfileLocationMap);
+  void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
+                               const AnchorMap &ProfileAnchors,
+                               LocToLocMap &IRToProfileLocationMap);
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

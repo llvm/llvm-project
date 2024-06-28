@@ -1387,18 +1387,31 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
-    if (!expand_tool_spec) {
-      error.SetErrorString(
-          "could not get support executable directory for lldb-argdumper tool");
-      return error;
+    FileSpec expand_tool_spec;
+    Environment host_env = Host::GetEnvironment();
+    std::string env_argdumper_path = host_env.lookup("LLDB_ARGDUMPER_PATH");
+    if (!env_argdumper_path.empty()) {
+      expand_tool_spec.SetFile(env_argdumper_path, FileSpec::Style::native);
+      Log *log(GetLog(LLDBLog::Host | LLDBLog::Process));
+      LLDB_LOGF(log,
+                "lldb-argdumper exe path set from environment variable: %s",
+                env_argdumper_path.c_str());
     }
-    expand_tool_spec.AppendPathComponent("lldb-argdumper");
-    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
-      error.SetErrorStringWithFormat(
-          "could not find the lldb-argdumper tool: %s",
-          expand_tool_spec.GetPath().c_str());
-      return error;
+    bool argdumper_exists = FileSystem::Instance().Exists(env_argdumper_path);
+    if (!argdumper_exists) {
+      expand_tool_spec = HostInfo::GetSupportExeDir();
+      if (!expand_tool_spec) {
+        error.SetErrorString("could not get support executable directory for "
+                             "lldb-argdumper tool");
+        return error;
+      }
+      expand_tool_spec.AppendPathComponent("lldb-argdumper");
+      if (!FileSystem::Instance().Exists(expand_tool_spec)) {
+        error.SetErrorStringWithFormat(
+            "could not find the lldb-argdumper tool: %s",
+            expand_tool_spec.GetPath().c_str());
+        return error;
+      }
     }
 
     StreamString expand_tool_spec_stream;

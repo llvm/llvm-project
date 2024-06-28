@@ -266,7 +266,7 @@ char &llvm::MachineSchedulerID = MachineScheduler::ID;
 INITIALIZE_PASS_BEGIN(MachineScheduler, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
@@ -279,7 +279,7 @@ MachineScheduler::MachineScheduler() : MachineSchedulerBase(ID) {
 
 void MachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
@@ -296,7 +296,7 @@ char &llvm::PostMachineSchedulerID = PostMachineScheduler::ID;
 
 INITIALIZE_PASS_BEGIN(PostMachineScheduler, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(PostMachineScheduler, "postmisched",
@@ -308,7 +308,7 @@ PostMachineScheduler::PostMachineScheduler() : MachineSchedulerBase(ID) {
 
 void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
@@ -445,7 +445,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   // Initialize the context of the pass.
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfo>();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PassConfig = &getAnalysis<TargetPassConfig>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
@@ -1664,7 +1664,8 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
     if (ShouldTrackPressure) {
       // Update top scheduled pressure.
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks,
+                       /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
         SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -1698,7 +1699,8 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
     }
     if (ShouldTrackPressure) {
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks, false);
+      RegOpers.collect(*MI, *TRI, MRI, ShouldTrackLaneMasks,
+                       /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
         SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
@@ -3775,6 +3777,21 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     }
   } while (SU->isScheduled);
 
+  // If IsTopNode, then SU is in Top.Available and must be removed. Otherwise,
+  // if isTopReady(), then SU is in either Top.Available or Top.Pending.
+  // If !IsTopNode, then SU is in Bot.Available and must be removed. Otherwise,
+  // if isBottomReady(), then SU is in either Bot.Available or Bot.Pending.
+  //
+  // It is coincidental when !IsTopNode && isTopReady or when IsTopNode &&
+  // isBottomReady. That is, it didn't factor into the decision to choose SU
+  // because it isTopReady or isBottomReady, respectively. In fact, if the
+  // RegionPolicy is OnlyTopDown or OnlyBottomUp, then the Bot queues and Top
+  // queues respectivley contain the original roots and don't get updated when
+  // picking a node. So if SU isTopReady on a OnlyBottomUp pick, then it was
+  // because we schduled everything but the top roots. Conversley, if SU
+  // isBottomReady on OnlyTopDown, then it was because we scheduled everything
+  // but the bottom roots. If its in a queue even coincidentally, it should be
+  // removed so it does not get re-picked in a subsequent pickNode call.
   if (SU->isTopReady())
     Top.removeReady(SU);
   if (SU->isBottomReady())

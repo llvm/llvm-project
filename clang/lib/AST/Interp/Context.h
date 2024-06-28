@@ -107,6 +107,8 @@ public:
   unsigned collectBaseOffset(const RecordDecl *BaseDecl,
                              const RecordDecl *DerivedDecl) const;
 
+  const Record *getRecord(const RecordDecl *D) const;
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func, APValue &Result);

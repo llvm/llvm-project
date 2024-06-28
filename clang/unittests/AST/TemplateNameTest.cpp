@@ -24,6 +24,31 @@ std::string printTemplateName(TemplateName TN, const PrintingPolicy &Policy,
   return Out.str();
 }
 
+TEST(TemplateName, PrintTemplate) {
+  std::string Code = R"cpp(
+    namespace std {
+      template <typename> struct vector {};
+    }
+    template<template <typename> class T> class X;
+    using A = X<std::vector>;
+  )cpp";
+  auto AST = tooling::buildASTFromCode(Code);
+  ASTContext &Ctx = AST->getASTContext();
+  // Match the template argument vector in X<std::vector>.
+  auto MatchResults = match(templateArgumentLoc().bind("id"), Ctx);
+  const auto *Template = selectFirst<TemplateArgumentLoc>("id", MatchResults);
+  ASSERT_TRUE(Template);
+
+  TemplateName TN = Template->getArgument().getAsTemplate();
+  EXPECT_EQ(TN.getKind(), TemplateName::QualifiedTemplate);
+  EXPECT_EQ(printTemplateName(TN, Ctx.getPrintingPolicy(),
+                              TemplateName::Qualified::AsWritten),
+            "std::vector");
+  EXPECT_EQ(printTemplateName(TN, Ctx.getPrintingPolicy(),
+                              TemplateName::Qualified::None),
+            "vector");
+}
+
 TEST(TemplateName, PrintUsingTemplate) {
   std::string Code = R"cpp(
     namespace std {
@@ -44,12 +69,11 @@ TEST(TemplateName, PrintUsingTemplate) {
   ASSERT_TRUE(Template);
 
   TemplateName TN = Template->getArgument().getAsTemplate();
-  EXPECT_EQ(TN.getKind(), TemplateName::UsingTemplate);
-  EXPECT_EQ(TN.getAsUsingShadowDecl()->getTargetDecl(), TN.getAsTemplateDecl());
+  EXPECT_EQ(TN.getKind(), TemplateName::QualifiedTemplate);
+  UsingShadowDecl *USD = TN.getAsUsingShadowDecl();
+  EXPECT_TRUE(USD != nullptr);
+  EXPECT_EQ(USD->getTargetDecl(), TN.getAsTemplateDecl());
 
-  EXPECT_EQ(printTemplateName(TN, Ctx.getPrintingPolicy(),
-                              TemplateName::Qualified::Fully),
-            "std::vector");
   EXPECT_EQ(printTemplateName(TN, Ctx.getPrintingPolicy(),
                               TemplateName::Qualified::AsWritten),
             "vector");
@@ -102,7 +126,8 @@ TEST(TemplateName, UsingTemplate) {
   const auto *TST =
       MatchResults.front().getNodeAs<TemplateSpecializationType>("id");
   ASSERT_TRUE(TST);
-  EXPECT_EQ(TST->getTemplateName().getKind(), TemplateName::UsingTemplate);
+  EXPECT_EQ(TST->getTemplateName().getKind(), TemplateName::QualifiedTemplate);
+  EXPECT_TRUE(TST->getTemplateName().getAsUsingShadowDecl() != nullptr);
 
   AST = tooling::buildASTFromCodeWithArgs(R"cpp(
     namespace std {
@@ -120,7 +145,8 @@ TEST(TemplateName, UsingTemplate) {
   const auto *DTST =
       MatchResults.front().getNodeAs<DeducedTemplateSpecializationType>("id");
   ASSERT_TRUE(DTST);
-  EXPECT_EQ(DTST->getTemplateName().getKind(), TemplateName::UsingTemplate);
+  EXPECT_EQ(DTST->getTemplateName().getKind(), TemplateName::QualifiedTemplate);
+  EXPECT_TRUE(DTST->getTemplateName().getAsUsingShadowDecl() != nullptr);
 }
 
 } // namespace

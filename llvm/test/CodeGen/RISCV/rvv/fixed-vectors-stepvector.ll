@@ -225,11 +225,11 @@ declare <16 x i64> @llvm.experimental.stepvector.v16i64()
 define <16 x i64> @stepvector_v16i64() {
 ; RV32-LABEL: stepvector_v16i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI16_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI16_0)
-; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; RV32-NEXT:    vle8.v v16, (a0)
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    lui a1, %hi(.LCPI16_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_0)
+; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    vle8.v v16, (a1)
 ; RV32-NEXT:    vsext.vf4 v8, v16
 ; RV32-NEXT:    ret
 ;

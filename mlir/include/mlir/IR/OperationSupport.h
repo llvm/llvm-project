@@ -1219,6 +1219,9 @@ public:
   /// Return if the printer should print users of values.
   bool shouldPrintValueUsers() const;
 
+  /// Return if printer should use unique SSA IDs.
+  bool shouldPrintUniqueSSAIDs() const;
+
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
@@ -1249,6 +1252,9 @@ private:
 
   /// Print users of values.
   bool printValueUsersFlag : 1;
+
+  /// Print unique SSA IDs for values, block arguments and naming conflicts
+  bool printUniqueSSAIDsFlag : 1;
 };
 
 //===----------------------------------------------------------------------===//

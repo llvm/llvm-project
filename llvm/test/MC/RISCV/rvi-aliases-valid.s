@@ -190,6 +190,16 @@ jalr x25, x26, 11
 # CHECK-S-OBJ-NOALIAS: jalr zero, 0(ra)
 # CHECK-S-OBJ: ret
 ret
+# CHECK-S-OBJ-NOALIAS: jalr zero, 0(s11)
+# CHECK-S-OBJ: jr s11
+jr (x27)
+# CHECK-S-OBJ-NOALIAS: jalr ra, 0(t3)
+# CHECK-S-OBJ: jalr t3
+jalr (x28)
+# CHECK-S-OBJ-NOALIAS: jalr t4, 0(t5)
+# CHECK-S-OBJ: jalr t4, t5
+jalr x29, (x30)
+
 # TODO call
 # TODO tail
 

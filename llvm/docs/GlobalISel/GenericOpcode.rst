@@ -60,6 +60,17 @@ The address of a global value.
 
   %0(p0) = G_GLOBAL_VALUE @var_local
 
+G_PTRAUTH_GLOBAL_VALUE
+^^^^^^^^^^^^^^^^^^^^^^
+
+The signed address of a global value. Operands: address to be signed (pointer),
+key (32-bit imm), address for address discrimination (zero if not needed) and
+an extra discriminator (64-bit imm).
+
+.. code-block:: none
+
+  %0:_(p0) = G_PTRAUTH_GLOBAL_VALUE %1:_(p0), s32, %2:_(p0), s64
+
 G_BLOCK_ADDR
 ^^^^^^^^^^^^
 
@@ -592,10 +603,15 @@ G_FLOG, G_FLOG2, G_FLOG10
 
 Calculate the base-e, base-2, or base-10 respectively.
 
-G_FCEIL, G_FCOS, G_FSIN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C functions of the same name.
+
+G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These correspond to the standard C trigonometry functions of the same name.
 
 G_INTRINSIC_TRUNC
 ^^^^^^^^^^^^^^^^^
@@ -644,7 +660,7 @@ source vector should be inserted into.
 The index must be a constant multiple of the second source vector's minimum
 vector length. If the vectors are scalable, then the index is first scaled by
 the runtime scaling factor. The indices inserted in the source vector must be
-valid indicies of that vector. If this condition cannot be determined statically
+valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
 .. code-block:: none
@@ -661,7 +677,7 @@ the source vector.
 The index must be a constant multiple of the source vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
-vector must be valid indicies of that vector. If this condition cannot be
+vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 

@@ -55,9 +55,8 @@ TensorType inferReshapeExpandedType(TensorType inputType,
   // Check if the input is static, and if so, get its total size
   bool inputIsStatic = inputType.hasStaticShape();
   int64_t totalSize = inputIsStatic ? inputType.getNumElements() : -1;
- 
+
   // Compute result shape
-  bool resultIsStatic = true;
   auto resultShape = llvm::map_to_vector(newShape, [&](int64_t size) -> int64_t {
     // If this is not a placeholder, do not change it
     if (size >= 0)
@@ -65,10 +64,8 @@ TensorType inferReshapeExpandedType(TensorType inputType,
 
     // If we do not know the total size of the tensor, keep this dimension
     // dynamic in the result shape.
-    if (!inputIsStatic) {
-      resultIsStatic = false;
+    if (!inputIsStatic)
       return ShapedType::kDynamic;
-    }
 
     // Calculate the product of all elements in 'newShape' except for the -1
     // placeholder, which we discard by negating the result.
@@ -84,12 +81,14 @@ TensorType inferReshapeExpandedType(TensorType inputType,
     return totalSize / totalSizeNoPlaceholder;
   });
 
+  bool resultIsStatic = !ShapedType::isDynamicShape(resultShape);
+
   // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
   // shaped input from being reshaped into a statically shaped result. We may
   // simply turn the first result dimension dynamic to address this.
   if (!inputIsStatic && resultIsStatic)
     resultShape[0] = ShapedType::kDynamic;
-  
+
   // The 'tensor.expand_shape' op also forbids a statically shaped input from
   // being reshaped into a dynamically shaped result, but the placeholder
   // inference algorithm above guarantees that this will never be the case.
@@ -225,8 +224,17 @@ public:
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
-    auto resultType = reshape.getResult().getType();
-    auto input = reshape.getInput1();
+    auto resultType = cast_if_present<ShapedType>(
+        getTypeConverter()->convertType(reshape.getType()));
+    if (!resultType) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "could not convert result type");
+    }
+    auto input = dyn_cast<TypedValue<TensorType>>(adaptor.getInput1());
+    if (!input) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "expected input type to be tensor");
+    }
     auto newShape = reshape.getNewShape();
 
     // Infer all intermediate types
@@ -289,12 +297,13 @@ public:
   }
 };
 
-class PadConverter : public OpRewritePattern<tosa::PadOp> {
+class PadConverter : public OpConversionPattern<tosa::PadOp> {
 public:
-  using OpRewritePattern<tosa::PadOp>::OpRewritePattern;
+  using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(tosa::PadOp padOp,
-                                PatternRewriter &rewriter) const final {
+  LogicalResult
+  matchAndRewrite(tosa::PadOp padOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
     auto loc = padOp.getLoc();
     auto input = padOp.getInput1();
     auto padding = padOp.getPadding();
@@ -429,11 +438,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
-    RewritePatternSet *patterns) {
-  patterns->add<
-    ConcatConverter,
-    PadConverter,
-    ReshapeConverter,
-    SliceConverter
-  >(patterns->getContext());
+    TypeConverter &converter, RewritePatternSet *patterns) {
+  patterns
+      ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
+          converter, patterns->getContext());
 }

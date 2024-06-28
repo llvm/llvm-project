@@ -146,6 +146,38 @@ TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
                                    " (Lifetime ends)\n")));
 }
 
+TEST_F(DataflowAnalysisTest, CanAnalyzeStmt) {
+  std::string Code = R"cc(
+      struct S { bool b; };
+      void foo() {
+        S AnS = S{true};
+      }
+    )cc";
+  AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+  const auto &DeclStatement =
+      matchNode<DeclStmt>(declStmt(hasSingleDecl(varDecl(hasName("AnS")))));
+  const auto &Func = matchNode<FunctionDecl>(functionDecl(hasName("foo")));
+
+  ACFG = std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(
+      Func, const_cast<DeclStmt &>(DeclStatement), AST->getASTContext())));
+
+  NoopAnalysis Analysis = NoopAnalysis(AST->getASTContext());
+  DACtx = std::make_unique<DataflowAnalysisContext>(
+      std::make_unique<WatchedLiteralsSolver>());
+  Environment Env(*DACtx, const_cast<DeclStmt &>(DeclStatement));
+
+  llvm::Expected<std::vector<std::optional<DataflowAnalysisState<NoopLattice>>>>
+      Results = runDataflowAnalysis(*ACFG, Analysis, Env);
+
+  ASSERT_THAT_ERROR(Results.takeError(), llvm::Succeeded());
+  const Environment &ExitBlockEnv = Results->front()->Env;
+  BoolValue *BoolFieldValue = cast<BoolValue>(
+      getFieldValue(ExitBlockEnv.get<RecordStorageLocation>(
+                        *cast<VarDecl>((*DeclStatement.decl_begin()))),
+                    "b", AST->getASTContext(), ExitBlockEnv));
+  EXPECT_TRUE(Env.proves(BoolFieldValue->formula()));
+}
+
 // Tests for the statement-to-block map.
 using StmtToBlockTest = DataflowAnalysisTest;
 

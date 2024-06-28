@@ -787,25 +787,15 @@ define i1 @shifted_mask64_testl(i64 %a) {
 }
 
 define i1 @shifted_mask64_extra_use_const(i64 %a) {
-; NO-NDD-LABEL: shifted_mask64_extra_use_const:
-; NO-NDD:       # %bb.0:
-; NO-NDD-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
-; NO-NDD-NEXT:    # imm = 0x3FC000000000000
-; NO-NDD-NEXT:    testq %rcx, %rdi # encoding: [0x48,0x85,0xcf]
-; NO-NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
-; NO-NDD-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
-; NO-NDD-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: shifted_mask64_extra_use_const:
-; NDD:       # %bb.0:
-; NDD-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
-; NDD-NEXT:    # imm = 0x3FC000000000000
-; NDD-NEXT:    andq %rcx, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x21,0xcf]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
-; NDD-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
-; NDD-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
-; NDD-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: shifted_mask64_extra_use_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; CHECK-NEXT:    # imm = 0x3FC000000000000
+; CHECK-NEXT:    testq %rcx, %rdi # encoding: [0x48,0x85,0xcf]
+; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; CHECK-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
   store i64 287104476244869120, ptr @d64
@@ -954,19 +944,12 @@ declare i32 @f()
 ; The store makes sure the chain result of the load is used which used to
 ; prevent the post isel peephole from catching this.
 define i1 @fold_test_and_with_chain(ptr %x, ptr %y, i32 %z) {
-; NO-NDD-LABEL: fold_test_and_with_chain:
-; NO-NDD:       # %bb.0:
-; NO-NDD-NEXT:    testl %edx, (%rdi) # encoding: [0x85,0x17]
-; NO-NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NO-NDD-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: fold_test_and_with_chain:
-; NDD:       # %bb.0:
-; NDD-NEXT:    andl (%rdi), %edx, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x23,0x17]
-; NDD-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
-; NDD-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
-; NDD-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: fold_test_and_with_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edx, (%rdi) # encoding: [0x85,0x17]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
+; CHECK-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %x
   %b = and i32 %z, %a
   %c = icmp eq i32 %b, 0

@@ -11,7 +11,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %matmul [10, 20]
+    %a, %b, %c = transform.structured.tile_using_for %matmul tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -63,7 +63,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c, %d = transform.structured.tile_using_for %matmul [10, 20, 30]
+    %a, %b, %c, %d = transform.structured.tile_using_for %matmul tile_sizes [10, 20, 30]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -122,7 +122,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %generic [10, 0, 20]
+    %a, %b, %c = transform.structured.tile_using_for %generic tile_sizes [10, 0, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -175,7 +175,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %conv = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c, %d = transform.structured.tile_using_for %conv [0, 0, 0, 0, 10, 20, 30]
+    %a, %b, %c, %d = transform.structured.tile_using_for %conv tile_sizes [0, 0, 0, 0, 10, 20, 30]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -254,7 +254,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %generic [10, 20]
+    %a, %b, %c = transform.structured.tile_using_for %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -282,7 +282,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c, %d = transform.structured.tile_using_for %matmul [10, 20, 30] interchange = [1, 2, 0]
+    %a, %b, %c, %d = transform.structured.tile_using_for %matmul tile_sizes [10, 20, 30] interchange = [1, 2, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -338,7 +338,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %copy [10, 20]
+    %a, %b, %c = transform.structured.tile_using_for %copy tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -369,7 +369,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a = transform.structured.tile_using_for %generic []
+    %a = transform.structured.tile_using_for %generic tile_sizes []
       : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }
@@ -396,7 +396,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a = transform.structured.tile_using_for %generic []
+    %a = transform.structured.tile_using_for %generic tile_sizes []
       : (!transform.any_op) -> (!transform.any_op)
     transform.yield
   }

@@ -25,6 +25,7 @@ typedef Empty EmptyArMB[1][2];
 typedef int Int;
 typedef Int IntAr[10];
 typedef Int IntArNB[];
+typedef Int IntArZero[0];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
 union IncompleteUnion; // expected-note {{forward declaration of 'IncompleteUnion'}}
@@ -685,6 +686,7 @@ void is_array()
 {
   static_assert(__is_array(IntAr));
   static_assert(__is_array(IntArNB));
+  static_assert(!__is_array(IntArZero));
   static_assert(__is_array(UnionAr));
 
   static_assert(!__is_array(void));
@@ -714,6 +716,7 @@ void is_array()
 void is_bounded_array(int n) {
   static_assert(__is_bounded_array(IntAr));
   static_assert(!__is_bounded_array(IntArNB));
+  static_assert(!__is_bounded_array(IntArZero));
   static_assert(__is_bounded_array(UnionAr));
 
   static_assert(!__is_bounded_array(void));
@@ -746,6 +749,7 @@ void is_bounded_array(int n) {
 void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(IntAr));
   static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(IntArZero));
   static_assert(!__is_unbounded_array(UnionAr));
 
   static_assert(!__is_unbounded_array(void));
@@ -2908,6 +2912,12 @@ struct ConvertsToRef {
   operator RefType() const { return static_cast<RefType>(obj); }
   mutable T obj = 42;
 };
+template <class T, class RefType = T &>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -2937,12 +2947,25 @@ void reference_binds_to_temporary_checks() {
 
   static_assert((__is_constructible(int const &, LongRef)));
   static_assert((__reference_binds_to_temporary(int const &, LongRef)));
+  static_assert(!__reference_binds_to_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
 }
+
+
+struct ExplicitConversionRvalueRef {
+    operator int();
+    explicit operator int&&();
+};
+
+struct ExplicitConversionRef {
+    operator int();
+    explicit operator int&();
+};
 
 void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(int &, int &));
@@ -2973,6 +2996,8 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_constructs_from_temporary(int const &, LongRef));
+  static_assert(!__reference_constructs_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_constructs_from_temporary(int, long));
@@ -2987,6 +3012,65 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, int&&));
   static_assert(__reference_constructs_from_temporary(int&&, long&&));
   static_assert(__reference_constructs_from_temporary(int&&, long));
+
+
+  static_assert(!__reference_constructs_from_temporary(int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
+
+
+}
+
+void reference_converts_from_temporary_checks() {
+  static_assert(!__reference_converts_from_temporary(int &, int &));
+  static_assert(!__reference_converts_from_temporary(int &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int const &, int &));
+  static_assert(!__reference_converts_from_temporary(int const &, int const &));
+  static_assert(!__reference_converts_from_temporary(int const &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int &, long &)); // doesn't construct
+
+  static_assert(__reference_converts_from_temporary(int const &, long &));
+  static_assert(__reference_converts_from_temporary(int const &, long &&));
+  static_assert(__reference_converts_from_temporary(int &&, long &));
+
+  using LRef = ConvertsToRef<int, int &>;
+  using RRef = ConvertsToRef<int, int &&>;
+  using CLRef = ConvertsToRef<int, const int &>;
+  using LongRef = ConvertsToRef<long, long &>;
+  static_assert(__is_constructible(int &, LRef));
+  static_assert(!__reference_converts_from_temporary(int &, LRef));
+
+  static_assert(__is_constructible(int &&, RRef));
+  static_assert(!__reference_converts_from_temporary(int &&, RRef));
+
+  static_assert(__is_constructible(int const &, CLRef));
+  static_assert(!__reference_converts_from_temporary(int &&, CLRef));
+
+  static_assert(__is_constructible(int const &, LongRef));
+  static_assert(__reference_converts_from_temporary(int const &, LongRef));
+  static_assert(!__reference_converts_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
+
+  // Test that it doesn't accept non-reference types as input.
+  static_assert(!__reference_converts_from_temporary(int, long));
+
+  static_assert(__reference_converts_from_temporary(const int &, long));
+
+  // Additional checks
+  static_assert(__reference_converts_from_temporary(POD const&, Derives));
+  static_assert(__reference_converts_from_temporary(int&&, int));
+  static_assert(__reference_converts_from_temporary(const int&, int));
+  static_assert(!__reference_converts_from_temporary(int&&, int&&));
+  static_assert(!__reference_converts_from_temporary(const int&, int&&));
+  static_assert(__reference_converts_from_temporary(int&&, long&&));
+  static_assert(__reference_converts_from_temporary(int&&, long));
+
+  static_assert(!__reference_converts_from_temporary(int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
+
 }
 
 void array_rank() {

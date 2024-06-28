@@ -38,6 +38,19 @@ ELF Improvements
 * ``--debug-names`` is added to create a merged ``.debug_names`` index
   from input ``.debug_names`` sections. Type units are not handled yet.
   (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
+* ``--enable-non-contiguous-regions`` option allows automatically packing input
+  sections into memory regions by automatically spilling to later matches if a
+  region would overflow. This reduces the toil of manually packing regions
+  (typical for embedded). It also makes full LTO feasible in such cases, since
+  IR merging currently prevents the linker script from referring to input
+  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
+* ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
+  and combine relocation sections if their relocated section group members are
+  placed to the same output section.
+  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
+* ``--build-id`` now defaults to generating a 20-byte digest ("sha1") instead
+  of 8-byte ("fast"). This improves compatibility with RPM packaging tools.
+  (`#93943 <https://github.com/llvm/llvm-project/pull/93943>`_)
 
 Breaking changes
 ----------------

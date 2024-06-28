@@ -21,7 +21,7 @@ getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
   llvm::StringRef Res;
   for (const llvm::StringRef &Item : Allowed) {
     if (Item.equals_insensitive(Search)) {
-      assert(!Item.equals(Search) && "This should be handled earlier on.");
+      assert(Item != Search && "This should be handled earlier on.");
       MaxEditDistance = 1;
       Res = Item;
       continue;
@@ -41,7 +41,7 @@ getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
       if (!NoPrefix.consume_front(DropPrefix))
         continue;
       if (NoPrefix.equals_insensitive(Search)) {
-        if (NoPrefix.equals(Search))
+        if (NoPrefix == Search)
           return Item.str();
         MaxEditDistance = 1;
         Res = Item;

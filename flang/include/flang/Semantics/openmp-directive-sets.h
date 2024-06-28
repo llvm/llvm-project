@@ -205,9 +205,11 @@ static const OmpDirectiveSet compositeConstructSet{
 };
 
 static const OmpDirectiveSet blockConstructSet{
+    Directive::OMPD_masked,
     Directive::OMPD_master,
     Directive::OMPD_ordered,
     Directive::OMPD_parallel,
+    Directive::OMPD_parallel_masked,
     Directive::OMPD_parallel_workshare,
     Directive::OMPD_single,
     Directive::OMPD_target,
@@ -240,6 +242,7 @@ static const OmpDirectiveSet loopConstructSet{
     Directive::OMPD_parallel_master_taskloop,
     Directive::OMPD_parallel_master_taskloop_simd,
     Directive::OMPD_simd,
+    Directive::OMPD_target_loop,
     Directive::OMPD_target_parallel_do,
     Directive::OMPD_target_parallel_do_simd,
     Directive::OMPD_target_parallel_loop,

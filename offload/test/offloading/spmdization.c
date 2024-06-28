@@ -32,13 +32,19 @@ int main(void) {
     tid = omp_get_thread_num();
     maxt = omp_get_max_threads();
     #pragma omp parallel
-    noop();  
+    noop();
   }
   printf("NumThreads: %i, InParallel: %i, Level: %i, ActiveLevel: %i, Nested: %i, "
          "ThreadNum: %i, MaxThreads: %i\n",
          nthreads, ip, lvl, alvl, nested, tid, maxt);
   // GENERIC: Generic mode
   // SPMD: Generic-SPMD mode
-  // CHECK: NumThreads: 1, InParallel: 0, Level: 0, ActiveLevel: 0, Nested: 0, ThreadNum: 0, MaxThreads: 
+  // CHECK: NumThreads: 1
+  // CHECK: InParallel: 0
+  // CHECK: Level: 0
+  // CHECK: ActiveLevel: 0
+  // CHECK: Nested: 0
+  // CHECK: ThreadNum: 0
+  // CHECK: MaxThreads:
   return 0;
 }

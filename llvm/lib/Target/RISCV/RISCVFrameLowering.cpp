@@ -42,10 +42,16 @@ RISCVFrameLowering::RISCVFrameLowering(const RISCVSubtarget &STI)
           /*TransientStackAlignment=*/getABIStackAlignment(STI.getTargetABI())),
       STI(STI) {}
 
-static const MCPhysReg AllPopRegs[] = {
-    RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
-    RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
-    RISCV::X25, RISCV::X26, RISCV::X27};
+// Offsets which need to be scale by XLen representing locations of CSRs which
+// are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
+static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
+    {/*ra*/ RISCV::X1, -1},   {/*s0*/ RISCV::X8, -2},
+    {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
+    {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
+    {/*s5*/ RISCV::X21, -7},  {/*s6*/ RISCV::X22, -8},
+    {/*s7*/ RISCV::X23, -9},  {/*s8*/ RISCV::X24, -10},
+    {/*s9*/ RISCV::X25, -11}, {/*s10*/ RISCV::X26, -12},
+    {/*s11*/ RISCV::X27, -13}};
 
 // For now we use x3, a.k.a gp, as pointer to shadow call stack.
 // User should not use x3 in their asm.
@@ -170,7 +176,7 @@ static int getLibCallID(const MachineFunction &MF,
 
   Register MaxReg = RISCV::NoRegister;
   for (auto &CS : CSI)
-    // RISCVRegisterInfo::hasReservedSpillSlot assigns negative frame indexes to
+    // assignCalleeSavedSpillSlots assigns negative frame indexes to
     // registers which can be saved by libcall.
     if (CS.getFrameIdx() < 0)
       MaxReg = std::max(MaxReg.id(), CS.getReg().id());
@@ -259,7 +265,6 @@ getPushPopEncodingAndNum(const Register MaxReg) {
   default:
     llvm_unreachable("Unexpected Reg for Push/Pop Inst");
   case RISCV::X27: /*s11*/
-  case RISCV::X26: /*s10*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S11, 13);
   case RISCV::X25: /*s9*/
     return std::make_pair(llvm::RISCVZC::RLISTENCODE::RA_S0_S9, 11);
@@ -291,12 +296,12 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
                                  const std::vector<CalleeSavedInfo> &CSI) {
   Register MaxPushPopReg = RISCV::NoRegister;
   for (auto &CS : CSI) {
-    if (llvm::is_contained(AllPopRegs, CS.getReg().id()))
+    if (llvm::find_if(FixedCSRFIMap, [&](auto P) {
+          return P.first == CS.getReg();
+        }) != std::end(FixedCSRFIMap))
       MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
   }
-  // if rlist is {rs, s0-s10}, then s11 will also be included
-  if (MaxPushPopReg == RISCV::X26)
-    MaxPushPopReg = RISCV::X27;
+  assert(MaxPushPopReg != RISCV::X26 && "x26 requires x27 to also be pushed");
   return MaxPushPopReg;
 }
 
@@ -873,9 +878,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
           StackID == TargetStackID::ScalableVector) &&
          "Unexpected stack ID for the frame object.");
   if (StackID == TargetStackID::Default) {
-    Offset =
-        StackOffset::getFixed(MFI.getObjectOffset(FI) - getOffsetOfLocalArea() +
-                              MFI.getOffsetAdjustment());
+    assert(getOffsetOfLocalArea() == 0 && "LocalAreaOffset is not 0!");
+    Offset = StackOffset::getFixed(MFI.getObjectOffset(FI) +
+                                   MFI.getOffsetAdjustment());
   } else if (StackID == TargetStackID::ScalableVector) {
     Offset = StackOffset::getScalable(MFI.getObjectOffset(FI));
   }
@@ -1039,6 +1044,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark BP as used if function has dedicated base pointer.
   if (hasBP(MF))
     SavedRegs.set(RISCVABI::getBPReg());
+
+  // When using cm.push/pop we must save X27 if we save X26.
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
+    SavedRegs.set(RISCV::X27);
 }
 
 std::pair<int64_t, Align>
@@ -1385,17 +1395,6 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   return 0;
 }
 
-// Offsets which need to be scale by XLen representing locations of CSRs which
-// are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
-static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
-    {/*ra*/ RISCV::X1, -1},   {/*s0*/ RISCV::X8, -2},
-    {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
-    {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
-    {/*s5*/ RISCV::X21, -7},  {/*s6*/ RISCV::X22, -8},
-    {/*s7*/ RISCV::X23, -9},  {/*s8*/ RISCV::X24, -10},
-    {/*s9*/ RISCV::X25, -11}, {/*s10*/ RISCV::X26, -12},
-    {/*s11*/ RISCV::X27, -13}};
-
 bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
@@ -1498,7 +1497,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       PushBuilder.addImm(0);
 
       for (unsigned i = 0; i < PushedRegNum; i++)
-        PushBuilder.addUse(AllPopRegs[i], RegState::Implicit);
+        PushBuilder.addUse(FixedCSRFIMap[i].first, RegState::Implicit);
     }
   } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
     // Add spill libcall via non-callee-saved register t0.
@@ -1611,7 +1610,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       PopBuilder.addImm(0);
 
       for (unsigned i = 0; i < RVFI->getRVPushRegs(); i++)
-        PopBuilder.addDef(AllPopRegs[i], RegState::ImplicitDefine);
+        PopBuilder.addDef(FixedCSRFIMap[i].first, RegState::ImplicitDefine);
     }
   } else {
     const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);

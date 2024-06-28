@@ -2096,13 +2096,12 @@ private:
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
-  void setFunctionTemplateSpecialization(ASTContext &C,
-                                         FunctionTemplateDecl *Template,
-                                       const TemplateArgumentList *TemplateArgs,
-                                         void *InsertPos,
-                                         TemplateSpecializationKind TSK,
-                          const TemplateArgumentListInfo *TemplateArgsAsWritten,
-                                         SourceLocation PointOfInstantiation);
+  void setFunctionTemplateSpecialization(
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation);
 
   /// Specify that this record is an instantiation of the
   /// member function FD.
@@ -2188,6 +2187,8 @@ public:
                             bool Qualified) const override;
 
   void setRangeEnd(SourceLocation E) { EndRangeLoc = E; }
+
+  void setDeclarationNameLoc(DeclarationNameLoc L) { DNLoc = L; }
 
   /// Returns the location of the ellipsis of a variadic function.
   SourceLocation getEllipsisLoc() const {
@@ -2981,12 +2982,12 @@ public:
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
-  void setFunctionTemplateSpecialization(FunctionTemplateDecl *Template,
-                const TemplateArgumentList *TemplateArgs,
-                void *InsertPos,
-                TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
-                const TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
-                SourceLocation PointOfInstantiation = SourceLocation()) {
+  void setFunctionTemplateSpecialization(
+      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
+      void *InsertPos,
+      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
+      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
+      SourceLocation PointOfInstantiation = SourceLocation()) {
     setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
                                       InsertPos, TSK, TemplateArgsAsWritten,
                                       PointOfInstantiation);
@@ -3040,6 +3041,16 @@ public:
   /// Returns cached ODRHash of the function.  This must have been previously
   /// computed and stored.
   unsigned getODRHash() const;
+
+  FunctionEffectsRef getFunctionEffects() const {
+    // Effects may differ between declarations, but they should be propagated
+    // from old to new on any redeclaration, so it suffices to look at
+    // getMostRecentDecl().
+    if (const auto *FPT =
+            getMostRecentDecl()->getType()->getAs<FunctionProtoType>())
+      return FPT->getFunctionEffects();
+    return {};
+  }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -4669,6 +4680,13 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
+  FunctionEffectsRef getFunctionEffects() const {
+    if (const TypeSourceInfo *TSI = getSignatureAsWritten())
+      if (const auto *FPT = TSI->getType()->getAs<FunctionProtoType>())
+        return FPT->getFunctionEffects();
+    return {};
+  }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Block; }
@@ -5048,6 +5066,11 @@ inline bool IsEnumDeclScoped(EnumDecl *ED) {
 static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
   return "$ompvariant";
 }
+
+/// Returns whether the given FunctionDecl has an __arm[_locally]_streaming
+/// attribute.
+bool IsArmStreamingFunction(const FunctionDecl *FD,
+                            bool IncludeLocallyStreaming);
 
 } // namespace clang
 

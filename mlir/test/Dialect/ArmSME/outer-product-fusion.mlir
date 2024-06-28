@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -arm-sme-outer-product-fusion -cse -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -arm-sme-outer-product-fusion -cse -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @outerproduct_add_widening_2way_f16f16f32
 // CHECK-SAME:    %[[A0:.*]]: vector<[4]xf16>, %[[B0:.*]]: vector<[4]xf16>, %[[A1:.*]]: vector<[4]xf16>, %[[B1:.*]]: vector<[4]xf16>,
@@ -929,6 +929,7 @@ func.func @outerproduct_widening_4way__missing_acc(
   %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) : vector<[4]xi32>, vector<[4]xi32>
   // Missing accumulator breaks use-def chain.
   %3 = arm_sme.outerproduct %a3_ext, %b3_ext : vector<[4]xi32>, vector<[4]xi32>
+  "test.some_use"(%2) : (vector<[4]x[4]xi32>) -> ()
 
   return %3 : vector<[4]x[4]xi32>
 }
@@ -1014,7 +1015,7 @@ func.func @outerproduct_widening_2way__cant_erase(
 
   %acc = arith.constant dense<1.0> : vector<[4]x[4]xf32>
   %0 = arm_sme.outerproduct %a0_ext, %b0_ext acc(%acc) : vector<[4]xf32>, vector<[4]xf32>
-  "fake.use"(%0) : (vector<[4]x[4]xf32>) -> ()
+  "test.some_use"(%0) : (vector<[4]x[4]xf32>) -> ()
   %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xf32>, vector<[4]xf32>
 
   return %1 : vector<[4]x[4]xf32>
@@ -1048,7 +1049,7 @@ func.func @outerproduct_widening_4way__multi_use_cant_erase(
 
   %0 = arm_sme.outerproduct %a0_ext, %b0_ext : vector<[4]xi32>, vector<[4]xi32>
   %1 = arm_sme.outerproduct %a1_ext, %b1_ext acc(%0) : vector<[4]xi32>, vector<[4]xi32>
-  "fake.use"(%1) : (vector<[4]x[4]xi32>) -> ()
+  "test.some_use"(%1) : (vector<[4]x[4]xi32>) -> ()
   %2 = arm_sme.outerproduct %a2_ext, %b2_ext acc(%1) : vector<[4]xi32>, vector<[4]xi32>
   %3 = arm_sme.outerproduct %a3_ext, %b3_ext acc(%2) : vector<[4]xi32>, vector<[4]xi32>
 

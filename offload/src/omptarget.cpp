@@ -315,7 +315,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (!PM->getNumUsedPlugins()) {
+      if (!PM->getNumActivePlugins()) {
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
 
@@ -461,7 +461,9 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceOrErr->deleteData(DevicePtr, Kind);
+  if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
+    FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr");
+
   DP("omp_target_free deallocated device ptr\n");
 }
 
@@ -1748,7 +1750,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                                   TARGET_ALLOC_DEFAULT);
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
-  KernelArgsTy KernelArgs = {0};
+  KernelArgsTy KernelArgs{};
   KernelArgs.Version = OMP_KERNEL_ARG_VERSION;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;

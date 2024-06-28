@@ -94,6 +94,7 @@ struct IfClauseOps {
 
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
+  llvm::SmallVector<bool> inReductionVarsByRef;
   llvm::SmallVector<Attribute> inReductionDeclSymbols;
 };
 
@@ -147,6 +148,7 @@ struct NumThreadsClauseOps {
 
 struct OrderClauseOps {
   ClauseOrderKindAttr orderAttr;
+  OrderModifierAttr orderModAttr;
 };
 
 struct OrderedClauseOps {
@@ -177,8 +179,8 @@ struct ProcBindClauseOps {
 
 struct ReductionClauseOps {
   llvm::SmallVector<Value> reductionVars;
+  llvm::SmallVector<bool> reductionVarsByRef;
   llvm::SmallVector<Attribute> reductionDeclSymbols;
-  UnitAttr reductionByRefAttr;
 };
 
 struct SafelenClauseOps {
@@ -198,6 +200,7 @@ struct SimdlenClauseOps {
 
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
+  llvm::SmallVector<bool> taskReductionVarsByRef;
   llvm::SmallVector<Attribute> taskReductionDeclSymbols;
 };
 

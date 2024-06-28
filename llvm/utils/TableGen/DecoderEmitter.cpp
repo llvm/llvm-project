@@ -2301,7 +2301,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckField: {
       // Decode the start value.
-      unsigned Start = decodeULEB128AndInc(++Ptr);
+      unsigned Start = decodeULEB128AndIncUnsafe(++Ptr);
       unsigned Len = *Ptr;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -2328,7 +2328,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckPredicate: {
       // Decode the Predicate Index value.
-      unsigned PIdx = decodeULEB128AndInc(++Ptr);
+      unsigned PIdx = decodeULEB128AndIncUnsafe(++Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2345,8 +2345,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_Decode: {
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndInc(++Ptr);
-      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
+      unsigned Opc = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
 
       MI.clear();
       MI.setOpcode(Opc);
@@ -2366,8 +2366,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_TryDecode: {
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128AndInc(++Ptr);
-      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
+      unsigned Opc = decodeULEB128AndIncUnsafe(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndIncUnsafe(Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2399,8 +2399,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_SoftFail: {
       // Decode the mask values.
-      uint64_t PositiveMask = decodeULEB128AndInc(++Ptr);
-      uint64_t NegativeMask = decodeULEB128AndInc(Ptr);
+      uint64_t PositiveMask = decodeULEB128AndIncUnsafe(++Ptr);
+      uint64_t NegativeMask = decodeULEB128AndIncUnsafe(Ptr);
       bool Fail = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
       if (Fail)
         S = MCDisassembler::SoftFail;

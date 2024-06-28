@@ -121,6 +121,12 @@ static cl::opt<unsigned> OutlinerBenefitThreshold(
     cl::desc(
         "The minimum size in bytes before an outlining candidate is accepted"));
 
+static cl::opt<bool> OutlinerLeafDescendants(
+    "outliner-leaf-descendants", cl::init(true), cl::Hidden,
+    cl::desc("Consider all leaf descendants of internal nodes of the suffix "
+             "tree as candidates for outlining (if false, only leaf children "
+             "are considered)"));
+
 namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
@@ -576,7 +582,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
 void MachineOutliner::findCandidates(
     InstructionMapper &Mapper, std::vector<OutlinedFunction> &FunctionList) {
   FunctionList.clear();
-  SuffixTree ST(Mapper.UnsignedVec);
+  SuffixTree ST(Mapper.UnsignedVec, OutlinerLeafDescendants);
 
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
@@ -584,7 +590,7 @@ void MachineOutliner::findCandidates(
   LLVM_DEBUG(dbgs() << "*** Discarding overlapping candidates *** \n");
   LLVM_DEBUG(
       dbgs() << "Searching for overlaps in all repeated sequences...\n");
-  for (const SuffixTree::RepeatedSubstring &RS : ST) {
+  for (SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
     unsigned StringLen = RS.Length;
     LLVM_DEBUG(dbgs() << "  Sequence length: " << StringLen << "\n");
@@ -593,6 +599,9 @@ void MachineOutliner::findCandidates(
     unsigned NumDiscarded = 0;
     unsigned NumKept = 0;
 #endif
+    // Sort the start indices so that we can efficiently check if candidates
+    // overlap with the ones we've already found for this sequence.
+    llvm::sort(RS.StartIndices);
     for (const unsigned &StartIdx : RS.StartIndices) {
       // Trick: Discard some candidates that would be incompatible with the
       // ones we've already found for this sequence. This will save us some
@@ -616,17 +625,15 @@ void MachineOutliner::findCandidates(
       // * End before the other starts
       // * Start after the other ends
       unsigned EndIdx = StartIdx + StringLen - 1;
-      auto FirstOverlap = find_if(
-          CandidatesForRepeatedSeq, [StartIdx, EndIdx](const Candidate &C) {
-            return EndIdx >= C.getStartIdx() && StartIdx <= C.getEndIdx();
-          });
-      if (FirstOverlap != CandidatesForRepeatedSeq.end()) {
+      if (!CandidatesForRepeatedSeq.empty() &&
+          StartIdx <= CandidatesForRepeatedSeq.back().getEndIdx()) {
 #ifndef NDEBUG
         ++NumDiscarded;
-        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx
-                          << ", " << EndIdx << "]; overlaps with candidate @ ["
-                          << FirstOverlap->getStartIdx() << ", "
-                          << FirstOverlap->getEndIdx() << "]\n");
+        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx << ", "
+                          << EndIdx << "]; overlaps with candidate @ ["
+                          << CandidatesForRepeatedSeq.back().getStartIdx()
+                          << ", " << CandidatesForRepeatedSeq.back().getEndIdx()
+                          << "]\n");
 #endif
         continue;
       }
@@ -717,8 +724,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       [](UWTableKind K, const outliner::Candidate &C) {
         return std::max(K, C.getMF()->getFunction().getUWTableKind());
       });
-  if (UW != UWTableKind::None)
-    F->setUWTableKind(UW);
+  F->setUWTableKind(UW);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
@@ -828,10 +834,12 @@ bool MachineOutliner::outline(Module &M,
                     << "\n");
   bool OutlinedSomething = false;
 
-  // Sort by benefit. The most beneficial functions should be outlined first.
+  // Sort by priority where priority := getNotOutlinedCost / getOutliningCost.
+  // The function with highest priority should be outlined first.
   stable_sort(FunctionList,
               [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-                return LHS.getBenefit() > RHS.getBenefit();
+                return LHS.getNotOutlinedCost() * RHS.getOutliningCost() >
+                       RHS.getNotOutlinedCost() * LHS.getOutliningCost();
               });
 
   // Walk over each function, outlining them as we go along. Functions are

@@ -44,6 +44,7 @@ extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
 extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
 extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
 extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
+extern cl::opt<bool> WasmEnableExnref; // EH using new Wasm EH (exnref)
 
 enum OperandType {
   /// Basic block label in a branch construct.
@@ -206,6 +207,8 @@ inline unsigned GetDefaultP2AlignAny(unsigned Opc) {
   WASM_LOAD_STORE(LOAD16_SPLAT)
   WASM_LOAD_STORE(LOAD_LANE_I16x8)
   WASM_LOAD_STORE(STORE_LANE_I16x8)
+  WASM_LOAD_STORE(LOAD_F16_F32)
+  WASM_LOAD_STORE(STORE_F16_F32)
   return 1;
   WASM_LOAD_STORE(LOAD_I32)
   WASM_LOAD_STORE(LOAD_F32)
@@ -343,6 +346,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_v4i32_S:
   case WebAssembly::ARGUMENT_v2i64:
   case WebAssembly::ARGUMENT_v2i64_S:
+  case WebAssembly::ARGUMENT_v8f16:
+  case WebAssembly::ARGUMENT_v8f16_S:
   case WebAssembly::ARGUMENT_v4f32:
   case WebAssembly::ARGUMENT_v4f32_S:
   case WebAssembly::ARGUMENT_v2f64:
@@ -351,6 +356,8 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_funcref_S:
   case WebAssembly::ARGUMENT_externref:
   case WebAssembly::ARGUMENT_externref_S:
+  case WebAssembly::ARGUMENT_exnref:
+  case WebAssembly::ARGUMENT_exnref_S:
     return true;
   default:
     return false;
@@ -373,6 +380,8 @@ inline bool isCopy(unsigned Opc) {
   case WebAssembly::COPY_FUNCREF_S:
   case WebAssembly::COPY_EXTERNREF:
   case WebAssembly::COPY_EXTERNREF_S:
+  case WebAssembly::COPY_EXNREF:
+  case WebAssembly::COPY_EXNREF_S:
     return true;
   default:
     return false;
@@ -395,6 +404,8 @@ inline bool isTee(unsigned Opc) {
   case WebAssembly::TEE_FUNCREF_S:
   case WebAssembly::TEE_EXTERNREF:
   case WebAssembly::TEE_EXTERNREF_S:
+  case WebAssembly::TEE_EXNREF:
+  case WebAssembly::TEE_EXNREF_S:
     return true;
   default:
     return false;
@@ -485,6 +496,8 @@ inline bool isLocalGet(unsigned Opc) {
   case WebAssembly::LOCAL_GET_FUNCREF_S:
   case WebAssembly::LOCAL_GET_EXTERNREF:
   case WebAssembly::LOCAL_GET_EXTERNREF_S:
+  case WebAssembly::LOCAL_GET_EXNREF:
+  case WebAssembly::LOCAL_GET_EXNREF_S:
     return true;
   default:
     return false;
@@ -507,6 +520,8 @@ inline bool isLocalSet(unsigned Opc) {
   case WebAssembly::LOCAL_SET_FUNCREF_S:
   case WebAssembly::LOCAL_SET_EXTERNREF:
   case WebAssembly::LOCAL_SET_EXTERNREF_S:
+  case WebAssembly::LOCAL_SET_EXNREF:
+  case WebAssembly::LOCAL_SET_EXNREF_S:
     return true;
   default:
     return false;
@@ -529,6 +544,8 @@ inline bool isLocalTee(unsigned Opc) {
   case WebAssembly::LOCAL_TEE_FUNCREF_S:
   case WebAssembly::LOCAL_TEE_EXTERNREF:
   case WebAssembly::LOCAL_TEE_EXTERNREF_S:
+  case WebAssembly::LOCAL_TEE_EXNREF:
+  case WebAssembly::LOCAL_TEE_EXNREF_S:
     return true;
   default:
     return false;

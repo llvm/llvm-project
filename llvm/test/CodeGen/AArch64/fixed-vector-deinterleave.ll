@@ -30,21 +30,13 @@ define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec
 }
 
 define {<4 x half>, <4 x half>} @vector_deinterleave_v4f16_v8f16(<8 x half> %vec) {
-; CHECK-SD-LABEL: vector_deinterleave_v4f16_v8f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    uzp1 v2.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    uzp2 v1.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    fmov d0, d2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_deinterleave_v4f16_v8f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    uzp1 v2.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    uzp2 v1.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-GI-NEXT:    fmov d0, d2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_deinterleave_v4f16_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v2.8h, v0.8h, v0.8h
+; CHECK-NEXT:    uzp2 v1.8h, v0.8h, v0.8h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    ret
   %retval = call {<4 x half>, <4 x half>} @llvm.vector.deinterleave2.v8f16(<8 x half> %vec)
   ret {<4 x half>, <4 x half>}   %retval
 }

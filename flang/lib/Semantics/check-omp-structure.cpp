@@ -84,48 +84,70 @@ private:
   parser::CharBlock source_;
 };
 
-class OmpCycleChecker {
+class OmpCycleAndExitChecker {
 public:
-  OmpCycleChecker(SemanticsContext &context, std::int64_t cycleLevel)
-      : context_{context}, cycleLevel_{cycleLevel} {}
+  OmpCycleAndExitChecker(SemanticsContext &context, std::int64_t level)
+      : context_{context}, level_{level} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
   bool Pre(const parser::DoConstruct &dc) {
-    cycleLevel_--;
-    const auto &labelName{std::get<0>(std::get<0>(dc.t).statement.t)};
-    if (labelName) {
-      labelNamesandLevels_.emplace(labelName.value().ToString(), cycleLevel_);
+    level_--;
+    const auto &constructName{std::get<0>(std::get<0>(dc.t).statement.t)};
+    if (constructName) {
+      constructNamesAndLevels_.emplace(
+          constructName.value().ToString(), level_);
     }
     return true;
   }
+
+  void Post(const parser::DoConstruct &dc) { level_++; }
 
   bool Pre(const parser::CycleStmt &cyclestmt) {
     std::map<std::string, std::int64_t>::iterator it;
     bool err{false};
     if (cyclestmt.v) {
-      it = labelNamesandLevels_.find(cyclestmt.v->source.ToString());
-      err = (it != labelNamesandLevels_.end() && it->second > 0);
+      it = constructNamesAndLevels_.find(cyclestmt.v->source.ToString());
+      err = (it != constructNamesAndLevels_.end() && it->second > 0);
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ > 0;
     }
-    if (cycleLevel_ > 0 || err) {
-      context_.Say(*cycleSource_,
+    if (err) {
+      context_.Say(*source_,
           "CYCLE statement to non-innermost associated loop of an OpenMP DO "
           "construct"_err_en_US);
     }
     return true;
   }
 
+  bool Pre(const parser::ExitStmt &exitStmt) {
+    std::map<std::string, std::int64_t>::iterator it;
+    bool err{false};
+    if (exitStmt.v) {
+      it = constructNamesAndLevels_.find(exitStmt.v->source.ToString());
+      err = (it != constructNamesAndLevels_.end() && it->second >= 0);
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ >= 0;
+    }
+    if (err) {
+      context_.Say(*source_,
+          "EXIT statement terminates associated loop of an OpenMP DO "
+          "construct"_err_en_US);
+    }
+    return true;
+  }
+
   bool Pre(const parser::Statement<parser::ActionStmt> &actionstmt) {
-    cycleSource_ = &actionstmt.source;
+    source_ = &actionstmt.source;
     return true;
   }
 
 private:
   SemanticsContext &context_;
-  const parser::CharBlock *cycleSource_;
-  std::int64_t cycleLevel_;
-  std::map<std::string, std::int64_t> labelNamesandLevels_;
+  const parser::CharBlock *source_;
+  std::int64_t level_;
+  std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
 
 bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
@@ -258,7 +280,8 @@ void OmpStructureChecker::HasInvalidDistributeNesting(
       violation = true;
     } else {
       // `distribute` region has to be strictly nested inside `teams`
-      if (!llvm::omp::topTeamsSet.test(GetContextParent().directive)) {
+      if (!OmpDirectiveSet{llvm::omp::OMPD_teams, llvm::omp::OMPD_target_teams}
+               .test(GetContextParent().directive)) {
         violation = true;
       }
     }
@@ -652,8 +675,8 @@ std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
 void OmpStructureChecker::CheckCycleConstraints(
     const parser::OpenMPLoopConstruct &x) {
   std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
-  OmpCycleChecker ompCycleChecker{context_, ordCollapseLevel};
-  parser::Walk(x, ompCycleChecker);
+  OmpCycleAndExitChecker checker{context_, ordCollapseLevel};
+  parser::Walk(x, checker);
 }
 
 void OmpStructureChecker::CheckDistLinear(
@@ -2287,6 +2310,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
   if (CheckReductionOperators(x)) {
     CheckReductionTypeList(x);
   }
+  CheckReductionModifier(x);
 }
 
 bool OmpStructureChecker::CheckReductionOperators(
@@ -2297,9 +2321,15 @@ bool OmpStructureChecker::CheckReductionOperators(
   common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &dOpr) {
-            const auto &intrinsicOp{
-                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)};
-            ok = CheckIntrinsicOperator(intrinsicOp);
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              ok = CheckIntrinsicOperator(*intrinsicOp);
+            } else {
+              context_.Say(GetContext().clauseSource,
+                  "Invalid reduction operator in REDUCTION clause."_err_en_US,
+                  ContextDirectiveAsFortran());
+            }
           },
           [&](const parser::ProcedureDesignator &procD) {
             const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
@@ -2348,6 +2378,87 @@ bool OmpStructureChecker::CheckIntrinsicOperator(
   return false;
 }
 
+static bool IsReductionAllowedForType(
+    const parser::OmpClause::Reduction &x, const DeclTypeSpec &type) {
+  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
+  // TODO: user defined reduction operators. Just allow everything for now.
+  bool ok{true};
+
+  auto IsLogical{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Logical;
+  }};
+  auto IsCharacter{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Character;
+  }};
+
+  common::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &dOpr) {
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              // OMP5.2: The type [...] of a list item that appears in a
+              // reduction clause must be valid for the combiner expression
+              // See F2023: Table 10.2
+              // .LT., .LE., .GT., .GE. are handled as procedure designators
+              // below.
+              switch (*intrinsicOp) {
+              case parser::DefinedOperator::IntrinsicOperator::Multiply:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::Add:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::Subtract:
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) ||
+                    type.IsNumeric(TypeCategory::Complex);
+                break;
+
+              case parser::DefinedOperator::IntrinsicOperator::AND:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::OR:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::EQV:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::NEQV:
+                ok = IsLogical(type);
+                break;
+
+              // Reduction identifier is not in OMP5.2 Table 5.2
+              default:
+                DIE("This should have been caught in CheckIntrinsicOperator");
+                ok = false;
+                break;
+              }
+            }
+          },
+          [&](const parser::ProcedureDesignator &procD) {
+            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+            if (name && name->symbol) {
+              const SourceName &realName{name->symbol->GetUltimate().name()};
+              // OMP5.2: The type [...] of a list item that appears in a
+              // reduction clause must be valid for the combiner expression
+              if (realName == "iand" || realName == "ior" ||
+                  realName == "ieor") {
+                // IAND: arguments must be integers: F2023 16.9.100
+                // IEOR: arguments must be integers: F2023 16.9.106
+                // IOR: arguments must be integers: F2023 16.9.111
+                ok = type.IsNumeric(TypeCategory::Integer);
+              } else if (realName == "max" || realName == "min") {
+                // MAX: arguments must be integer, real, or character:
+                // F2023 16.9.135
+                // MIN: arguments must be integer, real, or character:
+                // F2023 16.9.141
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) || IsCharacter(type);
+              }
+            }
+          },
+      },
+      definedOp.u);
+
+  return ok;
+}
+
 void OmpStructureChecker::CheckReductionTypeList(
     const parser::OmpClause::Reduction &x) {
   const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
@@ -2367,7 +2478,69 @@ void OmpStructureChecker::CheckReductionTypeList(
       context_.Say(source,
           "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
           symbol->name());
+    } else if (!IsReductionAllowedForType(x, DEREF(symbol->GetType()))) {
+      context_.Say(source,
+          "The type of '%s' is incompatible with the reduction operator."_err_en_US,
+          symbol->name());
     }
+  }
+}
+
+void OmpStructureChecker::CheckReductionModifier(
+    const parser::OmpClause::Reduction &x) {
+  using ReductionModifier = parser::OmpReductionClause::ReductionModifier;
+  const auto &maybeModifier{std::get<std::optional<ReductionModifier>>(x.v.t)};
+  if (!maybeModifier || *maybeModifier == ReductionModifier::Default) {
+    // No modifier, or the default one is always ok.
+    return;
+  }
+  ReductionModifier modifier{*maybeModifier};
+  const DirectiveContext &dirCtx{GetContext()};
+  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
+    // [5.2:257:33-34]
+    // If a reduction-modifier is specified in a reduction clause that
+    // appears on the directive, then the reduction modifier must be
+    // default.
+    context_.Say(GetContext().clauseSource,
+        "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
+  }
+  if (modifier == ReductionModifier::Task) {
+    // "Task" is only allowed on worksharing or "parallel" directive.
+    static llvm::omp::Directive worksharing[]{
+        llvm::omp::Directive::OMPD_do, llvm::omp::Directive::OMPD_scope,
+        llvm::omp::Directive::OMPD_sections,
+        // There are more worksharing directives, but they do not apply:
+        // "for" is C++ only,
+        // "single" and "workshare" don't allow reduction clause,
+        // "loop" has different restrictions (checked above).
+    };
+    if (dirCtx.directive != llvm::omp::Directive::OMPD_parallel &&
+        !llvm::is_contained(worksharing, dirCtx.directive)) {
+      context_.Say(GetContext().clauseSource,
+          "Modifier 'TASK' on REDUCTION clause is only allowed with "
+          "PARALLEL or worksharing directive"_err_en_US);
+    }
+  } else if (modifier == ReductionModifier::Inscan) {
+    // "Inscan" is only allowed on worksharing-loop, worksharing-loop simd,
+    // or "simd" directive.
+    // The worksharing-loop directives are OMPD_do and OMPD_for. Only the
+    // former is allowed in Fortran.
+    switch (dirCtx.directive) {
+    case llvm::omp::Directive::OMPD_do: // worksharing-loop
+    case llvm::omp::Directive::OMPD_do_simd: // worksharing-loop simd
+    case llvm::omp::Directive::OMPD_simd: // "simd"
+      break;
+    default:
+      context_.Say(GetContext().clauseSource,
+          "Modifier 'INSCAN' on REDUCTION clause is only allowed with "
+          "worksharing-loop, worksharing-loop simd, "
+          "or SIMD directive"_err_en_US);
+    }
+  } else {
+    // Catch-all for potential future modifiers to make sure that this
+    // function is up-to-date.
+    context_.Say(GetContext().clauseSource,
+        "Unexpected modifier on REDUCTION clause"_err_en_US);
   }
 }
 
@@ -2608,7 +2781,7 @@ void OmpStructureChecker::CheckIsLoopIvPartOfClause(
     }
   }
 }
-// Following clauses have a seperate node in parse-tree.h.
+// Following clauses have a separate node in parse-tree.h.
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicWrite, OMPC_write)
@@ -2714,18 +2887,18 @@ void OmpStructureChecker::CheckAllowedMapTypes(
     const parser::OmpMapType::Type &type,
     const std::list<parser::OmpMapType::Type> &allowedMapTypeList) {
   if (!llvm::is_contained(allowedMapTypeList, type)) {
-    std::string commaSeperatedMapTypes;
+    std::string commaSeparatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),
         [&](const parser::OmpMapType::Type &mapType) {
-          commaSeperatedMapTypes.append(parser::ToUpperCaseLetters(
+          commaSeparatedMapTypes.append(parser::ToUpperCaseLetters(
               parser::OmpMapType::EnumToString(mapType)));
         },
-        [&] { commaSeperatedMapTypes.append(", "); });
+        [&] { commaSeparatedMapTypes.append(", "); });
     context_.Say(GetContext().clauseSource,
         "Only the %s map types are permitted "
         "for MAP clauses on the %s directive"_err_en_US,
-        commaSeperatedMapTypes, ContextDirectiveAsFortran());
+        commaSeparatedMapTypes, ContextDirectiveAsFortran());
   }
 }
 

@@ -20,7 +20,7 @@
   llvm.func @main()  {
     %0 = llvm.mlir.constant(-1 : i32) : i32
     %1 = llvm.mlir.addressof @i : !llvm.ptr
-    omp.parallel byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_i_32 %1 -> %arg0 : !llvm.ptr) {
       llvm.store %0, %arg0 : i32, !llvm.ptr
       omp.terminator
     }

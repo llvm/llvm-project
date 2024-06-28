@@ -928,6 +928,11 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
+  mlir::arith::IntegerOverflowFlags flags{};
+  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+    flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+  auto iofAttr =
+      mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
@@ -965,7 +970,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
     genItemList(ioImpliedDo);
     builder.setInsertionPointToEnd(doLoopOp.getBody());
     mlir::Value result = builder.create<mlir::arith::AddIOp>(
-        loc, doLoopOp.getInductionVar(), doLoopOp.getStep());
+        loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr);
     builder.create<fir::ResultOp>(loc, result);
     builder.setInsertionPointAfter(doLoopOp);
     // The loop control variable may be used after the loop.
@@ -1007,7 +1012,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   mlir::OpResult iterateResult = builder.getBlock()->back().getResult(0);
   mlir::Value inductionResult0 = iterWhileOp.getInductionVar();
   auto inductionResult1 = builder.create<mlir::arith::AddIOp>(
-      loc, inductionResult0, iterWhileOp.getStep());
+      loc, inductionResult0, iterWhileOp.getStep(), iofAttr);
   auto inductionResult = builder.create<mlir::arith::SelectOp>(
       loc, iterateResult, inductionResult1, inductionResult0);
   llvm::SmallVector<mlir::Value> results = {inductionResult, iterateResult};
@@ -1383,7 +1388,7 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const auto &spec : specList) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(
+    ok = Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::IoControlSpec::Size &x) -> mlir::Value {
               // Size must be queried after the related READ runtime calls, not
@@ -1420,7 +1425,7 @@ ConditionSpecInfo lowerErrorSpec(Fortran::lower::AbstractConverter &converter,
   ConditionSpecInfo csi;
   const Fortran::lower::SomeExpr *ioMsgExpr = nullptr;
   for (const auto &spec : specList) {
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::StatVariable &var) {
               csi.ioStatExpr = Fortran::semantics::GetExpr(var);
@@ -2392,7 +2397,7 @@ lowerIdExpr(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             const std::list<Fortran::parser::InquireSpec> &ispecs,
             Fortran::lower::StatementContext &stmtCtx) {
   for (const Fortran::parser::InquireSpec &spec : ispecs)
-    if (mlir::Value v = std::visit(
+    if (mlir::Value v = Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::parser::IdExpr &idExpr) {
                   return fir::getBase(converter.genExprValue(
@@ -2414,11 +2419,11 @@ static void threadInquire(Fortran::lower::AbstractConverter &converter,
   mlir::Value idExpr = lowerIdExpr(converter, loc, ispecs, stmtCtx);
   for (const Fortran::parser::InquireSpec &spec : ispecs) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(Fortran::common::visitors{[&](const auto &x) {
-                      return genInquireSpec(converter, loc, cookie, idExpr, x,
-                                            stmtCtx);
-                    }},
-                    spec.u);
+    ok = Fortran::common::visit(Fortran::common::visitors{[&](const auto &x) {
+                                  return genInquireSpec(converter, loc, cookie,
+                                                        idExpr, x, stmtCtx);
+                                }},
+                                spec.u);
   }
 }
 

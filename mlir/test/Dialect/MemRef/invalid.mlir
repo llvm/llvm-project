@@ -1103,3 +1103,14 @@ func.func @subview_invalid_strides_rank_reduction(%m: memref<7x22x333x4444xi32>)
       : memref<7x22x333x4444xi32> to memref<7x11x4444xi32>
   return
 }
+
+// -----
+
+func.func @expand_shape_invalid_output_shape(
+    %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
+  // expected-error @+1 {{invalid output shape provided at pos 2}}
+  %0 = memref.expand_shape %arg0 [[0, 1], [2]] output_shape [2, 15, 21] :
+      memref<30x20xf32, strided<[4000, 2], offset: 100>>
+      into memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>
+  return
+}

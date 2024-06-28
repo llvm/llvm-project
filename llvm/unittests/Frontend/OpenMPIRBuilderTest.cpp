@@ -4980,10 +4980,18 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Builder.restoreIP(AfterIP);
 
   OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
-      {SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction},
-      {XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}};
+      {SumType, SumReduced, SumPrivatized,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction},
+      {XorType, XorReduced, XorPrivatized,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
+       /*ReductionGenClang=*/nullptr, xorAtomicReduction}};
+  OMPBuilder.Config.setIsGPU(false);
 
-  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos);
+  bool ReduceVariableByRef[] = {false, false};
+
+  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos,
+                              ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -5230,12 +5238,21 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
       /* NumThreads */ nullptr, OMP_PROC_BIND_default,
       /* IsCancellable */ false);
 
+  OMPBuilder.Config.setIsGPU(false);
+  bool ReduceVariableByRef[] = {false};
+
   OMPBuilder.createReductions(
       FirstBodyIP, FirstBodyAllocaIP,
-      {{SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}});
+      {{SumType, SumReduced, SumPrivatized,
+        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+        /*ReductionGenClang=*/nullptr, sumAtomicReduction}},
+      ReduceVariableByRef);
   OMPBuilder.createReductions(
       SecondBodyIP, SecondBodyAllocaIP,
-      {{XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}});
+      {{XorType, XorReduced, XorPrivatized,
+        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
+        /*ReductionGenClang=*/nullptr, xorAtomicReduction}},
+      ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();

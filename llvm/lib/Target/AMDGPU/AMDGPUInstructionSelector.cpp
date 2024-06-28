@@ -63,6 +63,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  Subtarget->checkSubtargetFeatures(MF.getFunction());
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
@@ -1013,7 +1014,7 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
-  unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_if_break: {
     MachineBasicBlock *BB = I.getParent();
@@ -2080,7 +2081,7 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
-  unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_end_cf:
     return selectEndCfIntrinsic(I);
@@ -3602,8 +3603,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
   case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
   case TargetOpcode::G_ATOMICRMW_FADD:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMIN:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMAX:
+  case TargetOpcode::G_ATOMICRMW_FMIN:
+  case TargetOpcode::G_ATOMICRMW_FMAX:
     return selectG_LOAD_STORE_ATOMICRMW(I);
   case TargetOpcode::G_SELECT:
     return selectG_SELECT(I);
@@ -4198,10 +4199,11 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     return false;
 
   const GEPInfo &GEPI = AddrInfo[0];
-  std::optional<int64_t> EncodedImm =
-      AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, false);
+  std::optional<int64_t> EncodedImm;
 
   if (SOffset && Offset) {
+    EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, /*IsBuffer=*/false,
+                                              /*HasSOffset=*/true);
     if (GEPI.SgprParts.size() == 1 && GEPI.Imm != 0 && EncodedImm &&
         AddrInfo.size() > 1) {
       const GEPInfo &GEPI2 = AddrInfo[1];
@@ -4211,6 +4213,17 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
           *Offset = *EncodedImm;
+          if (*Offset >= 0 || !AMDGPU::hasSMRDSignedImmOffset(STI))
+            return true;
+
+          // For unbuffered smem loads, it is illegal for the Immediate Offset
+          // to be negative if the resulting (Offset + (M0 or SOffset or zero)
+          // is negative. Handle the case where the Immediate Offset + SOffset
+          // is negative.
+          auto SKnown = KB->getKnownBits(*SOffset);
+          if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
+            return false;
+
           return true;
         }
       }
@@ -4218,6 +4231,8 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     return false;
   }
 
+  EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPI.Imm, /*IsBuffer=*/false,
+                                            /*HasSOffset=*/false);
   if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
     Base = GEPI.SgprParts[0];
     *Offset = *EncodedImm;

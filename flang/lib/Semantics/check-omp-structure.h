@@ -205,6 +205,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

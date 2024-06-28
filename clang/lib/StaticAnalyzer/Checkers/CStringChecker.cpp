@@ -189,8 +189,8 @@ public:
   };
 
   // These require a bit of special handling.
-  CallDescription StdCopy{{"std", "copy"}, 3},
-      StdCopyBackward{{"std", "copy_backward"}, 3};
+  CallDescription StdCopy{CDM::SimpleFunc, {"std", "copy"}, 3},
+      StdCopyBackward{CDM::SimpleFunc, {"std", "copy_backward"}, 3};
 
   FnCheck identifyCall(const CallEvent &Call, CheckerContext &C) const;
   void evalMemcpy(CheckerContext &C, const CallEvent &Call, CharKind CK) const;

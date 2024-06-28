@@ -106,8 +106,13 @@ equals output offset.
 `BRANCHENTRY` bit denotes whether a given offset pair is a control flow source
 (branch or call instruction). If not set, it signifies a control flow target
 (basic block offset).
+
 `InputAddr` is omitted for equal offsets in input and output function. In this
 case, `BRANCHENTRY` bits are encoded separately in a `BranchEntries` bitvector.
+
+Deleted basic blocks are emitted as having `OutputOffset` equal to the size of
+the function. They don't affect address translation and only participate in
+input basic block mapping.
 
 ### Secondary Entry Points table
 The table is emitted for hot fragments only. It contains `NumSecEntryPoints`

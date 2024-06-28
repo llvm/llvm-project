@@ -203,7 +203,8 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
          %arg3: memref<?x42xf32, strided<[42, 1], offset: 0>>,
          %arg4: index,
          %arg5: index,
-         %arg6: index) {
+         %arg6: index,
+         %arg7: memref<4x?x4xf32>) {
 //       CHECK:   memref.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
@@ -248,6 +249,10 @@ func.func @expand_collapse_shape_dynamic(%arg0: memref<?x?x?xf32>,
 //  CHECK-SAME:     memref<?xf32, strided<[1]>> into memref<?x42xf32>
   %r3 = memref.expand_shape %3 [[0, 1]] output_shape [%arg6, 42] :
     memref<?xf32, strided<[1]>> into memref<?x42xf32>
+
+//       CHECK:   memref.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
+  %4 = memref.expand_shape %arg7 [[0, 1], [2], [3, 4]] output_shape [2, 2, %arg4, 2, 2]
+        : memref<4x?x4xf32> into memref<2x2x?x2x2xf32>
   return
 }
 

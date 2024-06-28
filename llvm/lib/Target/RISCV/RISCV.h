@@ -60,9 +60,7 @@ void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
 
 FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
-
-FunctionPass *createRISCVCoalesceVSETVLIPass();
-void initializeRISCVCoalesceVSETVLIPass(PassRegistry &);
+extern char &RISCVInsertVSETVLIID;
 
 FunctionPass *createRISCVPostRAExpandPseudoPass();
 void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
@@ -84,7 +82,7 @@ void initializeRISCVPushPopOptPass(PassRegistry &);
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
-void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPostLegalizerCombiner();
 void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);

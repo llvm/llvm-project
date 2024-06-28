@@ -317,7 +317,8 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
                        !MFI.adjustsStack() &&       // No calls.
                        !MustSaveLR(MF, LR) &&       // No need to save LR.
                        !FI->mustSaveTOC() &&        // No need to save TOC.
-                       !RegInfo->hasBasePointer(MF); // No special alignment.
+                       !RegInfo->hasBasePointer(MF) && // No special alignment.
+                       !MFI.isFrameAddressTaken();
 
   // Note: for PPC32 SVR4ABI, we can still generate stackless
   // code if all local vars are reg-allocated.
@@ -383,7 +384,10 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
 }
 
 void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
-  bool is31 = needsFP(MF);
+  // When there is dynamic alloca in this function, we can not use the frame
+  // pointer X31/R31 for the frameaddress lowering. In this case, only X1/R1
+  // always points to the backchain.
+  bool is31 = needsFP(MF) && !MF.getFrameInfo().hasVarSizedObjects();
   unsigned FPReg  = is31 ? PPC::R31 : PPC::R1;
   unsigned FP8Reg = is31 ? PPC::X31 : PPC::X1;
 
@@ -1966,6 +1970,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  if (Subtarget.isAIXABI())
+    updateCalleeSaves(MF, SavedRegs);
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
@@ -2723,6 +2729,63 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
     return false;
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
+}
+
+void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
+                                         BitVector &SavedRegs) const {
+  // The AIX ABI uses traceback tables for EH which require that if callee-saved
+  // register N is used, all registers N-31 must be saved/restored.
+  // NOTE: The check for AIX is not actually what is relevant. Traceback tables
+  // on Linux have the same requirements. It is just that AIX is the only ABI
+  // for which we actually use traceback tables. If another ABI needs to be
+  // supported that also uses them, we can add a check such as
+  // Subtarget.usesTraceBackTables().
+  assert(Subtarget.isAIXABI() &&
+         "Function updateCalleeSaves should only be called for AIX.");
+
+  // If there are no callee saves then there is nothing to do.
+  if (SavedRegs.none())
+    return;
+
+  const MCPhysReg *CSRegs =
+      Subtarget.getRegisterInfo()->getCalleeSavedRegs(&MF);
+  MCPhysReg LowestGPR = PPC::R31;
+  MCPhysReg LowestG8R = PPC::X31;
+  MCPhysReg LowestFPR = PPC::F31;
+  MCPhysReg LowestVR = PPC::V31;
+
+  // Traverse the CSRs twice so as not to rely on ascending ordering of
+  // registers in the array. The first pass finds the lowest numbered
+  // register and the second pass marks all higher numbered registers
+  // for spilling.
+  for (int i = 0; CSRegs[i]; i++) {
+    // Get the lowest numbered register for each class that actually needs
+    // to be saved.
+    MCPhysReg Cand = CSRegs[i];
+    if (!SavedRegs.test(Cand))
+      continue;
+    if (PPC::GPRCRegClass.contains(Cand) && Cand < LowestGPR)
+      LowestGPR = Cand;
+    else if (PPC::G8RCRegClass.contains(Cand) && Cand < LowestG8R)
+      LowestG8R = Cand;
+    else if ((PPC::F4RCRegClass.contains(Cand) ||
+              PPC::F8RCRegClass.contains(Cand)) &&
+             Cand < LowestFPR)
+      LowestFPR = Cand;
+    else if (PPC::VRRCRegClass.contains(Cand) && Cand < LowestVR)
+      LowestVR = Cand;
+  }
+
+  for (int i = 0; CSRegs[i]; i++) {
+    MCPhysReg Cand = CSRegs[i];
+    if ((PPC::GPRCRegClass.contains(Cand) && Cand > LowestGPR) ||
+        (PPC::G8RCRegClass.contains(Cand) && Cand > LowestG8R) ||
+        ((PPC::F4RCRegClass.contains(Cand) ||
+          PPC::F8RCRegClass.contains(Cand)) &&
+         Cand > LowestFPR) ||
+        (PPC::VRRCRegClass.contains(Cand) && Cand > LowestVR))
+      SavedRegs.set(Cand);
+  }
 }
 
 uint64_t PPCFrameLowering::getStackThreshold() const {

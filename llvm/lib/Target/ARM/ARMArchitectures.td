@@ -293,9 +293,8 @@ def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureDSP,
                                                        FeatureCRC,
                                                        FeatureMP,
-                                                       FeatureVirtualization,
-                                                       FeatureFPARMv8,
-                                                       FeatureNEON]>;
+                                                       FeatureFPARMv8_D16_SP,
+                                                       FeatureVirtualization]>;
 
 def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
                                                       [HasV8MBaselineOps,

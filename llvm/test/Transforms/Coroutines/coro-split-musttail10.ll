@@ -1,4 +1,4 @@
-; Tests that we would convert coro.resume to a musttail call if the target is
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call if the target is
 ; Wasm64 or Wasm32 with tail-call support.
 ; REQUIRES: webassembly-registered-target
 
@@ -25,8 +25,7 @@ entry:
   ]
 await.ready:
   %save2 = call token @llvm.coro.save(ptr null)
-  %addr2 = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-  call fastcc void %addr2(ptr null)
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_suspend_function)
 
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %exit [
@@ -51,6 +50,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
+declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
 
 attributes #0 = { presplitcoroutine "target-features"="+tail-call" }
 attributes #1 = { argmemonly nounwind readonly }

@@ -12,6 +12,7 @@ set(MODULES
   "__ppc_intrinsics"
   "mma"
   "__cuda_builtins"
+  "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
   "ieee_features"
@@ -26,11 +27,15 @@ set(MODULES
 if (NOT CMAKE_CROSSCOMPILING)
   foreach(filename ${MODULES})
     set(depends "")
+    set(opts "")
     if(${filename} STREQUAL "__fortran_builtins" OR
        ${filename} STREQUAL "__ppc_types")
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
+    elseif(${filename} STREQUAL "cudadevice")
+      set(opts -fc1 -xcuda)
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(NOT ${filename} STREQUAL "__fortran_type_info")
@@ -43,9 +48,8 @@ if (NOT CMAKE_CROSSCOMPILING)
     endif()
 
     # The module contains PPC vector types that needs the PPC target.
-    set(opts "")
-      if(${filename} STREQUAL "__ppc_intrinsics" OR
-         ${filename} STREQUAL "mma")
+    if(${filename} STREQUAL "__ppc_intrinsics" OR
+       ${filename} STREQUAL "mma")
       if (PowerPC IN_LIST LLVM_TARGETS_TO_BUILD)
         set(opts "--target=ppc64le")
       else()
@@ -58,7 +62,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new ${opts} -cpp -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
@@ -92,6 +96,7 @@ if (NOT CMAKE_CROSSCOMPILING)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
+set_target_properties(module_files PROPERTIES FOLDER "Flang/Resources")
 
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.

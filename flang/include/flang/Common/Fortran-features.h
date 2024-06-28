@@ -24,7 +24,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DoubleComplex, Byte, StarKind, ExponentMatchingKindParam, QuadPrecision,
     SlashInitialization, TripletInArrayConstructor, MissingColons,
     SignedComplexLiteral, OldStyleParameter, ComplexConstructor, PercentLOC,
-    SignedPrimary, FileName, Carriagecontrol, Convert, Dispose,
+    SignedMultOperand, FileName, Carriagecontrol, Convert, Dispose,
     IOListLeadingComma, AbbreviatedEditDescriptor, ProgramParentheses,
     PercentRefAndVal, OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF,
     Assign, AssignedGOTO, Pause, OpenACC, OpenMP, CUDA, CruftAfterAmpersand,
@@ -48,14 +48,16 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
     IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
     EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
-    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize)
+    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
+    NonBindCInteroperability, CudaManaged, CudaUnified,
+    PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
+    UndefinableAsynchronousOrVolatileActual)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
-    ShortCharacterActual, ShortArrayActual, ExprPassedToVolatile,
-    ImplicitInterfaceActual, PolymorphicTransferArg,
-    PointerComponentTransferArg, TransferSizePresence,
+    ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
+    PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
     F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
     LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
     FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
@@ -80,6 +82,8 @@ public:
     disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
     disable_.set(LanguageFeature::CUDA); // !@cuf
+    disable_.set(LanguageFeature::CudaManaged);
+    disable_.set(LanguageFeature::CudaUnified);
     disable_.set(LanguageFeature::ImplicitNoneTypeNever);
     disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
     disable_.set(LanguageFeature::DefaultSave);

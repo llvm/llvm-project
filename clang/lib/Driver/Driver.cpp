@@ -147,6 +147,14 @@ getNVIDIAOffloadTargetTriple(const Driver &D, const ArgList &Args,
 static std::optional<llvm::Triple>
 getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   if (!Args.hasArg(options::OPT_offload_EQ)) {
+    auto OffloadArchs = Args.getAllArgValues(options::OPT_offload_arch_EQ);
+    if (llvm::find(OffloadArchs, "amdgcnspirv") != OffloadArchs.cend()) {
+      if (OffloadArchs.size() == 1)
+        return llvm::Triple("spirv64-amd-amdhsa");
+      // Mixing specific & SPIR-V compilation is not supported for now.
+      D.Diag(diag::err_drv_only_one_offload_target_supported);
+      return std::nullopt;
+    }
     return llvm::Triple("amdgcn-amd-amdhsa"); // Default HIP triple.
   }
   auto TT = getOffloadTargetTriple(D, Args);
@@ -355,6 +363,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
@@ -564,9 +573,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       StringRef ObjectMode = *ObjectModeValue;
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
-      if (ObjectMode.equals("64")) {
+      if (ObjectMode == "64") {
         AT = Target.get64BitArchVariant().getArch();
-      } else if (ObjectMode.equals("32")) {
+      } else if (ObjectMode == "32") {
         AT = Target.get32BitArchVariant().getArch();
       } else {
         D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
@@ -1254,6 +1263,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
     if (VFS->setCurrentWorkingDirectory(WD->getValue()))
       Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
+
+  // Check for missing include directories.
+  if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
+    for (auto IncludeDir : Args.getAllArgValues(options::OPT_I_Group)) {
+      if (!VFS->exists(IncludeDir))
+        Diag(diag::warn_missing_include_dirs) << IncludeDir;
+    }
+  }
 
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
@@ -2147,7 +2164,8 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
       C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
-      C.getArgs().hasArg(options::OPT_print_supported_extensions)) {
+      C.getArgs().hasArg(options::OPT_print_supported_extensions) ||
+      C.getArgs().hasArg(options::OPT_print_enabled_extensions)) {
     PrintVersion(C, llvm::errs());
     SuppressMissingInputWarning = true;
   }
@@ -2637,22 +2655,13 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       Diag(clang::diag::note_drv_t_option_is_global);
   }
 
-  // CUDA/HIP and their preprocessor expansions can be accepted by CL mode.
   // Warn -x after last input file has no effect
-  auto LastXArg = Args.getLastArgValue(options::OPT_x);
-  const llvm::StringSet<> ValidXArgs = {"cuda", "hip", "cui", "hipi"};
-  if (!IsCLMode() || ValidXArgs.contains(LastXArg)) {
+  {
     Arg *LastXArg = Args.getLastArgNoClaim(options::OPT_x);
     Arg *LastInputArg = Args.getLastArgNoClaim(options::OPT_INPUT);
     if (LastXArg && LastInputArg &&
         LastInputArg->getIndex() < LastXArg->getIndex())
       Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();
-  } else {
-    // In CL mode suggest /TC or /TP since -x doesn't make sense if passed via
-    // /clang:.
-    if (auto *A = Args.getLastArg(options::OPT_x))
-      Diag(diag::err_drv_unsupported_opt_with_suggestion)
-          << A->getAsString(Args) << "/TC' or '/TP";
   }
 
   for (Arg *A : Args) {
@@ -3232,10 +3241,14 @@ class OffloadingActionBuilder final {
       // supported GPUs.  sm_20 code should work correctly, if
       // suboptimally, on all newer GPUs.
       if (GpuArchList.empty()) {
-        if (ToolChains.front()->getTriple().isSPIRV())
-          GpuArchList.push_back(CudaArch::Generic);
-        else
+        if (ToolChains.front()->getTriple().isSPIRV()) {
+          if (ToolChains.front()->getTriple().getVendor() == llvm::Triple::AMD)
+            GpuArchList.push_back(CudaArch::AMDGCNSPIRV);
+          else
+            GpuArchList.push_back(CudaArch::Generic);
+        } else {
           GpuArchList.push_back(DefaultCudaArch);
+        }
       }
 
       return Error;
@@ -4336,13 +4349,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
-                   options::OPT_print_supported_extensions}) {
+                   options::OPT_print_supported_extensions,
+                   options::OPT_print_enabled_extensions}) {
     // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
     // custom Compile phase that prints out supported cpu models and quits.
     //
-    // If --print-supported-extensions is specified, call the helper function
-    // RISCVMarchHelp in RISCVISAInfo.cpp that prints out supported extensions
-    // and quits.
+    // If either --print-supported-extensions or --print-enabled-extensions is
+    // specified, call the corresponding helper function that prints out the
+    // supported/enabled extensions and quits.
     if (Arg *A = Args.getLastArg(Opt)) {
       if (Opt == options::OPT_print_supported_extensions &&
           !C.getDefaultToolChain().getTriple().isRISCV() &&
@@ -4350,6 +4364,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
           !C.getDefaultToolChain().getTriple().isARM()) {
         C.getDriver().Diag(diag::err_opt_not_valid_on_target)
             << "--print-supported-extensions";
+        return;
+      }
+      if (Opt == options::OPT_print_enabled_extensions &&
+          !C.getDefaultToolChain().getTriple().isAArch64()) {
+        C.getDriver().Diag(diag::err_opt_not_valid_on_target)
+            << "--print-enabled-extensions";
         return;
       }
 
@@ -4577,9 +4597,13 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
     // Get the product of all bound architectures and toolchains.
     SmallVector<std::pair<const ToolChain *, StringRef>> TCAndArchs;
-    for (const ToolChain *TC : ToolChains)
-      for (StringRef Arch : getOffloadArchs(C, Args, Kind, TC))
+    for (const ToolChain *TC : ToolChains) {
+      llvm::DenseSet<StringRef> Arches = getOffloadArchs(C, Args, Kind, TC);
+      SmallVector<StringRef, 0> Sorted(Arches.begin(), Arches.end());
+      llvm::sort(Sorted);
+      for (StringRef Arch : Sorted)
         TCAndArchs.push_back(std::make_pair(TC, Arch));
+    }
 
     for (unsigned I = 0, E = TCAndArchs.size(); I != E; ++I)
       DeviceActions.push_back(C.MakeAction<InputAction>(*InputArg, InputType));
@@ -6501,9 +6525,11 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
     // things.
     switch (TargetDeviceOffloadKind) {
     case Action::OFK_HIP: {
-      if (Target.getArch() == llvm::Triple::amdgcn &&
-          Target.getVendor() == llvm::Triple::AMD &&
-          Target.getOS() == llvm::Triple::AMDHSA)
+      if (((Target.getArch() == llvm::Triple::amdgcn ||
+            Target.getArch() == llvm::Triple::spirv64) &&
+           Target.getVendor() == llvm::Triple::AMD &&
+           Target.getOS() == llvm::Triple::AMDHSA) ||
+          !Args.hasArgNoClaim(options::OPT_offload_EQ))
         TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
                                                            HostTC, Args);
       else if (Target.getArch() == llvm::Triple::spirv64 &&
@@ -6694,7 +6720,7 @@ llvm::StringRef clang::driver::getDriverMode(StringRef ProgName,
   return Opt.consume_front(OptName) ? Opt : "";
 }
 
-bool driver::IsClangCL(StringRef DriverMode) { return DriverMode.equals("cl"); }
+bool driver::IsClangCL(StringRef DriverMode) { return DriverMode == "cl"; }
 
 llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                         bool ClangCLMode,

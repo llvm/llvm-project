@@ -116,13 +116,13 @@ func.func @main() {
   // CHECK-NEXT: nse = 18
   // CHECK-NEXT: dim = ( 3, 6, 1 )
   // CHECK-NEXT: lvl = ( 3, 6, 1 )
-  // CHECK-NEXT: pos[0] : ( 0, 3
-  // CHECK-NEXT: crd[0] : ( 0, 1, 2
-  // CHECK-NEXT: pos[1] : ( 0, 6, 12, 18
-  // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5
-  // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
-  // CHECK-NEXT: crd[2] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-  // CHECK-NEXT: values : ( 12, 28, 28, 28, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12
+  // CHECK-NEXT: pos[0] : ( 0, 3 )
+  // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+  // CHECK-NEXT: pos[1] : ( 0, 6, 12, 18 )
+  // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5 )
+  // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 )
+  // CHECK-NEXT: crd[2] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  // CHECK-NEXT: values : ( 12, 28, 28, 28, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12 )
   // CHECK-NEXT: ----
   //
   sparse_tensor.print %CCC_ret : tensor<?x?x?xf32, #CCC>
@@ -132,11 +132,11 @@ func.func @main() {
   // CHECK-NEXT: nse = 18
   // CHECK-NEXT: dim = ( 3, 6, 1 )
   // CHECK-NEXT: lvl = ( 3, 6, 1 )
-  // CHECK-NEXT: pos[0] : ( 0, 3
-  // CHECK-NEXT: crd[0] : ( 0, 1, 2
-  // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
-  // CHECK-NEXT: crd[2] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-  // CHECK-NEXT: values : ( 12, 28, 28, 28, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12
+  // CHECK-NEXT: pos[0] : ( 0, 3 )
+  // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+  // CHECK-NEXT: pos[2] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 )
+  // CHECK-NEXT: crd[2] : ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  // CHECK-NEXT: values : ( 12, 28, 28, 28, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12 )
   // CHECK-NEXT: ----
   //
   sparse_tensor.print %CDC_ret : tensor<?x?x?xf32, #CDC>

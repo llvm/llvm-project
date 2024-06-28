@@ -808,6 +808,9 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
       size = (layout == StringLayout::DSC) ? size_mode_value
                                            : ((size_mode_value >> 1) % 256);
 
+    if (!location_sp)
+      return {};
+
     // When the small-string optimization takes place, the data must fit in the
     // inline string buffer (23 bytes on x86_64/Darwin). If it doesn't, it's
     // likely that the string isn't initialized and we're reading garbage.
@@ -815,7 +818,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     const std::optional<uint64_t> max_bytes =
         location_sp->GetCompilerType().GetByteSize(
             exe_ctx.GetBestExecutionContextScope());
-    if (!max_bytes || size > *max_bytes || !location_sp)
+    if (!max_bytes || size > *max_bytes)
       return {};
 
     return std::make_pair(size, location_sp);
@@ -1098,6 +1101,7 @@ LibcxxChronoTimePointSecondsSummaryProvider(ValueObject &valobj, Stream &stream,
   if (!ptr_sp)
     return false;
 
+#ifndef _WIN32
   // The date time in the chrono library is valid in the range
   // [-32767-01-01T00:00:00Z, 32767-12-31T23:59:59Z]. A 64-bit time_t has a
   // larger range, the function strftime is not able to format the entire range
@@ -1107,6 +1111,11 @@ LibcxxChronoTimePointSecondsSummaryProvider(ValueObject &valobj, Stream &stream,
       -1'096'193'779'200; // -32767-01-01T00:00:00Z
   const std::time_t chrono_timestamp_max =
       971'890'963'199; // 32767-12-31T23:59:59Z
+#else
+  const std::time_t chrono_timestamp_min = -43'200; // 1969-12-31T12:00:00Z
+  const std::time_t chrono_timestamp_max =
+      32'536'850'399; // 3001-01-19T21:59:59
+#endif
 
   const std::time_t seconds = ptr_sp->GetValueAsSigned(0);
   if (seconds < chrono_timestamp_min || seconds > chrono_timestamp_max)
@@ -1148,12 +1157,17 @@ LibcxxChronoTimepointDaysSummaryProvider(ValueObject &valobj, Stream &stream,
   if (!ptr_sp)
     return false;
 
+#ifndef _WIN32
   // The date time in the chrono library is valid in the range
   // [-32767-01-01Z, 32767-12-31Z]. A 32-bit time_t has a larger range, the
   // function strftime is not able to format the entire range of time_t. The
   // exact point has not been investigated; it's limited to chrono's range.
   const int chrono_timestamp_min = -12'687'428; // -32767-01-01Z
   const int chrono_timestamp_max = 11'248'737;  // 32767-12-31Z
+#else
+  const int chrono_timestamp_min = 0;       // 1970-01-01Z
+  const int chrono_timestamp_max = 376'583; // 3001-01-19Z
+#endif
 
   const int days = ptr_sp->GetValueAsSigned(0);
   if (days < chrono_timestamp_min || days > chrono_timestamp_max)

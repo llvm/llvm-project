@@ -32,6 +32,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
@@ -58,7 +59,16 @@ using namespace clang::CodeGen;
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
-  return TI.isAlignRequired() ? TI.Align : 0;
+  if (TI.isAlignRequired())
+    return TI.Align;
+
+  // MaxFieldAlignmentAttr is the attribute added to types
+  // declared after #pragma pack(n).
+  if (auto *Decl = Ty->getAsRecordDecl())
+    if (Decl->hasAttr<MaxFieldAlignmentAttr>())
+      return TI.Align;
+
+  return 0;
 }
 
 static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
@@ -856,7 +866,16 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id,        \
+                               SingletonId)                                    \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
+                                     MangledName, TheCU, TheCU->getFile(), 0); \
+    return SingletonId;                                                        \
+  }
+#include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -1711,6 +1730,28 @@ llvm::DIType *CGDebugInfo::createFieldType(
   llvm::DINode::DIFlags flags = getAccessFlag(AS, RD);
   return DBuilder.createMemberType(scope, name, file, line, SizeInBits, Align,
                                    offsetInBits, flags, debugType, Annotations);
+}
+
+llvm::DISubprogram *
+CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
+                                         llvm::DIFile *FileScope) {
+  // We are caching the subprogram because we don't want to duplicate
+  // subprograms with the same message. Note that `SPFlagDefinition` prevents
+  // subprograms from being uniqued.
+  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+
+  if (!SP) {
+    llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
+    SP = DBuilder.createFunction(
+        /*Scope=*/FileScope, /*Name=*/FuncName, /*LinkageName=*/StringRef(),
+        /*File=*/FileScope, /*LineNo=*/0, /*Ty=*/DIFnTy,
+        /*ScopeLine=*/0,
+        /*Flags=*/llvm::DINode::FlagArtificial,
+        /*SPFlags=*/llvm::DISubprogram::SPFlagDefinition,
+        /*TParams=*/nullptr, /*ThrownTypes=*/nullptr, /*Annotations=*/nullptr);
+  }
+
+  return SP;
 }
 
 void CGDebugInfo::CollectRecordLambdaFields(
@@ -2836,7 +2877,7 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
 
   // Collect data fields (including static variables and any initializers).
   CollectRecordFields(RD, DefUnit, EltTys, FwdDecl);
-  if (CXXDecl)
+  if (CXXDecl && !CGM.getCodeGenOpts().DebugOmitUnreferencedMethods)
     CollectCXXMemberFunctions(CXXDecl, DefUnit, EltTys, FwdDecl);
 
   LexicalBlockStack.pop_back();
@@ -3507,6 +3548,23 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   llvm::DIFile *FName = getOrCreateFile(FileLoc);
   unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
   return DBuilder.createTempMacroFile(Parent, Line, FName);
+}
+
+llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
+    llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
+  // Create a debug location from `TrapLocation` that adds an artificial inline
+  // frame.
+  SmallString<64> FuncName(ClangTrapPrefix);
+
+  FuncName += "$";
+  FuncName += Category;
+  FuncName += "$";
+  FuncName += FailureMsg;
+
+  llvm::DISubprogram *TrapSP =
+      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -4865,40 +4923,6 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   return D;
 }
 
-llvm::DIType *CGDebugInfo::CreateBindingDeclType(const BindingDecl *BD) {
-  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
-
-  // If the declaration is bound to a bitfield struct field, its type may have a
-  // size that is different from its deduced declaration type's.
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
-    if (const FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      if (FD->isBitField()) {
-        ASTContext &Context = CGM.getContext();
-        const CGRecordLayout &RL =
-            CGM.getTypes().getCGRecordLayout(FD->getParent());
-        const CGBitFieldInfo &Info = RL.getBitFieldInfo(FD);
-
-        // Find an integer type with the same bitwidth as the bitfield size. If
-        // no suitable type is present in the target, give up on producing debug
-        // information as it would be wrong. It is certainly possible to produce
-        // correct debug info, but the logic isn't currently implemented.
-        uint64_t BitfieldSizeInBits = Info.Size;
-        QualType IntTy =
-            Context.getIntTypeForBitwidth(BitfieldSizeInBits, Info.IsSigned);
-        if (IntTy.isNull())
-          return nullptr;
-        Qualifiers Quals = BD->getType().getQualifiers();
-        QualType FinalTy = Context.getQualifiedType(IntTy, Quals);
-        llvm::DIType *Ty = getOrCreateType(FinalTy, Unit);
-        assert(Ty);
-        return Ty;
-      }
-    }
-  }
-
-  return getOrCreateType(BD->getType(), Unit);
-}
-
 llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
                                                 llvm::Value *Storage,
                                                 std::optional<unsigned> ArgNo,
@@ -4913,7 +4937,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   if (isa<DeclRefExpr>(BD->getBinding()))
     return nullptr;
 
-  llvm::DIType *Ty = CreateBindingDeclType(BD);
+  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
+  llvm::DIType *Ty = getOrCreateType(BD->getType(), Unit);
 
   // If there is no debug info for this type then do not emit debug info
   // for this variable.
@@ -4939,7 +4964,6 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   unsigned Column = getColumnNumber(BD->getLocation());
   StringRef Name = BD->getName();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  llvm::DIFile *Unit = getOrCreateFile(BD->getLocation());
   // Create the descriptor for the variable.
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
       Scope, Name, Unit, Line, Ty, CGM.getLangOpts().Optimize,
@@ -4953,13 +4977,29 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
       const ASTRecordLayout &layout =
           CGM.getContext().getASTRecordLayout(parent);
       const uint64_t fieldOffset = layout.getFieldOffset(fieldIndex);
-
-      if (fieldOffset != 0) {
-        // Currently if the field offset is not a multiple of byte, the produced
-        // location would not be accurate. Therefore give up.
-        if (fieldOffset % CGM.getContext().getCharWidth() != 0)
-          return nullptr;
-
+      if (FD->isBitField()) {
+        const CGRecordLayout &RL =
+            CGM.getTypes().getCGRecordLayout(FD->getParent());
+        const CGBitFieldInfo &Info = RL.getBitFieldInfo(FD);
+        // Use DW_OP_plus_uconst to adjust to the start of the bitfield
+        // storage.
+        if (!Info.StorageOffset.isZero()) {
+          Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
+          Expr.push_back(Info.StorageOffset.getQuantity());
+        }
+        // Use LLVM_extract_bits to extract the appropriate bits from this
+        // bitfield.
+        Expr.push_back(Info.IsSigned
+                           ? llvm::dwarf::DW_OP_LLVM_extract_bits_sext
+                           : llvm::dwarf::DW_OP_LLVM_extract_bits_zext);
+        Expr.push_back(Info.Offset);
+        // If we have an oversized bitfield then the value won't be more than
+        // the size of the type.
+        const uint64_t TypeSize = CGM.getContext().getTypeSize(BD->getType());
+        Expr.push_back(std::min((uint64_t)Info.Size, TypeSize));
+      } else if (fieldOffset != 0) {
+        assert(fieldOffset % CGM.getContext().getCharWidth() == 0 &&
+               "Unexpected non-bitfield with non-byte-aligned offset");
         Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
         Expr.push_back(
             CGM.getContext().toCharUnitsFromBits(fieldOffset).getQuantity());
@@ -5735,6 +5775,48 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
           DContext, Name, StringRef(), Unit, getLineNumber(D->getLocation()),
           Ty, false, false, nullptr, nullptr, nullptr, Align);
   Var->addDebugInfo(GVE);
+}
+
+void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
+                                     llvm::Instruction *Value, QualType Ty) {
+  // Only when -g2 or above is specified, debug info for variables will be
+  // generated.
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  llvm::DILocation *DIL = Value->getDebugLoc().get();
+  if (!DIL)
+    return;
+
+  llvm::DIFile *Unit = DIL->getFile();
+  llvm::DIType *Type = getOrCreateType(Ty, Unit);
+
+  // Check if Value is already a declared variable and has debug info, in this
+  // case we have nothing to do. Clang emits a declared variable as alloca, and
+  // it is loaded upon use, so we identify such pattern here.
+  if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
+    llvm::Value *Var = Load->getPointerOperand();
+    // There can be implicit type cast applied on a variable if it is an opaque
+    // ptr, in this case its debug info may not match the actual type of object
+    // being used as in the next instruction, so we will need to emit a pseudo
+    // variable for type-casted value.
+    auto DeclareTypeMatches = [&](auto *DbgDeclare) {
+      return DbgDeclare->getVariable()->getType() == Type;
+    };
+    if (any_of(llvm::findDbgDeclares(Var), DeclareTypeMatches) ||
+        any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
+      return;
+  }
+
+  llvm::DILocalVariable *D =
+      DBuilder.createAutoVariable(LexicalBlockStack.back(), "", nullptr, 0,
+                                  Type, false, llvm::DINode::FlagArtificial);
+
+  if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
+    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
+                                     &**InsertPoint);
+  }
 }
 
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,

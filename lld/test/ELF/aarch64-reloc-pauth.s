@@ -1,5 +1,6 @@
 # REQUIRES: aarch64
 
+# RUN: rm -rf %t
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared2.s -o %t.a.o
 # RUN: ld.lld -shared %t.a.o -soname=so -o %t.a.so
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o

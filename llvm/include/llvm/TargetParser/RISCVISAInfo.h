@@ -87,7 +87,7 @@ private:
 
   RISCVISAUtils::OrderedExtensionMap Exts;
 
-  void addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
+  bool addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
 
   Error checkDependency();
 

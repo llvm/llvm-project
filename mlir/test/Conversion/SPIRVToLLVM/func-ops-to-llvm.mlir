@@ -29,12 +29,12 @@ spirv.func @none() "None" {
   spirv.Return
 }
 
-// CHECK-LABEL: llvm.func @inline() attributes {passthrough = ["alwaysinline"]}
+// CHECK-LABEL: llvm.func @inline() attributes {always_inline}
 spirv.func @inline() "Inline" {
   spirv.Return
 }
 
-// CHECK-LABEL: llvm.func @dont_inline() attributes {passthrough = ["noinline"]}
+// CHECK-LABEL: llvm.func @dont_inline() attributes {no_inline}
 spirv.func @dont_inline() "DontInline" {
   spirv.Return
 }

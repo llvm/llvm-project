@@ -613,8 +613,7 @@ TEST_F(PatternMatchTest, BitCast) {
 
 TEST_F(PatternMatchTest, CheckedInt) {
   Type *I8Ty = IRB.getInt8Ty();
-  const APInt *Res = nullptr;
-
+  const Constant * CRes = nullptr;
   auto CheckUgt1 = [](const APInt &C) { return C.ugt(1); };
   auto CheckTrue = [](const APInt &) { return true; };
   auto CheckFalse = [](const APInt &) { return false; };
@@ -625,38 +624,33 @@ TEST_F(PatternMatchTest, CheckedInt) {
     APInt APVal(8, Val);
     Constant *C = ConstantInt::get(I8Ty, Val);
 
-    Res = nullptr;
+    CRes = nullptr;
     EXPECT_TRUE(m_CheckedInt(CheckTrue).match(C));
-    EXPECT_TRUE(m_CheckedInt(Res, CheckTrue).match(C));
-    EXPECT_EQ(*Res, APVal);
+    EXPECT_TRUE(m_CheckedInt(CRes, CheckTrue).match(C));
+    EXPECT_EQ(CRes, C);
 
-    Res = nullptr;
+    CRes = nullptr;
     EXPECT_FALSE(m_CheckedInt(CheckFalse).match(C));
-    EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(C));
+    EXPECT_FALSE(m_CheckedInt(CRes, CheckFalse).match(C));
+    EXPECT_EQ(CRes, nullptr);
 
-    Res = nullptr;
+    CRes = nullptr;
     EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(CheckUgt1).match(C));
-    EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(Res, CheckUgt1).match(C));
-    if (CheckUgt1(APVal)) {
-      EXPECT_NE(Res, nullptr);
-      EXPECT_EQ(*Res, APVal);
-    }
+    EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(CRes, CheckUgt1).match(C));
+    if (CheckUgt1(APVal))
+      EXPECT_EQ(CRes, C);
 
-    Res = nullptr;
+    CRes = nullptr;
     EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(CheckNonZero).match(C));
-    EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(Res, CheckNonZero).match(C));
-    if (CheckNonZero(APVal)) {
-      EXPECT_NE(Res, nullptr);
-      EXPECT_EQ(*Res, APVal);
-    }
+    EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(CRes, CheckNonZero).match(C));
+    if (CheckNonZero(APVal))
+      EXPECT_EQ(CRes, C);
 
-    Res = nullptr;
+    CRes = nullptr;
     EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CheckPow2).match(C));
-    EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(Res, CheckPow2).match(C));
-    if (CheckPow2(APVal)) {
-      EXPECT_NE(Res, nullptr);
-      EXPECT_EQ(*Res, APVal);
-    }
+    EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CRes, CheckPow2).match(C));
+    if (CheckPow2(APVal))
+      EXPECT_EQ(CRes, C);
 
   };
 
@@ -666,20 +660,20 @@ TEST_F(PatternMatchTest, CheckedInt) {
   DoScalarCheck(3);
 
   EXPECT_FALSE(m_CheckedInt(CheckTrue).match(UndefValue::get(I8Ty)));
-  EXPECT_FALSE(m_CheckedInt(Res, CheckTrue).match(UndefValue::get(I8Ty)));
-  EXPECT_EQ(Res, nullptr);
+  EXPECT_FALSE(m_CheckedInt(CRes, CheckTrue).match(UndefValue::get(I8Ty)));
+  EXPECT_EQ(CRes, nullptr);
 
   EXPECT_FALSE(m_CheckedInt(CheckFalse).match(UndefValue::get(I8Ty)));
-  EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(UndefValue::get(I8Ty)));
-  EXPECT_EQ(Res, nullptr);
+  EXPECT_FALSE(m_CheckedInt(CRes, CheckFalse).match(UndefValue::get(I8Ty)));
+  EXPECT_EQ(CRes, nullptr);
 
   EXPECT_FALSE(m_CheckedInt(CheckTrue).match(PoisonValue::get(I8Ty)));
-  EXPECT_FALSE(m_CheckedInt(Res, CheckTrue).match(PoisonValue::get(I8Ty)));
-  EXPECT_EQ(Res, nullptr);
+  EXPECT_FALSE(m_CheckedInt(CRes, CheckTrue).match(PoisonValue::get(I8Ty)));
+  EXPECT_EQ(CRes, nullptr);
 
   EXPECT_FALSE(m_CheckedInt(CheckFalse).match(PoisonValue::get(I8Ty)));
-  EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(PoisonValue::get(I8Ty)));
-  EXPECT_EQ(Res, nullptr);
+  EXPECT_FALSE(m_CheckedInt(CRes, CheckFalse).match(PoisonValue::get(I8Ty)));
+  EXPECT_EQ(CRes, nullptr);
 
   auto DoVecCheckImpl = [&](ArrayRef<std::optional<int8_t>> Vals,
                             function_ref<bool(const APInt &)> CheckFn,
@@ -711,13 +705,13 @@ TEST_F(PatternMatchTest, CheckedInt) {
     EXPECT_EQ(!(HasUndef && !UndefAsPoison) && Okay.value_or(false),
               m_CheckedInt(CheckFn).match(C));
 
-    Res = nullptr;
-    bool Expec =
-        !(HasUndef && !UndefAsPoison) && AllSame && Okay.value_or(false);
-    EXPECT_EQ(Expec, m_CheckedInt(Res, CheckFn).match(C));
+    CRes = nullptr;
+    bool Expec = !(HasUndef && !UndefAsPoison) && Okay.value_or(false);
+    EXPECT_EQ(Expec, m_CheckedInt(CRes, CheckFn).match(C));
     if (Expec) {
-      EXPECT_NE(Res, nullptr);
-      EXPECT_EQ(*Res, *First);
+      EXPECT_NE(CRes, nullptr);
+      if (AllSame)
+        EXPECT_EQ(CRes, C);
     }
   };
   auto DoVecCheck = [&](ArrayRef<std::optional<int8_t>> Vals) {
@@ -1559,24 +1553,25 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_FALSE(match(VectorNaNPoison, m_CheckedFp(CheckNonNaN)));
 
   const APFloat *C;
+  const Constant *CC;
   // Regardless of whether poison is allowed,
   // a fully undef/poison constant does not match.
   EXPECT_FALSE(match(ScalarUndef, m_APFloat(C)));
   EXPECT_FALSE(match(ScalarUndef, m_APFloatForbidPoison(C)));
   EXPECT_FALSE(match(ScalarUndef, m_APFloatAllowPoison(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(ScalarUndef, m_CheckedFp(CC, CheckTrue)));
   EXPECT_FALSE(match(VectorUndef, m_APFloat(C)));
   EXPECT_FALSE(match(VectorUndef, m_APFloatForbidPoison(C)));
   EXPECT_FALSE(match(VectorUndef, m_APFloatAllowPoison(C)));
-  EXPECT_FALSE(match(VectorUndef, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(VectorUndef, m_CheckedFp(CC, CheckTrue)));
   EXPECT_FALSE(match(ScalarPoison, m_APFloat(C)));
   EXPECT_FALSE(match(ScalarPoison, m_APFloatForbidPoison(C)));
   EXPECT_FALSE(match(ScalarPoison, m_APFloatAllowPoison(C)));
-  EXPECT_FALSE(match(ScalarPoison, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(ScalarPoison, m_CheckedFp(CC, CheckTrue)));
   EXPECT_FALSE(match(VectorPoison, m_APFloat(C)));
   EXPECT_FALSE(match(VectorPoison, m_APFloatForbidPoison(C)));
   EXPECT_FALSE(match(VectorPoison, m_APFloatAllowPoison(C)));
-  EXPECT_FALSE(match(VectorPoison, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(VectorPoison, m_CheckedFp(CC, CheckTrue)));
 
   // We can always match simple constants and simple splats.
   C = nullptr;
@@ -1597,12 +1592,13 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
-  C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_CheckedFp(C, CheckTrue)));
-  EXPECT_TRUE(C->isZero());
-  C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_CheckedFp(C, CheckNonNaN)));
-  EXPECT_TRUE(C->isZero());
+
+  CC = nullptr;
+  EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckTrue)));
+  EXPECT_TRUE(CC->isNullValue());
+  CC = nullptr;
+  EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckNonNaN)));
+  EXPECT_TRUE(CC->isNullValue());
 
   // Splats with undef are never allowed.
   // Whether splats with poison can be matched depends on the matcher.
@@ -1627,11 +1623,17 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   C = nullptr;
   EXPECT_TRUE(match(VectorZeroPoison, m_Finite(C)));
   EXPECT_TRUE(C->isZero());
+  CC = nullptr;
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(C, CheckTrue)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(CC, CheckTrue)));
+  EXPECT_NE(CC, nullptr);
+  EXPECT_TRUE(match(CC, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
+  CC = nullptr;
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(C, CheckNonNaN)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(CC, CheckNonNaN)));
+  EXPECT_NE(CC, nullptr);
+  EXPECT_TRUE(match(CC, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 }
 

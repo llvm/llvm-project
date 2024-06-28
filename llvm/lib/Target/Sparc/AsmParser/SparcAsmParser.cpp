@@ -91,6 +91,8 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseASITag(OperandVector &Operands);
 
+  ParseStatus parsePrefetchTag(OperandVector &Operands);
+
   template <TailRelocKind Kind>
   ParseStatus parseTailRelocSym(OperandVector &Operands);
 
@@ -105,9 +107,14 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseBranchModifiers(OperandVector &Operands);
 
+  ParseStatus parseExpression(int64_t &Val);
+
   // Helper function for dealing with %lo / %hi in PIC mode.
   const SparcMCExpr *adjustPICRelocation(SparcMCExpr::VariantKind VK,
                                          const MCExpr *subExpr);
+
+  // Helper function to see if current token can start an expression.
+  bool isPossibleExpression(const AsmToken &Token);
 
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
@@ -209,7 +216,8 @@ private:
     k_Immediate,
     k_MemoryReg,
     k_MemoryImm,
-    k_ASITag
+    k_ASITag,
+    k_PrefetchTag,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -240,6 +248,7 @@ private:
     struct ImmOp Imm;
     struct MemOp Mem;
     unsigned ASI;
+    unsigned Prefetch;
   };
 
 public:
@@ -253,6 +262,7 @@ public:
   bool isMEMri() const { return Kind == k_MemoryImm; }
   bool isMembarTag() const { return Kind == k_Immediate; }
   bool isASITag() const { return Kind == k_ASITag; }
+  bool isPrefetchTag() const { return Kind == k_PrefetchTag; }
   bool isTailRelocSym() const { return Kind == k_Immediate; }
 
   bool isCallTarget() const {
@@ -337,6 +347,11 @@ public:
     return ASI;
   }
 
+  unsigned getPrefetchTag() const {
+    assert((Kind == k_PrefetchTag) && "Invalid access!");
+    return Prefetch;
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override {
     return StartLoc;
@@ -359,6 +374,9 @@ public:
          << "\n"; break;
     case k_ASITag:
       OS << "ASI tag: " << getASITag() << "\n";
+      break;
+    case k_PrefetchTag:
+      OS << "Prefetch tag: " << getPrefetchTag() << "\n";
       break;
     }
   }
@@ -416,6 +434,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getASITag()));
   }
 
+  void addPrefetchTagOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getPrefetchTag()));
+  }
+
   void addMembarTagOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
@@ -464,6 +487,15 @@ public:
                                                     SMLoc E) {
     auto Op = std::make_unique<SparcOperand>(k_ASITag);
     Op->ASI = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<SparcOperand> CreatePrefetchTag(unsigned Val, SMLoc S,
+                                                         SMLoc E) {
+    auto Op = std::make_unique<SparcOperand>(k_PrefetchTag);
+    Op->Prefetch = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1058,33 +1090,71 @@ ParseStatus SparcAsmParser::parseASITag(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getEndLoc();
   int64_t ASIVal = 0;
 
-  if (is64Bit() && (getLexer().getKind() == AsmToken::Hash)) {
-    // For now we only support named tags for 64-bit/V9 systems.
-    // TODO: add support for 32-bit/V8 systems.
-    SMLoc TagStart = getLexer().peekTok(false).getLoc();
-    Parser.Lex(); // Eat the '#'.
-    auto ASIName = Parser.getTok().getString();
-    auto ASITag = SparcASITag::lookupASITagByName(ASIName);
-    if (!ASITag)
-      ASITag = SparcASITag::lookupASITagByAltName(ASIName);
-    Parser.Lex(); // Eat the identifier token.
+  if (getLexer().getKind() != AsmToken::Hash) {
+    // If the ASI tag provided is not a named tag, then it
+    // must be a constant expression.
+    ParseStatus ParseExprStatus = parseExpression(ASIVal);
+    if (!ParseExprStatus.isSuccess())
+      return ParseExprStatus;
 
-    if (!ASITag)
-      return Error(TagStart, "unknown ASI tag");
-
-    ASIVal = ASITag->Encoding;
-  } else if (!getParser().parseAbsoluteExpression(ASIVal)) {
     if (!isUInt<8>(ASIVal))
       return Error(S, "invalid ASI number, must be between 0 and 255");
-  } else {
-    return Error(
-        S, is64Bit()
-               ? "malformed ASI tag, must be %asi, a constant integer "
-                 "expression, or a named tag"
-               : "malformed ASI tag, must be a constant integer expression");
+
+    Operands.push_back(SparcOperand::CreateASITag(ASIVal, S, E));
+    return ParseStatus::Success;
   }
 
+  // For now we only support named tags for 64-bit/V9 systems.
+  // TODO: add support for 32-bit/V8 systems.
+  SMLoc TagStart = getLexer().peekTok(false).getLoc();
+  Parser.Lex(); // Eat the '#'.
+  const StringRef ASIName = Parser.getTok().getString();
+  const SparcASITag::ASITag *ASITag = SparcASITag::lookupASITagByName(ASIName);
+  if (!ASITag)
+    ASITag = SparcASITag::lookupASITagByAltName(ASIName);
+  Parser.Lex(); // Eat the identifier token.
+
+  if (!ASITag)
+    return Error(TagStart, "unknown ASI tag");
+
+  ASIVal = ASITag->Encoding;
+
   Operands.push_back(SparcOperand::CreateASITag(ASIVal, S, E));
+  return ParseStatus::Success;
+}
+
+ParseStatus SparcAsmParser::parsePrefetchTag(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  SMLoc E = Parser.getTok().getEndLoc();
+  int64_t PrefetchVal = 0;
+
+  if (getLexer().getKind() != AsmToken::Hash) {
+    // If the prefetch tag provided is not a named tag, then it
+    // must be a constant expression.
+    ParseStatus ParseExprStatus = parseExpression(PrefetchVal);
+    if (!ParseExprStatus.isSuccess())
+      return ParseExprStatus;
+
+    if (!isUInt<8>(PrefetchVal))
+      return Error(S, "invalid prefetch number, must be between 0 and 31");
+
+    Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
+    return ParseStatus::Success;
+  }
+
+  SMLoc TagStart = getLexer().peekTok(false).getLoc();
+  Parser.Lex(); // Eat the '#'.
+  const StringRef PrefetchName = Parser.getTok().getString();
+  const SparcPrefetchTag::PrefetchTag *PrefetchTag =
+      SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
+  Parser.Lex(); // Eat the identifier token.
+
+  if (!PrefetchTag)
+    return Error(TagStart, "unknown prefetch tag");
+
+  PrefetchVal = PrefetchTag->Encoding;
+
+  Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
   return ParseStatus::Success;
 }
 
@@ -1165,8 +1235,12 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
     // Parse an optional address-space identifier after the address.
     // This will be either an immediate constant expression, or, on 64-bit
     // processors, the %asi register.
-    if (is64Bit() && getLexer().is(AsmToken::Percent)) {
+    if (getLexer().is(AsmToken::Percent)) {
       SMLoc S = Parser.getTok().getLoc();
+      if (!is64Bit())
+        return Error(
+            S, "malformed ASI tag, must be a constant integer expression");
+
       Parser.Lex(); // Eat the %.
       const AsmToken Tok = Parser.getTok();
       if (Tok.is(AsmToken::Identifier) && Tok.getString() == "asi") {
@@ -1295,6 +1369,15 @@ ParseStatus SparcAsmParser::parseBranchModifiers(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+ParseStatus SparcAsmParser::parseExpression(int64_t &Val) {
+  AsmToken Tok = getLexer().getTok();
+
+  if (!isPossibleExpression(Tok))
+    return ParseStatus::NoMatch;
+
+  return getParser().parseAbsoluteExpression(Val);
+}
+
 #define GET_REGISTER_MATCHER
 #include "SparcGenAsmMatcher.inc"
 
@@ -1384,12 +1467,11 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   }
 
   // JPS1 extension - aliases for ASRs
-  // Section A.51 - Read State Register
+  // Section 5.2.11 - Ancillary State Registers (ASRs)
   if (Name == "pcr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR16;
   }
-
   if (Name == "pic") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR17;
@@ -1401,6 +1483,14 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   if (Name == "gsr") {
     RegKind = SparcOperand::rk_Special;
     return SP::ASR19;
+  }
+  if (Name == "set_softint") {
+    RegKind = SparcOperand::rk_Special;
+    return SP::ASR20;
+  }
+  if (Name == "clear_softint") {
+    RegKind = SparcOperand::rk_Special;
+    return SP::ASR21;
   }
   if (Name == "softint") {
     RegKind = SparcOperand::rk_Special;
@@ -1516,6 +1606,20 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
 
   EVal = adjustPICRelocation(VK, subExpr);
   return true;
+}
+
+bool SparcAsmParser::isPossibleExpression(const AsmToken &Token) {
+  switch (Token.getKind()) {
+  case AsmToken::LParen:
+  case AsmToken::Integer:
+  case AsmToken::Identifier:
+  case AsmToken::Plus:
+  case AsmToken::Minus:
+  case AsmToken::Tilde:
+    return true;
+  default:
+    return false;
+  }
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmParser() {

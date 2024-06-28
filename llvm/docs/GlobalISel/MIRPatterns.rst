@@ -274,8 +274,32 @@ it's less verbose.
 
 
 Combine Rules also allow mixing C++ code with MIR patterns, so that you
-may perform additional checks when matching, or run additional code after
-rewriting a pattern.
+may perform additional checks when matching, or run a C++ action after
+matching.
+
+Note that C++ code in ``apply`` pattern is mutually exclusive with
+other patterns. However, you can freely mix C++ code with other
+types of patterns in ``match`` patterns.
+C++ code in ``match`` patterns is always run last, after all other
+patterns matched.
+
+.. code-block:: text
+  :caption: Apply Pattern Examples with C++ code
+
+  // Valid
+  def Foo : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $tmp, (i32 0)),
+           (G_STORE $tmp, $ptr):$root,
+           "return myFinalCheck()"),
+    (apply "runMyAction(${root})")>;
+
+  // error: 'apply' patterns cannot mix C++ code with other types of patterns
+  def Bar : GICombineRule<
+    (defs root:$dst),
+    (match (G_ZEXT $dst, $src):$mi),
+    (apply (G_MUL $dst, $src, $src),
+           "runMyAction(${root})")>;
 
 The following expansions are available for MIR patterns:
 

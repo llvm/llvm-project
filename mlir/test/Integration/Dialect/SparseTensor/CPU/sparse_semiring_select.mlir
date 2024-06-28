@@ -91,11 +91,11 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 5, 5 )
     // CHECK-NEXT: lvl = ( 5, 5 )
-    // CHECK-NEXT: pos[0] : ( 0, 5
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6, 8, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 2, 3, 3, 4, 4
-    // CHECK-NEXT: values : ( 0.1, 1.1, 1.1, 2.2, 2.1, 3.3, 3.1, 4.4, 4.1
+    // CHECK-NEXT: pos[0] : ( 0, 5 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6, 8, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 2, 2, 3, 3, 4, 4 )
+    // CHECK-NEXT: values : ( 0.1, 1.1, 1.1, 2.2, 2.1, 3.3, 3.1, 4.4, 4.1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %1 : tensor<5x5xf64, #DCSR>

@@ -173,8 +173,7 @@ bool ARMTargetInfo::supportsThumb() const {
 }
 
 bool ARMTargetInfo::supportsThumb2() const {
-  return CPUAttr.equals("6T2") ||
-         (ArchVersion >= 7 && !CPUAttr.equals("8M_BASE"));
+  return CPUAttr == "6T2" || (ArchVersion >= 7 && CPUAttr != "8M_BASE");
 }
 
 StringRef ARMTargetInfo::getCPUAttr() const {
@@ -1162,7 +1161,7 @@ bool ARMTargetInfo::validateAsmConstraint(
     return true;
   case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)
     // only available in ARMv6T2 and above
-    if (CPUAttr.equals("6T2") || ArchVersion >= 7) {
+    if (CPUAttr == "6T2" || ArchVersion >= 7) {
       Info.setRequiresImmediate(0, 65535);
       return true;
     }
