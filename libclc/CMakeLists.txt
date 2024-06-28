@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.20.0)
 
-project( libclc VERSION 0.2.0 LANGUAGES CXX C)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  project(libclc VERSION 0.2.0 LANGUAGES CXX C)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
 # Add path for custom modules
-list( INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake/modules" )
+list( INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
 
 set( LIBCLC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 set( LIBCLC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
@@ -211,7 +213,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
-       INPUTS ${PROJECT_SOURCE_DIR}/generic/lib/${file}.ll
+       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/${file}.ll
     )
     install( FILES $<TARGET_PROPERTY:${file},TARGET_FILE> ARCHIVE
       DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
@@ -219,7 +221,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 endif()
 
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
+file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
 add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
@@ -264,7 +266,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   foreach( l ${dirs} ${DARCH} ${DARCH}-${OS} ${DARCH}-${VENDOR}-${OS} )
     foreach( s "SOURCES" "SOURCES_${LLVM_MAJOR}.${LLVM_MINOR}" )
       file( TO_CMAKE_PATH ${l}/lib/${s} file_loc )
-      file( TO_CMAKE_PATH ${PROJECT_SOURCE_DIR}/${file_loc} loc )
+      file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${file_loc} loc )
       # Prepend the location to give higher priority to
       # specialized implementation
       if( EXISTS ${loc} )
@@ -339,7 +341,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     list( APPEND build_flags
       -D__CLC_INTERNAL
       -D${CLC_TARGET_DEFINE}
-      -I${PROJECT_SOURCE_DIR}/generic/include
+      -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
       # FIXME: Fix libclc to not require disabling this noisy warning
       -Wno-bitwise-conditional-parentheses
     )
@@ -360,9 +362,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         # the path (e.g., ironing out any ".."), then make it relative to the
         # root directory again, and use that relative path component for the
         # binary path.
-        get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR} )
-        file( RELATIVE_PATH root_rel_path ${PROJECT_SOURCE_DIR} ${abs_path} )
-        set( input_file ${PROJECT_SOURCE_DIR}/${file} )
+        get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
+        file( RELATIVE_PATH root_rel_path ${CMAKE_CURRENT_SOURCE_DIR} ${abs_path} )
+        set( input_file ${CMAKE_CURRENT_SOURCE_DIR}/${file} )
         set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
       endif()
 
@@ -373,7 +375,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         INPUT ${input_file}
         OUTPUT ${output_file}
         EXTRA_OPTS "${mcpu}" -fno-builtin -nostdlib
-                   "${build_flags}" -I${PROJECT_SOURCE_DIR}/${file_dir}
+                   "${build_flags}" -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
         DEPENDENCIES generate_convert.cl clspv-generate_convert.cl
       )
       list( APPEND bytecode_files ${output_file} )
@@ -431,7 +433,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       if( NOT clang_triple MATCHES ".*ptx.*--$" )
         add_test( NAME external-calls-${obj_suffix}
           COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
-          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} )
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
       endif()
 
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
