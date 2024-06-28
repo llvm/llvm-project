@@ -89,7 +89,7 @@ private:
   void emitTopLevelDeclarations();
   /// Emit the function that returns the type or attribute name.
   void emitName();
-  /// Emit the dialect name s a static member variable.
+  /// Emit the dialect name as a static member variable.
   void emitDialectName();
   /// Emit attribute or type builders.
   void emitBuilders();
