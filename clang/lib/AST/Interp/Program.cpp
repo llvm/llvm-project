@@ -126,6 +126,12 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return std::nullopt;
 }
 
+std::optional<unsigned> Program::getGlobal(const Expr *E) {
+  if (auto It = GlobalIndices.find(E); It != GlobalIndices.end())
+    return It->second;
+  return std::nullopt;
+}
+
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
                                                    const Expr *Init) {
   if (auto Idx = getGlobal(VD))
@@ -195,7 +201,14 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 }
 
 std::optional<unsigned> Program::createGlobal(const Expr *E) {
-  return createGlobal(E, E->getType(), /*isStatic=*/true, /*isExtern=*/false);
+  if (auto Idx = getGlobal(E))
+    return Idx;
+  if (auto Idx = createGlobal(E, E->getType(), /*isStatic=*/true,
+                              /*isExtern=*/false)) {
+    GlobalIndices[E] = *Idx;
+    return *Idx;
+  }
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
