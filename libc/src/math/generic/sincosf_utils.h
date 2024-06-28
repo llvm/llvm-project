@@ -11,14 +11,18 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include <cstdint>
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 #include "range_reduction_fma.h"
 // using namespace LIBC_NAMESPACE::fma;
 using LIBC_NAMESPACE::fma::FAST_PASS_BOUND;
 using LIBC_NAMESPACE::fma::large_range_reduction;
+using LIBC_NAMESPACE::fma::small_range_reduction_mul_pi;
 using LIBC_NAMESPACE::fma::small_range_reduction;
+
 #else
 #include "range_reduction.h"
 // using namespace LIBC_NAMESPACE::generic;
@@ -58,18 +62,9 @@ const double SIN_K_PI_OVER_32[64] = {
     -0x1.917a6bc29b42cp-4,
 };
 
-LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
+
+static LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
                               double &cos_k, double &sin_y, double &cosm1_y) {
-  int64_t k;
-  double y;
-
-  if (LIBC_LIKELY(x_abs < FAST_PASS_BOUND)) {
-    k = small_range_reduction(xd, y);
-  } else {
-    fputil::FPBits<float> x_bits(x_abs);
-    k = large_range_reduction(xd, x_bits.get_exponent(), y);
-  }
-
   // After range reduction, k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
   // So k is an integer and -0.5 <= y <= 0.5.
   // Then sin(x) = sin((k + y)*pi/32)
@@ -93,6 +88,28 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
   // Note that cosm1_y = cos(y*pi/32) - 1.
   cosm1_y = ysq * fputil::polyeval(ysq, -0x1.3bd3cc9be430bp-8,
                                    0x1.03c1f070c2e27p-18, -0x1.55cc84bd942p-30);
+}
+
+LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
+                              double &cos_k, double &sin_y, double &cosm1_y) {
+  int64_t k;
+  double y;
+
+  if (LIBC_LIKELY(x_abs < FAST_PASS_BOUND)) {
+    k = small_range_reduction(xd, y);
+  } else {
+    fputil::FPBits<float> x_bits(x_abs);
+    k = large_range_reduction(xd, x_bits.get_exponent(), y);
+  }
+
+  sincosf_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
+}
+
+LIBC_INLINE void sincospif_eval(double xd, double &sin_k, double &cos_k,
+                                double &sin_y, double &cosm1_y) {
+  double y;
+  int64_t k = small_range_reduction_mul_pi(xd, y);
+  sincosf_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
 
 } // namespace LIBC_NAMESPACE
