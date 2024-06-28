@@ -12169,7 +12169,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_bad_conversion: {
     unsigned I = (Cand->IgnoreObjectArgument ? 1 : 0);
     for (unsigned N = Cand->Conversions.size(); I != N; ++I)
-      if (Cand->Conversions[I].isBad())
+      if (Cand->Conversions[I].isInitialized() && Cand->Conversions[I].isBad())
         return DiagnoseBadConversion(S, Cand, I, TakingCandidateAddress);
 
     // FIXME: this currently happens when we're called from SemaInit
