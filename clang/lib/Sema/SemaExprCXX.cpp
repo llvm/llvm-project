@@ -5201,6 +5201,82 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
   return false;
 }
 
+static bool
+HasNonDeletedDefaultedEqualityComparison(Sema &S, const CXXRecordDecl *Decl) {
+  if (Decl->isUnion())
+    return false;
+  if (Decl->isLambda())
+    return Decl->isCapturelessLambda();
+
+  {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+    // const ClassT& obj;
+    OpaqueValueExpr Operand(
+        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        ExprValueKind::VK_LValue);
+    UnresolvedSet<16> Functions;
+    // obj == obj;
+    S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
+
+    auto Result = S.CreateOverloadedBinOp({}, BinaryOperatorKind::BO_EQ,
+                                          Functions, &Operand, &Operand);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(Result.get());
+    if (!CallExpr)
+      return false;
+    const auto *Callee = CallExpr->getDirectCallee();
+    auto ParamT = Callee->getParamDecl(0)->getType();
+    if (!Callee->isDefaulted())
+      return false;
+    if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
+      return false;
+    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
+        Decl->getTypeForDecl())
+      return false;
+  }
+
+  return llvm::all_of(Decl->bases(),
+                      [&](const CXXBaseSpecifier &BS) {
+                        if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
+                          return HasNonDeletedDefaultedEqualityComparison(S,
+                                                                          RD);
+                        return true;
+                      }) &&
+         llvm::all_of(Decl->fields(), [&](const FieldDecl *FD) {
+           auto Type = FD->getType();
+           if (Type->isArrayType())
+             Type = Type->getBaseElementTypeUnsafe()
+                        ->getCanonicalTypeUnqualified();
+
+           if (Type->isReferenceType() || Type->isEnumeralType())
+             return false;
+           if (const auto *RD = Type->getAsCXXRecordDecl())
+             return HasNonDeletedDefaultedEqualityComparison(S, RD);
+           return true;
+         });
+}
+
+static bool isTriviallyEqualityComparableType(Sema &S, QualType Type) {
+  QualType CanonicalType = Type.getCanonicalType();
+  if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
+      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
+    return false;
+
+  if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
+    if (!HasNonDeletedDefaultedEqualityComparison(S, RD))
+      return false;
+  }
+
+  return S.getASTContext().hasUniqueObjectRepresentations(
+      CanonicalType, /*CheckIfTriviallyCopyable=*/false);
+}
+
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
                                    SourceLocation KeyLoc,
                                    TypeSourceInfo *TInfo) {
@@ -5633,7 +5709,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     Self.Diag(KeyLoc, diag::err_builtin_pass_in_regs_non_class) << T;
     return false;
   case UTT_IsTriviallyEqualityComparable:
-    return T.isTriviallyEqualityComparableType(C);
+    return isTriviallyEqualityComparableType(Self, T);
   }
 }
 
