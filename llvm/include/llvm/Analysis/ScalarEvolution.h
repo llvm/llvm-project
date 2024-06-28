@@ -1299,8 +1299,17 @@ public:
   /// sharpen it.
   void setNoWrapFlags(SCEVAddRecExpr *AddRec, SCEV::NoWrapFlags Flags);
 
+  /// Collect rewrite map for loop guards for loop \p L, together with flags
+  /// indidcating if NUW and NSW can be preserved during rewriting.
+  std::tuple<DenseMap<const SCEV *, const SCEV *>, bool, bool>
+  collectRewriteInfoFromLoopGuards(const Loop *L);
+
   /// Try to apply information from loop guards for \p L to \p Expr.
   const SCEV *applyLoopGuards(const SCEV *Expr, const Loop *L);
+  const SCEV *
+  applyLoopGuards(const SCEV *Expr, const Loop *L,
+                  const DenseMap<const SCEV *, const SCEV *> &RewriteMap,
+                  bool PreserveNUW, bool PreserveNSW);
 
   /// Return true if the loop has no abnormal exits. That is, if the loop
   /// is not infinite, it must exit through an explicit edge in the CFG.
