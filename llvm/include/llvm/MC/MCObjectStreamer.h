@@ -125,6 +125,7 @@ public:
   void emitSLEB128Value(const MCExpr *Value) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+  void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// Emit an instruction to a special fragment, because this instruction

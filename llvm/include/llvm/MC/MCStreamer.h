@@ -433,15 +433,8 @@ public:
   virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
   bool switchSection(MCSection *Section, const MCExpr *);
 
-  /// Set the current section where code is being emitted to \p Section.
-  /// This is required to update CurSection. This version does not call
-  /// changeSection.
-  void switchSectionNoChange(MCSection *Section) {
-    assert(Section && "Cannot switch to a null section!");
-    MCSectionSubPair curSection = SectionStack.back().first;
-    SectionStack.back().second = curSection;
-    SectionStack.back().first = MCSectionSubPair(Section, 0);
-  }
+  /// Similar to switchSection, but does not print the section directive.
+  virtual void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
