@@ -255,14 +255,14 @@ class MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
-
 protected:
   MCFragment *CurFrag = nullptr;
 
   MCStreamer(MCContext &Ctx);
+
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -399,7 +399,9 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
+  MCSection *getCurrentSectionOnly() const {
+    return CurFrag->getParent();
+  }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
@@ -407,6 +409,8 @@ public:
       return SectionStack.back().second;
     return MCSectionSubPair();
   }
+
+  MCFragment *getCurrentFragment() const;
 
   /// Returns an index to represent the order a symbol was emitted in.
   /// (zero if we did not emit that symbol)

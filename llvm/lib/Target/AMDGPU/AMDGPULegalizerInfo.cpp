@@ -1637,6 +1637,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomics.legalFor({{S32, FlatPtr}, {S64, FlatPtr}});
   }
 
+  // TODO: v2bf16 operations, and fat buffer pointer support.
   auto &Atomic = getActionDefinitionsBuilder(G_ATOMICRMW_FADD);
   if (ST.hasLDSFPAtomicAddF32()) {
     Atomic.legalFor({{S32, LocalPtr}, {S32, RegionPtr}});
@@ -1650,9 +1651,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
-  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
-    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
-
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
@@ -1664,12 +1662,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       });
   }
 
-  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
-    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
+      ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}, {V2F16, BufferFatPtr}});
   if (ST.hasAtomicGlobalPkAddBF16Inst())
     Atomic.legalFor({{V2BF16, GlobalPtr}});
   if (ST.hasAtomicFlatPkAdd16Insts())
     Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
+
+  // FIXME: Handle flat, global and buffer cases.
+  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
