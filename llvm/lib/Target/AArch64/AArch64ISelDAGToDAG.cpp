@@ -2019,7 +2019,7 @@ void AArch64DAGToDAGISel::SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
   if (!SelectSMETileSlice(SliceBase, MaxIdx, Base, Offset, Scale))
     return;
   // The correct Za tile number is computed in Machine Instruction
-  // See EmitZAIntr
+  // See EmitZAInstr
   // DAG cannot select Za tile as an output register with ZReg
   SDLoc DL(N);
   SmallVector<SDValue, 6> Ops;

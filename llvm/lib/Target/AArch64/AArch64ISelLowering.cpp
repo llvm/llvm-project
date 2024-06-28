@@ -2997,7 +2997,7 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
   } else {
     // Avoids all instructions with mnemonic za.<sz>[Reg, Imm,
     if (MI.getOperand(0).isReg() && !MI.getOperand(1).isImm()) {
-      MIB.add(MI.getOperand(0)); // Output ZPR
+      MIB.add(MI.getOperand(StartIdx)); // Output ZPR
       ++StartIdx;
     }
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
