@@ -10,12 +10,4 @@
 
 #include "src/math/f16fmaf.h"
 
-using LlvmLibcF16fmafTest = FmaTestTemplate<float16, float>;
-
-TEST_F(LlvmLibcF16fmafTest, SubnormalRange) {
-  test_subnormal_range(&LIBC_NAMESPACE::f16fmaf);
-}
-
-TEST_F(LlvmLibcF16fmafTest, NormalRange) {
-  test_normal_range(&LIBC_NAMESPACE::f16fmaf);
-}
+LIST_NARROWING_FMA_TESTS(float16, float, LIBC_NAMESPACE::f16fmaf)

@@ -866,22 +866,23 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
     Sec->setLayoutOrder(i);
 
     // Chain together fragments from all subsections.
-    MCDummyFragment Dummy;
-    Dummy.setParent(Sec);
-    MCFragment *Tail = &Dummy;
-    for (auto &[_, List] : Sec->Subsections) {
-      if (!List.Head)
-        continue;
-      Tail->Next = List.Head;
-      Tail = List.Tail;
-    }
-    Sec->Subsections.clear();
-    Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
-    Sec->CurFragList = &Sec->Subsections[0].second;
+    if (Sec->Subsections.size() > 1) {
+      MCDummyFragment Dummy;
+      MCFragment *Tail = &Dummy;
+      for (auto &[_, List] : Sec->Subsections) {
+        if (!List.Head)
+          continue;
+        Tail->Next = List.Head;
+        Tail = List.Tail;
+      }
+      Sec->Subsections.clear();
+      Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+      Sec->CurFragList = &Sec->Subsections[0].second;
 
-    unsigned FragmentIndex = 0;
-    for (MCFragment &Frag : *Sec)
-      Frag.setLayoutOrder(FragmentIndex++);
+      unsigned FragmentIndex = 0;
+      for (MCFragment &Frag : *Sec)
+        Frag.setLayoutOrder(FragmentIndex++);
+    }
   }
 
   // Layout until everything fits.
