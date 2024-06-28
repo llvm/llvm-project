@@ -73,6 +73,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sincos_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sincos_test.cpp
+  DEPENDS
+    libc.src.math.sincos
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE
@@ -1904,6 +1916,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16fma_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16fma_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fma
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
   f16fmaf_test
   NEED_MPFR
   SUITE
@@ -1914,6 +1941,21 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.f16fmaf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
+add_fp_unittest(
+  f16fmal_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16fmal_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmal
     libc.src.stdlib.rand
     libc.src.stdlib.srand
 )

@@ -359,6 +359,10 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+const DataLayout &Function::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
@@ -397,6 +401,12 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   }
   if (M->getModuleFlag("function_return_thunk_extern"))
     B.addAttribute(Attribute::FnRetThunkExtern);
+  StringRef DefaultCPU = F->getContext().getDefaultTargetCPU();
+  if (!DefaultCPU.empty())
+    B.addAttribute("target-cpu", DefaultCPU);
+  StringRef DefaultFeatures = F->getContext().getDefaultTargetFeatures();
+  if (!DefaultFeatures.empty())
+    B.addAttribute("target-features", DefaultFeatures);
   F->addFnAttrs(B);
   return F;
 }

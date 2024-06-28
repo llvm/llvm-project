@@ -14,9 +14,11 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
+
+class Module;
+
 /// A special type used by analysis passes to provide an address that
 /// identifies that particular analysis pass type.
 ///

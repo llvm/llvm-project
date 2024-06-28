@@ -1158,7 +1158,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
   Align MaxAlign = Align(1);
   uint64_t ExplicitArgOffset = 0;
-  const DataLayout &DL = Fn.getParent()->getDataLayout();
+  const DataLayout &DL = Fn.getDataLayout();
 
   unsigned InIndex = 0;
 
@@ -6015,7 +6015,7 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
     if (ValSize == 32 || ValSize == 64)
       return AtomicExpansionKind::None;

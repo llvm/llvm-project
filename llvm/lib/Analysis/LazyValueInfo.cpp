@@ -31,6 +31,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
@@ -1059,7 +1060,7 @@ LazyValueInfoImpl::solveBlockValueExtractValue(ExtractValueInst *EVI,
   // based on replaced with.overflow intrinsics.
   if (Value *V = simplifyExtractValueInst(
           EVI->getAggregateOperand(), EVI->getIndices(),
-          EVI->getModule()->getDataLayout()))
+          EVI->getDataLayout()))
     return getBlockValue(V, BB, EVI);
 
   LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
@@ -1387,7 +1388,7 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
         // over the operands unnecessarily which can be expensive for
         // instructions with many operands.
         if (isa<IntegerType>(Usr->getType()) && isOperationFoldable(Usr)) {
-          const DataLayout &DL = BBTo->getModule()->getDataLayout();
+          const DataLayout &DL = BBTo->getDataLayout();
           if (usesOperand(Usr, Condition)) {
             // If Val has Condition as an operand and Val can be folded into a
             // constant with either Condition == true or Condition == false,
@@ -1451,7 +1452,7 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
       ConstantRange EdgeVal(CaseValue);
       if (ValUsesConditionAndMayBeFoldable) {
         User *Usr = cast<User>(Val);
-        const DataLayout &DL = BBTo->getModule()->getDataLayout();
+        const DataLayout &DL = BBTo->getDataLayout();
         ValueLatticeElement EdgeLatticeVal =
             constantFoldUser(Usr, Condition, CaseValue, DL);
         if (EdgeLatticeVal.isOverdefined())
@@ -1689,7 +1690,7 @@ LazyValueInfo LazyValueAnalysis::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
 
-  return LazyValueInfo(&AC, &F.getParent()->getDataLayout());
+  return LazyValueInfo(&AC, &F.getDataLayout());
 }
 
 /// Returns true if we can statically tell that this value will never be a

@@ -2500,6 +2500,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget.isOSWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
                        ISD::SCALAR_TO_VECTOR,
@@ -30549,7 +30557,7 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
     bool Not = false;
     // Check if we have a NOT
     Value *PeekI;
-    if (match(I, m_c_Xor(m_Value(PeekI), m_AllOnes())) ||
+    if (match(I, m_Not(m_Value(PeekI))) ||
         match(I, m_Sub(m_AllOnes(), m_Value(PeekI)))) {
       Not = true;
       I = dyn_cast<Instruction>(PeekI);
@@ -32307,6 +32315,54 @@ bool X86TargetLowering::isInlineAsmTargetBranch(
   return Inst.equals_insensitive("call") || Inst.equals_insensitive("jmp");
 }
 
+static SDValue getFlagsOfCmpZeroFori1(SelectionDAG &DAG, const SDLoc &DL,
+                                      SDValue Mask) {
+  EVT Ty = MVT::i8;
+  auto V = DAG.getBitcast(MVT::i1, Mask);
+  auto VE = DAG.getZExtOrTrunc(V, DL, Ty);
+  auto Zero = DAG.getConstant(0, DL, Ty);
+  SDVTList X86SubVTs = DAG.getVTList(Ty, MVT::i32);
+  auto CmpZero = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, VE);
+  return SDValue(CmpZero.getNode(), 1);
+}
+
+SDValue X86TargetLowering::visitMaskedLoad(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, MachineMemOperand *MMO,
+    SDValue &NewLoad, SDValue Ptr, SDValue PassThru, SDValue Mask) const {
+  // @llvm.masked.load.v1*(ptr, alignment, mask, passthru)
+  // ->
+  // _, flags = SUB 0, mask
+  // res, chain = CLOAD inchain, ptr, (bit_cast_to_scalar passthru), cond, flags
+  // bit_cast_to_vector<res>
+  EVT VTy = PassThru.getValueType();
+  EVT Ty = VTy.getVectorElementType();
+  SDVTList Tys = DAG.getVTList(Ty, MVT::Other);
+  auto ScalarPassThru = PassThru.isUndef() ? DAG.getConstant(0, DL, Ty)
+                                           : DAG.getBitcast(Ty, PassThru);
+  auto Flags = getFlagsOfCmpZeroFori1(DAG, DL, Mask);
+  auto COND_NE = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+  SDValue Ops[] = {Chain, Ptr, ScalarPassThru, COND_NE, Flags};
+  NewLoad = DAG.getMemIntrinsicNode(X86ISD::CLOAD, DL, Tys, Ops, Ty, MMO);
+  return DAG.getBitcast(VTy, NewLoad);
+}
+
+SDValue X86TargetLowering::visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue Chain,
+                                            MachineMemOperand *MMO, SDValue Ptr,
+                                            SDValue Val, SDValue Mask) const {
+  // llvm.masked.store.v1*(Src0, Ptr, alignment, Mask)
+  // ->
+  // _, flags = SUB 0, mask
+  // chain = CSTORE inchain, (bit_cast_to_scalar val), ptr, cond, flags
+  EVT Ty = Val.getValueType().getVectorElementType();
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  auto ScalarVal = DAG.getBitcast(Ty, Val);
+  auto Flags = getFlagsOfCmpZeroFori1(DAG, DL, Mask);
+  auto COND_NE = DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8);
+  SDValue Ops[] = {Chain, ScalarVal, Ptr, COND_NE, Flags};
+  return DAG.getMemIntrinsicNode(X86ISD::CSTORE, DL, Tys, Ops, Ty, MMO);
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -34023,6 +34079,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FP80_ADD)
   NODE_NAME_CASE(CCMP)
   NODE_NAME_CASE(CTEST)
+  NODE_NAME_CASE(CLOAD)
+  NODE_NAME_CASE(CSTORE)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -37081,52 +37139,6 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   Known = Known.zext(64);
 }
 
-static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
-                                       KnownBits &Known,
-                                       const APInt &DemandedElts,
-                                       const SelectionDAG &DAG,
-                                       unsigned Depth) {
-  unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-
-  // Multiply signed i16 elements to create i32 values and add Lo/Hi pairs.
-  APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
-  APInt DemandedLoElts =
-      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
-  APInt DemandedHiElts =
-      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
-  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
-  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
-  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
-  KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
-  KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
-  Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true,
-                                      /*NUW=*/false, Lo, Hi);
-}
-
-static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
-                                         KnownBits &Known,
-                                         const APInt &DemandedElts,
-                                         const SelectionDAG &DAG,
-                                         unsigned Depth) {
-  unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-
-  // Multiply unsigned/signed i8 elements to create i16 values and add_sat Lo/Hi
-  // pairs.
-  APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
-  APInt DemandedLoElts =
-      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
-  APInt DemandedHiElts =
-      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
-  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
-  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
-  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
-  KnownBits Lo = KnownBits::mul(LHSLo.zext(16), RHSLo.sext(16));
-  KnownBits Hi = KnownBits::mul(LHSHi.zext(16), RHSHi.sext(16));
-  Known = KnownBits::sadd_sat(Lo, Hi);
-}
-
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       KnownBits &Known,
                                                       const APInt &DemandedElts,
@@ -37302,26 +37314,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
-  case X86ISD::VPMADDWD: {
-    SDValue LHS = Op.getOperand(0);
-    SDValue RHS = Op.getOperand(1);
-    assert(VT.getVectorElementType() == MVT::i32 &&
-           LHS.getValueType() == RHS.getValueType() &&
-           LHS.getValueType().getVectorElementType() == MVT::i16 &&
-           "Unexpected PMADDWD types");
-    computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
-    break;
-  }
-  case X86ISD::VPMADDUBSW: {
-    SDValue LHS = Op.getOperand(0);
-    SDValue RHS = Op.getOperand(1);
-    assert(VT.getVectorElementType() == MVT::i16 &&
-           LHS.getValueType() == RHS.getValueType() &&
-           LHS.getValueType().getVectorElementType() == MVT::i8 &&
-           "Unexpected PMADDUBSW types");
-    computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
-    break;
-  }
   case X86ISD::PMULUDQ: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -37458,30 +37450,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     switch (Op->getConstantOperandVal(0)) {
-    case Intrinsic::x86_sse2_pmadd_wd:
-    case Intrinsic::x86_avx2_pmadd_wd:
-    case Intrinsic::x86_avx512_pmaddw_d_512: {
-      SDValue LHS = Op.getOperand(1);
-      SDValue RHS = Op.getOperand(2);
-      assert(VT.getScalarType() == MVT::i32 &&
-             LHS.getValueType() == RHS.getValueType() &&
-             LHS.getValueType().getScalarType() == MVT::i16 &&
-             "Unexpected PMADDWD types");
-      computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
-      break;
-    }
-    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
-    case Intrinsic::x86_avx2_pmadd_ub_sw:
-    case Intrinsic::x86_avx512_pmaddubs_w_512: {
-      SDValue LHS = Op.getOperand(1);
-      SDValue RHS = Op.getOperand(2);
-      assert(VT.getScalarType() == MVT::i16 &&
-             LHS.getValueType() == RHS.getValueType() &&
-             LHS.getValueType().getScalarType() == MVT::i8 &&
-             "Unexpected PMADDUBSW types");
-      computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
-      break;
-    }
     case Intrinsic::x86_sse2_psad_bw:
     case Intrinsic::x86_avx2_psad_bw:
     case Intrinsic::x86_avx512_psad_bw_512: {
@@ -55628,6 +55596,32 @@ static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
+  // res, flags2 = sub 0, (setcc cc, flag)
+  // cload/cstore ..., cond_ne, flag2
+  // ->
+  // cload/cstore cc, flag
+  if (N->getConstantOperandVal(3) != X86::COND_NE)
+    return SDValue();
+
+  SDValue Sub = N->getOperand(4);
+  if (Sub.getOpcode() != X86ISD::SUB)
+    return SDValue();
+
+  SDValue SetCC = Sub.getOperand(1);
+
+  if (!X86::isZeroNode(Sub.getOperand(0)) || SetCC.getOpcode() != X86ISD::SETCC)
+    return SDValue();
+
+  SmallVector<SDValue, 5> Ops(N->op_values());
+  Ops[3] = SetCC.getOperand(0);
+  Ops[4] = SetCC.getOperand(1);
+
+  return DAG.getMemIntrinsicNode(N->getOpcode(), SDLoc(N), N->getVTList(), Ops,
+                                 cast<MemSDNode>(N)->getMemoryVT(),
+                                 cast<MemSDNode>(N)->getMemOperand());
+}
+
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -55698,14 +55692,43 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == X86ISD::PCMPEQ || Opcode == X86ISD::PCMPGT) &&
+         "Unknown PCMP opcode");
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
   SDLoc DL(N);
 
-  if (N->getOperand(0) == N->getOperand(1)) {
-    if (N->getOpcode() == X86ISD::PCMPEQ)
-      return DAG.getConstant(-1, DL, VT);
-    if (N->getOpcode() == X86ISD::PCMPGT)
-      return DAG.getConstant(0, DL, VT);
+  if (LHS == RHS)
+    return (Opcode == X86ISD::PCMPEQ) ? DAG.getAllOnesConstant(DL, VT)
+                                      : DAG.getConstant(0, DL, VT);
+
+  // Constant Folding.
+  // PCMPEQ(X,UNDEF) -> UNDEF
+  // PCMPGT(X,UNDEF) -> 0
+  // PCMPGT(UNDEF,X) -> 0
+  APInt LHSUndefs, RHSUndefs;
+  SmallVector<APInt> LHSBits, RHSBits;
+  if (getTargetConstantBitsFromNode(LHS, EltBits, LHSUndefs, LHSBits) &&
+      getTargetConstantBitsFromNode(RHS, EltBits, RHSUndefs, RHSBits)) {
+    APInt Ones = APInt::getAllOnes(EltBits);
+    APInt Zero = APInt::getZero(EltBits);
+    SmallVector<APInt> Results(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Opcode == X86ISD::PCMPEQ) {
+        Results[I] = (LHSBits[I] == RHSBits[I]) ? Ones : Zero;
+      } else {
+        bool AnyUndef = LHSUndefs[I] || RHSUndefs[I];
+        Results[I] = (!AnyUndef && LHSBits[I].sgt(RHSBits[I])) ? Ones : Zero;
+      }
+    }
+    if (Opcode == X86ISD::PCMPEQ)
+      return getConstVector(Results, LHSUndefs | RHSUndefs, VT, DAG, DL);
+    return getConstVector(Results, VT, DAG, DL);
   }
 
   return SDValue();
@@ -56928,15 +56951,40 @@ static SDValue combinePMULDQ(SDNode *N, SelectionDAG &DAG,
 // Simplify VPMADDUBSW/VPMADDWD operations.
 static SDValue combineVPMADD(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI) {
-  EVT VT = N->getValueType(0);
+  MVT VT = N->getSimpleValueType(0);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+  bool IsPMADDWD = Opc == X86ISD::VPMADDWD;
+  assert((Opc == X86ISD::VPMADDWD || Opc == X86ISD::VPMADDUBSW) &&
+         "Unexpected PMADD opcode");
 
   // Multiply by zero.
   // Don't return LHS/RHS as it may contain UNDEFs.
   if (ISD::isBuildVectorAllZeros(LHS.getNode()) ||
       ISD::isBuildVectorAllZeros(RHS.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
+
+  // Constant folding.
+  APInt LHSUndefs, RHSUndefs;
+  SmallVector<APInt> LHSBits, RHSBits;
+  unsigned SrcEltBits = LHS.getScalarValueSizeInBits();
+  unsigned DstEltBits = VT.getScalarSizeInBits();
+  if (getTargetConstantBitsFromNode(LHS, SrcEltBits, LHSUndefs, LHSBits) &&
+      getTargetConstantBitsFromNode(RHS, SrcEltBits, RHSUndefs, RHSBits)) {
+    SmallVector<APInt> Result;
+    for (unsigned I = 0, E = LHSBits.size(); I != E; I += 2) {
+      APInt LHSLo = LHSBits[I + 0], LHSHi = LHSBits[I + 1];
+      APInt RHSLo = RHSBits[I + 0], RHSHi = RHSBits[I + 1];
+      LHSLo = IsPMADDWD ? LHSLo.sext(DstEltBits) : LHSLo.zext(DstEltBits);
+      LHSHi = IsPMADDWD ? LHSHi.sext(DstEltBits) : LHSHi.zext(DstEltBits);
+      APInt Lo = LHSLo * RHSLo.sext(DstEltBits);
+      APInt Hi = LHSHi * RHSHi.sext(DstEltBits);
+      APInt Res = IsPMADDWD ? (Lo + Hi) : Lo.sadd_sat(Hi);
+      Result.push_back(Res);
+    }
+    return getConstVector(Result, VT, DAG, SDLoc(N));
+  }
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
@@ -57337,6 +57385,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
   case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI, Subtarget);
+  case X86ISD::CLOAD:
+  case X86ISD::CSTORE:      return combineX86CloadCstore(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
@@ -57542,16 +57592,20 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
     case ISD::ANY_EXTEND:
+    case ISD::MUL:
+      return false;
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:
     case ISD::SUB:
     case ISD::ADD:
-    case ISD::MUL:
     case ISD::AND:
     case ISD::OR:
     case ISD::XOR:
-      return false;
+      // NDD instruction never has "partial register write" issue b/c it has
+      // destination register's upper bits [63:OSIZE]) zeroed even when
+      // OSIZE=8/16.
+      return Subtarget.hasNDD();
     }
   }
 

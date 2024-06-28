@@ -940,6 +940,13 @@ def warn_ptrauth_auth_null_pointer :
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
 
+def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
+  Note<"cannot take an address of a virtual member function if its return or "
+       "argument types are incomplete">;
+def note_ptrauth_virtual_function_incomplete_arg_ret_type :
+  Note<"%0 is incomplete">;
+
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -3246,6 +3253,9 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_attribute_unsupported_m_profile
+    : Error<"on M-profile architectures %0 attribute is not supported on targets missing %1;"
+            " specify an appropriate -march= or -mcpu=">;
 def err_duplicate_target_attribute
     : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
@@ -5379,7 +5389,7 @@ def err_not_class_template_specialization : Error<
   "cannot specialize a %select{dependent template|template template "
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
-  "explicit specialization cannot have a storage class">;
+  "explicit specialization cannot have a storage class">, InGroup<ExplicitSpecializationStorageClass>;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
@@ -8953,6 +8963,8 @@ def err_expected_callable_argument : Error<
   "expected a callable expression as %ordinal0 argument to %1, found %2">;
 def note_building_builtin_dump_struct_call : Note<
   "in call to printing function with arguments '(%0)' while dumping struct">;
+def err_builtin_verbose_trap_arg : Error<
+  "argument to __builtin_verbose_trap must %select{be a pointer to a constant string|not contain $}0">;
 
 def err_atomic_load_store_uses_lib : Error<
   "atomic %select{load|store}0 requires runtime support that is not "
@@ -11168,16 +11180,12 @@ def err_omp_several_directives_in_region : Error<
 def note_omp_previous_directive : Note<
   "previous '%0' directive used here">;
 def err_omp_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp sections' must be a compound statement">;
-def err_omp_parallel_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp parallel sections' must be a compound statement">;
+  "the statement for '#pragma omp %0' must be a compound statement">;
 def err_omp_orphaned_section_directive : Error<
   "%select{orphaned 'omp section' directives are prohibited, it|'omp section' directive}0"
   " must be closely nested to a sections region%select{|, not a %1 region}0">;
 def err_omp_sections_substmt_not_section : Error<
-  "statement in 'omp sections' directive must be enclosed into a section region">;
-def err_omp_parallel_sections_substmt_not_section : Error<
-  "statement in 'omp parallel sections' directive must be enclosed into a section region">;
+  "statement in 'omp %0' directive must be enclosed into a section region">;
 def err_omp_parallel_reduction_in_task_firstprivate : Error<
   "argument of a reduction clause of a %0 construct must not appear in a firstprivate clause on a task construct">;
 def err_omp_atomic_read_not_expression_statement : Error<
@@ -12214,6 +12222,30 @@ def err_sycl_special_type_num_init_method : Error<
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
+
+// VTable pointer authentication errors
+def err_non_polymorphic_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on monomorphic type %0">;
+def err_incomplete_type_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on an incomplete type %0">;
+def err_non_top_level_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on %0 which is a subclass of polymorphic type %1">;
+def err_duplicated_vtable_pointer_auth : Error<
+  "multiple vtable pointer authentication policies on %0">;
+def err_invalid_authentication_key : Error<
+  "invalid authentication key %0">;
+def err_invalid_address_discrimination : Error<
+  "invalid address discrimination mode %0">;
+def err_invalid_extra_discrimination : Error<
+  "invalid extra discrimination selection %0">;
+def err_invalid_custom_discrimination : Error<
+  "invalid custom discrimination">;
+def err_missing_custom_discrimination : Error<
+  "missing custom discrimination">;
+def err_no_default_vtable_pointer_auth : Error<
+  "cannot specify a default vtable pointer authentication "
+  "%select{key|address discrimination mode|discriminator}0 with no default set"
+>;
 
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;

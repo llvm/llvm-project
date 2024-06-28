@@ -41,11 +41,11 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   std::vector<Record *> SortedExtensions =
       RK.getAllDerivedDefinitions("Extension");
   auto Alphabetical = [](Record *A, Record *B) -> bool {
-    const auto MarchA = A->getValueAsString("MArchName");
-    const auto MarchB = B->getValueAsString("MArchName");
-    return MarchA.compare(MarchB) < 0; // A lexographically less than B
+    const auto NameA = A->getValueAsString("Name");
+    const auto NameB = B->getValueAsString("Name");
+    return NameA.compare(NameB) < 0; // A lexographically less than B
   };
-  llvm::sort(SortedExtensions, Alphabetical);
+  std::sort(SortedExtensions.begin(), SortedExtensions.end(), Alphabetical);
 
   // The ARMProcFamilyEnum values are initialised by SubtargetFeature defs
   // which set the ARMProcFamily field. We can generate the enum from these defs
@@ -95,17 +95,19 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
     OS << "  ";
-    OS << "{\"" << Rec->getValueAsString("MArchName") << "\"";
-    if (auto Alias = Rec->getValueAsString("MArchAlias"); Alias.empty())
+    OS << "{\"" << Rec->getValueAsString("UserVisibleName") << "\"";
+    if (auto Alias = Rec->getValueAsString("UserVisibleAlias"); Alias.empty())
       OS << ", {}";
     else
       OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
+    OS << ", \"" << Rec->getValueAsString("ArchFeatureName") << "\"";
+    OS << ", \"" << Rec->getValueAsString("Desc") << "\"";
     OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
     OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {} },\n";
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"

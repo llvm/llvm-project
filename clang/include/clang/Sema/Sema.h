@@ -2114,8 +2114,6 @@ public:
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
-  static bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
-
   void CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
                             BinaryOperatorKind Opcode);
 
@@ -2228,8 +2226,6 @@ public:
   bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
-  bool CheckHLSLBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
-
   void checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
@@ -2258,6 +2254,14 @@ public:
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
 
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
+
+  void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
+                               bool *ICContext = nullptr,
+                               bool IsListInit = false);
+
+  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                     bool CheckForFloatArgs = true);
+  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2306,9 +2310,6 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   bool BuiltinElementwiseMath(CallExpr *TheCall);
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -4565,6 +4566,10 @@ public:
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
+
+  /// Check that VTable Pointer authentication is only being set on the first
+  /// first instantiation of the vtable
+  void checkIncorrectVTablePointerAuthenticationAttribute(CXXRecordDecl &RD);
 
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
