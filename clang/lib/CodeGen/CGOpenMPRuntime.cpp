@@ -9477,7 +9477,6 @@ static void genMapInfoForCaptures(
     llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
     MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
 
-  CodeGenModule &CGM = CGF.CGM;
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
   for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),

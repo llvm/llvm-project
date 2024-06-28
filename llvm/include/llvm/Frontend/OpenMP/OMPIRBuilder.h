@@ -2367,40 +2367,12 @@ public:
 
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference. This is the first of two overloads - this
-  /// one accepts a reference to a MapInfosTy object that contains combined
-  /// information generated for mappable clauses, including base pointers,
-  /// pointers, sizes, map types, user-defined mappers, and non-contiguous
-  /// information.
+  /// return nullptr by reference. Accepts a reference to a MapInfosTy object
+  /// that contains information generated for mappable clauses,
+  /// including base pointers, pointers, sizes, map types, user-defined mappers.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
-
-  /// Emit the arrays used to pass the captures and map information to the
-  /// offloading runtime library. If there is no map or capture information,
-  /// return nullptr by reference. This is the second of two overloads - Instead
-  /// of accepting a reference to a MapInfosTy object, this overload accepts
-  /// a call back of type GenMapInfoCallbackTy to populate a MapInfosTy object
-  /// with mapping information.
-  void emitOffloadingArrays(
-      InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
-      GenMapInfoCallbackTy GenMapInfoCB, TargetDataInfo &Info,
-      bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
-
-  /// Allocates memory for and populates the arrays required for offloading
-  /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
-  /// emits their base addresses as arguments to be passed to the runtime
-  /// library. In essence, this function is a combination of
-  /// emitOffloadingArrays and emitOffloadingArraysArgument and should arguably
-  /// be preferred by clients of OpenMPIRBuilder.
-  void emitOffloadingArraysAndArgs(
-      InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
-      TargetDataRTArgs &RTArgs, GenMapInfoCallbackTy GenMapInfoCB,
-      bool IsNonContiguous = false, bool ForEndCall = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
