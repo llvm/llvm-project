@@ -84,3 +84,9 @@ Reverts: break componsableKernels
 contact: RonL
 
 ---
+Reverts:
+7cfffe74 Unittests and usability for BitstreamWriter incremental flushing (#92983)
+993d2383e68b [ctx_prof] Remove `Buffer` field in PGOCtxProfWriter  
+1488fb415336 [PAC][AArch64] Lower ptrauth constants in code (#96879)  
+Contacts: RonL and Hulk
+---

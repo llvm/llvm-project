@@ -168,7 +168,7 @@ static bool canReuseDataFragment(const MCDataFragment &F,
 
 MCDataFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
-  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  auto *F = dyn_cast<MCDataFragment>(getCurrentFragment());
   if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
     F = getContext().allocFragment<MCDataFragment>();
     insert(F);
