@@ -14,17 +14,12 @@
 #ifndef LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 #define LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
 
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/Compiler.h"
-#include <cstddef>
-#include <functional>
-#include <vector>
 
 namespace llvm {
+
+class MachinePostDominatorTree;
 
 class MachineDomTreeUpdater
     : public GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
@@ -67,5 +62,10 @@ private:
 
 extern template class GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
+
+extern template void
+GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
+                      MachinePostDominatorTree>::recalculate(MachineFunction
+                                                                 &MF);
 } // namespace llvm
 #endif // LLVM_CODEGEN_MACHINEDOMTREEUPDATER_H
