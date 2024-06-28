@@ -575,7 +575,7 @@ public:
 
   Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
 
-  Stream *GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
+  lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
