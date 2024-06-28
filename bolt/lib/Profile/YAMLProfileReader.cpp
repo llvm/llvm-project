@@ -22,7 +22,6 @@ namespace opts {
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
-extern cl::opt<bool> MatchProfileWithFunctionHash;
 extern cl::opt<bool> Lite;
 
 static llvm::cl::opt<bool>
@@ -495,10 +494,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   BC.setNumUnusedProfiledObjects(NumUnused);
 
-  if (opts::Lite && opts::MatchProfileWithFunctionHash)
+  if (opts::Lite && opts::MatchProfileWithFunctionHash) {
     for (BinaryFunction *BF : BC.getAllBinaryFunctions())
       if (!BF->hasProfile())
         BF->setIgnored();
+  }
 
   return Error::success();
 }
