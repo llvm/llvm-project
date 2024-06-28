@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RemoteJITUtils.h"
+#include "clang/Interpreter/RemoteJITUtils.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -27,67 +27,44 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-Expected<std::unique_ptr<DefinitionGenerator>>
-loadDylib(ExecutionSession &ES, StringRef RemotePath) {
-  if (auto Handle = ES.getExecutorProcessControl().loadDylib(RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, *Handle);
-  else
-    return Handle.takeError();
-}
-
-static void findLocalExecutorHelper() {}
-std::string findLocalExecutor(const char *HostArgv0) {
-  // This just needs to be some static symbol in the binary; C++ doesn't
-  // allow taking the address of ::main however.
-  uintptr_t UIntPtr = reinterpret_cast<uintptr_t>(&findLocalExecutorHelper);
-  void *VoidPtr = reinterpret_cast<void *>(UIntPtr);
-  SmallString<256> FullName(sys::fs::getMainExecutable(HostArgv0, VoidPtr));
-  sys::path::remove_filename(FullName);
-  sys::path::append(FullName, "llvm-jitlink-executor");
-  return FullName.str().str();
-}
-
-#ifndef LLVM_ON_UNIX
-
-// FIXME: Add support for Windows.
-Expected<std::pair<std::unique_ptr<SimpleRemoteEPC>, uint64_t>>
-launchLocalExecutor(StringRef ExecutablePath) {
-  return make_error<StringError>(
-      "Remote JITing not yet supported on non-unix platforms",
-      inconvertibleErrorCode());
-}
-
-// FIXME: Add support for Windows.
 Expected<std::unique_ptr<SimpleRemoteEPC>>
-connectTCPSocket(StringRef NetworkAddress) {
+launchExecutor(StringRef ExecutablePath) {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add support for Windows.
+  return make_error<StringError>("-" + ExecutablePath +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
   return make_error<StringError>(
-      "Remote JITing not yet supported on non-unix platforms",
+      "-" + ExecutablePath +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
       inconvertibleErrorCode());
-}
-
 #else
-
-Expected<std::pair<std::unique_ptr<SimpleRemoteEPC>, uint64_t>>
-launchLocalExecutor(StringRef ExecutablePath) {
-  constexpr int ReadEnd = 0;
-  constexpr int WriteEnd = 1;
 
   if (!sys::fs::can_execute(ExecutablePath))
     return make_error<StringError>(
         formatv("Specified executor invalid: {0}", ExecutablePath),
         inconvertibleErrorCode());
 
+  constexpr int ReadEnd = 0;
+  constexpr int WriteEnd = 1;
+
   // Pipe FDs.
   int ToExecutor[2];
   int FromExecutor[2];
+
+  pid_t ChildPID;
 
   // Create pipes to/from the executor..
   if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
     return make_error<StringError>("Unable to create pipe for executor",
                                    inconvertibleErrorCode());
 
-  pid_t ProcessID = fork();
-  if (ProcessID == 0) {
+  ChildPID = fork();
+
+  if (ChildPID == 0) {
     // In the child...
 
     // Close the parent ends of the pipes
@@ -95,14 +72,10 @@ launchLocalExecutor(StringRef ExecutablePath) {
     close(FromExecutor[ReadEnd]);
 
     // Execute the child process.
-    std::unique_ptr<char[]> ExecPath, FDSpecifier, TestOutputFlag;
+    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
     {
-      ExecPath = std::make_unique<char[]>(ExecutablePath.size() + 1);
-      strcpy(ExecPath.get(), ExecutablePath.data());
-
-      const char *TestOutputFlagStr = "test-jitloadergdb";
-      TestOutputFlag = std::make_unique<char[]>(strlen(TestOutputFlagStr) + 1);
-      strcpy(TestOutputFlag.get(), TestOutputFlagStr);
+      ExecutorPath = std::make_unique<char[]>(ExecutablePath.size() + 1);
+      strcpy(ExecutorPath.get(), ExecutablePath.data());
 
       std::string FDSpecifierStr("filedescs=");
       FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
@@ -112,15 +85,13 @@ launchLocalExecutor(StringRef ExecutablePath) {
       strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
     }
 
-    char *const Args[] = {ExecPath.get(), TestOutputFlag.get(),
-                          FDSpecifier.get(), nullptr};
-    int RC = execvp(ExecPath.get(), Args);
-    if (RC != 0)
-      return make_error<StringError>(
-          "Unable to launch out-of-process executor '" + ExecutablePath + "'\n",
-          inconvertibleErrorCode());
-
-    llvm_unreachable("Fork won't return in success case");
+    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
+    int RC = execvp(ExecutorPath.get(), Args);
+    if (RC != 0) {
+      errs() << "unable to launch out-of-process executor \""
+             << ExecutorPath.get() << "\"\n";
+      exit(1);
+    }
   }
   // else we're the parent...
 
@@ -128,15 +99,15 @@ launchLocalExecutor(StringRef ExecutablePath) {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  auto EPC = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      SimpleRemoteEPC::Setup(),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
-  if (!EPC)
-    return EPC.takeError();
+  auto S = SimpleRemoteEPC::Setup();
 
-  return std::make_pair(std::move(*EPC), static_cast<uint64_t>(ProcessID));
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
+      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+#endif
 }
+
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 
 static Expected<int> connectTCPSocketImpl(std::string Host,
                                           std::string PortStr) {
@@ -150,18 +121,17 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
     return make_error<StringError>(
         formatv("address resolution failed ({0})", gai_strerror(EC)),
         inconvertibleErrorCode());
-
   // Cycle through the returned addrinfo structures and connect to the first
   // reachable endpoint.
   int SockFD;
   addrinfo *Server;
   for (Server = AI; Server != nullptr; Server = Server->ai_next) {
-    // If socket fails, maybe it's because the address family is not supported.
-    // Skip to the next addrinfo structure.
+    // socket might fail, e.g. if the address family is not supported. Skip to
+    // the next addrinfo structure in such a case.
     if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
       continue;
 
-    // If connect works, we exit the loop with a working socket.
+    // If connect returns null, we exit the loop with a working socket.
     if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
       break;
 
@@ -169,17 +139,33 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
   }
   freeaddrinfo(AI);
 
-  // Did we reach the end of the loop without connecting to a valid endpoint?
+  // If we reached the end of the loop without connecting to a valid endpoint,
+  // dump the last error that was logged in socket() or connect().
   if (Server == nullptr)
     return make_error<StringError>("invalid hostname",
                                    inconvertibleErrorCode());
 
   return SockFD;
 }
+#endif
 
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 connectTCPSocket(StringRef NetworkAddress) {
-  auto CreateErr = [NetworkAddress](StringRef Details) {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add TCP support for Windows.
+  return make_error<StringError>("-" + NetworkAddress +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return make_error<StringError>(
+      "-" + NetworkAddress +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
+#else
+
+  auto CreateErr = [NetworkAddress](Twine Details) {
     return make_error<StringError>(
         formatv("Failed to connect TCP socket '{0}': {1}", NetworkAddress,
                 Details),
@@ -189,20 +175,21 @@ connectTCPSocket(StringRef NetworkAddress) {
   StringRef Host, PortStr;
   std::tie(Host, PortStr) = NetworkAddress.split(':');
   if (Host.empty())
-    return CreateErr("host name cannot be empty");
+    return CreateErr("Host name for -" + NetworkAddress + " can not be empty");
   if (PortStr.empty())
-    return CreateErr("port cannot be empty");
+    return CreateErr("Port number in -" + NetworkAddress + " can not be empty");
   int Port = 0;
   if (PortStr.getAsInteger(10, Port))
-    return CreateErr("port number is not a valid integer");
+    return CreateErr("Port number '" + PortStr + "' is not a valid integer");
 
   Expected<int> SockFD = connectTCPSocketImpl(Host.str(), PortStr.str());
   if (!SockFD)
-    return CreateErr(toString(SockFD.takeError()));
+    return SockFD.takeError();
+
+  auto S = SimpleRemoteEPC::Setup();
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      SimpleRemoteEPC::Setup(), *SockFD);
-}
-
+      std::move(S), *SockFD, *SockFD);
 #endif
+}

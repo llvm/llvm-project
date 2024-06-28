@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RemoteJITUtils.h"
+#include "clang/Interpreter/RemoteJITUtils.h"
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -26,6 +26,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include <optional>
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
@@ -38,17 +39,21 @@
 LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 #endif
 
+#define DEBUG_TYPE "clang-repl"
+
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options (Only available on MachO)");
-static llvm::cl::opt<std::string> OOPExecutor(
-    "oop-executor",
-    llvm::cl::desc("Launch an out-of-process executor to run code"),
-    llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
+static llvm::cl::OptionCategory
+    OOPCategory("Out-of-process Execution Options");
+static llvm::cl::opt<std::string>
+    OOPExecutor("oop-executor",
+                llvm::cl::desc("Launch an out-of-process executor to run code"),
+                llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<std::string> OOPExecutorConnectTCP(
-    "opp-connect",
-    llvm::cl::desc("Connect to an out-of-process executor through a TCP socket"),
+    "oop-executor-connect",
+    llvm::cl::desc(
+        "Connect to an out-of-process executor through a TCP socket"),
     llvm::cl::value_desc("<hostname>:<port>"));
 static llvm::cl::opt<std::string>
     OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
@@ -62,7 +67,6 @@ static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
-
 static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
@@ -74,17 +78,25 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
 
   // Out-of-process executors must run with the ORC runtime for destructor
   // support.
-  if (OrcRuntimePath.empty() &&
-      (OOPExecutor.getNumOccurrences() ||
-       OOPExecutorConnectTCP.getNumOccurrences()))
-    return llvm::make_error<llvm::StringError>(
-        "ORC runtime required",
-        llvm::inconvertibleErrorCode());
+  if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
+                                 OOPExecutorConnectTCP.getNumOccurrences())) {
+    llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
+        ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
+    llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
+    llvm::sys::path::remove_filename(OrcPath); // Remove ./bin directory.
+    llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+    llvm::StringRef Path;
+    if (SystemTriple.isOSBinFormatELF())
+      Path = "lib/clang/19/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
+    else if (SystemTriple.isOSBinFormatMachO())
+      Path = "lib/clang/19/lib/darwin/liborc_rt_osx.a";
+    llvm::sys::path::append(OrcPath, Path);
+    OrcRuntimePath = OrcPath.str().str();
+  }
 
   // If -oop-executor was used but no value was specified then use a sensible
   // default.
-  if (!!OOPExecutor.getNumOccurrences() &&
-      OOPExecutor.empty()) {
+  if (!!OOPExecutor.getNumOccurrences() && OOPExecutor.empty()) {
     llvm::SmallString<256> OOPExecutorPath(llvm::sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(OOPExecutorPath);
@@ -231,21 +243,19 @@ int main(int argc, const char **argv) {
 
   ExitOnErr(sanitizeOopArguments(argv[0]));
 
-
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-    // std::unique_ptr<llvm::orc::TaskDispatcher> D = nullptr;
-
-    // D = std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(std::nullopt);
-
-    // if (auto EPCOrErr =
-    //         llvm::orc::SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
-    //   EPC = std::move(*EPCOrErr);
   if (OOPExecutor.getNumOccurrences()) {
     // Launch an out-of-process executor locally in a child process.
-    int PID;
-    std::tie(EPC, PID) = ExitOnErr(launchLocalExecutor(OOPExecutor));
+    EPC = ExitOnErr(launchExecutor(OOPExecutor));
+  } else if (OOPExecutorConnectTCP.getNumOccurrences()) {
+    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP));
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (EPC) {
     CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-    llvm::outs() << "executor process id = " << PID << "\n";
+    JB = ExitOnErr(
+        clang::Interpreter::createLLJITBuilder(std::move(EPC), OrcRuntimePath));
   }
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
@@ -279,15 +289,14 @@ int main(int argc, const char **argv) {
       auto CudaRuntimeLibPath = CudaPath + "/lib/libcudart.so";
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
-  } else if (EPC) {
-    Interp = ExitOnErr(
-        clang::Interpreter::createWithOOPExecutor(std::move(CI),
-                                                  std::move(EPC),
-                                                  OrcRuntimePath));
+  } else if (JB) {
+    Interp =
+        ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(JB)));
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
   bool HasError = false;
+
   for (const std::string &input : OptInputs) {
     if (auto Err = Interp->ParseAndExecute(input)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");

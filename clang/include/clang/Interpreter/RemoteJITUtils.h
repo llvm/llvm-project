@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_REMOTEJITUTILS_H
-#define LLVM_CLANG_TOOLS_REMOTEJITUTILS_H
+#ifndef LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H
+#define LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -24,11 +24,8 @@
 #include <memory>
 #include <string>
 
-/// Find the default exectuable on disk and create a JITLinkExecutor for it.
-std::string findLocalExecutor(const char *HostArgv0);
-
-llvm::Expected<std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint64_t>>
-launchLocalExecutor(llvm::StringRef ExecutablePath);
+llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
+launchExecutor(llvm::StringRef ExecutablePath);
 
 /// Create a JITLinkExecutor that connects to the given network address
 /// through a TCP socket. A valid NetworkAddress provides hostname and port,
@@ -36,7 +33,4 @@ launchLocalExecutor(llvm::StringRef ExecutablePath);
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress);
 
-llvm::Expected<std::unique_ptr<llvm::orc::DefinitionGenerator>>
-loadDylib(llvm::orc::ExecutionSession &ES, llvm::StringRef RemotePath);
-
-#endif
+#endif // LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H

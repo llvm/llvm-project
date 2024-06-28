@@ -133,13 +133,12 @@ public:
   create(std::unique_ptr<CompilerInstance> CI,
          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  createWithOOPExecutor(
-      std::unique_ptr<CompilerInstance> CI,
-      std::unique_ptr<llvm::orc::ExecutorProcessControl> EI,
-      llvm::StringRef OrcRuntimePath);
-  static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
+  static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+  createLLJITBuilder(
+      std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+      llvm::StringRef OrcRuntimePath);
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
