@@ -1085,8 +1085,8 @@ defm V_PERMUTE_PAIR_BCAST_B32             : VOP2M_Real_gfx13 <0x2>;
 defm V_BPERMUTE_B32                       : VOP2M_Real_gfx13 <0x3>;
 defm V_MOV_2SRC_B64                       : VOP2M_Real_gfx13 <0x4>;
 
-defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x80>;
-defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x81>;
+defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x10>;
+defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x11>;
 
 // TODO-GFX13: Replace invented opcodes
 
