@@ -399,7 +399,9 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
+  MCSection *getCurrentSectionOnly() const {
+    return CurFrag->getParent();
+  }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
