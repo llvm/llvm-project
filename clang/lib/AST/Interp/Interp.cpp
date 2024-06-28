@@ -322,7 +322,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   };
 
   if (const auto *D = Desc->asVarDecl();
-      D && D->hasGlobalStorage() && !IsConstType(D)) {
+      D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
     return S.inConstantContext();
   }
@@ -341,7 +341,9 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isZero())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_null_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_null_subobject)
+      << CSK << S.Current->getRange(OpPC);
+
   return false;
 }
 
@@ -350,7 +352,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isOnePastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_past_end) << AK;
+  S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+      << AK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -359,7 +362,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isElementPastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -369,7 +373,8 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
   return false;
 }
 

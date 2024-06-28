@@ -32,7 +32,7 @@
 
 // CHECK: DynamicSection [
 // CHECK-NEXT:  Tag                Type                 Name/Value
-// CHECK-NEXT:  0x0000000000000001 NEEDED               Shared library: [so]
+// CHECK-NEXT:  0x0000000000000001 NEEDED               Shared library: so
 // CHECK-NEXT:  0x0000000000000015 DEBUG                0x0
 // CHECK-NEXT:  0x0000000000000017 JMPREL
 // CHECK-NEXT:  0x0000000000000002 PLTRELSZ             24 (bytes)

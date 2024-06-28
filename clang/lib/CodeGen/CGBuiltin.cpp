@@ -3505,6 +3505,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
+  case Builtin::BI__builtin_verbose_trap: {
+    llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+    if (getDebugInfo()) {
+      TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+          TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
+          *E->getArg(1)->tryEvaluateString(getContext()));
+    }
+    ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
+    // Currently no attempt is made to prevent traps from being merged.
+    EmitTrapCall(Intrinsic::trap);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__debugbreak:
     EmitTrapCall(Intrinsic::debugtrap);
     return RValue::get(nullptr);
@@ -18467,6 +18479,16 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
     return Builder.CreateCall(F, Args);
   }
+  case AMDGPU::BI__builtin_amdgcn_permlane16:
+  case AMDGPU::BI__builtin_amdgcn_permlanex16:
+    return emitBuiltinWithOneOverloadedType<6>(
+        *this, E,
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_permlane16
+            ? Intrinsic::amdgcn_permlane16
+            : Intrinsic::amdgcn_permlanex16);
+  case AMDGPU::BI__builtin_amdgcn_permlane64:
+    return emitBuiltinWithOneOverloadedType<1>(*this, E,
+                                               Intrinsic::amdgcn_permlane64);
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_readlane);
@@ -18609,28 +18631,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Value *Src0 = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
-  }
-  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
-    Intrinsic::ID Intrin;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_ds_fminf:
-      Intrin = Intrinsic::amdgcn_ds_fmin;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
-      Intrin = Intrinsic::amdgcn_ds_fmax;
-      break;
-    }
-    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
-    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
-    llvm::Value *Src3 = EmitScalarExpr(E->getArg(3));
-    llvm::Value *Src4 = EmitScalarExpr(E->getArg(4));
-    llvm::Function *F = CGM.getIntrinsic(Intrin, { Src1->getType() });
-    llvm::FunctionType *FTy = F->getFunctionType();
-    llvm::Type *PTy = FTy->getParamType(0);
-    Src0 = Builder.CreatePointerBitCastOrAddrSpaceCast(Src0, PTy);
-    return Builder.CreateCall(F, { Src0, Src1, Src2, Src3, Src4 });
   }
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f32:
@@ -19065,11 +19065,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
-  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16: {
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+  case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19087,6 +19089,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
       BinOp = llvm::AtomicRMWInst::FAdd;
       break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fminf:
+      BinOp = llvm::AtomicRMWInst::FMin;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
+      BinOp = llvm::AtomicRMWInst::FMax;
+      break;
     }
 
     Address Ptr = CheckAtomicAlignment(*this, E);
@@ -19096,8 +19104,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     bool Volatile;
 
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_faddf) {
-      // __builtin_amdgcn_ds_faddf has an explicit volatile argument
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_faddf ||
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_fminf ||
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_fmaxf) {
+      // __builtin_amdgcn_ds_faddf/fminf/fmaxf has an explicit volatile argument
       Volatile =
           cast<ConstantInt>(EmitScalarExpr(E->getArg(4)))->getZExtValue();
     } else {

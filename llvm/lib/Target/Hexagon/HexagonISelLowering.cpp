@@ -2110,7 +2110,7 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_L2_loadrb_pbr:
   case Intrinsic::hexagon_L2_loadrub_pbr: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
+    auto &DL = I.getDataLayout();
     auto &Cont = I.getCalledFunction()->getParent()->getContext();
     // The intrinsic function call is of the form { ElTy, i8* }
     // @llvm.hexagon.L2.loadXX.pbr(i8*, i32). The pointer and memory access type

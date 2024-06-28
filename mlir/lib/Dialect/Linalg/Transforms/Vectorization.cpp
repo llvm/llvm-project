@@ -3234,6 +3234,11 @@ struct Conv1DGenerator
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
 
+      SmallVector<bool> inBounds(maskShape.size(), true);
+      auto xferOp = cast<VectorTransferOpInterface>(opToMask);
+      xferOp->setAttr(xferOp.getInBoundsAttrName(),
+                      rewriter.getBoolArrayAttr(inBounds));
+
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);
 

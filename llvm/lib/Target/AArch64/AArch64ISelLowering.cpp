@@ -511,6 +511,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
   setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
+  setOperationAction(ISD::PtrAuthGlobalAddress, MVT::i64, Custom);
+
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64, Custom);
@@ -1786,6 +1788,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   IsStrictFPEnabled = true;
   setMaxAtomicSizeInBitsSupported(128);
 
+  // On MSVC, both 32-bit and 64-bit, ldexpf(f32) is not defined.  MinGW has
+  // it, but it's just a wrapper around ldexp.
+  if (Subtarget->isTargetWindows()) {
+    for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
+  }
+
+  // LegalizeDAG currently can't expand fp16 LDEXP/FREXP on targets where i16
+  // isn't legal.
+  for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
+    if (isOperationExpand(Op, MVT::f16))
+      setOperationAction(Op, MVT::f16, Promote);
+
   if (Subtarget->isWindowsArm64EC()) {
     // FIXME: are there intrinsics we need to exclude from this?
     for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i) {
@@ -2962,18 +2978,25 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                    MachineInstr &MI,
-                                   MachineBasicBlock *BB, bool HasTile) const {
+                                   MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
   unsigned StartIdx = 0;
 
+  bool HasTile = BaseReg != AArch64::ZA;
+  bool HasZPROut = HasTile && MI.getOperand(0).isReg();
+  if (HasZPROut) {
+    MIB.add(MI.getOperand(StartIdx)); // Output ZPR
+    ++StartIdx;
+  }
   if (HasTile) {
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm());
-    StartIdx = 1;
-  } else
+    MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm(),
+               RegState::Define);                           // Output ZA Tile
+    MIB.addReg(BaseReg + MI.getOperand(StartIdx).getImm()); // Input Za Tile
+    StartIdx++;
+  } else {
     MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
-
+  }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
@@ -3082,17 +3105,17 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
         TII->get(MI.getOpcode()).TSFlags & AArch64::SMEMatrixTypeMask;
     switch (SMEMatrixType) {
     case (AArch64::SMEMatrixArray):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB, /*HasTile*/ false);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB);
     case (AArch64::SMEMatrixTileB):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB);
     case (AArch64::SMEMatrixTileH):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB);
     case (AArch64::SMEMatrixTileS):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB);
     case (AArch64::SMEMatrixTileD):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB);
     case (AArch64::SMEMatrixTileQ):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB);
     }
   }
 
@@ -6646,6 +6669,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:
     return LowerGlobalTLSAddress(Op, DAG);
+  case ISD::PtrAuthGlobalAddress:
+    return LowerPtrAuthGlobalAddress(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
@@ -9494,6 +9519,133 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
     return LowerWindowsGlobalTLSAddress(Op, DAG);
 
   llvm_unreachable("Unexpected platform trying to use TLS");
+}
+
+//===----------------------------------------------------------------------===//
+//                      PtrAuthGlobalAddress lowering
+//
+// We have 3 lowering alternatives to choose from:
+// - MOVaddrPAC: similar to MOVaddr, with added PAC.
+//   If the GV doesn't need a GOT load (i.e., is locally defined)
+//   materialize the pointer using adrp+add+pac. See LowerMOVaddrPAC.
+//
+// - LOADgotPAC: similar to LOADgot, with added PAC.
+//   If the GV needs a GOT load, materialize the pointer using the usual
+//   GOT adrp+ldr, +pac. Pointers in GOT are assumed to be not signed, the GOT
+//   section is assumed to be read-only (for example, via relro mechanism). See
+//   LowerMOVaddrPAC.
+//
+// - LOADauthptrstatic: similar to LOADgot, but use a
+//   special stub slot instead of a GOT slot.
+//   Load a signed pointer for symbol 'sym' from a stub slot named
+//   'sym$auth_ptr$key$disc' filled by dynamic linker during relocation
+//   resolving. This usually lowers to adrp+ldr, but also emits an entry into
+//   .data with an
+//   @AUTH relocation. See LowerLOADauthptrstatic.
+//
+// All 3 are pseudos that are expand late to longer sequences: this lets us
+// provide integrity guarantees on the to-be-signed intermediate values.
+//
+// LOADauthptrstatic is undesirable because it requires a large section filled
+// with often similarly-signed pointers, making it a good harvesting target.
+// Thus, it's only used for ptrauth references to extern_weak to avoid null
+// checks.
+
+SDValue AArch64TargetLowering::LowerPtrAuthGlobalAddressStatically(
+    SDValue TGA, SDLoc DL, EVT VT, AArch64PACKey::ID KeyC,
+    SDValue Discriminator, SDValue AddrDiscriminator, SelectionDAG &DAG) const {
+  const auto *TGN = cast<GlobalAddressSDNode>(TGA.getNode());
+  assert(TGN->getGlobal()->hasExternalWeakLinkage());
+
+  // Offsets and extern_weak don't mix well: ptrauth aside, you'd get the
+  // offset alone as a pointer if the symbol wasn't available, which would
+  // probably break null checks in users. Ptrauth complicates things further:
+  // error out.
+  if (TGN->getOffset() != 0)
+    report_fatal_error(
+        "unsupported non-zero offset in weak ptrauth global reference");
+
+  if (!isNullConstant(AddrDiscriminator))
+    report_fatal_error("unsupported weak addr-div ptrauth global");
+
+  SDValue Key = DAG.getTargetConstant(KeyC, DL, MVT::i32);
+  return SDValue(DAG.getMachineNode(AArch64::LOADauthptrstatic, DL, MVT::i64,
+                                    {TGA, Key, Discriminator}),
+                 0);
+}
+
+SDValue
+AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDValue Ptr = Op.getOperand(0);
+  uint64_t KeyC = Op.getConstantOperandVal(1);
+  SDValue AddrDiscriminator = Op.getOperand(2);
+  uint64_t DiscriminatorC = Op.getConstantOperandVal(3);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  if (KeyC > AArch64PACKey::LAST)
+    report_fatal_error("key in ptrauth global out of range [0, " +
+                       Twine((int)AArch64PACKey::LAST) + "]");
+
+  // Blend only works if the integer discriminator is 16-bit wide.
+  if (!isUInt<16>(DiscriminatorC))
+    report_fatal_error(
+        "constant discriminator in ptrauth global out of range [0, 0xffff]");
+
+  // Choosing between 3 lowering alternatives is target-specific.
+  if (!Subtarget->isTargetELF())
+    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+
+  int64_t PtrOffsetC = 0;
+  if (Ptr.getOpcode() == ISD::ADD) {
+    PtrOffsetC = Ptr.getConstantOperandVal(1);
+    Ptr = Ptr.getOperand(0);
+  }
+  const auto *PtrN = cast<GlobalAddressSDNode>(Ptr.getNode());
+  const GlobalValue *PtrGV = PtrN->getGlobal();
+
+  // Classify the reference to determine whether it needs a GOT load.
+  const unsigned OpFlags =
+      Subtarget->ClassifyGlobalReference(PtrGV, getTargetMachine());
+  const bool NeedsGOTLoad = ((OpFlags & AArch64II::MO_GOT) != 0);
+  assert(((OpFlags & (~AArch64II::MO_GOT)) == 0) &&
+         "unsupported non-GOT op flags on ptrauth global reference");
+
+  // Fold any offset into the GV; our pseudos expect it there.
+  PtrOffsetC += PtrN->getOffset();
+  SDValue TPtr = DAG.getTargetGlobalAddress(PtrGV, DL, VT, PtrOffsetC,
+                                            /*TargetFlags=*/0);
+  assert(PtrN->getTargetFlags() == 0 &&
+         "unsupported target flags on ptrauth global");
+
+  SDValue Key = DAG.getTargetConstant(KeyC, DL, MVT::i32);
+  SDValue Discriminator = DAG.getTargetConstant(DiscriminatorC, DL, MVT::i64);
+  SDValue TAddrDiscriminator = !isNullConstant(AddrDiscriminator)
+                                   ? AddrDiscriminator
+                                   : DAG.getRegister(AArch64::XZR, MVT::i64);
+
+  // No GOT load needed -> MOVaddrPAC
+  if (!NeedsGOTLoad) {
+    assert(!PtrGV->hasExternalWeakLinkage() && "extern_weak should use GOT");
+    return SDValue(
+        DAG.getMachineNode(AArch64::MOVaddrPAC, DL, MVT::i64,
+                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+        0);
+  }
+
+  // GOT load -> LOADgotPAC
+  // Note that we disallow extern_weak refs to avoid null checks later.
+  if (!PtrGV->hasExternalWeakLinkage())
+    return SDValue(
+        DAG.getMachineNode(AArch64::LOADgotPAC, DL, MVT::i64,
+                           {TPtr, Key, TAddrDiscriminator, Discriminator}),
+        0);
+
+  // extern_weak ref -> LOADauthptrstatic
+  return LowerPtrAuthGlobalAddressStatically(
+      TPtr, DL, VT, (AArch64PACKey::ID)KeyC, Discriminator, AddrDiscriminator,
+      DAG);
 }
 
 // Looks through \param Val to determine the bit that can be used to
@@ -15134,7 +15286,7 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                                const CallInst &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
-  auto &DL = I.getModule()->getDataLayout();
+  auto &DL = I.getDataLayout();
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_st2:
     return setInfoSVEStN<2>(*this, DL, Info, I);
@@ -15390,7 +15542,7 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
 
   const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
@@ -15454,7 +15606,7 @@ bool AArch64TargetLowering::isExtFreeImpl(const Instruction *Ext) const {
       break;
     case Instruction::GetElementPtr: {
       gep_type_iterator GTI = gep_type_begin(Instr);
-      auto &DL = Ext->getModule()->getDataLayout();
+      auto &DL = Ext->getDataLayout();
       std::advance(GTI, U.getOperandNo()-1);
       Type *IdxTy = GTI.getIndexedType();
       // This extension will end up with a shift because of the scaling factor.
@@ -15880,7 +16032,7 @@ bool AArch64TargetLowering::shouldSinkOperands(
         // the backend to generate a umull.
         unsigned Bitwidth = I->getType()->getScalarSizeInBits();
         APInt UpperMask = APInt::getHighBitsSet(Bitwidth, Bitwidth / 2);
-        const DataLayout &DL = I->getFunction()->getParent()->getDataLayout();
+        const DataLayout &DL = I->getDataLayout();
         if (!MaskedValueIsZero(OperandInstr, UpperMask, DL))
           continue;
         NumZExts++;
@@ -15942,24 +16094,6 @@ static Value *createTblShuffleForZExt(IRBuilderBase &Builder, Value *Op,
   if (DstTy != ZExtTy)
     Result = Builder.CreateZExt(Result, ZExtTy);
   return Result;
-}
-
-static Value *createTblShuffleForSExt(IRBuilderBase &Builder, Value *Op,
-                                      FixedVectorType *DstTy,
-                                      bool IsLittleEndian) {
-  auto *SrcTy = cast<FixedVectorType>(Op->getType());
-  auto SrcWidth = cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
-  auto DstWidth = cast<IntegerType>(DstTy->getElementType())->getBitWidth();
-
-  SmallVector<int> Mask;
-  if (!createTblShuffleMask(SrcWidth, DstWidth, SrcTy->getNumElements(),
-                            !IsLittleEndian, Mask))
-    return nullptr;
-
-  auto *FirstEltZero = Builder.CreateInsertElement(
-      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
-
-  return Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
 }
 
 static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
@@ -16142,25 +16276,10 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Value *ZExt = createTblShuffleForZExt(
         Builder, I->getOperand(0), FixedVectorType::getInteger(DstTy),
         FixedVectorType::getInteger(DstTy), Subtarget->isLittleEndian());
-    assert(ZExt && "Cannot fail for the i8 to float conversion");
+    if (!ZExt)
+      return false;
     auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
     I->replaceAllUsesWith(UI);
-    I->eraseFromParent();
-    return true;
-  }
-
-  auto *SIToFP = dyn_cast<SIToFPInst>(I);
-  if (SIToFP && SrcTy->getElementType()->isIntegerTy(8) &&
-      DstTy->getElementType()->isFloatTy()) {
-    IRBuilder<> Builder(I);
-    auto *Shuffle = createTblShuffleForSExt(Builder, I->getOperand(0),
-                                            FixedVectorType::getInteger(DstTy),
-                                            Subtarget->isLittleEndian());
-    assert(Shuffle && "Cannot fail for the i8 to float conversion");
-    auto *Cast = Builder.CreateBitCast(Shuffle, VectorType::getInteger(DstTy));
-    auto *AShr = Builder.CreateAShr(Cast, 24, "", true);
-    auto *SI = Builder.CreateSIToFP(AShr, DstTy);
-    I->replaceAllUsesWith(SI);
     I->eraseFromParent();
     return true;
   }
@@ -16356,7 +16475,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   assert(Shuffles.size() == Indices.size() &&
          "Unmatched number of shufflevectors and indices");
 
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
 
   VectorType *VTy = Shuffles[0]->getType();
 
@@ -16535,7 +16654,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   Type *EltTy = VecTy->getElementType();
   auto *SubVecTy = FixedVectorType::get(EltTy, LaneLen);
 
-  const DataLayout &DL = SI->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getDataLayout();
   bool UseScalable;
 
   // Skip if we do not have NEON and skip illegal vector types. We can
@@ -16681,7 +16800,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(DI->getType()->getContainedType(0));
-  const DataLayout &DL = DI->getModule()->getDataLayout();
+  const DataLayout &DL = DI->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -16756,7 +16875,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
   const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(II->getOperand(0)->getType());
-  const DataLayout &DL = II->getModule()->getDataLayout();
+  const DataLayout &DL = II->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -24024,7 +24143,7 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
   const GlobalValue *GV = GN->getGlobal();
   Type *T = GV->getValueType();
   if (!T->isSized() ||
-      Offset > GV->getParent()->getDataLayout().getTypeAllocSize(T))
+      Offset > GV->getDataLayout().getTypeAllocSize(T))
     return SDValue();
 
   SDLoc DL(GN);
