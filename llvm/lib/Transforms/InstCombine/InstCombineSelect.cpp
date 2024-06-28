@@ -4043,7 +4043,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
     return BinaryOperator::CreateXor(CondVal, FalseVal);
 
-  if (SelType->isIntOrIntVectorTy()) {
+  if (SelType->isIntOrIntVectorTy() &&
+      (!isa<Constant>(TrueVal) || !isa<Constant>(FalseVal))) {
     // Try to simplify select arms based on KnownBits implied by the condition.
     CondContext CC(CondVal);
     findValuesAffectedByCondition(CondVal, /*IsAssume=*/false, [&](Value *V) {
