@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -1038,7 +1039,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
   if (Optimized)
     addPass(RAGreedyPass());
   else
-    addPass(RAFastPass());
+    addPass(RegAllocFastPass());
 }
 
 /// Find and instantiate the register allocation pass requested by this target

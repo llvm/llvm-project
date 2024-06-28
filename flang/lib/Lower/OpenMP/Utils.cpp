@@ -36,6 +36,12 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
     llvm::cl::init(false));
 
+llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
+    "openmp-enable-delayed-privatization-staging",
+    llvm::cl::desc("For partially supported constructs, emit `[first]private` "
+                   "variables as clauses on the MLIR ops."),
+    llvm::cl::init(false));
+
 namespace Fortran {
 namespace lower {
 namespace omp {
@@ -188,7 +194,7 @@ void addChildIndexAndMapToParent(
     std::map<const semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx) {
-  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.designator);
+  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.ref());
   assert(dataRef.has_value() &&
          "DataRef could not be extracted during mapping of derived type "
          "cannot proceed");
@@ -319,7 +325,7 @@ void insertChildMapInfoIntoParent(
 
 semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
   semantics::Symbol *sym = nullptr;
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (auto *arrayEle =

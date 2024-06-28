@@ -73,6 +73,7 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);
@@ -80,6 +81,7 @@ private:
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
+  llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);

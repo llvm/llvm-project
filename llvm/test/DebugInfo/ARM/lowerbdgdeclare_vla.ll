@@ -26,9 +26,9 @@ entry:
   %vla = alloca float, i32 %conv, align 4, !dbg !24
   tail call void @llvm.dbg.declare(metadata ptr %vla, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !24
 ; The VLA alloca should be described by a dbg.declare:
-; CHECK: call void @llvm.dbg.declare(metadata ptr %vla, metadata ![[VLA:.*]], metadata {{.*}})
+; CHECK: #dbg_declare(ptr %vla, ![[VLA:.*]], {{.*}})
 ; The VLA alloca and following store into the array should not be lowered to like this:
-; CHECK-NOT:  call void @llvm.dbg.value(metadata float %r, metadata ![[VLA]])
+; CHECK-NOT:  #dbg_value(float %r, ![[VLA]])
 ; the backend interprets this as "vla has the location of %r".
   store float %r, ptr %vla, align 4, !dbg !25, !tbaa !26
   tail call void @llvm.dbg.value(metadata i32 0, metadata !18, metadata !DIExpression()), !dbg !30

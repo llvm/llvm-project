@@ -48,6 +48,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -1817,51 +1818,8 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
     error = expr_result_valobj_sp->GetError();
 
   if (error.Success()) {
-    switch (expr_result) {
-    case eExpressionSetupError:
-      error.SetErrorStringWithFormat(
-          "expression setup error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionParseError:
-      error.SetErrorStringWithFormat(
-          "expression parse error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionResultUnavailable:
-      error.SetErrorStringWithFormat(
-          "expression error fetching result for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionCompleted:
-      break;
-    case eExpressionDiscarded:
-      error.SetErrorStringWithFormat(
-          "expression discarded for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionInterrupted:
-      error.SetErrorStringWithFormat(
-          "expression interrupted for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionHitBreakpoint:
-      error.SetErrorStringWithFormat(
-          "expression hit breakpoint for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionTimedOut:
-      error.SetErrorStringWithFormat(
-          "expression timed out for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionStoppedForDebug:
-      error.SetErrorStringWithFormat("expression stop at entry point "
-                                     "for debugging for the "
-                                     "expression '%s'",
-                                     expr_str.c_str());
-      break;
-    case eExpressionThreadVanished:
-      error.SetErrorStringWithFormat(
-          "expression thread vanished for the expression '%s'",
-          expr_str.c_str());
-      break;
-    }
+    std::string result = lldb_private::toString(expr_result);
+    error.SetErrorString(result + "for the expression '" + expr_str + "'");
   }
   return error;
 }
@@ -2707,7 +2665,8 @@ enum {
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
-  eHandleCommandFlagStopOnCrash = (1u << 6)
+  eHandleCommandFlagStopOnCrash = (1u << 6),
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3129,14 +3088,19 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (!is_interactive) {
+  const bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
+  if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
     // alias, get an error and stop parsing the commands file).
+    // But obey the AllowRepeats flag if the user has set it.
     if (line.empty())
       return;
-
+  }
+  if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
@@ -3388,6 +3352,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagPrintResult;
       if (options->m_print_errors != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintErrors;
+      if (options->m_allow_repeats == eLazyBoolYes)
+        flags |= eHandleCommandFlagAllowRepeats;
     } else {
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
               eHandleCommandFlagPrintErrors;

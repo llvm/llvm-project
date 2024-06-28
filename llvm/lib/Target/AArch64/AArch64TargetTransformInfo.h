@@ -248,7 +248,7 @@ public:
     if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
 
-    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+    if (Ty->isIntegerTy(1) || Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
         Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
       return true;
 
@@ -276,7 +276,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->hasSVE() || !ST->isNeonAvailable())
+    if (!ST->isSVEAvailable())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.
@@ -373,9 +373,11 @@ public:
 
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
-  bool supportsScalableVectors() const { return ST->hasSVE(); }
+  bool supportsScalableVectors() const {
+    return ST->isSVEorStreamingSVEAvailable();
+  }
 
-  bool enableScalableVectorization() const { return ST->hasSVE(); }
+  bool enableScalableVectorization() const { return ST->isSVEAvailable(); }
 
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
@@ -425,6 +427,9 @@ public:
   }
 
   std::optional<unsigned> getMinPageSize() const { return 4096; }
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
 };
 
 } // end namespace llvm

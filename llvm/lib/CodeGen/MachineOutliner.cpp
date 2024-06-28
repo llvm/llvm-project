@@ -121,6 +121,12 @@ static cl::opt<unsigned> OutlinerBenefitThreshold(
     cl::desc(
         "The minimum size in bytes before an outlining candidate is accepted"));
 
+static cl::opt<bool> OutlinerLeafDescendants(
+    "outliner-leaf-descendants", cl::init(true), cl::Hidden,
+    cl::desc("Consider all leaf descendants of internal nodes of the suffix "
+             "tree as candidates for outlining (if false, only leaf children "
+             "are considered)"));
+
 namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
@@ -576,7 +582,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
 void MachineOutliner::findCandidates(
     InstructionMapper &Mapper, std::vector<OutlinedFunction> &FunctionList) {
   FunctionList.clear();
-  SuffixTree ST(Mapper.UnsignedVec);
+  SuffixTree ST(Mapper.UnsignedVec, OutlinerLeafDescendants);
 
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
@@ -828,10 +834,12 @@ bool MachineOutliner::outline(Module &M,
                     << "\n");
   bool OutlinedSomething = false;
 
-  // Sort by benefit. The most beneficial functions should be outlined first.
+  // Sort by priority where priority := getNotOutlinedCost / getOutliningCost.
+  // The function with highest priority should be outlined first.
   stable_sort(FunctionList,
               [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-                return LHS.getBenefit() > RHS.getBenefit();
+                return LHS.getNotOutlinedCost() * RHS.getOutliningCost() >
+                       RHS.getNotOutlinedCost() * LHS.getOutliningCost();
               });
 
   // Walk over each function, outlining them as we go along. Functions are

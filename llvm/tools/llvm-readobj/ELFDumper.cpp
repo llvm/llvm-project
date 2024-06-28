@@ -793,7 +793,11 @@ public:
 
   void printEmptyGroupMessage() const override;
 
+  void printDynamicTable() override;
+
 private:
+  void printAuxillaryDynamicTableEntryInfo(const Elf_Dyn &Entry);
+
   std::unique_ptr<DictScope> FileScope;
 };
 
@@ -1631,6 +1635,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
@@ -2312,6 +2317,12 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
     return OS.str();
   };
 
+  const std::map<uint64_t, const char *> TagNames = {
+      {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
+      {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
+      {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
+      {DT_RUNPATH, "Library runpath"},
+  };
   // Handle custom printing of architecture specific tags
   switch (Obj.getHeader().e_machine) {
   case EM_AARCH64:
@@ -2469,18 +2480,11 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
   case DT_AUXILIARY:
   case DT_USED:
   case DT_FILTER:
+    return (Twine(TagNames.at(Type)) + ": " + getDynamicString(Value)).str();
   case DT_RPATH:
-  case DT_RUNPATH: {
-    const std::map<uint64_t, const char *> TagNames = {
-        {DT_NEEDED, "Shared library"},       {DT_SONAME, "Library soname"},
-        {DT_AUXILIARY, "Auxiliary library"}, {DT_USED, "Not needed object"},
-        {DT_FILTER, "Filter library"},       {DT_RPATH, "Library rpath"},
-        {DT_RUNPATH, "Library runpath"},
-    };
-
+  case DT_RUNPATH:
     return (Twine(TagNames.at(Type)) + ": [" + getDynamicString(Value) + "]")
         .str();
-  }
   case DT_FLAGS:
     return FormatFlags(Value, ArrayRef(ElfDynamicDTFlags));
   case DT_FLAGS_1:
@@ -7362,6 +7366,63 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicTable() {
                   << Value << "\n";
   }
   W.startLine() << "]\n";
+}
+
+template <class ELFT>
+void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
+    const Elf_Dyn &Entry) {
+  auto FormatFlags = [this, Value = Entry.getVal()](auto Flags) {
+    ListScope L(this->W, "Flags");
+    for (const auto &Flag : Flags) {
+      if (Flag.Value != 0 && (Value & Flag.Value) == Flag.Value)
+        this->W.printString(Flag.Name);
+    }
+  };
+  switch (Entry.getTag()) {
+  case DT_SONAME:
+    this->W.printString("Name", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_AUXILIARY:
+  case DT_FILTER:
+  case DT_NEEDED:
+    this->W.printString("Library", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_USED:
+    this->W.printString("Object", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_RPATH:
+  case DT_RUNPATH: {
+    StringRef Value = this->getDynamicString(Entry.getVal());
+    ListScope L(this->W, "Path");
+    while (!Value.empty()) {
+      auto [Front, Back] = Value.split(':');
+      this->W.printString(Front);
+      Value = Back;
+    }
+    break;
+  }
+  case DT_FLAGS:
+    FormatFlags(ArrayRef(ElfDynamicDTFlags));
+    break;
+  case DT_FLAGS_1:
+    FormatFlags(ArrayRef(ElfDynamicDTFlags1));
+    break;
+  default:
+    return;
+  }
+}
+
+template <class ELFT> void JSONELFDumper<ELFT>::printDynamicTable() {
+  Elf_Dyn_Range Table = this->dynamic_table();
+  ListScope L(this->W, "DynamicSection");
+  for (const auto &Entry : Table) {
+    DictScope D(this->W);
+    uintX_t Tag = Entry.getTag();
+    this->W.printHex("Tag", Tag);
+    this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
+    this->W.printHex("Value", Entry.getVal());
+    this->printAuxillaryDynamicTableEntryInfo(Entry);
+  }
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicRelocations() {

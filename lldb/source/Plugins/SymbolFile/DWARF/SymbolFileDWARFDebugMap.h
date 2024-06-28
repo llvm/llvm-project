@@ -277,17 +277,12 @@ protected:
 
   CompileUnitInfo *GetCompileUnitInfo(SymbolFileDWARF *oso_dwarf);
 
-  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die);
+  DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
 
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, ConstString type_name, bool must_be_implementation);
-
-  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
-  GetForwardDeclCompilerTypeToDIE() {
-    return m_forward_decl_compiler_type_to_die;
-  }
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() {
     return m_unique_ast_type_map;
@@ -326,10 +321,6 @@ protected:
   std::vector<uint32_t> m_func_indexes; // Sorted by address
   std::vector<uint32_t> m_glob_indexes;
   std::map<std::pair<ConstString, llvm::sys::TimePoint<>>, OSOInfoSP> m_oso_map;
-  // A map from CompilerType to the struct/class/union/enum DIE (might be a
-  // declaration or a definition) that is used to construct it.
-  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
-      m_forward_decl_compiler_type_to_die;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
   DebugMap m_debug_map;

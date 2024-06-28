@@ -185,7 +185,7 @@ auipc a0, %tlsdesc_hi(a_symbol)
 
 lw a1, %tlsdesc_load_lo(.L5)(a0)
 # RELOC: R_RISCV_TLSDESC_LOAD_LO12
-# INSTR: a1, %tlsdesc_load_lo(.L5)(a0)
+# INSTR: lw a1, %tlsdesc_load_lo(.L5)(a0)
 # FIXUP: fixup A - offset: 0, value: %tlsdesc_load_lo(.L5), kind: fixup_riscv_tlsdesc_load_lo12
 
 addi a0, a0, %tlsdesc_add_lo(.L5)

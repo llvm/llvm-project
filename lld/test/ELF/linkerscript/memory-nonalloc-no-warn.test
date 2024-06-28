@@ -16,20 +16,20 @@
 ## The output file must include all sections.
 # RUN: llvm-readelf -S %t/a.elf | FileCheck %s
 
-# CHECK:      There are 12 section headers, starting at offset 0x2140:
+# CHECK:      There are 12 section headers, starting at offset 0x2138:
 # CHECK:      [Nr] Name         Type      Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT: [ 0]              NULL      0000000000000000 000000 000000 00     0  0   0
 # CHECK-NEXT: [ 1] .nonalloc    PROGBITS  0000000000000000 001064 001000 00 W   0  0   1
-# CHECK-NEXT: [ 2] .comment     PROGBITS  0000000000000000 {{.*}} {{.*}} 01 MS  0  0   1
-# CHECK-NEXT: [ 3] .symtab      SYMTAB    0000000000000000 {{.*}} {{.*}} 18     5  1   8
-# CHECK-NEXT: [ 4] .shstrtab    STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
-# CHECK-NEXT: [ 5] .strtab      STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
-# CHECK-NEXT: [ 6] .dat         PROGBITS  0000000000000000 002137 000004 00 W   0  0   1
-# CHECK-NEXT: [ 7] .intvec0_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
-# CHECK-NEXT: [ 8] .intvec1_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
-# CHECK-NEXT: [ 9] .intvec2_out PROGBITS  0000000000000000 00213b 000000 00 W   0  0   1
-# CHECK-NEXT: [10] .intvec3_out PROGBITS  00000000803fe060 001060 000004 00 AX  0  0   1
-# CHECK-NEXT: [11] .text        PROGBITS  00000000803fe064 001064 000000 00 AX  0  0   4
+# CHECK-NEXT: [ 2] .dat         PROGBITS  0000000000000000 002064 000004 00 W   0  0   1
+# CHECK-NEXT: [ 3] .intvec0_out PROGBITS  0000000000000000 002068 000000 00 W   0  0   1
+# CHECK-NEXT: [ 4] .intvec1_out PROGBITS  0000000000000000 002068 000000 00 W   0  0   1
+# CHECK-NEXT: [ 5] .intvec2_out PROGBITS  0000000000000000 002068 000000 00 W   0  0   1
+# CHECK-NEXT: [ 6] .intvec3_out PROGBITS  00000000803fe060 001060 000004 00 AX  0  0   1
+# CHECK-NEXT: [ 7] .text        PROGBITS  00000000803fe064 001064 000000 00 AX  0  0   4
+# CHECK-NEXT: [ 8] .comment     PROGBITS  0000000000000000 {{.*}} {{.*}} 01 MS  0  0   1
+# CHECK-NEXT: [ 9] .symtab      SYMTAB    0000000000000000 {{.*}} {{.*}} 18     11 1   8
+# CHECK-NEXT: [10] .shstrtab    STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
+# CHECK-NEXT: [11] .strtab      STRTAB    0000000000000000 {{.*}} {{.*}} 00     0  0   1
 
 
 #--- a.s

@@ -1,18 +1,26 @@
-// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named,tosa-to-linalg,canonicalize,linalg-generalize-named-ops,tosa-to-arith,tosa-totensor,canonicalize))" %s -o %t.model.linalg.mlir
-// RUN: mlir-opt --split-input-file --canonicalize --linalg-fuse-elementwise-ops --linalg-inline-scalar-operands --linalg-fold-unit-extent-dims --fold-tensor-subset-ops --canonicalize %t.model.linalg.mlir -o %t.model.linalg.opt.mlir
-// RUN: mlir-opt --split-input-file --pass-pipeline='builtin.module(one-shot-bufferize{allow-unknown-ops bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map}, canonicalize)' %t.model_linalg_opt.mlir -o %t.model.buffers.mlir
+// RUN: mlir-opt -pass-pipeline="builtin.module(canonicalize,func.func(tosa-to-linalg-named,tosa-to-linalg,canonicalize,linalg-generalize-named-ops,tosa-to-arith,tosa-to-tensor,canonicalize))" %s -o %t.model.linalg.mlir
+// RUN: mlir-opt --canonicalize --linalg-fuse-elementwise-ops --linalg-inline-scalar-operands --linalg-fold-unit-extent-dims --fold-tensor-subset-ops --canonicalize %t.model.linalg.mlir -o %t.model.linalg.opt.mlir
+// RUN: mlir-opt --pass-pipeline='builtin.module(one-shot-bufferize{allow-unknown-ops bufferize-function-boundaries function-boundary-type-conversion=identity-layout-map}, canonicalize)' %t.model.linalg.opt.mlir -o %t.model.buffers.mlir
 
-// RUN: mlir-opt --split-input-file --canonicalize  --buffer-results-to-out-params --buffer-hoisting --buffer-loop-hoisting --promote-buffers-to-stack --fold-memref-alias-ops --canonicalize  --buffer-deallocation-pipeline --canonicalize %t.model_buffers.mlir -o %t.model.buffers.opt.mlir
-// RUN: mlir-opt --split-input-file --canonicalize --convert-linalg-to-loops --fold-memref-alias-ops --canonicalize %t.model.buffers.opt.mlir -o %t.model.scf.mlir
+// RUN: mlir-opt --canonicalize  --buffer-results-to-out-params --buffer-hoisting --buffer-loop-hoisting --promote-buffers-to-stack --fold-memref-alias-ops --canonicalize  --buffer-deallocation-pipeline --canonicalize %t.model.buffers.mlir -o %t.model.buffers.opt.mlir
 
-// RUN: mlir-opt --split-input-file --canonicalize --convert-linalg-to-loops --canonicalize %t.model.scf.mlir -o %t.model.scf.1.mlir
-// RUN: mlir-opt --split-input-file --canonicalize --fold-memref-alias-ops --normalize-memrefs --canonicalize %t.model.scf.1.mlir -o %t.model.scf.2.mlir
+// RUN: mlir-opt --canonicalize --convert-linalg-to-loops --fold-memref-alias-ops --canonicalize %t.model.buffers.opt.mlir -o %t.model.scf.mlir
 
+// Fix up memref.copy
+// RUN: python %S/Input/mlir-substitute.py -p memref-copy %t.model.scf.mlir %t.model.scf.1.mlir
 
-// RUN: mlir-opt --split-input-file --arith-expand --canonicalize %t.model.scf.2.mlir -o %t.model.scf.3.mlir
-// RUN: mlir-opt --split-input-file --convert-math-to-libm --canonicalize %t.model.scf.4.mlir -o %t.model.scf.5.mlir
+// RUN: mlir-opt --canonicalize --convert-linalg-to-loops --canonicalize %t.model.scf.1.mlir -o %t.model.scf.2.mlir
 
-// RUN: mlir-opt --split-input-file --convert-func-to-emitc --convert-scf-to-emitc --convert-arith-to-emitc --convert-memref-to-emitc --canonicalize %t.model.scf.5.mlir -o %t.model.emitc.mlir
+// RUN: mlir-opt --canonicalize --fold-memref-alias-ops --normalize-memrefs --canonicalize %t.model.scf.2.mlir -o %t.model.scf.3.mlir
+
+// RUN: mlir-opt --arith-expand --canonicalize %t.model.scf.3.mlir -o %t.model.scf.4.mlir
+
+// Fix unsupported ops
+// RUN: python %S/Input/mlir-substitute.py %t.model.scf.4.mlir %t.model.scf.5.mlir
+
+// RUN: mlir-opt --convert-math-to-libm --canonicalize %t.model.scf.5.mlir -o %t.model.scf.6.mlir
+
+// RUN: mlir-opt --convert-func-to-emitc --convert-scf-to-emitc --convert-arith-to-emitc --convert-memref-to-emitc --canonicalize %t.model.scf.6.mlir -o %t.model.emitc.mlir
 
 // RUN: mlir-translate --mlir-to-cpp %t.model.emitc.mlir | FileCheck %s
 
@@ -22,7 +30,7 @@
 
 func.func @test_abs_scalar(%arg0: tensor<f32>) -> tensor<f32> {
   %0 = tosa.abs %arg0 : (tensor<f32>) -> tensor<f32>
-	return %0 : tensor<f32>
+  return %0 : tensor<f32>
 }
 
 // -----
@@ -158,13 +166,6 @@ func.func @test_simple_i16(%arg0: tensor<1xi16>) -> () {
 
 // -----
 
-func.func @test_simple_ui8(%arg0: tensor<1xui8>) -> () {
-  %0 = tosa.cast %arg0 : (tensor<1xui8>) -> tensor<1xf32>
-  return
-}
-
-// -----
-
 func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %0 = tosa.add %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
   %1 = tosa.sub %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
@@ -191,13 +192,6 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %22 = tosa.cast %0 : (tensor<1xi32>) -> tensor<1xi1>
   %23 = tosa.cast %0 : (tensor<1xi32>) -> tensor<1xf32>
   %24 = tosa.abs %arg0 : (tensor<1xi32>) -> tensor<1xi32>
-  return
-}
-
-// -----
-
-func.func @test_simple_ui8(%arg0: tensor<1xi8>) -> () {
-  %0 = tosa.cast %arg0 : (tensor<1xi8>) -> tensor<1xf32>
   return
 }
 

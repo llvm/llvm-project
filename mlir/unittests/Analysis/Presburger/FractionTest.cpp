@@ -8,7 +8,7 @@ using namespace presburger;
 
 TEST(FractionTest, getAsInteger) {
   Fraction f(3, 1);
-  EXPECT_EQ(f.getAsInteger(), MPInt(3));
+  EXPECT_EQ(f.getAsInteger(), DynamicAPInt(3));
 }
 
 TEST(FractionTest, nearIntegers) {

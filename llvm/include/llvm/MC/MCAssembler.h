@@ -203,10 +203,6 @@ private:
   /// were adjusted.
   bool layoutOnce(MCAsmLayout &Layout);
 
-  /// Perform one layout iteration of the given section and return true
-  /// if any offsets were adjusted.
-  bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
-
   /// Perform relaxation on a single fragment - returns true if the fragment
   /// changes as a result of relaxation.
   bool relaxFragment(MCAsmLayout &Layout, MCFragment &F);
@@ -503,13 +499,6 @@ public:
 
   void dump() const;
 };
-
-/// Compute the amount of padding required before the fragment \p F to
-/// obey bundling restrictions, where \p FOffset is the fragment's offset in
-/// its section and \p FSize is the fragment's size.
-uint64_t computeBundlePadding(const MCAssembler &Assembler,
-                              const MCEncodedFragment *F, uint64_t FOffset,
-                              uint64_t FSize);
 
 } // end namespace llvm
 
