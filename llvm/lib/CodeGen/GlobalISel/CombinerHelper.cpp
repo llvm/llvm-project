@@ -7349,6 +7349,54 @@ void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
   Root->eraseFromParent();
 }
 
+bool CombinerHelper::matchFPowIExpansion(MachineInstr &MI, int64_t Exponent) {
+  bool OptForSize = MI.getMF()->getFunction().hasOptSize();
+  return getTargetLowering().isBeneficialToExpandPowI(Exponent, OptForSize);
+}
+
+void CombinerHelper::applyExpandFPowI(MachineInstr &MI, int64_t Exponent) {
+  auto [Dst, Base] = MI.getFirst2Regs();
+  LLT Ty = MRI.getType(Dst);
+  int64_t ExpVal = Exponent;
+
+  if (ExpVal == 0) {
+    Builder.buildFConstant(Dst, 1.0);
+    MI.removeFromParent();
+    return;
+  }
+
+  if (ExpVal < 0)
+    ExpVal = -ExpVal;
+
+  // We use the simple binary decomposition method from SelectionDAG ExpandPowI
+  // to generate the multiply sequence. There are more optimal ways to do this
+  // (for example, powi(x,15) generates one more multiply than it should), but
+  // this has the benefit of being both really simple and much better than a
+  // libcall.
+  std::optional<SrcOp> Res;
+  SrcOp CurSquare = Base;
+  while (ExpVal > 0) {
+    if (ExpVal & 1) {
+      if (!Res)
+        Res = CurSquare;
+      else
+        Res = Builder.buildFMul(Ty, *Res, CurSquare);
+    }
+
+    CurSquare = Builder.buildFMul(Ty, CurSquare, CurSquare);
+    ExpVal >>= 1;
+  }
+
+  // If the original exponent was negative, invert the result, producing
+  // 1/(x*x*x).
+  if (Exponent < 0)
+    Res = Builder.buildFDiv(Ty, Builder.buildFConstant(Ty, 1.0), *Res,
+                            MI.getFlags());
+
+  Builder.buildCopy(Dst, *Res);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) {
   GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
