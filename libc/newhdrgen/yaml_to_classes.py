@@ -123,7 +123,7 @@ def parse_function_details(details):
         return_type=return_type,
         arguments=arguments,
         guard=guard if guard != "null" else None,
-        attributes=attributes if attributes else None
+        attributes=attributes if attributes else None,
     )
 
 
@@ -136,7 +136,7 @@ def add_function_to_yaml(yaml_file, function_details):
         function_details: A list containing function details (name, standards, return_type, arguments, guard, attributes).
     """
     new_function = parse_function_details(function_details)
-    
+
     with open(yaml_file, "r") as f:
         yaml_data = yaml.safe_load(f)
 
@@ -163,7 +163,13 @@ def add_function_to_yaml(yaml_file, function_details):
             return super(IndentYamlListDumper, self).increase_indent(flow, False)
 
     with open(yaml_file, "w") as f:
-        yaml.dump(yaml_data, f, Dumper=IndentYamlListDumper, default_flow_style=False, sort_keys=False)
+        yaml.dump(
+            yaml_data,
+            f,
+            Dumper=IndentYamlListDumper,
+            default_flow_style=False,
+            sort_keys=False,
+        )
 
     print(f"Added function {new_function.name} to {yaml_file}")
 
