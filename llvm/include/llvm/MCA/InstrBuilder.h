@@ -84,6 +84,7 @@ class InstrBuilder {
   using InstRecycleCallback = std::function<Instruction *(const InstrDesc &)>;
   InstRecycleCallback InstRecycleCB;
 
+  Expected<unsigned> getVariantSchedClassID(const MCInst &MCI, unsigned SchedClassID);
   Expected<const InstrDesc &>
   createInstrDescImpl(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
   Expected<const InstrDesc &>

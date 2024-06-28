@@ -540,6 +540,22 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
   return make_error<InstructionError<MCInst>>(std::string(Message), MCI);
 }
 
+Expected<unsigned> InstrBuilder::getVariantSchedClassID(const MCInst &MCI,
+                                                        unsigned SchedClassID) {
+  const MCSchedModel &SM = STI.getSchedModel();
+  unsigned CPUID = SM.getProcessorID();
+  while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
+    SchedClassID =
+        STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
+
+  if (!SchedClassID) {
+    return make_error<InstructionError<MCInst>>(
+        "unable to resolve scheduling class for write variant.", MCI);
+  }
+
+  return SchedClassID;
+}
+
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
                                   const SmallVector<Instrument *> &IVec) {
@@ -558,15 +574,13 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
   // Try to solve variant scheduling classes.
   if (IsVariant) {
-    unsigned CPUID = SM.getProcessorID();
-    while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID =
-          STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
-
-    if (!SchedClassID) {
-      return make_error<InstructionError<MCInst>>(
-          "unable to resolve scheduling class for write variant.", MCI);
+    Expected<unsigned> VariantSchedClassIDOrErr =
+        getVariantSchedClassID(MCI, SchedClassID);
+    if (!VariantSchedClassIDOrErr) {
+      return VariantSchedClassIDOrErr.takeError();
     }
+
+    SchedClassID = *VariantSchedClassIDOrErr;
   }
 
   // Check if this instruction is supported. Otherwise, report an error.
@@ -625,6 +639,9 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   }
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
+  assert(
+      !VariantDescriptors.contains(VDKey) &&
+      "Expected VariantDescriptors to not already have a value for this key.");
   VariantDescriptors[VDKey] = std::move(ID);
   return *VariantDescriptors[VDKey];
 }
@@ -639,8 +656,14 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   if (Descriptors.find_as(DKey) != Descriptors.end())
     return *Descriptors[DKey];
 
-  unsigned CPUID = STI.getSchedModel().getProcessorID();
-  SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
+  Expected<unsigned> VariantSchedClassIDOrErr =
+      getVariantSchedClassID(MCI, SchedClassID);
+  if (!VariantSchedClassIDOrErr) {
+    return VariantSchedClassIDOrErr.takeError();
+  }
+
+  SchedClassID = *VariantSchedClassIDOrErr;
+
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
