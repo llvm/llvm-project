@@ -251,7 +251,7 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   if (DisableLIRP::All)
     return PreservedAnalyses::all();
 
-  const auto *DL = &L.getHeader()->getModule()->getDataLayout();
+  const auto *DL = &L.getHeader()->getDataLayout();
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
   // pass.  Function analyses need to be preserved across loop transformations
