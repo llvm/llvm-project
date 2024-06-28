@@ -512,6 +512,7 @@ void MCAsmStreamer::emitExplicitComments() {
 
 void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   assert(Section && "Cannot switch to a null section!");
+  CurFrag = &Section->getDummyFragment();
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
   } else {
