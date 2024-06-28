@@ -98,11 +98,21 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      return static_cast<OutType>(y);
+      // volatile prevents Clang from converting tmp to OutType and then
+      // immediately back to InType before negating it, resulting in double
+      // rounding.
+      volatile InType tmp = y;
+      if constexpr (IsSub)
+        tmp = -tmp;
+      return static_cast<OutType>(tmp);
     }
 
-    if (y_bits.is_zero())
-      return static_cast<OutType>(x);
+    if (y_bits.is_zero()) {
+      volatile InType tmp = y;
+      if constexpr (IsSub)
+        tmp = -tmp;
+      return static_cast<OutType>(tmp);
+    }
   }
 
   InType x_abs = x_bits.abs().get_val();
