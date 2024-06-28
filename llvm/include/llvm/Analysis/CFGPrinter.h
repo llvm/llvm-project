@@ -133,7 +133,7 @@ std::string SimpleNodeLabelString(const BasicBlockT *Node) {
   raw_string_ostream OS(Str);
 
   Node->printAsOperand(OS, false);
-  return OS.str();
+  return Str;
 }
 
 template <typename BasicBlockT>
@@ -148,7 +148,7 @@ std::string CompleteNodeLabelString(
   std::string Str;
   raw_string_ostream OS(Str);
   HandleBasicBlock(OS, *Node);
-  std::string OutStr = OS.str();
+  std::string OutStr(Str);
   // Remove "%" from BB name
   if (OutStr[0] == '%') {
     OutStr.erase(OutStr.begin());
@@ -247,7 +247,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       raw_string_ostream OS(Str);
       auto Case = *SwitchInst::ConstCaseIt::fromSuccessorIndex(SI, SuccNo);
       OS << Case.getCaseValue()->getValue();
-      return OS.str();
+      return Str;
     }
     return "";
   }
@@ -257,7 +257,6 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (NodeName.empty()) {
       raw_string_ostream NodeOS(NodeName);
       Node->printAsOperand(NodeOS, false);
-      NodeName = NodeOS.str();
       // Removing %
       NodeName.erase(NodeName.begin());
     }
