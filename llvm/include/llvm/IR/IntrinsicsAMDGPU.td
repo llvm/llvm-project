@@ -2996,7 +2996,8 @@ def int_amdgcn_wave_id_in_wavegroup :
 // in instruction encoding.
 //
 // aux_data[ 5: 0] maps to instr[ 63: 58] for VOP2M-VOP6M (MOD0)
-// aux_data[17: 6] maps to instr[ 87: 76] for VOP3M-VOP6M (MOD1)
+// aux_data[17: 6] maps to instr[ 87: 76] for VOP3M-VOP5M (MOD1)
+// aux_data[13: 6] maps to instr[ 83: 76] for VOP6M       (MOD1)
 // aux_data[25:18] maps to instr[127:120] for VOP5M-VOP6M (MOD2)
 
 def int_amdgcn_permute_pair_2src_rotate_group_b32 :
@@ -3162,24 +3163,24 @@ multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = out
   def _3x3 : Conv3x3<outTy, weightsTensorTy, accinTy>;
 }
 
-defm int_amdgcn_wconv_fp16_fp16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_bf16_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp16_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_bf16_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp16_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp16_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_bf16_bf16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f16_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_bf16_bf8  : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f16_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
 
-defm int_amdgcn_wconv_fp32_fp16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp32_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-defm int_amdgcn_wconv_fp32_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_fp32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_i32_iu8: Conv<llvm_anyint_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_i32_iu4: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_f16   : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f32_bf16  : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_convolve_f32_fp8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_bf8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_iu8   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32_iu4   : Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_i32_iu8   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_i32_iu4   : Conv<llvm_anyint_ty, llvm_anyint_ty>;
 
-defm int_amdgcn_wconv_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
-defm int_amdgcn_wconv_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_convolve_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 
 class AMDGPUScaleBiasActivate<LLVMType data_ty, LLVMType bias_ty> :
   ClangBuiltin<!subst("int", "__builtin", NAME)>,
