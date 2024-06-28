@@ -221,7 +221,24 @@ __tysan_check(void *addr, int size, tysan_type_descriptor *td, int flags) {
     OldTDPtr -= i;
     OldTD = *OldTDPtr;
 
-    if (!isAliasingLegal(td, OldTD))
+    // When shadow memory is set for global objects, the entire object is tagged with the struct type
+    // This means that when you access a member variable, tysan reads that as you accessing a struct midway
+    // through, with 'i' being the offset
+    // Therefore, if you are accessing a struct, we need to find the member type. We can go through the
+    // members of the struct type and see if there is a member at the offset you are accessing the struct by.
+    // If there is indeed a member starting at offset 'i' in the struct, we should check aliasing legality
+    // with that type. If there isn't, we run alias checking on the struct with will give us the correct error.
+    tysan_type_descriptor *InternalMember = OldTD;
+    if (OldTD->Tag == TYSAN_STRUCT_TD) {
+      for (int j = 0; j < OldTD->Struct.MemberCount; j++) {
+        if (OldTD->Struct.Members[j].Offset == i) {
+          InternalMember = OldTD->Struct.Members[j].Type;
+          break;
+        }
+      }
+    }
+
+    if (!isAliasingLegal(td, InternalMember))
       reportError(addr, size, td, OldTD, AccessStr,
                   "accesses part of an existing object", -i, pc, bp, sp);
 
