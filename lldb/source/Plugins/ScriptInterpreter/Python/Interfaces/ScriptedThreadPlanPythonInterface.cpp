@@ -92,9 +92,9 @@ lldb::StateType ScriptedThreadPlanPythonInterface::GetRunState() {
 }
 
 llvm::Error
-ScriptedThreadPlanPythonInterface::GetStopDescription(lldb_private::Stream *s) {
+ScriptedThreadPlanPythonInterface::GetStopDescription(lldb::StreamSP &stream) {
   Status error;
-  Dispatch("stop_description", error, s);
+  Dispatch("stop_description", error, stream);
 
   if (error.Fail())
     return error.ToError();

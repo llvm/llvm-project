@@ -29,7 +29,7 @@ public:
 
   virtual lldb::StateType GetRunState() { return lldb::eStateStepping; }
 
-  virtual llvm::Error GetStopDescription(lldb_private::Stream *s) {
+  virtual llvm::Error GetStopDescription(lldb::StreamSP &stream) {
     return llvm::Error::success();
   }
 };
