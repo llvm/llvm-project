@@ -22,12 +22,12 @@
 # CHECK-LG: Starting link phase 1 for graph
 # CHECK-LG: section .rodata:
 
-# CHECK-LG:  block 0x0 size = 0x00000009, align = 1, alignment-offset = 0
-# CHECK-LG:    symbols:
-# CHECK-LG:      0x0 (block + 0x00000000): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H1
-# CHECK-LG:      0x3 (block + 0x00000003): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H2
-# CHECK-LG-NOT:  0x2 (block + 0x00000002): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H2
-# CHECK-LG:      0x6 (block + 0x00000006): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H3
+# CHECK-LG:       block 0x0 size = 0x00000009, align = 1, alignment-offset = 0
+# CHECK-LG-NEXT:    symbols:
+# CHECK-LG-NEXT:      0x0 (block + 0x00000000): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H1
+# CHECK-LG-NEXT:      0x3 (block + 0x00000003): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H2
+# CHECK-LG-NOT:       0x2 (block + 0x00000002): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H2
+# CHECK-LG-NEXT:      0x6 (block + 0x00000006): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H3
 
 # FIXME: The expression we want is either *{3}(Lstr.H1) = ...
 #                                  or *{4}(Lstr.H1) & 0x00ffffff = ...
