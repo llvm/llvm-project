@@ -420,20 +420,55 @@ around, such as ``std::string_view``.
 
 cplusplus.Move (C++)
 """"""""""""""""""""
-Method calls on a moved-from object and copying a moved-from object will be reported.
-
+Find use-after-move bugs in C++. This includes method calls on moved-from
+objects, assignment of a moved-from object, and repeated move of a moved-from
+object.
 
 .. code-block:: cpp
 
-  struct A {
+ struct A {
    void foo() {}
  };
 
- void f() {
+ void f1() {
    A a;
    A b = std::move(a); // note: 'a' became 'moved-from' here
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
+
+ void f2() {
+   A a;
+   A b = std::move(a);
+   A c(std::move(a)); // warn: move of an already moved-from object
+ }
+
+ void f3() {
+   A a;
+   A b = std::move(a);
+   b = a; // warn: copy of moved-from object
+ }
+
+The checker option ``WarnOn`` controls on what objects the use-after-move is
+checked:
+
+* The most strict value is ``KnownsOnly``, in this mode only objects are
+  checked whose type is known to be move-unsafe. These include most STL objects
+  (but excluding move-safe ones) and smart pointers.
+* With option value ``KnownsAndLocals`` local variables (of any type) are
+  additionally checked. The idea behind this is that local variables are
+  usually not tempting to be re-used so an use after move is more likely a bug
+  than with member variables.
+* With option value ``All`` any use-after move condition is checked on all
+  kinds of variables, excluding global variables and known move-safe cases.
+
+Default value is ``KnownsAndLocals``.
+
+Calls of methods named ``empty()`` or ``isEmpty()`` are allowed on moved-from
+objects because these methods are considered as move-safe. Functions called
+``reset()``, ``destroy()``, ``clear()``, ``assign``, ``resize``,  ``shrink`` are
+treated as state-reset functions and are allowed on moved-from objects, these
+make the object valid again. This applies to any type of object (not only STL
+ones).
 
 .. _cplusplus-NewDelete:
 
