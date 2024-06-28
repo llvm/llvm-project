@@ -5760,16 +5760,22 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 0;
           else if (Call->isIndirectCall())
             CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 1;
-          else if (isa_and_nonnull<FunctionDecl>(TargetDecl) &&
-                   cast<FunctionDecl>(TargetDecl)->isWeak())
-            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 2;
-          else if (isa_and_nonnull<FunctionDecl>(TargetDecl) &&
-                   !cast<FunctionDecl>(TargetDecl)->isDefined())
-            // The undefined callee may be a forward declaration. Without
-            // knowning all symbols in the module, we won't know the symbol is
-            // defined or not. Collect all these symbols for later diagnosing.
-            CGM.addUndefinedGlobalForTailCall(
-                {cast<FunctionDecl>(TargetDecl), Loc});
+          else if (isa_and_nonnull<FunctionDecl>(TargetDecl)) {
+            if (!cast<FunctionDecl>(TargetDecl)->isDefined())
+              // The undefined callee may be a forward declaration. Without
+              // knowning all symbols in the module, we won't know the symbol is
+              // defined or not. Collect all these symbols for later diagnosing.
+              CGM.addUndefinedGlobalForTailCall(
+                  {cast<FunctionDecl>(TargetDecl), Loc});
+            else {
+              llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(
+                  GlobalDecl(cast<FunctionDecl>(TargetDecl)));
+              if (llvm::GlobalValue::isWeakForLinker(Linkage) ||
+                  llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+                CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail)
+                    << 2;
+            }
+          }
         }
       }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);

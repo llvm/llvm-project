@@ -488,8 +488,8 @@ private:
   // When a tail call is performed on an "undefined" symbol, on PPC without pc
   // relative feature, the tail call is not allowed. In "EmitCall" for such
   // tail calls, the "undefined" symbols may be forward declarations, their
-  // definitions are provided in the module but after the callsites. For such
-  // tail calls, diagnose message should be not emitted.
+  // definitions are provided in the module after the callsites. For such tail
+  // calls, diagnose message should not be emitted.
   llvm::SmallSetVector<std::pair<const FunctionDecl *, SourceLocation>, 4>
       MustTailCallUndefinedGlobals;
 

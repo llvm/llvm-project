@@ -1400,6 +1400,13 @@ void CodeGenModule::Release() {
     for (auto &I : MustTailCallUndefinedGlobals) {
       if (!I.first->isDefined())
         getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      else {
+        StringRef MangledName = getMangledName(GlobalDecl(I.first));
+        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+        if (!Entry || Entry->isWeakForLinker() ||
+            Entry->isDeclarationForLinker())
+          getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      }
     }
   }
 }
