@@ -88,3 +88,18 @@ entry:
   store <4 x i32> %9, ptr %10, align 4
   ret void
 }
+
+define void @test4(ptr %in, ptr %out) {
+entry:
+  %0 = load <8 x float>, ptr %in, align 4
+  %1 = fmul <8 x float> %0, zeroinitializer
+  %2 = fmul <8 x float> %0, zeroinitializer
+  %3 = fadd <8 x float> zeroinitializer, %1
+  %4 = fadd <8 x float> %0, %2
+  %5 = fcmp ogt <8 x float> %3, zeroinitializer
+  %6 = fcmp ogt <8 x float> %4, zeroinitializer
+  %7 = getelementptr i1, ptr %out, i64 8
+  store <8 x i1> %5, ptr %out, align 1
+  store <8 x i1> %6, ptr %7, align 1
+  ret void
+}
