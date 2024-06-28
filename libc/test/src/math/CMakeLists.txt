@@ -2006,6 +2006,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  f16sqrtf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16sqrtf_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtf
+)
+
+add_fp_unittest(
   f16sqrtl_test
   NEED_MPFR
   SUITE
