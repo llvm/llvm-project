@@ -1290,6 +1290,12 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
   return false;
 }
 
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  CurFrag = &Section->getDummyFragment();
+}
+
 MCSymbol *MCStreamer::endSection(MCSection *Section) {
   // TODO: keep track of the last subsection so that this symbol appears in the
   // correct place.
