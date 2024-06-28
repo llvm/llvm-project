@@ -4344,7 +4344,8 @@ public:
   /// the given node type, without the need of explicit trunc or ext. e.g. On
   /// RISC-V Vector extension, vnsrl.wi can directly convert <n x i32> to <n x
   /// i16> when shifting, with no extra trunc operations needed.
-  virtual bool isTypeDesirableForOp(unsigned Opc, EVT NewVT, EVT OldVT) const {
+  virtual bool isTypeDesirableForOpWithCast(unsigned Opc, EVT NewVT,
+                                            EVT OldVT) const {
     // Fallback to isTypeDesirableForOp(unsigned Opc, EVT VT).
     if (NewVT == OldVT) {
       return isTypeDesirableForOp(Opc, NewVT);
