@@ -377,7 +377,7 @@ bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
 /// otherwise - false.
 bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
 
-/// Checks if the specified directive need to capture variables.
+/// Checks if the specified directive can capture variables.
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
