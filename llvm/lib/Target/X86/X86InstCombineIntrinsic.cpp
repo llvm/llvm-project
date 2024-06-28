@@ -3079,6 +3079,24 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     break;
   }
 
+  case Intrinsic::x86_sse2_pmadd_wd:
+  case Intrinsic::x86_avx2_pmadd_wd:
+  case Intrinsic::x86_avx512_pmaddw_d_512:
+  case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+  case Intrinsic::x86_avx2_pmadd_ub_sw:
+  case Intrinsic::x86_avx512_pmaddubs_w_512: {
+    // PMADD - demand both src elements that map to each dst element.
+    auto *ArgTy = II.getArgOperand(0)->getType();
+    unsigned InnerVWidth = cast<FixedVectorType>(ArgTy)->getNumElements();
+    assert((VWidth * 2) == InnerVWidth && "Unexpected input size");
+    APInt OpDemandedElts = APIntOps::ScaleBitMask(DemandedElts, InnerVWidth);
+    APInt Op0UndefElts(InnerVWidth, 0);
+    APInt Op1UndefElts(InnerVWidth, 0);
+    simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
+    break;
+  }
+
   // PSHUFB
   case Intrinsic::x86_ssse3_pshuf_b_128:
   case Intrinsic::x86_avx2_pshuf_b:
