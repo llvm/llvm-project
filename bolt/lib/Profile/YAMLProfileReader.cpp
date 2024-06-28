@@ -331,6 +331,8 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
+  if (opts::MatchProfileWithFunctionHash)
+    return true;
   for (StringRef Name : BF.getNames())
     if (ProfileFunctionNames.contains(Name))
       return true;

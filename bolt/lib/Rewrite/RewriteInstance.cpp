@@ -2981,9 +2981,6 @@ void RewriteInstance::selectFunctionsToProcess() {
     if (mustSkip(Function))
       return false;
 
-    if (opts::MatchProfileWithFunctionHash)
-      return true;
-
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
       // Regex check (-funcs and -funcs-file options).
