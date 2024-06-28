@@ -206,7 +206,6 @@ static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
 //    critical edge.
 // 2) `Inst` have users and all users are in `DestBB`.
 static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
-  BasicBlock *BB = Inst->getParent();
   assert(Inst->getParent() != DestBB &&
          BB->getTerminator()->getNumSuccessors() == 2 &&
          DestBB->getUniquePredecessor() == BB &&
@@ -850,7 +849,8 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
 
     LLVM_DEBUG(dbgs() << "  Candidate " << I << " FunctionCount: "
                       << Candidate.Count << ", VTableCounts:");
-    for (auto &[GUID, Count] : VTableGUIDAndCounts)
+    // Add [[maybe_unused]] since <GUID, Count> are only used by LLVM_DEBUG.
+    for ([[maybe_unused]] auto &[GUID, Count] : VTableGUIDAndCounts)
       LLVM_DEBUG(dbgs() << " {" << Symtab->getGlobalVariable(GUID)->getName()
                         << ", " << Count << "}");
     LLVM_DEBUG(dbgs() << "\n");
