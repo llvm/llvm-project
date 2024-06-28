@@ -467,7 +467,7 @@ public:
     getTopOfStack().PossiblyLoopCounter = D ? D->getCanonicalDecl() : D;
   }
   /// Gets the possible loop counter decl.
-  const Decl *getPossiblyLoopCunter() const {
+  const Decl *getPossiblyLoopCounter() const {
     return getTopOfStack().PossiblyLoopCounter;
   }
   /// Start new OpenMP region stack in new non-capturing function.
@@ -719,7 +719,7 @@ public:
     TargetLocations.push_back(LocStart);
   }
 
-  /// Add location for the first encountered atomicc directive.
+  /// Add location for the first encountered atomic directive.
   void addAtomicDirectiveLoc(SourceLocation Loc) {
     if (AtomicLocation.isInvalid())
       AtomicLocation = Loc;
@@ -2585,7 +2585,7 @@ OpenMPClauseKind SemaOpenMP::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
       DSAStack->loopStart();
       return OMPC_private;
     }
-    if ((DSAStack->getPossiblyLoopCunter() == D->getCanonicalDecl() ||
+    if ((DSAStack->getPossiblyLoopCounter() == D->getCanonicalDecl() ||
          DSAStack->isLoopControlVariable(D).first) &&
         !DSAStack->hasExplicitDSA(
             D, [](OpenMPClauseKind K, bool) { return K != OMPC_private; },
@@ -2695,8 +2695,8 @@ bool SemaOpenMP::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
       unsigned NumLevels =
           getOpenMPCaptureLevels(DSAStack->getDirective(Level));
       if (Level == 0)
-        // non-file scope static variale with default(firstprivate)
-        // should be gloabal captured.
+        // non-file scope static variable with default(firstprivate)
+        // should be global captured.
         return (NumLevels == CaptureLevel + 1 &&
                 (TopDVar.CKind != OMPC_shared ||
                  DSAStack->getDefaultDSA() == DSA_firstprivate));
@@ -2731,11 +2731,11 @@ void SemaOpenMP::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
   assert(getLangOpts().OpenMP && "Expected OpenMP compilation mode.");
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
       OMPDeclareTargetDeclAttr::getDeviceType(Caller->getMostRecentDecl());
-  // Ignore host functions during device analyzis.
+  // Ignore host functions during device analysis.
   if (getLangOpts().OpenMPIsTargetDevice &&
       (!DevTy || *DevTy == OMPDeclareTargetDeclAttr::DT_Host))
     return;
-  // Ignore nohost functions during host analyzis.
+  // Ignore nohost functions during host analysis.
   if (!getLangOpts().OpenMPIsTargetDevice && DevTy &&
       *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
     return;
@@ -3904,7 +3904,7 @@ public:
                   if (SemaRef.LangOpts.OpenMP >= 50)
                     return !StackComponents.empty();
                   // Variable is used if it has been marked as an array, array
-                  // section, array shaping or the variable iself.
+                  // section, array shaping or the variable itself.
                   return StackComponents.size() == 1 ||
                          llvm::all_of(
                              llvm::drop_begin(llvm::reverse(StackComponents)),
@@ -5783,7 +5783,7 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
       // Divide by the absolute step amount. If the range is not a multiple of
       // the step size, rounding-up the effective upper bound ensures that the
       // last iteration is included.
-      // Note that the rounding-up may cause an overflow in a temporry that
+      // Note that the rounding-up may cause an overflow in a temporary that
       // could be avoided, but would have occurred in a C-style for-loop as
       // well.
       Expr *Divisor = BuildVarRef(NewStep);
@@ -6064,7 +6064,7 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
 static void
 processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
                                       SmallVectorImpl<OMPClause *> &Clauses) {
-  // Check for the deault mapper for data members.
+  // Check for the default mapper for data members.
   if (S.getLangOpts().OpenMP < 50)
     return;
   SmallVector<OMPClause *, 4> ImplicitMaps;
@@ -6882,7 +6882,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       switch (C->getClauseKind()) {
       case OMPC_num_threads:
       case OMPC_dist_schedule:
-        // Do not analyse if no parent teams directive.
+        // Do not analyze if no parent teams directive.
         if (isOpenMPTeamsDirective(Kind))
           break;
         continue;
@@ -7703,7 +7703,7 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
       FnPtrType = Context.getMemberPointerType(AdjustedFnType, ClassType);
       ExprResult ER;
       {
-        // Build adrr_of unary op to correctly handle type checks for member
+        // Build addr_of unary op to correctly handle type checks for member
         // functions.
         Sema::TentativeAnalysisScope Trap(SemaRef);
         ER = SemaRef.CreateBuiltinUnaryOp(VariantRef->getBeginLoc(), UO_AddrOf,
@@ -8262,7 +8262,7 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
                    diag::err_omp_loop_incr_not_compatible)
           << LCDecl << *TestIsLessOp << NewStep->getSourceRange();
       SemaRef.Diag(ConditionLoc,
-                   diag::note_omp_loop_cond_requres_compatible_incr)
+                   diag::note_omp_loop_cond_requires_compatible_incr)
           << *TestIsLessOp << ConditionSrcRange;
       return true;
     }
@@ -9345,7 +9345,7 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
           }
         }
         DSAStack->addLoopControlVariable(D, VD);
-        const Decl *LD = DSAStack->getPossiblyLoopCunter();
+        const Decl *LD = DSAStack->getPossiblyLoopCounter();
         if (LD != D->getCanonicalDecl()) {
           DSAStack->resetPossibleLoopCounter();
           if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
@@ -9407,7 +9407,7 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
 }
 
 namespace {
-// Utility for openmp doacross clause kind
+// Utility for OpenMP doacross clause kind
 class OMPDoacrossKind {
 public:
   bool isSource(const OMPDoacrossClause *C) {
@@ -9785,7 +9785,7 @@ static Stmt *buildPreInits(ASTContext &Context,
 /// stored in lieu of using an explicit list. Flattening is necessary because
 /// contained DeclStmts need to be visible after the execution of the list. Used
 /// for OpenMP pre-init declarations/statements.
-static void appendFlattendedStmtList(SmallVectorImpl<Stmt *> &TargetList,
+static void appendFlattenedStmtList(SmallVectorImpl<Stmt *> &TargetList,
                                      Stmt *Item) {
   // nullptr represents an empty list.
   if (!Item)
@@ -9817,7 +9817,7 @@ static Stmt *buildPreInits(ASTContext &Context, ArrayRef<Stmt *> PreInits) {
 
   SmallVector<Stmt *> Stmts;
   for (Stmt *S : PreInits)
-    appendFlattendedStmtList(Stmts, S);
+    appendFlattenedStmtList(Stmts, S);
   return CompoundStmt::Create(Context, PreInits, FPOptionsOverride(), {}, {});
 }
 
@@ -9921,7 +9921,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             // Search for pre-init declared variables that need to be captured
             // to be referenceable inside the directive.
             SmallVector<Stmt *> Constituents;
-            appendFlattendedStmtList(Constituents, DependentPreInits);
+            appendFlattenedStmtList(Constituents, DependentPreInits);
             for (Stmt *S : Constituents) {
               if (auto *DC = dyn_cast<DeclStmt>(S)) {
                 for (Decl *C : DC->decls()) {
@@ -11407,7 +11407,7 @@ StmtResult SemaOpenMP::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
          diag::err_omp_scan_single_clause_expected);
     return StmtError();
   }
-  // Check that scan directive is used in the scopeof the OpenMP loop body.
+  // Check that scan directive is used in the scope of the OpenMP loop body.
   if (Scope *S = DSAStack->getCurScope()) {
     Scope *ParentS = S->getParent();
     if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
@@ -11562,7 +11562,7 @@ class OpenMPAtomicUpdateChecker {
     NotAnAssignmentOp,
     /// RHS part of the binary operation is not a binary expression.
     NotABinaryExpression,
-    /// RHS part is not additive/multiplicative/shift/biwise binary
+    /// RHS part is not additive/multiplicative/shift/bitwise binary
     /// expression.
     NotABinaryOperator,
     /// RHS binary operation does not have reference to the updated LHS
@@ -11840,7 +11840,7 @@ public:
     InvalidAssignment,
     /// Not if statement
     NotIfStmt,
-    /// More than two statements in a compund statement.
+    /// More than two statements in a compound statement.
     MoreThanTwoStmts,
     /// Not a compound statement.
     NotCompoundStmt,
@@ -14327,7 +14327,7 @@ bool SemaOpenMP::checkTransformableLoopNest(
         else
           llvm_unreachable("Unhandled loop transformation");
 
-        appendFlattendedStmtList(OriginalInits.back(), DependentPreInits);
+        appendFlattenedStmtList(OriginalInits.back(), DependentPreInits);
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
