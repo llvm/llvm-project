@@ -28,6 +28,7 @@ to learn about the defaults for your platform and target.
 * **"codegen" options**
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
+    - ``LIBC_CONF_VISIBILITY``: Visibility to use on all exported C library symbols.
 * **"malloc" options**
     - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
 * **"printf" options**

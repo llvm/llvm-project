@@ -10,7 +10,13 @@
 #define LLVM_LIBC_SRC_STDLIB_ATEXIT_H
 
 #include "hdr/types/atexithandler_t.h"
+#include "src/stdlib/exit_handler.h"
+
 namespace LIBC_NAMESPACE {
+
+int __cxa_atexit(AtExitCallback *callback, void *payload, void *);
+
+void __cxa_finalize(void *dso);
 
 int atexit(__atexithandler_t);
 

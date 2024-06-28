@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
+#include "src/__support/File/linux/file.h"
+#include "src/__support/common.h"
+
 #include <stdio.h>
 
 namespace LIBC_NAMESPACE {
@@ -19,6 +21,5 @@ File *stdout = &StdOut;
 
 } // namespace LIBC_NAMESPACE
 
-extern "C" {
-FILE *stdout = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdOut);
-} // extern "C"
+LLVM_LIBC_GLOBAL(FILE *,
+                 stdout) = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdOut);

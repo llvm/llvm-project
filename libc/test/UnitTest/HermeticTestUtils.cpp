@@ -23,6 +23,8 @@ void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
+int __cxa_atexit(void (*func)(void *), void *payload, void *dso);
+void __cxa_finalize(void *dso);
 
 // TODO: It seems that some old test frameworks does not use
 // add_libc_hermetic_test properly. Such that they won't get correct linkage
@@ -73,6 +75,12 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
+int __cxa_atexit(void (*callback)(void *), void *payload, void *dso) {
+  return LIBC_NAMESPACE::__cxa_atexit(callback, payload, dso);
+}
+
+void __cxa_finalize(void *dso) { LIBC_NAMESPACE::__cxa_finalize(dso); }
+
 constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
 
 void *malloc(size_t s) {
@@ -115,7 +123,8 @@ void *__dso_handle = nullptr;
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
-// defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
+// defined. See also
+// https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
   return LIBC_NAMESPACE::getauxval(id);
 }

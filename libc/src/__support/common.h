@@ -16,14 +16,26 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
+#define __LIBC_MACRO_TO_STRING(str) #str
+#define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)
+
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
+#endif
+
+#ifndef LIBC_VISIBILITY
+#define LIBC_VISIBILITY default
+#endif
+
+#ifndef LLVM_LIBC_VISIBILITY
+#define LLVM_LIBC_VISIBILITY                                                   \
+  [[gnu::visibility(LIBC_MACRO_TO_STRING(LIBC_VISIBILITY))]]
 #endif
 
 // MacOS needs to be excluded because it does not support aliasing.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
-  LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
+  LLVM_LIBC_FUNCTION_ATTR LLVM_LIBC_VISIBILITY decltype(LIBC_NAMESPACE::name)  \
       __##name##_impl__ __asm__(#name);                                        \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
   type __##name##_impl__ arglist
@@ -35,6 +47,10 @@
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
 
+// Defines a global variable meant to be exported by the C library.
+#define LLVM_LIBC_GLOBAL(type, name)                                           \
+  LLVM_LIBC_VISIBILITY type name __asm__(#name)
+
 namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
@@ -45,9 +61,6 @@ LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
 }
 } // namespace internal
 } // namespace LIBC_NAMESPACE
-
-#define __LIBC_MACRO_TO_STRING(str) #str
-#define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)
 
 // LLVM_LIBC_IS_DEFINED checks whether a particular macro is defined.
 // Usage: constexpr bool kUseAvx = LLVM_LIBC_IS_DEFINED(__AVX__);

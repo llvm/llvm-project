@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/File/file.h"
+#include "src/__support/common.h"
 
 #include <stdio.h>
 
-extern "C" FILE *stdout;
+LLVM_LIBC_GLOBAL(FILE *, stdout);

@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
+#include "src/__support/File/linux/file.h"
+#include "src/__support/common.h"
+
 #include <stdio.h>
 
 namespace LIBC_NAMESPACE {
@@ -18,6 +20,5 @@ File *stderr = &StdErr;
 
 } // namespace LIBC_NAMESPACE
 
-extern "C" {
-FILE *stderr = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdErr);
-}
+LLVM_LIBC_GLOBAL(FILE *,
+                 stderr) = reinterpret_cast<FILE *>(&LIBC_NAMESPACE::StdErr);

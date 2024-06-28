@@ -32,6 +32,10 @@
     }
   },
   "codegen": {
+    "LIBC_CONF_VISIBILITY": {
+      "value": "default",
+      "doc": "Visibility to use on all exported C library symbols."
+    },
     "LIBC_CONF_KEEP_FRAME_POINTER": {
       "value": true,
       "doc": "Keep frame pointer in functions for better debugging experience."

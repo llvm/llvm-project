@@ -28,6 +28,8 @@ void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
+int __cxa_atexit(void (*func)(void *), void *payload, void *dso);
+void __cxa_finalize(void *dso);
 
 } // namespace LIBC_NAMESPACE
 
@@ -52,6 +54,12 @@ void *memset(void *ptr, int value, size_t count) {
 
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
+
+int __cxa_atexit(void (*callback)(void *), void *payload, void *dso) {
+  return LIBC_NAMESPACE::__cxa_atexit(callback, payload, dso);
+}
+
+void __cxa_finalize(void *dso) { LIBC_NAMESPACE::__cxa_finalize(dso); }
 
 } // extern "C"
 

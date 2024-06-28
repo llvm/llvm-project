@@ -9,8 +9,7 @@
 #include "src/stdlib/exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
-
-extern "C" void __cxa_finalize(void *);
+#include "src/stdlib/atexit.h"
 
 namespace LIBC_NAMESPACE {
 
