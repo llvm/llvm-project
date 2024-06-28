@@ -415,17 +415,22 @@ let Predicates = [HasStdExtZbkb, IsRV64], IsSignExtendingOpW = 1 in
 def PACKW  : ALUW_rr<0b0000100, 0b100, "packw">,
              Sched<[WritePACK32, ReadPACK32, ReadPACK32]>;
 
-let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
+let Predicates = [HasStdExtZbb, IsRV32] in {
 def ZEXT_H_RV32 : RVBUnary<0b000010000000, 0b100, OPC_OP, "zext.h">,
                   Sched<[WriteIALU, ReadIALU]>;
+} // Predicates = [HasStdExtZbb, IsRV32]
+
+let Predicates = [HasStdExtZbb, IsRV64], IsSignExtendingOpW = 1 in {
+def ZEXT_H_RV64 : RVBUnary<0b000010000000, 0b100, OPC_OP_32, "zext.h">,
+                  Sched<[WriteIALU, ReadIALU]>;
+} // Predicates = [HasStdExtZbb, IsRV64]
+
+let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
 def REV8_RV32 : RVBUnary<0b011010011000, 0b101, OPC_OP_IMM, "rev8">,
                 Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-let IsSignExtendingOpW = 1 in
-def ZEXT_H_RV64 : RVBUnary<0b000010000000, 0b100, OPC_OP_32, "zext.h">,
-                  Sched<[WriteIALU, ReadIALU]>;
 def REV8_RV64 : RVBUnary<0b011010111000, 0b101, OPC_OP_IMM, "rev8">,
                 Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
@@ -475,6 +480,14 @@ def : InstAlias<"binv $rd, $rs1, $shamt",
 def : InstAlias<"bext $rd, $rs1, $shamt",
                 (BEXTI GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt), 0>;
 } // Predicates = [HasStdExtZbs]
+
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in {
+def : InstAlias<"zext.h $rd, $rs", (PACK GPR:$rd, GPR:$rs, X0)>;
+} // Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32]
+
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
+def : InstAlias<"zext.h $rd, $rs", (PACKW GPR:$rd, GPR:$rs, X0)>;
+} // Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns
@@ -632,10 +645,15 @@ def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
           (PACKW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in
+let Predicates = [HasStdExtZbb, IsRV32] in
 def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV32 GPR:$rs)>;
-let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in
+let Predicates = [HasStdExtZbb, IsRV64] in
 def : Pat<(i64 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
+
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV32] in
+def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (PACK GPR:$rs, (XLenVT X0))>;
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in
+def : Pat<(i64 (and GPR:$rs, 0xFFFF)), (PACKW GPR:$rs, (XLenVT X0))>;
 
 let Predicates = [HasStdExtZba] in {
 
@@ -743,11 +761,13 @@ def : PatGpr<ctpop, CPOPW, i32>;
 
 def : Pat<(i32 (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
 def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
+
+def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
-def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
-} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
+let Predicates = [HasStdExtZbkb, NoStdExtZbb, IsRV64] in {
+def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (PACKW GPR:$rs, (XLenVT X0))>;
+}
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
 def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;

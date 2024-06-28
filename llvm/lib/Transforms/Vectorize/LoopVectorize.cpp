@@ -5116,7 +5116,7 @@ std::pair<unsigned, unsigned>
 LoopVectorizationCostModel::getSmallestAndWidestTypes() {
   unsigned MinWidth = -1U;
   unsigned MaxWidth = 8;
-  const DataLayout &DL = TheFunction->getParent()->getDataLayout();
+  const DataLayout &DL = TheFunction->getDataLayout();
   // For in-loop reductions, no element types are added to ElementTypesInLoop
   // if there are no loads/stores in the loop. In this case, check through the
   // reduction variables to determine the maximum width.
@@ -9581,7 +9581,7 @@ static bool processLoopInVPlanNativePath(
     bool AddBranchWeights =
         hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
     GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                             F->getParent()->getDataLayout(), AddBranchWeights);
+                             F->getDataLayout(), AddBranchWeights);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                            VF.Width, 1, LVL, &CM, BFI, PSI, Checks);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9925,7 +9925,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   bool AddBranchWeights =
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
-                           F->getParent()->getDataLayout(), AddBranchWeights);
+                           F->getDataLayout(), AddBranchWeights);
   if (MaybeVF) {
     VF = *MaybeVF;
     // Select the interleave count.

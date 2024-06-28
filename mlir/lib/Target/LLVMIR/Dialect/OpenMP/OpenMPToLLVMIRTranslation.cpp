@@ -1460,6 +1460,18 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+/// Convert Order attribute to llvm::omp::OrderKind.
+static llvm::omp::OrderKind
+convertOrderKind(std::optional<omp::ClauseOrderKind> o) {
+  if (!o)
+    return llvm::omp::OrderKind::OMP_ORDER_unknown;
+  switch (*o) {
+  case omp::ClauseOrderKind::Concurrent:
+    return llvm::omp::OrderKind::OMP_ORDER_concurrent;
+  }
+  llvm_unreachable("Unknown ClauseOrderKind kind");
+}
+
 /// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1539,11 +1551,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     safelen = builder.getInt64(safelenVar.value());
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
-  ompBuilder->applySimd(
-      loopInfo, alignedVars,
-      simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
-                         : nullptr,
-      llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);
+  llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrderVal());
+  ompBuilder->applySimd(loopInfo, alignedVars,
+                        simdOp.getIfExpr()
+                            ? moduleTranslation.lookupValue(simdOp.getIfExpr())
+                            : nullptr,
+                        order, simdlen, safelen);
 
   builder.restoreIP(afterIP);
   return success();

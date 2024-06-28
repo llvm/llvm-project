@@ -1,4 +1,4 @@
-//===- bolt/Passes/CallGraph.h ----------------------------------*- C++ -*-===//
+//===- bolt/Core/CallGraph.h ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 #ifndef BOLT_PASSES_BINARY_FUNCTION_CALLGRAPH_H
 #define BOLT_PASSES_BINARY_FUNCTION_CALLGRAPH_H
 
-#include "bolt/Passes/CallGraph.h"
+#include "bolt/Core/CallGraph.h"
 #include <deque>
 #include <functional>
 #include <unordered_map>

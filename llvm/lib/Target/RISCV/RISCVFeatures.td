@@ -158,7 +158,7 @@ def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
                                           "'Zicfilp' (Landing pad)">;
 def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                                 AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
+                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<"zicfiss", 0, 4,
@@ -458,6 +458,8 @@ def FeatureStdExtZbb
 def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
+def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
+                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
 
 def FeatureStdExtZbc
     : RISCVExtension<"zbc", 1, 0,

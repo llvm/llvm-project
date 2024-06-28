@@ -3790,11 +3790,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  f16fma
+  SRCS
+    f16fma.cpp
+  HDRS
+    ../f16fma.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O0 -ggdb3
+)
+
+add_entrypoint_object(
   f16fmaf
   SRCS
     f16fmaf.cpp
   HDRS
     ../f16fmaf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16fmal
+  SRCS
+    f16fmal.cpp
+  HDRS
+    ../f16fmal.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16fmaf128
+  SRCS
+    f16fmaf128.cpp
+  HDRS
+    ../f16fmaf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.fma

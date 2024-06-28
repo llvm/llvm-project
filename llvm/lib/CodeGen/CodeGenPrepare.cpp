@@ -509,7 +509,7 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
     return false;
   auto TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   CodeGenPrepare CGP(TM);
-  CGP.DL = &F.getParent()->getDataLayout();
+  CGP.DL = &F.getDataLayout();
   CGP.SubtargetInfo = TM->getSubtargetImpl(F);
   CGP.TLI = CGP.SubtargetInfo->getTargetLowering();
   CGP.TRI = CGP.SubtargetInfo->getRegisterInfo();
@@ -557,7 +557,7 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
 }
 
 bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   TRI = SubtargetInfo->getRegisterInfo();
@@ -5185,7 +5185,7 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
                                     const TargetRegisterInfo &TRI) {
   const Function *F = CI->getFunction();
   TargetLowering::AsmOperandInfoVector TargetConstraints =
-      TLI.ParseConstraints(F->getParent()->getDataLayout(), &TRI, *CI);
+      TLI.ParseConstraints(F->getDataLayout(), &TRI, *CI);
 
   for (TargetLowering::AsmOperandInfo &OpInfo : TargetConstraints) {
     // Compute the constraint code and ConstraintType to use.

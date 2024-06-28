@@ -37,6 +37,7 @@
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
+#include "llvm/IR/Module.h"
 #endif
 
 using namespace llvm;
