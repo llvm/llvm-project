@@ -652,6 +652,7 @@ void DWARFRewriter::updateDebugInfo() {
         auto LegacyRangesSectionWriterByCU =
             std::make_unique<DebugRangesSectionWriter>();
         LegacyRangesSectionWriterByCU->initSection(CU);
+        LegacyRangesSectionWriterByCU->clearBuffer();
         LegacyRangesWritersByCU[*DWOId] =
             std::move(LegacyRangesSectionWriterByCU);
       }

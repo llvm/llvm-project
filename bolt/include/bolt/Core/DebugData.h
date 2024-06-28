@@ -205,6 +205,9 @@ public:
     return std::move(RangesBuffer);
   }
 
+  /// Clears the ranges buffer.
+  void clearBuffer() { RangesBuffer->clear(); }
+
   RangesWriterKind getKind() const { return Kind; }
 
   static bool classof(const DebugRangesSectionWriter *Writer) {
