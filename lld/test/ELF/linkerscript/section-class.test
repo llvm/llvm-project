@@ -43,9 +43,9 @@ SECTIONS {
   CLASS(h) { *(.rodata.h) }
   .rodata : {
     *(.rodata.*)
-    INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS(cd)
+    INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS( cd)
     CLASS(a)
-    CLASS(ef)
+    CLASS(ef )
   }
   OVERLAY : { .rodata.d { INPUT_SECTION_FLAGS(!SHF_EXECINSTR) CLASS(cd) } }
   /DISCARD/ : { CLASS(g) }
