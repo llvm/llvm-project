@@ -6,11 +6,6 @@
 // RUN:   -o "expr sizeof(OverlappingDerived)" \
 // RUN:   -o exit | FileCheck %s
 
-// CHECK:      (lldb) expr alignof(OverlappingDerived)
-// CHECK-NEXT: ${{.*}} = 4
-// CHECK:      (lldb) expr sizeof(OverlappingDerived)
-// CHECK-NEXT: ${{.*}} = 4
-
 struct Empty {};
 
 struct OverlappingBase {
@@ -26,5 +21,10 @@ struct Base {
 struct OverlappingDerived : Base, OverlappingBase {};
 static_assert(alignof(OverlappingDerived) == 4);
 static_assert(sizeof(OverlappingDerived) == 4);
+
+// CHECK:      (lldb) expr alignof(OverlappingDerived)
+// CHECK-NEXT: ${{.*}} = 4
+// CHECK:      (lldb) expr sizeof(OverlappingDerived)
+// CHECK-NEXT: ${{.*}} = 4
 
 int main() { OverlappingDerived d; }
