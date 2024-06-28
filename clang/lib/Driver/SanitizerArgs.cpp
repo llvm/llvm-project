@@ -570,7 +570,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   Kinds |= Default;
 
-  if (TC.getTriple().isOSDarwin() && !TC.getTriple().isX86())
+  if (TC.getTriple().isOSBinFormatMachO() && !TC.getTriple().isX86())
     Kinds &= ~SanitizerKind::Function;
 
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
