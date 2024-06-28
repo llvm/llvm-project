@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/GenericDomTreeUpdater.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
@@ -25,6 +24,8 @@
 #include <vector>
 
 namespace llvm {
+
+class PostDominatorTree;
 
 class DomTreeUpdater
     : public GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
@@ -110,27 +111,15 @@ private:
   bool forceFlushDeletedBB();
 
   /// Debug method to help view the internal state of this class.
-  LLVM_DUMP_METHOD void dump() const {
-    Base::dump();
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    raw_ostream &OS = dbgs();
-    OS << "Pending Callbacks:\n";
-    int Index = 0;
-    for (const auto &BB : Callbacks) {
-      OS << "  " << Index << " : ";
-      ++Index;
-      if (BB->hasName())
-        OS << BB->getName() << "(";
-      else
-        OS << "(no_name)(";
-      OS << BB << ")\n";
-    }
-#endif
-  }
+  LLVM_DUMP_METHOD void dump() const;
 };
 
 extern template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                                             PostDominatorTree>;
+
+extern template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                      PostDominatorTree>::recalculate(Function &F);
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DOMTREEUPDATER_H
