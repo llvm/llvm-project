@@ -1320,16 +1320,23 @@ def : Pat<(v8f16 (int_wasm_pmax (v8f16 V128:$lhs), (v8f16 V128:$rhs))),
 //===----------------------------------------------------------------------===//
 
 multiclass SIMDConvert<Vec vec, Vec arg, SDPatternOperator op, string name,
-                       bits<32> simdop> {
+                       bits<32> simdop, list<Predicate> reqs = []> {
   defm op#_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
            [(set (vec.vt V128:$dst), (vec.vt (op (arg.vt V128:$vec))))],
-           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop>;
+           vec.prefix#"."#name#"\t$dst, $vec", vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionConvert<Vec vec, Vec arg, SDPatternOperator op,
+                                string name, bits<32> simdop> {
+  defm "" : SIMDConvert<vec, arg, op, name, simdop, [HasHalfPrecision]>;
 }
 
 // Floating point to integer with saturation: trunc_sat
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_sint, "trunc_sat_f32x4_s", 248>;
 defm "" : SIMDConvert<I32x4, F32x4, fp_to_uint, "trunc_sat_f32x4_u", 249>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_sint, "trunc_sat_f16x8_s", 0x148>;
+defm "" : HalfPrecisionConvert<I16x8, F16x8, fp_to_uint, "trunc_sat_f16x8_u", 0x149>;
 
 // Support the saturating variety as well.
 def trunc_s_sat32 : PatFrag<(ops node:$x), (fp_to_sint_sat $x, i32)>;
@@ -1355,6 +1362,8 @@ defm "" : SIMDConvert<F32x4, I32x4, sint_to_fp, "convert_i32x4_s", 250>;
 defm "" : SIMDConvert<F32x4, I32x4, uint_to_fp, "convert_i32x4_u", 251>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_s, "convert_low_i32x4_s", 0xfe>;
 defm "" : SIMDConvert<F64x2, I32x4, convert_low_u, "convert_low_i32x4_u", 0xff>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, sint_to_fp, "convert_i16x8_s", 0x14a>;
+defm "" : HalfPrecisionConvert<F16x8, I16x8, uint_to_fp, "convert_i16x8_u", 0x14b>;
 
 // Extending operations
 // TODO: refactor this to be uniform for i64x2 if the numbering is not changed.

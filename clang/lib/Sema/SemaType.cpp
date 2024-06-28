@@ -7622,7 +7622,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
   FunctionEffectSet::Conflicts Errs;
-  bool Success = FX.insert(NewEC, Errs);
+  [[maybe_unused]] bool Success = FX.insert(NewEC, Errs);
   assert(Success && "effect conflicts should have been diagnosed above");
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
@@ -8203,23 +8203,19 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
-  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
-        S.Context.getTargetInfo().hasFeature("mve") ||
-        S.Context.getTargetInfo().hasFeature("sve") ||
-        S.Context.getTargetInfo().hasFeature("sme") ||
-        IsTargetCUDAAndHostARM) &&
-      VecKind == VectorKind::Neon) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'neon', 'mve', 'sve' or 'sme'";
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
+      VecKind == VectorKind::Neon &&
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
+        << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }
-  if (!(S.Context.getTargetInfo().hasFeature("neon") ||
-        S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM) &&
-      VecKind == VectorKind::NeonPoly) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'neon' or 'mve'";
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
+      VecKind == VectorKind::NeonPoly &&
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
+        << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }

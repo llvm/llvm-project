@@ -16,8 +16,6 @@
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
-#include <__tuple/sfinae_helpers.h>
-#include <__tuple/tuple_element.h>
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
@@ -130,19 +128,15 @@ struct _LIBCPP_TEMPLATE_VIS pair
     }
   };
 
-  template <bool _MaybeEnable>
-  using _CheckArgsDep _LIBCPP_NODEBUG =
-      typename conditional< _MaybeEnable, _CheckArgs, __check_tuple_constructor_fail>::type;
-
-  template <bool _Dummy = true, __enable_if_t<_CheckArgsDep<_Dummy>::__enable_default(), int> = 0>
-  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(
+  template <bool _Dummy = true, __enable_if_t<_Dummy && _CheckArgs::__enable_default(), int> = 0>
+  explicit(!_CheckArgs::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(
       is_nothrow_default_constructible<first_type>::value && is_nothrow_default_constructible<second_type>::value)
       : first(), second() {}
 
-  template <bool _Dummy = true,
-            __enable_if_t<_CheckArgsDep<_Dummy>::template __is_pair_constructible<_T1 const&, _T2 const&>(), int> = 0>
+  template <bool _Dummy                                                                                          = true,
+            __enable_if_t<_Dummy && _CheckArgs::template __is_pair_constructible<_T1 const&, _T2 const&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgsDep<_Dummy>::template __is_implicit<_T1 const&, _T2 const&>())
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_T1 const&, _T2 const&>())
       pair(_T1 const& __t1, _T2 const& __t2) noexcept(is_nothrow_copy_constructible<first_type>::value &&
                                                       is_nothrow_copy_constructible<second_type>::value)
       : first(__t1), second(__t2) {}

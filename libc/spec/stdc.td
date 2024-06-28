@@ -477,7 +477,10 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"fma", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmaf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>]>,
 
+          GuardedFunctionSpec<"f16fma", RetValSpec<Float16Type>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>, ArgSpec<DoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
           GuardedFunctionSpec<"f16fmaf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmal", RetValSpec<Float16Type>, [ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>, ArgSpec<LongDoubleType>], "LIBC_TYPES_HAS_FLOAT16">,
+          GuardedFunctionSpec<"f16fmaf128", RetValSpec<Float16Type>, [ArgSpec<Float128Type>, ArgSpec<Float128Type>, ArgSpec<Float128Type>], "LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128">,
 
           FunctionSpec<"fmod", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
           FunctionSpec<"fmodf", RetValSpec<FloatType>, [ArgSpec<FloatType>, ArgSpec<FloatType>]>,
@@ -725,6 +728,8 @@ def StdC : StandardSpec<"stdc"> {
           GuardedFunctionSpec<"setpayloadf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
 
           GuardedFunctionSpec<"setpayloadsigf16", RetValSpec<IntType>, [ArgSpec<Float16Ptr>, ArgSpec<Float16Type>], "LIBC_TYPES_HAS_FLOAT16">,
+
+          GuardedFunctionSpec<"f16divf", RetValSpec<Float16Type>, [ArgSpec<FloatType>, ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
 
           GuardedFunctionSpec<"f16sqrtf", RetValSpec<Float16Type>, [ArgSpec<FloatType>], "LIBC_TYPES_HAS_FLOAT16">,
       ]

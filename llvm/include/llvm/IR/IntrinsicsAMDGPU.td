@@ -523,17 +523,6 @@ def int_amdgcn_fmad_ftz :
             [IntrNoMem, IntrSpeculatable]
 >;
 
-class AMDGPULDSIntrin :
-  Intrinsic<[llvm_any_ty],
-    [LLVMQualPointerType<3>,
-    LLVMMatchType<0>,
-    llvm_i32_ty, // ordering
-    llvm_i32_ty, // scope
-    llvm_i1_ty], // isVolatile
-    [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]
->;
-
 // FIXME: The m0 argument should be moved after the normal arguments
 class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [llvm_i32_ty],
@@ -570,9 +559,6 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 // The pointer argument is assumed to be dynamically uniform if a VGPR.
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
-
-def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
-def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
 } // TargetPrefix = "amdgcn"
 
@@ -2042,26 +2028,23 @@ def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
-  ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.
 def int_amdgcn_readlane :
-  ClangBuiltin<"__builtin_amdgcn_readlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The value to write and lane select arguments must be uniform across the
 // currently active threads of the current wave. Otherwise, the result is
 // undefined.
 def int_amdgcn_writelane :
-  ClangBuiltin<"__builtin_amdgcn_writelane">,
-  Intrinsic<[llvm_i32_ty], [
-    llvm_i32_ty,    // uniform value to write: returned by the selected lane
-    llvm_i32_ty,    // uniform lane select
-    llvm_i32_ty     // returned by all lanes other than the selected one
+  Intrinsic<[llvm_any_ty], [
+    LLVMMatchType<0>,   // uniform value to write: returned by the selected lane
+    llvm_i32_ty,        // uniform lane select
+    LLVMMatchType<0>    // returned by all lanes other than the selected one
   ],
   [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
@@ -2348,26 +2331,25 @@ class AMDGPUGlobalLoadLDS :
      "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 
-// Use read/write of inaccessible memory to model the fact that this reads a
-// volatile value.
+// This is IntrHasSideEffects because it reads from a volatile hardware register.
 def int_amdgcn_pops_exiting_wave_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 
 // llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlane16 : ClangBuiltin<"__builtin_amdgcn_permlane16">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+def int_amdgcn_permlane16 :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
 
 // llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlanex16 : ClangBuiltin<"__builtin_amdgcn_permlanex16">,
-  Intrinsic<[llvm_i32_ty],
-            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
+def int_amdgcn_permlanex16 :
+  Intrinsic<[llvm_any_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
 
@@ -2410,8 +2392,7 @@ def int_amdgcn_image_bvh_intersect_ray :
 
 // llvm.amdgcn.permlane64 <src0>
 def int_amdgcn_permlane64 :
-  ClangBuiltin<"__builtin_amdgcn_permlane64">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_ds_add_gs_reg_rtn :

@@ -3655,8 +3655,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
     // (A & B) | (A ^ B) --> A | B
     // (B & A) | (A ^ B) --> A | B
-    if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
-        match(Op0, m_And(m_Specific(B), m_Specific(A))))
+    if (match(Op0, m_c_And(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
 
     // ~A | (A ^ B) --> ~(A & B)

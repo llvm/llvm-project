@@ -907,7 +907,8 @@ void CodeGenModule::Release() {
   if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
 
-  if (getTriple().isAMDGPU()) {
+  if (getTriple().isAMDGPU() ||
+      (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD)) {
     // Emit amdhsa_code_object_version module flag, which is code object version
     // times 100.
     if (getTarget().getTargetOpts().CodeObjectVersion !=

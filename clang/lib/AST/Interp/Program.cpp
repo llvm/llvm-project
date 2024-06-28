@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
