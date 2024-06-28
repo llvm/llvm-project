@@ -948,7 +948,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
-  this->DL = &Fn.getParent()->getDataLayout();
+  this->DL = &Fn.getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;

@@ -138,7 +138,7 @@ bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   if (!isScopedEHPersonality(Personality))
     return false;
 
-  DL = &Fn.getParent()->getDataLayout();
+  DL = &Fn.getDataLayout();
   return prepareExplicitEH(Fn);
 }
 

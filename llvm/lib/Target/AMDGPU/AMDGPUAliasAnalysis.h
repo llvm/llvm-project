@@ -52,7 +52,7 @@ public:
   using Result = AMDGPUAAResult;
 
   AMDGPUAAResult run(Function &F, AnalysisManager<Function> &AM) {
-    return AMDGPUAAResult(F.getParent()->getDataLayout());
+    return AMDGPUAAResult(F.getDataLayout());
   }
 };
 

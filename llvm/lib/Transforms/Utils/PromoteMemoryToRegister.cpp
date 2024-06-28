@@ -397,7 +397,7 @@ public:
                  AssumptionCache *AC)
       : Allocas(Allocas.begin(), Allocas.end()), DT(DT),
         DIB(*DT.getRoot()->getParent()->getParent(), /*AllowUnresolved*/ false),
-        AC(AC), SQ(DT.getRoot()->getParent()->getParent()->getDataLayout(),
+        AC(AC), SQ(DT.getRoot()->getDataLayout(),
                    nullptr, &DT, AC) {}
 
   void run();

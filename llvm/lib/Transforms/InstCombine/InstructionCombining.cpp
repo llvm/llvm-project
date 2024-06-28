@@ -5342,7 +5342,7 @@ static bool combineInstructionsOverFunction(
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
     const InstCombineOptions &Opts) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.

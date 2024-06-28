@@ -2584,7 +2584,7 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
-  const DataLayout *DL = &F.getParent()->getDataLayout();
+  const DataLayout *DL = &F.getDataLayout();
   VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();

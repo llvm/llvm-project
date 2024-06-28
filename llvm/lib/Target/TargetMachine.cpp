@@ -105,7 +105,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
@@ -268,7 +268,7 @@ void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(F.getParent()->getDataLayout());
+  return TargetTransformInfo(F.getDataLayout());
 }
 
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,

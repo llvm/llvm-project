@@ -359,6 +359,10 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+const DataLayout &Function::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)

@@ -98,7 +98,7 @@ bool RISCVELFTargetObjectFile::isGlobalInSmallSection(
     return false;
 
   return isInSmallSection(
-      GVA->getParent()->getDataLayout().getTypeAllocSize(Ty));
+      GVA->getDataLayout().getTypeAllocSize(Ty));
 }
 
 MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
