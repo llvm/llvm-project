@@ -502,6 +502,24 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   return Builder.CreateTrunc(Shuffle, ResTy);
 }
 
+static Value *simplifyX86pmadd(IntrinsicInst &II,
+                               InstCombiner::BuilderTy &Builder) {
+  Value *Arg0 = II.getArgOperand(0);
+  Value *Arg1 = II.getArgOperand(1);
+  auto *ResTy = cast<FixedVectorType>(II.getType());
+  [[maybe_unused]] auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
+
+  assert(ArgTy->getNumElements() == (2 * ResTy->getNumElements()) &&
+         ResTy->getScalarSizeInBits() == (2 * ArgTy->getScalarSizeInBits()) &&
+         "Unexpected PMADD types");
+
+  // Multiply by zero.
+  if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1))
+    return ConstantAggregateZero::get(ResTy);
+
+  return nullptr;
+}
+
 static Value *simplifyX86movmsk(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
   Value *Arg = II.getArgOperand(0);
@@ -2478,6 +2496,22 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_sse2_pmadd_wd:
+  case Intrinsic::x86_avx2_pmadd_wd:
+  case Intrinsic::x86_avx512_pmaddw_d_512:
+    if (Value *V = simplifyX86pmadd(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
+  case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+  case Intrinsic::x86_avx2_pmadd_ub_sw:
+  case Intrinsic::x86_avx512_pmaddubs_w_512:
+    if (Value *V = simplifyX86pmadd(II, IC.Builder)) {
+      return IC.replaceInstUsesWith(II, V);
+    }
+    break;
+
   case Intrinsic::x86_pclmulqdq:
   case Intrinsic::x86_pclmulqdq_256:
   case Intrinsic::x86_pclmulqdq_512: {
@@ -3076,6 +3110,24 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
         UndefElts |= LaneElts;
       }
     }
+    break;
+  }
+
+  case Intrinsic::x86_sse2_pmadd_wd:
+  case Intrinsic::x86_avx2_pmadd_wd:
+  case Intrinsic::x86_avx512_pmaddw_d_512:
+  case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+  case Intrinsic::x86_avx2_pmadd_ub_sw:
+  case Intrinsic::x86_avx512_pmaddubs_w_512: {
+    // PMADD - demand both src elements that map to each dst element.
+    auto *ArgTy = II.getArgOperand(0)->getType();
+    unsigned InnerVWidth = cast<FixedVectorType>(ArgTy)->getNumElements();
+    assert((VWidth * 2) == InnerVWidth && "Unexpected input size");
+    APInt OpDemandedElts = APIntOps::ScaleBitMask(DemandedElts, InnerVWidth);
+    APInt Op0UndefElts(InnerVWidth, 0);
+    APInt Op1UndefElts(InnerVWidth, 0);
+    simplifyAndSetOp(&II, 0, OpDemandedElts, Op0UndefElts);
+    simplifyAndSetOp(&II, 1, OpDemandedElts, Op1UndefElts);
     break;
   }
 
