@@ -26,12 +26,4 @@ executable("lldb-test") {
     "SystemInitializerTest.cpp",
     "lldb-test.cpp",
   ]
-
-  if (current_os == "mac") {
-    ldflags = [ "-Wl,-dead_strip" ]
-  } else if (current_os == "win") {
-    ldflags = [ "/OPT:REF" ]
-  } else {
-    ldflags = [ "-Wl,--gc-sections" ]
-  }
 }
