@@ -43,6 +43,7 @@ namespace usage_ok {
 
   void test_assignment() {
     p = A().class_member(); // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
+    p = {A().class_member()}; // expected-warning {{object backing the pointer p will be destroyed at the end of the full-expression}}
     q = A(); // expected-warning {{object backing the pointer q will be destroyed at the end of the full-expression}}
     r = A(1); // expected-warning {{object backing the pointer r will be destroyed at the end of the full-expression}}
   }

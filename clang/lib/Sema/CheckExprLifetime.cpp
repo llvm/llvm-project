@@ -992,6 +992,8 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
   if (LK == LK_FullExpression)
     return;
 
+  // FIXME: consider moving the TemporaryVisitor and visitLocalsRetained*
+  // functions to a dedicated class.
   auto TemporaryVisitor = [&](IndirectLocalPath &Path, Local L,
                               ReferenceKind RK) -> bool {
     SourceRange DiagRange = nextPathEntryRange(Path, 0, L);
@@ -1089,7 +1091,7 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
     case LK_MemInitializer: {
       assert(InitEntity && "Expect only on initializing the entity");
 
-      if (isa<MaterializeTemporaryExpr>(L)) {
+      if (MTE) {
         // Under C++ DR1696, if a mem-initializer (or a default member
         // initializer used by the absence of one) would lifetime-extend a
         // temporary, the program is ill-formed.
@@ -1280,8 +1282,10 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
                                           TemporaryVisitor,
                                           EnableLifetimeWarnings);
   else
-    visitLocalsRetainedByInitializer(Path, Init, TemporaryVisitor, false,
-                                     EnableLifetimeWarnings);
+    visitLocalsRetainedByInitializer(
+        Path, Init, TemporaryVisitor,
+        // Don't revisit the sub inits for the intialization case.
+        /*RevisitSubinits=*/!InitEntity, EnableLifetimeWarnings);
 }
 
 } // namespace clang::sema
