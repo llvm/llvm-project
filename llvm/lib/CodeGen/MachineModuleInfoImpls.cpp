@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
@@ -42,19 +43,24 @@ MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
   return List;
 }
 
-using ExprStubPairTy = std::pair<MCSymbol *, const MCExpr *>;
-static int SortAuthStubPair(const ExprStubPairTy *LHS,
-                            const ExprStubPairTy *RHS) {
-  return LHS->first->getName().compare(RHS->first->getName());
+template <typename MachineModuleInfoTarget>
+static typename MachineModuleInfoTarget::AuthStubListTy getAuthGVStubListHelper(
+    DenseMap<MCSymbol *, typename MachineModuleInfoTarget::AuthStubInfo>
+        &AuthPtrStubs) {
+  typename MachineModuleInfoTarget::AuthStubListTy List(AuthPtrStubs.begin(),
+                                                        AuthPtrStubs.end());
+
+  if (!List.empty())
+    llvm::sort(List.begin(), List.end(),
+               [](const typename MachineModuleInfoTarget::AuthStubPairTy &LHS,
+                  const typename MachineModuleInfoTarget::AuthStubPairTy &RHS) {
+                 return LHS.first->getName() < RHS.first->getName();
+               });
+
+  AuthPtrStubs.clear();
+  return List;
 }
 
-MachineModuleInfoImpl::ExprStubListTy MachineModuleInfoImpl::getSortedExprStubs(
-    DenseMap<MCSymbol *, const MCExpr *> &ExprStubs) {
-  MachineModuleInfoImpl::ExprStubListTy List(ExprStubs.begin(),
-                                             ExprStubs.end());
-
-  array_pod_sort(List.begin(), List.end(), SortAuthStubPair);
-
-  ExprStubs.clear();
-  return List;
+MachineModuleInfoELF::AuthStubListTy MachineModuleInfoELF::getAuthGVStubList() {
+  return getAuthGVStubListHelper<MachineModuleInfoELF>(AuthPtrStubs);
 }

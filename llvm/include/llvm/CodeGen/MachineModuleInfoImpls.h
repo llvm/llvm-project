@@ -75,13 +75,19 @@ public:
 /// MachineModuleInfoELF - This is a MachineModuleInfoImpl implementation
 /// for ELF targets.
 class MachineModuleInfoELF : public MachineModuleInfoImpl {
+public:
+  struct AuthStubInfo {
+    const MCExpr *AuthPtrRef;
+  };
+
+private:
   /// GVStubs - These stubs are used to materialize global addresses in PIC
   /// mode.
   DenseMap<MCSymbol *, StubValueTy> GVStubs;
 
   /// AuthPtrStubs - These stubs are used to materialize signed addresses for
   /// extern_weak symbols.
-  DenseMap<MCSymbol *, const MCExpr *> AuthPtrStubs;
+  DenseMap<MCSymbol *, AuthStubInfo> AuthPtrStubs;
 
   virtual void anchor(); // Out of line virtual method.
 
@@ -93,8 +99,7 @@ public:
     return GVStubs[Sym];
   }
 
-
-  const MCExpr *&getAuthPtrStubEntry(MCSymbol *Sym) {
+  AuthStubInfo &getAuthPtrStubEntry(MCSymbol *Sym) {
     assert(Sym && "Key cannot be null");
     return AuthPtrStubs[Sym];
   }
@@ -103,9 +108,10 @@ public:
 
   SymbolListTy GetGVStubList() { return getSortedStubs(GVStubs); }
 
-  ExprStubListTy getAuthGVStubList() {
-    return getSortedExprStubs(AuthPtrStubs);
-  }
+  using AuthStubPairTy = std::pair<MCSymbol *, AuthStubInfo>;
+  typedef std::vector<AuthStubPairTy> AuthStubListTy;
+
+  AuthStubListTy getAuthGVStubList();
 };
 
 /// MachineModuleInfoCOFF - This is a MachineModuleInfoImpl implementation
