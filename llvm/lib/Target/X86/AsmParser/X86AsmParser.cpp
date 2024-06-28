@@ -4145,7 +4145,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   return Match_Success;
 }
 
-void ReplaceSSE2AVXOpcode(llvm::MCInst &Inst) {
+void replaceSSE2AVXOpcode(llvm::MCInst &Inst) {
   ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
   unsigned Opcode = Inst.getOpcode();
   const auto I = llvm::lower_bound(Table, Opcode);
@@ -4173,11 +4173,11 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     ForcedDataPrefix = 0;
   }
 
-  // When "-msse2avx" option is enabled ReplaceSSE2AVXOpcode method will
+  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
   // replace SSE instruction with equivalent AVX instruction using mapping given
   // in table GET_X86_SSE2AVX_TABLE
   if (MCOptions.SSE2AVX)
-    ReplaceSSE2AVXOpcode(Inst);
+    replaceSSE2AVXOpcode(Inst);
 
   switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");

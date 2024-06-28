@@ -337,17 +337,14 @@ void X86InstrMappingEmitter::emitND2NonNDTable(
   printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
 }
 
-// Method emitSSE2AVXTable will create table GET_X86_SSE2AVX_TABLE for SSE to
-// AVX instruction mapping in X86GenInstrMapping.inc file, In table first entry
-// will be SSE instruction and second entry will be equivalent AVX instruction
-// Example:-  "{ X86::ADDPDrm, X86::VADDPDrm },"
 void X86InstrMappingEmitter::emitSSE2AVXTable(
     ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
   std::vector<Entry> Table;
   for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
-
+    if (!isInteresting(Rec))
+      continue;
     auto *NewRec = Records.getDef(Name);
     if (!NewRec)
       continue;

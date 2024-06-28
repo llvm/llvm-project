@@ -72,3 +72,9 @@
 	movupd	%xmm0, (%rax)
 # CHECK-NEXT: vmovsd  -656(%rbp), %xmm0
 	movsd	-656(%rbp), %xmm0               # xmm0 = mem[0],zero
+# CHECK-NEXT: extrq   $16, $8, %xmm0                  # xmm0 = xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
+        extrq   $16, $8, %xmm0
+# CHECK-NEXT: insertq $16, $8, %xmm1, %xmm0           # xmm0 = xmm0[0,1],xmm1[0],xmm0[3,4,5,6,7,u,u,u,u,u,u,u,u]
+	insertq $16, $8, %xmm1, %xmm0
+# CHECK-NEXT: pshufw  $1, %mm0, %mm2                  # mm2 = mm0[1,0,0,0]
+	pshufw  $1, %mm0, %mm2
