@@ -200,6 +200,9 @@ private:
 
 protected:
   TargetFlagsType makeTargetFlags(const typename ELFT::Sym &Sym) override {
+    // Data symbols do not have Arm or Thumb flags.
+    if (Sym.getType() == ELF::STT_OBJECT)
+      return TargetFlagsType{};
     if (Sym.getValue() & 0x01)
       return aarch32::ThumbSymbol;
     return TargetFlagsType{};
@@ -208,6 +211,11 @@ protected:
   orc::ExecutorAddrDiff getRawOffset(const typename ELFT::Sym &Sym,
                                      TargetFlagsType Flags) override {
     assert((makeTargetFlags(Sym) & Flags) == Flags);
+    // Data relocations can be aligned to 1 making some symbol addresses have
+    // their LSB set. To access the real addresses of these symbols their LSB
+    // should be protected.
+    if (Sym.getType() == ELF::STT_OBJECT)
+      return Sym.getValue();
     static constexpr uint64_t ThumbBit = 0x01;
     return Sym.getValue() & ~ThumbBit;
   }
