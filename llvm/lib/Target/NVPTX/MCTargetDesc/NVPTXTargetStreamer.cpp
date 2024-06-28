@@ -46,8 +46,7 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
                            const MCSection *Section) {
   // FIXME: the checks for the DWARF sections are very fragile and should be
   // fixed up in a followup patch.
-  if (!Section || Section->getKind().isText() ||
-      Section->getKind().isWriteable())
+  if (!Section || Section->isText())
     return false;
   return Section == FI->getDwarfAbbrevSection() ||
          Section == FI->getDwarfInfoSection() ||
@@ -84,14 +83,15 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
 }
 
 void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
-                                        MCSection *Section,
-                                        const MCExpr *SubSection,
+                                        MCSection *Section, uint32_t SubSection,
                                         raw_ostream &OS) {
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
   // Emit closing brace for DWARF sections only.
-  if (isDwarfSection(FI, CurSection))
+  if (isDwarfSection(FI, CurSection) && HasDWARFSections) {
+    HasDWARFSections = false;
     OS << "\t}\n";
+  }
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
     outputDwarfFileDirectives();
@@ -102,6 +102,7 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     // DWARF sections are enclosed into braces - emit the open one.
     OS << "\t{\n";
     HasSections = true;
+    HasDWARFSections = true;
   }
 }
 

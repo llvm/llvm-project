@@ -5,7 +5,7 @@ target triple = "powerpc-ibm-aix7.2.0.0"
 
 %struct.widget = type { i8, i8, i8 }
 
-; CHECK: @global = {{.*}}constant %struct.widget { i8 4, i8 0, i8 0 }, align 8 #0
+; CHECK: @global = {{.*}}constant %struct.widget { i8 4, i8 0, i8 0 }, align 4 #0
 @global = constant %struct.widget { i8 4, i8 0, i8 0 }, align 4 #0
 
 define void @baz() #1 {

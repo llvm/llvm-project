@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/sys/auxv/getauxval.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
 
 namespace LIBC_NAMESPACE {
 

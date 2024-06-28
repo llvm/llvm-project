@@ -939,12 +939,7 @@ def int_instrprof_mcdc_parameters : Intrinsic<[],
 // A test vector bitmap update for instrumentation based MCDC profiling.
 def int_instrprof_mcdc_tvbitmap_update : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty]>;
-
-// A condition bitmap value update for instrumentation based MCDC profiling.
-def int_instrprof_mcdc_condbitmap_update : Intrinsic<[],
-                                        [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_ptr_ty, llvm_i1_ty]>;
+                                         llvm_i32_ty, llvm_ptr_ty]>;
 
 def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
 def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
@@ -1024,9 +1019,15 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   // environment so they can be treated as readnone.
   def int_sqrt : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_powi : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
+  def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_sinh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_cosh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_tanh : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_pow  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_log  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;

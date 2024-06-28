@@ -120,6 +120,7 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <stack>
 #include <string>
 #include <unordered_map>
 #include <utility>

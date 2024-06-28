@@ -130,6 +130,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceilf
     libc.src.math.ceill
     libc.src.math.coshf
+    libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.erff
     libc.src.math.exp
@@ -224,8 +225,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
+    libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinhf
+    libc.src.math.sin
     libc.src.math.sinf
     libc.src.math.sqrt
     libc.src.math.sqrtf

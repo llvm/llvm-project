@@ -3972,7 +3972,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .add(*Src1)
-                  .addImm(Imm);
+                  .addImm(Imm)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -3991,7 +3992,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4012,7 +4014,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src1)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4048,7 +4051,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .addImm(Src2Mods ? Src2Mods->getImm() : 0)
             .add(*Src2)
             .addImm(Clamp ? Clamp->getImm() : 0)
-            .addImm(Omod ? Omod->getImm() : 0);
+            .addImm(Omod ? Omod->getImm() : 0)
+            .setMIFlags(MI.getFlags());
   if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
     MIB.addImm(OpSel ? OpSel->getImm() : 0);
   updateLiveVariables(LV, MI, *MIB);

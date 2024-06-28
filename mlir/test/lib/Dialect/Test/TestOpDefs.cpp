@@ -329,8 +329,6 @@ void SideEffectOp::getEffects(
   if (!effectsAttr)
     return;
 
-  // If there is one, it is an array of dictionary attributes that hold
-  // information on the effects of this operation.
   for (Attribute element : effectsAttr) {
     DictionaryAttr effectElement = cast<DictionaryAttr>(element);
 
@@ -350,7 +348,7 @@ void SideEffectOp::getEffects(
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
-      effects.emplace_back(effect, getResult(), resource);
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
     else if (Attribute ref = effectElement.get("on_reference"))
       effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
     else
@@ -359,6 +357,51 @@ void SideEffectOp::getEffects(
 }
 
 void SideEffectOp::getEffects(
+    SmallVectorImpl<TestEffects::EffectInstance> &effects) {
+  testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+void SideEffectWithRegionOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Check for an effects attribute on the op instance.
+  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  if (!effectsAttr)
+    return;
+
+  for (Attribute element : effectsAttr) {
+    DictionaryAttr effectElement = cast<DictionaryAttr>(element);
+
+    // Get the specific memory effect.
+    MemoryEffects::Effect *effect =
+        StringSwitch<MemoryEffects::Effect *>(
+            cast<StringAttr>(effectElement.get("effect")).getValue())
+            .Case("allocate", MemoryEffects::Allocate::get())
+            .Case("free", MemoryEffects::Free::get())
+            .Case("read", MemoryEffects::Read::get())
+            .Case("write", MemoryEffects::Write::get());
+
+    // Check for a non-default resource to use.
+    SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+    if (effectElement.get("test_resource"))
+      resource = TestResource::get();
+
+    // Check for a result to affect.
+    if (effectElement.get("on_result"))
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
+    else if (effectElement.get("on_operand"))
+      effects.emplace_back(effect, &getOperation()->getOpOperands()[0],
+                           resource);
+    else if (effectElement.get("on_argument"))
+      effects.emplace_back(effect, getOperation()->getRegion(0).getArgument(0),
+                           resource);
+    else if (Attribute ref = effectElement.get("on_reference"))
+      effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
+    else
+      effects.emplace_back(effect, resource);
+  }
+}
+
+void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
 }
@@ -1027,7 +1070,7 @@ void ReadBufferOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   // The buffer operand is read.
-  effects.emplace_back(MemoryEffects::Read::get(), getBuffer(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getBufferMutable(),
                        SideEffects::DefaultResource::get());
   // The buffer contents are dumped.
   effects.emplace_back(MemoryEffects::Write::get(),

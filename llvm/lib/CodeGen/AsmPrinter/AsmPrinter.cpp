@@ -444,7 +444,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -478,11 +478,13 @@ bool AsmPrinter::doInitialization(Module &M) {
   // use the directive, where it would need the same conditionalization
   // anyway.
   const Triple &Target = TM.getTargetTriple();
-  Triple TVT(M.getDarwinTargetVariantTriple());
-  OutStreamer->emitVersionForTarget(
-      Target, M.getSDKVersion(),
-      M.getDarwinTargetVariantTriple().empty() ? nullptr : &TVT,
-      M.getDarwinTargetVariantSDKVersion());
+  if (Target.isOSBinFormatMachO() && Target.isOSDarwin()) {
+    Triple TVT(M.getDarwinTargetVariantTriple());
+    OutStreamer->emitVersionForTarget(
+        Target, M.getSDKVersion(),
+        M.getDarwinTargetVariantTriple().empty() ? nullptr : &TVT,
+        M.getDarwinTargetVariantSDKVersion());
+  }
 
   // Allow the target to emit any magic that it wants at the start of the file.
   emitStartOfAsmFile(M);
@@ -783,7 +785,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   SectionKind GVKind = TargetLoweringObjectFile::getKindForGlobal(GV, TM);
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
 
   // If the alignment is specified, we *must* obey it.  Overaligning a global
@@ -871,7 +873,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       emitAlignment(Alignment, GV);
       OutStreamer->emitLabel(MangSym);
 
-      emitGlobalConstant(GV->getParent()->getDataLayout(),
+      emitGlobalConstant(GV->getDataLayout(),
                          GV->getInitializer());
     }
 
@@ -911,7 +913,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (LocalAlias != EmittedInitSym)
     OutStreamer->emitLabel(LocalAlias);
 
-  emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
+  emitGlobalConstant(GV->getDataLayout(), GV->getInitializer());
 
   if (MAI->hasDotTypeDotSizeDirective())
     // .size foo, 42
@@ -935,7 +937,7 @@ void AsmPrinter::emitFunctionPrefix(ArrayRef<const Constant *> Prefix) {
   const Function &F = MF->getFunction();
   if (!MAI->hasSubsectionsViaSymbols()) {
     for (auto &C : Prefix)
-      emitGlobalConstant(F.getParent()->getDataLayout(), C);
+      emitGlobalConstant(F.getDataLayout(), C);
     return;
   }
   // Preserving prefix-like data on platforms which use subsections-via-symbols
@@ -945,7 +947,7 @@ void AsmPrinter::emitFunctionPrefix(ArrayRef<const Constant *> Prefix) {
   OutStreamer->emitLabel(OutContext.createLinkerPrivateTempSymbol());
 
   for (auto &C : Prefix) {
-    emitGlobalConstant(F.getParent()->getDataLayout(), C);
+    emitGlobalConstant(F.getDataLayout(), C);
   }
 
   // Emit an .alt_entry directive for the actual function symbol.
@@ -1080,7 +1082,7 @@ void AsmPrinter::emitFunctionHeader() {
 
   // Emit the prologue data.
   if (F.hasPrologueData())
-    emitGlobalConstant(F.getParent()->getDataLayout(), F.getPrologueData());
+    emitGlobalConstant(F.getDataLayout(), F.getPrologueData());
 }
 
 /// EmitFunctionEntryLabel - Emit the label that is the entrypoint for the
@@ -1478,8 +1480,9 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
             : nullptr;
     const MachineBranchProbabilityInfo *MBPI =
-        Features.BrProb ? &getAnalysis<MachineBranchProbabilityInfo>()
-                        : nullptr;
+        Features.BrProb
+            ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
+            : nullptr;
 
     if (Features.BBFreq || Features.BrProb) {
       for (const MachineBasicBlock &MBB : MF) {
@@ -1527,7 +1530,7 @@ void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
 void AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
   if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
-    emitGlobalConstant(F.getParent()->getDataLayout(),
+    emitGlobalConstant(F.getDataLayout(),
                        mdconst::extract<ConstantInt>(MD->getOperand(0)));
 }
 
@@ -1677,7 +1680,7 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         for (const MDOperand &AuxMDO : AuxMDs->operands()) {
           assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
           const Constant *C = cast<ConstantAsMetadata>(AuxMDO)->getValue();
-          const DataLayout &DL = F.getParent()->getDataLayout();
+          const DataLayout &DL = F.getDataLayout();
           const uint64_t Size = DL.getTypeStoreSize(C->getType());
 
           if (auto *CI = dyn_cast<ConstantInt>(C);
@@ -2415,8 +2418,7 @@ bool AsmPrinter::doFinalization(Module &M) {
             SectionName,
             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                 COFF::IMAGE_SCN_LNK_COMDAT,
-            SectionKind::getReadOnly(), Stub.first->getName(),
-            COFF::IMAGE_COMDAT_SELECT_ANY));
+            Stub.first->getName(), COFF::IMAGE_COMDAT_SELECT_ANY));
         emitAlignment(Align(DL.getPointerSize()));
         OutStreamer->emitSymbolAttribute(Stub.first, MCSA_Global);
         OutStreamer->emitLabel(Stub.first);
@@ -2464,15 +2466,11 @@ bool AsmPrinter::doFinalization(Module &M) {
     emitGlobalIFunc(M, IFunc);
 
   // Finalize debug and EH information.
-  // Defer MCAssembler based constant folding due to a performance issue. The
-  // label differences will be evaluated at write time.
-  OutStreamer->setUseAssemblerInfoForParsing(false);
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->endModule();
   }
-  OutStreamer->setUseAssemblerInfoForParsing(true);
 
   // This deletes all the ephemeral handlers that AsmPrinter added, while
   // keeping all the user-added handlers alive until the AsmPrinter is
@@ -2804,10 +2802,8 @@ void AsmPrinter::emitJumpTableInfo() {
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
-    OutStreamer->setUseAssemblerInfoForParsing(false);
     for (const MachineBasicBlock *MBB : JTBBs)
       emitJumpTableEntry(MJTI, MBB, JTI);
-    OutStreamer->setUseAssemblerInfoForParsing(true);
   }
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
@@ -2898,8 +2894,8 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     // For ARM64EC, print the table that maps between symbols and the
     // corresponding thunks to translate between x64 and AArch64 code.
     // This table is generated by AArch64Arm64ECCallLowering.
-    OutStreamer->switchSection(OutContext.getCOFFSection(
-        ".hybmp$x", COFF::IMAGE_SCN_LNK_INFO, SectionKind::getMetadata()));
+    OutStreamer->switchSection(
+        OutContext.getCOFFSection(".hybmp$x", COFF::IMAGE_SCN_LNK_INFO));
     auto *Arr = cast<ConstantArray>(GV->getInitializer());
     for (auto &U : Arr->operands()) {
       auto *C = cast<Constant>(U);
@@ -2932,14 +2928,14 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
   assert(GV->hasInitializer() && "Not a special LLVM global!");
 
   if (GV->getName() == "llvm.global_ctors") {
-    emitXXStructorList(GV->getParent()->getDataLayout(), GV->getInitializer(),
+    emitXXStructorList(GV->getDataLayout(), GV->getInitializer(),
                        /* isCtor */ true);
 
     return true;
   }
 
   if (GV->getName() == "llvm.global_dtors") {
-    emitXXStructorList(GV->getParent()->getDataLayout(), GV->getInitializer(),
+    emitXXStructorList(GV->getDataLayout(), GV->getInitializer(),
                        /* isCtor */ false);
 
     return true;
@@ -3153,12 +3149,12 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
 void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
                                unsigned MaxBytesToEmit) const {
   if (GV)
-    Alignment = getGVAlignment(GV, GV->getParent()->getDataLayout(), Alignment);
+    Alignment = getGVAlignment(GV, GV->getDataLayout(), Alignment);
 
   if (Alignment == Align(1))
     return; // 1-byte aligned: no need to emit alignment.
 
-  if (getCurrentSection()->getKind().isText()) {
+  if (getCurrentSection()->isText()) {
     const MCSubtargetInfo *STI = nullptr;
     if (this->MF)
       STI = &getSubtargetInfo();

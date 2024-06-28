@@ -299,6 +299,9 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
       CodeGenOpts, this));
 
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
     setupLLVMOptimizationRemarks(
       Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
@@ -1204,6 +1207,9 @@ void CodeGenAction::ExecuteAction() {
   Ctx.setDiscardValueNames(false);
   Ctx.setDiagnosticHandler(
       std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
+
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

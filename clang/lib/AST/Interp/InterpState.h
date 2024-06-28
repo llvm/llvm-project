@@ -121,6 +121,8 @@ public:
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
   SourceLocation EvalLocation;
+  /// Declaration we're initializing/evaluting, if any.
+  const VarDecl *EvaluatingDecl = nullptr;
 };
 
 } // namespace interp

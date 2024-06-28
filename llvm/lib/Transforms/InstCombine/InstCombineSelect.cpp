@@ -485,10 +485,9 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   }
   if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {
     auto *FGEP = cast<GetElementPtrInst>(FI);
-    Type *ElementType = TGEP->getResultElementType();
-    return TGEP->isInBounds() && FGEP->isInBounds()
-               ? GetElementPtrInst::CreateInBounds(ElementType, Op0, {Op1})
-               : GetElementPtrInst::Create(ElementType, Op0, {Op1});
+    Type *ElementType = TGEP->getSourceElementType();
+    return GetElementPtrInst::Create(
+        ElementType, Op0, Op1, TGEP->getNoWrapFlags() & FGEP->getNoWrapFlags());
   }
   llvm_unreachable("Expected BinaryOperator or GEP");
   return nullptr;
@@ -1311,7 +1310,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
 
       // If NewOp is a constant and OldOp is not replace iff NewOp doesn't
       // contain and undef elements.
-      if (match(NewOp, m_ImmConstant())) {
+      if (match(NewOp, m_ImmConstant()) || NewOp == V) {
         if (isGuaranteedNotToBeUndef(NewOp, SQ.AC, &Sel, &DT))
           return replaceOperand(Sel, Swapped ? 2 : 1, V);
         return nullptr;
@@ -1530,7 +1529,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
         !match(ReplacementHigh, m_ImmConstant(HighC)))
       return nullptr;
-    const DataLayout &DL = Sel0.getModule()->getDataLayout();
+    const DataLayout &DL = Sel0.getDataLayout();
     ReplacementLow =
         ConstantFoldCastOperand(Instruction::SExt, LowC, X->getType(), DL);
     ReplacementHigh =
@@ -3706,16 +3705,15 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     Value *Idx = Gep->getOperand(1);
     if (isa<VectorType>(CondVal->getType()) && !isa<VectorType>(Idx->getType()))
       return nullptr;
-    Type *ElementType = Gep->getResultElementType();
+    Type *ElementType = Gep->getSourceElementType();
     Value *NewT = Idx;
     Value *NewF = Constant::getNullValue(Idx->getType());
     if (Swap)
       std::swap(NewT, NewF);
     Value *NewSI =
         Builder.CreateSelect(CondVal, NewT, NewF, SI.getName() + ".idx", &SI);
-    if (Gep->isInBounds())
-      return GetElementPtrInst::CreateInBounds(ElementType, Ptr, {NewSI});
-    return GetElementPtrInst::Create(ElementType, Ptr, {NewSI});
+    return GetElementPtrInst::Create(ElementType, Ptr, NewSI,
+                                     Gep->getNoWrapFlags());
   };
   if (auto *TrueGep = dyn_cast<GetElementPtrInst>(TrueVal))
     if (auto *NewGep = SelectGepWithBase(TrueGep, FalseVal, false))

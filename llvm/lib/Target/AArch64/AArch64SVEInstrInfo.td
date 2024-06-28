@@ -3351,7 +3351,7 @@ let Predicates = [HasSVEorSME] in {
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), dsub)>;
 
   // Extract element from vector with immediate index that's within the bottom 128-bits.
-  let Predicates = [IsNeonAvailable], AddedComplexity = 1 in {
+  let Predicates = [HasNEON], AddedComplexity = 1 in {
   def : Pat<(i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)),
             (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)),
@@ -3360,9 +3360,9 @@ let Predicates = [HasSVEorSME] in {
             (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
-  } // End IsNeonAvailable
+  } // End HasNEON
 
-  let Predicates = [IsNeonAvailable] in {
+  let Predicates = [HasNEON] in {
   def : Pat<(sext_inreg (vector_extract nxv16i8:$vec, VectorIndexB:$index), i8),
             (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index))), i8),
@@ -3375,7 +3375,7 @@ let Predicates = [HasSVEorSME] in {
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
             (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
-  } // End IsNeonAvailable
+  } // End HasNEON
 
   // Extract first element from vector.
   let AddedComplexity = 2 in {

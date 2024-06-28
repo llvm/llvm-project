@@ -34,6 +34,7 @@ constexpr const char categoryClassMethods[] =
 constexpr const char categoryProtocols[] = "__OBJC_CATEGORY_PROTOCOLS_$_";
 
 constexpr const char swift_objc_category[] = "__CATEGORY_";
+constexpr const char swift_objc_klass[] = "_$s";
 } // namespace symbol_names
 
 // Check for duplicate method names within related categories / classes.

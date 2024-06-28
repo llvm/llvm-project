@@ -924,12 +924,28 @@ def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
         "integer}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
+def err_ptrauth_bad_constant_pointer :
+  Error<"argument to ptrauth_sign_constant must refer to a global variable "
+        "or function">;
+def err_ptrauth_bad_constant_discriminator :
+  Error<"discriminator argument to ptrauth_sign_constant must be a constant "
+        "integer, the address of the global variable where the result "
+        "will be stored, or a blend of the two">;
 def warn_ptrauth_sign_null_pointer :
   Warning<"signing a null pointer will yield a non-null pointer">,
   InGroup<PtrAuthNullPointers>;
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_string_not_literal : Error<
+  "argument must be a string literal%select{| of char type}0">;
+
+def note_ptrauth_virtual_function_pointer_incomplete_arg_ret :
+  Note<"cannot take an address of a virtual member function if its return or "
+       "argument types are incomplete">;
+def note_ptrauth_virtual_function_incomplete_arg_ret_type :
+  Note<"%0 is incomplete">;
+
 
 /// main()
 // static main() is not an error in C, just in C++.
@@ -964,7 +980,7 @@ def err_main_global_variable :
 def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
-  "ISO C++ does not allow 'main' to be used by a program">, InGroup<Main>;
+    "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -1097,8 +1113,6 @@ def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
-def err_pragma_loop_invalid_argument_value : Error<
-  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
 def err_pragma_loop_compatibility : Error<
   "%select{incompatible|duplicate}0 directives '%1' and '%2'">;
 def err_pragma_loop_precedes_nonloop : Error<
@@ -3200,9 +3214,8 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048">;
-def warn_attribute_arm_sm_incompat_builtin : Warning<
-  "builtin call has undefined behaviour when called from a %0 function">,
-  InGroup<DiagGroup<"undefined-arm-streaming">>;
+def err_attribute_arm_sm_incompat_builtin : Error<
+  "builtin can only be called from a %0 function">;
 def warn_attribute_arm_za_builtin_no_za_state : Warning<
   "builtin call is not valid when calling from a function without active ZA state">,
   InGroup<DiagGroup<"undefined-arm-za">>;
@@ -3240,6 +3253,9 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_attribute_unsupported_m_profile
+    : Error<"on M-profile architectures %0 attribute is not supported on targets missing %1;"
+            " specify an appropriate -march= or -mcpu=">;
 def err_duplicate_target_attribute
     : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
@@ -3266,11 +3282,23 @@ def warn_aligned_attr_underaligned : Warning<err_alignas_underaligned.Summary>,
 def err_attribute_sizeless_type : Error<
   "%0 attribute cannot be applied to sizeless type %1">;
 def err_attribute_argument_n_type : Error<
-  "%0 attribute requires parameter %1 to be %select{int or bool|an integer "
-  "constant|a string|an identifier|a constant expression|a builtin function}2">;
+  "%0 attribute requires parameter %1 to be %select{"
+  "int or bool"
+  "|an integer constant"
+  "|a string"
+  "|an identifier"
+  "|a constant expression"
+  "|a builtin function"
+  "|nullptr or a bool, int, or enum literal}2">;
 def err_attribute_argument_type : Error<
-  "%0 attribute requires %select{int or bool|an integer "
-  "constant|a string|an identifier}1">;
+  "%0 attribute requires %select{"
+  "int or bool"
+  "|an integer constant"
+  "|a string"
+  "|an identifier"
+  "|a constant expression"
+  "|a builtin function"
+  "|a pointer or a bool, int, or enum literal}1">;
 def err_attribute_argument_out_of_range : Error<
   "%0 attribute requires integer constant between %1 and %2 inclusive">;
 def err_init_priority_object_attr : Error<
@@ -3722,7 +3750,8 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions}2">,
+  "|non-K&R-style functions"
+  "|functions that return bool, integer, or a pointer type}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
@@ -5360,10 +5389,7 @@ def err_not_class_template_specialization : Error<
   "cannot specialize a %select{dependent template|template template "
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
-  "explicit specialization cannot have a storage class">;
-def err_explicit_specialization_inconsistent_storage_class : Error<
-  "explicit specialization has extraneous, inconsistent storage class "
-  "'%select{none|extern|static|__private_extern__|auto|register}0'">;
+  "explicit specialization cannot have a storage class">, InGroup<ExplicitSpecializationStorageClass>;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
@@ -6072,6 +6098,9 @@ def err_thread_thread_different_kind : Error<
 def err_mismatched_owning_module : Error<
   "declaration of %0 in %select{the global module|module %2}1 follows "
   "declaration in %select{the global module|module %4}3">;
+def err_multiple_decl_in_different_modules : Error<
+  "declaration %0 attached to named module '%1' can't be attached to "
+  "other modules">;
 def err_redefinition_different_type : Error<
   "redefinition of %0 with a different type%diff{: $ vs $|}1,2">;
 def err_redefinition_different_kind : Error<
@@ -8779,9 +8808,6 @@ def err_typecheck_incomplete_type_not_modifiable_lvalue : Error<
 def err_typecheck_lvalue_casts_not_supported : Error<
   "assignment to cast is illegal, lvalue casts are not supported">;
 
-def note_typecheck_add_deref_star_not_modifiable_lvalue : Note<
-  "add '*' to dereference it">; 
-
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
 def err_block_decl_ref_not_modifiable_lvalue : Error<
@@ -8937,6 +8963,8 @@ def err_expected_callable_argument : Error<
   "expected a callable expression as %ordinal0 argument to %1, found %2">;
 def note_building_builtin_dump_struct_call : Note<
   "in call to printing function with arguments '(%0)' while dumping struct">;
+def err_builtin_verbose_trap_arg : Error<
+  "argument to __builtin_verbose_trap must %select{be a pointer to a constant string|not contain $}0">;
 
 def err_atomic_load_store_uses_lib : Error<
   "atomic %select{load|store}0 requires runtime support that is not "
@@ -10881,6 +10909,23 @@ def warn_imp_cast_drops_unaligned : Warning<
   "implicit cast from type %0 to type %1 drops __unaligned qualifier">,
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
+// Function effects
+// spoofing nonblocking/nonallocating
+def warn_invalid_add_func_effects : Warning<
+  "attribute '%0' should not be added via type conversion">,
+  InGroup<FunctionEffects>;
+def warn_mismatched_func_effect_override : Warning<
+  "attribute '%0' on overriding function does not match base declaration">,
+  InGroup<FunctionEffects>;
+def warn_mismatched_func_effect_redeclaration : Warning<
+  "attribute '%0' on function does not match previous declaration">,
+  InGroup<FunctionEffects>;
+def warn_conflicting_func_effects : Warning<
+  "effects conflict when merging declarations; kept '%0', discarded '%1'">,
+  InGroup<FunctionEffects>;
+def err_func_with_effects_no_prototype : Error<
+  "'%0' function must have a prototype">;
+
 } // end of sema category
 
 let CategoryName = "API Notes Issue" in {
@@ -11072,7 +11117,7 @@ def err_omp_loop_variable_type : Error<
 def err_omp_loop_incr_not_compatible : Error<
   "increment expression must cause %0 to %select{decrease|increase}1 "
   "on each iteration of OpenMP for loop">;
-def note_omp_loop_cond_requres_compatible_incr : Note<
+def note_omp_loop_cond_requires_compatible_incr : Note<
   "loop step is expected to be %select{negative|positive}0 due to this condition">;
 def err_omp_loop_diff_cxx : Error<
   "could not calculate number of iterations calling 'operator-' with "
@@ -11135,16 +11180,12 @@ def err_omp_several_directives_in_region : Error<
 def note_omp_previous_directive : Note<
   "previous '%0' directive used here">;
 def err_omp_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp sections' must be a compound statement">;
-def err_omp_parallel_sections_not_compound_stmt : Error<
-  "the statement for '#pragma omp parallel sections' must be a compound statement">;
+  "the statement for '#pragma omp %0' must be a compound statement">;
 def err_omp_orphaned_section_directive : Error<
   "%select{orphaned 'omp section' directives are prohibited, it|'omp section' directive}0"
   " must be closely nested to a sections region%select{|, not a %1 region}0">;
 def err_omp_sections_substmt_not_section : Error<
-  "statement in 'omp sections' directive must be enclosed into a section region">;
-def err_omp_parallel_sections_substmt_not_section : Error<
-  "statement in 'omp parallel sections' directive must be enclosed into a section region">;
+  "statement in 'omp %0' directive must be enclosed into a section region">;
 def err_omp_parallel_reduction_in_task_firstprivate : Error<
   "argument of a reduction clause of a %0 construct must not appear in a firstprivate clause on a task construct">;
 def err_omp_atomic_read_not_expression_statement : Error<
@@ -12182,6 +12223,30 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
+// VTable pointer authentication errors
+def err_non_polymorphic_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on monomorphic type %0">;
+def err_incomplete_type_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on an incomplete type %0">;
+def err_non_top_level_vtable_pointer_auth : Error<
+  "cannot set vtable pointer authentication on %0 which is a subclass of polymorphic type %1">;
+def err_duplicated_vtable_pointer_auth : Error<
+  "multiple vtable pointer authentication policies on %0">;
+def err_invalid_authentication_key : Error<
+  "invalid authentication key %0">;
+def err_invalid_address_discrimination : Error<
+  "invalid address discrimination mode %0">;
+def err_invalid_extra_discrimination : Error<
+  "invalid extra discrimination selection %0">;
+def err_invalid_custom_discrimination : Error<
+  "invalid custom discrimination">;
+def err_missing_custom_discrimination : Error<
+  "missing custom discrimination">;
+def err_no_default_vtable_pointer_auth : Error<
+  "cannot specify a default vtable pointer authentication "
+  "%select{key|address discrimination mode|discriminator}0 with no default set"
+>;
+
 def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
@@ -12215,6 +12280,9 @@ def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
 def err_std_source_location_impl_malformed : Error<
   "'std::source_location::__impl' must be standard-layout and have only two 'const char *' fields '_M_file_name' and '_M_function_name', and two integral fields '_M_line' and '_M_column'">;
+
+def err_std_initializer_list_malformed : Error<
+  "%0 layout not recognized. Must be a non-polymorphic class type with no bases and two fields: a 'const E *' and either another 'const E *' or a 'std::size_t'">;
 
 // HLSL Diagnostics
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;

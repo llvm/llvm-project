@@ -68,7 +68,7 @@ private:
   }
   template <typename... A>
   void show(const std::variant<A...> &u) {
-    std::visit([&](const auto &v) { show(v); }, u);
+    Fortran::common::visit([&](const auto &v) { show(v); }, u);
   }
   template <typename A>
   void show(const std::vector<A> &x) {
