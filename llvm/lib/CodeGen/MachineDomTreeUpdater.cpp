@@ -13,9 +13,8 @@
 
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <algorithm>
 #include <functional>
@@ -25,6 +24,11 @@ namespace llvm {
 
 template class GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
+
+template void
+GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
+                      MachinePostDominatorTree>::recalculate(MachineFunction
+                                                                 &MF);
 
 bool MachineDomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())
