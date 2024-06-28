@@ -1032,25 +1032,18 @@ void State::addInfoForInductions(BasicBlock &BB) {
       DTN, CmpInst::ICMP_SLT, PN, B,
       ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
 
+  // Try to add condition from header to the exit blocks. When exiting either
+  // with EQ or NE in the header, we know that the induction value must be u<=
+  // B, as other exits may only exit earlier.
   assert(!StepOffset.isNegative() && "induction must be increasing");
-  // Try to add condition from header to the unique exit block, if there is one.
-  // When exiting either with EQ or NE, we know that the induction value must be
-  // u<= B, as a different exit may exit earlier.
-  ConditionTy Precond;
-  if (!MonotonicallyIncreasingUnsigned)
-    Precond = {CmpInst::ICMP_ULE, StartValue, B};
-  if (Pred == CmpInst::ICMP_EQ) {
-    BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
-    if (L->getUniqueExitBlock() == EB) {
-      WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
-    }
-  }
-  if (Pred == CmpInst::ICMP_NE) {
-    BasicBlock *EB = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
-    if (L->getUniqueExitBlock() == EB)
-      WorkList.emplace_back(FactOrCheck::getConditionFact(
-          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
+         "unsupported predicate");
+  ConditionTy Precond = {CmpInst::ICMP_ULE, StartValue, B};
+  SmallVector<BasicBlock *> ExitBBs;
+  L->getExitBlocks(ExitBBs);
+  for (BasicBlock *EB : ExitBBs) {
+    WorkList.emplace_back(FactOrCheck::getConditionFact(
+        DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
   }
 }
 

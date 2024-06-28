@@ -541,8 +541,7 @@ define i1 @multi_exiting_loop_eq_different_exits_2_const_compare_known(ptr %s, i
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LATCH_C]], label %[[LOOP_HEADER]], label %[[EXIT_2]]
 ; CHECK:       [[EXIT_1]]:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[IV]], 1235
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT_2]]:
 ; CHECK-NEXT:    ret i1 true
 ;
