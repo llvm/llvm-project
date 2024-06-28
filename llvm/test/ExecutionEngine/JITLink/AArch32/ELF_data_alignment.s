@@ -15,7 +15,7 @@
 # RUN:              -slab-page-size 4096 %t_thumbv7.o -check %s
 
 # The strings of "H1\00", "H2\00" and "H3\00" are encoded as
-#               0x483100, 0x483200 and 0x483300 .rodata section.
+#               0x483100, 0x483200 and 0x483300 in the .rodata section.
 # CHECK-OBJ: Contents of section .rodata:
 # CHECK-OBJ: 0000 48310048 32004833 00                 H1.H2.H3.
 
@@ -29,13 +29,8 @@
 # CHECK-LG-NOT:       0x2 (block + 0x00000002): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H2
 # CHECK-LG-NEXT:      0x6 (block + 0x00000006): size: 0x00000003, linkage: strong, scope: default, live  -   Lstr.H3
 
-# FIXME: The expression we want is either *{3}(Lstr.H1) = ...
-#                                  or *{4}(Lstr.H1) & 0x00ffffff = ...
-#        The first is not supported and the latter segfaults.
-#        Also, whitespaces are not recognized and not consumed by the checker.
-
 # jitlink-check: Lstr.H1 = 0x76ff0000
-# jitlink-check: 0x00ffffff&*{4}(Lstr.H1) = 0x003148
+# jitlink-check: (*{4}(Lstr.H1))[23:0] = 0x003148
 	.globl	Lstr.H1
 	.type	Lstr.H1,%object
 	.section	.rodata,"a",%progbits
@@ -46,7 +41,7 @@ Lstr.H1:
 # H2 is unaligned as its beginning address is base address + 0x3
 # Make sure the string we get is 0x003248 and not 0x324800
 # jitlink-check: Lstr.H2 = 0x76ff0003
-# jitlink-check: 0x00ffffff&*{4}(Lstr.H2) = 0x003248
+# jitlink-check: (*{4}(Lstr.H2))[23:0] = 0x003248
 	.globl	Lstr.H2
 	.type	Lstr.H2,%object
 Lstr.H2:
@@ -54,7 +49,7 @@ Lstr.H2:
 	.size	Lstr.H2, 3
 
 # jitlink-check: Lstr.H3 = 0x76ff0006
-# jitlink-check: 0x00ffffff&*{4}(Lstr.H3) = 0x003348
+# jitlink-check: (*{4}(Lstr.H3))[23:0] = 0x003348
 	.globl	Lstr.H3
 	.type	Lstr.H3,%object
 Lstr.H3:
