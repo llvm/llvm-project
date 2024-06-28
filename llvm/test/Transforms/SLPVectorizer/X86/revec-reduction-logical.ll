@@ -27,6 +27,15 @@ define i1 @logical_and_icmp_diff_preds(<4 x i32> %x) {
 }
 
 define i1 @logical_and_icmp_clamp(<4 x i32> %x) {
+; CHECK-LABEL: @logical_and_icmp_clamp(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <8 x i32> [[TMP1]], <i32 17, i32 17, i32 17, i32 17, i32 42, i32 42, i32 42, i32 42>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <8 x i32> [[TMP1]], <i32 17, i32 17, i32 17, i32 17, i32 42, i32 42, i32 42, i32 42>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <8 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP5]])
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
   %x0 = extractelement <4 x i32> %x, i32 0
   %x1 = extractelement <4 x i32> %x, i32 1
   %x2 = extractelement <4 x i32> %x, i32 2
