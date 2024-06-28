@@ -13,6 +13,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 
