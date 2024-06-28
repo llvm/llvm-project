@@ -55734,6 +55734,28 @@ static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Helper to determine if we can convert an integer comparison to a float
+// comparison byt casting the operands.
+static std::optional<unsigned>
+CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
+                 unsigned NumSignificantBitsRHS) {
+  MVT SVT = VT.getScalarType();
+  assert(SVT == MVT::f32 && "Only tested for float so far");
+  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(SVT);
+  assert((CC == ISD::SETEQ || CC == ISD::SETGT) &&
+         "Only PCMPEQ/PCMPGT currently supported");
+
+  // TODO: Handle bitcastable integers.
+
+  // For cvt + signed compare we need lhs and rhs to be exactly representable as
+  // a fp value.
+  unsigned FPPrec = APFloat::semanticsPrecision(Sem);
+  if (FPPrec >= NumSignificantBitsLHS && FPPrec >= NumSignificantBitsRHS)
+    return ISD::SINT_TO_FP;
+
+  return std::nullopt;
+}
+
 /// Helper that combines an array of subvector ops as if they were the operands
 /// of a ISD::CONCAT_VECTORS node, but may have come from another source (e.g.
 /// ISD::INSERT_SUBVECTOR). The ops are assumed to be of the same type.
@@ -56126,11 +56148,50 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256() &&
+      if (!IsSplat && VT.is256BitVector() &&
+          (Subtarget.hasInt256() || VT == MVT::v8i32) &&
           (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1));
+        if (Subtarget.hasInt256())
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             ConcatSubOperand(VT, Ops, 0),
+                             ConcatSubOperand(VT, Ops, 1));
+
+        // Without AVX2, see if we can cast the values to v8f32 and use fcmp.
+        // TODO: Handle v4f64 as well?
+        unsigned MaxSigBitsLHS = 0, MaxSigBitsRHS = 0;
+        for (unsigned I = 0; I != NumOps; ++I) {
+          MaxSigBitsLHS =
+              std::max(MaxSigBitsLHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(0)));
+          MaxSigBitsRHS =
+              std::max(MaxSigBitsRHS,
+                       DAG.ComputeMaxSignificantBits(Ops[I].getOperand(1)));
+          if (MaxSigBitsLHS == EltSizeInBits && MaxSigBitsRHS == EltSizeInBits)
+            break;
+        }
+
+        ISD::CondCode ICC =
+            Op0.getOpcode() == X86ISD::PCMPEQ ? ISD::SETEQ : ISD::SETGT;
+        ISD::CondCode FCC =
+            Op0.getOpcode() == X86ISD::PCMPEQ ? ISD::SETOEQ : ISD::SETOGT;
+
+        MVT FpSVT = MVT::getFloatingPointVT(EltSizeInBits);
+        MVT FpVT = VT.changeVectorElementType(FpSVT);
+
+        if (std::optional<unsigned> CastOpc =
+                CastIntSETCCtoFP(FpVT, ICC, MaxSigBitsLHS, MaxSigBitsRHS)) {
+          SDValue LHS = ConcatSubOperand(VT, Ops, 0);
+          SDValue RHS = ConcatSubOperand(VT, Ops, 1);
+          LHS = DAG.getNode(*CastOpc, DL, FpVT, LHS);
+          RHS = DAG.getNode(*CastOpc, DL, FpVT, RHS);
+
+          bool IsAlwaysSignaling;
+          unsigned FSETCC =
+              translateX86FSETCC(FCC, LHS, RHS, IsAlwaysSignaling);
+          return DAG.getBitcast(
+              VT, DAG.getNode(X86ISD::CMPP, DL, FpVT, LHS, RHS,
+                              DAG.getTargetConstant(FSETCC, DL, MVT::i8)));
+        }
       }
       break;
     case ISD::CTPOP:
