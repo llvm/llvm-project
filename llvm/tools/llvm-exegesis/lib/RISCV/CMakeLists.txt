@@ -4,6 +4,7 @@ include_directories(
 )
 
 set(LLVM_LINK_COMPONENTS
+  CodeGen
   RISCV
   Exegesis
   Core
