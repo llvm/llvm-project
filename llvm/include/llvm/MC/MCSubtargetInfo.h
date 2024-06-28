@@ -240,6 +240,9 @@ public:
     return ProcFeatures;
   }
 
+  /// Return the list of processor features currently enabled.
+  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
+
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo
   /// HwMode ID, from the set as required. Using this approach, various
