@@ -16,8 +16,6 @@ functions:
       - type: int
       - type: int
       - type: int
-    guard: null
-    attributes: []
   - name: bind
     standards: 
       - POSIX
@@ -26,5 +24,3 @@ functions:
       - type: int
       - type: const struct sockaddr *
       - type: socklen_t
-    guard: null
-    attributes: []

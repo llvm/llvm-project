@@ -14,45 +14,33 @@ functions:
     arguments:
       - type: const struct dirent **
       - type: const struct dirent **
-    guard: null
-    attributes: []
   - name: closedir
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: DIR *
-    guard: null
-    attributes: []
   - name: dirfd
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: DIR *
-    guard: null
-    attributes: []
   - name: fdopendir
     standards: 
       - POSIX
     return_type: DIR *
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: opendir
     standards: 
       - POSIX
     return_type: DIR *
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: readdir
     standards: 
       - POSIX
     return_type: struct dirent *
     arguments:
       - type: DIR *
-    guard: null
-    attributes: []

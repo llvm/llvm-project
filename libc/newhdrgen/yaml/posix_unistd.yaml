@@ -29,32 +29,24 @@ functions:
     arguments:
       - type: const char *
       - type: int
-    guard: null
-    attributes: []
   - name: chdir
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: close
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: dup
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: dup2
     standards: 
       - POSIX
@@ -62,8 +54,6 @@ functions:
     arguments:
       - type: int
       - type: int
-    guard: null
-    attributes: []
   - name: dup3
     standards: 
       - POSIX
@@ -72,8 +62,6 @@ functions:
       - type: int
       - type: int
       - type: int
-    guard: null
-    attributes: []
   - name: execve
     standards: 
       - POSIX
@@ -82,24 +70,18 @@ functions:
       - type: const char *
       - type: __exec_argv_t
       - type: __exec_envp_t
-    guard: null
-    attributes: []
   - name: fchdir
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: fsync
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: ftruncate
     standards: 
       - POSIX
@@ -107,8 +89,6 @@ functions:
     arguments:
       - type: int
       - type: off_t
-    guard: null
-    attributes: []
   - name: getcwd
     standards: 
       - POSIX
@@ -116,36 +96,26 @@ functions:
     arguments:
       - type: char *
       - type: size_t
-    guard: null
-    attributes: []
   - name: geteuid
     standards: 
       - POSIX
     return_type: uid_t
     arguments: []
-    guard: null
-    attributes: []
   - name: getpid
     standards: 
       - POSIX
     return_type: int
     arguments: []
-    guard: null
-    attributes: []
   - name: getppid
     standards: 
       - POSIX
     return_type: int
     arguments: []
-    guard: null
-    attributes: []
   - name: getuid
     standards: 
       - POSIX
     return_type: uid_t
     arguments: []
-    guard: null
-    attributes: []
   - name: isatty
     standards: 
       - POSIX
@@ -161,8 +131,6 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
-    guard: null
-    attributes: []
   - name: linkat
     standards: 
       - POSIX
@@ -173,8 +141,6 @@ functions:
       - type: int
       - type: const char *
       - type: int
-    guard: null
-    attributes: []
   - name: lseek 
     standards: 
       - POSIX
@@ -183,16 +149,12 @@ functions:
       - type: int
       - type: off_t
       - type: int
-    guard: null
-    attributes: []
   - name: pipe
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int *
-    guard: null
-    attributes: []
   - name: pread
     standards: 
       - POSIX
@@ -202,8 +164,6 @@ functions:
       - type: void *
       - type: size_t
       - type: off_t
-    guard: null
-    attributes: []
   - name: pwrite
     standards: 
       - POSIX
@@ -213,8 +173,6 @@ functions:
       - type: const void *
       - type: size_t
       - type: off_t
-    guard: null
-    attributes: []
   - name: read
     standards: 
       - POSIX
@@ -223,8 +181,6 @@ functions:
       - type: int
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: readlink
     standards: 
       - POSIX
@@ -233,8 +189,6 @@ functions:
       - type: const char * __restrict
       - type: char * __restrict
       - type: size_t
-    guard: null
-    attributes: []
   - name: readlinkat
     standards: 
       - POSIX
@@ -243,16 +197,12 @@ functions:
       - type: const char * __restrict
       - type: char * __restrict
       - type: size_t
-    guard: null
-    attributes: []
   - name: rmdir
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: symlink
     standards: 
       - POSIX
@@ -260,8 +210,6 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
-    guard: null
-    attributes: []
   - name: symlinkat
     standards: 
       - POSIX
@@ -271,16 +219,12 @@ functions:
       - type: const char *
       - type: int
       - type: const char *
-    guard: null
-    attributes: []
   - name: sysconf
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: int
-    guard: null
-    attributes: []
   - name: truncate
     standards: 
       - POSIX
@@ -288,16 +232,12 @@ functions:
     arguments:
       - type: const char *
       - type: off_t
-    guard: null
-    attributes: []
   - name: unlink
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: const char *
-    guard: null
-    attributes: []
   - name: unlinkat
     standards: 
       - POSIX
@@ -306,8 +246,6 @@ functions:
       - type: int
       - type: const char *
       - type: int
-    guard: null
-    attributes: []
   - name: write
     standards: 
       - POSIX
@@ -321,12 +259,9 @@ functions:
   - name: _exit
     standards: 
       - POSIX
-    return_type: void
+    return_type: __Noreturn void
     arguments:
       - type: int
-    guard: null
-    attributes:
-      - noreturn
   - name: execv
     standards: 
       - POSIX
@@ -334,15 +269,11 @@ functions:
     arguments:
       - type: const char *
       - type: __exec_argv_t
-    guard: null
-    attributes: []
   - name: fork
     standards: 
       - POSIX
     return_type: pid_t
     arguments: []
-    guard: null
-    attributes: []
   - name: __llvm_libc_syscall
     standards: 
       - POSIX
@@ -355,8 +286,6 @@ functions:
       - type: long
       - type: long
       - type: long
-    guard: null
-    attributes: []
   - name: getopt
     standards: 
       - POSIX
@@ -365,8 +294,6 @@ functions:
       - type: int
       - type: __getoptargv_t
       - type: const char *
-    guard: null
-    attributes: []
   - name: swab
     standards: 
       - POSIX
@@ -375,40 +302,28 @@ functions:
       - type: const void * __restrict
       - type: void *
       - type: ssize_t
-    guard: null
-    attributes: []
   - name: enivron
     standards: 
       - POSIX
     return_type: extern char **
     arguments: []
-    guard: null
-    attributes: []
   - name: optarg
     standards: 
       - POSIX
     return_type: extern char *
     arguments: []
-    guard: null
-    attributes: []
   - name: optind
     standards: 
       - POSIX
     return_type: extern int 
     arguments: []
-    guard: null
-    attributes: []
   - name: optopt
     standards: 
       - POSIX
     return_type: extern int 
     arguments: []
-    guard: null
-    attributes: []
   - name: opterr
     standards: 
       - POSIX
     return_type: extern int 
     arguments: []
-    guard: null
-    attributes: []

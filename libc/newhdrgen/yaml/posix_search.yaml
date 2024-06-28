@@ -14,16 +14,12 @@ functions:
     return_type: int
     arguments:
       - type: size_t
-    guard: null
-    attributes: []
   - name: hcreate_r
     standards: GNUExtensions
     return_type: int
     arguments:
       - type: size_t
       - type: struct hsearch_data *
-    guard: null
-    attributes: []
   - name: hsearch
     standards: 
       - POSIX
@@ -31,8 +27,6 @@ functions:
     arguments:
       - type: ENTRY
       - type: ACTION
-    guard: null
-    attributes: []
   - name: hsearch_r
     standards: GNUExtensions
     return_type: int
@@ -41,22 +35,16 @@ functions:
       - type: ACTION
       - type: ENTRY * *
       - type: struct hsearch_data *
-    guard: null
-    attributes: []
   - name: hdestroy
     standards: GNUExtensions 
     return_type: void
     arguments: []
-    guard: null
-    attributes: []
   - name: hdestroy_r
     standards: 
       - POSIX
     return_type: void
     arguments:
       - type: struct hsearch_data *
-    guard: null
-    attributes: []
   - name: insque
     standards: 
       - POSIX
@@ -64,13 +52,9 @@ functions:
     arguments:
       - type: void *
       - type: void *
-    guard: null
-    attributes: []
   - name: remque
     standards: 
       - POSIX
     return_type: void
     arguments:
       - type: void *
-    guard: null
-    attributes: []

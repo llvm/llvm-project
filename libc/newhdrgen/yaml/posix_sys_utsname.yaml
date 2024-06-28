@@ -11,5 +11,3 @@ functions:
     return_type: int
     arguments:
       - type: struct utsname *
-    guard: null
-    attributes: []

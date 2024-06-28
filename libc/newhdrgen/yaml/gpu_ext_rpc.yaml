@@ -12,8 +12,6 @@ functions:
       - type: void *
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []
   - name: rpc_fprintf
     standards: 
       - GPUExtensions
@@ -23,5 +21,3 @@ functions:
       - type: const char *__restrict
       - type: void *
       - type: size_t
-    guard: null
-    attributes: []

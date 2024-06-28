@@ -13,8 +13,6 @@ functions:
     arguments:
       - type: const char *
       - type: mode_t
-    guard: null
-    attributes: []
   - name: fcntl
     standards: 
       - POSIX
@@ -23,8 +21,6 @@ functions:
       - type: int
       - type: int
       - type: ...
-    guard: null
-    attributes: []
   - name: open
     standards: 
       - POSIX
@@ -33,8 +29,6 @@ functions:
       - type: const char *
       - type: int
       - type: ...
-    guard: null
-    attributes: []
   - name: openat
     standards: 
       - POSIX
@@ -44,5 +38,3 @@ functions:
       - type: const char *
       - type: int
       - type: ...
-    guard: null
-    attributes: []

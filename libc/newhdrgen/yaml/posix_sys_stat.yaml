@@ -23,8 +23,6 @@ functions:
     arguments:
       - type: const char *
       - type: mode_t
-    guard: null
-    attributes: []
   - name: fchmod
     standards: 
       - POSIX
@@ -32,8 +30,6 @@ functions:
     arguments:
       - type: int
       - type: mode_t
-    guard: null
-    attributes: []
   - name: fchmodat
     standards: 
       - POSIX
@@ -43,8 +39,6 @@ functions:
       - type: const char *
       - type: mode_t
       - type: int
-    guard: null
-    attributes: []
   - name: fstat
     standards: 
       - POSIX
@@ -52,8 +46,6 @@ functions:
     arguments:
       - type: int
       - type: struct stat *
-    guard: null
-    attributes: []
   - name: lstat
     standards: 
       - POSIX
@@ -61,8 +53,6 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
-    guard: null
-    attributes: []
   - name: mkdir
     standards: 
       - POSIX
@@ -70,8 +60,6 @@ functions:
     arguments:
       - type: const char *
       - type: mode_t
-    guard: null
-    attributes: []
   - name: mkdirat
     standards: 
       - POSIX
@@ -80,8 +68,6 @@ functions:
       - type: int
       - type: const char *
       - type: mode_t
-    guard: null
-    attributes: []
   - name: stat
     standards: 
       - POSIX
@@ -89,5 +75,3 @@ functions:
     arguments:
       - type: const char *__restrict
       - type: struct stat *__restrict
-    guard: null
-    attributes: []

@@ -13,29 +13,21 @@ functions:
     return_type: uint32_t
     arguments:
       - type: uint32_t
-    guard: null
-    attributes: []
   - name: htons
     standards: 
       - POSIX
     return_type: uint16_t
     arguments:
       - type: uint16_t
-    guard: null
-    attributes: []
   - name: ntohl
     standards: 
       - POSIX
     return_type: uint32_t
     arguments:
       - type: uint32_t
-    guard: null
-    attributes: []
   - name: ntohs
     standards: 
       - POSIX
     return_type: uint16_t
     arguments:
       - type: uint16_t
-    guard: null
-    attributes: []

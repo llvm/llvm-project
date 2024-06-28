@@ -7,16 +7,14 @@ objects: []
 functions:
   - name: statvfs
     standards: 
-      - Linux
+      - POSIX
     return_type: int
     arguments:
       - type: const char *__restrict
       - type: struct statvfs *__restrict
-    guard: null
-    attributes: []
   - name: fstatvfs
     standards: 
-      - Linux
+      - POSIX
     return_type: int
     arguments: 
       - type: int

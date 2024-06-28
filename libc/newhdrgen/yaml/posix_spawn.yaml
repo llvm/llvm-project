@@ -19,8 +19,6 @@ functions:
       - type: posix_spawnattr_t *__restrict
       - type: const char *__restrict *
       - type: const char *__restrict *
-    guard: null
-    attributes: []
   - name: posix_spawn_file_actions_addclose
     standards: 
       - POSIX
@@ -28,8 +26,6 @@ functions:
     arguments:
       - type: posix_spawn_file_actions_t *
       - type: int
-    guard: null
-    attributes: []
   - name: posix_spawn_file_actions_adddup2
     standards: 
       - POSIX
@@ -38,8 +34,6 @@ functions:
       - type: posix_spawn_file_actions_t *
       - type: int
       - type: int
-    guard: null
-    attributes: []
   - name: posix_spawn_file_actions_addopen
     standards: 
       - POSIX
@@ -50,21 +44,15 @@ functions:
       - type: const char *__restrict
       - type: int
       - type: mode_t
-    guard: null
-    attributes: []
   - name: posix_spawn_file_actions_destroy
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: posix_spawn_file_actions_t *
-    guard: null
-    attributes: []
   - name: posix_spawn_file_actions_init
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: posix_spawn_file_actions_t *
-    guard: null
-    attributes: []

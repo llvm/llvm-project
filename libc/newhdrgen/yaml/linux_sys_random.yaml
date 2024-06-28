@@ -14,5 +14,3 @@ functions:
       - type: void *
       - type: size_t
       - type: unsigned int
-    guard: null
-    attributes: []

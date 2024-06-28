@@ -12,13 +12,9 @@ functions:
     return_type: int
     arguments:
       - type: struct rlimit *
-    guard: null
-    attributes: []
   - name: setrlimit
     standards: 
       - POSIX
     return_type: int
     arguments:
       - type: const struct rlimit
-    guard: null
-    attributes: []

@@ -11,8 +11,6 @@ functions:
     return_type: intmax_t
     arguments:
       - type: intmax_t
-    guard: null
-    attributes: []
   - name: imaxdiv
     standards: 
       - stdc
@@ -20,8 +18,6 @@ functions:
     arguments:
       - type: intmax_t
       - type: intmax_t
-    guard: null
-    attributes: []
   - name: strtoimax
     standards: 
       - stdc
@@ -30,8 +26,6 @@ functions:
       - type: const char *__restrict
       - type: char * *__restrict
       - type: int
-    guard: null
-    attributes: []
   - name: strtoumax
     standards: 
       - stdc
@@ -40,5 +34,3 @@ functions:
       - type: const char *__restrict
       - type: char * *__restrict
       - type: int
-    guard: null
-    attributes: []

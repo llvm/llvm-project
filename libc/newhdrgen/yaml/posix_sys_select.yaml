@@ -20,5 +20,3 @@ functions:
       - type: fd_set *__restrict
       - type: fd_set *__restrict
       - type: struct timeval *__restrict
-    guard: null
-    attributes: []
