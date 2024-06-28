@@ -1805,9 +1805,11 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*decl_die.GetCU());
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
-  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
+  clang::DeclContext *containing_decl_ctx =
+      GetClangDeclContextContainingDIE(decl_die, nullptr);
 
-  const bool should_directly_complete = DirectlyCompleteType(decl_ctx, attrs);
+  const bool should_directly_complete =
+      DirectlyCompleteType(containing_decl_ctx, attrs);
 
   // UniqueDWARFASTType is large, so don't create a local variables on the
   // stack, put it on the heap. This function is often called recursively and
@@ -1960,6 +1962,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   if (def_die) {
     attrs = ParsedDWARFTypeAttributes(def_die);
+    containing_decl_ctx = GetClangDeclContextContainingDIE(def_die, nullptr);
   } else {
     // No definition found. Proceed with the declaration die. We can use it to
     // create a forward-declared type.
@@ -1968,7 +1971,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   UNUSED_IF_ASSERT_DISABLED(tag_decl_kind);
   bool clang_type_was_created = false;
-  clang::DeclContext *containing_decl_ctx = GetClangDeclContextContainingDIE(def_die, nullptr);
 
   PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(),
                                  containing_decl_ctx, def_die,
@@ -1985,7 +1987,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   ClangASTMetadata metadata;
   // BEGIN SWIFT
-  metadata.SetIsPotentiallySwiftInteropType(IsSwiftInteropType(die));
+  metadata.SetIsPotentiallySwiftInteropType(IsSwiftInteropType(def_die));
   // END SWIFT
   metadata.SetUserID(def_die.GetID());
   metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(def_die));
@@ -2019,7 +2021,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
     m_ast.SetMetadata(class_template_decl, metadata);
     m_ast.SetMetadata(class_specialization_decl, metadata);
-    RegisterDIE(die.GetDIE(), clang_type);
+    RegisterDIE(def_die.GetDIE(), clang_type);
     if (auto *source = llvm::dyn_cast_or_null<ImporterBackedASTSource>(
             m_ast.getASTContext().getExternalSource()))
       source->MarkRedeclChainsAsOutOfDate(m_ast.getASTContext());
@@ -2028,29 +2030,14 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (!clang_type_was_created) {
     clang_type_was_created = true;
     clang_type = m_ast.CreateRecordType(
-        decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-        attrs.name.GetCString(), tag_decl_kind, attrs.class_language,
-        &metadata, attrs.exports_symbols);
-    RegisterDIE(die.GetDIE(), clang_type);
+        containing_decl_ctx, GetOwningClangModule(def_die), attrs.accessibility,
+        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, &metadata,
+        attrs.exports_symbols);
+    RegisterDIE(def_die.GetDIE(), clang_type);
     if (!should_directly_complete)
       if (auto *source = llvm::dyn_cast_or_null<ImporterBackedASTSource>(
               m_ast.getASTContext().getExternalSource()))
         source->MarkRedeclChainsAsOutOfDate(m_ast.getASTContext());
-  }
-
-  // Store a forward declaration to this class type in case any
-  // parameters in any class methods need it for the clang types for
-  // function prototypes.
-  if (TypeSystemClang::UseRedeclCompletion())
-    LinkDeclContextToDIE(GetClangDeclContextContainingDIE(die, nullptr), die);
-  else
-    LinkDeclContextToDIE(m_ast.GetDeclContextForType(clang_type), die);
-
-  type_sp = dwarf->MakeType(
-      die.GetID(), attrs.name, attrs.byte_size, nullptr, LLDB_INVALID_UID,
-        containing_decl_ctx, GetOwningClangModule(def_die), attrs.accessibility,
-        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, &metadata,
-        attrs.exports_symbols);
   }
 
   TypeSP type_sp = dwarf->MakeType(
@@ -2063,7 +2050,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   // parameters in any class methods need it for the clang types for
   // function prototypes.
   clang::DeclContext *type_decl_ctx =
-      TypeSystemClang::GetDeclContextForType(clang_type);
+      TypeSystemClang::UseRedeclCompletion()
+          ? GetClangDeclContextContainingDIE(def_die, nullptr)
+          : TypeSystemClang::GetDeclContextForType(clang_type);
   LinkDeclContextToDIE(type_decl_ctx, decl_die);
   if (decl_die != def_die) {
     LinkDeclContextToDIE(type_decl_ctx, def_die);
@@ -2149,7 +2138,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (!TypeSystemClang::UseRedeclCompletion())
     adjustArgPassing(m_ast, attrs, clang_type);
   else if (should_directly_complete)
-    m_to_complete.push_back({clang_type, die, type_sp});
+    m_to_complete.push_back({clang_type, def_die, type_sp});
 
   return type_sp;
 }
