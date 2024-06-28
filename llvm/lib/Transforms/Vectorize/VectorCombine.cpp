@@ -1902,7 +1902,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
               return false;
           if (auto *SI = dyn_cast<SelectInst>(V))
-            if (!isa<VectorType>(SI->getOperand(0)->getType()))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()) ||
+                SI->getOperand(0)->getType() !=
+                    cast<SelectInst>(FrontV)->getOperand(0)->getType())
               return false;
           if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
             return false;
