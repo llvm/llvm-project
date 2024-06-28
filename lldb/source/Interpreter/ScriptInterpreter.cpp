@@ -106,13 +106,10 @@ ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
   return event.m_opaque_ptr;
 }
 
-lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
+Stream *ScriptInterpreter::GetOpaqueTypeFromSBStream(
     const lldb::SBStream &stream) const {
-  if (stream.m_opaque_up) {
-    lldb::StreamSP s = std::make_shared<lldb_private::StreamString>();
-    *s << const_cast<lldb::SBStream &>(stream).GetData();
-    return s;
-  }
+  if (stream.m_opaque_up)
+    return const_cast<lldb::SBStream &>(stream).m_opaque_up.get();
 
   return nullptr;
 }
