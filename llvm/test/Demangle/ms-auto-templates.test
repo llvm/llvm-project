@@ -69,16 +69,16 @@
 ; CHECK: public: __cdecl AutoNTTPClass<&public: void __cdecl S::f(void)>::AutoNTTPClass<&public: void __cdecl S::f(void)>(void)
 
 ??0?$AutoNTTPClass@$MP8M@@EAAXXZH?f@1@QEAAXXZA@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void),0}>::AutoNTTPClass<{public: void __cdecl M::f(void),0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void), 0}>::AutoNTTPClass<{public: void __cdecl M::f(void), 0}>(void)
 
 ??0?$AutoNTTPClass@$H?f@M@@QEAAXXZA@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void),0}>::AutoNTTPClass<{public: void __cdecl M::f(void),0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl M::f(void), 0}>::AutoNTTPClass<{public: void __cdecl M::f(void), 0}>(void)
 
 ??0?$AutoNTTPClass@$MP8V@@EAAXXZI?f@1@QEAAXXZA@A@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void),0,0}>::AutoNTTPClass<{public: void __cdecl V::f(void),0,0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>::AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>(void)
 
 ??0?$AutoNTTPClass@$I?f@V@@QEAAXXZA@A@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void),0,0}>::AutoNTTPClass<{public: void __cdecl V::f(void),0,0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>::AutoNTTPClass<{public: void __cdecl V::f(void), 0, 0}>(void)
 
 ??0?$AutoNTTPClass@$MPEQS@@H07@@QEAA@XZ
 ; CHECK: public: __cdecl AutoNTTPClass<8>::AutoNTTPClass<8>(void)
@@ -93,7 +93,7 @@
 ; CHECK: public: __cdecl AutoNTTPClass<12>::AutoNTTPClass<12>(void)
 
 ??0?$AutoNTTPClass@$MPEQV@@HFBA@A@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{16,0}>::AutoNTTPClass<{16,0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{16, 0}>::AutoNTTPClass<{16, 0}>(void)
 
 ??0?$AutoNTTPClass@$FBA@A@@@QEAA@XZ
-; CHECK: public: __cdecl AutoNTTPClass<{16,0}>::AutoNTTPClass<{16,0}>(void)
+; CHECK: public: __cdecl AutoNTTPClass<{16, 0}>::AutoNTTPClass<{16, 0}>(void)
