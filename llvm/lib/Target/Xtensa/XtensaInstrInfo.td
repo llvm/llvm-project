@@ -425,6 +425,29 @@ def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
 def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
           (BGEU AR:$t, AR:$s, bb:$target)>;
 
+def : Pat<(brcond (i32 (seteq AR:$s, AR:$t)), bb:$target),
+          (BEQ AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setne AR:$s, AR:$t)), bb:$target),
+          (BNE AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setge AR:$s, AR:$t)), bb:$target),
+          (BGE AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setle AR:$s, AR:$t)), bb:$target),
+          (BLT AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setuge AR:$s, AR:$t)), bb:$target),
+          (BGEU AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setult AR:$s, AR:$t)), bb:$target),
+          (BLTU AR:$s, AR:$t, bb:$target)>;
+def : Pat<(brcond (i32 (setgt AR:$s, AR:$t)), bb:$target),
+          (BLT AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcond (i32 (setugt AR:$s, AR:$t)), bb:$target),
+          (BLTU AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcond (i32 (setle AR:$s, AR:$t)), bb:$target),
+          (BGE AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcond (i32 (setule AR:$s, AR:$t)), bb:$target),
+          (BGEU AR:$t, AR:$s, bb:$target)>;
+
+def : Pat<(brcond AR:$s, bb:$target), (BNEZ AR:$s, bb:$target)>;
+
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -573,4 +596,13 @@ let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                "#ADJCALLSTACKUP",
                                [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Generic select instruction
+//===----------------------------------------------------------------------===//
+let usesCustomInserter = 1 in {
+  def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
+                     [(set AR:$dst, (Xtensa_select_cc AR:$lhs, AR:$rhs, AR:$t, AR:$f, imm:$cond))]>;
 }

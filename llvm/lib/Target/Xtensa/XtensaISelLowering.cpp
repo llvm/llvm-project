@@ -90,6 +90,26 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
+  // Used by legalize types to correctly generate the setcc result.
+  // AddPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
+  setOperationPromotedToType(ISD::SETCC, MVT::i1, MVT::i32);
+  setOperationPromotedToType(ISD::BR_CC, MVT::i1, MVT::i32);
+
+  setOperationAction(ISD::BR_CC, MVT::i32, Legal);
+  setOperationAction(ISD::BR_CC, MVT::i64, Expand);
+
+  setOperationAction(ISD::SELECT, MVT::i32, Expand);
+  setOperationAction(ISD::SELECT, MVT::i64, Expand);
+
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
+
+  setOperationAction(ISD::SETCC, MVT::i32, Custom);
+  setOperationAction(ISD::SETCC, MVT::i64, Expand);
+
+  // make BRCOND legal, its actually only legal for a subset of conds
+  setOperationAction(ISD::BRCOND, MVT::Other, Legal);
+
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
   // Implement custom stack save and restore
@@ -514,6 +534,38 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(XtensaISD::RET, DL, MVT::Other, RetOps);
 }
 
+SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getOperand(0).getValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TrueValue = Op.getOperand(2);
+  SDValue FalseValue = Op.getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
+  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
+
+  // Wrap select nodes
+  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                     FalseValue, TargetCC);
+}
+
+SDValue XtensaTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getOperand(0).getValueType();
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
+
+  // Expand to target SELECT_CC
+  SDValue TrueValue = DAG.getConstant(1, DL, Op.getValueType());
+  SDValue FalseValue = DAG.getConstant(0, DL, Op.getValueType());
+
+  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                     FalseValue, TargetCC);
+}
+
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
                                              SelectionDAG &DAG) const {
   const ConstantSDNode *CN = cast<ConstantSDNode>(Op);
@@ -676,6 +728,10 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
+  case ISD::SELECT_CC:
+    return LowerSELECT_CC(Op, DAG);
   case ISD::STACKSAVE:
     return LowerSTACKSAVE(Op, DAG);
   case ISD::STACKRESTORE:
@@ -697,6 +753,136 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::PCREL_WRAPPER";
   case XtensaISD::RET:
     return "XtensaISD::RET";
+  case XtensaISD::SELECT:
+    return "XtensaISD::SELECT";
+  case XtensaISD::SELECT_CC:
+    return "XtensaISD::SELECT_CC";
   }
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Custom insertion
+//===----------------------------------------------------------------------===//
+
+static int GetBranchKind(int Cond, bool &BrInv) {
+  switch (Cond) {
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+    return Xtensa::BEQ;
+  case ISD::SETNE:
+  case ISD::SETONE:
+  case ISD::SETUNE:
+    return Xtensa::BNE;
+  case ISD::SETLT:
+  case ISD::SETOLT:
+    return Xtensa::BLT;
+  case ISD::SETLE:
+  case ISD::SETOLE:
+    BrInv = true;
+    return Xtensa::BGE;
+  case ISD::SETGT:
+  case ISD::SETOGT:
+    BrInv = true;
+    return Xtensa::BLT;
+  case ISD::SETGE:
+  case ISD::SETOGE:
+    return Xtensa::BGE;
+  case ISD::SETULT:
+    return Xtensa::BLTU;
+  case ISD::SETULE:
+    BrInv = true;
+    return Xtensa::BGEU;
+  case ISD::SETUGT:
+    BrInv = true;
+    return Xtensa::BLTU;
+  case ISD::SETUGE:
+    return Xtensa::BGEU;
+  default:
+    return -1;
+  }
+}
+
+MachineBasicBlock *
+XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
+                                   MachineBasicBlock *MBB) const {
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineOperand &LHS = MI.getOperand(1);
+  MachineOperand &RHS = MI.getOperand(2);
+  MachineOperand &TrueValue = MI.getOperand(3);
+  MachineOperand &FalseValue = MI.getOperand(4);
+  MachineOperand &Cond = MI.getOperand(5);
+
+  // To "insert" a SELECT_CC instruction, we actually have to insert
+  // CopyMBB and SinkMBB  blocks and add branch to MBB. We build phi
+  // operation in SinkMBB like phi (TrueVakue,FalseValue), where TrueValue
+  // is passed from MMB and FalseValue is passed from CopyMBB.
+  //   MBB
+  //   |   \
+  //   |   CopyMBB
+  //   |   /
+  //   SinkMBB
+  // The incoming instruction knows the
+  // destination vreg to set, the condition code register to branch on, the
+  // true/false values to select between, and a branch opcode to use.
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineFunction::iterator It = ++MBB->getIterator();
+
+  MachineFunction *F = MBB->getParent();
+  MachineBasicBlock *CopyMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *SinkMBB = F->CreateMachineBasicBlock(LLVM_BB);
+
+  F->insert(It, CopyMBB);
+  F->insert(It, SinkMBB);
+
+  // Transfer the remainder of MBB and its successor edges to SinkMBB.
+  SinkMBB->splice(SinkMBB->begin(), MBB,
+                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  MBB->addSuccessor(CopyMBB);
+  MBB->addSuccessor(SinkMBB);
+
+  bool BrInv = false;
+  int BrKind = GetBranchKind(Cond.getImm(), BrInv);
+  if (BrInv) {
+    BuildMI(MBB, DL, TII.get(BrKind))
+        .addReg(RHS.getReg())
+        .addReg(LHS.getReg())
+        .addMBB(SinkMBB);
+  } else {
+    BuildMI(MBB, DL, TII.get(BrKind))
+        .addReg(LHS.getReg())
+        .addReg(RHS.getReg())
+        .addMBB(SinkMBB);
+  }
+
+  CopyMBB->addSuccessor(SinkMBB);
+
+  //  SinkMBB:
+  //   %Result = phi [ %FalseValue, CopyMBB ], [ %TrueValue, MBB ]
+  //  ...
+
+  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(Xtensa::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(FalseValue.getReg())
+      .addMBB(CopyMBB)
+      .addReg(TrueValue.getReg())
+      .addMBB(MBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return SinkMBB;
+}
+
+MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  case Xtensa::SELECT:
+    return emitSelectCC(MI, MBB);
+  default:
+    report_fatal_error("Unexpected instr type to insert");
+  }
 }
