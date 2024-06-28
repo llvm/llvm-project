@@ -40,8 +40,8 @@ static bool isCondStoreIntr(const Instruction &Instr) {
 }
 
 static void lowerCondStoreIntr(Instruction &Instr) {
-  LLVM_DEBUG(dbgs() << "Found basic with conditional store: "
-                    << Instr.getParent()->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Found conditional store intrinsic in basic block '"
+                    << Instr.getParent()->getName() << "'\n");
   auto *CallInstr = dyn_cast<CallInst>(&Instr);
   auto *Val = CallInstr->getOperand(0);
   auto *Ptr = CallInstr->getOperand(1);

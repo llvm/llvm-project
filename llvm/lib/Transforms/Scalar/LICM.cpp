@@ -162,11 +162,6 @@ cl::opt<unsigned> llvm::SetLicmMssaOptCap(
     cl::desc("Enable imprecision in LICM in pathological cases, in exchange "
              "for faster compile. Caps the MemorySSA clobbering calls."));
 
-cl::opt<bool> SetLicmConditionalAccessPromotion(
-    "licm-conditional-access-promotion", cl::Hidden, cl::init(false),
-    cl::desc("Enable promotion of conditional accesses of loop-invariant"
-             " locations"));
-
 // Experimentally, memory promotion carries less importance than sinking and
 // hoisting. Limit when we do promotion when using MemorySSA, in order to save
 // compile time.
@@ -1837,7 +1832,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
   bool CanInsertStoresInExitBlocks;
-  // This flag will be used to make sure that every sinken, conditional store
+  // This flag will be used to make sure that every sunk, conditional store
   // instruction is executed conditionally within the exit blocks. In the
   // preheader, it is initialized to 0. In every basic block containing a
   // conditional store it is raised.
