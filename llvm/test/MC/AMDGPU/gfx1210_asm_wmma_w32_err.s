@@ -6,27 +6,6 @@ v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], s[4:11]
 v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], 3.0
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], s[16:23]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], 1.0 neg_lo:[0,0,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], 3.0
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[1,0,0]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,1,0]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23] neg_lo:[0,0,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-
-v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23] neg_hi:[0,0,1]
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-
 v_wmma_f32_16x16x32_bf16 v[16:23], v[0:7], v[8:15], s[16:23]
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 

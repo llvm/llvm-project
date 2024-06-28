@@ -26,30 +26,6 @@ bb:
   ret void
 }
 
-define amdgpu_ps void @test_wmma_f32_16x16x16_xf32(<8 x float> %A, <8 x float> %B, <8 x float> %C, ptr addrspace(1) %out) {
-; GFX1210-LABEL: test_wmma_f32_16x16x16_xf32:
-; GFX1210:       ; %bb.0: ; %bb
-; GFX1210-NEXT:    v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23]
-; GFX1210-NEXT:    s_clause 0x1
-; GFX1210-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GFX1210-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1210-NEXT:    s_endpgm
-;
-; GISEL-LABEL: test_wmma_f32_16x16x16_xf32:
-; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_f32_16x16x16_xf32 v[16:23], v[0:7], v[8:15], v[16:23]
-; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GISEL-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GISEL-NEXT:    s_endpgm
-bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float> %A, <8 x float> %B, <8 x float> %C)
-  store <8 x float> %res, ptr addrspace(1) %out
-  ret void
-}
-
 define amdgpu_ps void @test_wmma_f32_16x16x32_bf16(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1210-LABEL: test_wmma_f32_16x16x32_bf16:
 ; GFX1210:       ; %bb.0: ; %bb
@@ -1288,7 +1264,6 @@ bb:
 }
 
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x4.f32.v8f32.v2f32(i1, <2 x float>, i1, <2 x float>, i16, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>)
 declare <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v8bf16.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x bfloat>)
 declare <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>)

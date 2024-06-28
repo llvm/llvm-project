@@ -218,13 +218,6 @@ define amdgpu_kernel void @wmma_f32_16x16x4_f32(<2 x float> %A, <2 x float> %B, 
   ret void
 }
 
-; CHECK: DIVERGENT: %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float> %A, <8 x float> %B, <8 x float> %C)
-define amdgpu_kernel void @wmma_f32_16x16x16_xf32(<8 x float> %A, <8 x float> %B, <8 x float> %C, ptr addrspace(1) %out) {
-  %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float> %A, <8 x float> %B, <8 x float> %C)
-  store <8 x float> %tmp0, ptr addrspace(1) %out
-  ret void
-}
-
 ; CHECK: DIVERGENT: %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 false, <16 x bfloat> %A, i1 false, <16 x bfloat> %B, i16 0, <8 x float> %C)
 define amdgpu_kernel void @wmma_f32_16x16x32_bf16(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
   %tmp0 = call <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1 0, <16 x bfloat> %A, i1 0, <16 x bfloat> %B, i16 0, <8 x float> %C)
@@ -840,7 +833,6 @@ declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x32.bf8.bf8(<2 x i32>, <4 x i32
 declare <8 x double> @llvm.amdgcn.wmma.f64.16x16x4.f64.v8f64.v2f64(i1, <2 x double>, i1, <2 x double>, i16, <8 x double>)
 declare <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1, <4 x double>, i1, <4 x double>, i16, <8 x double>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x4.f32.v8f32.v2f32(i1, <2 x float>, i1, <2 x float>, i16, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x float>)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x half>)

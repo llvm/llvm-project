@@ -2928,7 +2928,6 @@ bb:
 }
 
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x4.f32.v8f32.v2f32(i1, <2 x float>, i1, <2 x float>, i16, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.xf32.v8f32.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.bf16.v8f32.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>)
 declare <8 x bfloat> @llvm.amdgcn.wmma.bf16.16x16x32.bf16.v8bf16.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x bfloat>)
 declare <8 x bfloat> @llvm.amdgcn.wmma.bf16f32.16x16x32.bf16.v8bf16.v16bf16(i1, <16 x bfloat>, i1, <16 x bfloat>, i16, <8 x float>)
