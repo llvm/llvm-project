@@ -206,6 +206,9 @@ static BasicBlock *getUserBasicBlock(Use &U, Instruction *UserInst) {
 //    critical edge.
 // 2) `Inst` have users and all users are in `DestBB`.
 static bool isDestBBSuitableForSink(Instruction *Inst, BasicBlock *DestBB) {
+  // 'BB' is used only by assert.
+  [[maybe_unused]] BasicBlock *BB = Inst->getParent();
+
   assert(Inst->getParent() != DestBB &&
          BB->getTerminator()->getNumSuccessors() == 2 &&
          DestBB->getUniquePredecessor() == BB &&
