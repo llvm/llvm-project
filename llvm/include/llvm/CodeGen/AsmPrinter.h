@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -40,7 +41,6 @@ class Constant;
 class ConstantArray;
 class ConstantPtrAuth;
 class DataLayout;
-class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
@@ -146,14 +146,14 @@ public:
 
   /// struct HandlerInfo and Handlers permit users or target extended
   /// AsmPrinter to add their own handlers.
-  struct HandlerInfo {
-    std::unique_ptr<AsmPrinterHandler> Handler;
+  template <class H> struct HandlerInfo {
+    std::unique_ptr<H> Handler;
     StringRef TimerName;
     StringRef TimerDescription;
     StringRef TimerGroupName;
     StringRef TimerGroupDescription;
 
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
+    HandlerInfo(std::unique_ptr<H> Handler, StringRef TimerName,
                 StringRef TimerDescription, StringRef TimerGroupName,
                 StringRef TimerGroupDescription)
         : Handler(std::move(Handler)), TimerName(TimerName),
@@ -206,11 +206,12 @@ protected:
 
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
-  std::vector<HandlerInfo> Handlers;
+  SmallVector<HandlerInfo<AsmPrinterHandler>, 2> Handlers;
   size_t NumUserHandlers = 0;
 
   /// Debuginfo handler. Protected so that targets can add their own.
-  SmallVector<std::unique_ptr<DebugHandlerBase>, 1> DebugHandlers;
+  SmallVector<HandlerInfo<DebugHandlerBase>, 1> DebugHandlers;
+  size_t NumUserDebugHandlers = 0;
 
   StackMaps SM;
 
@@ -535,9 +536,14 @@ public:
   // Overridable Hooks
   //===------------------------------------------------------------------===//
 
-  void addAsmPrinterHandler(HandlerInfo Handler) {
+  void addAsmPrinterHandler(HandlerInfo<AsmPrinterHandler> Handler) {
     Handlers.insert(Handlers.begin(), std::move(Handler));
     NumUserHandlers++;
+  }
+
+  void addDebugHandler(HandlerInfo<DebugHandlerBase> Handler) {
+    DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
+    NumUserDebugHandlers++;
   }
 
   // Targets can, or in the case of EmitInstruction, must implement these to

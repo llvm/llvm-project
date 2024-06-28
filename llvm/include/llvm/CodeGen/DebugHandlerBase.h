@@ -123,7 +123,7 @@ private:
 public:
   /// For symbols that have a size designated (e.g. common symbols),
   /// this tracks that size. Only used by DWARF.
-  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {};
+  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {}
 
   virtual void beginModule(Module *M);
   virtual void endModule() = 0;
