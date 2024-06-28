@@ -321,11 +321,19 @@ bool CompilerInstance::setUpTargetMachine() {
   assert(OptLevelOrNone && "Invalid optimization level!");
   llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
   std::string featuresStr = getTargetFeatures();
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(CGOpts.CodeModel);
   targetMachine.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, llvm::TargetOptions(),
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/std::nullopt, OptLevel));
+      /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
+  if (cm.has_value()) {
+    const llvm::Triple triple(theTriple);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);
+    }
+  }
   return true;
 }

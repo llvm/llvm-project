@@ -386,17 +386,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
     llvm::StringRef modelName = a->getValue();
-    auto codeModel =
-        llvm::StringSwitch<std::optional<llvm::CodeModel::Model>>(modelName)
-            .Case("tiny", llvm::CodeModel::Model::Tiny)
-            .Case("small", llvm::CodeModel::Model::Small)
-            .Case("kernel", llvm::CodeModel::Model::Kernel)
-            .Case("medium", llvm::CodeModel::Model::Medium)
-            .Case("large", llvm::CodeModel::Model::Large)
-            .Default(std::nullopt);
+    std::optional<llvm::CodeModel::Model> codeModel = getCodeModel(modelName);
 
     if (codeModel.has_value())
-      opts.setCodeModel(*codeModel);
+      opts.CodeModel = modelName;
     else
       diags.Report(clang::diag::err_drv_invalid_value)
           << a->getAsString(args) << modelName;

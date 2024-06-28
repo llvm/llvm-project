@@ -129,6 +129,9 @@ public:
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
 
+  /// The code model to use (-mcmodel).
+  std::string CodeModel;
+
   /// The code model-specific large data threshold to use
   /// (-mlarge-data-threshold).
   uint64_t LargeDataThreshold;
@@ -142,6 +145,8 @@ public:
 
   CodeGenOptions();
 };
+
+std::optional<llvm::CodeModel::Model> getCodeModel(llvm::StringRef string);
 
 } // end namespace Fortran::frontend
 
