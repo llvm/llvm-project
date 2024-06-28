@@ -3528,7 +3528,7 @@ static bool hasAffectedValue(Value *V, SmallPtrSetImpl<Value *> &Affected,
 
   // Ignore the case where the select arm itself is affected. These cases
   // are handled more efficiently by other optimizations.
-  if (Affected.contains(V) && Depth != 0)
+  if (Depth != 0 && Affected.contains(V))
     return true;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
