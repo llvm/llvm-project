@@ -60,6 +60,18 @@ entry:
 }
 
 define void @test3(ptr %x, ptr %y, ptr %z) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[Y]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP5]], <8 x i32> [[TMP3]], <8 x i32> [[TMP4]]
+; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[Z:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = getelementptr inbounds i32, ptr %x, i64 4
   %1 = getelementptr inbounds i32, ptr %y, i64 4
