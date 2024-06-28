@@ -8921,6 +8921,40 @@ static void emitOffloadingArrays(
                                   /*IsNonContiguous=*/true, DeviceAddrCB,
                                   CustomMapperCB);
 }
+/// Emit the arrays used to pass the captures and map information to the
+/// offloading runtime library. If there is no map or capture information,
+/// return nullptr by reference.
+static void emitOffloadingArraysAndArgs(
+    CodeGenFunction &CGF, MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
+    CGOpenMPRuntime::TargetDataInfo &Info, llvm::OpenMPIRBuilder &OMPBuilder,
+    bool IsNonContiguous = false, bool ForEndCall = false) {
+  CodeGenModule &CGM = CGF.CGM;
+
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  InsertPointTy AllocaIP(CGF.AllocaInsertPt->getParent(),
+                         CGF.AllocaInsertPt->getIterator());
+  InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
+                          CGF.Builder.GetInsertPoint());
+
+  auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
+    if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
+      Info.CaptureDeviceAddrMap.try_emplace(DevVD, NewDecl);
+    }
+  };
+
+  auto CustomMapperCB = [&](unsigned int I) {
+    llvm::Value *MFunc = nullptr;
+    if (CombinedInfo.Mappers[I]) {
+      Info.HasMapper = true;
+      MFunc = CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
+          cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
+    }
+    return MFunc;
+  };
+  OMPBuilder.emitOffloadingArraysAndArgs(
+      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, IsNonContiguous,
+      ForEndCall, DeviceAddrCB, CustomMapperCB);
+}
 
 /// Check for inner distribute directive.
 static const OMPExecutableDirective *
@@ -9614,37 +9648,10 @@ static void emitTargetCallKernelLaunch(
   // Fill up the arrays with all the captured variables.
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
   CGOpenMPRuntime::TargetDataInfo Info;
+  genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
 
-  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP)
-                          -> llvm::OpenMPIRBuilder::MapInfosTy & {
-    CGF.Builder.restoreIP(CodeGenIP);
-    genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
-    return CombinedInfo;
-  };
-  auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
-    if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
-      Info.CaptureDeviceAddrMap.try_emplace(DevVD, NewDecl);
-    }
-  };
-
-  auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Value *MFunc = nullptr;
-    if (CombinedInfo.Mappers[I]) {
-      Info.HasMapper = true;
-      MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
-          cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
-    }
-    return MFunc;
-  };
-  // Fill up the basepointers, pointers and mapper arrays and create the
-  // arguments.
-  llvm::OpenMPIRBuilder::InsertPointTy OffloadingArraysAllocaIP(
-      CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
-
-  OMPBuilder.emitOffloadingArraysAndArgs(
-      OffloadingArraysAllocaIP, CGF.Builder.saveIP(), Info, Info.RTArgs,
-      GenMapInfoCB, /*IsNonContiguous=*/true, /*ForEndCall=*/false,
-      DeviceAddrCB, CustomMapperCB);
+  emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
+                              /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
   InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
