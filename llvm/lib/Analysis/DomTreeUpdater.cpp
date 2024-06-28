@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -25,6 +26,10 @@ namespace llvm {
 
 template class GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
                                      PostDominatorTree>;
+
+template void
+GenericDomTreeUpdater<DomTreeUpdater, DominatorTree,
+                      PostDominatorTree>::recalculate(Function &F);
 
 bool DomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())
@@ -92,6 +97,25 @@ void DomTreeUpdater::validateDeleteBB(BasicBlock *DelBB) {
   // Make sure DelBB has a valid terminator instruction. As long as DelBB is a
   // Child of Function F it must contain valid IR.
   new UnreachableInst(DelBB->getContext(), DelBB);
+}
+
+LLVM_DUMP_METHOD
+void DomTreeUpdater::dump() const {
+  Base::dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  raw_ostream &OS = dbgs();
+  OS << "Pending Callbacks:\n";
+  int Index = 0;
+  for (const auto &BB : Callbacks) {
+    OS << "  " << Index << " : ";
+    ++Index;
+    if (BB->hasName())
+      OS << BB->getName() << "(";
+    else
+      OS << "(no_name)(";
+    OS << BB << ")\n";
+  }
+#endif
 }
 
 } // namespace llvm

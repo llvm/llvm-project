@@ -27,6 +27,15 @@ ScriptedPythonInterface::ScriptedPythonInterface(
     : ScriptedInterface(), m_interpreter(interpreter) {}
 
 template <>
+void ScriptedPythonInterface::ReverseTransform(
+    lldb_private::Stream *&original_arg, python::PythonObject transformed_arg,
+    Status &error) {
+  Stream *s = ExtractValueFromPythonObject<Stream *>(transformed_arg, error);
+  *original_arg = *s;
+  original_arg->PutCString(static_cast<StreamString *>(s)->GetData());
+}
+
+template <>
 StructuredData::ArraySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(
     python::PythonObject &p, Status &error) {
@@ -65,8 +74,7 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
 }
 
 template <>
-lldb::StreamSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
+Stream *ScriptedPythonInterface::ExtractValueFromPythonObject<Stream *>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBStream *sb_stream = reinterpret_cast<lldb::SBStream *>(
           python::LLDBSWIGPython_CastPyObjectToSBStream(p.get())))
