@@ -575,7 +575,7 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   if (OpcRedBO == BO_AddAssign) {
     RedRHSExpr = RedBO->getRHS()->IgnoreImpCasts();
   } else {
-    const Expr *L1RhsExpr = RedBO->getRHS();
+    const Expr *L1RhsExpr = RedBO->getRHS()->IgnoreImpCasts();
     assert(isa<BinaryOperator>(L1RhsExpr) &&
            "Expected rhs to be a binary operator");
     const BinaryOperator *L2BO = cast<BinaryOperator>(L1RhsExpr);
