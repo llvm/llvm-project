@@ -7,7 +7,7 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-include-tree-full \
 // RUN:   -cas-path %t/cas -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
-// RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream -fcas-plugin-option no-logging \
+// RUN:   -fcas-plugin-option no-logging \
 // RUN:   > %t/deps.json
 
 // RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/cc1.rsp
@@ -24,6 +24,12 @@
 // RUN:   -e "s/^.*hit for '//" \
 // RUN:   -e "s/' .*$//" > %t/cache-key
 
+// RUN: c-index-test core -upload-cached-job -cas-path %t/cas @%t/cache-key -test-cas-cancellation \
+// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream \
+// RUN:   2>&1 | FileCheck %s --check-prefix=UPLOAD-CANCEL
+// UPLOAD-CANCEL: actioncache_put_for_digest_async cancelled
+
 // Delete the "local" cache and use the "upstream" one to re-materialize the outputs locally.
 // RUN: rm -rf %t/cas
 
@@ -31,14 +37,17 @@
 // RUN: clang-scan-deps -compilation-database %t/cdb.json \
 // RUN:   -format experimental-include-tree-full \
 // RUN:   -cas-path %t/cas -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
-// RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream -fcas-plugin-option no-logging \
+// RUN:   -fcas-plugin-option no-logging \
 // RUN:   > %t/deps2.json
 // RUN: diff -u %t/deps.json %t/deps2.json
 
 
-// RUN: c-index-test core -materialize-cached-job -cas-path %t/cas @%t/cache-key \
+// RUN: c-index-test core -materialize-cached-job -cas-path %t/cas @%t/cache-key -test-cas-cancellation \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
-// RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream -fcas-plugin-option no-logging
+// RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream \
+// RUN:   2>&1 | FileCheck %s --check-prefix=MATERIALIZE-CANCEL
+// MATERIALIZE-CANCEL: actioncache_get_for_digest_async cancelled
+// MATERIALIZE-CANCEL: load_object_async cancelled
 
 // RUN: c-index-test core -replay-cached-job -cas-path %t/cas @%t/cache-key \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \

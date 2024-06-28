@@ -166,9 +166,11 @@ protected:
   virtual Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) = 0;
 
   /// Asynchronous version of \c loadIfExists.
+  /// \param[out] CancelObj Optional pointer to receive a cancellation object.
   virtual void loadIfExistsAsync(
       ObjectRef Ref,
-      unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback);
+      unique_function<void(Expected<std::optional<ObjectHandle>>)> Callback,
+      std::unique_ptr<Cancellable> *CancelObj);
 
   /// Like \c loadIfExists but returns an error if the object is missing.
   Expected<ObjectHandle> load(ObjectRef Ref);
@@ -258,13 +260,16 @@ public:
   std::future<AsyncProxyValue> getProxyFuture(ObjectRef Ref);
 
   /// Asynchronous version of \c getProxyIfExists using a callback.
+  /// \param[out] CancelObj Optional pointer to receive a cancellation object.
   void getProxyAsync(
       const CASID &ID,
-      unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback);
+      unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback,
+      std::unique_ptr<Cancellable> *CancelObj = nullptr);
   /// Asynchronous version of \c getProxyIfExists using a callback.
   void getProxyAsync(
       ObjectRef Ref,
-      unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback);
+      unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback,
+      std::unique_ptr<Cancellable> *CancelObj = nullptr);
 
   /// Read the data from \p Data into \p OS.
   uint64_t readData(ObjectHandle Node, raw_ostream &OS, uint64_t Offset = 0,

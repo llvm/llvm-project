@@ -51,10 +51,16 @@ struct WrappedReplayResult {
   SmallString<256> DiagText;
 };
 
+struct WrappedCancellationToken {
+  std::unique_ptr<llvm::cas::Cancellable> CancelTok;
+};
+
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedCASObject, CXCASObject)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedCachedCompilation,
                                    CXCASCachedCompilation)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedReplayResult, CXCASReplayResult)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(WrappedCancellationToken,
+                                   CXCASCancellationToken)
 
 } // anonymous namespace
 
@@ -265,8 +271,9 @@ void clang_experimental_cas_loadObjectByString_async(
 
   /// Asynchronously visits the graph of the object node to ensure it's fully
   /// materialized.
-  class AsyncObjectLoader
-      : public std::enable_shared_from_this<AsyncObjectLoader> {
+  class AsyncObjectLoader final
+      : public llvm::cas::Cancellable,
+        public std::enable_shared_from_this<AsyncObjectLoader> {
     void *Ctx;
     void (*Callback)(void *Ctx, CXCASObject, CXError);
     std::shared_ptr<cas::ObjectStore> CAS;
@@ -277,29 +284,40 @@ void clang_experimental_cas_loadObjectByString_async(
     std::atomic<bool> MissingNode{false};
     /// The first error that occurred.
     std::optional<Error> ErrOccurred;
+
+    const bool MayCancel;
+    bool Cancelled = false;
+    llvm::SmallDenseMap<ObjectRef, std::unique_ptr<llvm::cas::Cancellable>>
+        PendingCancellables;
+
     std::mutex Mutex;
 
   public:
     AsyncObjectLoader(void *Ctx,
                       void (*Callback)(void *Ctx, CXCASObject, CXError),
-                      std::shared_ptr<cas::ObjectStore> CAS)
-        : Ctx(Ctx), Callback(Callback), CAS(std::move(CAS)) {}
+                      std::shared_ptr<cas::ObjectStore> CAS, bool MayCancel)
+        : Ctx(Ctx), Callback(Callback), CAS(std::move(CAS)),
+          MayCancel(MayCancel) {}
 
     void visit(ObjectRef Ref, bool IsRootNode) {
-      bool Inserted;
       {
         std::lock_guard<std::mutex> Guard(Mutex);
-        Inserted = ObjectsSeen.insert(Ref).second;
-        if (Inserted)
-          ++NumPending;
-      }
-      if (!Inserted) {
-        finishedNode();
-        return;
+        if (Cancelled)
+          return;
+        bool Inserted = ObjectsSeen.insert(Ref).second;
+        if (!Inserted)
+          return;
+        ++NumPending;
       }
       auto This = shared_from_this();
+      std::unique_ptr<llvm::cas::Cancellable> CancelObj;
       CAS->getProxyAsync(
-          Ref, [This, IsRootNode](Expected<std::optional<ObjectProxy>> Obj) {
+          Ref,
+          [This, IsRootNode, Ref](Expected<std::optional<ObjectProxy>> Obj) {
+            if (This->MayCancel) {
+              std::lock_guard<std::mutex> Guard(This->Mutex);
+              This->PendingCancellables.erase(Ref);
+            }
             auto _1 = llvm::make_scope_exit([&]() { This->finishedNode(); });
             if (!Obj) {
               This->encounteredError(Obj.takeError());
@@ -315,7 +333,12 @@ void clang_experimental_cas_loadObjectByString_async(
               This->visit(Sub, /*IsRootNode*/ false);
               return Error::success();
             }));
-          });
+          },
+          MayCancel ? &CancelObj : nullptr);
+      if (CancelObj) {
+        std::lock_guard<std::mutex> Guard(This->Mutex);
+        PendingCancellables[Ref] = std::move(CancelObj);
+      }
     }
 
     void finishedNode() {
@@ -347,9 +370,30 @@ void clang_experimental_cas_loadObjectByString_async(
       }
       ErrOccurred = std::move(E);
     }
+
+    void cancel() override {
+      std::lock_guard<std::mutex> Guard(Mutex);
+      Cancelled = true;
+      for (const auto &I : PendingCancellables)
+        I.second->cancel();
+      PendingCancellables.clear();
+    }
   };
 
-  auto WL = std::make_shared<AsyncObjectLoader>(Ctx, Callback, DBs.CAS);
+  auto WL = std::make_shared<AsyncObjectLoader>(
+      Ctx, Callback, DBs.CAS, /*MayCancel=*/OutToken != nullptr);
+  if (OutToken) {
+    // Using a wrapper since \c WrappedCancellationToken expects a
+    // \c std::unique_ptr.
+    struct ObjectLoaderWrapper : public llvm::cas::Cancellable {
+      std::shared_ptr<AsyncObjectLoader> ObjLoader;
+      ObjectLoaderWrapper(std::shared_ptr<AsyncObjectLoader> ObjLoader)
+          : ObjLoader(std::move(ObjLoader)) {}
+      void cancel() override { ObjLoader->cancel(); }
+    };
+    *OutToken = wrap(new WrappedCancellationToken{
+        std::make_unique<ObjectLoaderWrapper>(WL)});
+  }
   WL->visit(*Ref, /*IsRootNode*/ true);
 }
 
@@ -391,16 +435,21 @@ void clang_experimental_cas_getCachedCompilation_async(
   if (!KeyID)
     return Callback(Ctx, nullptr, cxerror::create(KeyID.takeError()));
 
-  DBs.Cache->getAsync(*KeyID, Globally,
-                      [KeyID = *KeyID, CAS = DBs.CAS, AC = DBs.Cache, Ctx,
-                       Callback](Expected<std::optional<CASID>> ResultID) {
-                        CXError Err = nullptr;
-                        CXCASCachedCompilation CComp =
-                            WrappedCachedCompilation::fromResultID(
-                                std::move(ResultID), std::move(KeyID),
-                                std::move(CAS), std::move(AC), &Err);
-                        Callback(Ctx, CComp, Err);
-                      });
+  std::unique_ptr<llvm::cas::Cancellable> CancelObj;
+  DBs.Cache->getAsync(
+      *KeyID, Globally,
+      [KeyID = *KeyID, CAS = DBs.CAS, AC = DBs.Cache, Ctx,
+       Callback](Expected<std::optional<CASID>> ResultID) {
+        CXError Err = nullptr;
+        CXCASCachedCompilation CComp = WrappedCachedCompilation::fromResultID(
+            std::move(ResultID), std::move(KeyID), std::move(CAS),
+            std::move(AC), &Err);
+        Callback(Ctx, CComp, Err);
+      },
+      OutToken != nullptr ? &CancelObj : nullptr);
+  if (OutToken && CancelObj) {
+    *OutToken = wrap(new WrappedCancellationToken{std::move(CancelObj)});
+  }
 }
 
 void clang_experimental_cas_CachedCompilation_dispose(
@@ -450,10 +499,16 @@ void clang_experimental_cas_CachedCompilation_makeGlobal(
     *OutToken = nullptr;
   WrappedCachedCompilation &WComp = *unwrap(CComp);
   CompileJobCacheResult &CacheResult = WComp.CachedResult;
-  WComp.AC->putAsync(WComp.CacheKey, CacheResult.getID(), /*Globally=*/true,
-                     [Ctx, Callback](Error E) {
-                       Callback(Ctx, cxerror::create(std::move(E)));
-                     });
+  std::unique_ptr<llvm::cas::Cancellable> CancelObj;
+  WComp.AC->putAsync(
+      WComp.CacheKey, CacheResult.getID(), /*Globally=*/true,
+      [Ctx, Callback](Error E) {
+        Callback(Ctx, cxerror::create(std::move(E)));
+      },
+      OutToken != nullptr ? &CancelObj : nullptr);
+  if (OutToken && CancelObj) {
+    *OutToken = wrap(new WrappedCancellationToken{std::move(CancelObj)});
+  }
 }
 
 CXCASReplayResult clang_experimental_cas_replayCompilation(
@@ -516,12 +571,18 @@ CXString clang_experimental_cas_ReplayResult_getStderr(CXCASReplayResult CRR) {
   return cxstring::createDup(unwrap(CRR)->DiagText);
 }
 
-void clang_experimental_cas_CancellationToken_cancel(CXCASCancellationToken) {
-  // FIXME: Implement.
+void clang_experimental_cas_CancellationToken_cancel(
+    CXCASCancellationToken CCT) {
+  if (!CCT)
+    return;
+  unwrap(CCT)->CancelTok->cancel();
 }
 
-void clang_experimental_cas_CancellationToken_dispose(CXCASCancellationToken) {
-  // FIXME: Implement.
+void clang_experimental_cas_CancellationToken_dispose(
+    CXCASCancellationToken CCT) {
+  if (!CCT)
+    return;
+  delete unwrap(CCT);
 }
 
 void clang_experimental_cas_ObjectStore_dispose(CXCASObjectStore CAS) {
