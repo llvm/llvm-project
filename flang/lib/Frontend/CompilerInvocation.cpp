@@ -402,6 +402,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
           << a->getAsString(args) << modelName;
   }
 
+  if (const llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_mlarge_data_threshold_EQ)) {
+    uint64_t LDT;
+    if (llvm::StringRef(arg->getValue()).getAsInteger(/*Radix=*/10, LDT)) {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getSpelling() << arg->getValue();
+    }      
+    opts.LargeDataThreshold = LDT;
+  }
+  
   // This option is compatible with -f[no-]underscoring in gfortran.
   if (args.hasFlag(clang::driver::options::OPT_fno_underscoring,
                    clang::driver::options::OPT_funderscoring, false)) {

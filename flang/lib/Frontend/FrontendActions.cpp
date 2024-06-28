@@ -864,6 +864,7 @@ void CodeGenAction::generateLLVMIR() {
 
   // Set mcmodel level LLVM module flags
   llvmModule->setCodeModel(opts.getCodeModel());
+  llvmModule->setLargeDataThreshold(opts.LargeDataThreshold);
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>
