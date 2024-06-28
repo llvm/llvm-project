@@ -68,7 +68,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
+bool isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  AssumptionCache *AC = nullptr,
