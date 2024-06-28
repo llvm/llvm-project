@@ -19,7 +19,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <chrono>
 #ifdef _WIN32
 #include "flang/Common/windows-include.h"
 #else
@@ -124,17 +123,10 @@ static constexpr inline unsigned_count_t GetHUGE(int kind) {
   return (unsigned_count_t{1} << ((8 * kind) - 1)) - 1;
 }
 
-// This is the fallback implementation, which should work everywhere.
-template <typename Unused = void>
-count_t GetSystemClockCount(int kind, fallback_implementation) {
-  std::timespec tspec;
-
-  if (std::timespec_get(&tspec, TIME_UTC) < 0) {
-    // Return -HUGE(COUNT) to represent failure.
-    return -static_cast<count_t>(GetHUGE(kind));
-  }
-
-  // compute the timestamp as seconds plus nanoseconds
+// Function converts a std::timespec_t into the desired count to
+// be returned by the timing functions in accordance with the requested
+// kind at the call site.
+count_t ConvertTimeSpecToCount(int kind, const std::timespec &tspec) {
   const unsigned_count_t huge{GetHUGE(kind)};
   unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
   unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
@@ -145,6 +137,21 @@ count_t GetSystemClockCount(int kind, fallback_implementation) {
   } else { // kind == 1
     return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
   }
+}
+
+// This is the fallback implementation, which should work everywhere.
+template <typename Unused = void>
+count_t GetSystemClockCount(int kind, fallback_implementation) {
+  std::timespec tspec;
+
+  if (std::timespec_get(&tspec, TIME_UTC) < 0) {
+    // Return -HUGE(COUNT) to represent failure.
+    return -static_cast<count_t>(GetHUGE(kind));
+  }
+
+  // Compute the timestamp as seconds plus nanoseconds in accordance
+  // with the requested kind at the call site.
+  return ConvertTimeSpecToCount(kind, tspec);
 }
 
 template <typename Unused = void>
@@ -169,15 +176,10 @@ count_t GetSystemClockCount(int kind, preferred_implementation,
   if (clock_gettime(CLOCKID_ELAPSED_TIME, &tspec) != 0) {
     return -huge; // failure
   }
-  unsigned_count_t sec{static_cast<unsigned_count_t>(tspec.tv_sec)};
-  unsigned_count_t nsec{static_cast<unsigned_count_t>(tspec.tv_nsec)};
-  if (kind >= 8) {
-    return (sec * NS_PER_SEC + nsec) % (huge + 1);
-  } else if (kind >= 2) {
-    return (sec * MS_PER_SEC + (nsec / (NS_PER_SEC / MS_PER_SEC))) % (huge + 1);
-  } else { // kind == 1
-    return (sec * DS_PER_SEC + (nsec / (NS_PER_SEC / DS_PER_SEC))) % (huge + 1);
-  }
+
+  // Compute the timestamp as seconds plus nanoseconds in accordance
+  // with the requested kind at the call site.
+  return ConvertTimeSpecToCount(kind, tspec);
 }
 #endif // CLOCKID_ELAPSED_TIME
 
