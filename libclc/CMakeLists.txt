@@ -51,12 +51,12 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
     message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
   endif()
 
-  # Import required tools as targets
+  # Import required tools
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
     foreach( tool IN ITEMS clang llvm-as llvm-link opt )
       find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-      add_executable( libclc::${tool} IMPORTED GLOBAL )
-      set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
+      set( ${tool}_exe ${LLVM_TOOL_${tool}} )
+      set( ${tool}_target )
     endforeach()
   endif()
 else()
@@ -73,9 +73,10 @@ else()
   endif()
 
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
-    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-      add_executable(libclc::${tool} ALIAS ${tool})
-    endforeach()
+    setup_host_tool( clang CLANG clang_exe clang_target )
+    setup_host_tool( llvm-as LLVM_AS llvm-as_exe llvm-as_target )
+    setup_host_tool( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
+    setup_host_tool( opt OPT opt_exe opt_target )
   endif()
 endif()
 
@@ -90,14 +91,13 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     find_program( LLVM_CUSTOM_TOOL_${tool} ${tool}
       PATHS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    add_executable( libclc::${tool} IMPORTED GLOBAL )
-    set_target_properties( libclc::${tool} PROPERTIES
-      IMPORTED_LOCATION ${LLVM_CUSTOM_TOOL_${tool}} )
+    set( ${tool}_exe ${LLVM_CUSTOM_TOOL_${tool}} )
+    set( ${tool}_target )
   endforeach()
 endif()
 
 foreach( tool IN ITEMS clang opt llvm-as llvm-link )
-  if( NOT TARGET libclc::${tool} )
+  if( NOT EXISTS "${${tool}_exe}" AND NOT TARGET "${${tool}_target}" )
     message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
   endif()
 endforeach()
@@ -167,8 +167,11 @@ set(LLVM_LINK_COMPONENTS
 )
 if( LIBCLC_STANDALONE_BUILD )
   add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
+  set( prepare_builtins_exe prepare_builtins )
+  set( prepare_builtins_target prepare_builtins )
 else()
   add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
+  setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
 endif()
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
@@ -409,9 +412,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
       # Add opt target
       add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
-        COMMAND libclc::opt ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
+        COMMAND ${opt_exe} ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
           ${builtins_link_lib}
-        DEPENDS libclc::opt ${builtins_link_lib} ${builtins_link_lib_tgt}
+        DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
@@ -425,8 +428,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Add prepare target
       set( obj_suffix ${arch_suffix}.bc )
       add_custom_command( OUTPUT ${obj_suffix}
-        COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
-        DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} prepare_builtins )
+        COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
+        DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
 
       # nvptx-- targets don't include workitem builtins
