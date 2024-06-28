@@ -259,7 +259,7 @@ functions:
   - name: _exit
     standards: 
       - POSIX
-    return_type: __Noreturn void
+    return_type: _Noreturn void
     arguments:
       - type: int
   - name: execv
