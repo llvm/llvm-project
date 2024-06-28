@@ -2058,25 +2058,23 @@ void CXXRecordDecl::completeDefinition() {
 
 static bool hasPureVirtualFinalOverrider(
     const CXXRecordDecl &RD, const CXXFinalOverriderMap *FinalOverriders) {
-  auto ExistsIn = [](const CXXFinalOverriderMap &FinalOverriders) {
-    for (const CXXFinalOverriderMap::value_type &
-          OverridingMethodsEntry : FinalOverriders) {
-      for (const auto &[_, SubobjOverrides] : OverridingMethodsEntry.second) {
-        assert(SubobjOverrides.size() > 0 &&
-              "All virtual functions have overriding virtual functions");
+  if (!FinalOverriders) {
+    CXXFinalOverriderMap MyFinalOverriders;
+    RD.getFinalOverriders(MyFinalOverriders);
+    return hasPureVirtualFinalOverrider(RD, &MyFinalOverriders);
+  }
 
-        if (SubobjOverrides.front().Method->isPureVirtual())
-          return true;
-      }
+  for (const CXXFinalOverriderMap::value_type &
+        OverridingMethodsEntry : *FinalOverriders) {
+    for (const auto &[_, SubobjOverrides] : OverridingMethodsEntry.second) {
+      assert(SubobjOverrides.size() > 0 &&
+            "All virtual functions have overriding virtual functions");
+
+      if (SubobjOverrides.front().Method->isPureVirtual())
+        return true;
     }
-    return false;
-  };
-
-  if (FinalOverriders)
-    return ExistsIn(*FinalOverriders);
-  CXXFinalOverriderMap MyFinalOverriders;
-  RD.getFinalOverriders(MyFinalOverriders);
-  return ExistsIn(MyFinalOverriders);
+  }
+  return false;
 }
 
 void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
