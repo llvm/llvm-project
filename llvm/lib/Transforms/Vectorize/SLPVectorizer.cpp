@@ -8304,20 +8304,31 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         });
     // FIXME: this must be moved to TTI for better estimation.
     unsigned EltsPerVector = getPartNumElems(VL.size(), NumParts);
-    auto CheckPerRegistersShuffle =
-        [&](MutableArrayRef<int> Mask,
-            SmallVector<int> Indices) -> std::optional<TTI::ShuffleKind> {
+    auto CheckPerRegistersShuffle = [&](MutableArrayRef<int> Mask,
+                                        SmallVectorImpl<unsigned> &Indices)
+        -> std::optional<TTI::ShuffleKind> {
       if (NumElts <= EltsPerVector)
         return std::nullopt;
+      int OffsetReg0 =
+          alignDown(std::accumulate(Mask.begin(), Mask.end(), INT_MAX,
+                                    [](int S, int I) {
+                                      if (I == PoisonMaskElem)
+                                        return S;
+                                      return std::min(S, I);
+                                    }),
+                    EltsPerVector);
+      int OffsetReg1 = OffsetReg0;
       DenseSet<int> RegIndices;
       // Check that if trying to permute same single/2 input vectors.
       TTI::ShuffleKind ShuffleKind = TTI::SK_PermuteSingleSrc;
       int FirstRegId = -1;
-      Indices.assign(1, -1);
-      for (int &I : Mask) {
+      Indices.assign(1, OffsetReg0);
+      for (auto [Pos, I] : enumerate(Mask)) {
         if (I == PoisonMaskElem)
           continue;
-        int RegId = (I / NumElts) * NumParts + (I % NumElts) / EltsPerVector;
+        int Idx = I - OffsetReg0;
+        int RegId =
+            (Idx / NumElts) * NumParts + (Idx % NumElts) / EltsPerVector;
         if (FirstRegId < 0)
           FirstRegId = RegId;
         RegIndices.insert(RegId);
@@ -8325,14 +8336,25 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           return std::nullopt;
         if (RegIndices.size() == 2) {
           ShuffleKind = TTI::SK_PermuteTwoSrc;
-          if (Indices.size() == 1)
-            Indices.push_back(-1);
+          if (Indices.size() == 1) {
+            OffsetReg1 = alignDown(
+                std::accumulate(
+                    std::next(Mask.begin(), Pos), Mask.end(), INT_MAX,
+                    [&](int S, int I) {
+                      if (I == PoisonMaskElem)
+                        return S;
+                      int RegId = ((I - OffsetReg0) / NumElts) * NumParts +
+                                  ((I - OffsetReg0) % NumElts) / EltsPerVector;
+                      if (RegId == FirstRegId)
+                        return S;
+                      return std::min(S, I);
+                    }),
+                EltsPerVector);
+            Indices.push_back(OffsetReg1 % NumElts);
+          }
+          Idx = I - OffsetReg1;
         }
-        if (RegId == FirstRegId)
-          Indices.front() = I % NumElts;
-        else
-          Indices.back() = I % NumElts;
-        I = (I % NumElts) % EltsPerVector +
+        I = (Idx % NumElts) % EltsPerVector +
             (RegId == FirstRegId ? 0 : EltsPerVector);
       }
       return ShuffleKind;
@@ -8349,7 +8371,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           Part * EltsPerVector, getNumElems(Mask.size(), EltsPerVector, Part));
       SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
-      SmallVector<int> Indices;
+      SmallVector<unsigned, 2> Indices;
       std::optional<TTI::ShuffleKind> RegShuffleKind =
           CheckPerRegistersShuffle(SubMask, Indices);
       if (!RegShuffleKind) {
@@ -8367,12 +8389,24 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                  FixedVectorType::get(ScalarTy, EltsPerVector),
                                  SubMask);
       }
-      for (int Idx : Indices) {
-        Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
-                                 FixedVectorType::get(ScalarTy, NumElts),
-                                 std::nullopt, CostKind, Idx,
-                                 FixedVectorType::get(ScalarTy, EltsPerVector));
+      for (unsigned Idx : Indices) {
+        assert((Idx + EltsPerVector) <= alignTo(NumElts, EltsPerVector) &&
+               "SK_ExtractSubvector index out of range");
+        Cost += ::getShuffleCost(
+            TTI, TTI::SK_ExtractSubvector,
+            FixedVectorType::get(ScalarTy, alignTo(NumElts, EltsPerVector)),
+            std::nullopt, CostKind, Idx,
+            FixedVectorType::get(ScalarTy, EltsPerVector));
       }
+      // Second attempt to check, if just a permute is better estimated than
+      // subvector extract.
+      SubMask.assign(NumElts, PoisonMaskElem);
+      copy(MaskSlice, SubMask.begin());
+      InstructionCost OriginalCost =
+          ::getShuffleCost(TTI, *ShuffleKinds[Part],
+                           FixedVectorType::get(ScalarTy, NumElts), SubMask);
+      if (OriginalCost < Cost)
+        Cost = OriginalCost;
     }
     return Cost;
   }
