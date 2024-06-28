@@ -43,7 +43,7 @@ LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
 //   => pi * x = (k + y) * pi / 32
 LIBC_INLINE int64_t small_range_reduction_mul_pi(double x, double &y) {
   double kd = fputil::nearest_integer(x * 32);
-  y = fputil::fma(x, 32.0, -kd);
+  y = fputil::fma<double>(x, 32.0, -kd);
   
   return static_cast<int64_t>(kd);
 }
