@@ -22,10 +22,6 @@ from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
 
-class MyDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super(MyDumper, self).increase_indent(flow, False)
-
 
 def yaml_to_classes(yaml_data):
     """
@@ -115,7 +111,13 @@ def add_function_to_yaml(yaml_file, function_details):
         yaml_file: The path to the YAML file.
         function_details: A list containing function details:
         (name, return_type, guard, attributes, arguments, standards).
+        
     """
+    
+    class IndentYamlDumper(yaml.Dumper):
+        def increase_indent(self, flow=False, indentless=False):
+            return super(IndentYamlDumper, self).increase_indent(flow, False)
+
     name, return_type, guard, attributes, arguments, standards = function_details
     attributes = attributes.split(",") if attributes != "null" else []
     arguments = [{"type": arg.strip()} for arg in arguments.split(",")]
@@ -144,7 +146,7 @@ def add_function_to_yaml(yaml_file, function_details):
 
     with open(yaml_file, "w") as f:
         yaml.dump(
-            yaml_data, f, Dumper=MyDumper, default_flow_style=False, sort_keys=False
+            yaml_data, f, Dumper=IndentYamlDumper, default_flow_style=False, sort_keys=False
         )
 
     print(f"Added function {name} to {yaml_file}")
