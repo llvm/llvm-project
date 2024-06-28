@@ -145,10 +145,9 @@ std::string CompleteNodeLabelString(
         HandleComment) {
 
   enum { MaxColumns = 80 };
-  std::string Str;
-  raw_string_ostream OS(Str);
+  std::string OutStr;
+  raw_string_ostream OS(OutStr);
   HandleBasicBlock(OS, *Node);
-  std::string OutStr(Str);
   // Remove "%" from BB name
   if (OutStr[0] == '%') {
     OutStr.erase(OutStr.begin());
