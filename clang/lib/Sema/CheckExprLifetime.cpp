@@ -1047,7 +1047,8 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
 
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
-        assert(InitEntity && "Expect only on initializing the entity");
+        assert(InitEntity && "Lifetime extension should happen only for "
+                             "initialization and not assignment");
         // Update the storage duration of the materialized temporary.
         // FIXME: Rebuild the expression instead of mutating it.
         MTE->setExtendingDecl(ExtendingEntity->getDecl(),
@@ -1056,7 +1057,8 @@ void checkExprLifetime(Sema &SemaRef, const CheckingEntity &CEntity,
         return true;
 
       case PathLifetimeKind::ShouldExtend:
-        assert(InitEntity && "Expect only on initializing the entity");
+        assert(InitEntity && "Lifetime extension should happen only for "
+                             "initialization and not assignment");
         // We're supposed to lifetime-extend the temporary along this path (per
         // the resolution of DR1815), but we don't support that yet.
         //
