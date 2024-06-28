@@ -2,6 +2,16 @@
 ; RUN: opt < %s -passes=slp-vectorizer -slp-revec -mtriple=x86_64 -S | FileCheck %s
 
 define i1 @logical_and_icmp_diff_preds(<4 x i32> %x) {
+; CHECK-LABEL: @logical_and_icmp_diff_preds(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, <4 x i32> <i32 1, i32 3, i32 6, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP6]])
+; CHECK-NEXT:    ret i1 [[TMP7]]
+;
   %x0 = extractelement <4 x i32> %x, i32 0
   %x1 = extractelement <4 x i32> %x, i32 1
   %x2 = extractelement <4 x i32> %x, i32 2
