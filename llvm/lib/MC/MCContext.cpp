@@ -383,6 +383,27 @@ MCSymbol *MCContext::getDirectionalLocalSymbol(unsigned LocalLabelVal,
   return getOrCreateDirectionalLocalSymbol(LocalLabelVal, Instance);
 }
 
+template <typename Symbol>
+Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
+  Symbol *R;
+  auto &SymEntry = getSymbolTableEntry(Section);
+  MCSymbol *Sym = SymEntry.second.Symbol;
+  // A section symbol can not redefine regular symbols. There may be multiple
+  // sections with the same name, in which case the first such section wins.
+  if (Sym && Sym->isDefined() &&
+      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
+    reportError(SMLoc(), "invalid symbol redefinition");
+  if (Sym && Sym->isUndefined()) {
+    R = cast<Symbol>(Sym);
+  } else {
+    SymEntry.second.Used = true;
+    R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
+    if (!Sym)
+      SymEntry.second.Symbol = R;
+  }
+  return R;
+}
+
 MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
@@ -497,22 +518,7 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               const MCSymbolELF *Group,
                                               bool Comdat, unsigned UniqueID,
                                               const MCSymbolELF *LinkedToSym) {
-  MCSymbolELF *R;
-  MCSymbolTableEntry &SymEntry = getSymbolTableEntry(Section);
-  MCSymbol *Sym = SymEntry.second.Symbol;
-  // A section symbol can not redefine regular symbols. There may be multiple
-  // sections with the same name, in which case the first such section wins.
-  if (Sym && Sym->isDefined() &&
-      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
-    reportError(SMLoc(), "invalid symbol redefinition");
-  if (Sym && Sym->isUndefined()) {
-    R = cast<MCSymbolELF>(Sym);
-  } else {
-    SymEntry.second.Used = true;
-    R = new (&SymEntry, *this) MCSymbolELF(&SymEntry, /*isTemporary*/ false);
-    if (!Sym)
-      SymEntry.second.Symbol = R;
-  }
+  auto *R = getOrCreateSectionSymbol<MCSymbolELF>(Section);
   R->setBinding(ELF::STB_LOCAL);
   R->setType(ELF::STT_SECTION);
 
@@ -681,12 +687,19 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
                                          StringRef COMDATSymName, int Selection,
-                                         unsigned UniqueID,
-                                         const char *BeginSymName) {
+                                         unsigned UniqueID) {
   MCSymbol *COMDATSymbol = nullptr;
   if (!COMDATSymName.empty()) {
     COMDATSymbol = getOrCreateSymbol(COMDATSymName);
     COMDATSymName = COMDATSymbol->getName();
+    // A non-associative COMDAT is considered to define the COMDAT symbol. Check
+    // the redefinition error.
+    if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE && COMDATSymbol &&
+        COMDATSymbol->isDefined() &&
+        (!COMDATSymbol->isInSection() ||
+         cast<MCSectionCOFF>(COMDATSymbol->getSection()).getCOMDATSymbol() !=
+             COMDATSymbol))
+      reportError(SMLoc(), "invalid symbol redefinition");
   }
 
   // Do the lookup, if we have a hit, return it.
@@ -696,23 +709,19 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   if (!IterBool.second)
     return Iter->second;
 
-  MCSymbol *Begin = nullptr;
-  if (BeginSymName)
-    Begin = createTempSymbol(BeginSymName, false);
-
   StringRef CachedName = Iter->first.SectionName;
+  MCSymbol *Begin = getOrCreateSectionSymbol<MCSymbolCOFF>(Section);
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
       CachedName, Characteristics, COMDATSymbol, Selection, Begin);
   Iter->second = Result;
-  allocInitialFragment(*Result);
+  auto *F = allocInitialFragment(*Result);
+  Begin->setFragment(F);
   return Result;
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
-                                         unsigned Characteristics,
-                                         const char *BeginSymName) {
-  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID,
-                        BeginSymName);
+                                         unsigned Characteristics) {
+  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID);
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,

@@ -4443,51 +4443,23 @@ the configuration (without a prefix: ``Auto``).
      false:
      import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,} from "some/module.js"
 
-.. _KeepEmptyLines:
-
-**KeepEmptyLines** (``KeepEmptyLinesStyle``) :versionbadge:`clang-format 19` :ref:`¶ <KeepEmptyLines>`
-  Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
-  consecutive empty lines are kept.
-
-  Nested configuration flags:
-
-  Options regarding which empty lines are kept.
-
-  For example, the config below will remove empty lines at start of the
-  file, end of the file, and start of blocks.
-
-
-  .. code-block:: c++
-
-    KeepEmptyLines:
-      AtEndOfFile: false
-      AtStartOfBlock: false
-      AtStartOfFile: false
-
-  * ``bool AtEndOfFile`` Keep empty lines at end of file.
-
-  * ``bool AtStartOfBlock`` Keep empty lines at start of a block.
-
-    .. code-block:: c++
-
-       true:                                  false:
-       if (foo) {                     vs.     if (foo) {
-                                                bar();
-         bar();                               }
-       }
-
-  * ``bool AtStartOfFile`` Keep empty lines at start of file.
-
-
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  If true, the empty line at the start of blocks is kept.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     if (foo) {                     vs.     if (foo) {
+                                              bar();
+       bar();                               }
+     }
 
 .. _LambdaBodyIndentation:
 

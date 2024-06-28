@@ -115,6 +115,7 @@ AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -934,6 +935,7 @@ Bug Fixes to C++ Support
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
+- Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1110,8 +1112,6 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
-- Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
-  and ``KeepEmptyLinesAtTheStartOfBlocks``.
 
 libclang
 --------

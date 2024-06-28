@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #if defined(_WIN32)
@@ -672,9 +673,14 @@ void request_attach(const llvm::json::Object &request) {
   lldb::SBError error;
   FillResponse(request, response);
   lldb::SBAttachInfo attach_info;
+  const int invalid_port = 0;
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
+  const auto gdb_remote_port =
+      GetUnsigned(arguments, "gdb-remote-port", invalid_port);
+  const auto gdb_remote_hostname =
+      GetString(arguments, "gdb-remote-hostname", "localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -736,7 +742,8 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || gdb_remote_port == invalid_port) &&
+      wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -749,9 +756,27 @@ void request_attach(const llvm::json::Object &request) {
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
-    if (core_file.empty())
-      g_dap.target.Attach(attach_info, error);
-    else
+    if (core_file.empty()) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) &&
+          (gdb_remote_port != invalid_port)) {
+        // If both pid and port numbers are specified.
+        error.SetErrorString("The user can't specify both pid and port");
+      } else if (gdb_remote_port != invalid_port) {
+        // If port is specified and pid is not.
+        lldb::SBListener listener = g_dap.debugger.GetListener();
+
+        // If the user hasn't provided the hostname property, default localhost
+        // being used.
+        std::string connect_url =
+            llvm::formatv("connect://{0}:", gdb_remote_hostname);
+        connect_url += std::to_string(gdb_remote_port);
+        g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+      } else {
+        // Attach by process name or id.
+        g_dap.target.Attach(attach_info, error);
+      }
+    } else
       g_dap.target.LoadCore(core_file.data(), error);
     // Reenable async events
     g_dap.debugger.SetAsync(true);
@@ -1586,6 +1611,7 @@ void request_initialize(const llvm::json::Object &request) {
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
   g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  g_dap.PopulateExceptionBreakpoints();
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
@@ -1621,7 +1647,7 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsEvaluateForHovers", true);
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : g_dap.exception_breakpoints) {
+  for (const auto &exc_bp : *g_dap.exception_breakpoints) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
@@ -2476,7 +2502,7 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
-  for (const auto &bp : g_dap.exception_breakpoints)
+  for (const auto &bp : *g_dap.exception_breakpoints)
     unset_filters.insert(bp.filter);
 
   for (const auto &value : *filters) {

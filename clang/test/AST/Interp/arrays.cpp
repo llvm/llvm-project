@@ -26,6 +26,9 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int afterEnd[] = {1,2,3};
+static_assert(&afterEnd[3] == afterEnd + 3, "");
+
 constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
@@ -623,3 +626,4 @@ constexpr int *get2() {
   extern int same_entity_2[];
   return same_entity_2;
 }
+static_assert(get2() == same_entity_2, "failed to find previous decl");

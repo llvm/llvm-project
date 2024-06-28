@@ -67,15 +67,11 @@ int fcntl(int fd, int cmd, void *arg) {
   }
   case F_GETOWN: {
     struct f_owner_ex fex;
-    int retVal =
+    int ret =
         LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, fd, F_GETOWN_EX, &fex);
-    if (retVal == -EINVAL)
-      return LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, fd, cmd,
-                                               reinterpret_cast<void *>(arg));
-    if (static_cast<unsigned long>(retVal) <= -4096UL)
+    if (ret >= 0)
       return fex.type == F_OWNER_PGRP ? -fex.pid : fex.pid;
-
-    libc_errno = -retVal;
+    libc_errno = -ret;
     return -1;
   }
   // The general case

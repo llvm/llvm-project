@@ -395,7 +395,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  auto &DL = Callee->getParent()->getDataLayout();
+  auto &DL = Callee->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
   // compatible with the call site's type.

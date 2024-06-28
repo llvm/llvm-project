@@ -5818,7 +5818,8 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   for (auto &ForwardingNode : ForwardingNodes) {
     PHINode *Phi = ForwardingNode.first;
     SmallVectorImpl<int> &Indexes = ForwardingNode.second;
-    if (Indexes.size() < 2)
+    // Check if it helps to fold PHI.
+    if (Indexes.size() < 2 && !llvm::is_contained(Phi->incoming_values(), SI->getCondition()))
       continue;
 
     for (int Index : Indexes)
@@ -6592,7 +6593,7 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  const DataLayout &DL = PhiBlock->getDataLayout();
   Constant *DefaultConst = ConstantFoldCompareInstOperands(
       CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
@@ -7749,7 +7750,7 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
                        ArrayRef<WeakVH> LoopHeaders) {
-  return SimplifyCFGOpt(TTI, DTU, BB->getModule()->getDataLayout(), LoopHeaders,
+  return SimplifyCFGOpt(TTI, DTU, BB->getDataLayout(), LoopHeaders,
                         Options)
       .run(BB);
 }
