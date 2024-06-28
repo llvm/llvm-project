@@ -1109,6 +1109,9 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   if (hasFlatScratchInit())
     NumUsedUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+
+  if (hasPrivateSegmentSize())
+    NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentSizeID);
 }
 
 void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {

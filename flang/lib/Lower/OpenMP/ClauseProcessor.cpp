@@ -729,7 +729,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   auto declSrc = builder.create<hlfir::DeclareOp>(
       loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
-  converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
+  converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
 }
