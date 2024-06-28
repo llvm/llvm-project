@@ -1,6 +1,5 @@
 // RUN: %clangxx_host -gdwarf -o %t %s
 // RUN: %lldb %t \
-// RUN:   -o "b main" \
 // RUN:   -o "expr alignof(packed)" \
 // RUN:   -o "expr sizeof(packed)" \
 // RUN:   -o "expr alignof(packed_and_aligned)" \

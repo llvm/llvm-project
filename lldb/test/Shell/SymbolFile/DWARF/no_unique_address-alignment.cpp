@@ -2,7 +2,6 @@
 
 // RUN: %clangxx_host -gdwarf -o %t %s
 // RUN: %lldb %t \
-// RUN:   -o "b main" \
 // RUN:   -o "expr alignof(OverlappingFields)" \
 // RUN:   -o "expr sizeof(OverlappingFields)" \
 // RUN:   -o exit | FileCheck %s
@@ -18,7 +17,7 @@ struct OverlappingFields {
   char y;
   [[no_unique_address]] Empty e;
   int z;
-} g_packed_struct;
+} g_overlapping_struct;
 static_assert(alignof(OverlappingFields) == 4);
 static_assert(sizeof(OverlappingFields) == 8);
 
