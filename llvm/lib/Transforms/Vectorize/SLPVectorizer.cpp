@@ -9172,12 +9172,30 @@ public:
         }
         Vals.push_back(Constant::getNullValue(V->getType()));
       }
+      if (auto *VecTy = dyn_cast<FixedVectorType>(Vals.front()->getType())) {
+        // When REVEC is enabled, we need to expand vector types into scalar
+        // types.
+        unsigned VecTyNumElements = VecTy->getNumElements();
+        SmallVector<Constant *> NewVals;
+        NewVals.reserve(VL.size() * VecTyNumElements);
+        for (Constant *V : Vals)
+          for (unsigned I = 0; I != VecTyNumElements; ++I) {
+            Type *ScalarTy = V->getType()->getScalarType();
+            if (isa<PoisonValue>(V))
+              NewVals.push_back(PoisonValue::get(ScalarTy));
+            else if (isa<UndefValue>(V))
+              NewVals.push_back(UndefValue::get(ScalarTy));
+            else
+              NewVals.push_back(Constant::getNullValue(ScalarTy));
+          }
+        Vals.swap(NewVals);
+      }
       return ConstantVector::get(Vals);
     }
     return ConstantVector::getSplat(
         ElementCount::getFixed(
             cast<FixedVectorType>(Root->getType())->getNumElements()),
-        getAllOnesValue(*R.DL, ScalarTy));
+        getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
   /// Finalize emission of the shuffles.
