@@ -993,6 +993,14 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
         failed(tilableOp.getIterationDomainTileFromResultTile(
             rewriter, sliceResultNumber, sliceOffset, sliceSizes,
             iterDomainOffset, iterDomainSizes))) {
+      // In theory, it is unnecessary to raise an error here. Actually although
+      // it fails to reconstruct the result tensor, it should not broke current
+      // fusion anyway. The reason why we must return failure currently is that
+      // the callback function `newYieldValuesFn` will be called after new init
+      // operand(s) has already been appended. It will take more refactoring to
+      // make sure the init operands are added consistently in the future. For
+      // more details, please refer to:
+      // https://github.com/llvm/llvm-project/pull/93144#discussion_r1643760814
       return failure();
     }
 
