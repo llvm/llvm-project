@@ -21,8 +21,8 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/SemaBase.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaBase.h"
 #include <initializer_list>
 
 namespace clang {
