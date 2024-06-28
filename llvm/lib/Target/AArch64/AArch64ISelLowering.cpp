@@ -2986,7 +2986,7 @@ AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
   bool HasTile = BaseReg != AArch64::ZA;
   bool HasZPROut = HasTile && MI.getOperand(0).isReg();
   if (HasZPROut) {
-    MIB.add(MI.getOperand(0)); // Output ZPR
+    MIB.add(MI.getOperand(StartIdx)); // Output ZPR
     ++StartIdx;
   }
   if (HasTile) {
