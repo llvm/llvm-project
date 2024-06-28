@@ -55692,14 +55692,43 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == X86ISD::PCMPEQ || Opcode == X86ISD::PCMPGT) &&
+         "Unknown PCMP opcode");
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
   MVT VT = N->getSimpleValueType(0);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
   SDLoc DL(N);
 
-  if (N->getOperand(0) == N->getOperand(1)) {
-    if (N->getOpcode() == X86ISD::PCMPEQ)
-      return DAG.getConstant(-1, DL, VT);
-    if (N->getOpcode() == X86ISD::PCMPGT)
-      return DAG.getConstant(0, DL, VT);
+  if (LHS == RHS)
+    return (Opcode == X86ISD::PCMPEQ) ? DAG.getAllOnesConstant(DL, VT)
+                                      : DAG.getConstant(0, DL, VT);
+
+  // Constant Folding.
+  // PCMPEQ(X,UNDEF) -> UNDEF
+  // PCMPGT(X,UNDEF) -> 0
+  // PCMPGT(UNDEF,X) -> 0
+  APInt LHSUndefs, RHSUndefs;
+  SmallVector<APInt> LHSBits, RHSBits;
+  if (getTargetConstantBitsFromNode(LHS, EltBits, LHSUndefs, LHSBits) &&
+      getTargetConstantBitsFromNode(RHS, EltBits, RHSUndefs, RHSBits)) {
+    APInt Ones = APInt::getAllOnes(EltBits);
+    APInt Zero = APInt::getZero(EltBits);
+    SmallVector<APInt> Results(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Opcode == X86ISD::PCMPEQ) {
+        Results[I] = (LHSBits[I] == RHSBits[I]) ? Ones : Zero;
+      } else {
+        bool AnyUndef = LHSUndefs[I] || RHSUndefs[I];
+        Results[I] = (!AnyUndef && LHSBits[I].sgt(RHSBits[I])) ? Ones : Zero;
+      }
+    }
+    if (Opcode == X86ISD::PCMPEQ)
+      return getConstVector(Results, LHSUndefs | RHSUndefs, VT, DAG, DL);
+    return getConstVector(Results, VT, DAG, DL);
   }
 
   return SDValue();
