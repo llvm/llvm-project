@@ -48,7 +48,11 @@ public:
                         UpdateStrategy Strategy_)
       : DT(DT_), PDT(PDT_), Strategy(Strategy_) {}
 
-  ~GenericDomTreeUpdater() { flush(); }
+  ~GenericDomTreeUpdater() {
+    // We cannot call into derived() here as it will already be destroyed.
+    assert(!hasPendingUpdates() &&
+           "Pending updates were not flushed by derived class.");
+  }
 
   /// Returns true if the current strategy is Lazy.
   bool isLazy() const { return Strategy == UpdateStrategy::Lazy; }
