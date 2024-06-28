@@ -2359,12 +2359,6 @@ public:
                                    MapInfosTy &CombinedInfo,
                                    TargetDataInfo &Info);
 
-  /// Callback type for creating the map infos for the kernel parameters.
-  /// \param CodeGenIP is the insertion point where code should be generated,
-  ///        if any.
-  using GenMapInfoCallbackTy =
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
-
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
   /// return nullptr by reference. Accepts a reference to a MapInfosTy object
@@ -2792,6 +2786,11 @@ public:
   /// duplicating the body code.
   enum BodyGenTy { Priv, DupNoPriv, NoPriv };
 
+  /// Callback type for creating the map infos for the kernel parameters.
+  /// \param CodeGenIP is the insertion point where code should be generated,
+  ///        if any.
+  using GenMapInfoCallbackTy =
+      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
 
   /// Generator for '#omp target data'
   ///
