@@ -95,38 +95,14 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
   // |x| <= 1/16
   if (LIBC_UNLIKELY(x_abs <= 0x3d80'0000U)) {
 
-    if (LIBC_UNLIKELY(x_abs < 0x34b0'0000U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x33FC'1538U)) {
       if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
-      // When |x| < 2^-12, the relative error of the approximation sin(x) ~ x
-      // is:
-      //   |sin(x) - x| / |sin(x)| < |x^3| / (6|x|)
-      //                           = x^2 / 6
-      //                           < 2^-25
-      //                           < epsilon(1)/2.
-      // So the correctly rounded values of sin(x) are:
-      //   = x - sign(x)*eps(x) if rounding mode = FE_TOWARDZERO,
-      //                        or (rounding mode = FE_UPWARD and x is
-      //                        negative),
-      //   = x otherwise.
-      // To simplify the rounding decision and make it more efficient, we use
-      //   fma(x, -2^-25, x) instead.
-      // An exhaustive test shows that this formula work correctly for all
-      // rounding modes up to |x| < 0x1.c555dep-11f.
-      // Note: to use the formula x - 2^-25*x to decide the correct rounding, we
-      // do need fma(x, -2^-25, x) to prevent underflow caused by -2^-25*x when
-      // |x| < 2^-125. For targets without FMA instructions, we simply use
-      // double for intermediate results as it is more efficient than using an
-      double xdpi =  xd * 3.1415926535897;
-      return static_cast<float>(xdpi);
 
-      // emulated version of FMA.
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
-#else
-      return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
-#endif // LIBC_TARGET_CPU_HAS_FMAx
+      double xdpi =  xd * 0x1.921fb54442d18p1; // pi
+      return static_cast<float>(xdpi);
     }
 
     // |x| < 1/16.
