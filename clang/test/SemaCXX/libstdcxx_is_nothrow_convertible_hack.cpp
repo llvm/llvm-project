@@ -7,8 +7,15 @@ struct Same {
 };
 
 template <class T>
-struct __is_nothrow_convertible { // expected-warning{{keyword '__is_nothrow_convertible' will be made available as an identifier for the remainder of the translation unit}}
+struct __is_nothrow_convertible {
+  // expected-warning@-1 {{using the name of the builtin '__is_nothrow_convertible' outside of a builtin invocation is deprecated}}
   using type = T;
 };
 
-using A = Same<__is_nothrow_convertible<int>::type, __is_nothrow_convertible<int>::type>;
+using A = Same<
+  __is_nothrow_convertible<int>::type,
+  // expected-warning@-1 {{using the name of the builtin '__is_nothrow_convertible' outside of a builtin invocation is deprecated}}
+  __is_nothrow_convertible<int>::type
+  // expected-warning@-1 {{using the name of the builtin '__is_nothrow_convertible' outside of a builtin invocation is deprecated}}
+>;
+

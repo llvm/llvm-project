@@ -7,8 +7,14 @@ struct Same {
 };
 
 template <class T>
-struct __is_trivially_equality_comparable { // expected-warning{{keyword '__is_trivially_equality_comparable' will be made available as an identifier for the remainder of the translation unit}}
+struct __is_trivially_equality_comparable {
+  // expected-warning@-1 {{using the name of the builtin '__is_trivially_equality_comparable' outside of a builtin invocation is deprecated}}
   using type = T;
 };
 
-using A = Same<__is_trivially_equality_comparable<int>::type, __is_trivially_equality_comparable<int>::type>;
+using A = Same<
+  __is_trivially_equality_comparable<int>::type,
+  // expected-warning@-1 {{using the name of the builtin '__is_trivially_equality_comparable' outside of a builtin invocation is deprecated}}
+  __is_trivially_equality_comparable<int>::type
+  // expected-warning@-1 {{using the name of the builtin '__is_trivially_equality_comparable' outside of a builtin invocation is deprecated}}
+>;

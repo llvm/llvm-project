@@ -2,14 +2,12 @@
 // RUN: %clang_cc1 -fms-extensions -include %S/cxx-traits.h -std=c++11 -fsyntax-only -verify %s
 
 // RUN: %clang_cc1 -fms-extensions -x c++-header -std=c++11 -emit-pch -o %t %S/cxx-traits.h
-// RUN: %clang_cc1 -fms-extensions -std=c++11 -include-pch %t -DPCH -fsyntax-only -verify %s
-
-#ifdef PCH
-// expected-no-diagnostics
-#endif
+// RUN: %clang_cc1 -fms-extensions -std=c++11 -include-pch %t -fsyntax-only -verify %s
 
 bool _Is_pod_comparator = n::__is_pod<int>::__value;
+// expected-warning@-1 {{using the name of the builtin '__is_pod' outside of a builtin invocation is deprecated}}
 bool _Is_empty_check = n::__is_empty<int>::__value;
+// expected-warning@-1 {{using the name of the builtin '__is_empty' outside of a builtin invocation is deprecated}}
 
 bool default_construct_int = n::is_trivially_constructible<int>::value;
 bool copy_construct_int = n::is_trivially_constructible<int, const int&>::value;
