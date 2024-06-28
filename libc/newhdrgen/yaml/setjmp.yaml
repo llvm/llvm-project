@@ -10,11 +10,11 @@ functions:
       - stdc
     return_type: _Noreturn void
     arguments:
-      - type: _jmp_buf 
+      - type: jmp_buf 
       - type: int
   - name: setjmp
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: _jmp_buf
+      - type: jmp_buf
