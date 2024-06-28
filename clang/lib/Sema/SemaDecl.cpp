@@ -11507,11 +11507,11 @@ static void patchDefaultTargetVersion(FunctionDecl *From, FunctionDecl *To) {
         To->getASTContext(), "default", To->getSourceRange()));
 }
 
-static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
-                                             FunctionDecl *NewFD,
-                                             bool &Redeclaration,
-                                             NamedDecl *&OldDecl,
-                                             LookupResult &Previous) {
+static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
+                                                  FunctionDecl *NewFD,
+                                                  bool &Redeclaration,
+                                                  NamedDecl *&OldDecl,
+                                                  LookupResult &Previous) {
   assert(!OldFD->isMultiVersion() && "Unexpected MultiVersion");
 
   // The definitions should be allowed in any order. If we have discovered
@@ -11533,8 +11533,9 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   // declaration is NOT the default version. Moreover, the old declaration
   // must be the default version (either explicitly via the attribute,
   // or implicitly without it).
-  if (NewTVA &&
-      (NewTVA->isDefaultVersion() || (OldTVA && !OldTVA->isDefaultVersion())))
+  if (NewTVA && NewTVA->isDefaultVersion())
+    return false;
+  if (NewTVA && OldTVA && !OldTVA->isDefaultVersion())
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
@@ -11576,22 +11577,6 @@ static bool CheckTargetCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
     // Sort order doesn't matter, it just needs to be consistent.
     llvm::sort(NewParsed.Features);
     if (OldParsed == NewParsed) {
-      S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
-      S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
-      NewFD->setInvalidDecl();
-      return true;
-    }
-  }
-
-  if (NewTVA) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    OldTVA->getFeatures(Feats);
-    llvm::sort(Feats);
-    llvm::SmallVector<StringRef, 8> NewFeats;
-    NewTVA->getFeatures(NewFeats);
-    llvm::sort(NewFeats);
-
-    if (Feats == NewFeats) {
       S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
       S.Diag(OldFD->getLocation(), diag::note_previous_declaration);
       NewFD->setInvalidDecl();
@@ -11972,8 +11957,8 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     switch (MVKind) {
     case MultiVersionKind::Target:
     case MultiVersionKind::TargetVersion:
-      return CheckTargetCausesMultiVersioning(S, OldFD, NewFD, Redeclaration,
-                                              OldDecl, Previous);
+      return CheckDeclarationCausesMultiVersioning(
+          S, OldFD, NewFD, Redeclaration, OldDecl, Previous);
     case MultiVersionKind::TargetClones:
       if (OldFD->isUsed(false)) {
         NewFD->setInvalidDecl();
