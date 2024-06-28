@@ -310,6 +310,8 @@ public:
     if (Error E = readAltInstructions())
       return E;
 
+    // Some ORC entries could be linked to alternative instruction
+    // sequences. Hence, we read ORC after .altinstructions.
     if (Error E = readORCTables())
       return E;
 
