@@ -1266,7 +1266,7 @@ public:
   /// Return the DataLayout associated with the module this SCEV instance is
   /// operating on.
   const DataLayout &getDataLayout() const {
-    return F.getParent()->getDataLayout();
+    return F.getDataLayout();
   }
 
   const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
