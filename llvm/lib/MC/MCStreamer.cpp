@@ -105,6 +105,7 @@ void MCStreamer::reset() {
   SymbolOrdering.clear();
   SectionStack.clear();
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
+  CurFrag = nullptr;
 }
 
 raw_ostream &MCStreamer::getCommentOS() {
@@ -1287,6 +1288,12 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
   }
   switchSection(Section, Subsec);
   return false;
+}
+
+void MCStreamer::switchSectionNoPrint(MCSection *Section) {
+  SectionStack.back().second = SectionStack.back().first;
+  SectionStack.back().first = MCSectionSubPair(Section, 0);
+  CurFrag = &Section->getDummyFragment();
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
@@ -254,7 +255,13 @@ class MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
+
 protected:
+  MCFragment *CurFrag = nullptr;
+
   MCStreamer(MCContext &Ctx);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
@@ -407,12 +414,6 @@ public:
     return SymbolOrdering.lookup(Sym);
   }
 
-  /// Update streamer for a new active section.
-  ///
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, uint32_t);
-
   /// Save the current and previous section on the section stack.
   void pushSection() {
     SectionStack.push_back(
@@ -432,15 +433,8 @@ public:
   virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
   bool switchSection(MCSection *Section, const MCExpr *);
 
-  /// Set the current section where code is being emitted to \p Section.
-  /// This is required to update CurSection. This version does not call
-  /// changeSection.
-  void switchSectionNoChange(MCSection *Section) {
-    assert(Section && "Cannot switch to a null section!");
-    MCSectionSubPair curSection = SectionStack.back().first;
-    SectionStack.back().second = curSection;
-    SectionStack.back().first = MCSectionSubPair(Section, 0);
-  }
+  /// Similar to switchSection, but does not print the section directive.
+  virtual void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);

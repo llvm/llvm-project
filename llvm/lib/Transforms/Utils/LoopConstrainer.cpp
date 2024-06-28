@@ -397,7 +397,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
-  const DataLayout &DL = Preheader->getModule()->getDataLayout();
+  const DataLayout &DL = Preheader->getDataLayout();
   SCEVExpander Expander(SE, DL, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 

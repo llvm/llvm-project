@@ -2392,7 +2392,7 @@ Value *StripPointerGEPsAndCasts(Value *V) {
 }
 
 void DFSanVisitor::visitLoadInst(LoadInst &LI) {
-  auto &DL = LI.getModule()->getDataLayout();
+  auto &DL = LI.getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(LI.getType());
   if (Size == 0) {
     DFSF.setShadow(&LI, DFSF.DFS.getZeroShadow(&LI));
@@ -2659,7 +2659,7 @@ static AtomicOrdering addReleaseOrdering(AtomicOrdering AO) {
 }
 
 void DFSanVisitor::visitStoreInst(StoreInst &SI) {
-  auto &DL = SI.getModule()->getDataLayout();
+  auto &DL = SI.getDataLayout();
   Value *Val = SI.getValueOperand();
   uint64_t Size = DL.getTypeStoreSize(Val->getType());
   if (Size == 0)
@@ -2715,7 +2715,7 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
   assert(isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I));
 
   Value *Val = I.getOperand(1);
-  const auto &DL = I.getModule()->getDataLayout();
+  const auto &DL = I.getDataLayout();
   uint64_t Size = DL.getTypeStoreSize(Val->getType());
   if (Size == 0)
     return;
