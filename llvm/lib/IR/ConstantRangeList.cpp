@@ -131,6 +131,8 @@ void ConstantRangeList::subtract(const ConstantRange &SubRange) {
       // "Range" and "SubRange" overlap at the right.
       //       L---U        : Range
       //         L---U      : SubRange
+      assert(SubRange.getLower().sge(Range.getLower()) &&
+             SubRange.getLower().sle(Range.getUpper()));
       AppendRangeIfNonEmpty(Range.getLower(), SubRange.getLower());
     }
   }
