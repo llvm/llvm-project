@@ -7,10 +7,10 @@ define i8 @re_order_mul_with_udiv_C(i8 %xx1, i8 %xx2, i8 %xx3) {
 ; CHECK-NEXT:    [[X1:%.*]] = add nuw i8 [[XX1]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw i8 [[XX2]], 1
 ; CHECK-NEXT:    [[X3:%.*]] = add nuw i8 [[XX3]], 1
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw i8 [[X1]], 9
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[X2]], [[X1]]
 ; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw i8 [[MUL_A]], [[X3]]
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[MUL_C]], 3
+; CHECK-NEXT:    [[MUL_C1:%.*]] = mul nuw i8 [[MUL_C]], 9
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[MUL_C1]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x1 = add nuw i8 %xx1, 1
@@ -52,9 +52,9 @@ define i8 @re_order_mul_with_udiv_var(i8 %xx0, i8 %xx1, i8 %xx2, i8 %xx3) {
 ; CHECK-NEXT:    [[X1:%.*]] = add nuw i8 [[XX1]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw i8 [[XX2]], 1
 ; CHECK-NEXT:    [[X3:%.*]] = add nuw i8 [[XX3]], 1
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw i8 [[X1]], [[X0]]
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[MUL_B]], [[X2]]
-; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw i8 [[MUL_A]], [[X3]]
+; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw i8 [[X2]], [[X1]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[MUL_B]], [[X3]]
+; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw i8 [[MUL_A]], [[X0]]
 ; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[MUL_C]], [[X0]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -105,8 +105,8 @@ define i8 @re_order_mul_with_sdiv_var(i8 %xx0, i8 %xx1, i8 %xx2, i8 %xx3) {
 ; CHECK-NEXT:    [[X2:%.*]] = call i8 @llvm.umin.i8(i8 [[X2_NZ]], i8 7)
 ; CHECK-NEXT:    [[X3:%.*]] = call i8 @llvm.umin.i8(i8 [[X3_NZ]], i8 7)
 ; CHECK-NEXT:    [[MUL_B:%.*]] = mul nsw i8 [[X1]], [[X0]]
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul nsw i8 [[MUL_B]], [[X2]]
-; CHECK-NEXT:    [[MUL_C:%.*]] = mul nsw i8 [[MUL_A]], [[X3]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nsw i8 [[MUL_B]], [[X3]]
+; CHECK-NEXT:    [[MUL_C:%.*]] = mul nsw i8 [[MUL_A]], [[X2]]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[MUL_C]], [[X2]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -166,10 +166,10 @@ define i8 @re_order_mul_with_srem_C(i8 %xx0, i8 %xx2, i8 %xx3) {
 ; CHECK-NEXT:    [[X0:%.*]] = call i8 @llvm.umin.i8(i8 [[X0_NZ]], i8 7)
 ; CHECK-NEXT:    [[X2:%.*]] = call i8 @llvm.umin.i8(i8 [[X2_NZ]], i8 7)
 ; CHECK-NEXT:    [[X3:%.*]] = call i8 @llvm.umin.i8(i8 [[X3_NZ]], i8 7)
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul nsw i8 [[X0]], 20
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul nsw i8 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nsw i8 [[X2]], [[X0]]
 ; CHECK-NEXT:    [[MUL_C:%.*]] = mul nsw i8 [[MUL_A]], [[X3]]
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[MUL_C]], 5
+; CHECK-NEXT:    [[MUL_C1:%.*]] = mul nsw i8 [[MUL_C]], 20
+; CHECK-NEXT:    [[R:%.*]] = srem i8 [[MUL_C1]], 5
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x0_nz = add nuw i8 %xx0, 1
@@ -219,10 +219,10 @@ define i8 @re_order_mul_with_urem_C(i8 %xx0, i8 %xx2, i8 %xx3) {
 ; CHECK-NEXT:    [[X0:%.*]] = add nuw i8 [[XX0]], 1
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw i8 [[XX2]], 1
 ; CHECK-NEXT:    [[X3:%.*]] = add nuw i8 [[XX3]], 1
-; CHECK-NEXT:    [[MUL_B:%.*]] = mul nuw i8 [[X0]], 20
-; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[MUL_B]], [[X2]]
+; CHECK-NEXT:    [[MUL_A:%.*]] = mul nuw i8 [[X2]], [[X0]]
 ; CHECK-NEXT:    [[MUL_C:%.*]] = mul nuw i8 [[MUL_A]], [[X3]]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[MUL_C]], 20
+; CHECK-NEXT:    [[MUL_C1:%.*]] = mul nuw i8 [[MUL_C]], 20
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[MUL_C1]], 20
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x0 = add nuw i8 %xx0, 1

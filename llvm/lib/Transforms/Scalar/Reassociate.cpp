@@ -2321,20 +2321,55 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     return;
   }
 
-  // We want to sink immediates as deeply as possible except in the case where
-  // this is a multiply tree used only by an add, and the immediate is a -1.
-  // In this case we reassociate to put the negation on the outside so that we
-  // can fold the negation into the add: (-X)*Y + Z -> Z-X*Y
+  // We want to sink immediates as deeply as possible except a few special
+  // cases:
+  // 1) In the case where this is a multiply tree used only by an add, and
+  //    the immediate is a -1. In this case we reassociate to put the
+  //    negation on the outside so that we can fold the negation into the
+  //    add: (-X)*Y + Z -> Z-X*Y
+  // 2) In the case that the muliply tree is used only be a rem/div and the
+  //    rem/div rhs is a factor of one of the mulitply operands. In this
+  //    case move the mul with the matching operand to the outside so it can
+  //    fold with the rem/div.
+  //    (X * Y) % (Y exact/ N) -> 0
+  //    (X * Y) / (Y exact/ N) -> X * N
   if (I->hasOneUse()) {
-    if (I->getOpcode() == Instruction::Mul &&
-        cast<Instruction>(I->user_back())->getOpcode() == Instruction::Add &&
-        isa<ConstantInt>(Ops.back().Op) &&
-        cast<ConstantInt>(Ops.back().Op)->isMinusOne()) {
-      ValueEntry Tmp = Ops.pop_back_val();
-      Ops.insert(Ops.begin(), Tmp);
+    Instruction *UserI = cast<Instruction>(I->user_back());
+    if (I->getOpcode() == Instruction::Mul) {
+      if (UserI->getOpcode() == Instruction::Add &&
+          isa<ConstantInt>(Ops.back().Op) &&
+          cast<ConstantInt>(Ops.back().Op)->isMinusOne()) {
+        ValueEntry Tmp = Ops.pop_back_val();
+        Ops.insert(Ops.begin(), Tmp);
+      } else if ((I->hasNoUnsignedWrap() &&
+                  (UserI->getOpcode() == Instruction::UDiv ||
+                   UserI->getOpcode() == Instruction::URem)) ||
+                 (I->hasNoSignedWrap() &&
+                  (UserI->getOpcode() == Instruction::SDiv ||
+                   UserI->getOpcode() == Instruction::SRem))) {
+        const APInt *C0, *C1;
+        if (match(UserI->getOperand(1), m_APInt(C0)) &&
+            match(Ops.back().Op, m_APInt(C1))) {
+          if ((UserI->getOpcode() == Instruction::UDiv ||
+               UserI->getOpcode() == Instruction::URem)
+                  ? C1->srem(*C0).isZero()
+                  : C1->urem(*C0).isZero()) {
+            ValueEntry Tmp = Ops.pop_back_val();
+            Ops.insert(Ops.begin(), Tmp);
+          }
+        } else {
+          for (auto it = Ops.begin(); it != Ops.end(); ++it) {
+            ValueEntry Tmp = *it;
+            if (UserI->getOperand(1) == Tmp.Op) {
+              Ops.erase(it);
+              Ops.insert(Ops.begin(), Tmp);
+              break;
+            }
+          }
+        }
+      }
     } else if (I->getOpcode() == Instruction::FMul &&
-               cast<Instruction>(I->user_back())->getOpcode() ==
-                   Instruction::FAdd &&
+               UserI->getOpcode() == Instruction::FAdd &&
                isa<ConstantFP>(Ops.back().Op) &&
                cast<ConstantFP>(Ops.back().Op)->isExactlyValue(-1.0)) {
       ValueEntry Tmp = Ops.pop_back_val();
