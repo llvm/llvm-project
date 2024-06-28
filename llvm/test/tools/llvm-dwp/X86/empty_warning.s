@@ -1,5 +1,5 @@
-# RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj -dwarf-version=4 %s -o non_split.o
-# RUN: llvm-dwp -e non_split.o -o non_split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
+# RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj -dwarf-version=4 %s -o %t.o
+# RUN: llvm-dwp -e %t.o -o %t.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
 
 # CHECK-WARNING: warning: executable file does not contain any references to dwo files
 
