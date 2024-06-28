@@ -22,12 +22,6 @@ namespace exegesis {
 
 inline uint64_t getRISCVCpuCyclesCount() {
 #if defined(__riscv) && defined(__linux__)
-  uint32_t Cycle;
-  size_t Length = sizeof(Cycle);
-  if (!sysctlbyname("kernel.perf_user_access", &Cycle, &Length, NULL, 0) ||
-      Cycle != 1)
-    report_fatal_error(
-        "Please write 'sudo echo 1 > /proc/sys/kernel/perf_user_access'");
 #if __riscv_xlen == 32
   uint32_t cycles_lo, cycles_hi0, cycles_hi1;
   asm volatile("rdcycleh %0\n"
@@ -68,6 +62,14 @@ public:
 
 RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
     : CounterGroup(std::move(Event), {}) {
+  #if defined(__riscv) && defined(__linux__)
+  uint32_t Cycle;
+  size_t Length = sizeof(Cycle);
+  if (!sysctlbyname("kernel.perf_user_access", &Cycle, &Length, NULL, 0) ||
+      Cycle != 1)
+    report_fatal_error(
+        "Please write 'sudo echo 1 > /proc/sys/kernel/perf_user_access'");
+  #endif
   StartValue = getRISCVCpuCyclesCount();
   EndValue = getRISCVCpuCyclesCount();
   MeasurementCycles = EndValue - StartValue;
