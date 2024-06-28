@@ -410,7 +410,11 @@ public:
     return MCSectionSubPair();
   }
 
-  MCFragment *getCurrentFragment() const;
+  MCFragment *getCurrentFragment() const {
+    assert(!getCurrentSection().first ||
+           CurFrag->getParent() == getCurrentSection().first);
+    return CurFrag;
+  }
 
   /// Returns an index to represent the order a symbol was emitted in.
   /// (zero if we did not emit that symbol)
