@@ -3,6 +3,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
+
 class TestMembersAndLocalsWithSameName(TestBase):
     def test_when_stopped_in_method(self):
         self._load_exe()
