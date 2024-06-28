@@ -96,7 +96,11 @@ private:
   Value *getFunctionName(IRBuilder<> &IRB);
   Value *getFileName(IRBuilder<> &IRB);
   Value *getLineNo(IRBuilder<> &IRB);
-  PtrOrigin getPtrOrigin(LoopInfo &LI, Value *Ptr);
+
+  void getAllocationInfo(Function &Fn, PtrOrigin PO, Value &Object,
+                         Value *&Start, Value *&Length, Value *&Tag);
+  PtrOrigin getPtrOrigin(LoopInfo &LI, Value *Ptr,
+                         const Value **Object = nullptr);
 
   FunctionCallee getOrCreateFn(FunctionCallee &FC, StringRef Name, Type *RetTy,
                                ArrayRef<Type *> ArgTys) {
@@ -125,6 +129,19 @@ private:
     return getOrCreateFn(
         CheckFn[PO], "ompx_check" + getSuffix(PO), PtrTy,
         {PtrTy, Int64Ty, Int64Ty, Int64Ty, PtrTy, PtrTy, Int64Ty});
+  }
+  FunctionCallee getCheckWithBaseFn(PtrOrigin PO) {
+    assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
+    return getOrCreateFn(CheckWithBaseFn[PO],
+                         "ompx_check_with_base" + getSuffix(PO), PtrTy,
+                         {PtrTy, PtrTy, Int64Ty, Int32Ty, Int64Ty, Int64Ty,
+                          Int64Ty, PtrTy, PtrTy, Int64Ty});
+  }
+  FunctionCallee getAllocationInfoFn(PtrOrigin PO) {
+    assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
+    return getOrCreateFn(
+        AllocationInfoFn[PO], "ompx_get_allocation_info" + getSuffix(PO),
+        StructType::create({PtrTy, Int64Ty, Int32Ty}), {PtrTy});
   }
   FunctionCallee getGEPFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
@@ -167,13 +184,20 @@ private:
   FunctionCallee GEPFn[3];
   FunctionCallee FreeFn[3];
   FunctionCallee CheckFn[3];
+  FunctionCallee CheckWithBaseFn[3];
+  FunctionCallee AllocationInfoFn[3];
   FunctionCallee UnpackFn[3];
   FunctionCallee LifetimeEndFn;
   FunctionCallee LifetimeStartFn;
   FunctionCallee FreeNLocal;
 
   StringMap<Value *> GlobalStringMap;
-  DenseMap<Value *, Value *> PtrMap;
+  struct AllocationInfoTy {
+    Value *Start;
+    Value *Length;
+    Value *Tag;
+  };
+  DenseMap<std::pair<Function *, Value *>, AllocationInfoTy> AllocationInfoMap;
 };
 
 } // end anonymous namespace
@@ -219,9 +243,32 @@ Value *GPUSanImpl::getLineNo(IRBuilder<> &IRB) {
   return ConstantInt::get(Int64Ty, DLoc.getLine());
 }
 
-PtrOrigin GPUSanImpl::getPtrOrigin(LoopInfo &LI, Value *Ptr) {
+void GPUSanImpl::getAllocationInfo(Function &Fn, PtrOrigin PO, Value &Object,
+                                   Value *&Start, Value *&Length, Value *&Tag) {
+  auto &It = AllocationInfoMap[{&Fn, &Object}];
+  if (!It.Start) {
+    auto *IP = dyn_cast<Instruction>(&Object);
+    if (IP)
+      IP = IP->getNextNode();
+    else
+      IP = &*Fn.getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+    IRBuilder<> IRB(IP);
+    auto *CB = IRB.CreateCall(getAllocationInfoFn(PO), {&Object});
+    It.Start = IRB.CreateExtractValue(CB, {0});
+    It.Length = IRB.CreateExtractValue(CB, {1});
+    It.Tag = IRB.CreateExtractValue(CB, {2});
+  }
+  Start = It.Start;
+  Length = It.Length;
+  Tag = It.Tag;
+}
+
+PtrOrigin GPUSanImpl::getPtrOrigin(LoopInfo &LI, Value *Ptr,
+                                   const Value **Object) {
   SmallVector<const Value *> Objects;
   getUnderlyingObjects(Ptr, Objects, &LI);
+  if (Object && Objects.size() == 1)
+    *Object = Objects.front();
   PtrOrigin PO = NONE;
   for (auto *Obj : Objects) {
     PtrOrigin ObjPO = HasAllocas ? UNKNOWN : GLOBAL;
@@ -323,9 +370,17 @@ Value *GPUSanImpl::instrumentAllocaInst(LoopInfo &LI, AllocaInst &AI) {
 void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
                                   Type &AccessTy, bool IsRead) {
   Value *PtrOp = I.getOperand(PtrIdx);
-  PtrOrigin PO = getPtrOrigin(LI, PtrOp);
+  const Value *Object = nullptr;
+  PtrOrigin PO = getPtrOrigin(LI, PtrOp, &Object);
   if (PO > GLOBAL)
     return;
+
+  Value *Start = nullptr;
+  Value *Length = nullptr;
+  Value *Tag = nullptr;
+  if (PO != UNKNOWN)
+    getAllocationInfo(*I.getFunction(), PO, *const_cast<Value *>(Object), Start,
+                      Length, Tag);
 
   static int32_t ReadAccessId = -1;
   static int32_t WriteAccessId = 1;
@@ -336,11 +391,21 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   Value *Size = ConstantInt::get(Int64Ty, TySize.getFixedValue());
   IRBuilder<> IRB(&I);
   Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
-  auto *CB = IRB.CreateCall(
-      getCheckFn(PO),
-      {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId), getPC(IRB),
-       getFunctionName(IRB), getFileName(IRB), getLineNo(IRB)},
-      I.getName() + ".san");
+  CallInst *CB;
+  if (Start) {
+    CB =
+        IRB.CreateCall(getCheckWithBaseFn(PO),
+                       {PlainPtrOp, Start, Length, Tag, Size,
+                        ConstantInt::get(Int64Ty, AccessId), getPC(IRB),
+                        getFunctionName(IRB), getFileName(IRB), getLineNo(IRB)},
+                       I.getName() + ".san");
+  } else {
+    CB = IRB.CreateCall(getCheckFn(PO),
+                        {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId),
+                         getPC(IRB), getFunctionName(IRB), getFileName(IRB),
+                         getLineNo(IRB)},
+                        I.getName() + ".san");
+  }
   I.setOperand(PtrIdx,
                IRB.CreatePointerBitCastOrAddrSpaceCast(CB, PtrOp->getType()));
 }
@@ -409,33 +474,38 @@ bool GPUSanImpl::instrumentCallInst(LoopInfo &LI, CallInst &CI) {
 bool GPUSanImpl::instrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
+
   bool Changed = false;
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(Fn);
   SmallVector<std::pair<AllocaInst *, Value *>> Allocas;
   SmallVector<ReturnInst *> Returns;
+  SmallVector<LoadInst *> Loads;
+  SmallVector<StoreInst *> Stores;
+  SmallVector<CallInst *> Calls;
+  SmallVector<GetElementPtrInst *> GEPs;
+
   for (auto &I : instructions(Fn)) {
     switch (I.getOpcode()) {
     case Instruction::Alloca: {
       AllocaInst &AI = cast<AllocaInst>(I);
-      Value *FakePtr = instrumentAllocaInst(LI, AI);
-      Allocas.push_back({&AI, FakePtr});
+      Allocas.push_back({&AI, nullptr});
       Changed = true;
       break;
     }
     case Instruction::Load:
-      instrumentLoadInst(LI, cast<LoadInst>(I));
+      Loads.push_back(&cast<LoadInst>(I));
       Changed = true;
       break;
     case Instruction::Store:
-      instrumentStoreInst(LI, cast<StoreInst>(I));
+      Stores.push_back(&cast<StoreInst>(I));
       Changed = true;
       break;
     case Instruction::GetElementPtr:
-      // instrumentGEPInst(LI, cast<GetElementPtrInst>(I));
+      GEPs.push_back(&cast<GetElementPtrInst>(I));
       Changed = true;
       break;
     case Instruction::Call:
-      Changed = instrumentCallInst(LI, cast<CallInst>(I));
+      Calls.push_back(&cast<CallInst>(I));
       break;
     case Instruction::Ret:
       Returns.push_back(&cast<ReturnInst>(I));
@@ -444,6 +514,17 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
       break;
     }
   }
+
+  for (auto &It : Allocas)
+    It.second = instrumentAllocaInst(LI, *It.first);
+  for (auto *Load : Loads)
+    instrumentLoadInst(LI, *Load);
+  for (auto *Store : Stores)
+    instrumentStoreInst(LI, *Store);
+  for (auto *GEP : GEPs)
+    instrumentGEPInst(LI, *GEP);
+  for (auto *Call : Calls)
+    Changed |= instrumentCallInst(LI, *Call);
 
   instrumentReturns(Allocas, Returns);
 
@@ -472,6 +553,7 @@ bool GPUSanImpl::instrument() {
     return false;
   }();
 
+  M.dump();
   for (Function &Fn : M)
     if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc") &&
         !Fn.getName().starts_with("rpc_"))

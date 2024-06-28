@@ -22,6 +22,12 @@ using namespace utils;
 
 #include "Shared/Sanitizer.h"
 
+struct AllocationInfoTy {
+  void *Start;
+  uint64_t Length;
+  uint32_t Tag;
+};
+
 [[gnu::used, gnu::retain, gnu::weak,
   gnu::visibility("protected")]] SanitizerTrapInfoTy *__sanitizer_trap_info_ptr;
 
@@ -31,8 +37,14 @@ template <AllocationKind AK> struct AllocationTracker {
   static_assert(sizeof(AllocationPtrTy<AK>) == sizeof(void *),
                 "AllocationTy pointers should be pointer sized");
 
-  static AllocationArrayTy<AK>
-      Allocations[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
+  [[clang::disable_sanitizer_instrumentation]] static struct AllocationInfoTy
+  getAllocationInfo(void *P) {
+    AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
+    uint32_t AllocationId = AP.AllocationId;
+    auto &AllocArr = getAllocationArray<AK>();
+    auto &A = AllocArr.Arr[AllocationId];
+    return {A.Start, A.Length, (uint32_t)A.Tag};
+  }
 
   [[clang::disable_sanitizer_instrumentation]] static void *
   create(void *Start, uint64_t Length, int64_t AllocationId, uint64_t Slot,
@@ -42,16 +54,8 @@ template <AllocationKind AK> struct AllocationTracker {
         __sanitizer_trap_info_ptr->exceedsAllocationLength<AK>(
             Start, Length, AllocationId, Slot, PC);
 
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-
     // Reserve the 0 element for the null pointer in global space.
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &Cnt = AllocArr.Cnt;
     if constexpr (AK == AllocationKind::LOCAL)
       Slot = ++Cnt;
@@ -81,15 +85,7 @@ template <AllocationKind AK> struct AllocationTracker {
                                                                   uint64_t PC) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
     uint32_t AllocationId = AP.AllocationId;
-
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &A = AllocArr.Arr[AllocationId];
     A.Length = 0;
 
@@ -102,11 +98,7 @@ template <AllocationKind AK> struct AllocationTracker {
 
   [[clang::disable_sanitizer_instrumentation]] static void remove_n(int32_t N) {
     static_assert(AK == AllocationKind::LOCAL, "");
-    uint32_t ThreadId = __kmpc_get_hardware_thread_id_in_block();
-    uint32_t BlockId = ompx_block_id(0);
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &Cnt = AllocArr.Cnt;
     for (int32_t I = 0; I < N; ++I) {
       auto &A = AllocArr.Arr[Cnt--];
@@ -122,47 +114,35 @@ template <AllocationKind AK> struct AllocationTracker {
   }
 
   [[clang::disable_sanitizer_instrumentation]] static void *
+  checkWithBase(void *P, void *Start, int64_t Length, uint32_t Tag,
+                int64_t Size, int64_t AccessId, uint64_t PC,
+                const char *FunctionName, const char *FileName,
+                uint64_t LineNo) {
+    AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
+    int64_t Offset = AP.Offset;
+    if (OMP_UNLIKELY(
+            Offset > Length - Size ||
+            (SanitizerConfig<AK>::useTags() && Tag != AP.AllocationTag))) {
+      __sanitizer_trap_info_ptr->accessError(AP, Size, AccessId, PC,
+                                             FunctionName, FileName, LineNo);
+    }
+    return utils::advancePtr(Start, Offset);
+  }
+
+  [[clang::disable_sanitizer_instrumentation]] static void *
   check(void *P, int64_t Size, int64_t AccessId, uint64_t PC,
         const char *FunctionName, const char *FileName, uint64_t LineNo) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
-    auto &A = AllocArr.Arr[AP.AllocationId];
-    int64_t Offset = AP.Offset;
-    int64_t Length = A.Length;
-    if (OMP_UNLIKELY(
-            Offset > Length - Size ||
-            (SanitizerConfig<AK>::useTags() && A.Tag != AP.AllocationTag))) {
-      if (AK == AllocationKind::LOCAL && Length == 0)
-        __sanitizer_trap_info_ptr->useAfterScope<AK>(
-            A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
-      else if (Offset > Length - Size)
-        __sanitizer_trap_info_ptr->outOfBoundAccess<AK>(
-            A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
-      else
-        __sanitizer_trap_info_ptr->useAfterFree<AK>(
-            A, AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
-    }
-    return utils::advancePtr(A.Start, Offset);
+    auto &AllocArr = getAllocationArray<AK>();
+    auto &Alloc = AllocArr.Arr[AP.AllocationId];
+    return checkWithBase(P, Alloc.Start, Alloc.Length, Alloc.Tag, Size,
+                         AccessId, PC, FunctionName, FileName, LineNo);
   }
 
   [[clang::disable_sanitizer_instrumentation]] static void *
   unpack(void *P, uint64_t PC = 0) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &A = AllocArr.Arr[AP.AllocationId];
     uint64_t Offset = AP.Offset;
     void *Ptr = utils::advancePtr(A.Start, Offset);
@@ -172,14 +152,7 @@ template <AllocationKind AK> struct AllocationTracker {
   [[clang::disable_sanitizer_instrumentation]] static void
   lifetimeStart(void *P, uint64_t Length) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &A = AllocArr.Arr[AP.AllocationId];
     // TODO: Check length
     A.Length = Length;
@@ -188,14 +161,7 @@ template <AllocationKind AK> struct AllocationTracker {
   [[clang::disable_sanitizer_instrumentation]] static void
   lifetimeEnd(void *P, uint64_t Length) {
     AllocationPtrTy<AK> AP = AllocationPtrTy<AK>::get(P);
-    uint32_t ThreadId = 0, BlockId = 0;
-    if constexpr (AK == AllocationKind::LOCAL) {
-      ThreadId = __kmpc_get_hardware_thread_id_in_block();
-      BlockId = ompx_block_id(0);
-    }
-    auto &AllocArr =
-        Allocations[ThreadId +
-                    BlockId * __kmpc_get_hardware_num_threads_in_block()];
+    auto &AllocArr = getAllocationArray<AK>();
     auto &A = AllocArr.Arr[AP.AllocationId];
     // TODO: Check length
     A.Length = 0;
@@ -203,7 +169,7 @@ template <AllocationKind AK> struct AllocationTracker {
 
   [[clang::disable_sanitizer_instrumentation]] static void leakCheck() {
     static_assert(AK == AllocationKind::GLOBAL, "");
-    auto &AllocArr = Allocations[0];
+    auto &AllocArr = getAllocationArray<AK>();
     for (uint64_t Slot = 0; Slot < SanitizerConfig<AK>::SLOTS; ++Slot) {
       auto &A = AllocArr.Arr[Slot];
       if (OMP_UNLIKELY(A.Length))
@@ -213,8 +179,8 @@ template <AllocationKind AK> struct AllocationTracker {
 };
 
 template <AllocationKind AK>
-AllocationArrayTy<AK> AllocationTracker<
-    AK>::Allocations[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
+AllocationArrayTy<AK>
+    Allocations<AK>::Arr[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
 
 extern "C" {
 
@@ -312,6 +278,28 @@ ompx_check_global(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
+ompx_check_with_base_local(void *P, void *Start, uint64_t Length, uint32_t Tag,
+                           uint64_t Size, uint64_t AccessId, uint64_t PC,
+                           const char *FunctionName, const char *FileName,
+                           uint64_t LineNo) {
+  return AllocationTracker<AllocationKind::LOCAL>::checkWithBase(
+      P, Start, Length, Tag, Size, AccessId, PC, FunctionName, FileName,
+      LineNo);
+}
+
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] void *
+ompx_check_with_base_global(void *P, void *Start, uint64_t Length, uint32_t Tag,
+                            uint64_t Size, uint64_t AccessId, uint64_t PC,
+                            const char *FunctionName, const char *FileName,
+                            uint64_t LineNo) {
+  return AllocationTracker<AllocationKind::GLOBAL>::checkWithBase(
+      P, Start, Length, Tag, Size, AccessId, PC, FunctionName, FileName,
+      LineNo);
+}
+
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] void *
 ompx_unpack(void *P, uint64_t PC) {
   FAKE_PTR_CHECK(unpack, P, PC);
 }
@@ -335,6 +323,17 @@ ompx_lifetime_start(void *P, uint64_t Length) {
   gnu::used, gnu::retain]] void
 ompx_lifetime_end(void *P, uint64_t Length) {
   AllocationTracker<AllocationKind::LOCAL>::lifetimeEnd(P, Length);
+}
+
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] struct AllocationInfoTy
+ompx_get_allocation_info_local(void *P) {
+  return AllocationTracker<AllocationKind::LOCAL>::getAllocationInfo(P);
+}
+[[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
+  gnu::used, gnu::retain]] struct AllocationInfoTy
+ompx_get_allocation_info_global(void *P) {
+  return AllocationTracker<AllocationKind::GLOBAL>::getAllocationInfo(P);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,

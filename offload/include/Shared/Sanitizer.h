@@ -15,6 +15,7 @@
 #include "Utils.h"
 
 extern "C" int ompx_block_id(int Dim);
+extern "C" int ompx_block_dim(int Dim);
 extern "C" int ompx_thread_id(int Dim);
 
 enum class AllocationKind { GLOBAL, LOCAL, LAST = LOCAL };
@@ -80,6 +81,23 @@ static inline void *__offload_get_new_sanitizer_ptr(int32_t Slot) {
   AP.AllocationId = Slot;
   AP.Kind = (uint32_t)AllocationKind::GLOBAL;
   return AP;
+}
+
+template <AllocationKind AK> struct Allocations {
+  static AllocationArrayTy<AK> Arr[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
+};
+
+template <AllocationKind AK>
+[[clang::disable_sanitizer_instrumentation,
+  gnu::always_inline]] AllocationArrayTy<AK> &
+getAllocationArray() {
+  uint32_t ThreadId = 0, BlockId = 0;
+  if constexpr (AK == AllocationKind::LOCAL) {
+    ThreadId = ompx_thread_id(0);
+    BlockId = ompx_block_id(0);
+  }
+  auto &AllocArr = Allocations<AK>::Arr[ThreadId + BlockId * ompx_block_dim(0)];
+  return AllocArr;
 }
 
 struct SanitizerTrapInfoTy {
@@ -166,10 +184,10 @@ struct SanitizerTrapInfoTy {
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
-  accessError(ErrorCodeTy EC, const AllocationTy<AK> &A,
-              const AllocationPtrTy<AK> &AP, uint64_t Size, int64_t Id,
-              uint64_t PC, const char *FunctionName, const char *FileName,
-              uint64_t LineNo) {
+  propagateAccessError(ErrorCodeTy EC, const AllocationTy<AK> &A,
+                       const AllocationPtrTy<AK> &AP, uint64_t Size, int64_t Id,
+                       uint64_t PC, const char *FunctionName,
+                       const char *FileName, uint64_t LineNo) {
     AllocationStart = A.Start;
     AllocationLength = A.Length;
     AllocationId = A.Id;
@@ -212,8 +230,8 @@ struct SanitizerTrapInfoTy {
                    uint64_t Size, int64_t AccessId, uint64_t PC,
                    const char *FunctionName, const char *FileName,
                    uint64_t LineNo) {
-    accessError(OutOfBounds, A, AP, Size, AccessId, PC, FunctionName, FileName,
-                LineNo);
+    propagateAccessError(OutOfBounds, A, AP, Size, AccessId, PC, FunctionName,
+                         FileName, LineNo);
     __builtin_trap();
   }
 
@@ -223,8 +241,8 @@ struct SanitizerTrapInfoTy {
                 uint64_t Size, int64_t AccessId, uint64_t PC,
                 const char *FunctionName, const char *FileName,
                 uint64_t LineNo) {
-    accessError(UseAfterScope, A, AP, Size, AccessId, PC, FunctionName,
-                FileName, LineNo);
+    propagateAccessError(UseAfterScope, A, AP, Size, AccessId, PC, FunctionName,
+                         FileName, LineNo);
     __builtin_trap();
   }
 
@@ -234,9 +252,28 @@ struct SanitizerTrapInfoTy {
                uint64_t Size, int64_t AccessId, uint64_t PC,
                const char *FunctionName, const char *FileName,
                uint64_t LineNo) {
-    accessError(UseAfterFree, A, AP, Size, AccessId, PC, FunctionName, FileName,
-                LineNo);
+    propagateAccessError(UseAfterFree, A, AP, Size, AccessId, PC, FunctionName,
+                         FileName, LineNo);
     __builtin_trap();
+  }
+
+  template <enum AllocationKind AK>
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  accessError(const AllocationPtrTy<AK> AP, int64_t Size, int64_t AccessId,
+              uint64_t PC, const char *FunctionName, const char *FileName,
+              uint64_t LineNo) {
+    auto &A = getAllocationArray<AK>().Arr[AP.AllocationId];
+    int64_t Offset = AP.Offset;
+    int64_t Length = A.Length;
+    if (AK == AllocationKind::LOCAL && Length == 0)
+      useAfterScope<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName,
+                        LineNo);
+    else if (Offset > Length - Size)
+      outOfBoundAccess<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName,
+                           LineNo);
+    else
+      useAfterFree<AK>(A, AP, Size, AccessId, PC, FunctionName, FileName,
+                       LineNo);
   }
 
   template <enum AllocationKind AK>
