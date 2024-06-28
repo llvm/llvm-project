@@ -2,6 +2,14 @@
 ; RUN: opt -passes=slp-vectorizer -S -slp-revec -slp-max-reg-size=1024 -slp-threshold=-100 %s | FileCheck %s
 
 define void @test1(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add <16 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store <16 x i32> [[TMP2]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %arrayidx3 = getelementptr inbounds i32, ptr %a, i64 4
   %arrayidx7 = getelementptr inbounds i32, ptr %a, i64 8
