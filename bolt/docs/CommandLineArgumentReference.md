@@ -632,7 +632,7 @@
 
 - `--name-similarity-function-matching-threshold=<uint>`
 
-  Matches functions using namespace and edit distance.
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 
