@@ -80,7 +80,8 @@ public:
 private:
   bool instrumentGlobals();
   bool instrumentFunction(Function &Fn);
-  Value *instrumentAllocation(Instruction &I, Value &Size, FunctionCallee Fn);
+  Value *instrumentAllocation(Instruction &I, Value &Size, FunctionCallee Fn,
+                              PtrOrigin PO);
   Value *instrumentAllocaInst(LoopInfo &LI, AllocaInst &AI);
   void instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
                         Type &AccessTy, bool IsRead);
@@ -111,15 +112,21 @@ private:
     return FC;
   }
 
+  PointerType *getPtrTy(PtrOrigin PO) {
+    if (PO == PtrOrigin::LOCAL)
+      return PointerType::get(Ctx, 5);
+    return PtrTy;
+  }
+
   FunctionCallee getNewFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
-    return getOrCreateFn(NewFn[PO], "ompx_new" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty, Int64Ty, Int64Ty});
+    return getOrCreateFn(NewFn[PO], "ompx_new" + getSuffix(PO), getPtrTy(PO),
+                         {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty});
   }
   FunctionCallee getFreeFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(FreeFn[PO], "ompx_free" + getSuffix(PO), VoidTy,
-                         {PtrTy, Int64Ty});
+                         {getPtrTy(PO), Int64Ty});
   }
   FunctionCallee getFreeNLocalFn() {
     return getOrCreateFn(FreeNLocal, "ompx_free_local_n", VoidTy, {Int32Ty});
@@ -127,39 +134,39 @@ private:
   FunctionCallee getCheckFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(
-        CheckFn[PO], "ompx_check" + getSuffix(PO), PtrTy,
-        {PtrTy, Int64Ty, Int64Ty, Int64Ty, PtrTy, PtrTy, Int64Ty});
+        CheckFn[PO], "ompx_check" + getSuffix(PO), getPtrTy(PO),
+        {getPtrTy(PO), Int64Ty, Int64Ty, Int64Ty, PtrTy, PtrTy, Int64Ty});
   }
   FunctionCallee getCheckWithBaseFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(CheckWithBaseFn[PO],
-                         "ompx_check_with_base" + getSuffix(PO), PtrTy,
-                         {PtrTy, PtrTy, Int64Ty, Int32Ty, Int64Ty, Int64Ty,
-                          Int64Ty, PtrTy, PtrTy, Int64Ty});
+                         "ompx_check_with_base" + getSuffix(PO), getPtrTy(PO),
+                         {getPtrTy(PO), getPtrTy(PO), Int64Ty, Int32Ty, Int64Ty,
+                          Int64Ty, Int64Ty, PtrTy, PtrTy, Int64Ty});
   }
   FunctionCallee getAllocationInfoFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
     return getOrCreateFn(
         AllocationInfoFn[PO], "ompx_get_allocation_info" + getSuffix(PO),
-        StructType::create({PtrTy, Int64Ty, Int32Ty}), {PtrTy});
+        StructType::create({getPtrTy(PO), Int64Ty, Int32Ty}), {getPtrTy(PO)});
   }
   FunctionCallee getGEPFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
-    return getOrCreateFn(GEPFn[PO], "ompx_gep" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty, Int64Ty});
+    return getOrCreateFn(GEPFn[PO], "ompx_gep" + getSuffix(PO), getPtrTy(PO),
+                         {getPtrTy(PO), Int64Ty, Int64Ty});
   }
   FunctionCallee getUnpackFn(PtrOrigin PO) {
     assert(PO <= GLOBAL && "Origin does not need handling.");
-    return getOrCreateFn(UnpackFn[PO], "ompx_unpack" + getSuffix(PO), PtrTy,
-                         {PtrTy, Int64Ty});
+    return getOrCreateFn(UnpackFn[PO], "ompx_unpack" + getSuffix(PO),
+                         getPtrTy(PO), {getPtrTy(PO), Int64Ty});
   }
   FunctionCallee getLifetimeStart() {
     return getOrCreateFn(LifetimeStartFn, "ompx_lifetime_start", VoidTy,
-                         {PtrTy, Int64Ty});
+                         {getPtrTy(LOCAL), Int64Ty});
   }
   FunctionCallee getLifetimeEnd() {
     return getOrCreateFn(LifetimeEndFn, "ompx_lifetime_end", VoidTy,
-                         {PtrTy, Int64Ty});
+                         {getPtrTy(LOCAL), Int64Ty});
   }
   FunctionCallee getLeakCheckFn() {
     FunctionCallee LeakCheckFn;
@@ -253,7 +260,8 @@ void GPUSanImpl::getAllocationInfo(Function &Fn, PtrOrigin PO, Value &Object,
     else
       IP = &*Fn.getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
     IRBuilder<> IRB(IP);
-    auto *CB = IRB.CreateCall(getAllocationInfoFn(PO), {&Object});
+    auto *CB = IRB.CreateCall(getAllocationInfoFn(PO),
+                              {IRB.CreateAddrSpaceCast(&Object, getPtrTy(PO))});
     It.Start = IRB.CreateExtractValue(CB, {0});
     It.Length = IRB.CreateExtractValue(CB, {1});
     It.Tag = IRB.CreateExtractValue(CB, {2});
@@ -326,9 +334,9 @@ bool GPUSanImpl::instrumentGlobals() {
 }
 
 Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
-                                        FunctionCallee Fn) {
+                                        FunctionCallee Fn, PtrOrigin PO) {
   IRBuilder<> IRB(I.getNextNode());
-  Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, PtrTy);
+  Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, getPtrTy(PO));
   static int AllocationId = 1;
   auto *CB = IRB.CreateCall(
       Fn,
@@ -364,7 +372,7 @@ Value *GPUSanImpl::instrumentAllocaInst(LoopInfo &LI, AllocaInst &AI) {
   if (!SizeOrNone)
     llvm_unreachable("TODO");
   Value *Size = ConstantInt::get(Int64Ty, *SizeOrNone);
-  return instrumentAllocation(AI, *Size, getNewFn(LOCAL));
+  return instrumentAllocation(AI, *Size, getNewFn(LOCAL), LOCAL);
 }
 
 void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
@@ -378,7 +386,7 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   Value *Start = nullptr;
   Value *Length = nullptr;
   Value *Tag = nullptr;
-  if (PO != UNKNOWN)
+  if (PO != UNKNOWN && Object)
     getAllocationInfo(*I.getFunction(), PO, *const_cast<Value *>(Object), Start,
                       Length, Tag);
 
@@ -390,7 +398,8 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   assert(!TySize.isScalable());
   Value *Size = ConstantInt::get(Int64Ty, TySize.getFixedValue());
   IRBuilder<> IRB(&I);
-  Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
+  Value *PlainPtrOp =
+      IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, getPtrTy(PO));
   CallInst *CB;
   if (Start) {
     CB =
@@ -430,7 +439,8 @@ void GPUSanImpl::instrumentGEPInst(LoopInfo &LI, GetElementPtrInst &GEP) {
   GEP.setOperand(GetElementPtrInst::getPointerOperandIndex(),
                  Constant::getNullValue(PtrOp->getType()));
   IRBuilder<> IRB(GEP.getNextNode());
-  Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
+  Value *PlainPtrOp =
+      IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, getPtrTy(PO));
   auto *CB = IRB.CreateCall(getGEPFn(PO),
                             {PlainPtrOp, UndefValue::get(Int64Ty), getPC(IRB)},
                             GEP.getName() + ".san");
@@ -459,7 +469,8 @@ bool GPUSanImpl::instrumentCallInst(LoopInfo &LI, CallInst &CI) {
         PtrOrigin PO = getPtrOrigin(LI, Op);
         if (PO > GLOBAL)
           continue;
-        Value *PlainOp = IRB.CreatePointerBitCastOrAddrSpaceCast(Op, PtrTy);
+        Value *PlainOp =
+            IRB.CreatePointerBitCastOrAddrSpaceCast(Op, getPtrTy(PO));
         auto *CB = IRB.CreateCall(getUnpackFn(PO), {PlainOp, getPC(IRB)},
                                   Op->getName() + ".unpack");
         CI.setArgOperand(
@@ -515,8 +526,6 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
     }
   }
 
-  for (auto &It : Allocas)
-    It.second = instrumentAllocaInst(LI, *It.first);
   for (auto *Load : Loads)
     instrumentLoadInst(LI, *Load);
   for (auto *Store : Stores)
@@ -525,6 +534,8 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
     instrumentGEPInst(LI, *GEP);
   for (auto *Call : Calls)
     Changed |= instrumentCallInst(LI, *Call);
+  for (auto &It : Allocas)
+    It.second = instrumentAllocaInst(LI, *It.first);
 
   instrumentReturns(Allocas, Returns);
 
@@ -553,12 +564,12 @@ bool GPUSanImpl::instrument() {
     return false;
   }();
 
-  M.dump();
   for (Function &Fn : M)
     if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc") &&
         !Fn.getName().starts_with("rpc_"))
       if (!Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
         Changed |= instrumentFunction(Fn);
+
   return Changed;
 }
 

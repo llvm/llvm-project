@@ -7536,7 +7536,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // Collect all tail calls in the function as we cannot allow new allocas to
     // escape into tail recursion.
     // TODO: Be smarter about new allocas escaping into tail calls.
-    SmallVector<CallInst *, 16> TailCalls;
+    SmallVector<WeakTrackingVH, 16> TailCalls;
     bool UsedAssumedInformation = false;
     if (!A.checkForAllInstructions(
             [&](Instruction &I) {
@@ -7574,8 +7574,9 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                 AI, Arg->getType(), "", IP);
           Arg->replaceAllUsesWith(AI);
 
-          for (CallInst *CI : TailCalls)
-            CI->setTailCall(false);
+          for (auto &CI : TailCalls)
+            if (CI)
+              cast<CallInst>(CI)->setTailCall(false);
         };
 
     // Callback to repair a call site of the associated function. The elements

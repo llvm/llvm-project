@@ -1,5 +1,5 @@
 // clang-format off
-// RUN: %libomptarget-compileopt-generic -fsanitize=offload
+// RUN: %libomptarget-compileopt-generic -fsanitize=offload -O0
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefixes=CHECK
 // clang-format on
 
@@ -12,11 +12,14 @@
 
 // Align lines.
 
+__attribute__((optnone)) void *foo(void *P) { return P; }
+
 int main(void) {
 
-#pragma omp target
+  int *Ptr = 0;
+#pragma omp target is_device_ptr(Ptr)
   {
-    volatile int *Null = 0;
+    int *Null = foo(Ptr);
     // clang-format off
     // CHECK:      ERROR: OffloadSanitizer out-of-bounds access on address 0x0000000000000000 at pc [[PC:0x.*]]
     // CHECK-NEXT: WRITE of size 4 at 0x0000000000000000 thread <0, 0, 0> block <0, 0, 0>

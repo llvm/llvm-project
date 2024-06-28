@@ -27,8 +27,7 @@ auto getPtrDiff(const void *End, const void *Begin) {
 
 /// Return \p Ptr advanced by \p Offset bytes.
 template <typename Ty1, typename Ty2> Ty1 *advancePtr(Ty1 *Ptr, Ty2 Offset) {
-  return reinterpret_cast<Ty1 *>(
-      const_cast<char *>(reinterpret_cast<const char *>(Ptr)) + Offset);
+  return (Ty1 *)(const_cast<char *>((const char *)(Ptr)) + Offset);
 }
 
 /// Return \p V aligned "upwards" according to \p Align.
@@ -70,7 +69,7 @@ inline uint32_t popc(uint64_t V) {
 }
 
 template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
-  static_assert(sizeof(DstTy) == sizeof(SrcTy), "Bad conversion");
+  //  static_assert(sizeof(DstTy) == sizeof(SrcTy), "Bad conversion");
   return *((DstTy *)(&V));
 }
 
