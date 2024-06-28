@@ -81,6 +81,65 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   }
 }
 
+void ConstantRangeList::subtract(const ConstantRange &SubRange) {
+  if (SubRange.isEmptySet())
+    return;
+  assert(!SubRange.isFullSet() && "Do not support full set");
+  assert(SubRange.getLower().slt(SubRange.getUpper()));
+  assert(getBitWidth() == SubRange.getBitWidth());
+  // Handle common cases.
+  if (empty() || Ranges.back().getUpper().sle(SubRange.getLower())) {
+    return;
+  }
+  if (SubRange.getUpper().sle(Ranges.front().getLower())) {
+    return;
+  }
+
+  SmallVector<ConstantRange, 2> Result;
+  auto AppendRange = [&Result](APInt Start, APInt End) {
+    if (Start.slt(End))
+      Result.push_back(ConstantRange(Start, End));
+  };
+  for (auto &Range : Ranges) {
+    if (SubRange.getUpper().sle(Range.getLower()) ||
+        Range.getUpper().sle(SubRange.getLower())) {
+      // "Range" and "SubRange" do not overlap.
+      //       L---U        : Range
+      // L---U              : SubRange (Case1)
+      //             L---U  : SubRange (Case2)
+      Result.push_back(Range);
+    } else if (Range.getLower().sle(SubRange.getLower()) &&
+               SubRange.getUpper().sle(Range.getUpper())) {
+      // "Range" contains "SubRange".
+      //       L---U        : Range
+      //        L-U         : SubRange
+      // Note that ConstantRange::contains(ConstantRange) checks unsigned,
+      // but we need signed checking here.
+      AppendRange(Range.getLower(), SubRange.getLower());
+      AppendRange(SubRange.getUpper(), Range.getUpper());
+    } else if (SubRange.getLower().sle(Range.getLower()) &&
+               Range.getUpper().sle(SubRange.getUpper())) {
+      // "SubRange" contains "Range".
+      //        L-U        : Range
+      //       L---U       : SubRange
+      continue;
+    } else if (Range.getLower().sge(SubRange.getLower()) &&
+               Range.getLower().sle(SubRange.getUpper())) {
+      // "Range" and "SubRange" overlap at the left.
+      //       L---U        : Range
+      //     L---U          : SubRange
+      AppendRange(SubRange.getUpper(), Range.getUpper());
+    } else {
+      // "Range" and "SubRange" overlap at the right.
+      //       L---U        : Range
+      //         L---U      : SubRange
+      AppendRange(Range.getLower(), SubRange.getLower());
+    }
+  }
+
+  Ranges.assign(Result.begin(), Result.end());
+}
+
 ConstantRangeList
 ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
   assert(getBitWidth() == CRL.getBitWidth() &&
