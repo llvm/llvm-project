@@ -73,10 +73,6 @@ public:
   }
 
   void subtract(const ConstantRange &SubRange);
-  void subtract(int64_t Lower, int64_t Upper) {
-    subtract(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
-                           APInt(64, Upper, /*isSigned=*/true)));
-  }
 
   /// Return the range list that results from the union of this
   /// ConstantRangeList with another ConstantRangeList, "CRL".

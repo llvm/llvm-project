@@ -82,21 +82,19 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
 }
 
 void ConstantRangeList::subtract(const ConstantRange &SubRange) {
-  if (SubRange.isEmptySet())
+  if (SubRange.isEmptySet() || empty())
     return;
   assert(!SubRange.isFullSet() && "Do not support full set");
   assert(SubRange.getLower().slt(SubRange.getUpper()));
   assert(getBitWidth() == SubRange.getBitWidth());
   // Handle common cases.
-  if (empty() || Ranges.back().getUpper().sle(SubRange.getLower())) {
+  if (Ranges.back().getUpper().sle(SubRange.getLower()))
     return;
-  }
-  if (SubRange.getUpper().sle(Ranges.front().getLower())) {
+  if (SubRange.getUpper().sle(Ranges.front().getLower()))
     return;
-  }
 
   SmallVector<ConstantRange, 2> Result;
-  auto AppendRange = [&Result](APInt Start, APInt End) {
+  auto AppendRangeIfNonEmpty = [&Result](APInt Start, APInt End) {
     if (Start.slt(End))
       Result.push_back(ConstantRange(Start, End));
   };
@@ -115,8 +113,8 @@ void ConstantRangeList::subtract(const ConstantRange &SubRange) {
       //        L-U         : SubRange
       // Note that ConstantRange::contains(ConstantRange) checks unsigned,
       // but we need signed checking here.
-      AppendRange(Range.getLower(), SubRange.getLower());
-      AppendRange(SubRange.getUpper(), Range.getUpper());
+      AppendRangeIfNonEmpty(Range.getLower(), SubRange.getLower());
+      AppendRangeIfNonEmpty(SubRange.getUpper(), Range.getUpper());
     } else if (SubRange.getLower().sle(Range.getLower()) &&
                Range.getUpper().sle(SubRange.getUpper())) {
       // "SubRange" contains "Range".
@@ -128,16 +126,16 @@ void ConstantRangeList::subtract(const ConstantRange &SubRange) {
       // "Range" and "SubRange" overlap at the left.
       //       L---U        : Range
       //     L---U          : SubRange
-      AppendRange(SubRange.getUpper(), Range.getUpper());
+      AppendRangeIfNonEmpty(SubRange.getUpper(), Range.getUpper());
     } else {
       // "Range" and "SubRange" overlap at the right.
       //       L---U        : Range
       //         L---U      : SubRange
-      AppendRange(Range.getLower(), SubRange.getLower());
+      AppendRangeIfNonEmpty(Range.getLower(), SubRange.getLower());
     }
   }
 
-  Ranges.assign(Result.begin(), Result.end());
+  Ranges = Result;
 }
 
 ConstantRangeList

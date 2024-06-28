@@ -118,7 +118,8 @@ TEST_F(ConstantRangeListTest, Subtract) {
   auto SubtractAndCheck = [](ConstantRangeList CRL,
                              const std::pair<int64_t, int64_t> &Range,
                              const ConstantRangeList &ExpectedCRL) {
-    CRL.subtract(Range.first, Range.second);
+    CRL.subtract(ConstantRange(APInt(64, Range.first, /*isSigned=*/true),
+                               APInt(64, Range.second, /*isSigned=*/true)));
     EXPECT_EQ(CRL, ExpectedCRL);
   };
 
@@ -127,13 +128,20 @@ TEST_F(ConstantRangeListTest, Subtract) {
   SubtractAndCheck(CRL, {4, 8}, CRL);
   SubtractAndCheck(CRL, {12, 16}, CRL);
 
-  // Overlap (left or right)
+  // Overlap (left, right, or both)
   SubtractAndCheck(CRL, {-4, 2}, GetCRL({{AP2, AP4}, {AP8, AP12}}));
   SubtractAndCheck(CRL, {-4, 4}, GetCRL({{AP8, AP12}}));
   SubtractAndCheck(CRL, {-4, 8}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 2}, GetCRL({{AP2, AP4}, {AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 4}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 8}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {10, 12}, GetCRL({{AP0, AP4}, {AP8, AP10}}));
+  SubtractAndCheck(CRL, {8, 12}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {6, 12}, GetCRL({{AP0, AP4}}));
   SubtractAndCheck(CRL, {10, 16}, GetCRL({{AP0, AP4}, {AP8, AP10}}));
   SubtractAndCheck(CRL, {8, 16}, GetCRL({{AP0, AP4}}));
   SubtractAndCheck(CRL, {6, 16}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {2, 10}, GetCRL({{AP0, AP2}, {AP10, AP12}}));
 
   // Subset
   SubtractAndCheck(CRL, {2, 3}, GetCRL({{AP0, AP2}, {AP3, AP4}, {AP8, AP12}}));
