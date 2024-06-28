@@ -131,11 +131,6 @@ cl::opt<bool>
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
 
-cl::opt<bool>
-    MatchProfileWithFunctionHash("match-profile-with-function-hash",
-                                 cl::desc("Match profile with function hash"),
-                                 cl::Hidden, cl::cat(BoltCategory));
-
 cl::opt<std::string>
 OutputFilename("o",
   cl::desc("<output file>"),

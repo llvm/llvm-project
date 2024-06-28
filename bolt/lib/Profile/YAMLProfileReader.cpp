@@ -30,6 +30,11 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
+llvm::cl::opt<bool>
+    MatchProfileWithFunctionHash("match-profile-with-function-hash",
+                                 cl::desc("Match profile with function hash"),
+                                 cl::Hidden, cl::cat(BoltOptCategory));
+
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
                                   cl::Hidden, cl::cat(BoltOptCategory));
@@ -376,8 +381,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     for (auto &[_, BF] : BC.getBinaryFunctions()) {
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
     }
-  }
-  else if (!opts::IgnoreHash) {
+  } else if (!opts::IgnoreHash) {
     for (BinaryFunction *BF : ProfileBFs) {
       if (!BF)
         continue;
@@ -400,9 +404,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     }
   }
 
-  // Uses the strict hash of profiled and binary functions to match functions
-  // that are not matched by name or common name. Collisions are possible in the
-  // unlikely case where multiple functions share the same exact hash.
+  // Iterates through profiled functions to match the first binary function with
+  // the same exact hash. Serves to match identical, renamed functions.
+  // Collisions are possible where multiple functions share the same exact hash.
   if (opts::MatchProfileWithFunctionHash) {
     DenseMap<size_t, BinaryFunction *> StrictHashToBF;
     StrictHashToBF.reserve(BC.getBinaryFunctions().size());
