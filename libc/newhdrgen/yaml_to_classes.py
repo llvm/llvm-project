@@ -114,9 +114,9 @@ def add_function_to_yaml(yaml_file, function_details):
         
     """
     
-    class IndentYamlDumper(yaml.Dumper):
+    class IndentYamlListDumper(yaml.Dumper):
         def increase_indent(self, flow=False, indentless=False):
-            return super(IndentYamlDumper, self).increase_indent(flow, False)
+            return super(IndentYamlListDumper, self).increase_indent(flow, False)
 
     name, return_type, guard, attributes, arguments, standards = function_details
     attributes = attributes.split(",") if attributes != "null" else []
@@ -146,7 +146,7 @@ def add_function_to_yaml(yaml_file, function_details):
 
     with open(yaml_file, "w") as f:
         yaml.dump(
-            yaml_data, f, Dumper=IndentYamlDumper, default_flow_style=False, sort_keys=False
+            yaml_data, f, Dumper=IndentYamlListDumper, default_flow_style=False, sort_keys=False
         )
 
     print(f"Added function {name} to {yaml_file}")
