@@ -369,7 +369,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     return;
   }
 
-  const DataLayout &DL = Func->getParent()->getDataLayout();
+  const DataLayout &DL = Func->getDataLayout();
   unsigned AS = DL.getAllocaAddrSpace();
   if (isParamGridConstant(*Arg)) {
     // Writes to a grid constant are undefined behaviour. We do not need a
