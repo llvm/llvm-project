@@ -11522,7 +11522,7 @@ static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
   const auto *NewTA = NewFD->getAttr<TargetAttr>();
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
+
   // If the old decl is NOT MultiVersioned yet, and we don't cause that
   // to change, this is a simple redeclaration.
   if (NewTA && !NewTA->isDefaultVersion() &&
@@ -11530,12 +11530,8 @@ static bool CheckDeclarationCausesMultiVersioning(Sema &S, FunctionDecl *OldFD,
     return false;
 
   // The target_version attribute only causes Multiversioning if this
-  // declaration is NOT the default version. Moreover, the old declaration
-  // must be the default version (either explicitly via the attribute,
-  // or implicitly without it).
+  // declaration is NOT the default version.
   if (NewTVA && NewTVA->isDefaultVersion())
-    return false;
-  if (NewTVA && OldTVA && !OldTVA->isDefaultVersion())
     return false;
 
   // Otherwise, this decl causes MultiVersioning.
