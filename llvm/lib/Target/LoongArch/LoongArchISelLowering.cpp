@@ -4694,7 +4694,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   // sign-extend.
   if (AI->getOperation() == AtomicRMWInst::Min ||
       AI->getOperation() == AtomicRMWInst::Max) {
-    const DataLayout &DL = AI->getModule()->getDataLayout();
+    const DataLayout &DL = AI->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
     Value *SextShamt =

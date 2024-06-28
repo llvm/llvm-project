@@ -370,15 +370,19 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithLTOCommonName = 0;
 
   // Computes hash for binary functions.
-  if (opts::MatchProfileWithFunctionHash)
-    for (auto &[_, BF] : BC.getBinaryFunctions())
+  if (opts::MatchProfileWithFunctionHash) {
+    for (auto &[_, BF] : BC.getBinaryFunctions()) {
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
-  else if (!opts::IgnoreHash)
+    }
+  }
+  else if (!opts::IgnoreHash) {
     for (BinaryFunction *BF : ProfileBFs) {
       if (!BF)
         continue;
       BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
     }
+  }
+
   // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
     if (!BF)
@@ -397,7 +401,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   // Uses the strict hash of profiled and binary functions to match functions
   // that are not matched by name or common name.
   if (opts::MatchProfileWithFunctionHash) {
-    std::unordered_map<size_t, BinaryFunction *> StrictHashToBF;
+    DenseMap<size_t, BinaryFunction *> StrictHashToBF;
     StrictHashToBF.reserve(BC.getBinaryFunctions().size());
 
     for (auto &[_, BF] : BC.getBinaryFunctions())
@@ -456,7 +460,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
 
-  if (opts::Verbosity >= 2) {
+  if (opts::Verbosity >= 1) {
     outs() << "BOLT-INFO: matched " << MatchedWithExactName
            << " functions with identical names\n";
     outs() << "BOLT-INFO: matched " << MatchedWithHash

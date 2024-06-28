@@ -523,17 +523,6 @@ def int_amdgcn_fmad_ftz :
             [IntrNoMem, IntrSpeculatable]
 >;
 
-class AMDGPULDSIntrin :
-  Intrinsic<[llvm_any_ty],
-    [LLVMQualPointerType<3>,
-    LLVMMatchType<0>,
-    llvm_i32_ty, // ordering
-    llvm_i32_ty, // scope
-    llvm_i1_ty], // isVolatile
-    [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]
->;
-
 // FIXME: The m0 argument should be moved after the normal arguments
 class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [llvm_i32_ty],
@@ -570,9 +559,6 @@ def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
 // The pointer argument is assumed to be dynamically uniform if a VGPR.
 def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
 def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
-
-def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
-def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
 } // TargetPrefix = "amdgcn"
 
@@ -2345,10 +2331,9 @@ class AMDGPUGlobalLoadLDS :
      "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 
-// Use read/write of inaccessible memory to model the fact that this reads a
-// volatile value.
+// This is IntrHasSideEffects because it reads from a volatile hardware register.
 def int_amdgcn_pops_exiting_wave_id :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
