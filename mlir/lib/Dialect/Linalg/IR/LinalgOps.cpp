@@ -2496,7 +2496,13 @@ SoftmaxOp::getTiledImplementation(OpBuilder &builder,
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
 
-  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+  SmallVector<Operation *> sliceOps;
+  for (Value operand : tiledOperands)
+    if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
+      sliceOps.push_back(sliceOp);
+
+  return TilingResult{
+      {tiledOp}, SmallVector<Value>(tiledOp->getResults()), sliceOps};
 }
 
 LogicalResult SoftmaxOp::getResultTilePosition(

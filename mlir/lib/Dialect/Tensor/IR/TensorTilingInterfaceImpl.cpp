@@ -99,6 +99,16 @@ static void applyPermToRange(SmallVector<OpFoldResult> &offsets,
   applyPermutationToVector<OpFoldResult>(sizes, permutation);
 }
 
+static SmallVector<Operation *> sliceOperandsOf(Operation *op) {
+  SmallVector<Operation *> sliceOps;
+  for (auto operand : op->getOperands()) {
+    if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>()) {
+      sliceOps.push_back(sliceOp);
+    }
+  }
+  return sliceOps;
+}
+
 struct PackOpTiling
     : public TilingInterface::ExternalModel<PackOpTiling, PackOp> {
 
@@ -192,7 +202,8 @@ struct PackOpTiling
         loc, TypeRange{extractSlice.getType()}, tiledOperands, op->getAttrs());
 
     return TilingResult{{tiledPackOp},
-                        SmallVector<Value>(tiledPackOp->getResults())};
+                        SmallVector<Value>(tiledPackOp->getResults()),
+                        sliceOperandsOf(tiledPackOp)};
   }
 
   LogicalResult
@@ -440,12 +451,16 @@ struct UnPackOpTiling
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
-                          SmallVector<Value>(tiledUnpackOp->getResults())};
+                          SmallVector<Value>(tiledUnpackOp->getResults()),
+                          sliceOperandsOf(tiledUnpackOp)};
 
     auto extractSlice =
         b.create<ExtractSliceOp>(loc, tiledUnpackOp->getResult(0),
                                  resultOffsetsFromDest, sizes, destStrides);
-    return TilingResult{{tiledUnpackOp}, {extractSlice.getResult()}};
+
+    return TilingResult{{tiledUnpackOp},
+                        {extractSlice.getResult()},
+                        sliceOperandsOf(tiledUnpackOp)};
   }
 
   LogicalResult
@@ -567,7 +582,8 @@ struct UnPackOpTiling
                            tiledOperands, op->getAttrs());
 
     return TilingResult{{tiledUnPackOp},
-                        SmallVector<Value>(tiledUnPackOp->getResults())};
+                        SmallVector<Value>(tiledUnPackOp->getResults()),
+                        sliceOperandsOf(tiledUnPackOp)};
   }
 };
 
@@ -756,7 +772,9 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // the original data source x is not used.
   if (hasZeroLen) {
     Operation *generateOp = createGenerateOp();
-    return TilingResult{{generateOp}, {castResult(generateOp->getResult(0))}};
+    return TilingResult{{generateOp},
+                        {castResult(generateOp->getResult(0))},
+                        /*extractSliceOps=*/{}};
   }
 
   // If there are dynamic dimensions: Generate an scf.if check to avoid
@@ -776,11 +794,15 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
           elseOp = createPadOfExtractSlice();
           b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
         });
-    return TilingResult{{elseOp}, SmallVector<Value>(result->getResults())};
+    return TilingResult{{elseOp},
+                        SmallVector<Value>(result->getResults()),
+                        sliceOperandsOf(elseOp)};
   }
 
   Operation *newPadOp = createPadOfExtractSlice();
-  return TilingResult{{newPadOp}, {castResult(newPadOp->getResult(0))}};
+  return TilingResult{{newPadOp},
+                      {castResult(newPadOp->getResult(0))},
+                      sliceOperandsOf(newPadOp)};
 }
 
 void mlir::tensor::registerTilingInterfaceExternalModels(

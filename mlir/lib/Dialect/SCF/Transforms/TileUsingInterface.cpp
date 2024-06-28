@@ -619,7 +619,8 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
     if (llvm::all_of(tileSizes, isZeroIndex)) {
       tiledResults.append(clonedOp->result_begin(), clonedOp->result_end());
       tilingResult =
-          TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults()};
+          TilingResult{/*tiledOps=*/{clonedOp}, clonedOp->getResults(),
+                       /*extractSliceOps=*/{}};
       return success();
     }
 
@@ -675,12 +676,14 @@ mlir::scf::tileUsingSCF(RewriterBase &rewriter, TilingInterface op,
   // op.
   if (loops.empty()) {
     return scf::SCFTilingResult{tilingResult->tiledOps, loops,
-                                tilingResult->tiledValues};
+                                tilingResult->tiledValues,
+                                tilingResult->extractSliceOps};
   }
 
   SmallVector<Value> replacements = llvm::map_to_vector(
       loops.front()->getResults(), [](OpResult r) -> Value { return r; });
-  return scf::SCFTilingResult{tilingResult->tiledOps, loops, replacements};
+  return scf::SCFTilingResult{tilingResult->tiledOps, loops, replacements,
+                              tilingResult->extractSliceOps};
 }
 
 FailureOr<scf::SCFReductionTilingResult>
@@ -944,9 +947,9 @@ mlir::scf::tileAndFuseProducerOfSlice(
         ->getOpOperands()[destinationInitArg.value()->getOperandNumber()]
         .set(origDestinationTensors[resultNumber]);
   }
-  return scf::SCFFuseProducerOfSliceResult{fusableProducer,
-                                           tileAndFuseResult->tiledValues[0],
-                                           tileAndFuseResult->tiledOps};
+  return scf::SCFFuseProducerOfSliceResult{
+      fusableProducer, tileAndFuseResult->tiledValues[0],
+      tileAndFuseResult->tiledOps, tileAndFuseResult->extractSliceOps};
 }
 
 /// Reconstruct the fused producer from within the tiled-and-fused code.
@@ -975,13 +978,12 @@ LogicalResult mlir::scf::yieldReplacementForFusedProducer(
                   .getDefiningOp<DestinationStyleOpInterface>()) {
         rewriter.setInsertionPoint(tiledDestStyleOp);
         Value newRegionArg = newRegionIterArgs.back();
-        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
-            sliceOp.getLoc(), newRegionArg, sliceOp.getMixedOffsets(),
-            sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
         unsigned resultNumber = fusableProducer.getResultNumber();
-        rewriter.modifyOpInPlace(tiledDestStyleOp, [&]() {
-          tiledDestStyleOp.getDpsInitsMutable()[resultNumber].set(destSlice);
-        });
+        auto origSlice = tiledDestStyleOp.getDpsInits()[resultNumber]
+                             .getDefiningOp<tensor::ExtractSliceOp>();
+        if (origSlice) {
+          origSlice.getSourceMutable().set(newRegionArg);
+        }
       }
       Block *block = rewriter.getInsertionPoint()->getBlock();
       rewriter.setInsertionPoint(block->getTerminator());
@@ -1049,15 +1051,14 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   //    operations. If the producers of the source of the `tensor.extract_slice`
   //    can be tiled such that the tiled value is generated in-place, that
   //    effectively tiles + fuses the operations.
-  auto addCandidateSlices = [](Operation *fusedOp,
+  auto addCandidateSlices = [](const SmallVector<Operation *> &newSliceOps,
                                std::deque<tensor::ExtractSliceOp> &candidates) {
-    for (Value operand : fusedOp->getOperands())
-      if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
-        candidates.push_back(sliceOp);
+    for (auto *op : newSliceOps)
+      candidates.push_back(llvm::cast<tensor::ExtractSliceOp>(op));
   };
 
   std::deque<tensor::ExtractSliceOp> candidates;
-  addCandidateSlices(tiledAndFusedOps.back(), candidates);
+  addCandidateSlices(tilingResult->extractSliceOps, candidates);
   OpBuilder::InsertionGuard g(rewriter);
   while (!candidates.empty()) {
     // Traverse the slices in BFS fashion.
@@ -1099,7 +1100,7 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
             fusedResult->tiledAndFusedProducer.getDefiningOp()) {
       fusedProducers.insert(fusedResult->origProducer.getDefiningOp());
       tiledAndFusedOps.insert(tiledAndFusedOp);
-      addCandidateSlices(tiledAndFusedOp, candidates);
+      addCandidateSlices(fusedResult->extractSliceOps, candidates);
     }
   }
 

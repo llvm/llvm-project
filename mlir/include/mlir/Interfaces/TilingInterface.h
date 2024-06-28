@@ -28,9 +28,13 @@ namespace mlir {
 /// are returned to the caller for further transformations.
 /// - `tiledValues` contains the tiled value corresponding to the result of the
 /// untiled operation.
+/// - `extractSliceOps` contains all the `tensor.extract_slice` ops used in
+/// generating the `tiledOps`. Usually these are operands to the `tiledOps`
+/// but they can be embedded in regions owned by `tiledOps`.
 struct TilingResult {
   SmallVector<Operation *> tiledOps;
   SmallVector<Value> tiledValues;
+  SmallVector<Operation *> extractSliceOps;
 };
 
 /// Container for the result of merge operation of tiling.
