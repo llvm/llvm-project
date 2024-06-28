@@ -648,6 +648,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .libcallFor({{s16, s128}, {s32, s128}, {s64, s128}})
       .clampNumElements(0, v4s16, v4s16)
       .clampNumElements(0, v2s32, v2s32)
       .scalarize(0);
@@ -661,7 +662,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   // Conversions
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-      .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
+      .legalFor({{s32, s32},
+                 {s64, s32},
+                 {s32, s64},
+                 {s64, s64},
+                 {v2s64, v2s64},
+                 {v4s32, v4s32},
+                 {v2s32, v2s32}})
       .legalIf([=](const LegalityQuery &Query) {
         return HasFP16 &&
                (Query.Types[1] == s16 || Query.Types[1] == v4s16 ||
@@ -669,26 +676,38 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                (Query.Types[0] == s32 || Query.Types[0] == s64 ||
                 Query.Types[0] == v4s16 || Query.Types[0] == v8s16);
       })
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, s64)
-      .widenScalarToNextPow2(1)
-      .clampScalarOrElt(1, MinFPScalar, s64)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
+      // The range of a fp16 value fits into an i17, so we can lower the width
+      // to i64.
+      .narrowScalarIf(
+          [=](const LegalityQuery &Query) {
+            return Query.Types[1] == s16 && Query.Types[0].getSizeInBits() > 64;
+          },
+          changeTo(0, s64))
       .moreElementsToNextPow2(0)
+      .widenScalarOrEltToNextPow2OrMinSize(0)
+      .minScalar(0, s32)
+      .widenScalarOrEltToNextPow2OrMinSize(1, /*MinSize=*/HasFP16 ? 16 : 32)
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarSizeInBits() >
-                   Query.Types[1].getScalarSizeInBits();
+            return Query.Types[0].getScalarSizeInBits() <= 64 &&
+                   Query.Types[0].getScalarSizeInBits() >
+                       Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(1, 0))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarSizeInBits() <
-                   Query.Types[1].getScalarSizeInBits();
+            return Query.Types[1].getScalarSizeInBits() <= 64 &&
+                   Query.Types[0].getScalarSizeInBits() <
+                       Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(0, 1))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
-      .clampMaxNumElements(0, s64, 2);
+      .clampMaxNumElements(0, s64, 2)
+      .libcallFor(
+          {{s32, s128}, {s64, s128}, {s128, s128}, {s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
@@ -741,6 +760,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     getActionDefinitionsBuilder(G_GLOBAL_VALUE).custom();
   else
     getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
+
+  getActionDefinitionsBuilder(G_PTRAUTH_GLOBAL_VALUE)
+      .legalIf(all(typeIs(0, p0), typeIs(1, p0)));
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{s64, p0}, {v2s64, v2p0}})

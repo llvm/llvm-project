@@ -1473,7 +1473,7 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
   for (const auto TopLevelDecl : TopLevelDeclsInPreamble) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
-    if (Decl *D = Reader->GetDecl(Reader->getGlobalDeclID(MF, TopLevelDecl)))
+    if (Decl *D = Reader->GetLocalDecl(MF, TopLevelDecl))
       Resolved.push_back(D);
   }
   TopLevelDeclsInPreamble.clear();

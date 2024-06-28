@@ -718,7 +718,6 @@ gatherBoundsOrBoundValues(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
-                    Fortran::lower::AbstractConverter &converter,
                     fir::ExtendedValue dataExv,
                     Fortran::lower::AddrAndBoundsInfo &info) {
   llvm::SmallVector<mlir::Value> bounds;
@@ -778,7 +777,6 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
-                 Fortran::lower::AbstractConverter &converter,
                  fir::ExtendedValue dataExv, bool isAssumedSize) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -836,7 +834,7 @@ struct PeelConvert {
   static Fortran::semantics::MaybeExpr visit_with_category(
       const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category, Kind>>
           &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         [](auto &&s) { return visit_with_category<Category, Kind>(s); },
         expr.u);
   }
@@ -859,12 +857,12 @@ struct PeelConvert {
   static Fortran::semantics::MaybeExpr
   visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<Category>>
             &expr) {
-    return std::visit([](auto &&s) { return visit_with_category<Category>(s); },
-                      expr.u);
+    return Fortran::common::visit(
+        [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }
   static Fortran::semantics::MaybeExpr
   visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    return std::visit([](auto &&s) { return visit(s); }, expr.u);
+    return Fortran::common::visit([](auto &&s) { return visit(s); }, expr.u);
   }
   template <typename T> //
   static Fortran::semantics::MaybeExpr visit(const T &) {
@@ -1163,7 +1161,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     info.rawInput = info.addr;
     if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, operandLocation,
-                                                      converter, compExv,
+                                                      compExv,
                                                       /*isAssumedSize=*/false);
     asFortran << designator.AsFortran();
 
@@ -1189,7 +1187,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       info.addr = boxAddrOp.getVal();
       info.rawInput = info.addr;
       bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
-          builder, operandLocation, converter, compExv, info);
+          builder, operandLocation, compExv, info);
     }
   } else {
     if (detail::getRef<evaluate::ArrayRef>(designator)) {
@@ -1206,13 +1204,13 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       if (mlir::isa<fir::BaseBoxType>(
               fir::unwrapRefType(info.addr.getType()))) {
         bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
-            builder, operandLocation, converter, dataExv, info);
+            builder, operandLocation, dataExv, info);
       }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
       if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
-            builder, operandLocation, converter, dataExv, dataExvIsAssumedSize);
+            builder, operandLocation, dataExv, dataExvIsAssumedSize);
       asFortran << symRef->get().name().ToString();
     } else { // Unsupported
       llvm::report_fatal_error("Unsupported type of OpenACC operand");

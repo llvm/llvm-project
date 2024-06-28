@@ -778,9 +778,16 @@ class time_zone {
   template<class Duration>
   sys_time<common_type_t<Duration, seconds>>
     to_sys(const local_time<Duration>& tp, choose z) const;
+
+  template<class Duration>
+  local_time<common_type_t<Duration, seconds>>
+    to_local(const sys_time<Duration>& tp) const;
 };
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
+
+// [time.zone.zonedtraits], class template zoned_traits
+template<class T> struct zoned_traits;                                           // C++20
 
 // [time.zone.leap], leap second support
 class leap_second {                                                              // C++20
@@ -955,6 +962,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #    include <__chrono/time_zone_link.h>
 #    include <__chrono/tzdb.h>
 #    include <__chrono/tzdb_list.h>
+#    include <__chrono/zoned_time.h>
 #  endif
 
 #endif
@@ -989,6 +997,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
 #  include <charconv>
 #  include <locale>
+#  include <ostream>
 #endif
 
 #endif // _LIBCPP_CHRONO

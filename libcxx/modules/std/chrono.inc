@@ -227,11 +227,10 @@ export namespace std {
     using std::chrono::choose;
     using std::chrono::time_zone;
 
-#    if 0
-
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
 
+#    if 0
     // [time.zone.zonedtime], class template zoned_time
     using std::chrono::zoned_time;
 

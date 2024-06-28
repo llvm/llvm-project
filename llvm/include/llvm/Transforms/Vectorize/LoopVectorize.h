@@ -67,6 +67,7 @@ class BlockFrequencyInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
+class Instruction;
 class Loop;
 class LoopAccessInfoManager;
 class LoopInfo;

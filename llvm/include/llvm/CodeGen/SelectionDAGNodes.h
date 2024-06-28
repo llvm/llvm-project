@@ -1754,6 +1754,9 @@ public:
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
 
+/// Returns true if \p V is a constant integer zero or an UNDEF node.
+bool isNullConstantOrUndef(SDValue V);
+
 /// Returns true if \p V is an FP constant with a value of positive zero.
 bool isNullFPConstant(SDValue V);
 

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCWinEH.h"
@@ -63,7 +64,7 @@ struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
 }
 
-using MCSectionSubPair = std::pair<MCSection *, const MCExpr *>;
+using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 
 /// Target specific streamer interface. This is used so that targets can
 /// implement support for target specific assembly directives.
@@ -116,7 +117,7 @@ public:
   /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(const MCSection *CurSection, MCSection *Section,
-                             const MCExpr *SubSection, raw_ostream &OS);
+                             uint32_t SubSection, raw_ostream &OS);
 
   virtual void emitValue(const MCExpr *Value);
 
@@ -255,7 +256,13 @@ class MCStreamer {
   bool AllowAutoPadding = false;
 
 protected:
+  MCFragment *CurFrag = nullptr;
+
   MCStreamer(MCContext &Ctx);
+
+  /// This is called by popSection and switchSection, if the current
+  /// section changes.
+  virtual void changeSection(MCSection *, uint32_t);
 
   virtual void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame);
   virtual void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame);
@@ -392,7 +399,9 @@ public:
       return SectionStack.back().first;
     return MCSectionSubPair();
   }
-  MCSection *getCurrentSectionOnly() const { return getCurrentSection().first; }
+  MCSection *getCurrentSectionOnly() const {
+    return CurFrag->getParent();
+  }
 
   /// Return the previous section that the streamer is emitting code to.
   MCSectionSubPair getPreviousSection() const {
@@ -401,17 +410,13 @@ public:
     return MCSectionSubPair();
   }
 
+  MCFragment *getCurrentFragment() const;
+
   /// Returns an index to represent the order a symbol was emitted in.
   /// (zero if we did not emit that symbol)
   unsigned getSymbolOrder(const MCSymbol *Sym) const {
     return SymbolOrdering.lookup(Sym);
   }
-
-  /// Update streamer for a new active section.
-  ///
-  /// This is called by popSection and switchSection, if the current
-  /// section changes.
-  virtual void changeSection(MCSection *, const MCExpr *);
 
   /// Save the current and previous section on the section stack.
   void pushSection() {
@@ -423,47 +428,17 @@ public:
   /// Calls changeSection as needed.
   ///
   /// Returns false if the stack was empty.
-  bool popSection() {
-    if (SectionStack.size() <= 1)
-      return false;
-    auto I = SectionStack.end();
-    --I;
-    MCSectionSubPair OldSection = I->first;
-    --I;
-    MCSectionSubPair NewSection = I->first;
-
-    if (NewSection.first && OldSection != NewSection)
-      changeSection(NewSection.first, NewSection.second);
-    SectionStack.pop_back();
-    return true;
-  }
-
-  bool subSection(const MCExpr *Subsection) {
-    if (SectionStack.empty())
-      return false;
-
-    switchSection(SectionStack.back().first.first, Subsection);
-    return true;
-  }
+  bool popSection();
 
   /// Set the current section where code is being emitted to \p Section.  This
   /// is required to update CurSection.
   ///
   /// This corresponds to assembler directives like .section, .text, etc.
-  virtual void switchSection(MCSection *Section,
-                             const MCExpr *Subsection = nullptr);
+  virtual void switchSection(MCSection *Section, uint32_t Subsec = 0);
+  bool switchSection(MCSection *Section, const MCExpr *);
 
-  /// Set the current section where code is being emitted to \p Section.
-  /// This is required to update CurSection. This version does not call
-  /// changeSection.
-  void switchSectionNoChange(MCSection *Section,
-                             const MCExpr *Subsection = nullptr) {
-    assert(Section && "Cannot switch to a null section!");
-    MCSectionSubPair curSection = SectionStack.back().first;
-    SectionStack.back().second = curSection;
-    if (MCSectionSubPair(Section, Subsection) != curSection)
-      SectionStack.back().first = MCSectionSubPair(Section, Subsection);
-  }
+  /// Similar to switchSection, but does not print the section directive.
+  virtual void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
   virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);

@@ -67,11 +67,6 @@
 ///   that terminology in code frequently refers to these as "TA" which is
 ///   confusing.  We're in the process of migrating away from this
 ///   representation.
-/// * _TU w/o policy operand -- Has a passthrough operand, and always
-///   represents the tail undisturbed state.
-/// * _TU w/policy operand - Can represent all three policy states.  If
-///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
-///   Otherwise, policy operand and tablegen flags drive the interpretation.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -384,17 +379,6 @@ class GetIntVTypeInfo<VTypeInfo vti> {
   //   VF64M4 → VI64M4
   VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VI",
                                           !subst("VF", "VI",
-                                                 !cast<string>(vti))));
-}
-
-// This functor is used to obtain the fp vector type that has the same SEW and
-// multiplier as the input parameter type.
-class GetFpVTypeInfo<VTypeInfo vti> {
-  // Equivalent integer vector type. Eg.
-  //   VF16M1 → VF16M1 (identity)
-  //   VBF16M1 → VF16M1
-  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VF",
-                                          !subst("VI", "VF",
                                                  !cast<string>(vti))));
 }
 
@@ -772,11 +756,6 @@ class GetVTypePredicates<VTypeInfo vti> {
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
                                      !eq(vti.SEW, 64) : [HasVInstructionsI64],
                                      true : [HasVInstructions]);
-}
-
-class GetVTypeScalarPredicates<VTypeInfo vti> {
-  list<Predicate> Predicates = !cond(!eq(vti.Scalar, bf16) : [HasStdExtZfbfmin],
-                                     true : []);
 }
 
 class VPseudoUSLoadNoMask<VReg RetClass,
