@@ -10,6 +10,7 @@
 
 func.func @add_i1(%v1 : i1, %v2 : i1) -> (i1) {
   %res = arith.addi %v1, %v2 : i1
+  vector.print %res : i1
   return %res : i1
 }
 
@@ -21,17 +22,18 @@ func.func @additions_i1() {
 
   // CHECK:      1
   %0 = func.call @add_i1(%false, %true) : (i1, i1) -> i1
-  vector.print %0 : i1
 
   // CHECK-NEXT: 1
   %true_based_on_non_zero_val = arith.constant -1 : i1
   %1 = func.call @add_i1(%false, %true_based_on_non_zero_val) : (i1, i1) -> i1
-  vector.print %1 : i1
+
   return
 }
 
 func.func @addui_extended_i1(%v1 : i1, %v2 : i1) -> (i1, i1) {
   %res, %overflow = arith.addui_extended %v1, %v2 : i1, i1
+  vector.print %res : i1
+  vector.print %overflow : i1
   return %res, %overflow : i1, i1
 }
 
@@ -43,27 +45,19 @@ func.func @additions_extended_i1() {
   
   // CHECK-NEXT: 0
   // CHECK-NEXT: 1
-  %sum_tt, %overflow_tt = func.call @addui_extended_i1(%true, %true) : (i1, i1) -> (i1, i1)
-  vector.print %sum_tt : i1
-  vector.print %overflow_tt : i1
+  func.call @addui_extended_i1(%true, %true) : (i1, i1) -> (i1, i1)
 
   // CHECK-NEXT: 1
   // CHECK-NEXT: 0
-  %sum_tf, %overflow_tf = func.call @addui_extended_i1(%true, %false) : (i1, i1) -> (i1, i1)
-  vector.print %sum_tf : i1
-  vector.print %overflow_tf : i1
+  func.call @addui_extended_i1(%true, %false) : (i1, i1) -> (i1, i1)
 
   // CHECK-NEXT: 1
   // CHECK-NEXT: 0
-  %sum_ft, %overflow_ft = func.call @addui_extended_i1(%false, %true) : (i1, i1) -> (i1, i1)
-  vector.print %sum_ft : i1
-  vector.print %overflow_ft : i1
+  func.call @addui_extended_i1(%false, %true) : (i1, i1) -> (i1, i1)
 
   // CHECK-NEXT: 0
   // CHECK-NEXT: 0
-  %sum_ff, %overflow_ff = func.call @addui_extended_i1(%false, %false) : (i1, i1) -> (i1, i1)
-  vector.print %sum_ff : i1
-  vector.print %overflow_ff : i1
+  func.call @addui_extended_i1(%false, %false) : (i1, i1) -> (i1, i1)
   return
 }
 
