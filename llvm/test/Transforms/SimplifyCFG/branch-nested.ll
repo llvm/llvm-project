@@ -5,11 +5,8 @@ define void @fold_nested_branch(i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: define void @fold_nested_branch(
 ; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 [[COND1]], label %[[BB1:.*]], label %[[BB2:.*]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br i1 [[COND2]], label %[[BB3:.*]], label %[[BB4:.*]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br i1 [[COND2]], label %[[BB4]], label %[[BB3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB4:.*]], label %[[BB3:.*]]
 ; CHECK:       [[COMMON_RET:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB3]]:
@@ -268,11 +265,8 @@ define void @fold_nested_branch_prof(i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: define void @fold_nested_branch_prof(
 ; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 [[COND1]], label %[[BB1:.*]], label %[[BB2:.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br i1 [[COND2]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br i1 [[COND2]], label %[[BB4]], label %[[BB3]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB4:.*]], label %[[BB3:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[COMMON_RET:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB3]]:
@@ -308,7 +302,5 @@ bb4:
 declare void @sideeffect1()
 declare void @sideeffect2()
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 2}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 4}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 5, i32 6}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 14, i32 15}
 ;.
