@@ -76,7 +76,8 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
     }
   )",
                                                          Diags));
-#if !defined(__cpp_sized_deallocation)
+#if defined(_AIX) || defined(__MVS__)
+  // AIX and ZOS default to -fno-sized-deallocation.
   EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 1\n");
 #else
   EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 2\n");
