@@ -998,6 +998,8 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 define i32 @shift_overflow(i32 %x) {
 ; CHECK-LABEL: shift_overflow:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: shift_overflow:
