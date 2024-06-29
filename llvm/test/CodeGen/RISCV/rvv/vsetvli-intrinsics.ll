@@ -123,7 +123,6 @@ define <vscale x 4 x i32> @redundant_vsetvli(iXLen %avl, ptr %ptr) nounwind {
 define <vscale x 4 x i32> @repeated_vsetvli(iXLen %avl, ptr %ptr) nounwind {
 ; CHECK-LABEL: repeated_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
