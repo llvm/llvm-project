@@ -80,9 +80,6 @@ function createIndex(Index) {
 
 // Runs after DOM loads
 document.addEventListener("DOMContentLoaded", function() {
-  // JsonIndex is a variable from another file that contains the index
-  // in JSON format
-  fetch("/index.json")
-      .then((response) => response.json())
-      .then((Index) => { createIndex(Index); });
+  // Loadindex is an asynchronous function that will be generated clang-doc
+  LoadIndex().then((Index) => { createIndex(Index); });
 });

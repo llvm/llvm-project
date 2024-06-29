@@ -972,7 +972,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   std::error_code FileErr;
   llvm::SmallString<128> FilePath;
   llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
-  llvm::sys::path::append(FilePath, "index.json");
+  llvm::sys::path::append(FilePath, "index_json.js");
   llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
   if (FileErr != OK) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -993,9 +993,9 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
       });
     });
   };
-  OS << "var JsonIndex = `\n";
+  OS << "async function LoadIndex() {\nreturn";
   IndexToJSON(CDCtx.Idx);
-  OS << "`;\n";
+  OS << ";\n}";
   return llvm::Error::success();
 }
 
