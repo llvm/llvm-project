@@ -716,18 +716,8 @@ bool MachObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   if (&SecA != &SecB)
     return false;
 
-  const MCFragment *FA = SA.getFragment();
-
-  // Bail if the symbol has no fragment.
-  if (!FA)
-    return false;
-
   // If the atoms are the same, they are guaranteed to have the same address.
-  if (FA->getAtom() == FB.getAtom())
-    return true;
-
-  // Otherwise, we can't prove this is fully resolved.
-  return false;
+  return SA.getFragment()->getAtom() == FB.getAtom();
 }
 
 static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
