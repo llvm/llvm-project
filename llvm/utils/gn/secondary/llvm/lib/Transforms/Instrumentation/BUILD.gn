@@ -26,7 +26,6 @@ static_library("Instrumentation") {
     "LowerAllowCheckPass.cpp",
     "MemProfiler.cpp",
     "MemorySanitizer.cpp",
-    "NumericalStabilitySanitizer.cpp",
     "PGOCtxProfLowering.cpp",
     "PGOForceFunctionAttrs.cpp",
     "PGOInstrumentation.cpp",
