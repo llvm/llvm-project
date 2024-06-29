@@ -1479,7 +1479,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= (it != part.relrAuthDyn->relocs.end());
         part.relrAuthDyn->relocs.erase(it, part.relrAuthDyn->relocs.end());
       }
-      changed |= part.relaDyn->updateAllocSize();
+      if (part.relaDyn)
+        changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
       if (part.relrAuthDyn)

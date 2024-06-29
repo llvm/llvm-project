@@ -132,6 +132,8 @@ private:
   bool isFlatScratchBaseLegal(SDValue Addr) const;
   bool isFlatScratchBaseLegalSV(SDValue Addr) const;
   bool isFlatScratchBaseLegalSVImm(SDValue Addr) const;
+  bool isSOffsetLegalWithImmOffset(SDValue *SOffset, bool Imm32Only,
+                                   bool IsBuffer, int64_t ImmOffset = 0) const;
 
   bool SelectDS1Addr1Offset(SDValue Ptr, SDValue &Base, SDValue &Offset) const;
   bool SelectDS64Bit4ByteAligned(SDValue Ptr, SDValue &Base, SDValue &Offset0,
@@ -174,11 +176,13 @@ private:
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false) const;
+                        bool IsBuffer = false, bool HasSOffset = false,
+                        int64_t ImmOffset = 0) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                             SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false) const;
+                            bool IsBuffer = false, bool HasSOffset = false,
+                            int64_t ImmOffset = 0) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
                   SDValue *Offset, bool Imm32Only = false) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
@@ -190,6 +194,8 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
+  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
+                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
@@ -263,7 +269,6 @@ private:
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N);
-  void SelectPOPSExitingWaveID(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);

@@ -1,7 +1,9 @@
-// RUN: printf "\0" > %S/Inputs/null_byte.bin
-// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,cxx -Wno-c23-extensions
-// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,c
-// RUN: rm %S/Inputs/null_byte.bin
+// RUN: rm -rf %t && mkdir -p %t/media
+// RUN: cp %S/Inputs/single_byte.txt %S/Inputs/jk.txt %S/Inputs/numbers.txt %t/
+// RUN: cp %S/Inputs/media/empty %t/media/
+// RUN: printf "\0" > %t/null_byte.bin
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%t -verify=expected,cxx -Wno-c23-extensions
+// RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%t -verify=expected,c
 #embed <media/empty>
 ;
 

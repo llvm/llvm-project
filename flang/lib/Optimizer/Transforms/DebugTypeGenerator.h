@@ -48,7 +48,8 @@ private:
   mlir::LLVM::DITypeAttr convertCharacterType(fir::CharacterType charTy,
                                               mlir::LLVM::DIFileAttr fileAttr,
                                               mlir::LLVM::DIScopeAttr scope,
-                                              mlir::Location loc);
+                                              mlir::Location loc,
+                                              bool hasDescriptor);
 
   mlir::LLVM::DITypeAttr
   convertPointerLikeType(mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
@@ -60,6 +61,7 @@ private:
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
   std::uint64_t ptrSize;
+  std::uint64_t lenOffset;
 };
 
 } // namespace fir

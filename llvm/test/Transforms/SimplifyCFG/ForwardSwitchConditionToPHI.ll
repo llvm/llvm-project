@@ -59,6 +59,76 @@ return:                                           ; preds = %entry, %sw.bb4, %sw
   ret i32 %retval.0
 }
 
+; We should not forward `%m` to 1, as this does not simplify the CFG.
+define i32 @forward_one(i32 %m) {
+; NO_FWD-LABEL: @forward_one(
+; NO_FWD-NEXT:  entry:
+; NO_FWD-NEXT:    switch i32 [[M:%.*]], label [[SW_BB4:%.*]] [
+; NO_FWD-NEXT:      i32 0, label [[RETURN:%.*]]
+; NO_FWD-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; NO_FWD-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; NO_FWD-NEXT:      i32 3, label [[SW_BB3:%.*]]
+; NO_FWD-NEXT:    ]
+; NO_FWD:       sw.bb1:
+; NO_FWD-NEXT:    br label [[RETURN]]
+; NO_FWD:       sw.bb2:
+; NO_FWD-NEXT:    br label [[RETURN]]
+; NO_FWD:       sw.bb3:
+; NO_FWD-NEXT:    br label [[RETURN]]
+; NO_FWD:       sw.bb4:
+; NO_FWD-NEXT:    br label [[RETURN]]
+; NO_FWD:       return:
+; NO_FWD-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 4, [[SW_BB4]] ], [ 5, [[SW_BB3]] ], [ 6, [[SW_BB2]] ], [ 1, [[SW_BB1]] ], [ 8, [[ENTRY:%.*]] ]
+; NO_FWD-NEXT:    ret i32 [[RETVAL_0]]
+;
+; FWD-LABEL: @forward_one(
+; FWD-NEXT:  entry:
+; FWD-NEXT:    switch i32 [[M:%.*]], label [[SW_BB4:%.*]] [
+; FWD-NEXT:      i32 0, label [[RETURN:%.*]]
+; FWD-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; FWD-NEXT:      i32 2, label [[SW_BB2:%.*]]
+; FWD-NEXT:      i32 3, label [[SW_BB3:%.*]]
+; FWD-NEXT:    ]
+; FWD:       sw.bb1:
+; FWD-NEXT:    br label [[RETURN]]
+; FWD:       sw.bb2:
+; FWD-NEXT:    br label [[RETURN]]
+; FWD:       sw.bb3:
+; FWD-NEXT:    br label [[RETURN]]
+; FWD:       sw.bb4:
+; FWD-NEXT:    br label [[RETURN]]
+; FWD:       return:
+; FWD-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 4, [[SW_BB4]] ], [ 5, [[SW_BB3]] ], [ 6, [[SW_BB2]] ], [ 1, [[SW_BB1]] ], [ 8, [[ENTRY:%.*]] ]
+; FWD-NEXT:    ret i32 [[RETVAL_0]]
+;
+entry:
+  switch i32 %m, label %sw.bb4 [
+  i32 0, label %sw.bb0
+  i32 1, label %sw.bb1
+  i32 2, label %sw.bb2
+  i32 3, label %sw.bb3
+  ]
+
+sw.bb0:                                           ; preds = %entry
+  br label %return
+
+sw.bb1:                                           ; preds = %entry
+  br label %return
+
+sw.bb2:                                           ; preds = %entry
+  br label %return
+
+sw.bb3:                                           ; preds = %entry
+  br label %return
+
+sw.bb4:                                           ; preds = %entry
+  br label %return
+
+return:                                           ; preds = %entry, %sw.bb4, %sw.bb3, %sw.bb2, %sw.bb1
+  %retval.0 = phi i32 [ 4, %sw.bb4 ], [ 5, %sw.bb3 ], [ 6, %sw.bb2 ], [ 1, %sw.bb1 ], [ 8, %sw.bb0 ]
+  ret i32 %retval.0
+}
+
 ; If 1 incoming phi value is a case constant of a switch, convert it to the switch condition:
 ; https://bugs.llvm.org/show_bug.cgi?id=34471
 ; This then subsequently should allow squashing of the other trivial case blocks.
@@ -115,3 +185,60 @@ return:
   ret i32 %r
 }
 
+; We can replace `[ 1, %bb2 ]` with `[ %arg1, %bb2 ]`.
+define { i64, i64 } @PR95919(i64 noundef %arg, i64 noundef %arg1) {
+; NO_FWD-LABEL: @PR95919(
+; NO_FWD-NEXT:  bb:
+; NO_FWD-NEXT:    switch i64 [[ARG1:%.*]], label [[BB3:%.*]] [
+; NO_FWD-NEXT:      i64 0, label [[BB5:%.*]]
+; NO_FWD-NEXT:      i64 1, label [[BB2:%.*]]
+; NO_FWD-NEXT:    ]
+; NO_FWD:       bb2:
+; NO_FWD-NEXT:    br label [[BB5]]
+; NO_FWD:       bb3:
+; NO_FWD-NEXT:    [[I:%.*]] = udiv i64 [[ARG:%.*]], [[ARG1]]
+; NO_FWD-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 1
+; NO_FWD-NEXT:    br label [[BB5]]
+; NO_FWD:       bb5:
+; NO_FWD-NEXT:    [[I6:%.*]] = phi i64 [ [[I4]], [[BB3]] ], [ [[ARG]], [[BB2]] ], [ undef, [[BB:%.*]] ]
+; NO_FWD-NEXT:    [[I7:%.*]] = phi i64 [ 1, [[BB3]] ], [ 1, [[BB2]] ], [ [[ARG1]], [[BB]] ]
+; NO_FWD-NEXT:    [[I8:%.*]] = insertvalue { i64, i64 } poison, i64 [[I7]], 0
+; NO_FWD-NEXT:    [[I9:%.*]] = insertvalue { i64, i64 } [[I8]], i64 [[I6]], 1
+; NO_FWD-NEXT:    ret { i64, i64 } [[I9]]
+;
+; FWD-LABEL: @PR95919(
+; FWD-NEXT:  bb:
+; FWD-NEXT:    [[SWITCH:%.*]] = icmp ult i64 [[ARG1:%.*]], 2
+; FWD-NEXT:    br i1 [[SWITCH]], label [[BB5:%.*]], label [[BB3:%.*]]
+; FWD:       bb3:
+; FWD-NEXT:    [[I:%.*]] = udiv i64 [[ARG:%.*]], [[ARG1]]
+; FWD-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 1
+; FWD-NEXT:    br label [[BB5]]
+; FWD:       bb5:
+; FWD-NEXT:    [[I6:%.*]] = phi i64 [ [[I4]], [[BB3]] ], [ [[ARG]], [[BB:%.*]] ]
+; FWD-NEXT:    [[I7:%.*]] = phi i64 [ 1, [[BB3]] ], [ [[ARG1]], [[BB]] ]
+; FWD-NEXT:    [[I8:%.*]] = insertvalue { i64, i64 } poison, i64 [[I7]], 0
+; FWD-NEXT:    [[I9:%.*]] = insertvalue { i64, i64 } [[I8]], i64 [[I6]], 1
+; FWD-NEXT:    ret { i64, i64 } [[I9]]
+;
+bb:
+  switch i64 %arg1, label %bb3 [
+  i64 0, label %bb5
+  i64 1, label %bb2
+  ]
+
+bb2: ; preds = %bb
+  br label %bb5
+
+bb3: ; preds = %bb
+  %i = udiv i64 %arg, %arg1
+  %i4 = shl nuw i64 %i, 1
+  br label %bb5
+
+bb5: ; preds = %bb3, %bb2, %bb
+  %i6 = phi i64 [ %i4, %bb3 ], [ %arg, %bb2 ], [ undef, %bb ]
+  %i7 = phi i64 [ 1, %bb3 ], [ 1, %bb2 ], [ %arg1, %bb ]
+  %i8 = insertvalue { i64, i64 } poison, i64 %i7, 0
+  %i9 = insertvalue { i64, i64 } %i8, i64 %i6, 1
+  ret { i64, i64 } %i9
+}

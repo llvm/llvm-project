@@ -251,6 +251,26 @@ func.func @order_value(%lb : index, %ub : index, %step : index) {
 }
 
 // -----
+func.func @reproducible_order(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{invalid clause value: 'default'}}
+  omp.wsloop order(reproducible:default) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  }
+}
+// -----
+func.func @unconstrained_order(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{invalid clause value: 'default'}}
+  omp.wsloop order(unconstrained:default) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  }
+}
+// -----
 
 func.func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
   // expected-error @below {{expected '{'}}
@@ -485,6 +505,26 @@ func.func @omp_simd_order_value(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @omp_simd_reproducible_order(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{invalid clause value: 'default'}}
+  omp.simd order(reproducible:default) {
+    omp.loop_nest (%iv) : index = (%arg0) to (%arg1) step (%arg2) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+func.func @omp_simd_unconstrained_order(%lb : index, %ub : index, %step : index) {
+  // expected-error @below {{invalid clause value: 'default'}}
+  omp.simd order(unconstrained:default) {
+    omp.loop_nest (%iv) : index = (%arg0) to (%arg1) step (%arg2) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
 func.func @omp_simd_pretty_simdlen(%lb : index, %ub : index, %step : index) -> () {
   // expected-error @below {{op attribute 'simdlen' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   omp.simd simdlen(0) {
@@ -2131,6 +2171,36 @@ func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
 
 // -----
 
+func.func @omp_distribute_order() -> () {
+// expected-error @below {{invalid clause value: 'default'}}
+  omp.distribute order(default) {
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+func.func @omp_distribute_reproducible_order() -> () {
+// expected-error @below {{invalid clause value: 'default'}}
+  omp.distribute order(reproducible:default) {
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+func.func @omp_distribute_unconstrained_order() -> () {
+// expected-error @below {{invalid clause value: 'default'}}
+  omp.distribute order(unconstrained:default) {
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
 omp.private {type = private} @x.privatizer : i32 alloc {
 ^bb0(%arg0: i32):
   %0 = arith.constant 0.0 : f32
