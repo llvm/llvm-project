@@ -191,19 +191,6 @@ unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
   return CurIdx;
 }
 
-/// Go up the super-register chain until we hit a valid dwarf register number.
-static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
-  int RegNum;
-  for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
-    RegNum = TRI->getDwarfRegNum(SR, false);
-    if (RegNum >= 0)
-      break;
-  }
-
-  assert(RegNum >= 0 && isUInt<16>(RegNum) && "Invalid Dwarf register number.");
-  return (unsigned)RegNum;
-}
-
 MachineInstr::const_mop_iterator
 StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
                         MachineInstr::const_mop_iterator MOE, LocationVec &Locs,
@@ -221,8 +208,9 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       Size /= 8;
       Register Reg = (++MOI)->getReg();
       int64_t Imm = (++MOI)->getImm();
-      Locs.emplace_back(StackMaps::Location::Direct, Size,
-                        getDwarfRegNum(Reg, TRI), Imm);
+      unsigned DwarfRegNum = static_cast<unsigned>(
+          TRI->getDwarfRegNum(Reg, false)); // false for non-EH context
+      Locs.emplace_back(StackMaps::Location::Direct, Size, DwarfRegNum, Imm);
       break;
     }
     case StackMaps::IndirectMemRefOp: {
@@ -230,8 +218,9 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       assert(Size > 0 && "Need a valid size for indirect memory locations.");
       Register Reg = (++MOI)->getReg();
       int64_t Imm = (++MOI)->getImm();
-      Locs.emplace_back(StackMaps::Location::Indirect, Size,
-                        getDwarfRegNum(Reg, TRI), Imm);
+      unsigned DwarfRegNum = static_cast<unsigned>(
+          TRI->getDwarfRegNum(Reg, false)); // false for non-EH context
+      Locs.emplace_back(StackMaps::Location::Indirect, Size, DwarfRegNum, Imm);
       break;
     }
     case StackMaps::ConstantOp: {
@@ -281,7 +270,8 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     assert(!MOI->getSubReg() && "Physical subreg still around.");
 
     unsigned Offset = 0;
-    unsigned DwarfRegNum = getDwarfRegNum(MOI->getReg(), TRI);
+    unsigned DwarfRegNum = static_cast<unsigned>(
+        TRI->getDwarfRegNum(MOI->getReg(), false)); // false for non-EH context
     unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
     unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, MOI->getReg());
     if (SubRegIdx)
@@ -372,7 +362,8 @@ void StackMaps::print(raw_ostream &OS) {
 /// Create a live-out register record for the given register Reg.
 StackMaps::LiveOutReg
 StackMaps::createLiveOutReg(unsigned Reg, const TargetRegisterInfo *TRI) const {
-  unsigned DwarfRegNum = getDwarfRegNum(Reg, TRI);
+  unsigned DwarfRegNum = static_cast<unsigned>(
+      TRI->getDwarfRegNum(Reg, false)); // false for non-EH context
   unsigned Size = TRI->getSpillSize(*TRI->getMinimalPhysRegClass(Reg));
   return LiveOutReg(Reg, DwarfRegNum, Size);
 }

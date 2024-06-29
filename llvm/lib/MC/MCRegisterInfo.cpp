@@ -141,17 +141,52 @@ unsigned MCRegisterInfo::getSubRegIndex(MCRegister Reg,
   return 0;
 }
 
+int MCRegisterInfo::getDwarfRegNumFromTable(MCRegister RegNum,
+                                            const DwarfLLVMRegPair *M,
+                                            unsigned Size) const {
+  if (!M)
+    return -1;
+  DwarfLLVMRegPair Key = {RegNum, 0};
+  const DwarfLLVMRegPair *I = std::lower_bound(M, M + Size, Key);
+  if (I == M + Size || I->FromReg != RegNum)
+    return -1;
+  return I->ToReg;
+}
+
 int MCRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHL2DwarfRegs : L2DwarfRegs;
   unsigned Size = isEH ? EHL2DwarfRegsSize : L2DwarfRegsSize;
 
-  if (!M)
-    return -1;
-  DwarfLLVMRegPair Key = { RegNum, 0 };
-  const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
-  if (I == M+Size || I->FromReg != RegNum)
-    return -1;
-  return I->ToReg;
+  // First, check the register itself
+  int RegDwarfNum = getDwarfRegNumFromTable(RegNum, M, Size);
+  if (RegDwarfNum >= 0)
+    return RegDwarfNum;
+
+  // If not found, check super-registers
+  for (MCRegister SR : superregs_inclusive(RegNum)) {
+    if (SR == RegNum)
+      continue; // Skip the register itself
+    RegDwarfNum = getDwarfRegNumFromTable(SR, M, Size);
+    if (RegDwarfNum >= 0)
+      break;
+  }
+
+  // If still not found, check sub-registers
+  if (RegDwarfNum < 0) {
+    for (MCRegister SubR : subregs_inclusive(RegNum)) {
+      if (SubR == RegNum)
+        continue; // Skip the register itself
+      RegDwarfNum = getDwarfRegNumFromTable(SubR, M, Size);
+      if (RegDwarfNum >= 0)
+        break;
+    }
+  }
+
+  // Assert if no valid DWARF number found or if it's not a 16-bit unsigned
+  // integer
+  assert(RegDwarfNum >= 0 && isUInt<16>(RegDwarfNum) &&
+         "Invalid Dwarf register number");
+  return RegDwarfNum;
 }
 
 std::optional<unsigned> MCRegisterInfo::getLLVMRegNum(unsigned RegNum,
