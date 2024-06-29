@@ -1945,6 +1945,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     if (atEq(r, pos) != 0) {
       // Use Gaussian elimination here (since we have an equality).
       bool ret = gaussianEliminateVar(pos);
+      (void)ret;
       assert(ret && "Gaussian elimination guaranteed to succeed");
       LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
       LLVM_DEBUG(dump());
