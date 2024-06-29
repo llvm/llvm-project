@@ -1011,3 +1011,22 @@ define i32 @shift_overflow(i32 %x) {
   %r = mul i32 %x, %const
   ret i32 %r
 }
+
+; Transforming `(mul x, -(2^(N-M) - 1) * 2^M)` to `(sub (shl x, M), (shl x, N))`
+; will not cause overflow when N is 31 and M is 30.
+define i32 @shift_no_overflow(i32 %x) {
+; CHECK-LABEL: shift_no_overflow:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #31
+; CHECK-NEXT:    sub w0, w8, w0, lsl #30
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: shift_no_overflow:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #1073741824 // =0x40000000
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+  %const = bitcast i32 1073741824 to i32
+  %r = mul i32 %x, %const
+  ret i32 %r
+}

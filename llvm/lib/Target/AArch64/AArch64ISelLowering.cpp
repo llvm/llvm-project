@@ -18061,12 +18061,11 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   auto Shl = [&](SDValue N0, unsigned N1) {
     if (!N0.getNode())
       return SDValue();
-    SDValue RHS = DAG.getConstant(N1, DL, MVT::i64);
-    SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, N0, RHS);
     // If shift causes overflow, ignore this combine.
-    if (SHL->isUndef())
+    if (N1 >= N0.getValueSizeInBits())
       return SDValue();
-    return SHL;
+    SDValue RHS = DAG.getConstant(N1, DL, MVT::i64);
+    return DAG.getNode(ISD::SHL, DL, VT, N0, RHS);
   };
   auto Add = [&](SDValue N0, SDValue N1) {
     if (!N0.getNode() || !N1.getNode())
