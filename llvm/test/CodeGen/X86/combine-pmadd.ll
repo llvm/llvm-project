@@ -229,35 +229,10 @@ define i32 @combine_pmaddubsw_constant_sat() {
 
 ; Constant folding PMADDWD was causing an infinite loop in the PCMPGT commuting between 2 constant values.
 define i1 @pmaddwd_pcmpgt_infinite_loop() {
-; SSE-LABEL: pmaddwd_pcmpgt_infinite_loop:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    testl %eax, %eax
-; SSE-NEXT:    sete %al
-; SSE-NEXT:    retq
-;
-; AVX1-LABEL: pmaddwd_pcmpgt_infinite_loop:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vtestps %xmm1, %xmm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: pmaddwd_pcmpgt_infinite_loop:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
-; AVX2-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vtestps %xmm1, %xmm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    retq
+; CHECK-LABEL: pmaddwd_pcmpgt_infinite_loop:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    retq
   %1 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>)
   %2 = icmp eq <4 x i32> %1, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %3 = select <4 x i1> %2, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> zeroinitializer
