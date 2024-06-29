@@ -156,15 +156,28 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
 
-    if (Desc->IsTemporary) {
+    if (GP.isInitialized() && Desc->IsTemporary) {
       if (const auto *MTE =
               dyn_cast_if_present<MaterializeTemporaryExpr>(Desc->asExpr());
           MTE && MTE->getLifetimeExtendedTemporaryDecl()) {
-        const APValue *V = MTE->getLifetimeExtendedTemporaryDecl()->getValue();
-        if (V->isInt())
-          OS << " (global temporary value: " << V->getInt() << ")";
-        else
-          OS << " (huh?)";
+        if (const APValue *V =
+                MTE->getLifetimeExtendedTemporaryDecl()->getValue()) {
+          OS << " (global temporary value: ";
+          {
+            ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_MAGENTA, true});
+            std::string VStr;
+            llvm::raw_string_ostream SS(VStr);
+            V->dump(SS, Ctx.getASTContext());
+
+            for (unsigned I = 0; I != VStr.size(); ++I) {
+              if (VStr[I] == '\n')
+                VStr[I] = ' ';
+            }
+            VStr.pop_back(); // Remove the newline (or now space) at the end.
+            OS << VStr;
+          }
+          OS << ')';
+        }
       }
     }
 
