@@ -396,9 +396,8 @@ define void @ctest16ri_zf(i16 noundef %a, i16 noundef %b) {
 ;
 ; NDD-LABEL: ctest16ri_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    andl $1234, %esi, %eax # imm = 0x4D2
 ; NDD-NEXT:    testw %di, %di
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $1234, %si # imm = 0x4D2
 ; NDD-NEXT:    jne .LBB10_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -704,10 +703,8 @@ define void @ctest16mi_zf(i16 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest16mi_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    andl $1234, %eax # imm = 0x4D2
 ; NDD-NEXT:    testw %di, %di
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $1234, (%rsi) # imm = 0x4D2
 ; NDD-NEXT:    jne .LBB18_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
@@ -746,10 +743,8 @@ define void @ctest32mi_zf(i32 noundef %a, ptr %ptr) {
 ;
 ; NDD-LABEL: ctest32mi_zf:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax
-; NDD-NEXT:    andl $12345, %eax # imm = 0x3039
 ; NDD-NEXT:    testl %edi, %edi
-; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
+; NDD-NEXT:    ctestnew {dfv=zf} $12345, (%rsi) # imm = 0x3039
 ; NDD-NEXT:    jne .LBB19_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax

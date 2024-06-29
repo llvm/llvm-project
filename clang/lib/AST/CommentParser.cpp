@@ -222,6 +222,63 @@ public:
     return true;
   }
 
+  // Check if this line starts with @par or \par
+  bool startsWithParCommand() {
+    unsigned Offset = 1;
+
+    // Skip all whitespace characters at the beginning.
+    // This needs to backtrack because Pos has already advanced past the
+    // actual \par or @par command by the time this function is called.
+    while (isWhitespace(*(Pos.BufferPtr - Offset)))
+      Offset++;
+
+    // Once we've reached the whitespace, backtrack and check if the previous
+    // four characters are \par or @par.
+    llvm::StringRef LineStart(Pos.BufferPtr - Offset - 3, 4);
+    return LineStart.starts_with("\\par") || LineStart.starts_with("@par");
+  }
+
+  /// Extract a par command argument-header.
+  bool lexParHeading(Token &Tok) {
+    if (isEnd())
+      return false;
+
+    Position SavedPos = Pos;
+
+    consumeWhitespace();
+    SmallString<32> WordText;
+    const char *WordBegin = Pos.BufferPtr;
+    SourceLocation Loc = getSourceLocation();
+
+    if (!startsWithParCommand())
+      return false;
+
+    // Read until the end of this token, which is effectively the end of the
+    // line. This gets us the content of the par header, if there is one.
+    while (!isEnd()) {
+      WordText.push_back(peek());
+      if (Pos.BufferPtr + 1 == Pos.BufferEnd) {
+        consumeChar();
+        break;
+      }
+      consumeChar();
+    }
+
+    unsigned Length = WordText.size();
+    if (Length == 0) {
+      Pos = SavedPos;
+      return false;
+    }
+
+    char *TextPtr = Allocator.Allocate<char>(Length + 1);
+
+    memcpy(TextPtr, WordText.c_str(), Length + 1);
+    StringRef Text = StringRef(TextPtr, Length);
+
+    formTokenWithChars(Tok, Loc, WordBegin, Length, Text);
+    return true;
+  }
+
   /// Extract a word -- sequence of non-whitespace characters.
   bool lexWord(Token &Tok) {
     if (isEnd())
@@ -394,6 +451,24 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
   return llvm::ArrayRef(Args, ParsedArgs);
 }
 
+ArrayRef<Comment::Argument>
+Parser::parseParCommandArgs(TextTokenRetokenizer &Retokenizer,
+                            unsigned NumArgs) {
+  assert(NumArgs > 0);
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
+  unsigned ParsedArgs = 0;
+  Token Arg;
+
+  while (ParsedArgs < NumArgs && Retokenizer.lexParHeading(Arg)) {
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
+    ParsedArgs++;
+  }
+
+  return llvm::ArrayRef(Args, ParsedArgs);
+}
+
 BlockCommandComment *Parser::parseBlockCommand() {
   assert(Tok.is(tok::backslash_command) || Tok.is(tok::at_command));
 
@@ -449,6 +524,9 @@ BlockCommandComment *Parser::parseBlockCommand() {
     else if (Info->IsThrowsCommand)
       S.actOnBlockCommandArgs(
           BC, parseThrowCommandArgs(Retokenizer, Info->NumArgs));
+    else if (Info->IsParCommand)
+      S.actOnBlockCommandArgs(BC,
+                              parseParCommandArgs(Retokenizer, Info->NumArgs));
     else
       S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 

@@ -60,22 +60,18 @@ int fcntl(int fd, int cmd, void *arg) {
     // Now copy back into flk, in case flk64 got modified
     flk->l_type = flk64.l_type;
     flk->l_whence = flk64.l_whence;
-    flk->l_start = flk64.l_start;
-    flk->l_len = flk64.l_len;
+    flk->l_start = static_cast<decltype(flk->l_start)>(flk64.l_start);
+    flk->l_len = static_cast<decltype(flk->l_len)>(flk64.l_len);
     flk->l_pid = flk64.l_pid;
     return retVal;
   }
   case F_GETOWN: {
     struct f_owner_ex fex;
-    int retVal =
+    int ret =
         LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, fd, F_GETOWN_EX, &fex);
-    if (retVal == -EINVAL)
-      return LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, fd, cmd,
-                                               reinterpret_cast<void *>(arg));
-    if (static_cast<unsigned long>(retVal) <= -4096UL)
+    if (ret >= 0)
       return fex.type == F_OWNER_PGRP ? -fex.pid : fex.pid;
-
-    libc_errno = -retVal;
+    libc_errno = -ret;
     return -1;
   }
   // The general case

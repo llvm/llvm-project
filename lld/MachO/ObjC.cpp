@@ -349,11 +349,15 @@ void objc::checkCategories() {
 namespace {
 
 class ObjcCategoryMerger {
+  // In which language was a particular construct originally defined
+  enum SourceLanguage { Unknown, ObjC, Swift };
+
   // Information about an input category
   struct InfoInputCategory {
     ConcatInputSection *catListIsec;
     ConcatInputSection *catBodyIsec;
     uint32_t offCatListIsec = 0;
+    SourceLanguage sourceLanguage = SourceLanguage::Unknown;
 
     bool wasMerged = false;
   };
@@ -413,7 +417,9 @@ class ObjcCategoryMerger {
     // Merged names of containers. Ex: base|firstCategory|secondCategory|...
     std::string mergedContainerName;
     std::string baseClassName;
-    Symbol *baseClass = nullptr;
+    const Symbol *baseClass = nullptr;
+    SourceLanguage baseClassSourceLanguage = SourceLanguage::Unknown;
+
     CategoryLayout &catLayout;
 
     // In case we generate new data, mark the new data as belonging to this file
@@ -456,10 +462,12 @@ private:
                              ClassExtensionInfo &extInfo);
 
   void parseProtocolListInfo(const ConcatInputSection *isec, uint32_t secOffset,
-                             PointerListInfo &ptrList);
+                             PointerListInfo &ptrList,
+                             SourceLanguage sourceLang);
 
   PointerListInfo parseProtocolListInfo(const ConcatInputSection *isec,
-                                        uint32_t secOffset);
+                                        uint32_t secOffset,
+                                        SourceLanguage sourceLang);
 
   void parsePointerListInfo(const ConcatInputSection *isec, uint32_t secOffset,
                             PointerListInfo &ptrList);
@@ -653,9 +661,9 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
 // Parse a protocol list that might be linked to ConcatInputSection at a given
 // offset. The format of the protocol list is different than other lists (prop
 // lists, method lists) so we need to parse it differently
-void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
-                                               uint32_t secOffset,
-                                               PointerListInfo &ptrList) {
+void ObjcCategoryMerger::parseProtocolListInfo(
+    const ConcatInputSection *isec, uint32_t secOffset,
+    PointerListInfo &ptrList, [[maybe_unused]] SourceLanguage sourceLang) {
   assert((isec && (secOffset + target->wordSize <= isec->data.size())) &&
          "Tried to read pointer list beyond protocol section end");
 
@@ -684,8 +692,10 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
   [[maybe_unused]] uint32_t expectedListSizeSwift =
       expectedListSize - target->wordSize;
 
-  assert((expectedListSize == ptrListSym->isec()->data.size() ||
-          expectedListSizeSwift == ptrListSym->isec()->data.size()) &&
+  assert(((expectedListSize == ptrListSym->isec()->data.size() &&
+           sourceLang == SourceLanguage::ObjC) ||
+          (expectedListSizeSwift == ptrListSym->isec()->data.size() &&
+           sourceLang == SourceLanguage::Swift)) &&
          "Protocol list does not match expected size");
 
   uint32_t off = protocolListHeaderLayout.totalSize;
@@ -708,9 +718,10 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
 // Parse a protocol list and return the PointerListInfo for it
 ObjcCategoryMerger::PointerListInfo
 ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
-                                          uint32_t secOffset) {
+                                          uint32_t secOffset,
+                                          SourceLanguage sourceLang) {
   PointerListInfo ptrList;
-  parseProtocolListInfo(isec, secOffset, ptrList);
+  parseProtocolListInfo(isec, secOffset, ptrList, sourceLang);
   return ptrList;
 }
 
@@ -809,7 +820,7 @@ void ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
                        extInfo.classMethods);
 
   parseProtocolListInfo(catInfo.catBodyIsec, catLayout.protocolsOffset,
-                        extInfo.protocols);
+                        extInfo.protocols, catInfo.sourceLanguage);
 
   parsePointerListInfo(catInfo.catBodyIsec, catLayout.instancePropsOffset,
                        extInfo.instanceProps);
@@ -1151,13 +1162,20 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       if (nlCategories.count(categorySym))
         continue;
 
-      assert(categorySym->getName().starts_with(objc::symbol_names::category) ||
-             categorySym->getName().starts_with(
-                 objc::symbol_names::swift_objc_category));
-
       auto *catBodyIsec = dyn_cast<ConcatInputSection>(categorySym->isec());
       assert(catBodyIsec &&
              "Category data section is not an ConcatInputSection");
+
+      SourceLanguage eLang = SourceLanguage::Unknown;
+      if (categorySym->getName().starts_with(objc::symbol_names::category))
+        eLang = SourceLanguage::ObjC;
+      else if (categorySym->getName().starts_with(
+                   objc::symbol_names::swift_objc_category))
+        eLang = SourceLanguage::Swift;
+      else
+        llvm_unreachable("Unexpected category symbol name");
+
+      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off, eLang};
 
       // Check that the category has a reloc at 'klassOffset' (which is
       // a pointer to the class symbol)
@@ -1166,7 +1184,6 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
           tryGetSymbolAtIsecOffset(catBodyIsec, catLayout.klassOffset);
       assert(classSym && "Category does not have a valid base class");
 
-      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off};
       categoryMap[classSym].push_back(catInputInfo);
 
       collectCategoryWriterInfoFromCategory(catInputInfo);
@@ -1366,6 +1383,16 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
 
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
+  extInfo.baseClass = baseClass;
+
+  if (baseClass->getName().starts_with(objc::symbol_names::klass))
+    extInfo.baseClassSourceLanguage = SourceLanguage::ObjC;
+  else if (baseClass->getName().starts_with(
+               objc::symbol_names::swift_objc_klass))
+    extInfo.baseClassSourceLanguage = SourceLanguage::Swift;
+  else
+    llvm_unreachable("Unexpected base class symbol name");
+
   for (auto &catInfo : categories) {
     parseCatInfoToExtInfo(catInfo, extInfo);
   }
@@ -1382,14 +1409,15 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   // Protocol lists are a special case - the same protocol list is in classRo
   // and metaRo, so we only need to parse it once
   parseProtocolListInfo(classIsec, roClassLayout.baseProtocolsOffset,
-                        extInfo.protocols);
+                        extInfo.protocols, extInfo.baseClassSourceLanguage);
 
   // Check that the classRo and metaRo protocol lists are identical
-  assert(
-      parseProtocolListInfo(classIsec, roClassLayout.baseProtocolsOffset) ==
-          parseProtocolListInfo(metaIsec, roClassLayout.baseProtocolsOffset) &&
-      "Category merger expects classRo and metaRo to have the same protocol "
-      "list");
+  assert(parseProtocolListInfo(classIsec, roClassLayout.baseProtocolsOffset,
+                               extInfo.baseClassSourceLanguage) ==
+             parseProtocolListInfo(metaIsec, roClassLayout.baseProtocolsOffset,
+                                   extInfo.baseClassSourceLanguage) &&
+         "Category merger expects classRo and metaRo to have the same protocol "
+         "list");
 
   parsePointerListInfo(metaIsec, roClassLayout.baseMethodsOffset,
                        extInfo.classMethods);

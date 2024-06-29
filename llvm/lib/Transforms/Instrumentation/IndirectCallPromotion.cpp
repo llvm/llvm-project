@@ -133,16 +133,17 @@ private:
   // TotalCount is the total profiled count of call executions, and
   // NumCandidates is the number of candidate entries in ValueDataRef.
   std::vector<PromotionCandidate> getPromotionCandidatesForCallSite(
-      const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
+      const CallBase &CB, ArrayRef<InstrProfValueData> ValueDataRef,
       uint64_t TotalCount, uint32_t NumCandidates);
 
   // Promote a list of targets for one indirect-call callsite by comparing
   // indirect callee with functions. Returns true if there are IR
   // transformations and false otherwise.
-  bool tryToPromoteWithFuncCmp(
-      CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
-      uint64_t TotalCount, ArrayRef<InstrProfValueData> ICallProfDataRef,
-      uint32_t NumCandidates);
+  bool tryToPromoteWithFuncCmp(CallBase &CB,
+                               ArrayRef<PromotionCandidate> Candidates,
+                               uint64_t TotalCount,
+                               ArrayRef<InstrProfValueData> ICallProfDataRef,
+                               uint32_t NumCandidates);
 
 public:
   IndirectCallPromoter(Function &Func, InstrProfSymtab *Symtab, bool SamplePGO,
@@ -160,7 +161,7 @@ public:
 // the count. Stop at the first target that is not promoted.
 std::vector<IndirectCallPromoter::PromotionCandidate>
 IndirectCallPromoter::getPromotionCandidatesForCallSite(
-    const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
+    const CallBase &CB, ArrayRef<InstrProfValueData> ValueDataRef,
     uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
 
@@ -277,9 +278,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
 
 // Promote indirect-call to conditional direct-call for one callsite.
 bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
-    CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
-    uint64_t TotalCount, ArrayRef<InstrProfValueData> ICallProfDataRef,
-    uint32_t NumCandidates) {
+    CallBase &CB, ArrayRef<PromotionCandidate> Candidates, uint64_t TotalCount,
+    ArrayRef<InstrProfValueData> ICallProfDataRef, uint32_t NumCandidates) {
   uint32_t NumPromoted = 0;
 
   for (const auto &C : Candidates) {
@@ -315,10 +315,10 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   bool Changed = false;
   ICallPromotionAnalysis ICallAnalysis;
   for (auto *CB : findIndirectCalls(F)) {
-    uint32_t NumVals, NumCandidates;
+    uint32_t NumCandidates;
     uint64_t TotalCount;
     auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
-        CB, NumVals, TotalCount, NumCandidates);
+        CB, TotalCount, NumCandidates);
     if (!NumCandidates ||
         (PSI && PSI->hasProfileSummary() && !PSI->isHotCount(TotalCount)))
       continue;

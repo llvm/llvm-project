@@ -25,7 +25,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
@@ -42,7 +42,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
@@ -55,7 +55,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1
 
@@ -72,6 +72,6 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %[[LAB8:mcdc.bits[0-9]*]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:.+]] = load i8, ptr %[[LAB4]], align 1
 // MCDC:  %[[LAB9:[0-9]+]] = or i8 %[[LAB8]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB9]], ptr %[[LAB4]], align 1

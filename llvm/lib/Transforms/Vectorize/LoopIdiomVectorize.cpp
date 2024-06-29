@@ -112,7 +112,7 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
   if (DisableAll)
     return PreservedAnalyses::all();
 
-  const auto *DL = &L.getHeader()->getModule()->getDataLayout();
+  const auto *DL = &L.getHeader()->getDataLayout();
 
   LoopIdiomVectorize LIT(&AR.DT, &AR.LI, &AR.TTI, DL);
   if (!LIT.run(&L))

@@ -3389,7 +3389,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 
@@ -3861,11 +3861,6 @@ def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 1;
-}
-
-let Namespace = "AMDGPU" in {
-def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
-def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }
 
 class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {

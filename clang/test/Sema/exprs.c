@@ -65,10 +65,8 @@ void test4(void) {
 
 void test5(int *X, float *P) {
   (float*)X = P;   // expected-error {{assignment to cast is illegal, lvalue casts are not supported}}
-  // expected-note@-1 {{add '*' to dereference it}}
 #define FOO ((float*) X)
   FOO = P;   // expected-error {{assignment to cast is illegal, lvalue casts are not supported}}
-  // expected-note@-1 {{add '*' to dereference it}}
 }
 
 void test6(void) {
