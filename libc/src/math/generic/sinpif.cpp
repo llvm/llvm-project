@@ -1,4 +1,5 @@
-//===-- Single-precision sinpif function -------------------------------------===//
+//===-- Single-precision sinpif function
+//-------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,25 +9,12 @@
 
 #include "src/math/sinpif.h"
 #include "sincosf_utils.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
-#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
-
-#include <cstdio>
-#include <errno.h>
-#include <iostream>
-
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
-#include "range_reduction_fma.h"
-#else
-#include "range_reduction.h"
-#endif
 
 namespace LIBC_NAMESPACE {
 
@@ -66,10 +54,11 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
         // For signed zeros.
         return x;
       }
-      
+
       // For very small values we can approximate sinpi(x) with x * pi
-      // An exhaustive test shows that this is accurate for |x| < 9.546391 × 10-8
-      double xdpi =  xd * 0x1.921fb54442d18p1;
+      // An exhaustive test shows that this is accurate for |x| < 9.546391 ×
+      // 10-8
+      double xdpi = xd * 0x1.921fb54442d18p1;
       return static_cast<float>(xdpi);
     }
 
@@ -88,7 +77,6 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
         -0x1.32d2c0b62d41cp-1, 0x1.501ec4497cb7dp-4);
     return static_cast<float>(xd * result);
   }
-
 
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {
@@ -112,4 +100,3 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
 }
 
 } // namespace LIBC_NAMESPACE
-

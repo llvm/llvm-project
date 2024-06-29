@@ -12,7 +12,6 @@
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
@@ -35,16 +34,6 @@ LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
   double kd = fputil::nearest_integer(x * THIRTYTWO_OVER_PI[0]);
   y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[0], -kd);
   y = fputil::fma<double>(x, THIRTYTWO_OVER_PI[1], y);
-  return static_cast<int64_t>(kd);
-}
-
-// Return k and y, where
-//   k = round(x * 32) and y = (x * 32) - k.
-//   => pi * x = (k + y) * pi / 32
-LIBC_INLINE int64_t small_range_reduction_mul_pi(double x, double &y) {
-  double kd = fputil::nearest_integer(x * 32);
-  y = fputil::fma<double>(x, 32.0, -kd);
-  
   return static_cast<int64_t>(kd);
 }
 

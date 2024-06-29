@@ -1,4 +1,5 @@
-//===-- Exhaustive test for sinpif ------------------------------------------===//
+//===-- Exhaustive test for sinpif
+//------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
+#include "mpfr.h"
 #include "src/math/sinpif.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "mpfr.h"
 #include <sys/types.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
