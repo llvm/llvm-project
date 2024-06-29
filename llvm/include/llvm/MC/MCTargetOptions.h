@@ -55,7 +55,6 @@ public:
   bool ShowMCEncoding : 1;
   bool ShowMCInst : 1;
   bool AsmVerbose : 1;
-  bool SSE2AVX : 1;
 
   /// Preserve Comments in Assembly.
   bool PreserveAsmComments : 1;
@@ -65,6 +64,8 @@ public:
   // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
   // ELF.
   bool X86RelaxRelocations = true;
+
+  bool SSE2AVX : 1;
 
   EmitDwarfUnwindType EmitDwarfUnwind;
 

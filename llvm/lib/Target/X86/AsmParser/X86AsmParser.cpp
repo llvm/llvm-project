@@ -3749,13 +3749,12 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-void replaceSSE2AVXOpcode(MCInst &Inst) {
+static void replaceSSE2AVXOpcode(MCInst &Inst) {
   ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
   unsigned Opcode = Inst.getOpcode();
   const auto I = llvm::lower_bound(Table, Opcode);
-  if (I != Table.end() && I->OldOpc == Opcode) {
+  if (I != Table.end() && I->OldOpc == Opcode)
     Inst.setOpcode(I->NewOpc);
-  }
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
@@ -4178,7 +4177,6 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SwitchMode(X86::Is16Bit);
     ForcedDataPrefix = 0;
   }
-
   switch (OriginalError) {
   default: llvm_unreachable("Unexpected match result!");
   case Match_Success:
