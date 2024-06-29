@@ -66,12 +66,27 @@ func.func @mului_extended_i8(%v1 : i8, %v2 : i8) -> (i8, i8) {
 }
 
 func.func @mului_extended_overflows() -> () {
-  %c_100_i8 = arith.constant -100 : i8
+  %c_n100_i8 = arith.constant -100 : i8
+  %c_156_i8 = arith.constant 156 : i8
 
   // mului_extended -100, -100 : i8 = (16, 95)
+  // and on equivalent representations (e.g. 156 === -100 (mod 256))
+
   // CHECK-NEXT:  16
   // CHECK-NEXT:  95
-  func.call @mului_extended_i8(%c_100_i8, %c_100_i8) : (i8, i8) -> (i8, i8)
+  func.call @mului_extended_i8(%c_n100_i8, %c_n100_i8) : (i8, i8) -> (i8, i8)
+
+  // CHECK-NEXT:  16
+  // CHECK-NEXT:  95
+  func.call @mului_extended_i8(%c_n100_i8, %c_156_i8) : (i8, i8) -> (i8, i8)
+
+  // CHECK-NEXT:  16
+  // CHECK-NEXT:  95
+  func.call @mului_extended_i8(%c_156_i8, %c_n100_i8) : (i8, i8) -> (i8, i8)
+
+  // CHECK-NEXT:  16
+  // CHECK-NEXT:  95
+  func.call @mului_extended_i8(%c_156_i8, %c_156_i8) : (i8, i8) -> (i8, i8)
   return
 }
 
