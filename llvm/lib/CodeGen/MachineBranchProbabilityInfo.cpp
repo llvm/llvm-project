@@ -18,11 +18,9 @@
 
 using namespace llvm;
 
-INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfoWrapperPass,
-                      "machine-branch-prob",
+INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfo, "machine-branch-prob",
                       "Machine Branch Probability Analysis", false, true)
-INITIALIZE_PASS_END(MachineBranchProbabilityInfoWrapperPass,
-                    "machine-branch-prob",
+INITIALIZE_PASS_END(MachineBranchProbabilityInfo, "machine-branch-prob",
                     "Machine Branch Probability Analysis", false, true)
 
 namespace llvm {
@@ -39,45 +37,15 @@ cl::opt<unsigned> ProfileLikelyProb(
     cl::init(51), cl::Hidden);
 } // namespace llvm
 
-MachineBranchProbabilityAnalysis::Result
-MachineBranchProbabilityAnalysis::run(MachineFunction &,
-                                      MachineFunctionAnalysisManager &) {
-  return MachineBranchProbabilityInfo();
-}
+char MachineBranchProbabilityInfo::ID = 0;
 
-PreservedAnalyses
-MachineBranchProbabilityPrinterPass::run(MachineFunction &MF,
-                                         MachineFunctionAnalysisManager &MFAM) {
-  OS << "Printing analysis 'Machine Branch Probability Analysis' for machine "
-        "function '"
-     << MF.getName() << "':\n";
-  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
-  for (const MachineBasicBlock &MBB : MF) {
-    for (const MachineBasicBlock *Succ : MBB.successors())
-      MBPI.printEdgeProbability(OS << "  ", &MBB, Succ);
-  }
-  return PreservedAnalyses::all();
-}
-
-char MachineBranchProbabilityInfoWrapperPass::ID = 0;
-
-MachineBranchProbabilityInfoWrapperPass::
-    MachineBranchProbabilityInfoWrapperPass()
+MachineBranchProbabilityInfo::MachineBranchProbabilityInfo()
     : ImmutablePass(ID) {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
+  initializeMachineBranchProbabilityInfoPass(Registry);
 }
 
-void MachineBranchProbabilityInfoWrapperPass::anchor() {}
-
-AnalysisKey MachineBranchProbabilityAnalysis::Key;
-
-bool MachineBranchProbabilityInfo::invalidate(
-    MachineFunction &, const PreservedAnalyses &PA,
-    MachineFunctionAnalysisManager::Invalidator &) {
-  auto PAC = PA.getChecker<MachineBranchProbabilityAnalysis>();
-  return !PAC.preservedWhenStateless();
-}
+void MachineBranchProbabilityInfo::anchor() {}
 
 BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src,
