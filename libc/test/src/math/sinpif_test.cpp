@@ -7,16 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/math_macros.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/sinpif.h"
 #include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcSinpifTest = LIBC_NAMESPACE::testing::FPTest<float>;
