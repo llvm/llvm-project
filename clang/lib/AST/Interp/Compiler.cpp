@@ -4906,8 +4906,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return this->emitGetLocal(PT_Ptr, Offset, E);
     return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(D)) {
-    if (IsReference)
-      return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+    if (IsReference) {
+      if (!Ctx.getLangOpts().CPlusPlus11)
+        return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
+      return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
+    }
 
     return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
