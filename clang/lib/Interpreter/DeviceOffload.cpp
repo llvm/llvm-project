@@ -17,7 +17,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
