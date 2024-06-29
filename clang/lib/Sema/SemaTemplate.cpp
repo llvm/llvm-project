@@ -2310,7 +2310,8 @@ public:
     //       Inner(Alias);
     //     };
     //   };
-    if (OuterInstantiationArgs && InDependentContext) {
+    if (OuterInstantiationArgs && InDependentContext &&
+        TL.getTypePtr()->isInstantiationDependentType()) {
       Decl = cast_if_present<TypedefNameDecl>(SemaRef.SubstDecl(
           OrigDecl, Context.getTranslationUnitDecl(), *OuterInstantiationArgs));
       if (!Decl)
@@ -2667,7 +2668,8 @@ private:
       // defined at the class template and the constructor. In this example,
       // they're U and V, respectively.
       NewParam =
-          transformFunctionTypeParam(NewParam, Args, MaterializedTypedefs);
+          transformFunctionTypeParam(NewParam, Args, MaterializedTypedefs,
+                                     /*TransformingOuterPatterns=*/false);
       if (!NewParam)
         return QualType();
       ParamTypes.push_back(NewParam->getType());
@@ -2712,7 +2714,7 @@ private:
   ParmVarDecl *transformFunctionTypeParam(
       ParmVarDecl *OldParam, MultiLevelTemplateArgumentList &Args,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
-      bool TransformingOuterPatterns = false) {
+      bool TransformingOuterPatterns) {
     TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
     TypeSourceInfo *NewDI;
     if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
