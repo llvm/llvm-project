@@ -717,6 +717,16 @@ backend:AMDGPU:
   - '**/*amdgpu*/**'
   - '**/*AMDGPU*/**'
 
+backend:NVPTX:
+  - 'llvm/**/*nvvm*'
+  - 'llvm/**/*NVVM*'
+  - 'llvm/**/*nvptx*'
+  - 'llvm/**/*NVPTX*'
+  - 'llvm/**/*nvvm*/**'
+  - 'llvm/**/*NVVM*/**'
+  - 'llvm/**/*nvptx*/**'
+  - 'llvm/**/*NVPTX*/**'
+
 backend:RISC-V:
   - clang/**/*riscv*
   - clang/**/*RISCV*

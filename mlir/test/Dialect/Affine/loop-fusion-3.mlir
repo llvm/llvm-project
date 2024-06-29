@@ -889,7 +889,7 @@ func.func @reduce_add_non_innermost(%arg0: memref<64x64xf32, 1>, %arg1: memref<1
 // CHECK:         affine.for
 // CHECK-NEXT:      affine.for
 // CHECK-NEXT:        affine.for
-// CHECK             affine.for
+// CHECK:            affine.for
 
 
 

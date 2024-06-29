@@ -116,8 +116,8 @@ multiclass AMOCASPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
   } // Predicates = !listconcat([HasStdExtZacas, HasStdExtZtso], ExtraPreds)
 }
 
-defm : AMOCASPat<"atomic_cmp_swap_32", "AMOCAS_W">;
-defm : AMOCASPat<"atomic_cmp_swap_64", "AMOCAS_D_RV64", i64, [IsRV64]>;
+defm : AMOCASPat<"atomic_cmp_swap_i32", "AMOCAS_W">;
+defm : AMOCASPat<"atomic_cmp_swap_i64", "AMOCAS_D_RV64", i64, [IsRV64]>;
 
 //===----------------------------------------------------------------------===//
 // Zawrs (Wait-on-Reservation-Set)
@@ -188,27 +188,27 @@ defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
 
 /// AMOs
 
-defm : AMOPat<"atomic_swap_8", "AMOSWAP_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_add_8", "AMOADD_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_and_8", "AMOAND_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_or_8", "AMOOR_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_xor_8", "AMOXOR_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_max_8", "AMOMAX_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_min_8", "AMOMIN_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umax_8", "AMOMAXU_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umin_8", "AMOMINU_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_swap_i8", "AMOSWAP_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_i8", "AMOADD_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_i8", "AMOAND_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_i8", "AMOOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_i8", "AMOXOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_i8", "AMOMAX_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_i8", "AMOMIN_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_i8", "AMOMAXU_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_i8", "AMOMINU_B", XLenVT, [HasStdExtZabha]>;
 
-defm : AMOPat<"atomic_swap_16", "AMOSWAP_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_add_16", "AMOADD_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_and_16", "AMOAND_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_or_16", "AMOOR_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_xor_16", "AMOXOR_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_max_16", "AMOMAX_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_min_16", "AMOMIN_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umax_16", "AMOMAXU_H", XLenVT, [HasStdExtZabha]>;
-defm : AMOPat<"atomic_load_umin_16", "AMOMINU_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_swap_i16", "AMOSWAP_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_i16", "AMOADD_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_i16", "AMOAND_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_i16", "AMOOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_i16", "AMOXOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_i16", "AMOMAX_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_i16", "AMOMIN_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_i16", "AMOMAXU_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_i16", "AMOMINU_H", XLenVT, [HasStdExtZabha]>;
 
 /// AMOCAS
 
-defm : AMOCASPat<"atomic_cmp_swap_8", "AMOCAS_B", XLenVT, [HasStdExtZabha]>;
-defm : AMOCASPat<"atomic_cmp_swap_16", "AMOCAS_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOCASPat<"atomic_cmp_swap_i8", "AMOCAS_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOCASPat<"atomic_cmp_swap_i16", "AMOCAS_H", XLenVT, [HasStdExtZabha]>;

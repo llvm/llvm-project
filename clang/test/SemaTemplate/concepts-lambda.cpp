@@ -225,3 +225,15 @@ void foo() {
   }(x);
 }
 } // namespace GH73418
+
+namespace GH93821 {
+
+template <class>
+concept C = true;
+
+template <class...>
+concept D = []<C T = int>() { return true; }();
+
+D auto x = 0;
+
+} // namespace GH93821

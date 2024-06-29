@@ -267,9 +267,12 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   std::optional<std::string> ptxasCompiler = findTool("ptxas");
   if (!ptxasCompiler)
     return std::nullopt;
-  std::optional<std::string> fatbinaryTool = findTool("fatbinary");
-  if (createFatbin && !fatbinaryTool)
-    return std::nullopt;
+  std::optional<std::string> fatbinaryTool;
+  if (createFatbin) {
+    fatbinaryTool = findTool("fatbinary");
+    if (!fatbinaryTool)
+      return std::nullopt;
+  }
   Location loc = getOperation().getLoc();
 
   // Base name for all temp files: mlir-<module name>-<target triple>-<chip>.

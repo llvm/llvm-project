@@ -156,6 +156,18 @@ def AS_FromLeaves : Association<"FromLeaves"> {}    // See below
 // The name "AS_FromLeaves" is recognized by TableGen, and there is no enum
 // generated for it.
 
+// Kinds of directive categories.
+class Category<string n> {
+  string name = n;  // Name of the enum value in enum class Category.
+}
+
+def CA_Declarative: Category<"Declarative"> {}
+def CA_Executable: Category<"Executable"> {}
+def CA_Informational: Category<"Informational"> {}
+def CA_Meta: Category<"Meta"> {}
+def CA_Subsidiary: Category<"Subsidiary"> {}
+def CA_Utility: Category<"Utility"> {}
+
 // Information about a specific directive.
 class Directive<string d> {
   // Name of the directive. Can be composite directive sepearted by whitespace.
@@ -190,4 +202,7 @@ class Directive<string d> {
 
   // What the directive is associated with.
   Association association = AS_FromLeaves;
+
+  // The category of the directive.
+  Category category = ?;
 }

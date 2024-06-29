@@ -3265,7 +3265,7 @@ TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
   std::string Code = R"(
     namespace std {
     template <typename T>
-    struct initializer_list {};
+    struct initializer_list { const T *a, *b; };
     } // namespace std
 
     void target() {
@@ -3341,6 +3341,32 @@ TEST(TransferTest, ResultObjectLocationForBuiltinBitCastExpr) {
             "cast", match(explicitCastExpr().bind("cast"), ASTCtx));
 
         EXPECT_EQ(&Env.getResultObjectLocation(*BuiltinBitCast),
+                  &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForAtomicExpr) {
+  std::string Code = R"(
+    struct S {};
+    void target(_Atomic(S) *ptr) {
+      S s = __c11_atomic_load(ptr, __ATOMIC_SEQ_CST);
+      // [[p]]
+    }
+  )";
+  using ast_matchers::atomicExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Atomic = selectFirst<AtomicExpr>(
+            "atomic", match(atomicExpr().bind("atomic"), ASTCtx));
+
+        EXPECT_EQ(&Env.getResultObjectLocation(*Atomic),
                   &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
       });
 }
@@ -3757,6 +3783,77 @@ TEST(TransferTest, AddrOfReference) {
         const auto *FooVal = cast<PointerValue>(Env.getValue(*FooDecl));
         const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(&BarVal->getPointeeLoc(), &FooVal->getPointeeLoc());
+      });
+}
+
+TEST(TransferTest, Preincrement) {
+  std::string Code = R"(
+    void target(int I) {
+      (void)0; // [[before]]
+      int &IRef = ++I;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        EXPECT_EQ(&getLocForDecl(ASTCtx, EnvAfter, "IRef"),
+                  &getLocForDecl(ASTCtx, EnvBefore, "I"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_NE(EnvBefore.getValue(*IDecl), nullptr);
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
+      });
+}
+
+TEST(TransferTest, Postincrement) {
+  std::string Code = R"(
+    void target(int I) {
+      (void)0; // [[before]]
+      int OldVal = I++;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        EXPECT_EQ(&getValueForDecl(ASTCtx, EnvBefore, "I"),
+                  &getValueForDecl(ASTCtx, EnvAfter, "OldVal"));
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "I");
+        EXPECT_EQ(EnvAfter.getValue(*IDecl), nullptr);
+      });
+}
+
+// We test just one of the compound assignment operators because we know the
+// code for propagating the storage location is shared among all of them.
+TEST(TransferTest, AddAssign) {
+  std::string Code = R"(
+    void target(int I) {
+      int &IRef = (I += 1);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        EXPECT_EQ(&getLocForDecl(ASTCtx, Env, "IRef"),
+                  &getLocForDecl(ASTCtx, Env, "I"));
       });
 }
 

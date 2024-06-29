@@ -106,8 +106,6 @@ if.end:
 ;YAML-NEXT:    - Line:            '1'
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Column:          '11'
-;YAML-NEXT:    - String:          .
-;YAML-NEXT:    - Disc:            '2'
 ;YAML-NEXT:    - String:          ';'
 ;YAML-NEXT:  ...
 ;YAML:  --- !Analysis

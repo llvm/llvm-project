@@ -456,6 +456,33 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   declareTargetOp.setDeclareTarget(deviceType, captureClause);
 }
 
+/// For an operation that takes `omp.private` values as region args, this util
+/// merges the private vars info into the region arguments list.
+///
+/// \tparam OMPOP  - the OpenMP op that takes `omp.private` inputs.
+/// \tparam InfoTy - the type of private info we want to merge; e.g. mlir::Type
+/// or mlir::Location fields of the private var list.
+///
+/// \param [in] op                 - the op accepting `omp.private` inputs.
+/// \param [in] currentList        - the current list of region info that we
+/// want to merge private info with. For example this could be the list of types
+/// or locations of previous arguments to \op's region.
+/// \param [in] infoAccessor       - for a private variable, this returns the
+/// data we want to merge: type or location.
+/// \param [out] allRegionArgsInfo - the merged list of region info.
+template <typename OMPOp, typename InfoTy>
+static void
+mergePrivateVarsInfo(OMPOp op, llvm::ArrayRef<InfoTy> currentList,
+                     llvm::function_ref<InfoTy(mlir::Value)> infoAccessor,
+                     llvm::SmallVectorImpl<InfoTy> &allRegionArgsInfo) {
+  mlir::OperandRange privateVars = op.getPrivateVars();
+
+  llvm::transform(currentList, std::back_inserter(allRegionArgsInfo),
+                  [](InfoTy i) { return i; });
+  llvm::transform(privateVars, std::back_inserter(allRegionArgsInfo),
+                  infoAccessor);
+}
+
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -749,6 +776,33 @@ static void genBodyOfTargetDataOp(
   }
 }
 
+// This generates intermediate common block member accesses within a region
+// and then rebinds the members symbol to the intermediate accessors we have
+// generated so that subsequent code generation will utilise these instead.
+//
+// When the scope changes, the bindings to the intermediate accessors should
+// be dropped in place of the original symbol bindings.
+//
+// This is for utilisation with TargetOp.
+static void genIntermediateCommonBlockAccessors(
+    Fortran::lower::AbstractConverter &converter,
+    const mlir::Location &currentLocation, mlir::Region &region,
+    llvm::ArrayRef<const Fortran::semantics::Symbol *> mapSyms) {
+  for (auto [argIndex, argSymbol] : llvm::enumerate(mapSyms)) {
+    if (auto *details =
+            argSymbol->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      for (auto obj : details->objects()) {
+        auto targetCBMemberBind = Fortran::lower::genCommonBlockMember(
+            converter, currentLocation, *obj, region.getArgument(argIndex));
+        fir::ExtendedValue sexv = converter.getSymbolExtendedValue(*obj);
+        fir::ExtendedValue targetCBExv =
+            getExtendedValue(sexv, targetCBMemberBind);
+        converter.bindSymbol(*obj, targetCBExv);
+      }
+    }
+  }
+}
+
 // This functions creates a block for the body of the targetOp's region. It adds
 // all the symbols present in mapSymbols as block arguments to this block.
 static void
@@ -758,6 +812,7 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                   llvm::ArrayRef<const semantics::Symbol *> mapSyms,
                   llvm::ArrayRef<mlir::Location> mapSymLocs,
                   llvm::ArrayRef<mlir::Type> mapSymTypes,
+                  DataSharingProcessor &dsp,
                   const mlir::Location &currentLocation,
                   const ConstructQueue &queue, ConstructQueue::iterator item) {
   assert(mapSymTypes.size() == mapSymLocs.size());
@@ -765,8 +820,20 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Region &region = targetOp.getRegion();
 
-  auto *regionBlock =
-      firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
+  llvm::SmallVector<mlir::Type> allRegionArgTypes;
+  mergePrivateVarsInfo(targetOp, mapSymTypes,
+                       llvm::function_ref<mlir::Type(mlir::Value)>{
+                           [](mlir::Value v) { return v.getType(); }},
+                       allRegionArgTypes);
+
+  llvm::SmallVector<mlir::Location> allRegionArgLocs;
+  mergePrivateVarsInfo(targetOp, mapSymLocs,
+                       llvm::function_ref<mlir::Location(mlir::Value)>{
+                           [](mlir::Value v) { return v.getLoc(); }},
+                       allRegionArgLocs);
+
+  auto *regionBlock = firOpBuilder.createBlock(&region, {}, allRegionArgTypes,
+                                               allRegionArgLocs);
 
   // Clones the `bounds` placing them inside the target region and returns them.
   auto cloneBound = [&](mlir::Value bound) {
@@ -828,6 +895,20 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           TODO(converter.getCurrentLocation(),
                "target map clause operand unsupported type");
         });
+  }
+
+  for (auto [argIndex, argSymbol] :
+       llvm::enumerate(dsp.getAllSymbolsToPrivatize())) {
+    argIndex = mapSyms.size() + argIndex;
+
+    const mlir::BlockArgument &arg = region.getArgument(argIndex);
+    converter.bindSymbol(*argSymbol,
+                         hlfir::translateToExtendedValue(
+                             currentLocation, firOpBuilder, hlfir::Entity{arg},
+                             /*contiguousHint=*/
+                             evaluate::IsSimplyContiguous(
+                                 *argSymbol, converter.getFoldingContext()))
+                             .first);
   }
 
   // Check if cloning the bounds introduced any dependency on the outer region.
@@ -901,12 +982,24 @@ genBodyOfTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 
+  // If we map a common block using it's symbol e.g. map(tofrom: /common_block/)
+  // and accessing it's members within the target region, there is a large
+  // chance we will end up with uses external to the region accessing the common
+  // resolve these, we do so by generating new common block member accesses
+  // within the region, binding them to the member symbol for the scope of the
+  // region so that subsequent code generation within the region will utilise
+  // our new member accesses we have created.
+  genIntermediateCommonBlockAccessors(converter, currentLocation, region,
+                                      mapSyms);
+
   if (ConstructQueue::iterator next = std::next(item); next != queue.end()) {
     genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                    next);
   } else {
     genNestedEvaluations(converter, eval);
   }
+
+  dsp.processStep2(targetOp, /*isLoop=*/false);
 }
 
 template <typename OpTy, typename... Args>
@@ -933,6 +1026,19 @@ static void genCriticalDeclareClauses(lower::AbstractConverter &converter,
   cp.processHint(clauseOps);
   clauseOps.nameAttr =
       mlir::StringAttr::get(converter.getFirOpBuilder().getContext(), name);
+}
+
+static void genDistributeClauses(lower::AbstractConverter &converter,
+                                 semantics::SemanticsContext &semaCtx,
+                                 lower::StatementContext &stmtCtx,
+                                 const List<Clause> &clauses,
+                                 mlir::Location loc,
+                                 mlir::omp::DistributeClauseOps &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processDistSchedule(stmtCtx, clauseOps);
+  cp.processOrder(clauseOps);
+  // TODO Support delayed privatization.
 }
 
 static void genFlushClauses(lower::AbstractConverter &converter,
@@ -1002,14 +1108,15 @@ static void genSimdClauses(lower::AbstractConverter &converter,
                            const List<Clause> &clauses, mlir::Location loc,
                            mlir::omp::SimdClauseOps &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAligned(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_simd, clauseOps);
+  cp.processOrder(clauseOps);
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
-  // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Nontemporal, clause::Order>(
+  // TODO Support delayed privatization.
+  cp.processTODO<clause::Allocate, clause::Linear, clause::Nontemporal>(
       loc, llvm::omp::Directive::OMPD_simd);
 }
 
@@ -1048,15 +1155,18 @@ static void genTargetClauses(
                         devicePtrSyms);
   cp.processMap(loc, stmtCtx, clauseOps, &mapSyms, &mapLocs, &mapTypes);
   cp.processThreadLimit(stmtCtx, clauseOps);
-  // TODO Support delayed privatization.
 
   if (processHostOnlyClauses)
     cp.processNowait(clauseOps);
 
   cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
-                 clause::InReduction, clause::Private, clause::Reduction,
+                 clause::InReduction, clause::Reduction,
                  clause::UsesAllocators>(loc,
                                          llvm::omp::Directive::OMPD_target);
+
+  // `target private(..)` is only supported in delayed privatization mode.
+  if (!enableDelayedPrivatizationStaging)
+    cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -1172,12 +1282,13 @@ static void genWsloopClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processNowait(clauseOps);
+  cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Allocate, clause::Linear, clause::Order>(
+  cp.processTODO<clause::Allocate, clause::Linear>(
       loc, llvm::omp::Directive::OMPD_do);
 }
 
@@ -1229,8 +1340,50 @@ genDistributeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 semantics::SemanticsContext &semaCtx,
                 lower::pft::Evaluation &eval, mlir::Location loc,
                 const ConstructQueue &queue, ConstructQueue::iterator item) {
-  TODO(loc, "Distribute construct");
-  return nullptr;
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue));
+  dsp.processStep1();
+
+  lower::StatementContext stmtCtx;
+  mlir::omp::LoopNestClauseOps loopClauseOps;
+  mlir::omp::DistributeClauseOps distributeClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopClauseOps, iv);
+  genDistributeClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                       distributeClauseOps);
+
+  // Create omp.distribute wrapper.
+  auto distributeOp =
+      firOpBuilder.create<mlir::omp::DistributeOp>(loc, distributeClauseOps);
+
+  firOpBuilder.createBlock(&distributeOp.getRegion());
+  firOpBuilder.setInsertionPoint(
+      lower::genOpenMPTerminator(firOpBuilder, distributeOp, loc));
+
+  // Create nested omp.loop_nest and fill body with loop contents.
+  auto loopOp = firOpBuilder.create<mlir::omp::LoopNestOp>(loc, loopClauseOps);
+
+  auto *nestedEval =
+      getCollapsedLoopEval(eval, getCollapseValue(item->clauses));
+
+  auto ivCallback = [&](mlir::Operation *op) {
+    genLoopVars(op, converter, loc, iv);
+    return iv;
+  };
+
+  createBodyOfOp(*loopOp,
+                 OpWithBodyGenInfo(converter, symTable, semaCtx, loc,
+                                   *nestedEval, llvm::omp::Directive::OMPD_simd)
+                     .setClauses(&item->clauses)
+                     .setDataSharingProcessor(&dsp)
+                     .setGenRegionEntryCb(ivCallback),
+                 queue, item);
+
+  symTable.popScope();
+  return distributeOp;
 }
 
 static mlir::omp::FlushOp
@@ -1289,7 +1442,6 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   lower::StatementContext stmtCtx;
   mlir::omp::ParallelClauseOps clauseOps;
-  llvm::SmallVector<const semantics::Symbol *> privateSyms;
   llvm::SmallVector<mlir::Type> reductionTypes;
   llvm::SmallVector<const semantics::Symbol *> reductionSyms;
   genParallelClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -1319,7 +1471,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*useDelayedPrivatization=*/true, &symTable);
 
   if (privatize)
-    dsp.processStep1(&clauseOps, &privateSyms);
+    dsp.processStep1(&clauseOps);
 
   auto genRegionEntryCB = [&](mlir::Operation *op) {
     auto parallelOp = llvm::cast<mlir::omp::ParallelOp>(op);
@@ -1327,26 +1479,27 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     llvm::SmallVector<mlir::Location> reductionLocs(
         clauseOps.reductionVars.size(), loc);
 
-    mlir::OperandRange privateVars = parallelOp.getPrivateVars();
+    llvm::SmallVector<mlir::Type> allRegionArgTypes;
+    mergePrivateVarsInfo(parallelOp, llvm::ArrayRef(reductionTypes),
+                         llvm::function_ref<mlir::Type(mlir::Value)>{
+                             [](mlir::Value v) { return v.getType(); }},
+                         allRegionArgTypes);
+
+    llvm::SmallVector<mlir::Location> allRegionArgLocs;
+    mergePrivateVarsInfo(parallelOp, llvm::ArrayRef(reductionLocs),
+                         llvm::function_ref<mlir::Location(mlir::Value)>{
+                             [](mlir::Value v) { return v.getLoc(); }},
+                         allRegionArgLocs);
+
     mlir::Region &region = parallelOp.getRegion();
-
-    llvm::SmallVector<mlir::Type> privateVarTypes = reductionTypes;
-    privateVarTypes.reserve(privateVarTypes.size() + privateVars.size());
-    llvm::transform(privateVars, std::back_inserter(privateVarTypes),
-                    [](mlir::Value v) { return v.getType(); });
-
-    llvm::SmallVector<mlir::Location> privateVarLocs = reductionLocs;
-    privateVarLocs.reserve(privateVarLocs.size() + privateVars.size());
-    llvm::transform(privateVars, std::back_inserter(privateVarLocs),
-                    [](mlir::Value v) { return v.getLoc(); });
-
-    firOpBuilder.createBlock(&region, /*insertPt=*/{}, privateVarTypes,
-                             privateVarLocs);
+    firOpBuilder.createBlock(&region, /*insertPt=*/{}, allRegionArgTypes,
+                             allRegionArgLocs);
 
     llvm::SmallVector<const semantics::Symbol *> allSymbols = reductionSyms;
-    allSymbols.append(privateSyms);
+    allSymbols.append(dsp.getAllSymbolsToPrivatize().begin(),
+                      dsp.getAllSymbolsToPrivatize().end());
+
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      fir::ExtendedValue hostExV = converter.getSymbolExtendedValue(*arg);
       converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
                                      loc, firOpBuilder, hlfir::Entity{prv},
                                      /*contiguousHint=*/
@@ -1434,7 +1587,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       mlir::OpBuilder::InsertPoint insp = builder.saveInsertionPoint();
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
-        semantics::Symbol *sym = object.id();
+        semantics::Symbol *sym = object.sym();
         converter.copyHostAssociateVar(*sym, &insp);
       }
     }
@@ -1541,11 +1694,29 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    deviceAddrLocs, deviceAddrTypes, devicePtrSyms,
                    devicePtrLocs, devicePtrTypes);
 
+  llvm::SmallVector<const semantics::Symbol *> privateSyms;
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/
+                           lower::omp::isLastItemInQueue(item, queue),
+                           /*useDelayedPrivatization=*/true, &symTable);
+  dsp.processStep1(&clauseOps);
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
-  // symbols used inside the region that have not been explicitly mapped using
-  // the map clause.
+  // symbols used inside the region that do not have explicit data-environment
+  // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
+  // clauses).
   auto captureImplicitMap = [&](const semantics::Symbol &sym) {
+    if (dsp.getAllSymbolsToPrivatize().contains(&sym))
+      return;
+
+    // if the symbol is part of an already mapped common block, do not make a
+    // map for it.
+    if (const Fortran::semantics::Symbol *common =
+            Fortran::semantics::FindCommonBlockContaining(sym.GetUltimate()))
+      if (llvm::find(mapSyms, common) != mapSyms.end())
+        return;
+
     if (llvm::find(mapSyms, &sym) == mapSyms.end()) {
       mlir::Value baseOp = converter.getSymbolAddress(sym);
       if (!baseOp)
@@ -1567,15 +1738,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 fir::unwrapRefType(info.addr.getType())))
           bounds = lower::genBoundsOpsFromBox<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
-              firOpBuilder, converter.getCurrentLocation(), converter, dataExv,
-              info);
+              firOpBuilder, converter.getCurrentLocation(), dataExv, info);
         if (mlir::isa<fir::SequenceType>(
                 fir::unwrapRefType(info.addr.getType()))) {
           bool dataExvIsAssumedSize =
               semantics::IsAssumedSizeArray(sym.GetUltimate());
           bounds = lower::genBaseBoundsOps<mlir::omp::MapBoundsOp,
                                            mlir::omp::MapBoundsType>(
-              firOpBuilder, converter.getCurrentLocation(), converter, dataExv,
+              firOpBuilder, converter.getCurrentLocation(), dataExv,
               dataExvIsAssumedSize);
         }
 
@@ -1632,7 +1802,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
   genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, mapSyms,
-                    mapLocs, mapTypes, loc, queue, item);
+                    mapLocs, mapTypes, dsp, loc, queue, item);
   return targetOp;
 }
 
@@ -1855,8 +2025,8 @@ static void genCompositeDoSimd(lower::AbstractConverter &converter,
                                ConstructQueue::iterator item) {
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Order, clause::Safelen, clause::Simdlen>(
-      loc, llvm::omp::OMPD_do_simd);
+                 clause::Safelen, clause::Simdlen>(loc,
+                                                   llvm::omp::OMPD_do_simd);
   // TODO: Add support for vectorization - add vectorization hints inside loop
   // body.
   // OpenMP standard does not specify the length of vector instructions.
@@ -2075,7 +2245,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPDeclarativeConstruct &ompDeclConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       ompDeclConstruct.u);
 }
@@ -2152,7 +2322,7 @@ static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
        semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
        const parser::OpenMPStandaloneConstruct &standaloneConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       standaloneConstruct.u);
 }
@@ -2172,7 +2342,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPAtomicConstruct &atomicConstruct) {
-  std::visit(
+  Fortran::common::visit(
       common::visitors{
           [&](const parser::OmpAtomicRead &atomicRead) {
             mlir::Location loc = converter.genLocation(atomicRead.source);
@@ -2363,7 +2533,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPConstruct &ompConstruct) {
-  std::visit(
+  Fortran::common::visit(
       [&](auto &&s) { return genOMP(converter, symTable, semaCtx, eval, s); },
       ompConstruct.u);
 }
@@ -2525,21 +2695,22 @@ void Fortran::lower::gatherOpenMPDeferredDeclareTargets(
     const parser::OpenMPDeclarativeConstruct &ompDecl,
     llvm::SmallVectorImpl<OMPDeferredDeclareTargetInfo>
         &deferredDeclareTarget) {
-  std::visit(common::visitors{
-                 [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
-                   collectDeferredDeclareTargets(converter, semaCtx, eval,
-                                                 ompReq, deferredDeclareTarget);
-                 },
-                 [&](const auto &) {},
-             },
-             ompDecl.u);
+  Fortran::common::visit(
+      common::visitors{
+          [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
+            collectDeferredDeclareTargets(converter, semaCtx, eval, ompReq,
+                                          deferredDeclareTarget);
+          },
+          [&](const auto &) {},
+      },
+      ompDecl.u);
 }
 
 bool Fortran::lower::isOpenMPDeviceDeclareTarget(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval,
     const parser::OpenMPDeclarativeConstruct &ompDecl) {
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::OpenMPDeclareTargetConstruct &ompReq) {
             mlir::omp::DeclareTargetDeviceType targetType =
@@ -2608,7 +2779,9 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
           symbol->details());
     }
 
-    MlirRequires mlirFlags = MlirRequires::none;
+    // Use pre-populated omp.requires module attribute if it was set, so that
+    // the "-fopenmp-force-usm" compiler option is honored.
+    MlirRequires mlirFlags = offloadMod.getRequires();
     if (semaFlags.test(SemaRequires::ReverseOffload))
       mlirFlags = mlirFlags | MlirRequires::reverse_offload;
     if (semaFlags.test(SemaRequires::UnifiedAddress))

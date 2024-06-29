@@ -790,14 +790,12 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
   uint32_t NumVals = 0;
   uint64_t TotalCount = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
+  auto ValueData =
       getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, TotalCount, true);
+                               NumVals, TotalCount, true);
   // No valid value profile so no promoted targets have been recorded
   // before. Ok to do ICP.
-  if (!Valid)
+  if (!ValueData)
     return true;
 
   unsigned NumPromoted = 0;
@@ -837,11 +835,8 @@ updateIDTMetaData(Instruction &Inst,
   uint32_t NumVals = 0;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
-      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, OldSum, true);
+  auto ValueData = getValueProfDataFromInst(
+      Inst, IPVK_IndirectCallTarget, MaxNumPromotions, NumVals, OldSum, true);
 
   DenseMap<uint64_t, uint64_t> ValueCountMap;
   if (Sum == 0) {
@@ -850,7 +845,7 @@ updateIDTMetaData(Instruction &Inst,
            "If sum is 0, assume only one element in CallTargets "
            "with count being NOMORE_ICP_MAGICNUM");
     // Initialize ValueCountMap with existing value profile data.
-    if (Valid) {
+    if (ValueData) {
       for (uint32_t I = 0; I < NumVals; I++)
         ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
     }
@@ -866,7 +861,7 @@ updateIDTMetaData(Instruction &Inst,
   } else {
     // Initialize ValueCountMap with existing NOMORE_ICP_MAGICNUM
     // counts in the value profile.
-    if (Valid) {
+    if (ValueData) {
       for (uint32_t I = 0; I < NumVals; I++) {
         if (ValueData[I].Count == NOMORE_ICP_MAGICNUM)
           ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
@@ -1662,7 +1657,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
+                           /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1673,7 +1669,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)});
+            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
           }
         }
       }
@@ -1756,7 +1752,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     if (MaxWeight > 0 &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      setBranchWeights(*TI, Weights);
+      setBranchWeights(*TI, Weights, /*IsExpected=*/false);
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "

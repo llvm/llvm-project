@@ -196,6 +196,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX803:
       case CudaArch::GFX805:
       case CudaArch::GFX810:
+      case CudaArch::GFX9_GENERIC:
       case CudaArch::GFX900:
       case CudaArch::GFX902:
       case CudaArch::GFX904:
@@ -207,10 +208,12 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX940:
       case CudaArch::GFX941:
       case CudaArch::GFX942:
+      case CudaArch::GFX10_1_GENERIC:
       case CudaArch::GFX1010:
       case CudaArch::GFX1011:
       case CudaArch::GFX1012:
       case CudaArch::GFX1013:
+      case CudaArch::GFX10_3_GENERIC:
       case CudaArch::GFX1030:
       case CudaArch::GFX1031:
       case CudaArch::GFX1032:
@@ -218,14 +221,18 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case CudaArch::GFX1034:
       case CudaArch::GFX1035:
       case CudaArch::GFX1036:
+      case CudaArch::GFX11_GENERIC:
       case CudaArch::GFX1100:
       case CudaArch::GFX1101:
       case CudaArch::GFX1102:
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1152:
+      case CudaArch::GFX12_GENERIC:
       case CudaArch::GFX1200:
       case CudaArch::GFX1201:
+      case CudaArch::AMDGCNSPIRV:
       case CudaArch::Generic:
       case CudaArch::LAST:
         break;

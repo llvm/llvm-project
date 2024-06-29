@@ -1155,10 +1155,10 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   return getSubRegion<CompoundLiteralRegion>(CL, sReg);
 }
 
-const ElementRegion*
+const ElementRegion *
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
-                                   const SubRegion* superRegion,
-                                   ASTContext &Ctx){
+                                   const SubRegion *superRegion,
+                                   const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
   llvm::FoldingSetNodeID ID;

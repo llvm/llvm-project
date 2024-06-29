@@ -7851,7 +7851,7 @@ TEST_P(ImportAttributes, ImportAcquireCapability) {
 TEST_P(ImportAttributes, ImportTryAcquireCapability) {
   TryAcquireCapabilityAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
+      "bool test(int A1, int A2) __attribute__((try_acquire_capability(1, A1, "
       "A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
@@ -7948,7 +7948,7 @@ TEST_P(ImportAttributes, ImportAssertSharedLock) {
 TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
   ExclusiveTrylockFunctionAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
+      "bool test(int A1, int A2) __attribute__((exclusive_trylock_function(1, "
       "A1, A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
@@ -7958,7 +7958,7 @@ TEST_P(ImportAttributes, ImportExclusiveTrylockFunction) {
 TEST_P(ImportAttributes, ImportSharedTrylockFunction) {
   SharedTrylockFunctionAttr *FromAttr, *ToAttr;
   importAttr<FunctionDecl>(
-      "void test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
+      "bool test(int A1, int A2) __attribute__((shared_trylock_function(1, A1, "
       "A2)));",
       FromAttr, ToAttr);
   checkImported(FromAttr->getSuccessValue(), ToAttr->getSuccessValue());
@@ -9672,6 +9672,46 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportInstantiatedFromMember) {
   auto *ImportedPartialSpecialization =
       Import(FromPartialSpecialization, Lang_CXX11);
   EXPECT_TRUE(ImportedPartialSpecialization->getInstantiatedFromMember());
+}
+
+AST_MATCHER_P(EnumDecl, hasEnumConstName, StringRef, ConstName) {
+  for (EnumConstantDecl *D : Node.enumerators())
+    if (D->getName() == ConstName)
+      return true;
+  return false;
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportAnonymousEnum) {
+  const char *ToCode =
+      R"(
+      struct A {
+        enum { E1, E2} x;
+        enum { E3, E4} y;
+      };
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  auto *ToE1 = FirstDeclMatcher<EnumDecl>().match(
+      ToTU, enumDecl(hasEnumConstName("E1")));
+  auto *ToE3 = FirstDeclMatcher<EnumDecl>().match(
+      ToTU, enumDecl(hasEnumConstName("E3")));
+  const char *Code =
+      R"(
+      struct A {
+        enum { E1, E2} x;
+        enum { E3, E4} y;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromE1 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E1")));
+  auto *ImportedE1 = Import(FromE1, Lang_CXX11);
+  ASSERT_TRUE(ImportedE1);
+  EXPECT_EQ(ImportedE1, ToE1);
+  auto *FromE3 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E3")));
+  auto *ImportedE3 = Import(FromE3, Lang_CXX11);
+  ASSERT_TRUE(ImportedE3);
+  EXPECT_EQ(ImportedE3, ToE3);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

@@ -1,11 +1,11 @@
-# Check new BAT format containing hashes for YAML profile.
+## Check new BAT format containing hashes for YAML profile.
 
 RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
 RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
 RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main \
 RUN:   2>&1 | FileCheck --check-prefix WRITE-BAT-CHECK %s
-# Check that branch with entry in BAT is accounted for.
+## Check that branch with entry in BAT is accounted for.
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat_branchentry.preagg.txt \
 RUN:   -w %t.yaml -o %t.fdata
 RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o %t.null
@@ -15,7 +15,7 @@ BRANCHENTRY-YAML-CHECK:    - name: SolveCubic
 BRANCHENTRY-YAML-CHECK:      bid: 0
 BRANCHENTRY-YAML-CHECK:      hash: 0x700F19D24600000
 BRANCHENTRY-YAML-CHECK-NEXT: succ: [ { bid: 7, cnt: 1 }
-# Check that the order is correct between BAT YAML and FDATA->YAML.
+## Check that the order is correct between BAT YAML and FDATA->YAML.
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat_order.preagg.txt \
 RUN:   -w %t.yaml -o %t.fdata
 RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o %t.null
@@ -26,16 +26,16 @@ ORDER-YAML-CHECK:      bid: 3
 ORDER-YAML-CHECK:      hash: 0xDDA1DC5F69F900AC
 ORDER-YAML-CHECK-NEXT: calls: [ { off: 0x26, fid: [[#]], cnt: 20 } ]
 ORDER-YAML-CHECK-NEXT: succ: [ { bid: 5, cnt: 7 }
-# Large profile test
+## Large profile test
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o %t.fdata \
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
-# Check that YAML converted from fdata matches YAML created directly with BAT.
+## Check that YAML converted from fdata matches YAML created directly with BAT.
 RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-FDATA-CHECK %s
 RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
 
-# Test resulting YAML profile with the original binary (no-stale mode)
+## Test resulting YAML profile with the original binary (no-stale mode)
 RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -dyno-stats 2>&1 \
 RUN:   | FileCheck --check-prefix CHECK-BOLT-YAML %s
 

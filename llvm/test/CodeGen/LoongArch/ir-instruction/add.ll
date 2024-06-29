@@ -54,7 +54,7 @@ define i32 @add_i32(i32 %x, i32 %y) {
 ;
 ; LA64-LABEL: add_i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    add.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %add = add i32 %x, %y
   ret i32 %add
@@ -144,7 +144,7 @@ define i32 @add_i32_3(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_3:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $a0, $a0, 3
+; LA64-NEXT:    addi.w $a0, $a0, 3
 ; LA64-NEXT:    ret
   %add = add i32 %x, 3
   ret i32 %add
@@ -195,6 +195,7 @@ define i32 @add_i32_0x12340000(i32 %x) {
 ; LA64-LABEL: add_i32_0x12340000:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, 4660
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %add = add i32 %x, 305397760
   ret i32 %add
@@ -244,6 +245,7 @@ define i32 @add_i32_0x7fff0000(i32 %x) {
 ; LA64-LABEL: add_i32_0x7fff0000:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, 32767
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %add = add i32 %x, 2147418112
   ret i32 %add
@@ -293,6 +295,7 @@ define i32 @add_i32_minus_0x80000000(i32 %x) {
 ; LA64-LABEL: add_i32_minus_0x80000000:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, -32768
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %add = add i32 %x, -2147483648
   ret i32 %add
@@ -343,6 +346,7 @@ define i32 @add_i32_minus_0x10000(i32 %x) {
 ; LA64-LABEL: add_i32_minus_0x10000:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, -1
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %add = add i32 %x, -65536
   ret i32 %add
@@ -396,7 +400,7 @@ define i32 @add_i32_0x7fff07ff(i32 %x) {
 ; LA64-LABEL: add_i32_0x7fff07ff:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, 32767
-; LA64-NEXT:    addi.d $a0, $a0, 2047
+; LA64-NEXT:    addi.w $a0, $a0, 2047
 ; LA64-NEXT:    ret
   %add = add i32 %x, 2147420159
   ret i32 %add
@@ -450,7 +454,7 @@ define i32 @add_i32_0x7ffef800(i32 %x) {
 ; LA64-LABEL: add_i32_0x7ffef800:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, 32767
-; LA64-NEXT:    addi.d $a0, $a0, -2048
+; LA64-NEXT:    addi.w $a0, $a0, -2048
 ; LA64-NEXT:    ret
   %add = add i32 %x, 2147416064
   ret i32 %add
@@ -525,7 +529,7 @@ define i32 @add_i32_minus_0x23450679(i32 %x) {
 ; LA64-LABEL: add_i32_minus_0x23450679:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, -9029
-; LA64-NEXT:    addi.d $a0, $a0, -1657
+; LA64-NEXT:    addi.w $a0, $a0, -1657
 ; LA64-NEXT:    ret
   %add = add i32 %x, -591726201
   ret i32 %add
@@ -580,7 +584,7 @@ define i32 @add_i32_minus_0x2345fedd(i32 %x) {
 ; LA64-LABEL: add_i32_minus_0x2345fedd:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addu16i.d $a0, $a0, -9030
-; LA64-NEXT:    addi.d $a0, $a0, 291
+; LA64-NEXT:    addi.w $a0, $a0, 291
 ; LA64-NEXT:    ret
   %add = add i32 %x, -591789789
   ret i32 %add
@@ -680,7 +684,7 @@ define i32 @add_i32_minus_0x80000800(i32 %x) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu12i.w $a1, 524287
 ; LA64-NEXT:    ori $a1, $a1, 2048
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    add.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %add = add i32 %x, -2147485696
   ret i32 %add

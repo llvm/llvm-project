@@ -8,8 +8,7 @@
 
 #include "Context.h"
 #include "ByteCodeEmitter.h"
-#include "ByteCodeExprGen.h"
-#include "ByteCodeStmtGen.h"
+#include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
 #include "InterpFrame.h"
@@ -30,7 +29,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
   Function *Func = P->getFunction(FD);
   if (!Func || !Func->hasBody())
-    Func = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD);
+    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
 
   APValue DummyResult;
   if (!Run(Parent, Func, DummyResult))
@@ -41,11 +40,12 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
@@ -66,10 +66,11 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
@@ -90,13 +91,14 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
   bool Recursing = !Stk.empty();
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
   auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
+    C.cleanup();
     Stk.clear();
     return false;
   }
@@ -160,8 +162,12 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isFloatingType())
     return PT_Float;
 
+  if (T->isSpecificBuiltinType(BuiltinType::BoundMember) ||
+      T->isMemberPointerType())
+    return PT_MemberPtr;
+
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
-      T->isFunctionType() || T->isSpecificBuiltinType(BuiltinType::BoundMember))
+      T->isFunctionType())
     return PT_FnPtr;
 
   if (T->isReferenceType() || T->isPointerType() ||
@@ -173,9 +179,6 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
-
-  if (const auto *DT = dyn_cast<MemberPointerType>(T))
-    return classify(DT->getPointeeType());
 
   return std::nullopt;
 }
@@ -257,7 +260,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
     return Func;
 
   if (!Func || WasNotDefined) {
-    if (auto F = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD))
       Func = F;
   }
 
@@ -289,10 +292,12 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
     }
     if (CurDecl == FinalDecl)
       break;
-
-    // break;
   }
 
   assert(OffsetSum > 0);
   return OffsetSum;
+}
+
+const Record *Context::getRecord(const RecordDecl *D) const {
+  return P->getOrCreateRecord(D);
 }

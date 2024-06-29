@@ -492,7 +492,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela)
+  // This generalises to relocation types with implicit addends.
+  if (RelTy::HasAddend)
     return 0;
 
   RelType type = rel.getType(config->isMips64EL);
@@ -898,9 +899,9 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, isec.relocs().size() - 1});
+          {&isec, offsetInSec});
     else
-      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
+      part.relrDyn->relocs.push_back({&isec, offsetInSec});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(target->relativeRel, isec, offsetInSec,
@@ -1154,12 +1155,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         // relative relocation. Use a symbolic relocation instead.
         if (sym.isPreemptible) {
           part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
-          // When symbol values are determined in
-          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
-          // may be moved to .rela.dyn.
-          sec->addReloc({expr, type, offset, addend, &sym});
-          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
                                   DynamicReloc::AddendOnlyWithTargetVA, sym,
@@ -1303,6 +1298,18 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+
+  // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
+  // generate TLSDESC dynamic relocation for the dynamic linker to handle.
+  if (config->emachine == EM_LOONGARCH &&
+      oneof<R_LOONGARCH_TLSDESC_PAGE_PC, R_TLSDESC, R_TLSDESC_CALL>(expr)) {
+    if (expr != R_TLSDESC_CALL) {
+      sym.setFlags(NEEDS_TLSDESC);
+      c.addReloc({expr, type, offset, addend, &sym});
+    }
+    return 1;
+  }
+
   bool isRISCV = config->emachine == EM_RISCV;
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
@@ -1442,7 +1449,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
-  int64_t addend = RelTy::IsRela
+  int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);

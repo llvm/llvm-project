@@ -52,29 +52,46 @@ void clearAnnotationCache(const Module *Mod) {
   AC.Cache.erase(Mod);
 }
 
-static void cacheAnnotationFromMD(const MDNode *md, key_val_pair_t &retval) {
+static void readIntVecFromMDNode(const MDNode *MetadataNode,
+                                 std::vector<unsigned> &Vec) {
+  for (unsigned i = 0, e = MetadataNode->getNumOperands(); i != e; ++i) {
+    ConstantInt *Val =
+        mdconst::extract<ConstantInt>(MetadataNode->getOperand(i));
+    Vec.push_back(Val->getZExtValue());
+  }
+}
+
+static void cacheAnnotationFromMD(const MDNode *MetadataNode,
+                                  key_val_pair_t &retval) {
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
-  assert(md && "Invalid mdnode for annotation");
-  assert((md->getNumOperands() % 2) == 1 && "Invalid number of operands");
+  assert(MetadataNode && "Invalid mdnode for annotation");
+  assert((MetadataNode->getNumOperands() % 2) == 1 &&
+         "Invalid number of operands");
   // start index = 1, to skip the global variable key
   // increment = 2, to skip the value for each property-value pairs
-  for (unsigned i = 1, e = md->getNumOperands(); i != e; i += 2) {
+  for (unsigned i = 1, e = MetadataNode->getNumOperands(); i != e; i += 2) {
     // property
-    const MDString *prop = dyn_cast<MDString>(md->getOperand(i));
+    const MDString *prop = dyn_cast<MDString>(MetadataNode->getOperand(i));
     assert(prop && "Annotation property not a string");
+    std::string Key = prop->getString().str();
 
     // value
-    ConstantInt *Val = mdconst::dyn_extract<ConstantInt>(md->getOperand(i + 1));
-    assert(Val && "Value operand not a constant int");
-
-    std::string keyname = prop->getString().str();
-    if (retval.find(keyname) != retval.end())
-      retval[keyname].push_back(Val->getZExtValue());
-    else {
-      std::vector<unsigned> tmp;
-      tmp.push_back(Val->getZExtValue());
-      retval[keyname] = tmp;
+    if (ConstantInt *Val = mdconst::dyn_extract<ConstantInt>(
+            MetadataNode->getOperand(i + 1))) {
+      retval[Key].push_back(Val->getZExtValue());
+    } else if (MDNode *VecMd =
+                   dyn_cast<MDNode>(MetadataNode->getOperand(i + 1))) {
+      // note: only "grid_constant" annotations support vector MDNodes.
+      // assert: there can only exist one unique key value pair of
+      // the form (string key, MDNode node). Operands of such a node
+      // shall always be unsigned ints.
+      if (retval.find(Key) == retval.end()) {
+        readIntVecFromMDNode(VecMd, retval[Key]);
+        continue;
+      }
+    } else {
+      llvm_unreachable("Value operand not a constant int or an mdnode");
     }
   }
 }
@@ -128,6 +145,14 @@ bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
   return true;
 }
 
+static std::optional<unsigned>
+findOneNVVMAnnotation(const GlobalValue &GV, const std::string &PropName) {
+  unsigned RetVal;
+  if (findOneNVVMAnnotation(&GV, PropName, RetVal))
+    return RetVal;
+  return std::nullopt;
+}
+
 bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                            std::vector<unsigned> &retval) {
   auto &AC = getAnnotationCache();
@@ -145,9 +170,9 @@ bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
 
 bool isTexture(const Value &val) {
   if (const GlobalValue *gv = dyn_cast<GlobalValue>(&val)) {
-    unsigned annot;
-    if (findOneNVVMAnnotation(gv, "texture", annot)) {
-      assert((annot == 1) && "Unexpected annotation on a texture symbol");
+    unsigned Annot;
+    if (findOneNVVMAnnotation(gv, "texture", Annot)) {
+      assert((Annot == 1) && "Unexpected annotation on a texture symbol");
       return true;
     }
   }
@@ -156,9 +181,38 @@ bool isTexture(const Value &val) {
 
 bool isSurface(const Value &val) {
   if (const GlobalValue *gv = dyn_cast<GlobalValue>(&val)) {
-    unsigned annot;
-    if (findOneNVVMAnnotation(gv, "surface", annot)) {
-      assert((annot == 1) && "Unexpected annotation on a surface symbol");
+    unsigned Annot;
+    if (findOneNVVMAnnotation(gv, "surface", Annot)) {
+      assert((Annot == 1) && "Unexpected annotation on a surface symbol");
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool argHasNVVMAnnotation(const Value &Val,
+                                 const std::string &Annotation,
+                                 const bool StartArgIndexAtOne = false) {
+  if (const Argument *Arg = dyn_cast<Argument>(&Val)) {
+    const Function *Func = Arg->getParent();
+    std::vector<unsigned> Annot;
+    if (findAllNVVMAnnotation(Func, Annotation, Annot)) {
+      const unsigned BaseOffset = StartArgIndexAtOne ? 1 : 0;
+      if (is_contained(Annot, BaseOffset + Arg->getArgNo())) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool isParamGridConstant(const Value &V) {
+  if (const Argument *Arg = dyn_cast<Argument>(&V)) {
+    // "grid_constant" counts argument indices starting from 1
+    if (Arg->hasByValAttr() &&
+        argHasNVVMAnnotation(*Arg, "grid_constant", /*StartArgIndexAtOne*/true)) {
+      assert(isKernelFunction(*Arg->getParent()) &&
+             "only kernel arguments can be grid_constant");
       return true;
     }
   }
@@ -169,57 +223,25 @@ bool isSampler(const Value &val) {
   const char *AnnotationName = "sampler";
 
   if (const GlobalValue *gv = dyn_cast<GlobalValue>(&val)) {
-    unsigned annot;
-    if (findOneNVVMAnnotation(gv, AnnotationName, annot)) {
-      assert((annot == 1) && "Unexpected annotation on a sampler symbol");
+    unsigned Annot;
+    if (findOneNVVMAnnotation(gv, AnnotationName, Annot)) {
+      assert((Annot == 1) && "Unexpected annotation on a sampler symbol");
       return true;
     }
   }
-  if (const Argument *arg = dyn_cast<Argument>(&val)) {
-    const Function *func = arg->getParent();
-    std::vector<unsigned> annot;
-    if (findAllNVVMAnnotation(func, AnnotationName, annot)) {
-      if (is_contained(annot, arg->getArgNo()))
-        return true;
-    }
-  }
-  return false;
+  return argHasNVVMAnnotation(val, AnnotationName);
 }
 
 bool isImageReadOnly(const Value &val) {
-  if (const Argument *arg = dyn_cast<Argument>(&val)) {
-    const Function *func = arg->getParent();
-    std::vector<unsigned> annot;
-    if (findAllNVVMAnnotation(func, "rdoimage", annot)) {
-      if (is_contained(annot, arg->getArgNo()))
-        return true;
-    }
-  }
-  return false;
+  return argHasNVVMAnnotation(val, "rdoimage");
 }
 
 bool isImageWriteOnly(const Value &val) {
-  if (const Argument *arg = dyn_cast<Argument>(&val)) {
-    const Function *func = arg->getParent();
-    std::vector<unsigned> annot;
-    if (findAllNVVMAnnotation(func, "wroimage", annot)) {
-      if (is_contained(annot, arg->getArgNo()))
-        return true;
-    }
-  }
-  return false;
+  return argHasNVVMAnnotation(val, "wroimage");
 }
 
 bool isImageReadWrite(const Value &val) {
-  if (const Argument *arg = dyn_cast<Argument>(&val)) {
-    const Function *func = arg->getParent();
-    std::vector<unsigned> annot;
-    if (findAllNVVMAnnotation(func, "rdwrimage", annot)) {
-      if (is_contained(annot, arg->getArgNo()))
-        return true;
-    }
-  }
-  return false;
+  return argHasNVVMAnnotation(val, "rdwrimage");
 }
 
 bool isImage(const Value &val) {
@@ -228,9 +250,9 @@ bool isImage(const Value &val) {
 
 bool isManaged(const Value &val) {
   if(const GlobalValue *gv = dyn_cast<GlobalValue>(&val)) {
-    unsigned annot;
-    if (findOneNVVMAnnotation(gv, "managed", annot)) {
-      assert((annot == 1) && "Unexpected annotation on a managed symbol");
+    unsigned Annot;
+    if (findOneNVVMAnnotation(gv, "managed", Annot)) {
+      assert((Annot == 1) && "Unexpected annotation on a managed symbol");
       return true;
     }
   }
@@ -252,32 +274,57 @@ std::string getSamplerName(const Value &val) {
   return std::string(val.getName());
 }
 
-bool getMaxNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "maxntidx", x);
+std::optional<unsigned> getMaxNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidx");
 }
 
-bool getMaxNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "maxntidy", y);
+std::optional<unsigned> getMaxNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidy");
 }
 
-bool getMaxNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "maxntidz", z);
+std::optional<unsigned> getMaxNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidz");
+}
+
+std::optional<unsigned> getMaxNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. The PTX ISA states the
+  // following (11.4.2. Performance-Tuning Directives: .maxntid):
+  //
+  //  Note that this directive guarantees that the total number of threads does
+  //  not exceed the maximum, but does not guarantee that the limit in any
+  //  particular dimension is not exceeded.
+  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
+  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
+  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
+  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
+    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMaxClusterRank(const Function &F, unsigned &x) {
   return findOneNVVMAnnotation(&F, "maxclusterrank", x);
 }
 
-bool getReqNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "reqntidx", x);
+std::optional<unsigned> getReqNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidx");
 }
 
-bool getReqNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "reqntidy", y);
+std::optional<unsigned> getReqNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidy");
 }
 
-bool getReqNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "reqntidz", z);
+std::optional<unsigned> getReqNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidz");
+}
+
+std::optional<unsigned> getReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
+  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
+  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
+  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
+    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMinCTASm(const Function &F, unsigned &x) {
@@ -290,8 +337,7 @@ bool getMaxNReg(const Function &F, unsigned &x) {
 
 bool isKernelFunction(const Function &F) {
   unsigned x = 0;
-  bool retval = findOneNVVMAnnotation(&F, "kernel", x);
-  if (!retval) {
+  if (!findOneNVVMAnnotation(&F, "kernel", x)) {
     // There is no NVVM metadata, check the calling convention
     return F.getCallingConv() == CallingConv::PTX_Kernel;
   }

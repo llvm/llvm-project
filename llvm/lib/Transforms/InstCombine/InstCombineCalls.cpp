@@ -307,7 +307,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getModule()->getDataLayout(), &II, &AC)) {
+                               II.getDataLayout(), &II, &AC)) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -1041,10 +1041,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   return nullptr;
 }
 
-static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
-                                   const DataLayout &DL, AssumptionCache *AC,
-                                   DominatorTree *DT) {
-  KnownBits Known = computeKnownBits(Op, DL, 0, AC, CxtI, DT);
+static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
+  KnownBits Known = computeKnownBits(Op, /*Depth=*/0, SQ);
   if (Known.isNonNegative())
     return false;
   if (Known.isNegative())
@@ -1052,34 +1050,30 @@ static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, CxtI, DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CxtI, SQ.DL);
 
-  return isImpliedByDomCondition(
-      ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
+  return std::nullopt;
 }
 
-static std::optional<bool> getKnownSignOrZero(Value *Op, Instruction *CxtI,
-                                              const DataLayout &DL,
-                                              AssumptionCache *AC,
-                                              DominatorTree *DT) {
-  if (std::optional<bool> Sign = getKnownSign(Op, CxtI, DL, AC, DT))
+static std::optional<bool> getKnownSignOrZero(Value *Op,
+                                              const SimplifyQuery &SQ) {
+  if (std::optional<bool> Sign = getKnownSign(Op, SQ))
     return Sign;
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, CxtI, DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CxtI, SQ.DL);
 
   return std::nullopt;
 }
 
 /// Return true if two values \p Op0 and \p Op1 are known to have the same sign.
-static bool signBitMustBeTheSame(Value *Op0, Value *Op1, Instruction *CxtI,
-                                 const DataLayout &DL, AssumptionCache *AC,
-                                 DominatorTree *DT) {
-  std::optional<bool> Known1 = getKnownSign(Op1, CxtI, DL, AC, DT);
+static bool signBitMustBeTheSame(Value *Op0, Value *Op1,
+                                 const SimplifyQuery &SQ) {
+  std::optional<bool> Known1 = getKnownSign(Op1, SQ);
   if (!Known1)
     return false;
-  std::optional<bool> Known0 = getKnownSign(Op0, CxtI, DL, AC, DT);
+  std::optional<bool> Known0 = getKnownSign(Op0, SQ);
   if (!Known0)
     return false;
   return *Known0 == *Known1;
@@ -1628,7 +1622,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     if (std::optional<bool> Known =
-            getKnownSignOrZero(IIOperand, II, DL, &AC, &DT)) {
+            getKnownSignOrZero(IIOperand, SQ.getWithInstruction(II))) {
       // abs(x) -> x if x >= 0 (include abs(x-y) --> x - y where x >= y)
       // abs(x) -> x if x > 0 (include abs(x-y) --> x - y where x > y)
       if (!*Known)
@@ -1753,7 +1747,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       bool UseAndN = IID == Intrinsic::smin || IID == Intrinsic::umin;
 
       if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
-        auto KnownSign = getKnownSign(X, II, DL, &AC, &DT);
+        auto KnownSign = getKnownSign(X, SQ.getWithInstruction(II));
         if (KnownSign == std::nullopt) {
           UseOr = false;
           UseAndN = false;
@@ -2517,16 +2511,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fabs: {
     Value *Cond, *TVal, *FVal;
-    if (match(II->getArgOperand(0),
-              m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
+    Value *Arg = II->getArgOperand(0);
+    Value *X;
+    // fabs (-X) --> fabs (X)
+    if (match(Arg, m_FNeg(m_Value(X)))) {
+        CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+        return replaceInstUsesWith(CI, Fabs);
+    }
+
+    if (match(Arg, m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
       if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
         FastMathFlags FMF1 = II->getFastMathFlags();
-        FastMathFlags FMF2 =
-            cast<SelectInst>(II->getArgOperand(0))->getFastMathFlags();
+        FastMathFlags FMF2 = cast<SelectInst>(Arg)->getFastMathFlags();
         FMF2.setNoSignedZeros(false);
         SI->setFastMathFlags(FMF1 | FMF2);
         return SI;
@@ -2614,7 +2614,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       FastMathFlags InnerFlags = cast<FPMathOperator>(Src)->getFastMathFlags();
 
       if ((FMF.allowReassoc() && InnerFlags.allowReassoc()) ||
-          signBitMustBeTheSame(Exp, InnerExp, II, DL, &AC, &DT)) {
+          signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II))) {
         // TODO: Add nsw/nuw probably safe if integer type exceeds exponent
         // width.
         Value *NewExp = Builder.CreateAdd(InnerExp, Exp);
@@ -2624,6 +2624,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
+    // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    Value *ExtSrc;
+    if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
+        ExtSrc->getType()->getScalarSizeInBits() == 1) {
+      Value *Select =
+          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
+                               ConstantFP::get(II->getType(), 1.0));
+      return BinaryOperator::CreateFMulFMF(Src, Select, II);
+    }
+    if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
+        ExtSrc->getType()->getScalarSizeInBits() == 1) {
+      Value *Select =
+          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
+                               ConstantFP::get(II->getType(), 1.0));
+      return BinaryOperator::CreateFMulFMF(Src, Select, II);
+    }
+
     break;
   }
   case Intrinsic::ptrauth_auth:
@@ -2631,13 +2649,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
+    Value *Ptr = II->getArgOperand(0);
     Value *Key = II->getArgOperand(1);
     Value *Disc = II->getArgOperand(2);
 
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
-    if (auto CI = dyn_cast<CallBase>(II->getArgOperand(0))) {
+    if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -2649,6 +2668,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
+    } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
+      // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
+      // our purposes, so check for that too.
+      const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
+      if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
+        break;
+
+      // resign(ptrauth(p,ks,ds),ks,ds,kr,dr) -> ptrauth(p,kr,dr)
+      if (NeedSign && isa<ConstantInt>(II->getArgOperand(4))) {
+        auto *SignKey = cast<ConstantInt>(II->getArgOperand(3));
+        auto *SignDisc = cast<ConstantInt>(II->getArgOperand(4));
+        auto *SignAddrDisc = ConstantPointerNull::get(Builder.getPtrTy());
+        auto *NewCPA = ConstantPtrAuth::get(CPA->getPointer(), SignKey,
+                                            SignDisc, SignAddrDisc);
+        replaceInstUsesWith(
+            *II, ConstantExpr::getPointerCast(NewCPA, II->getType()));
+        return eraseInstFromFunction(*II);
+      }
+
+      // auth(ptrauth(p,k,d),k,d) -> p
+      BasePtr = Builder.CreatePtrToInt(CPA->getPointer(), II->getType());
     } else
       break;
 
@@ -2665,8 +2705,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     } else {
       // sign(0) + auth(0) = nop
       replaceInstUsesWith(*II, BasePtr);
-      eraseInstFromFunction(*II);
-      return nullptr;
+      return eraseInstFromFunction(*II);
     }
 
     SmallVector<Value *, 4> CallArgs;

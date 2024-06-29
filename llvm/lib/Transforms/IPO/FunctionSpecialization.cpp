@@ -689,7 +689,9 @@ bool FunctionSpecializer::run() {
   // specialization budget, which is derived from maximum number of
   // specializations per specialization candidate function.
   auto CompareScore = [&AllSpecs](unsigned I, unsigned J) {
-    return AllSpecs[I].Score > AllSpecs[J].Score;
+    if (AllSpecs[I].Score != AllSpecs[J].Score)
+      return AllSpecs[I].Score > AllSpecs[J].Score;
+    return I > J;
   };
   const unsigned NSpecs =
       std::min(NumCandidates * MaxClones, unsigned(AllSpecs.size()));
