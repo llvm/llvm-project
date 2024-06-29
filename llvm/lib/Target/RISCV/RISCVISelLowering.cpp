@@ -1886,7 +1886,9 @@ bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 
 bool RISCVTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
   // free truncate from vnsrl and vnsra
-  if (Subtarget.hasStdExtV() && (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) && Val.getValueType().isVector() && VT2.isVector()) {
+  if (Subtarget.hasStdExtV() &&
+      (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) &&
+      Val.getValueType().isVector() && VT2.isVector()) {
     return true;
   }
   return TargetLowering::isTruncateFree(Val, VT2);
