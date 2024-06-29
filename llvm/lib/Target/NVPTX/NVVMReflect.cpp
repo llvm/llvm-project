@@ -208,7 +208,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
 
   // Removing via isInstructionTriviallyDead may add duplicates to the ToRemove
   // array. Filter out the duplicates before starting to erase from parent.
-  llvm::sort(ToRemove);
+  std::sort(ToRemove.begin(), ToRemove.end());
   auto NewLastIter = llvm::unique(ToRemove);
   ToRemove.erase(NewLastIter, ToRemove.end());
 
