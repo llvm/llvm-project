@@ -1,12 +1,19 @@
 function genLink(Ref) {
   var Path = `${window.location.protocol}//${window.location.host}/${Ref.Path}`;
+  var isFileProtocol = window.location.protocol.startsWith("file");
+  // we treat the file paths different depending on if we're
+  // serving via a http server or viewing from a local
+  if (isFileProtocol) {
+    Path = `${window.location.protocol}//${RootPath}/${Ref.Path}`;
+  }
   if (Ref.RefType !== "namespace") {
     if (Ref.Path === "") {
       Path = `${Path}${Ref.Name}.html`;
-    }
-    else {
+    } else {
       Path = `${Path}/${Ref.Name}.html`;
     }
+  } else {
+    Path = `${Path}/index.html`
   }
 
   ANode = document.createElement("a");
@@ -15,7 +22,6 @@ function genLink(Ref) {
   ANode.appendChild(TextNode);
   return ANode;
 }
-
 
 function genHTMLOfIndex(Index, CurrentDirectory, IsOutermostList) {
   // Out will store the HTML elements that Index requires to be generated
