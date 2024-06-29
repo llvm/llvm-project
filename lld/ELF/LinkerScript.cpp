@@ -609,7 +609,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
-          errorOrWarn("section '" + sec->name + "' cannot spill from/to /DISCARD/");
+          errorOrWarn("section '" + sec->name +
+                      "' cannot spill from/to /DISCARD/");
           continue;
         }
         if (isSpill)
