@@ -1,19 +1,20 @@
-// RUN: %clang_cc1 %s -verify -fno-builtin -Werror=comment -Wno-error=abi
+// RUN: %clang_cc1 %s -verify -fno-builtin -Werror=comment -Wno-error=abi -Wfatal-errors=assume -Wno-fatal-errors=assume
 
-#define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
-
-template <bool b>
-void diagnose_if_wcomma() _diagnose_if(b, "oh no", "warning", "comma") {}
+#define diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 
 template <bool b>
-void diagnose_if_wcomment() _diagnose_if(b, "oh no", "warning", "comment") {}
+void diagnose_if_wcomma() diagnose_if(b, "oh no", "warning", "comma") {}
 
-void bougus_warning() _diagnose_if(true, "oh no", "warning", "bougus warning") {} // expected-error {{unknown warning group}}
+template <bool b>
+void diagnose_if_wcomment() diagnose_if(b, "oh no", "warning", "comment") {}
 
-void show_in_system_header() _diagnose_if(true, "oh no", "warning", "assume", "Banane") {} // expected-error {{'diagnose_if' attribute takes no more than 4 arguments}}
+void bougus_warning() diagnose_if(true, "oh no", "warning", "bougus warning") {} // expected-error {{unknown warning group}}
+
+void show_in_system_header() diagnose_if(true, "oh no", "warning", "assume", "Banane") {} // expected-error {{'diagnose_if' attribute takes no more than 4 arguments}}
 
 
-void diagnose_if_wabi_default_error() _diagnose_if(true, "ABI stuff", "error", "abi") {}
+void diagnose_if_wabi_default_error() diagnose_if(true, "ABI stuff", "error", "abi") {}
+void diagnose_assume() diagnose_if(true, "Assume diagnostic", "warning", "assume") {}
 
 void call() {
   diagnose_if_wcomma<true>(); // expected-warning {{oh no}}
@@ -36,5 +37,9 @@ void call() {
   diagnose_if_wcomma<true>(); // expected-warning {{oh no}}
   diagnose_if_wcomment<true>(); // expected-error {{oh no}}
 
+  diagnose_if_wabi_default_error(); // expected-warning {{ABI stuff}}
+  diagnose_assume(); // expected-error {{Assume diagnostic}}
+
+  // Make sure that the -Wassume diagnostic isn't fatal
   diagnose_if_wabi_default_error(); // expected-warning {{ABI stuff}}
 }
