@@ -4339,21 +4339,6 @@ public:
     return isTypeLegal(VT);
   }
 
-  /// Same as isTypeDesirableForOp(unsigned Opc, EVT VT), but also check if
-  /// the target is 'desirable' to truncate or extend OldVT to NewVT only using
-  /// the given node type, without the need of explicit trunc or ext. e.g. On
-  /// RISC-V Vector extension, vnsrl.wi can directly convert <n x i32> to <n x
-  /// i16> when shifting, with no extra trunc operations needed.
-  virtual bool isTypeDesirableForOpWithCast(unsigned Opc, EVT NewVT,
-                                            EVT OldVT) const {
-    // Fallback to isTypeDesirableForOp(unsigned Opc, EVT VT).
-    if (NewVT == OldVT) {
-      return isTypeDesirableForOp(Opc, NewVT);
-    }
-    // Most of instructions are not desirable, so return false by default.
-    return false;
-  }
-
   /// Return true if it is profitable for dag combiner to transform a floating
   /// point op of specified opcode to a equivalent op of an integer
   /// type. e.g. f32 load -> i32 load can be profitable on ARM.
