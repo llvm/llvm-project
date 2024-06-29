@@ -18,7 +18,7 @@ extern "C" int ompx_block_id(int Dim);
 extern "C" int ompx_block_dim(int Dim);
 extern "C" int ompx_thread_id(int Dim);
 
-enum class AllocationKind { GLOBAL, LOCAL, LAST = LOCAL };
+enum class AllocationKind { LOCAL, GLOBAL, LAST = GLOBAL };
 
 template <AllocationKind AK> struct ASTypes {};
 template <> struct ASTypes<AllocationKind::GLOBAL> {
@@ -36,6 +36,8 @@ template <AllocationKind AK> struct SanitizerConfig {
   static constexpr uint32_t NUM_ALLOCATION_ARRAYS =
       AK == AllocationKind::GLOBAL ? 1 : (1024 * 1024 * 2);
   static constexpr uint32_t TAG_BITS = AK == AllocationKind::GLOBAL ? 1 : 8;
+  static constexpr uint32_t MAGIC_BITS = 3;
+  static constexpr uint32_t MAGIC = 0b101;
 
   static constexpr uint32_t OBJECT_BITS = AK == AllocationKind::GLOBAL ? 10 : 7;
   static constexpr uint32_t SLOTS = (1 << (OBJECT_BITS));
@@ -45,13 +47,13 @@ template <AllocationKind AK> struct SanitizerConfig {
   static constexpr uint32_t LENGTH_BITS =
       ADDR_SPACE_PTR_SIZE - TAG_BITS - ID_BITS;
   static constexpr uint32_t OFFSET_BITS =
-      ADDR_SPACE_PTR_SIZE - TAG_BITS - OBJECT_BITS - KIND_BITS;
+      ADDR_SPACE_PTR_SIZE - TAG_BITS - OBJECT_BITS - KIND_BITS - MAGIC_BITS;
 
   static constexpr bool useTags() { return TAG_BITS > 1; }
 
   static_assert(LENGTH_BITS + TAG_BITS + ID_BITS == ADDR_SPACE_PTR_SIZE,
                 "Length, tag, and ID bits should cover one pointer");
-  static_assert(OFFSET_BITS + TAG_BITS + OBJECT_BITS + KIND_BITS ==
+  static_assert(OFFSET_BITS + TAG_BITS + OBJECT_BITS + MAGIC_BITS + KIND_BITS ==
                     ADDR_SPACE_PTR_SIZE,
                 "Offset, tag, object, and kind bits should cover one pointer");
   static_assert((1 << KIND_BITS) >= ((uint64_t)AllocationKind::LAST + 1),
@@ -77,7 +79,9 @@ template <AllocationKind AK> struct AllocationPtrTy {
   static AllocationPtrTy<AK> get(_AS_PTR(void, AK) P) {
     return utils::convertViaPun<AllocationPtrTy<AK>>(P);
   }
-
+  static AllocationPtrTy<AK> get(void *P) {
+    return get((_AS_PTR(void, AK))(P));
+  }
   operator _AS_PTR(void, AK)() const {
     return utils::convertViaPun<_AS_PTR(void, AK)>(*this);
   }
@@ -87,16 +91,28 @@ template <AllocationKind AK> struct AllocationPtrTy {
   typename ASTypes<AK>::INT_TY Offset : SanitizerConfig<AK>::OFFSET_BITS;
   typename ASTypes<AK>::INT_TY AllocationTag : SanitizerConfig<AK>::TAG_BITS;
   typename ASTypes<AK>::INT_TY AllocationId : SanitizerConfig<AK>::OBJECT_BITS;
+  typename ASTypes<AK>::INT_TY Magic : SanitizerConfig<AK>::MAGIC_BITS;
   // Must be last, TODO: merge into TAG
   typename ASTypes<AK>::INT_TY Kind : SanitizerConfig<AK>::KIND_BITS;
 };
-
 static_assert(sizeof(AllocationPtrTy<AllocationKind::LOCAL>) * 8 == 32);
+
+union TypePunUnion {
+  uint64_t I;
+  void *P;
+  _AS_PTR(void, AllocationKind::LOCAL) AddrP;
+  struct {
+    AllocationPtrTy<AllocationKind::LOCAL> AP;
+    uint32_t U;
+  };
+};
+static_assert(sizeof(TypePunUnion) * 8 == 64);
 
 static inline void *__offload_get_new_sanitizer_ptr(int32_t Slot) {
   AllocationPtrTy<AllocationKind::GLOBAL> AP;
   AP.Offset = 0;
   AP.AllocationId = Slot;
+  AP.Magic = SanitizerConfig<AllocationKind::GLOBAL>::MAGIC;
   AP.Kind = (uint32_t)AllocationKind::GLOBAL;
   return (void *)(_AS_PTR(void, AllocationKind::GLOBAL))AP;
 }
@@ -124,6 +140,7 @@ struct SanitizerTrapInfoTy {
     UseAfterScope,
     UseAfterFree,
     MemoryLeak,
+    GarbagePointer,
   } ErrorCode;
 
   /// AllocationTy
@@ -278,6 +295,20 @@ struct SanitizerTrapInfoTy {
   accessError(const AllocationPtrTy<AK> AP, int64_t Size, int64_t AccessId,
               uint64_t PC, const char *FunctionName, const char *FileName,
               uint64_t LineNo);
+
+  template <enum AllocationKind AK>
+  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  garbagePointer(const AllocationPtrTy<AK> AP, void *P, uint64_t PC) {
+    ErrorCode = GarbagePointer;
+    AllocationStart = P;
+    AllocationKind = (decltype(AllocationKind))AK;
+    PtrOffset = AP.Offset;
+    PtrSlot = AP.AllocationId;
+    PtrTag = AP.AllocationTag;
+    PtrKind = AP.Kind;
+    setCoordinates(PC, nullptr, nullptr, 0);
+    __builtin_trap();
+  }
 
   template <enum AllocationKind AK>
   [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void

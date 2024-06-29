@@ -41,6 +41,23 @@ template <> struct AllocationInfoTy<AllocationKind::LOCAL> {
   using ASVoidPtrTy = AllocationInfoLocalTy;
 };
 
+template <>
+AllocationPtrTy<AllocationKind::LOCAL>
+AllocationPtrTy<AllocationKind::LOCAL>::get(_AS_PTR(void, AllocationKind::LOCAL)
+                                                P) {
+  TypePunUnion TPU;
+  TPU.P = (void *)P;
+  return TPU.AP;
+}
+
+template <>
+AllocationPtrTy<AllocationKind::LOCAL>::operator _AS_PTR(
+    void, AllocationKind::LOCAL)() const {
+  TypePunUnion TPU;
+  TPU.AP = *this;
+  return TPU.AddrP;
+}
+
 template <AllocationKind AK> struct AllocationTracker {
   static_assert(sizeof(AllocationTy<AK>) == sizeof(_AS_PTR(void, AK)) * 2,
                 "AllocationTy should not exceed two pointers");
@@ -86,11 +103,12 @@ template <AllocationKind AK> struct AllocationTracker {
 
     AllocationPtrTy<AK> AP;
     AP.Offset = 0;
-    AP.AllocationId = Slot;
-    AP.Kind = (uint64_t)AK;
     if constexpr (SanitizerConfig<AK>::useTags()) {
       AP.AllocationTag = ++A.Tag;
     }
+    AP.AllocationId = Slot;
+    AP.Magic = SanitizerConfig<AK>::MAGIC;
+    AP.Kind = (uint64_t)AK;
     return AP;
   }
 
@@ -135,12 +153,15 @@ template <AllocationKind AK> struct AllocationTracker {
     if constexpr (AK == AllocationKind::LOCAL)
       if (Length == 0)
         Length = getAllocation<AK>(AP, AccessId).Length;
+    if constexpr (AK == AllocationKind::GLOBAL)
+      if (AP.Magic != SanitizerConfig<AllocationKind::GLOBAL>::MAGIC)
+        __sanitizer_trap_info_ptr->garbagePointer<AK>(AP, (void *)P, PC);
     int64_t Offset = AP.Offset;
     if (OMP_UNLIKELY(
             Offset > Length - Size ||
             (SanitizerConfig<AK>::useTags() && Tag != AP.AllocationTag))) {
-      __sanitizer_trap_info_ptr->accessError(AP, Size, AccessId, PC,
-                                             FunctionName, FileName, LineNo);
+      __sanitizer_trap_info_ptr->accessError<AK>(
+          AP, Size, AccessId, PC, FunctionName, FileName, LineNo);
     }
     return utils::advancePtr(Start, Offset);
   }
@@ -194,10 +215,24 @@ template <AllocationKind AK>
 AllocationArrayTy<AK>
     Allocations<AK>::Arr[SanitizerConfig<AK>::NUM_ALLOCATION_ARRAYS];
 
+static void checkForMagic(bool IsGlobal, void *P, uint64_t PC) {
+  if (IsGlobal) {
+    auto AP = AllocationPtrTy<AllocationKind::GLOBAL>::get(P);
+    if (AP.Magic != SanitizerConfig<AllocationKind::GLOBAL>::MAGIC)
+      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::GLOBAL>(AP, P,
+                                                                        PC);
+  } else {
+    auto AP = AllocationPtrTy<AllocationKind::LOCAL>::get(P);
+    if (AP.Magic != SanitizerConfig<AllocationKind::LOCAL>::MAGIC)
+      __sanitizer_trap_info_ptr->garbagePointer<AllocationKind::LOCAL>(AP, P,
+                                                                       PC);
+  }
+}
+
 extern "C" {
 
 #define REAL_PTR_IS_LOCAL(PTR) (isThreadLocalMemPtr(PTR))
-#define IS_LOCAL(PTR) ((intptr_t)PTR & 1)
+#define IS_GLOBAL(PTR) ((uintptr_t)PTR & (1UL << 63))
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] _AS_PTR(void, AllocationKind::LOCAL)
@@ -254,10 +289,11 @@ ompx_free_global(_AS_PTR(void, AllocationKind::GLOBAL) P) {
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void
 ompx_free(void *P, uint64_t PC) {
-  if (IS_LOCAL(P))
-    ompx_free_local((_AS_PTR(void, AllocationKind::LOCAL))P);
-  else
-    ompx_free_global((_AS_PTR(void, AllocationKind::GLOBAL))P);
+  bool IsGlobal = IS_GLOBAL(P);
+  checkForMagic(IsGlobal, P, PC);
+  if (IsGlobal)
+    return ompx_free_global((_AS_PTR(void, AllocationKind::GLOBAL))P);
+  return ompx_free_local((_AS_PTR(void, AllocationKind::LOCAL))P);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
@@ -275,11 +311,13 @@ ompx_free(void *P, uint64_t PC) {
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
 ompx_gep(void *P, uint64_t Offset, uint64_t PC) {
-  if (IS_LOCAL(P))
-    return (void *)ompx_gep_local((_AS_PTR(void, AllocationKind::LOCAL))P,
-                                  Offset, PC);
-  return (void *)ompx_gep_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                 Offset, PC);
+  bool IsGlobal = IS_GLOBAL(P);
+  checkForMagic(IsGlobal, P, PC);
+  if (IsGlobal)
+    return (void *)ompx_gep_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
+                                   Offset, PC);
+  return (void *)ompx_gep_local((_AS_PTR(void, AllocationKind::LOCAL))P, Offset,
+                                PC);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
@@ -302,13 +340,14 @@ ompx_gep(void *P, uint64_t Offset, uint64_t PC) {
   gnu::used, gnu::retain]] void *
 ompx_check(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
            const char *FunctionName, const char *FileName, uint64_t LineNo) {
-  if (IS_LOCAL(P))
-    return (void *)ompx_check_local((_AS_PTR(void, AllocationKind::LOCAL))P,
-                                    Size, AccessId, PC, FunctionName, FileName,
-                                    LineNo);
-  return (void *)ompx_check_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                   Size, AccessId, PC, FunctionName, FileName,
-                                   LineNo);
+  bool IsGlobal = IS_GLOBAL(P);
+  checkForMagic(IsGlobal, P, PC);
+  if (IsGlobal)
+    return (void *)ompx_check_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
+                                     Size, AccessId, PC, FunctionName, FileName,
+                                     LineNo);
+  return (void *)ompx_check_local((_AS_PTR(void, AllocationKind::LOCAL))P, Size,
+                                  AccessId, PC, FunctionName, FileName, LineNo);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
@@ -350,11 +389,12 @@ ompx_check(void *P, uint64_t Size, uint64_t AccessId, uint64_t PC,
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,
   gnu::used, gnu::retain]] void *
 ompx_unpack(void *P, uint64_t PC) {
-  if (IS_LOCAL(P))
-    return (void *)ompx_unpack_local((_AS_PTR(void, AllocationKind::LOCAL))P,
-                                     PC);
-  return (void *)ompx_unpack_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
-                                    PC);
+  bool IsGlobal = IS_GLOBAL(P);
+  checkForMagic(IsGlobal, P, PC);
+  if (IsGlobal)
+    return (void *)ompx_unpack_global((_AS_PTR(void, AllocationKind::GLOBAL))P,
+                                      PC);
+  return (void *)ompx_unpack_local((_AS_PTR(void, AllocationKind::LOCAL))P, PC);
 }
 
 [[clang::disable_sanitizer_instrumentation, gnu::flatten, gnu::always_inline,

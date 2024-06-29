@@ -2043,7 +2043,9 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   //
   // TODO: Use ValueTracking's isKnownNeverNull if it becomes aware that some
   // address spaces have non-zero null values.
-  auto SrcPtrKB = computeKnownBits(V, DL).trunc(DL.getPointerSizeInBits(AS));
+  auto SrcPtrKB = computeKnownBits(V, DL);
+  if (SrcPtrKB.getBitWidth() > DL.getPointerSizeInBits(AS))
+    SrcPtrKB = SrcPtrKB.trunc(DL.getPointerSizeInBits(AS));
   const auto NullVal = TM.getNullPointerValue(AS);
   assert((NullVal == 0 || NullVal == -1) &&
          "don't know how to check for this null value!");

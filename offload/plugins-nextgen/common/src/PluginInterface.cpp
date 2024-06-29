@@ -2215,6 +2215,8 @@ void GPUSanTy::checkAndReportError() {
       FunctionName = FunctionName.drop_front(It + 1);
   }
 
+  if (FunctionName.ends_with("_debug__"))
+    FunctionName = FunctionName.drop_back(sizeof("debug__"));
   if (FunctionName.ends_with("_debug___omp_outlined_debug__"))
     FunctionName =
         FunctionName.drop_back(sizeof("debug___omp_outlined_debug__"));
@@ -2251,8 +2253,8 @@ void GPUSanTy::checkAndReportError() {
             Blue(), STI.AccessId > 0 ? "WRITE" : "READ", STI.AccessSize,
             DPxPTR(Addr), STI.ThreadId[0], STI.ThreadId[1], STI.ThreadId[2],
             STI.BlockId[0], STI.BlockId[1], STI.BlockId[2], STI.AccessId,
-            (STI.AllocationKind ? "stack" : "heap"), Default());
-    fprintf(stderr, "    #0 %p %s in %s:%lu\n\n", PC,
+            (STI.AllocationKind ? "heap" : "stack"), Default());
+    fprintf(stderr, "    #0 " DPxMOD " %s in %s:%lu\n\n", DPxPTR(PC),
             FunctionName.str().c_str(), FileName.data(), STI.LineNo);
     fprintf(
         stderr,
@@ -2262,6 +2264,11 @@ void GPUSanTy::checkAndReportError() {
         DPxPTR(STI.AllocationStart),
         DPxPTR(utils::advancePtr(STI.AllocationStart, STI.AllocationLength)),
         Default());
+    fprintf(stderr,
+            "%s Pointer[slot:%lu,tag:%u,kind:%i] "
+            "Allocation[slot:%d,tag:%u,kind:%i]\n%s",
+            Green(), STI.PtrSlot, STI.PtrTag, STI.PtrKind, STI.AllocationId,
+            STI.AllocationTag, STI.AllocationKind, Default());
   };
 
   switch (STI.ErrorCode) {
@@ -2278,7 +2285,7 @@ void GPUSanTy::checkAndReportError() {
   case SanitizerTrapInfoTy::PointerOutsideAllocation:
     fprintf(stderr, "%sERROR: OffloadSanitizer %s : %p : %i %lu (%s)\n%s",
             Red(), "outside allocation", STI.AllocationStart, STI.AllocationId,
-            STI.PtrSlot, (STI.AllocationKind ? "stack" : "heap"), Default());
+            STI.PtrSlot, (STI.AllocationKind ? "heap" : "stack"), Default());
     break;
   case SanitizerTrapInfoTy::OutOfBounds: {
     DiagnoseAccess("out-of-bounds");
@@ -2292,6 +2299,15 @@ void GPUSanTy::checkAndReportError() {
     break;
   case SanitizerTrapInfoTy::MemoryLeak:
     fprintf(stderr, "%sERROR: OffloadSanitizer %s\n%s", Red(), "memory leak",
+            Default());
+    break;
+  case SanitizerTrapInfoTy::GarbagePointer:
+    fprintf(stderr, "%sERROR: OffloadSanitizer %s : %p\n%s", Red(),
+            "garbage pointer", STI.AllocationStart, Default());
+    fprintf(stderr,
+            "%s Pointer[slot:%lu,tag:%u,kind:%i] "
+            "Allocation[kind:%i]\n%s",
+            Green(), STI.PtrSlot, STI.PtrTag, STI.PtrKind, STI.AllocationKind,
             Default());
     break;
   }

@@ -16,11 +16,13 @@
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 
+[[clang::optnone]] int *deref(int **P) { return *P; }
+
 int main(void) {
 
 #pragma omp target
   {
-    volatile int *Null = 0;
+    int *NullPtr = 0;
     // clang-format off
     // CHECK: ERROR: OffloadSanitizer out-of-bounds access on address 0x0000000000000000 at pc [[PC:.*]]
     // CHECK: WRITE of size 4 at 0x0000000000000000 thread <0, 0, 0> block <0, 0, 0> (acc 1, heap)
@@ -34,6 +36,6 @@ int main(void) {
     // 
     // DEBUG: 0x0000000000000000 is located 0 bytes inside of a 0-byte region [0x0000000000000000,0x0000000000000000)
     // clang-format on
-    *Null = 42;
+    deref(&NullPtr)[10] = 42;
   }
 }
