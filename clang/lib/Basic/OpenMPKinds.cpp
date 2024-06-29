@@ -702,6 +702,13 @@ bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
          DKind == OMPD_target_parallel_loop;
 }
 
+bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Executable || Cat == Category::Subsidiary;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
