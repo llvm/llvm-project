@@ -18,7 +18,9 @@
 #include "test/UnitTest/FPMatcher.h"
 
 #include "hdr/math_macros.h"
+#include <iostream>
 #include <memory>
+#include <ostream>
 #include <stdint.h>
 
 #include "mpfr_inc.h"
@@ -439,7 +441,10 @@ public:
 
   MPFRNumber sinpi() const {
     MPFRNumber result(*this);
-    mpfr_sinpi(result.value, value, mpfr_rounding);
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
     return result;
   }
 
